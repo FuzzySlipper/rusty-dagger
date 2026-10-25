@@ -254,27 +254,29 @@ public sealed class DaggerfallExteriorCellResidencyTests
     {
         CollisionResidencySpatialFake spatial = CollisionResidencySpatialFake.Create();
         using SpatialSession session = new(new SpatialSessionHandle(53), static () => { });
-        DaggerfallExteriorCellResidency residency = Create(spatial.Service, session);
+        DaggerfallDeferredCollision deferred = new(spatial.Service, session);
+        DaggerfallExteriorCellResidency residency = Create(spatial.Service, session, deferred);
         // One batch already pending ahead of the window's when it is made.
-        spatial.Readout = new CollisionResidencyReadout(4, 1, 0, 0, 0, 9);
+        spatial.Readout = Readout(4, 1, revision: 9);
         residency.Update(new(10, 10), DaggerfallExteriorWorldOrigin.At(new(10, 10)), hold: true);
         ulong batch = residency.ReleaseHeld()!.Value.DeferredBatch;
 
         // Both pending, the one ahead still validating: nothing measures it yet.
-        spatial.Readout = new CollisionResidencyReadout(4, 2, 0, 0, 0, 9);
-        Assert.Equal(new DaggerfallExteriorAdmission(DaggerfallExteriorAdmissionState.Baking), residency.ReadAdmission());
+        spatial.Readout = Readout(4, 2);
+        Assert.Equal(new DaggerfallDeferredCollisionReading(DaggerfallDeferredCollisionState.Preparing), deferred.Poll());
         // The one ahead half baked: a quarter of the two.
-        spatial.Readout = new CollisionResidencyReadout(4, 2, 10, 20, 0, 9);
-        Assert.Equal(new DaggerfallExteriorAdmission(DaggerfallExteriorAdmissionState.Baking, .25d), residency.ReadAdmission());
+        spatial.Readout = Readout(4, 2, baked: 10, planned: 20);
+        Assert.Equal(new DaggerfallDeferredCollisionReading(DaggerfallDeferredCollisionState.Preparing, .25d), deferred.Poll());
         // That one done and the window's 49 instances 7 baked.
-        spatial.Readout = new CollisionResidencyReadout(5, 1, 7, 49, 0, 10);
-        Assert.Equal(new DaggerfallExteriorAdmission(DaggerfallExteriorAdmissionState.Baking, (1d + (7d / 49d)) / 2d), residency.ReadAdmission());
+        spatial.Readout = Readout(5, 1, baked: 7, planned: 49);
+        Assert.Equal(new DaggerfallDeferredCollisionReading(DaggerfallDeferredCollisionState.Preparing, (1d + (7d / 49d)) / 2d), deferred.Poll());
         // Every batch up to the window's is done.
-        spatial.Readout = new CollisionResidencyReadout(batch, 0, 0, 0, 0, 11);
-        Assert.Equal(DaggerfallExteriorAdmission.Live, residency.ReadAdmission());
+        spatial.Readout = Readout(batch, 0);
+        Assert.Equal(DaggerfallDeferredCollisionReading.Live, deferred.Poll());
+        Assert.False(deferred.Awaiting);
         // Nothing is deferred now, so the Engine is not asked again.
         spatial.Readout = default;
-        Assert.Equal(DaggerfallExteriorAdmission.Live, residency.ReadAdmission());
+        Assert.Equal(DaggerfallDeferredCollisionReading.Live, deferred.Poll());
     }
 
     [Fact]
@@ -282,15 +284,16 @@ public sealed class DaggerfallExteriorCellResidencyTests
     {
         CollisionResidencySpatialFake spatial = CollisionResidencySpatialFake.Create();
         using SpatialSession session = new(new SpatialSessionHandle(54), static () => { });
-        DaggerfallExteriorCellResidency residency = Create(spatial.Service, session);
+        DaggerfallDeferredCollision deferred = new(spatial.Service, session);
+        DaggerfallExteriorCellResidency residency = Create(spatial.Service, session, deferred);
         DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(new(10, 10));
         residency.Update(new(10, 10), origin);
-        spatial.Readout = new CollisionResidencyReadout(0, 0, 0, 0, 2, 3);
+        spatial.Readout = Readout(0, 0, refused: 2);
         residency.Update(new(11, 10), origin, hold: true);
         ulong batch = residency.ReleaseHeld()!.Value.DeferredBatch;
 
-        spatial.Readout = new CollisionResidencyReadout(batch, 0, 0, 0, 3, 3);
-        Assert.Equal(DaggerfallExteriorAdmissionState.Refused, residency.ReadAdmission().State);
+        spatial.Readout = Readout(batch, 0, refused: 3, lastRefused: batch);
+        Assert.Equal(DaggerfallDeferredCollisionState.Refused, deferred.Poll().State);
         Assert.Contains(new DaggerfallExteriorCellId(7, 10), residency.ResidentCells);
         Assert.DoesNotContain(new DaggerfallExteriorCellId(14, 10), residency.ResidentCells);
 
@@ -300,9 +303,47 @@ public sealed class DaggerfallExteriorCellResidencyTests
         Assert.False(spatial.Requests[^1].Deferred);
     }
 
+    [Fact]
+    public void A_placement_batch_reads_by_its_composed_cells_and_only_the_batch_the_Engine_names_refused_is_reverted()
+    {
+        CollisionResidencySpatialFake spatial = CollisionResidencySpatialFake.Create();
+        using SpatialSession session = new(new SpatialSessionHandle(55), static () => { });
+        DaggerfallDeferredCollision deferred = new(spatial.Service, session);
+        List<ulong> reverted = [];
+        spatial.Readout = Readout(10, 0, refused: 4);
+        deferred.Track(11, deferred.Read(), () => reverted.Add(11));
+        deferred.Track(12, deferred.Read(), () => reverted.Add(12));
+
+        // The placements compose a quarter of their cells; the window waits behind them.
+        spatial.Readout = Readout(10, 2, composed: 250, cells: 1000, refused: 4);
+        Assert.Equal(new DaggerfallDeferredCollisionReading(DaggerfallDeferredCollisionState.Preparing, .125d), deferred.Poll());
+        // The placements refused, the window still baking: nothing is settled until both are done.
+        spatial.Readout = Readout(11, 1, baked: 1, planned: 2, refused: 5, lastRefused: 11);
+        Assert.Equal(new DaggerfallDeferredCollisionReading(DaggerfallDeferredCollisionState.Preparing, .75d), deferred.Poll());
+        Assert.Empty(reverted);
+        // Both done with one refusal, the one the Engine names: only the placements go back.
+        spatial.Readout = Readout(12, 0, refused: 5, lastRefused: 11);
+        Assert.Equal(DaggerfallDeferredCollisionState.Refused, deferred.Poll().State);
+        Assert.Equal([11UL], reverted);
+        Assert.False(deferred.Awaiting);
+
+        // Two batches and two refusals: both go back.
+        reverted.Clear();
+        deferred.Track(13, deferred.Read(), () => reverted.Add(13));
+        deferred.Track(14, deferred.Read(), () => reverted.Add(14));
+        spatial.Readout = Readout(14, 0, refused: 7, lastRefused: 14);
+        Assert.Equal(DaggerfallDeferredCollisionState.Refused, deferred.Poll().State);
+        Assert.Equal([13UL, 14UL], reverted);
+    }
+
+    private static CollisionResidencyReadout Readout(ulong completed, uint pending, ulong baked = 0, ulong planned = 0,
+        ulong composed = 0, ulong cells = 0, ulong refused = 0, ulong lastRefused = 0, ulong revision = 0) =>
+        new(completed, pending, baked, planned, composed, cells, refused, lastRefused, revision);
+
     private static DaggerfallExteriorCellResidency Create(
         ISpatialService spatial,
-        SpatialSession session) => new(
+        SpatialSession session,
+        DaggerfallDeferredCollision? deferred = null) => new(
             spatial,
             session,
             new DaggerfallExteriorWorldBounds(1000, 500),
@@ -311,5 +352,6 @@ public sealed class DaggerfallExteriorCellResidencyTests
                 cell.Y,
                 [new Vector3(0F, 0F, 0F), new Vector3(1F, 0F, 0F), new Vector3(0F, 0F, 1F)],
                 [new Triangle(0, 2, 1)],
-                [0F, 0F, 0F]));
+                [0F, 0F, 0F]),
+            deferred);
 }

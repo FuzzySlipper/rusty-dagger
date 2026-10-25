@@ -114,27 +114,6 @@ internal readonly record struct DaggerfallExteriorCellResidencyUpdate(
     bool Applied,
     CollisionReplaceReceipt EngineReceipt);
 
-/// <summary>How far the window's collision handed to the Engine to bake off the update has come.</summary>
-internal enum DaggerfallExteriorAdmissionState
-{
-    /// <summary>Nothing is baking: the window's collision is live.</summary>
-    Live,
-    /// <summary>The batch is validating or baking.</summary>
-    Baking,
-    /// <summary>The Engine refused the batch, so none of it is live; the host log names why.</summary>
-    Refused,
-}
-
-/// <summary>One reading of the window's deferred collision.</summary>
-/// <param name="Fraction">
-/// While baking, the share done: batches the Engine finished ahead of and including this one, plus the share of
-/// the baking batch's instances baked. Null while the baking batch still validates (0 of 0 planned).
-/// </param>
-internal readonly record struct DaggerfallExteriorAdmission(DaggerfallExteriorAdmissionState State, double? Fraction = null)
-{
-    internal static DaggerfallExteriorAdmission Live => new(DaggerfallExteriorAdmissionState.Live, 1d);
-}
-
 /// <summary>
 /// Selects and incrementally admits the donor's seven-by-seven exterior cell
 /// window. Product map-pixel identity stays global while Engine collision
@@ -143,7 +122,7 @@ internal readonly record struct DaggerfallExteriorAdmission(DaggerfallExteriorAd
 /// <remarks>
 /// A staged site change admits its window <em>held</em>: the batch is kept until the change's own synchronous
 /// collision and content calls are done, then handed to the Engine to bake off the update as one deferred batch
-/// (<see cref="ReleaseHeld"/>), and <see cref="ReadAdmission"/> says when it is live. A synchronous change the Engine
+/// (<see cref="ReleaseHeld"/>), which the session's <see cref="DaggerfallDeferredCollision"/> follows until it is live. A synchronous change the Engine
 /// receives while that batch is pending waits for it, so every other residency call here releases a held batch
 /// first and keeps the Engine's order the product's.
 /// </remarks>
@@ -171,34 +150,31 @@ internal sealed class DaggerfallExteriorCellResidency
     private bool _initialized;
     // A held window batch, with the cells resident before it, which a refusal returns to.
     private (CollisionResidencyRequest Request, HashSet<DaggerfallExteriorCellId> ResidentBefore)? _held;
-    private DeferredBatch? _deferred;
-
-    /// <summary>
-    /// The window batch the Engine is baking: its number, how many batches were ahead of it when it was made, the
-    /// refusals counted before it, and the cells resident before it.
-    /// </summary>
-    private sealed record DeferredBatch(ulong Batch, uint Ahead, ulong RefusedBefore,
-        HashSet<DaggerfallExteriorCellId> ResidentBefore);
+    private readonly DaggerfallDeferredCollision _deferred;
 
     internal DaggerfallExteriorCellResidency(
         ISpatialService spatial,
         SpatialSession session,
-        Func<DaggerfallExteriorCellId, DaggerfallTerrainSurface> surfaceFactory)
-        : this(spatial, session, DaggerfallExteriorWorldBounds.Daggerfall, surfaceFactory)
+        Func<DaggerfallExteriorCellId, DaggerfallTerrainSurface> surfaceFactory,
+        DaggerfallDeferredCollision? deferred = null)
+        : this(spatial, session, DaggerfallExteriorWorldBounds.Daggerfall, surfaceFactory, deferred)
     {
     }
 
+    /// <param name="deferred">Follows a released batch until it is live; the session's own, shared with its placements.</param>
     internal DaggerfallExteriorCellResidency(
         ISpatialService spatial,
         SpatialSession session,
         DaggerfallExteriorWorldBounds bounds,
-        Func<DaggerfallExteriorCellId, DaggerfallTerrainSurface> surfaceFactory)
+        Func<DaggerfallExteriorCellId, DaggerfallTerrainSurface> surfaceFactory,
+        DaggerfallDeferredCollision? deferred = null)
     {
         _spatial = spatial ?? throw new ArgumentNullException(nameof(spatial));
         _session = session ?? throw new ArgumentNullException(nameof(session));
         _bounds = bounds;
         _bounds.Validate();
         _surfaceFactory = surfaceFactory ?? throw new ArgumentNullException(nameof(surfaceFactory));
+        _deferred = deferred ?? new DaggerfallDeferredCollision(spatial, session);
     }
 
     internal bool IsInitialized => _initialized;
@@ -422,56 +398,24 @@ internal sealed class DaggerfallExteriorCellResidency
 
     /// <summary>
     /// Hands a held batch to the Engine to validate, bake and install off the update; nothing when none is held.
-    /// The receipt names the batch, and <see cref="ReadAdmission"/> follows it until it is live.
+    /// The session's <see cref="DaggerfallDeferredCollision"/> follows it until it is live. A refusal changed nothing
+    /// in the Engine, so the window returns to the cells resident before it: its next update admits them again.
     /// </summary>
     internal CollisionReplaceReceipt? ReleaseHeld()
     {
         if (_held is not { } held) return null;
         _held = null;
-        CollisionResidencyReadout before = _spatial.ReadCollisionResidency(new CollisionResidencyReadRequest(_session));
+        CollisionResidencyReadout before = _deferred.Read();
         CollisionResidencyRequest request = held.Request;
         CollisionReplaceReceipt receipt = _spatial.ApplyCollisionResidency(new CollisionResidencyRequest(
             request.Session, request.Assets, request.Vertices, request.Triangles, request.Instances,
             request.RemovedAssets, request.RemovedInstances, Deferred: true));
-        // A batch the Engine applied before returning is already live.
-        _deferred = receipt.DeferredBatch == 0
-            ? null
-            : new DeferredBatch(receipt.DeferredBatch, before.PendingBatches, before.RefusedBatches, held.ResidentBefore);
-        return receipt;
-    }
-
-    /// <summary>Whether a window batch handed to the Engine is still to be read live or refused.</summary>
-    internal bool AwaitsBatch => _deferred is not null;
-
-    /// <summary>
-    /// Reads how far the window's deferred batch has come. A refusal changed nothing in the Engine, so the window
-    /// returns to the cells resident before it: the next window update admits the refused cells again.
-    /// </summary>
-    internal DaggerfallExteriorAdmission ReadAdmission()
-    {
-        if (_held is not null)
-            throw new InvalidOperationException("A held exterior batch has not been handed to the Engine.");
-        if (_deferred is not { } batch) return DaggerfallExteriorAdmission.Live;
-        CollisionResidencyReadout readout = _spatial.ReadCollisionResidency(new CollisionResidencyReadRequest(_session));
-        if (readout.RefusedBatches > batch.RefusedBefore)
+        _deferred.Track(receipt.DeferredBatch, before, () =>
         {
-            // This window's batch is the session's only deferred one, so a new refusal is its own.
-            _deferred = null;
             _resident.Clear();
-            _resident.UnionWith(batch.ResidentBefore);
-            return new(DaggerfallExteriorAdmissionState.Refused);
-        }
-        if (readout.CompletedBatch >= batch.Batch)
-        {
-            _deferred = null;
-            return DaggerfallExteriorAdmission.Live;
-        }
-        if (readout.PlannedInstances == 0) return new(DaggerfallExteriorAdmissionState.Baking);
-        // The batches ahead of this one when it was made, and this one: those no longer pending are done.
-        double total = batch.Ahead + 1d;
-        double done = total - Math.Min(readout.PendingBatches, total);
-        return new(DaggerfallExteriorAdmissionState.Baking,
-            (done + ((double)readout.BakedInstances / readout.PlannedInstances)) / total);
+            _resident.UnionWith(held.ResidentBefore);
+        });
+        return receipt;
     }
 
     /// <summary>Captures the window and its anchor with the Engine origin cell the caller read.</summary>

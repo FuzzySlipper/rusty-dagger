@@ -189,6 +189,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     void IDaggerfallSiteTransitionHost.ReconcileArrivalPopulation() => ReconcileCivilianPopulation();
 
+    void IDaggerfallSiteTransitionHost.GroundArrivedActors() => _grounding.GroundAwaiting(actor =>
+        State.Actors.TryGet(actor.DurableId, out ActorState live) && live.Actor.Entity == actor.Actor.Entity);
+
     void IDaggerfallSiteTransitionHost.EnteredSite()
     {
         Casting.ClearTransient();

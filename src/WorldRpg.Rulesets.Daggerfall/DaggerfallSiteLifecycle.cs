@@ -44,6 +44,12 @@ internal interface IDaggerfallSiteTransitionHost
 
     /// <summary>The departing projection is about to be released; retire what it was still timing.</summary>
     void RetireDepartingProjection(DaggerfallSiteProjection source);
+
+    /// <summary>
+    /// The collision a staged site change handed off is live: the actors it placed while that collision was still to
+    /// come are settled on the floor below them now.
+    /// </summary>
+    void GroundArrivedActors();
 }
 
 /// <summary>
@@ -101,12 +107,20 @@ internal sealed class DaggerfallSiteLifecycle
     private DaggerfallExteriorCellId? _locationCell;
     private bool _admittingInitialResidency;
     private bool _retired;
-    // A staged site change holds its terrain window to hand it over deferred, and stands the arriving player only
-    // once that collision is live.
+    // A staged site change holds its terrain window and its location placements to hand them over deferred, and
+    // stands the arriving player only once that collision is live.
     private bool _deferringCollision;
     private bool _arrivalStandPending;
-    // An arrival whose ground the Engine refused: the world is held until its window is admitted again and stood on.
-    private bool _arrivalGroundRefused;
+    // Collision a site change handed off that play must not run without: the Engine refused it, or the change failed
+    // with it still being prepared. The world is held until it is live and the arrival stood on it.
+    private bool _awaitingGround;
+    private DaggerfallDeferredCollision? _deferredCollision;
+    // The location parts placed, by placement id, as the product means them and as handed to the Engine. They differ
+    // only while a staged change holds its placements (_heldPlacementGrid), or after the Engine refused a batch.
+    private readonly Dictionary<ulong, PlacedLocationPart> _placements = [];
+    private Dictionary<ulong, PlacedLocationPart> _enginePlacements = [];
+    private ulong? _heldPlacementGrid;
+    private ulong? _placementGrid;
     // The Engine composes placed artifacts on the local frame current when the first one was placed,
     // and moves that grid with every origin commit. A new game first places at origin zero; a restore
     // commits the saved origin before placing anything, so placements are expressed against this.
@@ -126,6 +140,9 @@ internal sealed class DaggerfallSiteLifecycle
         /// <summary>The presentation identity slot the active snapshot draws this location under.</summary>
         internal int Slot { get; } = slot;
     }
+
+    /// <summary>One placed part of a location's collision and navigation, with the profile whose source resolves it.</summary>
+    private sealed record PlacedLocationPart(SpatialContentArtifactPlacement Placement, DaggerfallSiteProfile Profile);
 
     /// <summary>The session-wide classic presentation every site projection draws held items and effects from.</summary>
     private readonly NormalizedClassicPresentation? _sessionPresentation;
@@ -270,16 +287,91 @@ internal sealed class DaggerfallSiteLifecycle
     /// Places one profile's parts and removes others in one Engine admission, holding the source its parts
     /// resolve from (the per-block publication's bundle, for an assembled location) open for the call.
     /// </summary>
+    /// <remarks>
+    /// Inside a staged site change, a town's placements and removals are held instead, and handed to the Engine as one
+    /// deferred batch once the change's own synchronous calls are done (<see cref="ReleaseHeldPlacements"/>): composing
+    /// a town's navigation takes hundreds of milliseconds. A dungeon's or an interior's placement is small and is made
+    /// at once, after anything held, so the Engine receives them in the product's order.
+    /// </remarks>
     private void ApplyLocationResidency(DaggerfallSiteProfile? placed, DaggerfallExteriorWorldOrigin? exteriorOrigin,
         IEnumerable<ulong> removals, ulong navigationGridId)
     {
         // Before any placement there is nothing resident to remove, and the composition starts with its first artifact.
         if (placed is null && _artifactFrameCompensation is null) return;
         Vector3 frame = _artifactFrameCompensation ?? EngineCompensation();
-        using IDisposable? source = placed?.Geometry.SpatialSource?.Invoke();
-        _ = _spatial.ApplyContentArtifactResidency(placed is null ? [] : LocationPlacements(placed, frame, exteriorOrigin), removals, navigationGridId);
+        SpatialContentArtifactPlacement[] placements = placed is null ? [] : LocationPlacements(placed, frame, exteriorOrigin);
+        ulong[] removed = [.. removals];
+        bool hold = _deferringCollision && placed is not { ProfileKind: not DaggerfallWorldProfileKind.Exterior };
+        // One request composes one navigation grid.
+        if (!hold || _heldPlacementGrid is { } grid && grid != navigationGridId) ReleaseHeldPlacements();
+        if (!hold)
+        {
+            using IDisposable? source = placed?.Geometry.SpatialSource?.Invoke();
+            _ = _spatial.ApplyContentArtifactResidency(placements, removed, navigationGridId);
+            Place(_enginePlacements, placements, placed, removed);
+        }
+        else _heldPlacementGrid = navigationGridId;
+        Place(_placements, placements, placed, removed);
+        _placementGrid = navigationGridId;
         _artifactFrameCompensation = frame;
     }
+
+    private static void Place(Dictionary<ulong, PlacedLocationPart> parts, SpatialContentArtifactPlacement[] placements,
+        DaggerfallSiteProfile? profile, ulong[] removals)
+    {
+        foreach (ulong id in removals) parts.Remove(id);
+        foreach (SpatialContentArtifactPlacement placement in placements) parts[placement.Id] = new(placement, profile!);
+    }
+
+    /// <summary>
+    /// Hands the Engine, as one deferred batch, what the placements held since the change began amount to: the parts
+    /// placed or moved and the parts gone. A part placed and removed again inside the change, or removed and placed
+    /// back unchanged (a failed change's rollback), costs nothing. A refused batch returns what the Engine is known
+    /// to have to before it, so handing the placements over again repeats it.
+    /// </summary>
+    private void ReleaseHeldPlacements()
+    {
+        if (_heldPlacementGrid is not { } grid) return;
+        _heldPlacementGrid = null;
+        HandOverPlacements(grid);
+    }
+
+    private void HandOverPlacements(ulong grid)
+    {
+        PlacedLocationPart[] placing = [.. _placements.Values
+            .Where(part => !_enginePlacements.TryGetValue(part.Placement.Id, out PlacedLocationPart? handed) || handed.Placement != part.Placement)
+            .OrderBy(part => part.Placement.Id)];
+        ulong[] removing = [.. _enginePlacements.Keys.Where(id => !_placements.ContainsKey(id)).Order()];
+        if (placing.Length == 0 && removing.Length == 0) return;
+        DaggerfallDeferredCollision deferred = DeferredCollision();
+        List<IDisposable> sources = [];
+        try
+        {
+            foreach (DaggerfallSiteProfile profile in placing.Select(part => part.Profile).Distinct())
+                if (profile.Geometry.SpatialSource?.Invoke() is { } source) sources.Add(source);
+            CollisionResidencyReadout before = deferred.Read();
+            SpatialContentArtifactResidencyReceipt receipt = _spatial.ApplyContentArtifactResidency(
+                placing.Select(part => part.Placement), removing, grid, deferred: true);
+            Dictionary<ulong, PlacedLocationPart> engineBefore = _enginePlacements;
+            _enginePlacements = new(_placements);
+            deferred.Track(receipt.DeferredBatch, before, () => _enginePlacements = engineBefore);
+        }
+        finally
+        {
+            foreach (IDisposable source in sources) source.Dispose();
+        }
+    }
+
+    /// <summary>The session's one follower of collision handed to the Engine to prepare off the update.</summary>
+    private DaggerfallDeferredCollision DeferredCollision() =>
+        _deferredCollision ??= new DaggerfallDeferredCollision(_engine.Spatial, _spatial.Session);
+
+    /// <summary>
+    /// Whether collision a staged site change admits is still held or being prepared: the floor below an arrival may
+    /// not be there yet, so anything settled onto it waits.
+    /// </summary>
+    internal bool CollisionPending =>
+        _exteriorResidency is { HoldsBatch: true } || _heldPlacementGrid is not null || _deferredCollision is { Awaiting: true };
 
     private void AdmitLocationArtifact(DaggerfallSiteProfile profile, DaggerfallExteriorWorldOrigin? exteriorOrigin = null) =>
         ApplyLocationResidency(profile, exteriorOrigin, [], profile.Geometry.NavigationGridId);
@@ -436,8 +528,8 @@ internal sealed class DaggerfallSiteLifecycle
     /// </summary>
     internal void StandArrivingPlayer()
     {
-        // The terrain this arrival would stand on is still to be baked: stand once it is live (AwaitArrivalCollision).
-        if (_exteriorResidency is { HoldsBatch: true })
+        // The ground this arrival would stand on is still to be prepared: stand once it is live (AwaitArrivalCollision).
+        if (CollisionPending)
         {
             _arrivalStandPending = true;
             return;
@@ -456,10 +548,12 @@ internal sealed class DaggerfallSiteLifecycle
     }
 
     /// <summary>
-    /// Runs a staged site change with its terrain window baked off the update. The window is held while the change
-    /// makes its own synchronous collision and content calls, which would otherwise wait for its bake, then handed
-    /// to the Engine as one deferred batch; an arrival inside the change is stood once <see cref="AwaitArrivalCollision"/>
-    /// finds that batch live. Play does not resume meanwhile: the loading screen holds the updates.
+    /// Runs a staged site change with its collision prepared off the update: its terrain window and its towns'
+    /// placements are held while the change makes its own synchronous collision and content calls, which would
+    /// otherwise wait for them, then handed to the Engine as deferred batches. An arrival inside the change is stood,
+    /// and the actors it placed are settled, once <see cref="AwaitArrivalCollision"/> finds them live. Play does not
+    /// resume meanwhile: the loading screen holds the updates. A change that fails with its rollback's collision still
+    /// to come leaves the world held until it is live (<see cref="RecoverArrivalGround"/>).
     /// </summary>
     internal void DeferCollision(Action change)
     {
@@ -475,48 +569,60 @@ internal sealed class DaggerfallSiteLifecycle
         finally
         {
             _deferringCollision = false;
-            // A failed change's rollback has applied its own window; whatever is still held matches what the window
-            // records, so the Engine is given it either way.
+            // A failed change's rollback has made its own placements and window; whatever is still held matches what
+            // they record, so the Engine is given it either way.
+            ReleaseHeldPlacements();
             _ = _exteriorResidency?.ReleaseHeld();
-            if (!changed) _arrivalStandPending = false;
+            if (!changed)
+            {
+                _arrivalStandPending = false;
+                if (CollisionPending) _awaitingGround = true;
+                else _host.GroundArrivedActors();
+            }
         }
     }
 
     /// <summary>
     /// How far the collision a <see cref="DeferCollision"/> change handed off has come; once it is live, stands the
-    /// arriving player on it and reports done. A refused batch fails the arrival: the Engine kept none of it, so
-    /// the arrival waits, still to be stood, while <see cref="RecoverArrivalGround"/> admits the window again.
+    /// arriving player on it, settles the actors placed with it, and reports done. A refused batch fails the arrival:
+    /// the Engine kept none of it, so the arrival waits, still to be stood, while <see cref="RecoverArrivalGround"/>
+    /// hands it over again.
     /// </summary>
     internal LoadingProgress AwaitArrivalCollision()
     {
-        DaggerfallExteriorAdmission admission = _exteriorResidency?.ReadAdmission() ?? DaggerfallExteriorAdmission.Live;
-        switch (admission.State)
+        DaggerfallDeferredCollisionReading reading = _deferredCollision?.Poll() ?? DaggerfallDeferredCollisionReading.Live;
+        switch (reading.State)
         {
-            case DaggerfallExteriorAdmissionState.Refused:
-                _arrivalGroundRefused = true;
+            case DaggerfallDeferredCollisionState.Refused:
+                _awaitingGround = true;
                 throw new DaggerfallArrivalCollisionRefusedException();
-            case DaggerfallExteriorAdmissionState.Baking:
-                return admission.Fraction is { } fraction ? LoadingProgress.Measured(fraction) : LoadingProgress.Unmeasured;
+            case DaggerfallDeferredCollisionState.Preparing:
+                return reading.Fraction is { } fraction ? LoadingProgress.Measured(fraction) : LoadingProgress.Unmeasured;
         }
         if (_arrivalStandPending)
         {
             _arrivalStandPending = false;
             StandArrivingPlayer();
         }
+        _host.GroundArrivedActors();
         return LoadingProgress.Finished;
     }
 
     /// <summary>
-    /// Brings back the ground of an arrival whose collision the Engine refused, one admitted update at a time; true
-    /// when there is nothing to recover. Until then the world must not run: nothing holds the player or anyone else
-    /// up. Each call reads the window's batch, hands the Engine the window again off the update once that batch is
-    /// refused, and stands the arrival once it is live.
+    /// Brings back the collision a site change handed off and play must not run without, one admitted update at a
+    /// time; true when there is nothing to wait for. Until then the world must not run: nothing holds the player or
+    /// anyone else up. Each call reads the batches handed over; once they are refused, it hands the placements and
+    /// the window over again off the update, and once they are live, stands the arrival on them.
     /// </summary>
     internal bool RecoverArrivalGround()
     {
-        if (!_arrivalGroundRefused) return true;
-        if (_exteriorResidency is not { AwaitsBatch: true } && ActiveProfile.Kind == DaggerfallWorldProfileKind.Exterior)
-            DeferCollision(() => _ = UpdateExteriorResidency());
+        if (!_awaitingGround) return true;
+        if (_deferredCollision is not { Awaiting: true })
+            DeferCollision(() =>
+            {
+                _heldPlacementGrid = _placementGrid;
+                if (ActiveProfile.Kind == DaggerfallWorldProfileKind.Exterior) _ = UpdateExteriorResidency();
+            });
         try
         {
             if (!AwaitArrivalCollision().Done) return false;
@@ -525,7 +631,7 @@ internal sealed class DaggerfallSiteLifecycle
         {
             return false;
         }
-        _arrivalGroundRefused = false;
+        _awaitingGround = false;
         return true;
     }
 
@@ -1693,6 +1799,7 @@ internal sealed class DaggerfallSiteLifecycle
         if (_exteriorResidency is not { IsInitialized: true })
             throw new InvalidOperationException("An origin commit requires admitted exterior residency; otherwise world coordinates would detach from their cell.");
         // The commit installs pending batches and moves them with the rest; a held one would miss the move.
+        ReleaseHeldPlacements();
         _ = _exteriorResidency.ReleaseHeld();
         EntityStore store = _state.Actors.Store;
         EntityId[] roots = [.. _state.Actors.All.Select(actor => actor.Actor.Entity),
@@ -1860,7 +1967,8 @@ internal sealed class DaggerfallSiteLifecycle
             _engine.Spatial,
             _spatial.Session,
             new DaggerfallExteriorWorldBounds(_definitions.Terrain.Width, _definitions.Terrain.Height),
-            surfaceFactory);
+            surfaceFactory,
+            DeferredCollision());
     }
 
     private void ReconcileExteriorTerrainAppearance(DaggerfallExteriorCellResidency residency)

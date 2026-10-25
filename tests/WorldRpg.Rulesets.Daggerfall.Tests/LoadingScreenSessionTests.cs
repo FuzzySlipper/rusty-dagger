@@ -130,7 +130,7 @@ public sealed class LoadingScreenSessionTests
     }
 
     [Fact]
-    public void A_journeys_ground_bakes_off_the_update_under_the_screen_and_the_player_is_stood_only_once_it_is_live()
+    public void A_journeys_ground_and_town_are_prepared_off_the_update_under_the_screen_and_the_player_is_stood_only_once_they_are_live()
     {
         AssembledWorld world = Shared.Value;
         DaggerfallSiteRecord destination = world.Unpublished(_ => true);
@@ -139,12 +139,15 @@ public sealed class LoadingScreenSessionTests
         LoadingScreen loading = run.Loading!;
         SpatialFake spatial = run.Spatial;
         string title = $"Travelling to {destination.Name}", arriving = $"Arriving at {destination.Name}";
-        // The terrain window's instances, and whether each downward floor probe (a stand) found them live.
+        // The terrain window's instances and the town's placements, and whether each downward floor probe (a stand)
+        // found both live.
+        ulong[] town = [];
         bool WindowLive() => spatial.ResidentCollisionInstances.Keys.Any(id => id >> 56 == 0xD7);
+        bool TownLive() => town.Length != 0 && town.All(spatial.PlacedArtifacts.Contains);
         List<bool> probes = [];
         spatial.FloorHit = request =>
         {
-            if (request.Direction.Y < 0) probes.Add(WindowLive());
+            if (request.Direction.Y < 0) probes.Add(WindowLive() && TownLive());
             return default;
         };
         spatial.HoldDeferredCollision = true;
@@ -153,38 +156,86 @@ public sealed class LoadingScreenSessionTests
         run.Step();
         run.Step();
         int waited = spatial.SynchronousWaitsOnDeferred;
+        int placements = spatial.ContentResidencyRequests.Count;
         probes.Clear();
         run.Step();
 
-        // Arrived: the destination is the session's, its window is handed to the Engine as one deferred batch, and
-        // nothing the arrival did afterwards waited on it. The batch still validates, so the bar moves unmeasured.
+        // Arrived: the destination is the session's, and the town's placements and its window are handed to the Engine
+        // as two deferred batches, the placements first, after everything else the arrival did; nothing waited on them.
         Assert.Equal(DaggerfallWorldProfileIds.Exterior(destination.Id), session.Sites.ActiveProfile);
-        Assert.Equal(1, spatial.PendingDeferredBatches);
+        Assert.Equal(2, spatial.PendingDeferredBatches);
+        SpatialContentArtifactResidencyRequest placed = Assert.Single(spatial.ContentResidencyRequests.Skip(placements));
+        Assert.True(placed.Deferred);
+        town = [.. placed.Admitted.ToArray().Select(instance => instance.Id)];
+        Assert.NotEmpty(town);
         Assert.True(spatial.CollisionResidencyRequests.Last(request => request.Deferred).Instances.Length > 0);
         Assert.Equal(waited, spatial.SynchronousWaitsOnDeferred);
         Assert.False(WindowLive());
+        Assert.False(TownLive());
+        // The placements still parse, so the bar moves unmeasured, and nobody is stood: there is no ground yet.
         Assert.Equal(new LoadingState(title, arriving, 2, 3, null), loading.Current);
         Assert.Null(run.PublishedLoading()!["fraction"]);
-        // Not stood: there is no ground under the player yet.
         Assert.Empty(probes);
 
-        // Baking: the bar counts the share of the window baked within the arrival's third.
-        spatial.DeferredBake = (12, 48);
+        // Composing: the bar counts the share of the town's cells composed, of the two batches, within the arrival's third.
+        spatial.DeferredCompose = (250, 1000);
         run.Step();
-        Assert.Equal(new LoadingState(title, arriving, 2, 3, (2d + .25d) / 3d), loading.Current);
-        Assert.Equal((2d + .25d) / 3d, run.PublishedLoading()!["fraction"]);
+        Assert.Equal(new LoadingState(title, arriving, 2, 3, (2d + .125d) / 3d), loading.Current);
+        Assert.Equal((2d + .125d) / 3d, run.PublishedLoading()!["fraction"]);
         Assert.Empty(probes);
 
         // Live: the arrival is stood on it, and the screen keeps its full bar for one update before play resumes.
         spatial.HoldDeferredCollision = false;
         run.Step();
         Assert.True(WindowLive());
+        Assert.True(TownLive());
         Assert.NotEmpty(probes);
         Assert.All(probes, Assert.True);
         Assert.Equal(new LoadingState(title, arriving, 3, 3, 1d), loading.Current);
         run.Step();
         Assert.Null(loading.Current);
         Assert.Equal(waited, spatial.SynchronousWaitsOnDeferred);
+    }
+
+    [Fact]
+    public void A_journeys_town_placements_the_Engine_refuses_fail_the_arrival_and_are_handed_over_again_while_the_world_is_held()
+    {
+        AssembledWorld world = Shared.Value;
+        DaggerfallSiteRecord destination = world.Unpublished(_ => true);
+        using AssembledWorldRun run = world.Start(AssembledWorld.PrivateersHold, loadingScreen: true);
+        DaggerfallSession session = run.Session;
+        SpatialFake spatial = run.Spatial;
+        int placements = spatial.ContentResidencyRequests.Count;
+        HashSet<ulong> placedBefore = [.. spatial.PlacedArtifacts];
+        spatial.RefuseDeferredPlacements = true;
+
+        run.AcceptJourney(destination);
+        run.FinishLoading();
+
+        // The window went live, the town did not: the arrival failed and says why.
+        Assert.Null(run.Loading!.Current);
+        Assert.Equal(DaggerfallWorldProfileIds.Exterior(destination.Id), session.Sites.ActiveProfile);
+        Assert.Contains("the Engine refused its collision", session.Presentation.LastOutcome);
+        ulong[] town = [.. spatial.ContentResidencyRequests.Skip(placements).Single(request => request.Deferred)
+            .Admitted.ToArray().Select(instance => instance.Id)];
+        // The destination's own parts: the island's are placed again too, in the journey's new frame.
+        ulong[] arriving = [.. town.Where(id => !placedBefore.Contains(id))];
+        Assert.NotEmpty(arriving);
+        Assert.DoesNotContain(arriving, spatial.PlacedArtifacts.Contains);
+
+        // Held: the same placements go to the Engine again off the update, and nobody steps until they are live.
+        int steps = spatial.StepCalls, requests = spatial.ContentResidencyRequests.Count;
+        spatial.RefuseDeferredPlacements = false;
+        spatial.HoldDeferredCollision = true;
+        run.Step();
+        SpatialContentArtifactResidencyRequest again = Assert.Single(spatial.ContentResidencyRequests.Skip(requests));
+        Assert.True(again.Deferred);
+        Assert.Equal(town, again.Admitted.ToArray().Select(instance => instance.Id));
+        Assert.Equal(steps, spatial.StepCalls);
+        spatial.HoldDeferredCollision = false;
+        run.Step();
+        Assert.All(arriving, id => Assert.Contains(id, spatial.PlacedArtifacts));
+        Assert.True(spatial.StepCalls > steps);
     }
 
     [Fact]

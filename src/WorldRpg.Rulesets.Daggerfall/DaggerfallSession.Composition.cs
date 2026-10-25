@@ -639,6 +639,7 @@ internal sealed partial class DaggerfallSession
                 _roster, _persistence, _groundContainers, _enemyBehavior, ExecuteDungeonFamilyAction, this,
                 projection, actionTriggers, profiles, activeProfile, saved?.Site.ReturnProfile?.Require(),
                 composition.StartSite.ClassicPresentation);
+            _grounding.FloorPending = () => _sites.CollisionPending;
             State.LevelUps.Began += () => _appearance.PlayGameplaySound(96, "level-up");
             _equipmentMoves.Changed += change =>
             {
