@@ -7,9 +7,15 @@ namespace Daggerfall.Import.Publication;
 /// Content payloads have independently imported sections; preserving their original JSON keeps
 /// an update to one importer from creating formatting churn in every other section.
 /// </summary>
+/// <remarks>
+/// Each written value is compact: nobody reads a generated payload by eye, and the product parses it at every
+/// composition, so the indentation a section serializes with would double what it parses. Only the whitespace
+/// between tokens is removed, so the value's strings and numbers keep their exact bytes. The root keeps one
+/// section to a line.
+/// </remarks>
 public static class TopLevelJsonSectionRewriter
 {
-    /// <summary>Replaces or appends root object sections using already serialized JSON values.</summary>
+    /// <summary>Replaces or appends root object sections using already serialized JSON values, each written compact.</summary>
     public static string ReplaceOrAppend(string json, IReadOnlyDictionary<string, string> values)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(json);
@@ -43,7 +49,7 @@ public static class TopLevelJsonSectionRewriter
                 foreach ((string sectionName, int position) in missing.Select((sectionName, position) => (sectionName, position)))
                 {
                     output.Append('\n').Append("  ").Append(JsonSerializer.Serialize(sectionName)).Append(": ")
-                        .Append(Indent(values[sectionName], "  "));
+                        .Append(Compact(values[sectionName]));
                     if (position != missing.Length - 1) output.Append(',');
                 }
 
@@ -63,8 +69,7 @@ public static class TopLevelJsonSectionRewriter
             if (values.TryGetValue(name, out string? replacement))
             {
                 output.Append(json, copied, valueStart - copied);
-                string lineIndent = LineIndent(json, index);
-                output.Append(Indent(replacement, lineIndent));
+                output.Append(Compact(replacement));
                 copied = valueEnd;
                 replaced.Add(name);
             }
@@ -131,16 +136,34 @@ public static class TopLevelJsonSectionRewriter
         throw new ArgumentException($"The string at offset {start} does not close.", nameof(value));
     }
 
-    private static string LineIndent(string value, int position)
+    /// <summary>A JSON value without the whitespace between its tokens; what is inside a string is kept as it is.</summary>
+    public static string Compact(string json)
     {
-        int line = value.LastIndexOf('\n', position);
-        int start = line < 0 ? 0 : line + 1;
-        int end = start;
-        while (end < value.Length && value[end] is ' ' or '\t') end++;
-        return value[start..end];
-    }
+        ArgumentNullException.ThrowIfNull(json);
+        System.Text.StringBuilder output = new(json.Length);
+        bool inString = false;
+        for (int index = 0; index < json.Length; index++)
+        {
+            char character = json[index];
+            if (inString)
+            {
+                output.Append(character);
+                if (character == '\\') output.Append(json[++index]);
+                else if (character == '"') inString = false;
+            }
+            else if (character == '"')
+            {
+                inString = true;
+                output.Append(character);
+            }
+            else if (character is not (' ' or '\t' or '\r' or '\n'))
+            {
+                output.Append(character);
+            }
+        }
 
-    private static string Indent(string value, string prefix) => value.Replace("\n", "\n" + prefix, StringComparison.Ordinal);
+        return output.ToString();
+    }
 
     private static bool HasRootMembers(string value, int start, int end) => value[start..end].Any(character => !char.IsWhiteSpace(character));
 }

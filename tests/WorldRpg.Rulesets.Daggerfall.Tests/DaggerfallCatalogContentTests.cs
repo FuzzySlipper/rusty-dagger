@@ -169,9 +169,9 @@ public sealed class DaggerfallCatalogContentTests
     }
 
     [Theory]
-    [InlineData("\"id\": \"implicit-values\"", "\"id\": \"\"")]
-    [InlineData("\"evidence\": \"daggerfall-unity/Assets/Scripts/Game/Items/ItemEnums.cs declares None = -1 in ItemGroups and ArtifactsSubTypes.\"", "\"evidence\": \"\"")]
-    [InlineData("\"status\": \"available\"", "\"status\": \"unclear\"")]
+    [InlineData("\"id\":\"implicit-values\"", "\"id\":\"\"")]
+    [InlineData("\"evidence\":\"daggerfall-unity/Assets/Scripts/Game/Items/ItemEnums.cs declares None = -1 in ItemGroups and ArtifactsSubTypes.\"", "\"evidence\":\"\"")]
+    [InlineData("\"status\":\"available\"", "\"status\":\"unclear\"")]
     public void RejectsABaselineRuleOrSubstituteThatDoesNotSayWhatItRestsOn(string before, string after)
     {
         Assert.True(TestPayload.Contains(before), "The fixture's text is not in the payload.");
@@ -208,13 +208,13 @@ public sealed class DaggerfallCatalogContentTests
 
     [Theory]
     [InlineData("\"itemTemplateLedger\"", "\"itemTemplateLedgerAbsent\"")]
-    [InlineData("\"provenance\": \"no-donor-group\"", "\"provenance\": \"\"")]
-    [InlineData("\"disposition\": \"substitute\"", "\"disposition\": \"decoded\"")]
-    [InlineData("\"targets\": 288", "\"targets\": 287")]
-    [InlineData("\"referencedByDonorGroups\": 279", "\"referencedByDonorGroups\": 278")]
-    [InlineData("\"nativeTemplatesDecoded\": 0", "\"nativeTemplatesDecoded\": 279")]
-    [InlineData("\"nativeDecoding\": false", "\"nativeDecoding\": true")]
-    [InlineData("\"count\": 31,", "\"count\": 30,")]
+    [InlineData("\"provenance\":\"no-donor-group\"", "\"provenance\":\"\"")]
+    [InlineData("\"disposition\":\"substitute\"", "\"disposition\":\"decoded\"")]
+    [InlineData("\"targets\":288", "\"targets\":287")]
+    [InlineData("\"referencedByDonorGroups\":279", "\"referencedByDonorGroups\":278")]
+    [InlineData("\"nativeTemplatesDecoded\":0", "\"nativeTemplatesDecoded\":279")]
+    [InlineData("\"nativeDecoding\":false", "\"nativeDecoding\":true")]
+    [InlineData("\"count\":31,", "\"count\":30,")]
     public void RejectsAnItemTemplateLedgerThatMisstatesItsOwnCoverage(string before, string after)
     {
         Assert.True(TestPayload.Contains(before), "The fixture's text is not in the payload.");
@@ -224,10 +224,10 @@ public sealed class DaggerfallCatalogContentTests
     }
 
     [Theory]
-    [InlineData("\"status\": \"absent\"", "\"status\": \"Absent\"")]
-    [InlineData("\"disposition\": \"substitute\"", "\"disposition\": \"banana\"")]
-    [InlineData("\"nativeDecoding\": false", "\"nativeDecoding\": \"false\"")]
-    [InlineData("\"donorGroups\": [", "\"donorGroups\": [123, ")]
+    [InlineData("\"status\":\"absent\"", "\"status\":\"Absent\"")]
+    [InlineData("\"disposition\":\"substitute\"", "\"disposition\":\"banana\"")]
+    [InlineData("\"nativeDecoding\":false", "\"nativeDecoding\":\"false\"")]
+    [InlineData("\"donorGroups\":[", "\"donorGroups\":[123, ")]
     public void RejectsALedgerThatLeavesItsVocabulary(string before, string after)
     {
         // A near miss must not pass as a state: 'Absent' is not the absent status, 'banana'
@@ -245,8 +245,8 @@ public sealed class DaggerfallCatalogContentTests
         // The vocabulary is closed rather than collapsed to one value: a supplied source is
         // what lets a target be malformed or decoded, and the ledger must be able to say so.
         byte[] tampered = TestPayload.Replaced(
-            ("\"status\": \"absent\"", "\"status\": \"present\""),
-            ("\"disposition\": \"substitute\"", "\"disposition\": \"malformed\""));
+            ("\"status\":\"absent\"", "\"status\":\"present\""),
+            ("\"disposition\":\"substitute\"", "\"disposition\":\"malformed\""));
 
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(tampered);
 
@@ -261,10 +261,7 @@ public sealed class DaggerfallCatalogContentTests
         // The ledger's own target block, not the citation string: the path appears in every catalog
         // item reference too, so a bare replacement would be caught by the catalog gate and this test
         // would pass with the ledger gate gone.
-        const string ledgerTarget = """
-            "target": {
-                  "path": "daggerfall-unity/Assets/Scripts/API/ItemsFile.cs",
-            """;
+        const string ledgerTarget = "\"target\":{\"path\":\"daggerfall-unity/Assets/Scripts/API/ItemsFile.cs\",";
         Assert.True(TestPayload.Contains(ledgerTarget), "The ledger's target block is not in the payload.");
         byte[] tampered = TestPayload.Replaced((ledgerTarget, ledgerTarget.Replace("ItemsFile.cs", "Invented.cs", StringComparison.Ordinal)));
 
@@ -278,8 +275,8 @@ public sealed class DaggerfallCatalogContentTests
         // substitute withdrawn and a target resolved, the ledger claims a fact with nothing
         // behind it — which is the one thing this task must never publish.
         byte[] tampered = TestPayload.Replaced(
-            ("\"status\": \"available\"", "\"status\": \"missing\""),
-            ("\"disposition\": \"unresolved\"", "\"disposition\": \"decoded\""));
+            ("\"status\":\"available\"", "\"status\":\"missing\""),
+            ("\"disposition\":\"unresolved\"", "\"disposition\":\"decoded\""));
 
         Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(tampered));
     }
