@@ -2840,10 +2840,11 @@ test('travel map draws the published world and region art from the projected map
     // The chosen place keeps focus through the redraw, and its name rests in the readout.
     assert.equal(document.activeElement, root.querySelector('.dagger-travel-map-dot[data-index="9"]'));
     assert.equal(root.querySelector('.dagger-travel-map-readout').textContent, 'Hand-drawn Keep (Dungeon)');
-    // The quoted route is drawn from where it starts to the chosen place, in the sheet's percentages.
+    // The quoted route is drawn from where it starts to the chosen place, in the sheet art's pixels.
     const line = root.querySelector('.dagger-travel-map-route line');
-    near(Number(line.getAttribute('x1')), 70 / (frame.right - frame.left) * 100);
-    near(Number(line.getAttribute('y2')), 100 / (frame.bottom - frame.top) * 100);
+    assert.equal(root.querySelector('.dagger-travel-map-route').getAttribute('viewBox'), `0 0 ${frame.width} ${frame.height}`);
+    near(Number(line.getAttribute('x1')), 70 / (frame.right - frame.left) * frame.width);
+    near(Number(line.getAttribute('y2')), 100 / (frame.bottom - frame.top) * frame.height);
     assert.match(root.querySelector('.dagger-travel-map-legend').textContent, /Route/);
     // The place was chosen with no pointer (as Enter or a pad's accept clicks), so once its quote is in,
     // focus goes on to Begin journey rather than leaving the player to step out through every place.
@@ -3029,7 +3030,7 @@ test('dungeon map notes are added at the player, edited and removed through the 
   } finally { f.dispose(); }
 });
 
-test('a stationary click on a city map point chooses it under pointer capture, and a pan from it does not', () => {
+test('a stationary click on a city map point chooses it by position under pointer capture, and a pan from it does not', () => {
   const f = fixture();
   // Pointer capture as a browser does it: after a press captures, the release and click go to the captor.
   let captured = null;
@@ -3045,22 +3046,37 @@ test('a stationary click on a city map point chooses it under pointer capture, a
     const svg = f.root.querySelector('.dagger-map-diagram');
     svg.getBoundingClientRect = () => ({ left: 0, top: 0, width: 320, height: 320, right: 320, bottom: 320 });
     const point = f.root.querySelector('[data-label-id="0/0/3"]');
-    const at = (target, type, x, y, buttons) => target.dispatchEvent(new window.MouseEvent(type, { bubbles: true, cancelable: true, button: 0, buttons, clientX: x, clientY: y }));
+    const at = (target, type, x, y, buttons) => target.dispatchEvent(new window.MouseEvent(type, { bubbles: true, cancelable: true, button: 0, buttons, clientX: x, clientY: y, detail: type === 'click' ? 1 : 0 }));
     const choices = () => f.actions.filter(action => action.action === 'map-building').length;
-    // Press and release in place: the release and click reach the point the press captured on.
-    at(point, 'pointerdown', 100, 100, 1);
+    // The window's Servo sends pointer events inside the diagram to the <svg>, so the point is found
+    // by position: at zoom 3.5 the point (1, 2) sits 3.5 and 7 diagram units from the centre.
+    const [x, y] = [163.5, 167];
+    assert.equal(point.querySelector('text').getAttribute('display'), 'none');
+    at(svg, 'pointermove', x + 2, y, 0);
+    assert.equal(point.querySelector('text').getAttribute('display'), 'inline');
+    at(svg, 'pointermove', 40, 40, 0);
+    assert.equal(point.querySelector('text').getAttribute('display'), 'none');
+    // Focus rings the point and names it, as attributes.
+    point.focus();
+    assert.equal(point.querySelector('circle').getAttribute('stroke'), '#ffe077');
+    assert.equal(point.querySelector('text').getAttribute('display'), 'inline');
+    // Press and release in place: the click on the diagram chooses the point under it.
+    at(svg, 'pointerdown', x, y, 1);
     const captor = captured;
-    assert.equal(captor, point);
-    at(captor, 'pointerup', 100, 100, 0); at(captor, 'click', 100, 100, 0);
+    assert.equal(captor, svg);
+    at(captor, 'pointerup', x, y, 0); at(captor, 'click', x, y, 0);
     assert.equal(choices(), 1);
     assert.deepEqual(f.actions.filter(action => action.action === 'map-building').at(-1), { action: 'map-building', region: 17, destination: 45, item: '0/0/3' });
+    // A click away from every point chooses nothing.
+    at(svg, 'pointerdown', 40, 40, 1); at(captured, 'pointerup', 40, 40, 0); at(svg, 'click', 40, 40, 0);
+    assert.equal(choices(), 1);
     // A press on the point that travels pans the map, and its trailing click chooses nothing.
     const group = svg.querySelector(':scope > g');
     const before = group.getAttribute('transform');
-    at(point, 'pointerdown', 100, 100, 1);
-    at(captured, 'pointermove', 160, 120, 1);
+    at(svg, 'pointerdown', x, y, 1);
+    at(captured, 'pointermove', x + 60, y + 20, 1);
     const target = captured;
-    at(target, 'pointerup', 160, 120, 0); at(target, 'click', 160, 120, 0);
+    at(target, 'pointerup', x + 60, y + 20, 0); at(target, 'click', x + 60, y + 20, 0);
     assert.notEqual(group.getAttribute('transform'), before);
     assert.equal(choices(), 1);
   } finally { [proto.setPointerCapture, proto.hasPointerCapture, proto.releasePointerCapture] = saved; f.dispose(); }
@@ -4261,6 +4277,35 @@ test('arrow navigation treats a wide row the focus sits over as in line, ahead o
     back.focus();
     back.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowUp', bubbles: true, cancelable: true }));
     assert.equal(document.activeElement, row);
+  } finally {
+    window.HTMLElement.prototype.getBoundingClientRect = original;
+    window.Element.prototype.getClientRects = originalRects;
+    f.dispose();
+  }
+});
+
+test('arrow navigation passes over a control the page cannot focus for the next one in that direction', () => {
+  const f = fixture();
+  const original = window.HTMLElement.prototype.getBoundingClientRect;
+  const originalRects = window.Element.prototype.getClientRects;
+  try {
+    f.publish({ spells: { available: [{ key: 'a', name: 'Alpha', cost: 8 }], ready: null, result: '' } });
+    f.root.querySelector('[data-action="spells"]').click();
+    const book = f.root.querySelector('.dagger-spells-root');
+    const row = book.querySelector('[data-action="spell-select"]');
+    const tab = book.querySelector('[data-spell-school="all"]');
+    const back = [...f.root.querySelectorAll('.dagger-menu button')].find(button => button.textContent === 'Back to menu');
+    // A column: tab, then row, then Back. The row refuses focus, as the window's Servo refuses an SVG point.
+    const rects = new Map([[tab, [420, 100, 75, 20]], [row, [420, 200, 75, 20]], [back, [420, 300, 75, 20]]]);
+    window.HTMLElement.prototype.getBoundingClientRect = function () {
+      const [left, top, width, height] = this === document.documentElement ? [0, 0, 1280, 720] : rects.get(this) ?? [-9999, -9999, 0, 0];
+      return { left, top, width, height, right: left + width, bottom: top + height, x: left, y: top };
+    };
+    window.Element.prototype.getClientRects = function () { return rects.has(this) ? [this.getBoundingClientRect()] : []; };
+    row.focus = () => {};
+    tab.focus();
+    tab.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowDown', bubbles: true, cancelable: true }));
+    assert.equal(document.activeElement, back);
   } finally {
     window.HTMLElement.prototype.getBoundingClientRect = original;
     window.Element.prototype.getClientRects = originalRects;

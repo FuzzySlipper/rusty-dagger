@@ -24,9 +24,17 @@ The window draws the page with Servo, which differs from a browser in ways
 the shell already follows: a modal frame dims the page with `--dagger-scrim`
 (a spread shadow) rather than `::backdrop`; selectors avoid `:has()`; focus
 rings match `:focus` under `.keyed-navigation` as well as `:focus-visible`,
-which Servo never matches after script focus; inline SVG takes its paint as
-attributes, since Servo draws it without the stylesheet; and selects and inputs
-that should fill a cell are sized explicitly.
+which Servo never matches after script focus; and selects and inputs that
+should fill a cell are sized explicitly.
+
+Servo draws an inline SVG as a picture of its markup, so the maps keep all of
+an SVG's look in attributes: paint, a name's `display`, a `font-family` on
+each `<text>`, and no `vector-effect`. State a stylesheet would express with
+`:hover`, `:focus` or an ancestor class is set on the elements by script.
+Pointer events inside an SVG reach only the `<svg>`, so the local map finds the
+point under the pointer by position. SVG elements cannot take focus under
+Servo; keyed navigation passes over a control that refuses focus, and the
+map's places stay reachable as HTML controls beside it.
 
 Each surface is its own module in `src/ui` (`menu.ts`, `dialogue.ts`,
 `hud.ts`, `death.ts`, `entry.ts`, `choices.ts`, `dungeon-text.ts` beside the

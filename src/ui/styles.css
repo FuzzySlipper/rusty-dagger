@@ -247,13 +247,8 @@
 .dagger-map-view.is-panning .dagger-map-diagram { border-color: #ffe077; box-shadow: 0 0 0 2px rgb(255 224 119 / .4); }
 .dagger-map-diagram { width: 100%; height: min(60vh, 37.5rem); background: #17232b; border: 1px solid #87969f; }
 .dagger-map-hint { margin: .25rem 0 0; font-size: .8rem; color: #b9ae8c; }
-.dagger-map-point circle { fill: #d5e2e7; stroke: #17232b; stroke-width: 1; }
-.dagger-map-point.is-note circle { fill: #8fd0ff; }
-.dagger-map-point.is-selected circle { fill: #ffe077; }
+/* The diagram's paint and name visibility are attributes set by maps.ts: the window's Servo draws SVG from its markup alone. */
 .dagger-map-point:focus { outline: none; }
-.dagger-map-point:focus circle { stroke: #ffe077; stroke-width: 2.5; }
-.dagger-map-name { display: none; font: 600 11px system-ui, sans-serif; fill: #f6ead0; stroke: #10171c; stroke-width: 3px; paint-order: stroke; pointer-events: none; }
-.dagger-map-point:is(:hover, :focus, .is-selected, .is-note) .dagger-map-name, .dagger-map-view.shows-names .dagger-map-name { display: inline; }
 .dagger-map-legend { display: flex; flex-wrap: wrap; gap: .25rem 1rem; list-style: none; margin: 0; padding: 0; font-size: .85rem; }
 .dagger-map-legend li { display: inline-flex; align-items: center; gap: .375rem; }
 .dagger-map-key { display: inline-block; width: .875rem; height: .875rem; border: 1px solid rgb(0 0 0 / .6); }
@@ -320,7 +315,6 @@
 .dagger-travel-map-canvas > img { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
 /* The route is clipped to the map, so a journey that starts off this sheet enters it at the edge. */
 .dagger-travel-map-route { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
-.dagger-travel-map-route line { filter: drop-shadow(0 0 1px #000); }
 .dagger-travel-map-layer { position: absolute; inset: 0; }
 .dagger-travel-map-layer > * { position: absolute; transform: translate(-50%, -50%); padding: 0; cursor: var(--dagger-cursor-pointer); }
 .dagger-travel-map-region { width: .875rem; height: .875rem; border-radius: 50%; border: 2px solid #fff0a7; background: #6d2b14; }
