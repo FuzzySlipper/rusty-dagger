@@ -193,7 +193,8 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
         buildings.append(text);
       }
     }
-    viewport.append(svgElement('path', { d: PLAYER_ARROW, 'data-player': 'true', class: 'dagger-map-player' }));
+    // Paint as attributes: the window's Servo draws SVG without the page's stylesheet.
+    viewport.append(svgElement('path', { d: PLAYER_ARROW, 'data-player': 'true', class: 'dagger-map-player', fill: '#73ff98', stroke: '#0d2416', 'stroke-width': '1' }));
     // The legend names what this map draws: the ruleset's area categories, then the marks.
     const entry = (swatch: string, text: string, style?: string): HTMLLIElement => {
       const item = document.createElement('li');
