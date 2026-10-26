@@ -57,6 +57,8 @@ internal class SpatialFake : DispatchProxy
     internal bool RefuseDeferredCollision { get; set; }
     /// <summary>Refuses each deferred placement batch when it would install, as the Engine refuses an artifact it cannot read.</summary>
     internal bool RefuseDeferredPlacements { get; set; }
+    /// <summary>Rejects this many deferred placement requests in the call, unrecorded and before any batch is made.</summary>
+    internal int RejectDeferredPlacementCalls { get; set; }
     /// <summary>The location placements live in the most recently created session, by placement id.</summary>
     internal IReadOnlyCollection<ulong> PlacedArtifacts => CurrentSession.Placed;
     /// <summary>The deferred batches made in the most recent session and not yet installed or refused.</summary>
@@ -227,6 +229,11 @@ internal class SpatialFake : DispatchProxy
     /// </remarks>
     private SpatialContentArtifactResidencyReceipt ApplyContentResidency(SpatialContentArtifactResidencyRequest request)
     {
+        if (request.Deferred && RejectDeferredPlacementCalls > 0)
+        {
+            RejectDeferredPlacementCalls--;
+            throw new InvalidOperationException("Rejected deferred placement in the call.");
+        }
         ContentResidencyRequests.Add(request);
         SessionColliders colliders = Live(request.Session);
         // Keep the historical counter as a count of accepted/attempted static world admissions so

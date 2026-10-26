@@ -400,16 +400,17 @@ internal sealed class DaggerfallExteriorCellResidency
     /// Hands a held batch to the Engine to validate, bake and install off the update; nothing when none is held.
     /// The session's <see cref="DaggerfallDeferredCollision"/> follows it until it is live. A refusal changed nothing
     /// in the Engine, so the window returns to the cells resident before it: its next update admits them again.
+    /// A request the Engine rejects in the call stays held, to be handed over again.
     /// </summary>
     internal CollisionReplaceReceipt? ReleaseHeld()
     {
         if (_held is not { } held) return null;
-        _held = null;
         CollisionResidencyReadout before = _deferred.Read();
         CollisionResidencyRequest request = held.Request;
         CollisionReplaceReceipt receipt = _spatial.ApplyCollisionResidency(new CollisionResidencyRequest(
             request.Session, request.Assets, request.Vertices, request.Triangles, request.Instances,
             request.RemovedAssets, request.RemovedInstances, Deferred: true));
+        _held = null;
         _deferred.Track(receipt.DeferredBatch, before, () =>
         {
             _resident.Clear();

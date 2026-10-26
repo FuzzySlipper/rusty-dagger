@@ -327,13 +327,14 @@ internal sealed class DaggerfallSiteLifecycle
     /// Hands the Engine, as one deferred batch, what the placements held since the change began amount to: the parts
     /// placed or moved and the parts gone. A part placed and removed again inside the change, or removed and placed
     /// back unchanged (a failed change's rollback), costs nothing. A refused batch returns what the Engine is known
-    /// to have to before it, so handing the placements over again repeats it.
+    /// to have to before it, so handing the placements over again repeats it. A handover that throws (an artifact
+    /// that does not resolve, a request the Engine rejects in the call) leaves them held, to be handed over again.
     /// </summary>
     private void ReleaseHeldPlacements()
     {
         if (_heldPlacementGrid is not { } grid) return;
-        _heldPlacementGrid = null;
         HandOverPlacements(grid);
+        _heldPlacementGrid = null;
     }
 
     private void HandOverPlacements(ulong grid)
@@ -553,7 +554,9 @@ internal sealed class DaggerfallSiteLifecycle
     /// otherwise wait for them, then handed to the Engine as deferred batches. An arrival inside the change is stood,
     /// and the actors it placed are settled, once <see cref="AwaitArrivalCollision"/> finds them live. Play does not
     /// resume meanwhile: the loading screen holds the updates. A change that fails with its rollback's collision still
-    /// to come leaves the world held until it is live (<see cref="RecoverArrivalGround"/>).
+    /// to come leaves the world held until it is live (<see cref="RecoverArrivalGround"/>). So does a handover that
+    /// throws: what it could not hand over stays held, and a change that had otherwise succeeded fails with it, its
+    /// arrival committed but still to be stood.
     /// </summary>
     internal void DeferCollision(Action change)
     {
@@ -561,6 +564,7 @@ internal sealed class DaggerfallSiteLifecycle
         if (_deferringCollision) throw new InvalidOperationException("A site change is already deferring its collision.");
         _deferringCollision = true;
         bool changed = false;
+        Exception? handover = null;
         try
         {
             change();
@@ -571,15 +575,32 @@ internal sealed class DaggerfallSiteLifecycle
             _deferringCollision = false;
             // A failed change's rollback has made its own placements and window; whatever is still held matches what
             // they record, so the Engine is given it either way.
-            ReleaseHeldPlacements();
-            _ = _exteriorResidency?.ReleaseHeld();
-            if (!changed)
+            try
             {
-                _arrivalStandPending = false;
+                ReleaseHeldPlacements();
+            }
+            catch (Exception error)
+            {
+                handover = error;
+            }
+            try
+            {
+                _ = _exteriorResidency?.ReleaseHeld();
+            }
+            catch (Exception error)
+            {
+                handover ??= error;
+            }
+            // A rolled-back change has nothing to stand; a committed one stands once its collision is live.
+            if (!changed) _arrivalStandPending = false;
+            if (!changed || handover is not null)
+            {
                 if (CollisionPending) _awaitingGround = true;
                 else _host.GroundArrivedActors();
             }
         }
+        // The change's own failure, if any, has already left this method; a handover failure fails a committed one.
+        if (handover is not null) throw new DaggerfallArrivalCollisionRefusedException(handover);
     }
 
     /// <summary>
@@ -599,6 +620,8 @@ internal sealed class DaggerfallSiteLifecycle
             case DaggerfallDeferredCollisionState.Preparing:
                 return reading.Fraction is { } fraction ? LoadingProgress.Measured(fraction) : LoadingProgress.Unmeasured;
         }
+        // What a handover that threw left held is not live either: RecoverArrivalGround hands it over again.
+        if (CollisionPending) return LoadingProgress.Unmeasured;
         if (_arrivalStandPending)
         {
             _arrivalStandPending = false;
@@ -611,24 +634,25 @@ internal sealed class DaggerfallSiteLifecycle
     /// <summary>
     /// Brings back the collision a site change handed off and play must not run without, one admitted update at a
     /// time; true when there is nothing to wait for. Until then the world must not run: nothing holds the player or
-    /// anyone else up. Each call reads the batches handed over; once they are refused, it hands the placements and
-    /// the window over again off the update, and once they are live, stands the arrival on them.
+    /// anyone else up. Each call reads the batches handed over; once they are refused, or a handover threw, it hands
+    /// the placements and the window over again off the update, and once they are live, stands the arrival on them.
     /// </summary>
     internal bool RecoverArrivalGround()
     {
         if (!_awaitingGround) return true;
-        if (_deferredCollision is not { Awaiting: true })
-            DeferCollision(() =>
-            {
-                _heldPlacementGrid = _placementGrid;
-                if (ActiveProfile.Kind == DaggerfallWorldProfileKind.Exterior) _ = UpdateExteriorResidency();
-            });
         try
         {
+            if (_deferredCollision is not { Awaiting: true })
+                DeferCollision(() =>
+                {
+                    _heldPlacementGrid = _placementGrid;
+                    if (ActiveProfile.Kind == DaggerfallWorldProfileKind.Exterior) _ = UpdateExteriorResidency();
+                });
             if (!AwaitArrivalCollision().Done) return false;
         }
         catch (DaggerfallArrivalCollisionRefusedException)
         {
+            // Refused again, or a handover threw again: what is not live stays held, and the next update retries.
             return false;
         }
         _awaitingGround = false;
@@ -2122,8 +2146,9 @@ internal sealed class DaggerfallSiteLifecycle
 }
 
 /// <summary>
-/// The Engine refused the arrival's terrain collision, so the player arrived on ground that is not solid yet. The
-/// Engine kept none of the batch and its host log names why; the window admits those cells again on the next update.
+/// The Engine refused the arrival's collision, so the player arrived on ground that is not solid yet. The Engine kept
+/// none of the batch and its host log names why, or rejected it in the call (<paramref name="inner"/>); either way
+/// it is handed over again on the next update.
 /// </summary>
-internal sealed class DaggerfallArrivalCollisionRefusedException()
-    : InvalidOperationException("The ground here could not be made solid: the Engine refused its collision, and its log says why. The world waits while it is made again.");
+internal sealed class DaggerfallArrivalCollisionRefusedException(Exception? inner = null)
+    : InvalidOperationException("The ground here could not be made solid: the Engine refused its collision, and its log says why. The world waits while it is made again.", inner);
