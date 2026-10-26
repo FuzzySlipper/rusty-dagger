@@ -79,7 +79,7 @@ internal sealed partial class DaggerfallSession
                     EnterPortal),
                 new DaggerfallGroundActivationOwner(() => _groundContainers.All.Values, PropertyInteractionPoint, OpenPropertyLoot),
                 npc: new DaggerfallCrimeActivationOwner(_dialogue, State.Actors, IsPickpocketTarget, PickpocketActor, IsLawGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),
-                    id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id))));
+                    id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id), PersonSightHeight)));
     }
 
     private DaggerfallWorldProfileKey ResolvePortalDestination(string logicalProfile) =>
@@ -723,16 +723,34 @@ internal sealed partial class DaggerfallSession
     /// </summary>
     private WorldPoint CorpseSightPoint(ActorState actor)
     {
+        if (ActorSprite(actor) is not { } sprite) return actor.Position;
+        float height = (sprite.Corpse ?? sprite).Size.Y;
+        return WorldPoint.From(actor.Position.ToVector() + (Vector3.UnitY * (height * .5F)));
+    }
+
+    /// <summary>
+    /// How far above where a person stands they are sighted for use: the middle of their standing sprite, for
+    /// the reason <see cref="CorpseSightPoint"/> gives. A placed person shows their billboard, anyone else their
+    /// actor sprite; both stand at their pose. A person with no known sprite keeps their position.
+    /// </summary>
+    private double? PersonSightHeight(long id)
+    {
         DaggerfallSiteProfile inputs = _sites.Projection.Inputs;
-        NormalizedActorSprite? sprite = inputs.ActorSprites.TryGetValue(actor.DurableId, out NormalizedActorSprite? placed)
+        if (State.Npcs.TryGet(id, out DaggerfallNpc? npc)
+            && inputs.BillboardSprites.TryGetValue((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord), out NormalizedBillboardSprite? billboard))
+            return billboard.Size.Y * .5d;
+        return State.Actors.TryGet(id, out ActorState? actor) && ActorSprite(actor) is { } sprite ? sprite.Size.Y * .5d : null;
+    }
+
+    private NormalizedActorSprite? ActorSprite(ActorState actor)
+    {
+        DaggerfallSiteProfile inputs = _sites.Projection.Inputs;
+        return inputs.ActorSprites.TryGetValue(actor.DurableId, out NormalizedActorSprite? placed)
             ? placed
             : DefinitionsByActor.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? definition)
                 && definition.MobileId is int mobileId && inputs.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? mobile)
                     ? mobile.ForGender(actor.Actor.TryGet<DaggerfallActorGender>(out var gender) ? gender.Value : "unspecified")
                     : null;
-        if (sprite is null) return actor.Position;
-        float height = (sprite.Corpse ?? sprite).Size.Y;
-        return WorldPoint.From(actor.Position.ToVector() + (Vector3.UnitY * (height * .5F)));
     }
 
     /// <summary>The current corpse owner composed into the activation seam.</summary>

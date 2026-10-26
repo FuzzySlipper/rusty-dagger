@@ -178,13 +178,15 @@ internal sealed partial class DaggerfallSession
 
     private sealed class DaggerfallCrimeActivationOwner(DaggerfallDialogueService dialogue, ActorsState actors,
         Func<long, bool> eligible, Func<long, DaggerfallActivationOutcome> pickpocket,
-        Func<long, bool> lawGuard, Func<long, DaggerfallActivationOutcome> surrender, Func<long, bool> questActor, Func<long, bool> questClick) : IDaggerfallNpcActivationOwner
+        Func<long, bool> lawGuard, Func<long, DaggerfallActivationOutcome> surrender, Func<long, bool> questActor, Func<long, bool> questClick,
+        Func<long, double?> sightHeight) : IDaggerfallNpcActivationOwner
     {
-        public IEnumerable<DaggerfallActivationTarget> NpcTargets()
-        {
-            return dialogue.NpcTargets();
-        }
-        public IEnumerable<DaggerfallActivationTarget> NpcTargets(DaggerfallActivationMode mode)
+        public IEnumerable<DaggerfallActivationTarget> NpcTargets() => dialogue.NpcTargets().Select(Sighted);
+        public IEnumerable<DaggerfallActivationTarget> NpcTargets(DaggerfallActivationMode mode) => People(mode).Select(Sighted);
+        // A person stands where their position is; they are sighted at the middle of their body.
+        private DaggerfallActivationTarget Sighted(DaggerfallActivationTarget person) =>
+            person with { SightHeight = sightHeight(checked((long)person.Identity.Value)) };
+        private IEnumerable<DaggerfallActivationTarget> People(DaggerfallActivationMode mode)
         {
             HashSet<long> included = [];
             if (mode != DaggerfallActivationMode.Steal)

@@ -162,6 +162,39 @@ public sealed class ControlsInputSessionTests
     }
 
     [Fact]
+    public void The_pads_face_buttons_are_the_rulesets_actions_and_never_jump_or_crouch()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
+        ulong step = 1;
+        foreach (ControllerButton button in new[] { ControllerButton.Button0, ControllerButton.Button1, ControllerButton.Button2 })
+        {
+            // Held across a step as a real press is: the standard FPS layout would read B as crouch and A as jump,
+            // and a crouch in the step that activates lowers the reach query (#10282).
+            int before = spatial.StepRequests.Count;
+            session.Update(new ProductUpdate(OuterUpdate(step++), [PadButton(button, InputEdge.Pressed)]));
+            session.Update(new ProductUpdate(OuterUpdate(step++), []));
+            session.Update(new ProductUpdate(OuterUpdate(step++), [PadButton(button, InputEdge.Released)]));
+            Assert.All(spatial.StepRequests.Skip(before), request =>
+            {
+                Assert.False(request.Command.CrouchRequested, $"{button} crouched.");
+                Assert.False(request.Command.JumpPressed, $"{button} jumped.");
+                Assert.False(request.Command.JumpHeld, $"{button} held a jump.");
+            });
+        }
+        // B's use query starts where the standing player is, as the prompt's preview and the inspector do.
+        Assert.Equal(session.State.PlayerControl.Position!.Value.ToVector(), perception.Requests[^1].Observers.Span[0].Origin);
+    }
+
+    [Fact]
     public void A_pad_button_asks_the_dom_for_the_menu_action_that_opens_that_panel()
     {
         string root = TestData.RepositoryRoot;

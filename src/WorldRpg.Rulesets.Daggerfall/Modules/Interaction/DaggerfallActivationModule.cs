@@ -30,10 +30,11 @@ internal readonly record struct DaggerfallActivationTarget(
     int Precedence,
     string? Label = null,
     double? ReachDistance = null,
-    Vector3? SurfaceNormal = null)
+    Vector3? SurfaceNormal = null,
+    double? SightHeight = null)
 {
     internal InteractionTargetCandidate ToKitCandidate() => new(Entity, Identity, QueryIdentity, Position, Precedence,
-        Label ?? Kind.ToString(), ReachDistance, SurfaceNormal);
+        Label ?? Kind.ToString(), ReachDistance, SurfaceNormal, SightHeight);
 }
 
 /// <summary>Stable mode and target selected from one Engine perception query.</summary>

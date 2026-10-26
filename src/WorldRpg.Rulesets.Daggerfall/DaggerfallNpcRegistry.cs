@@ -189,6 +189,9 @@ public sealed class DaggerfallNpcRegistry
     public DaggerfallNpc Require(long durableId) =>
         _npcs.TryGetValue(durableId, out DaggerfallNpc? npc) ? npc : throw new InvalidOperationException($"No NPC answers durable identity {durableId}.");
 
+    /// <summary>Reads one NPC by its durable identity, if the registry has them.</summary>
+    internal bool TryGet(long durableId, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out DaggerfallNpc? npc) => _npcs.TryGetValue(durableId, out npc);
+
     internal bool IsStatic(long durableId) => _npcs.TryGetValue(durableId, out DaggerfallNpc? npc)
         && npc.Kind == DaggerfallNpcKind.Static;
 
