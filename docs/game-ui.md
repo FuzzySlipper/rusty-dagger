@@ -32,9 +32,10 @@ an SVG's look in attributes: paint, a name's `display`, a `font-family` on
 each `<text>`, and no `vector-effect`. State a stylesheet would express with
 `:hover`, `:focus` or an ancestor class is set on the elements by script.
 Pointer events inside an SVG reach only the `<svg>`, so the local map finds the
-point under the pointer by position. SVG elements cannot take focus under
-Servo; keyed navigation passes over a control that refuses focus, and the
-map's places stay reachable as HTML controls beside it.
+point under the pointer by position. A map point with a `tabindex` takes focus
+from Tab and `focus()`, but a click does not focus it and `:focus` does not
+draw, so its ring is an attribute set on `focusin` and `focusout`. Keyed
+navigation still passes over any control that refuses focus.
 
 Each surface is its own module in `src/ui` (`menu.ts`, `dialogue.ts`,
 `hud.ts`, `death.ts`, `entry.ts`, `choices.ts`, `dungeon-text.ts` beside the
