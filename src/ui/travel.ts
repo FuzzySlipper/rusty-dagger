@@ -191,10 +191,9 @@ function mountTravelMap(claim: (action: TravelAction) => void, choose: (region: 
   canvas.className = 'dagger-travel-map-canvas';
   const picture = document.createElement('img');
   picture.alt = '';
-  // The route sits between the art and the markers, in the canvas's own percentages.
+  // The route sits between the art and the markers, in the art's own pixels.
   const routeLayer = document.createElementNS(SVG, 'svg');
   routeLayer.setAttribute('class', 'dagger-travel-map-route');
-  routeLayer.setAttribute('viewBox', '0 0 100 100');
   routeLayer.setAttribute('preserveAspectRatio', 'none');
   routeLayer.setAttribute('aria-hidden', 'true');
   const layer = document.createElement('div');
@@ -250,13 +249,14 @@ function mountTravelMap(claim: (action: TravelAction) => void, choose: (region: 
   const drawRoute = (frame: TravelMapImageProjection, route: TravelQuoteProjection['route'] | null): void => {
     routeLayer.replaceChildren();
     if (!route) return;
-    const [x1, y1] = percent(frame, route.fromX, route.fromY);
-    const [x2, y2] = percent(frame, route.toX, route.toY);
+    // The view box is the art's pixels, which the canvas scales evenly, so the stroke scales with the art:
+    // the window's Servo draws SVG from its markup alone, without the page's stylesheet or vector-effect.
+    routeLayer.setAttribute('viewBox', `0 0 ${frame.width} ${frame.height}`);
+    const [x1, y1] = percent(frame, route.fromX, route.fromY).map((value, axis) => value / 100 * (axis === 0 ? frame.width : frame.height));
+    const [x2, y2] = percent(frame, route.toX, route.toY).map((value, axis) => value / 100 * (axis === 0 ? frame.width : frame.height));
     const line = document.createElementNS(SVG, 'line');
     for (const [name, value] of [['x1', x1], ['y1', y1], ['x2', x2], ['y2', y2]] as const) line.setAttribute(name, String(value));
-    line.setAttribute('vector-effect', 'non-scaling-stroke');
-    // Painted as attributes: the window's Servo draws SVG without the page's stylesheet.
-    for (const [name, value] of [['stroke', '#fff0a7'], ['stroke-width', '2'], ['stroke-dasharray', '6 4']] as const) line.setAttribute(name, value);
+    for (const [name, value] of [['stroke', '#fff0a7'], ['stroke-width', '1'], ['stroke-dasharray', '3 2'], ['filter', 'drop-shadow(0 0 .5px #000)']] as const) line.setAttribute(name, value);
     routeLayer.append(line);
   };
 

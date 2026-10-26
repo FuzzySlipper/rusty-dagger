@@ -185,11 +185,17 @@ export function mountNavigation(shell: HTMLElement, context: RustyApplicationUiC
     if (items.length === 0) return;
     const active = document.activeElement instanceof HTMLElement && scope.contains(document.activeElement) ? document.activeElement : null;
     if (!active) { items[direction === 'up' || direction === 'left' ? items.length - 1 : 0]?.focus(); return; }
-    let next = nearest(active, items, direction);
-    // Entering a row of tabs from outside it lands on the tab that is shown, not the nearest one.
-    const tablist = next?.matches('[role="tab"]') ? next.closest('[role="tablist"]') : null;
-    if (tablist && !tablist.contains(active)) next = tablist.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]') ?? next;
-    (next ?? active).focus();
+    // A control the page cannot focus (the window's Servo focuses no SVG element) is passed over for the next nearest.
+    for (let pool = items; ;) {
+      const candidate = nearest(active, pool, direction);
+      if (!candidate) { active.focus(); return; }
+      // Entering a row of tabs from outside it lands on the tab that is shown, not the nearest one.
+      const tablist = candidate.matches('[role="tab"]') ? candidate.closest('[role="tablist"]') : null;
+      const next = tablist && !tablist.contains(active) ? tablist.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]') ?? candidate : candidate;
+      next.focus();
+      if (document.activeElement !== active) return;
+      pool = pool.filter(item => item !== candidate && item !== next);
+    }
   };
 
   /** A focused choice or amount takes left and right as a change of its value. */

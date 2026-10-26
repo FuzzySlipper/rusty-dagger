@@ -45,6 +45,8 @@ function svgElement(name: string, attributes: Record<string, string>): SVGElemen
   return element;
 }
 const PLAYER_ARROW = 'M 0 -6 L 4 5 L 0 2 L -4 5 Z';
+/** How near a point a press or hover must be to reach it, in diagram units. */
+const POINT_REACH = 8;
 
 /**
  * The local map: a pannable, zoomable diagram of what the player has explored, with a legend, named
@@ -54,6 +56,10 @@ const PLAYER_ARROW = 'M 0 -6 L 4 5 L 0 2 L -4 5 Z';
  * zooms about the cursor. Keyboard and controller pan it from the diagram itself: accepting the
  * focused diagram starts panning, the directions then move the view, the triggers or Page Up and Down
  * zoom, and accepting again or Back stops. Points stay focusable as controls of their own.
+ *
+ * The window's Servo draws an inline SVG from its markup alone and sends every pointer event inside
+ * it to the `<svg>`, so the diagram is painted with attributes, a point's name is shown or hidden by
+ * its `display` attribute, and hover and clicks find the point from the pointer's position.
  */
 export function mountMap(root: HTMLElement, send: (action: MapAction) => void, travel: () => void): {
   update(value: MapProjection | null): void;
@@ -96,6 +102,9 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
   let drawn = '';
   let current: MapProjection | null = null, identity = '', centerX = 0, centerZ = 0, zoom = 1, rotation = 0, playerUp = false;
   let panning = false;
+  let hovered: SVGElement | null = null;
+  /** Each drawn point's place on the map and what choosing it does. */
+  const points = new Map<SVGElement, { readonly x: number; readonly z: number; choose?: () => void }>();
   const angle = (): number => playerUp && current ? -current.player.yaw * 180 / Math.PI : rotation;
   /** A move on screen, in diagram units, as a move over the map: undo the view's rotation and zoom. */
   const toWorld = (dx: number, dy: number): [number, number] => {
@@ -125,11 +134,35 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
     if (label.selected) group.classList.add('is-selected');
     if (label.note) group.classList.add('is-note');
     const mark = svgElement('g', { 'data-mark': 'true' });
-    const dot = svgElement('circle', { r: '3.2' });
-    const text = svgElement('text', { x: '6', y: '4', class: 'dagger-map-name' });
+    const dot = svgElement('circle', { r: '3.2', fill: label.selected ? '#ffe077' : label.note ? '#8fd0ff' : '#d5e2e7' });
+    const text = svgElement('text', { x: '6', y: '4', class: 'dagger-map-name', 'font-family': 'system-ui, sans-serif', 'font-size': '11', 'font-weight': '600',
+      fill: '#f6ead0', stroke: '#10171c', 'stroke-width': '3', 'paint-order': 'stroke', 'pointer-events': 'none' });
     text.textContent = label.name;
     mark.append(dot, text); group.append(mark);
+    points.set(group, { x: label.x, z: label.z });
     return group;
+  };
+  /** Ring the focused point and show the names the view calls for: all, or the hovered, focused, chosen and noted ones. */
+  const paintPoints = (): void => {
+    for (const group of points.keys()) {
+      const focused = document.activeElement === group;
+      group.querySelector('circle')?.setAttribute('stroke', focused ? '#ffe077' : '#17232b');
+      group.querySelector('circle')?.setAttribute('stroke-width', focused ? '2.5' : '1');
+      const shown = names.checked || focused || group === hovered || group.classList.contains('is-selected') || group.classList.contains('is-note');
+      group.querySelector('text')?.setAttribute('display', shown ? 'inline' : 'none');
+    }
+  };
+  /** The point nearest a client position, if it is within reach on screen. */
+  const pointAt = (clientX: number, clientY: number): SVGElement | null => {
+    const [sx, sy] = diagramPoint(clientX, clientY);
+    const radians = angle() * Math.PI / 180, cos = Math.cos(radians), sin = Math.sin(radians);
+    let nearest: SVGElement | null = null, best = POINT_REACH;
+    for (const [group, at] of points) {
+      const dx = (at.x - centerX) * zoom, dz = (at.z - centerZ) * zoom;
+      const distance = Math.hypot(dx * cos - dz * sin - sx, dx * sin + dz * cos - sy);
+      if (distance <= best) { nearest = group; best = distance; }
+    }
+    return nearest;
   };
   function draw(): void {
     // A point or building the player had focused keeps focus through the rebuild, as when choosing it
@@ -146,6 +179,7 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
   }
   function build(): void {
     drawn = '';
+    points.clear(); hovered = null;
     viewport.replaceChildren(); buildings.replaceChildren(); legend.replaceChildren();
     if (!current) { status.textContent = 'No map is available in this interior.'; return; }
     const value = current;
@@ -166,7 +200,7 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
         const select = (): void => send({ action: 'map-building', region, destination, item: label.id });
         button.addEventListener('click', select);
         mark.setAttribute('role', 'button'); mark.setAttribute('tabindex', '0'); mark.setAttribute('aria-label', `${label.name}: show directions`);
-        mark.addEventListener('click', () => { if (!dragged) select(); });
+        points.get(mark)!.choose = select;
         mark.addEventListener('keydown', event => { if (event instanceof KeyboardEvent && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); select(); } });
         buildings.append(button);
       } else {
@@ -211,6 +245,7 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
     const chosen = value.labels.find(label => label.selected)?.name;
     target.textContent = chosen ? `Directions target: ${chosen}` : '';
     applyView();
+    paintPoints();
   }
 
   const setPanning = (on: boolean): void => {
@@ -265,6 +300,22 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
     const size = Math.min(rect.width, rect.height);
     return [(clientX - rect.left - rect.width / 2) * HALF * 2 / size, (clientY - rect.top - rect.height / 2) * HALF * 2 / size];
   };
+  viewport.addEventListener('focusin', paintPoints);
+  viewport.addEventListener('focusout', () => queueMicrotask(paintPoints));
+  svg.addEventListener('pointermove', event => {
+    if (view.classList.contains('is-dragging')) return;
+    const near = pointAt(event.clientX, event.clientY);
+    if (near !== hovered) { hovered = near; paintPoints(); }
+  });
+  svg.addEventListener('pointerleave', () => { if (hovered) { hovered = null; paintPoints(); } });
+  // A click chooses the point under it; a press that travelled was a drag.
+  svg.addEventListener('click', event => {
+    if (dragged || event.detail === 0) return;
+    const near = pointAt(event.clientX, event.clientY);
+    if (!near) return;
+    near.focus({ preventScroll: true });
+    points.get(near)?.choose?.();
+  });
   svg.addEventListener('wheel', event => {
     if (!current) return;
     event.preventDefault();
@@ -278,10 +329,8 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
     if (event.button !== 0 || !current) return;
     const from = { x: event.clientX, y: event.clientY, centerX, centerZ };
     dragged = false;
-    // Capture goes to what was pressed: a point keeps its own release and click, so a press that does
-    // not travel still chooses it, while one that does pans the map from it.
-    const pressed = event.target instanceof Element ? event.target.closest('.dagger-map-point') ?? svg : svg;
-    followPress(pressed, event, {
+    // A press that does not travel stays a click, which the diagram resolves to a point by position.
+    followPress(svg, event, {
       start() { dragged = true; view.classList.add('is-dragging'); },
       move(moved) {
         const [x0, y0] = diagramPoint(from.x, from.y), [x1, y1] = diagramPoint(moved.clientX, moved.clientY);
@@ -309,7 +358,7 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
   button('Level down', () => { all.checked = false; level.value = String(Number(level.value) - .5); });
   button('Travel destinations', travel);
   level.addEventListener('change', () => { all.checked = false; draw(); }); all.addEventListener('change', draw);
-  names.addEventListener('change', () => view.classList.toggle('shows-names', names.checked));
+  names.addEventListener('change', paintPoints);
   controls.append(levelLabel, allLabel, namesLabel);
   shell.append(heading, status, view, legend, controls, target, noteForm, buildings); root.append(shell);
   return {
