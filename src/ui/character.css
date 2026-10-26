@@ -25,8 +25,8 @@
 .dagger-character-rows > div { align-items: baseline; border-bottom: 1px solid rgb(125 108 69 / .45); display: flex; gap: .5625rem; justify-content: space-between; min-width: 0; padding-bottom: .3125rem; }
 .dagger-character-rows dd { margin: 0; text-align: right; }
 .dagger-character-rows > div > span { color: #c3b48b; font-size: .58rem; text-align: right; }
-.dagger-character-rows > div:has(span) { align-items: start; display: grid; gap: 2px .5rem; grid-template-columns: minmax(0, 1fr) auto; }
-.dagger-character-rows > div:has(span) dd { color: #e6cc84; grid-column: 1 / -1; text-align: left; }
+.dagger-character-rows > div:where(.dagger-character-equipment, .dagger-character-fact-row) { align-items: start; display: grid; gap: 2px .5rem; grid-template-columns: minmax(0, 1fr) auto; }
+.dagger-character-rows > div:where(.dagger-character-equipment, .dagger-character-fact-row) dd { color: #e6cc84; grid-column: 1 / -1; text-align: left; }
 
 @media (max-width: 52rem) {
   .dagger-character { min-width: 0; width: calc(100vw - 2rem); }
@@ -79,7 +79,7 @@
 .dagger-character-rows > .dagger-character-skill { align-items: center; display: grid; gap: .25rem .5rem; grid-template-columns: minmax(0, 1fr) auto; }
 .dagger-character-rows > .dagger-character-skill dd { color: inherit; grid-column: auto; text-align: right; }
 .dagger-character-rows > .dagger-character-skill .dagger-character-meter { grid-column: 1 / -1; }
-.dagger-character-skill:focus-visible { outline: 2px solid #f0c96a; outline-offset: 2px; }
+.dagger-character-skill:is(:focus-visible, :where(.keyed-navigation) :focus) { outline: 2px solid #f0c96a; outline-offset: 2px; }
 .dagger-character-meter { background: rgb(12 13 10 / .85); border: 1px solid #5b4d31; display: block; height: .5rem; position: relative; }
 .dagger-character-meter > span:first-child { background: linear-gradient(#d9b25a, #9c7a34); display: block; height: 100%; }
 .dagger-character-meter.is-low > span:first-child { background: linear-gradient(#d2785a, #8f3f2a); }
@@ -92,4 +92,4 @@
 .dagger-character-facts { color: #c3b48b; font-size: .68rem; font-weight: 400; }
 .dagger-character-fact-row.is-warning strong { color: #e3a58b; }
 /* A row with an explanation takes focus for its tooltip, as the skills do. */
-.dagger-character-explained:focus-visible { outline: 2px solid #f0c96a; outline-offset: 2px; }
+.dagger-character-explained:is(:focus-visible, :where(.keyed-navigation) :focus) { outline: 2px solid #f0c96a; outline-offset: 2px; }

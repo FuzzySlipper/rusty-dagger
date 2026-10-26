@@ -63,7 +63,7 @@ export function renderSpellMaker(root:HTMLElement,view:SpellMakerProjection|null
   icons.addEventListener('click',event=>{const choice=(event.target as HTMLElement).closest<HTMLButtonElement>('[data-spell-icon]');if(!choice) return;
     icon=Number(choice.dataset.spellIcon);for(const other of icons.querySelectorAll<HTMLElement>('[data-spell-icon]')) other.setAttribute('aria-checked',String(other===choice));
     form.dispatchEvent(new Event('change',{bubbles:true}));});
-  const iconField=document.createElement('div');iconField.className='dagger-maker-field';const iconLabel=document.createElement('span');iconLabel.textContent='Icon';iconField.append(iconLabel,icons);form.append(iconField);
+  const iconField=document.createElement('div');iconField.className='dagger-maker-field dagger-maker-icon-field';const iconLabel=document.createElement('span');iconLabel.textContent='Icon';iconField.append(iconLabel,icons);form.append(iconField);
   const slots:{select:HTMLSelectElement;values:Map<keyof SpellMakerSetting,Stepper>}[]=[];
   for(let slot=0;slot<limits.effects;slot++) {
     const section=document.createElement('fieldset');section.className='dagger-maker-effect';const legend=document.createElement('legend');legend.textContent=`Effect ${slot+1}`;section.append(legend);form.append(section);

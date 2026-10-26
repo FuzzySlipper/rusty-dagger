@@ -36,7 +36,9 @@
   border-image: var(--skin-stone-window) var(--skin-stone-window-slice) / var(--skin-stone-window-width) stretch;
   background: var(--ground) var(--skin-stone-texture, none) 0 0 / var(--skin-stone-texture-size, auto) repeat;
   color: var(--ink);
-  box-shadow: 0 .75rem 2.75rem rgb(0 0 0 / .7);
+  /* A modal frame dims the page behind it with --dagger-scrim, a spread shadow rather than ::backdrop,
+     which the window's Servo does not draw. */
+  box-shadow: 0 .75rem 2.75rem rgb(0 0 0 / .7), 0 0 0 100vmax var(--dagger-scrim, transparent);
 }
 
 /* Parchment: a reading surface. The frame art carries its page, so it fills; text takes dark ink. */
@@ -101,8 +103,10 @@
   cursor: var(--dagger-cursor-pointer);
   pointer-events: auto;
 }
+/* Focus rings: :focus-visible, and any focus while keys or a controller move it. Servo never matches
+   :focus-visible after script focus, which is how navigation moves it, so keyed navigation says so itself. */
 .dagger-hud:not(.keyed-navigation) button:not(.dagger-slot, [role="tab"], .dagger-travel-map-layer > *):hover:not(:disabled),
-.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-travel-map-layer > *):focus-visible:not(:disabled) {
+.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-travel-map-layer > *):is(:focus-visible, :where(.keyed-navigation) :focus):not(:disabled) {
   border-image-source: var(--skin-stone-button-focus, none);
   background: var(--skin-button-face, #594521);
 }
@@ -143,11 +147,11 @@
   color: var(--ink);
   cursor: var(--dagger-cursor-pointer);
 }
-.dagger-hud .dagger-slot:is(:focus-visible, .is-selected, .is-drop-target) { border-image-source: var(--skin-stone-slot-focus, none); border-color: #ffe99a; }
+.dagger-hud .dagger-slot:is(:is(:focus-visible, :where(.keyed-navigation) :focus), .is-selected, .is-drop-target) { border-image-source: var(--skin-stone-slot-focus, none); border-color: #ffe99a; }
 .dagger-hud .dagger-slot.is-drop-invalid { border-image-source: var(--skin-stone-slot-invalid, none); border-color: #c0392b; }
 
 /* Focus is always visible for keyboard and controller, over the kit's own focus art. */
-.dagger-hud :is(button, [role="tab"], input, select, textarea, [tabindex]):focus-visible { outline: 2px solid var(--brass-bright); outline-offset: 2px; }
+.dagger-hud :is(button, [role="tab"], input, select, textarea, [tabindex]):is(:focus-visible, :where(.keyed-navigation) :focus) { outline: 2px solid var(--brass-bright); outline-offset: 2px; }
 .dagger-hud.controller-navigation :focus { outline: 2px solid var(--brass-bright); outline-offset: 2px; }
 
 /* Scrollbars inside game surfaces: a slate groove with a brass handle. */

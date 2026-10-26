@@ -20,6 +20,14 @@ and death. It keeps to the green path and is checked in
 `rusty dev --output window` before it is called done, because the window is
 what ships. A browser tab is for iterating.
 
+The window draws the page with Servo, which differs from a browser in ways
+the shell already follows: a modal frame dims the page with `--dagger-scrim`
+(a spread shadow) rather than `::backdrop`; selectors avoid `:has()`; focus
+rings match `:focus` under `.keyed-navigation` as well as `:focus-visible`,
+which Servo never matches after script focus; inline SVG takes its paint as
+attributes, since Servo draws it without the stylesheet; and selects and inputs
+that should fill a cell are sized explicitly.
+
 Each surface is its own module in `src/ui` (`menu.ts`, `dialogue.ts`,
 `hud.ts`, `death.ts`, `entry.ts`, `choices.ts`, `dungeon-text.ts` beside the
 panel modules); `main.ts` only mounts them and routes each snapshot.

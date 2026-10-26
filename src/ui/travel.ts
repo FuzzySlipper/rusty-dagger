@@ -255,6 +255,8 @@ function mountTravelMap(claim: (action: TravelAction) => void, choose: (region: 
     const line = document.createElementNS(SVG, 'line');
     for (const [name, value] of [['x1', x1], ['y1', y1], ['x2', x2], ['y2', y2]] as const) line.setAttribute(name, String(value));
     line.setAttribute('vector-effect', 'non-scaling-stroke');
+    // Painted as attributes: the window's Servo draws SVG without the page's stylesheet.
+    for (const [name, value] of [['stroke', '#fff0a7'], ['stroke-width', '2'], ['stroke-dasharray', '6 4']] as const) line.setAttribute(name, value);
     routeLayer.append(line);
   };
 
