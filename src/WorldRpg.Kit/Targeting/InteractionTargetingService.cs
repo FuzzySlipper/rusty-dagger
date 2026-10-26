@@ -20,6 +20,10 @@ namespace WorldRpg.Kit.Targeting;
 /// by <see cref="InteractionTargetingService.SurfaceSeparation"/> along the normal, and only from its open
 /// side: from behind the surface it is occluded.
 /// </para>
+/// <para>
+/// <paramref name="SightHeight"/> sights a target standing on the floor above its position: a person's
+/// position is where they stand, and a line of sight ending on the floor there can be stopped by the floor.
+/// </para>
 /// </remarks>
 public readonly record struct InteractionTargetCandidate(
     EntityId Entity,
@@ -29,12 +33,18 @@ public readonly record struct InteractionTargetCandidate(
     int Precedence,
     string Label = "world object",
     double? ReachDistance = null,
-    Vector3? SurfaceNormal = null)
+    Vector3? SurfaceNormal = null,
+    double? SightHeight = null)
 {
-    /// <summary>The point Engine focus and line of sight use: the position, lifted off its surface when it has one.</summary>
-    public Vector3 SightPoint => SurfaceNormal is Vector3 normal
-        ? Position.ToVector() + (Vector3.Normalize(normal) * InteractionTargetingService.SurfaceSeparation)
-        : Position.ToVector();
+    /// <summary>The point Engine focus and line of sight use: the position, raised by its sight height and lifted off its surface when it has them.</summary>
+    public Vector3 SightPoint
+    {
+        get
+        {
+            Vector3 point = Position.ToVector() + (Vector3.UnitY * (float)(SightHeight ?? 0d));
+            return SurfaceNormal is Vector3 normal ? point + (Vector3.Normalize(normal) * InteractionTargetingService.SurfaceSeparation) : point;
+        }
+    }
 
     /// <summary>Whether an observer stands on the open side of a surface target; a target in open space faces everyone.</summary>
     public bool FacesObserver(WorldPoint observer) =>
@@ -52,6 +62,8 @@ public readonly record struct InteractionTargetCandidate(
         if (SurfaceNormal is Vector3 normal && (!float.IsFinite(normal.X) || !float.IsFinite(normal.Y) || !float.IsFinite(normal.Z)
             || normal.LengthSquared() < 1e-12f))
             throw new ArgumentOutOfRangeException(nameof(SurfaceNormal), "A surface target requires a finite, non-zero surface normal.");
+        if (SightHeight is double height && (!double.IsFinite(height) || height < 0d || height > float.MaxValue))
+            throw new ArgumentOutOfRangeException(nameof(SightHeight));
     }
 }
 

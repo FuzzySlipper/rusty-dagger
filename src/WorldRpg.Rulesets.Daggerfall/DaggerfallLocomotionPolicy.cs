@@ -209,11 +209,16 @@ internal sealed class DaggerfallLocomotionPolicy
         KeyboardControl Key(string action) => controls.KeysFor(action)
             .Select(key => Enum.TryParse(key, out KeyboardControl control) ? control : KeyboardControl.None)
             .FirstOrDefault(control => control != KeyboardControl.None);
+        // The pad's face buttons are the ruleset's actions (DaggerfallInput.PadActions): B reaches for what the
+        // player faces, so the standard layout's B crouch would lower the reach query below the person it is
+        // aimed at. Running, crouching and jumping stay on their keys, and locomotion reads no pad button.
         FpsInputBindings selected = FpsInputBindings.Standard with
         {
             ForwardKey = Key("move.forward"), BackwardKey = Key("move.backward"),
             LeftKey = Key("move.left"), RightKey = Key("move.right"),
             JumpKey = Key("jump"), CrouchKey = Key("crouch"), SprintKey = Key("run"),
+            JumpButton = ControllerButton.None, CrouchButton = ControllerButton.None,
+            SprintButton = ControllerButton.None, UseButton = ControllerButton.None,
         };
         return new FpsInput(FpsInputConfig.Standard with { Bindings = selected });
     }

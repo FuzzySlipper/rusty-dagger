@@ -148,6 +148,32 @@ public sealed class InteractionTargetingServiceTests
         Assert.Throws<ArgumentOutOfRangeException>(() => (door with { SurfaceNormal = Vector3.Zero }).Validate());
     }
 
+    /// <summary>
+    /// A person stands at their position on the floor. A line of sight ending on the floor there can be stopped by
+    /// the floor; sighted at their body's height, they are seen and used (#10282).
+    /// </summary>
+    [Fact]
+    public void A_target_standing_on_the_floor_is_sighted_at_its_sight_height()
+    {
+        using ActorsState actors = Actors();
+        PerceptionDouble perception = PerceptionDouble.Create();
+        // A floor in the plane y = 0: a ray reaching it is stopped.
+        perception.Responder = request => Receipt([.. request.Targets.ToArray().Select(target =>
+            new PerceptionPair(1, target.Entity, 1d, 1d, target.Center.Y <= 0f ? PerceptionPairKind.Occluded : PerceptionPairKind.Visible, 1d))]);
+        using SpatialMovementSystem spatial = Spatial();
+        InteractionTargetingService targeting = new(perception.Service, spatial, actors.Entities);
+        InteractionTargetCandidate standing = Candidate(actors, 2, precedence: 0) with { Position = new WorldPoint(1.5f, 0, 0) };
+
+        Assert.False(targeting.Activate(actors.Player.Actor.Entity, new WorldPoint(0, .9f, 0), Vector3.UnitX, 2.25d, .5d, [standing],
+            _ => throw new Xunit.Sdk.XunitException("A target sighted at the floor is hidden by it.")).Performed);
+
+        InteractionUseReceipt use = targeting.Activate(actors.Player.Actor.Entity, new WorldPoint(0, .9f, 0), Vector3.UnitX, 2.25d, .5d,
+            [standing with { SightHeight = .8d }], _ => new(true, "Spoke."));
+        Assert.True(use.Performed);
+        Assert.Equal(.8f, perception.Requests[^1].Targets.Span[0].Center.Y, 6);
+        Assert.Throws<ArgumentOutOfRangeException>(() => (standing with { SightHeight = -1d }).Validate());
+    }
+
     private static InteractionTargetCandidate Candidate(ActorsState actors, long durableId, int precedence)
     {
         ActorState actor = actors.Get(durableId);
