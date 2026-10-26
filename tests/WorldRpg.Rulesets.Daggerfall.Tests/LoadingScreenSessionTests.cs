@@ -239,6 +239,59 @@ public sealed class LoadingScreenSessionTests
     }
 
     [Fact]
+    public void A_journeys_town_placements_the_Engine_rejects_in_the_call_fail_the_arrival_and_hold_the_world_until_they_are_live_and_stood_on()
+    {
+        AssembledWorld world = Shared.Value;
+        DaggerfallSiteRecord destination = world.Unpublished(_ => true);
+        using AssembledWorldRun run = world.Start(AssembledWorld.PrivateersHold, loadingScreen: true);
+        DaggerfallSession session = run.Session;
+        SpatialFake spatial = run.Spatial;
+        HashSet<ulong> placedBefore = [.. spatial.PlacedArtifacts];
+        int requests = spatial.ContentResidencyRequests.Count;
+        bool WindowLive() => spatial.ResidentCollisionInstances.Keys.Any(id => id >> 56 == 0xD7);
+        // The destination's own parts, once handed over: the island's are placed again too, in the journey's new frame.
+        ulong[] Arriving() => spatial.ContentResidencyRequests.Skip(requests).SingleOrDefault(request => request.Deferred) is { } handed
+            ? [.. handed.Admitted.ToArray().Select(instance => instance.Id).Where(id => !placedBefore.Contains(id))]
+            : [];
+        bool TownLive() => Arriving() is { Length: > 0 } arriving && arriving.All(spatial.PlacedArtifacts.Contains);
+        List<bool> probes = [];
+        spatial.FloorHit = request =>
+        {
+            if (request.Direction.Y < 0) probes.Add(WindowLive() && TownLive());
+            return default;
+        };
+        List<bool> stepped = [];
+        spatial.StepResult = (_, receipt) =>
+        {
+            stepped.Add(WindowLive() && TownLive());
+            return receipt;
+        };
+        spatial.RejectDeferredPlacementCalls = 1;
+
+        run.AcceptJourney(destination);
+        run.FinishLoading();
+
+        // The arrival is committed and its window handed over, but the town's placements never left: it failed, and says why.
+        Assert.Null(run.Loading!.Current);
+        Assert.Equal(DaggerfallWorldProfileIds.Exterior(destination.Id), session.Sites.ActiveProfile);
+        Assert.Contains("the Engine refused its collision", session.Presentation.LastOutcome);
+        Assert.Contains(spatial.CollisionResidencyRequests, request => request.Deferred);
+        Assert.DoesNotContain(spatial.ContentResidencyRequests.Skip(requests), request => request.Deferred);
+        Assert.Empty(probes);
+
+        // Held: the same placements go to the Engine again off the update, and nobody steps or stands until both are live.
+        stepped.Clear();
+        for (int update = 0; update < 6 && !TownLive(); update++) run.Step();
+        Assert.NotEmpty(Arriving());
+        Assert.True(TownLive());
+        run.Step();
+        Assert.NotEmpty(probes);
+        Assert.All(probes, Assert.True);
+        Assert.NotEmpty(stepped);
+        Assert.All(stepped, Assert.True);
+    }
+
+    [Fact]
     public void A_journeys_ground_the_Engine_refuses_fails_the_arrival_and_holds_the_world_until_it_is_live_and_stood_on()
     {
         AssembledWorld world = Shared.Value;
