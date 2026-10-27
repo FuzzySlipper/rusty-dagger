@@ -25,6 +25,15 @@ public static class MobileSourceMetadata
     private static readonly ImmutableArray<Arena2MobileFrameRecord> RangedAttack1Records = CreateOrientationRecords(20, 21, 22, 23, 24, false);
     private static readonly ImmutableArray<Arena2MobileFrameRecord> RangedAttack2Records = CreateOrientationRecords(25, 26, 27, 28, 29, false);
 
+    // DFU GhostWraithMoveAnims and GhostWraithAttackAnims: the spectral archives draw their
+    // side record facing the other way, so only that pair swaps its mirroring.
+    private static readonly ImmutableArray<Arena2MobileFrameRecord> SpectralMoveRecords = InvertSideRecordMirroring(MoveRecords);
+    private static readonly ImmutableArray<Arena2MobileFrameRecord> SpectralPrimaryAttackRecords = InvertSideRecordMirroring(PrimaryAttackRecords);
+
+    // DFU FemaleThiefIdleAnims: the female thief-family archive's front-quarter idle is record 11.
+    private static readonly ImmutableArray<Arena2MobileFrameRecord> FemaleThiefIdleRecords = CreateOrientationRecords(15, 11, 17, 18, 19, false);
+    private static readonly Arena2TextureArchiveId FemaleThiefArchive = new(483);
+
     private static readonly ImmutableArray<Arena2MobileSource> Sources = CreateSources();
 
     /// <summary>Gets the supported source-mobile entries in stable ID order.</summary>
@@ -66,6 +75,24 @@ public static class MobileSourceMetadata
             Arena2MobileFrameGroup.RangedAttack1 => RangedAttack1Records,
             Arena2MobileFrameGroup.RangedAttack2 => RangedAttack2Records,
             _ => throw new ArgumentOutOfRangeException(nameof(group), group, "The source frame group is not known."),
+        };
+    }
+
+    /// <summary>
+    /// Gets one source's eight-sector record mapping: the classic group mapping with the
+    /// donor's per-mobile exceptions (spectral move and attack mirroring, and the female
+    /// thief-family idle record) applied.
+    /// </summary>
+    public static ImmutableArray<Arena2MobileFrameRecord> GetFrameRecords(Arena2MobileSource source, Arena2MobileFrameGroup group)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        bool spectral = source.Id.Value is 18 or 23;
+        return group switch
+        {
+            Arena2MobileFrameGroup.Move when spectral => SpectralMoveRecords,
+            Arena2MobileFrameGroup.PrimaryAttack when spectral => SpectralPrimaryAttackRecords,
+            Arena2MobileFrameGroup.Idle when source.TextureArchive == FemaleThiefArchive => FemaleThiefIdleRecords,
+            _ => GetFrameRecords(group),
         };
     }
 
@@ -268,6 +295,10 @@ public static class MobileSourceMetadata
             }
         }
     }
+
+    private static ImmutableArray<Arena2MobileFrameRecord> InvertSideRecordMirroring(ImmutableArray<Arena2MobileFrameRecord> records) => records
+        .SetItem(2, records[2] with { IsHorizontallyMirrored = !records[2].IsHorizontallyMirrored })
+        .SetItem(6, records[6] with { IsHorizontallyMirrored = !records[6].IsHorizontallyMirrored });
 
     private static ImmutableArray<Arena2MobileFrameRecord> CreateOrientationRecords(ushort front, ushort frontRight, ushort right, ushort backRight, ushort back, bool invertSideMirroring)
     {

@@ -109,6 +109,30 @@ public sealed class Arena2MobileSourceTests
     }
 
     [Fact]
+    public void SpectralMobilesSwapOnlyTheSideRecordMirroringOfMoveAndAttack()
+    {
+        bool[] spectralMirroring = [false, false, true, false, false, true, false, true];
+        foreach (byte id in new byte[] { 18, 23 })
+        {
+            Assert.True(MobileSourceMetadata.TryGet(new(id), out Arena2MobileSource? spectral));
+            Arena2MobileFrameRecord[] move = MobileSourceMetadata.GetFrameRecords(spectral, Arena2MobileFrameGroup.Move).ToArray();
+            Assert.Equal(new ushort[] { 0, 1, 2, 3, 4, 3, 2, 1 }, move.Select(record => record.Record));
+            Assert.Equal(spectralMirroring, move.Select(record => record.IsHorizontallyMirrored));
+            Arena2MobileFrameRecord[] attack = MobileSourceMetadata.GetFrameRecords(spectral, Arena2MobileFrameGroup.PrimaryAttack).ToArray();
+            Assert.Equal(new ushort[] { 5, 6, 7, 8, 9, 8, 7, 6 }, attack.Select(record => record.Record));
+            Assert.Equal(spectralMirroring, attack.Select(record => record.IsHorizontallyMirrored));
+            Assert.Equal(
+                MobileSourceMetadata.GetFrameRecords(Arena2MobileFrameGroup.Hurt).ToArray(),
+                MobileSourceMetadata.GetFrameRecords(spectral, Arena2MobileFrameGroup.Hurt).ToArray());
+        }
+
+        Assert.True(MobileSourceMetadata.TryGet(new(7), out Arena2MobileSource? orc));
+        Assert.Equal(
+            MobileSourceMetadata.GetFrameRecords(Arena2MobileFrameGroup.Move).ToArray(),
+            MobileSourceMetadata.GetFrameRecords(orc, Arena2MobileFrameGroup.Move).ToArray());
+    }
+
+    [Fact]
     public void SourceRecordWorldSizeUsesTheDfuScaleFormulaWithoutPresentationWork()
     {
         Assert.Equal(new Arena2RecordWorldSize(1.6F, 1.6F), MobileSourceMetadata.GetRecordWorldSize(64, 64, 0, 0));

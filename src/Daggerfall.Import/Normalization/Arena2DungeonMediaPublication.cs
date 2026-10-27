@@ -680,13 +680,11 @@ public sealed record Arena2DungeonMediaPublication(
             for (int sourceFrame = 0; sourceFrame < frameCount; sourceFrame++)
             {
                 IndexedTextureFrame decoded = archive.DecodeFrame(selection.Record, sourceFrame);
-                frames.Add(DecodedSpriteFrame.FromPalette(
+                frames.Add(new DecodedSpriteFrame(
                     $"frame/billboard-{selection.Archive}-{selection.Record}/{sourceFrame}",
                     decoded.Width,
                     decoded.Height,
-                    decoded.Pixels.Span,
-                    palette,
-                    PaletteAlphaMode.IndexZeroTransparent));
+                    SpriteRgba(selection.Archive, decoded, palette)));
             }
 
             NormalizedSpriteAtlas atlas = SpriteAtlasNormalizer.Normalize(frames, SpriteAtlasOptions.Strip(quotas.MaximumAtlasDimension));
@@ -759,7 +757,7 @@ public sealed record Arena2DungeonMediaPublication(
             List<StateDraft> states = [];
             foreach ((DungeonActorSpriteState state, Arena2MobileFrameGroup group, DungeonSpritePlaybackSource sourcePlayback) in ActorStates(selection.Source))
             {
-                IReadOnlyList<Arena2MobileFrameRecord> orientations = MobileSourceMetadata.GetFrameRecords(group);
+                IReadOnlyList<Arena2MobileFrameRecord> orientations = MobileSourceMetadata.GetFrameRecords(selection.Source, group);
                 if (!HasAllSourceRecords(archive, orientations))
                 {
                     if (state is DungeonActorSpriteState.Idle or DungeonActorSpriteState.RatIdle)
@@ -796,7 +794,7 @@ public sealed record Arena2DungeonMediaPublication(
                                 $"frame/mobile-{selection.Source.Id.Value}/{state}/{orientation}/{sourceFrame}",
                                 decoded.Width,
                                 decoded.Height,
-                                decoded.ToRgba(palette, PaletteAlphaMode.IndexZeroTransparent),
+                                SpriteRgba(selection.Source.TextureArchive.Value, decoded, palette),
                                 record.IsHorizontallyMirrored)));
                     }
                 }
@@ -929,6 +927,11 @@ public sealed record Arena2DungeonMediaPublication(
 
         yield return (DungeonActorSpriteState.Hurt, Arena2MobileFrameGroup.Hurt, SourceHurtPlayback);
     }
+
+    private static byte[] SpriteRgba(ushort archive, IndexedTextureFrame frame, Arena2Palette palette) =>
+        Arena2SpectralTextures.IsSpectralArchive(archive)
+            ? Arena2SpectralTextures.ToRgbaBytes(frame.Pixels.Span, palette, frame.Source)
+            : frame.ToRgba(palette, PaletteAlphaMode.IndexZeroTransparent);
 
     private static bool HasAllSourceRecords(TextureArchive archive, IReadOnlyList<Arena2MobileFrameRecord> records) =>
         records.All(record => record.Record < archive.RecordCount);
