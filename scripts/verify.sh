@@ -32,11 +32,12 @@ done
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$repo_root"
 
-# The corpus and donor suites skip, with a stated reason, when their data is absent, so a green run
-# means different things with and without them. Say up front which ones this run has.
+# The corpus suites skip, with a stated reason, when their data is absent, so a green run means different
+# things with and without them. Say up front whether this run has it. The Daggerfall Unity files the import
+# reads are tracked in data/daggerfall-unity; DAGGER_DONOR_ROOT points the tests at a full checkout instead.
 arena2_root=${DAGGER_ARENA2:-local/arena2}
-donor_root=${DAGGER_DONOR_ROOT:-/home/research/daggerfall-unity}
-corpora="Arena2 corpus $arena2_root: $([[ -d "$arena2_root" ]] && echo present || echo absent); donor checkout $donor_root: $([[ -d "$donor_root" ]] && echo present || echo absent)"
+donor_root=${DAGGER_DONOR_ROOT:-data/daggerfall-unity}
+corpora="Arena2 corpus $arena2_root: $([[ -d "$arena2_root" ]] && echo present || echo absent); donor files $donor_root"
 echo "corpora: $corpora"
 
 # The Arena2-derived content is not tracked: the import command packs it into local/daggerfall-data.rpak,
@@ -120,7 +121,7 @@ dotnet test tests/WorldRpg.Architecture.Tests/WorldRpg.Architecture.Tests.csproj
 #
 # The import suite tests the importer against the corpus, so its result changes only when something it reads
 # changes: the importer revision's inputs, the product's tracked content (the authored base payload and the UI
-# art among it), the suite's own sources and the Engine pin, the corpus, the donor checkout, or the imported data
+# art among it), the suite's own sources and the Engine pin, the corpus, a relocated donor checkout, or the imported data
 # (the data container, the staging tree and the records). A green run leaves a stamp of those on this machine,
 # and a later run that finds the same stamp skips its 15 to 20 minutes; --import runs it anyway. The ruleset suite
 # always runs, and its contract tests read what the importer wrote. The stamp lives outside local/import, whose
@@ -131,7 +132,7 @@ import_inputs() {
       tests/Daggerfall.Import.Tests tests/Shared tests/SharedEngine \( -name bin -o -name obj \) -prune -o -type f -print \
     | LC_ALL=C sort | xargs sha256sum
   sha256sum src/ImporterRevision.targets tests/Directory.Build.props Directory.Build.props
-  # The corpus and the imported data by name, size and modification time; the donor by its commit.
+  # The corpus and the imported data by name, size and modification time; a relocated donor by its commit.
   for path in "$arena2_root"/* local/daggerfall-data.rpak; do [[ -e "$path" ]] && stat -c '%n %s %Y' "$path"; done
   for path in local/import/staging local/import/records; do
     [[ -d "$path" ]] && find "$path" -type f -printf '%p %s %T@\n' | LC_ALL=C sort

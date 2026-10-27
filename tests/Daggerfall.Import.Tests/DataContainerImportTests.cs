@@ -77,20 +77,27 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void Every_missing_input_is_named_before_anything_is_written()
     {
-        ImportCommand.Inputs inputs = new("local/arena2", Path.Combine(root, "donor"), "local/Sound", "authoring", "variants.json");
+        ImportCommand.Inputs inputs = new("local/arena2", "local/Sound", "authoring", "variants.json");
 
         string[] missing = [.. ImportCommand.MissingInputs(inputs, root)];
 
         Assert.Contains(missing, entry => entry.StartsWith("block variant descriptor 'variants.json'", StringComparison.Ordinal));
         Assert.Contains(missing, entry => entry.StartsWith("Arena2 directory 'local/arena2'", StringComparison.Ordinal));
-        Assert.Contains(missing, entry => entry.StartsWith($"Daggerfall Unity checkout '{Path.Combine(root, "donor")}'", StringComparison.Ordinal));
+        Assert.Contains($"tracked file '{ImportCommand.Donor}/Assets/Scripts/Utility/EnemyBasics.cs'", missing);
+        Assert.Contains($"tracked directory '{ImportCommand.Donor}/Assets/StreamingAssets/Quests'", missing);
         Assert.Contains(missing, entry => entry.StartsWith("music folder 'local/Sound'", StringComparison.Ordinal));
         Assert.Contains(missing, entry => entry.StartsWith("sprite authoring root 'authoring'", StringComparison.Ordinal));
         Assert.Contains("tracked file 'data/content-source-manifest.csv'", missing);
         Assert.Contains("tracked file 'content/worldrpg/payloads/daggerfall.base.json'", missing);
 
-        // An Arena2 folder that exists is checked file by file, so each absent archive is named.
+        // A folder that is not ARENA2 is named as such rather than as a list of every archive it lacks.
         Directory.CreateDirectory(Path.Combine(root, "local/arena2"));
+        missing = [.. ImportCommand.MissingInputs(inputs, root)];
+        Assert.Contains("Arena2 folder: 'local/arena2' is not Daggerfall's ARENA2 folder and none was found inside it", missing);
+        Assert.DoesNotContain(missing, entry => entry.StartsWith("Arena2 file", StringComparison.Ordinal));
+
+        // An ARENA2 folder that exists is checked file by file, so each absent archive is named.
+        File.WriteAllBytes(Path.Combine(root, "local/arena2/BLOCKS.BSA"), []);
         missing = [.. ImportCommand.MissingInputs(inputs, root)];
         Assert.Contains("Arena2 file 'local/arena2/MAPS.BSA'", missing);
         Assert.Contains("Arena2 sky file 'local/arena2/SKY31.DAT'", missing);
@@ -106,18 +113,46 @@ public sealed class DataContainerImportTests : IDisposable
         string before = Directory.GetCurrentDirectory();
 
         InvalidOperationException refusal = Assert.Throws<InvalidOperationException>(() => Program.Commands["import"].Invoke(
-            ["import", "--repository", root, "--arena2", Path.Combine(root, "absent"), "--donor", Path.Combine(root, "absent-donor")]));
+            ["import", "--repository", root, "--arena2", Path.Combine(root, "absent")]));
 
         Assert.Contains("missing inputs:", refusal.Message, StringComparison.Ordinal);
         Assert.Contains("Arena2 directory 'absent'", refusal.Message, StringComparison.Ordinal);
+        Assert.Contains("Point --arena2 at a complete copy of the game's ARENA2 folder, or at the folder Daggerfall is installed in.", refusal.Message, StringComparison.Ordinal);
         Assert.False(Directory.Exists(Path.Combine(root, "local")));
         Assert.Equal(before, Directory.GetCurrentDirectory());
     }
 
     [Fact]
+    public void An_installation_folder_resolves_to_the_ARENA2_folder_inside_it()
+    {
+        string install = Path.Combine(root, "GOG Games", "Daggerfall");
+        string arena2 = Directory.CreateDirectory(Path.Combine(install, "DF", "DAGGER", "arena2")).FullName;
+        Directory.CreateDirectory(Path.Combine(install, "DF", "DAGGER", "ARENA2-backup"));
+        File.WriteAllBytes(Path.Combine(arena2, "MAPS.BSA"), []);
+
+        Assert.Equal(arena2, ImportCommand.Arena2Folder(install));
+        // The ARENA2 folder itself, and a folder that holds none, are left for the input check to judge.
+        Assert.Null(ImportCommand.Arena2Folder(arena2));
+        Assert.Null(ImportCommand.Arena2Folder(Directory.CreateDirectory(Path.Combine(root, "Documents")).FullName));
+        Assert.Null(ImportCommand.Arena2Folder(Path.Combine(root, "absent")));
+    }
+
+    [Fact]
+    public void Without_FFmpeg_the_import_converts_no_cinematics_and_changes_nothing_else()
+    {
+        IReadOnlyList<ImportCommand.Step> with = ImportCommand.Steps(new("local/arena2", null, null, null), root);
+        IReadOnlyList<ImportCommand.Step> without = ImportCommand.Steps(new("local/arena2", null, null, null, Cinematics: false), root);
+
+        Assert.Equal(["cinematic-media-vid", "cinematic-media-flc"], with.Select(step => step.Label).Where(label => label.StartsWith("cinematic-media", StringComparison.Ordinal)));
+        Assert.Equal(
+            with.Where(step => !step.Label.StartsWith("cinematic-media", StringComparison.Ordinal)).Select(step => string.Join('\u001f', [step.Label, .. step.Arguments])),
+            without.Select(step => string.Join('\u001f', [step.Label, .. step.Arguments])));
+    }
+
+    [Fact]
     public void Every_step_is_a_tool_command_the_commands_own_grammar_accepts()
     {
-        ImportCommand.Inputs inputs = new("local/arena2", "/donor", "local/Sound", null, "variants.json");
+        ImportCommand.Inputs inputs = new("local/arena2", "local/Sound", null, "variants.json");
 
         IReadOnlyList<ImportCommand.Step> steps = ImportCommand.Steps(inputs, root);
 
@@ -140,7 +175,7 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void A_command_rerun_without_its_staged_options_reads_and_writes_what_the_import_does()
     {
-        IReadOnlyList<ImportCommand.Step> steps = ImportCommand.Steps(new("local/arena2", "/donor", "local/Sound", null, null), root);
+        IReadOnlyList<ImportCommand.Step> steps = ImportCommand.Steps(new("local/arena2", "local/Sound", null, null), root);
 
         int staged = 0;
         foreach (ImportCommand.Step step in steps)
@@ -173,8 +208,8 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void The_data_container_steps_are_the_same_whichever_music_was_supplied()
     {
-        IReadOnlyList<ImportCommand.Step> without = ImportCommand.Steps(new("local/arena2", "/donor", null, null, null), root);
-        IReadOnlyList<ImportCommand.Step> with = ImportCommand.Steps(new("local/arena2", "/donor", "local/Sound", null, null), root);
+        IReadOnlyList<ImportCommand.Step> without = ImportCommand.Steps(new("local/arena2", null, null, null), root);
+        IReadOnlyList<ImportCommand.Step> with = ImportCommand.Steps(new("local/arena2", "local/Sound", null, null), root);
 
         // Only the music container's own step reads the music folder; no other step names it or what it staged.
         Assert.DoesNotContain(without, step => step.Label == "music-tracks");

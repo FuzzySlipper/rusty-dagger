@@ -1,0 +1,2 @@
+# Daggerfall Unity inputs are read byte for byte by the import; keep them as Daggerfall Unity ships them.
+data/daggerfall-unity/** -text

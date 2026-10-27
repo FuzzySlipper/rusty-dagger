@@ -49,11 +49,14 @@ public sealed class DaggerfallCinematicPresentationTests
     }
 
     [Fact]
-    public void Missing_publication_is_explicit_and_native_failure_still_releases_the_content_lease()
+    public void An_unconverted_cinematic_counts_as_skipped_and_native_failure_still_releases_the_content_lease()
     {
         Harness state = new();
-        Assert.Contains("no accepted packaged artifact", Assert.Throws<InvalidOperationException>(() => state.Presentation.Play("AZURA.FLC")).Message);
+        // An import without FFmpeg leaves the cinematic unconverted; playing it opens nothing and ends as skipped.
+        state.Presentation.Play("AZURA.FLC");
         Assert.Empty(state.Paths);
+        Assert.Null(state.Presentation.ActiveSource);
+        Assert.Equal(new DaggerfallCinematicResult("AZURA.FLC", VideoRealizationFactKind.Skipped, null), state.Presentation.TakeResult());
         state.FailPlay = true;
         Assert.Throws<InvalidOperationException>(() => state.Presentation.Play("ANIM0011.VID"));
         Assert.Equal(1, state.ReferencesReleased);

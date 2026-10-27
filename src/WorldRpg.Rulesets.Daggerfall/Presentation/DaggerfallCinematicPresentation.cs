@@ -21,9 +21,13 @@ internal sealed class DaggerfallCinematicPresentation(IEngineContext engine, Dag
     internal void Play(string sourceFile)
     {
         DaggerfallCinematicDefinition source = catalog.Resolve(sourceFile);
-        DaggerfallCinematicArtifact artifact = source.Artifact
-            ?? throw new InvalidOperationException($"Cinematic '{sourceFile}' has source provenance but no accepted packaged artifact.");
         Stop();
+        // An import without FFmpeg converts no cinematics; the game then plays on as if each one were skipped.
+        if (source.Artifact is not { } artifact)
+        {
+            SetResult(new(source.FileName, VideoRealizationFactKind.Skipped, null));
+            return;
+        }
         _lostFacts = engine.Video.ReadRealization().EvictedFactCount;
         using DaggerfallDataRoot bundle = content.Open(Root);
         using ContentReference reference = bundle.OpenReference(artifact.Path[(Root.Length + 1)..]);

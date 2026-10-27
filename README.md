@@ -132,11 +132,13 @@ It installs the pair, rewrites the pin, and lists the release notes to read.
 `rusty update --check` reports what is available without changing anything.
 
 The game content is not in the repository: it is converted from your own copy of
-Daggerfall. Supply the game's `ARENA2` directory as `local/arena2` and the song
-folder as `local/Sound` (a link is fine; `local/` is ignored), have a Daggerfall
-Unity checkout (default `/home/research/daggerfall-unity`, or `DAGGER_DONOR_ROOT`)
-and FFmpeg on `PATH`, then import the content once per checkout, and again after
-an importer change (the entry screen says when the data is stale):
+Daggerfall. Supply the game's `ARENA2` directory as `local/arena2` (or pass
+`--arena2` the folder Daggerfall is installed in, which holds it) and the song
+folder as `local/Sound` (a link is fine; `local/` is ignored), then import the
+content once per checkout, and again after an importer change (the entry screen
+says when the data is stale). The Daggerfall Unity tables and quest scripts it
+reads are tracked in `data/daggerfall-unity`. FFmpeg on `PATH` is optional: without
+it the cinematics are not converted and the game plays without them.
 
 ```bash
 dotnet run --project src/Daggerfall.Import.Tool -- import --music local/Sound

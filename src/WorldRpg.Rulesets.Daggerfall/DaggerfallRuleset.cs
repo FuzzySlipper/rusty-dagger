@@ -65,7 +65,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
     [
         new(DaggerfallData.DataContainerName, "the Daggerfall data", Required: true,
             DevelopmentStep: $"With the game's ARENA2 folder at local/arena2, run `{ImportCommand}` in the repository root.",
-            ReleaseStep: "Choose Import in the launcher and select your Daggerfall installation's ARENA2 folder."),
+            ReleaseStep: "Choose Import in the launcher and select the folder Daggerfall is installed in, or its ARENA2 folder."),
         new(DaggerfallMusicBundle.ContainerName, "the Daggerfall music", Required: false,
             DevelopmentStep: $"Run `{ImportCommand}` with a folder of <track>.<ext> recordings, such as the Daggerfall Unity song pack.",
             ReleaseStep: "Choose Import in the launcher and select a folder of the game's music recordings."),
