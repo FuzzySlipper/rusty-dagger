@@ -16,6 +16,9 @@
 .dagger-character-title h2 { color: #f8e7b4; font: 500 1.18rem Georgia, serif; letter-spacing: .06em; margin: 0; text-transform: uppercase; }
 .dagger-character-overview { background: #7d6c45; display: grid; gap: 1px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .dagger-character-overview div { background: rgb(20 21 16 / .9); display: grid; gap: .1875rem; min-width: 0; padding: .5rem; }
+/* The gap draws the lines in the overview's colour, so the last fact fills what is left of its row. */
+.dagger-character-overview div:nth-child(3n+1):last-child { grid-column: span 3; }
+.dagger-character-overview div:nth-child(3n+2):last-child { grid-column: span 2; }
 .dagger-character-overview span, .dagger-character-rows dt, .dagger-character-rows > div > span { color: #e4c676; font: 700 .63rem ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
 .dagger-character-overview strong, .dagger-character-rows dd { font: 600 .8rem ui-monospace, monospace; overflow-wrap: anywhere; }
 .dagger-character-columns { display: grid; gap: .75rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: .875rem; }
