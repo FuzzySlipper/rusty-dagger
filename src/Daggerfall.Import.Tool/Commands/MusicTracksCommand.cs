@@ -37,7 +37,7 @@ internal static class MusicTracksCommand
             Console.WriteLine($"music tracks: no recording of [{string.Join(", ", matched.Missing)}]; their contexts play their other tracks");
         if (matched.Unknown.Count != 0)
         {
-            Console.WriteLine($"music tracks: not packed, as no known track in a format the Engine plays ({string.Join(", ", ClassicMusicTracks.Extensions)}): [{string.Join(", ", matched.Unknown)}]");
+            Console.WriteLine($"music tracks: {matched.Unknown.Count} other files in the folder name no classic track in a format the Engine plays ({string.Join(", ", ClassicMusicTracks.Extensions)}), so they are left out: [{string.Join(", ", matched.Unknown)}]");
         }
 
         return 0;
