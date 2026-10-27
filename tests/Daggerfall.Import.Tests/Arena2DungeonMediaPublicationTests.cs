@@ -170,6 +170,88 @@ public sealed class Arena2DungeonMediaPublicationTests
     }
 
     [Fact]
+    public void FemaleThiefFamilyIdleUsesRecordElevenForBothFrontQuarters()
+    {
+        ushort[] ordinaryIdle = [15, 16, 17, 18, 19, 18, 17, 16];
+        bool[] ordinaryMirroring = [false, false, false, false, false, true, true, true];
+        foreach (byte id in new byte[] { 134, 135, 137, 138 })
+        {
+            DungeonActorSpriteMedia actor = Assert.Single(Arena2DungeonMediaPublication.Create(CreateActorRequest(id, 484, actorRecordCount: 25)).Actors);
+            DungeonActorSpriteMedia female = Assert.IsType<DungeonActorSpriteMedia>(actor.Female);
+            DungeonActorSpriteStateLayout femaleIdle = female.States.Single(state => state.State == DungeonActorSpriteState.Idle);
+            Assert.Equal(new[] { 15, 11, 17, 18, 19, 18, 17, 11 }, femaleIdle.Frames.Select(frame => frame.SourceRecord));
+            Assert.Equal(Enumerable.Range(0, 8), femaleIdle.Frames.Select(frame => frame.Orientation));
+            Assert.Equal(ordinaryMirroring, femaleIdle.Frames.Select(frame => frame.Mirrored));
+
+            // The male archive keeps the classic idle mapping, and the female archive's other
+            // groups keep theirs.
+            DungeonActorSpriteStateLayout maleIdle = actor.States.Single(state => state.State == DungeonActorSpriteState.Idle);
+            Assert.Equal(ordinaryIdle.Select(record => (int)record), maleIdle.Frames.Select(frame => frame.SourceRecord));
+            foreach (DungeonActorSpriteStateLayout state in female.States.Where(state => state.State != DungeonActorSpriteState.Idle))
+            {
+                DungeonActorSpriteStateLayout male = actor.States.Single(candidate => candidate.State == state.State);
+                Assert.Equal(male.Frames.Select(frame => (frame.SourceRecord, frame.Mirrored)), state.Frames.Select(frame => (frame.SourceRecord, frame.Mirrored)));
+            }
+        }
+
+        DungeonActorSpriteMedia rogue = Assert.Single(Arena2DungeonMediaPublication.Create(CreateActorRequest(136, 480, actorRecordCount: 25)).Actors);
+        DungeonActorSpriteStateLayout rogueFemaleIdle = Assert.IsType<DungeonActorSpriteMedia>(rogue.Female).States.Single(state => state.State == DungeonActorSpriteState.Idle);
+        Assert.Equal(ordinaryIdle.Select(record => (int)record), rogueFemaleIdle.Frames.Select(frame => frame.SourceRecord));
+    }
+
+    [CorpusFact("PAL.PAL", "TEXTURE.002", "TEXTURE.380", "TEXTURE.483", "TEXTURE.484")]
+    public void FemaleThiefIdlePublishesTheOriginalRecordElevenPixels()
+    {
+        Arena2DungeonMediaPublication publication = Arena2DungeonMediaPublication.Create(CreateCorpusActorRequest(137));
+        DungeonActorSpriteMedia female = Assert.IsType<DungeonActorSpriteMedia>(Assert.Single(publication.Actors).Female);
+        DeterministicPngImage atlas = DeterministicPngReader.ReadRgba8(female.Artifact.Bytes.ToArray(), female.SpriteResourceId);
+        DungeonMediaFrameLayout frontQuarter = female.States.Single(state => state.State == DungeonActorSpriteState.Idle)
+            .Frames.Single(frame => frame.Orientation == 1 && frame.SourceFrame == 0);
+
+        TextureArchive archive = TextureArchive.Parse(File.ReadAllBytes(TestData.Corpus("TEXTURE.483")), "TEXTURE.483");
+        IndexedTextureFrame source = archive.DecodeFrame(11, 0);
+        Assert.Equal((64, 109), (frontQuarter.AtlasFrame.Width, frontQuarter.AtlasFrame.Height));
+        Assert.Equal(
+            source.ToRgba(PaletteDecoder.Decode(File.ReadAllBytes(TestData.Corpus("PAL.PAL")), "PAL.PAL"), PaletteAlphaMode.IndexZeroTransparent),
+            Crop(atlas, frontQuarter.AtlasFrame));
+    }
+
+    [CorpusTheory("PAL.PAL", "TEXTURE.002", "TEXTURE.273", "TEXTURE.278", "TEXTURE.306")]
+    [InlineData(18)]
+    [InlineData(23)]
+    public void SpectralMobilesPublishTranslucentGreyShadesWithOpaqueEyes(byte mobileId)
+    {
+        Arena2Palette palette = PaletteDecoder.Decode(File.ReadAllBytes(TestData.Corpus("PAL.PAL")), "PAL.PAL");
+        Rgb24 eye = palette.Colors.Span[247];
+        DungeonActorSpriteMedia actor = Assert.Single(Arena2DungeonMediaPublication.Create(CreateCorpusActorRequest(mobileId)).Actors);
+        DeterministicPngImage atlas = DeterministicPngReader.ReadRgba8(actor.Artifact.Bytes.ToArray(), actor.SpriteResourceId);
+        bool[] spectralMirroring = [false, false, true, false, false, true, false, true];
+        foreach (DungeonActorSpriteState state in new[] { DungeonActorSpriteState.Move, DungeonActorSpriteState.PrimaryAttack })
+        {
+            DungeonActorSpriteStateLayout layout = actor.States.Single(candidate => candidate.State == state);
+            Assert.Equal(spectralMirroring, layout.Frames.Where(frame => frame.SourceFrame == 0).OrderBy(frame => frame.Orientation).Select(frame => frame.Mirrored));
+            HashSet<(byte, byte, byte, byte)> colors = [];
+            foreach (DungeonMediaFrameLayout frame in layout.Frames)
+            {
+                byte[] pixels = Crop(atlas, frame.AtlasFrame);
+                for (int offset = 0; offset < pixels.Length; offset += 4)
+                {
+                    colors.Add((pixels[offset], pixels[offset + 1], pixels[offset + 2], pixels[offset + 3]));
+                }
+            }
+
+            Assert.Contains(colors, color => color.Item4 == 0);
+            Assert.All(colors.Where(color => color.Item4 != 0), color =>
+            {
+                Assert.NotEqual((255, 0, 255), (color.Item1, color.Item2, color.Item3));
+                Assert.True(color.Item4 is 180 or 255, $"unexpected spectral alpha {color.Item4}");
+            });
+            Assert.True(colors.Count(color => color.Item4 == 180 && color.Item1 == color.Item2) >= 3, "the body keeps several grey shades");
+            Assert.Contains((eye.Red, eye.Green, eye.Blue, (byte)255), colors);
+        }
+    }
+
+    [Fact]
     public void PublishesTheDonorRangedGroupOnlyForAMobileThatDeclaresIt()
     {
         DungeonActorSpriteMedia archer = Assert.Single(Arena2DungeonMediaPublication.Create(CreateActorRequest(141, 482, actorRecordCount: 25)).Actors);
@@ -418,6 +500,32 @@ public sealed class Arena2DungeonMediaPublicationTests
         if (mobile?.FemaleTextureArchive is { } female)
             sources.Add(new Arena2DungeonMediaSource($"arena2/TEXTURE.{female.Value:000}", CreateTextureArchive(actorRecordCount)));
         return Arena2DungeonMediaRequest.Create(document, new Arena2DungeonMediaSourceSet(sources));
+    }
+
+    private static Arena2DungeonMediaRequest CreateCorpusActorRequest(byte mobileId)
+    {
+        Assert.True(MobileSourceMetadata.TryGet(new Arena2MobileId(mobileId), out Arena2MobileSource? mobile));
+        ushort?[] archives = [2, mobile.TextureArchive.Value, mobile.Corpse?.TextureArchive.Value, mobile.FemaleTextureArchive?.Value];
+        return CreateActorRequest(mobileId, mobile.TextureArchive.Value) with
+        {
+            Sources = new Arena2DungeonMediaSourceSet(
+            [
+                new("arena2/PAL.PAL", File.ReadAllBytes(TestData.Corpus("PAL.PAL"))),
+                .. archives.OfType<ushort>().Distinct().Select(archive =>
+                    new Arena2DungeonMediaSource($"arena2/TEXTURE.{archive:000}", File.ReadAllBytes(TestData.Corpus($"TEXTURE.{archive:000}")))),
+            ]),
+        };
+    }
+
+    private static byte[] Crop(DeterministicPngImage atlas, NormalizedAtlasFrame frame)
+    {
+        byte[] pixels = new byte[frame.Width * frame.Height * 4];
+        for (int row = 0; row < frame.Height; row++)
+        {
+            Array.Copy(atlas.Rgba, (((frame.Y + row) * atlas.Width) + frame.X) * 4, pixels, row * frame.Width * 4, frame.Width * 4);
+        }
+
+        return pixels;
     }
 
     private static Arena2DungeonMediaSource[] CreateSources() =>
