@@ -54,6 +54,9 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
 
     public IReadOnlyList<RulesVariantManifest> CompiledVariants => [.. _variants.Select(variant => variant.Manifest)];
 
+    /// <summary>The import tool <c>rusty build --release</c> ships, from the game's folder.</summary>
+    private const string ReleaseImportTool = "tools/Daggerfall.Import.Tool/Daggerfall.Import.Tool";
+
     /// <summary>The import command a developer runs in the repository root to produce the containers.</summary>
     private const string ImportCommand = "dotnet run --project src/Daggerfall.Import.Tool -- import --music local/Sound";
 
@@ -65,10 +68,10 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
     [
         new(DaggerfallData.DataContainerName, "the Daggerfall data", Required: true,
             DevelopmentStep: $"With the game's ARENA2 folder at local/arena2, run `{ImportCommand}` in the repository root.",
-            ReleaseStep: "Choose Import in the launcher and select the folder Daggerfall is installed in, or its ARENA2 folder."),
+            ReleaseStep: $"Drop the folder Daggerfall is installed in (or its ARENA2 folder) onto {ReleaseImportTool} in the game's folder, or run it with that folder."),
         new(DaggerfallMusicBundle.ContainerName, "the Daggerfall music", Required: false,
             DevelopmentStep: $"Run `{ImportCommand}` with a folder of <track>.<ext> recordings, such as the Daggerfall Unity song pack.",
-            ReleaseStep: "Choose Import in the launcher and select a folder of the game's music recordings."),
+            ReleaseStep: $"Run {ReleaseImportTool} with the folder Daggerfall is installed in and --music with a folder of the game's music recordings (<track>.<ext>)."),
     ];
 
     /// <summary>

@@ -74,7 +74,10 @@ internal static class ImportCommand
     {
         string invoked = Directory.GetCurrentDirectory();
         string repository = ImportLayout.RepositoryRoot(args);
-        string arena2 = args.Optional("--arena2") ?? Environment.GetEnvironmentVariable("DAGGER_ARENA2") ?? Path.Combine(repository, DefaultArena2);
+        // A release has no local/arena2: the player names the folder.
+        string arena2 = args.Optional("--arena2")
+            ?? (ImportLayout.ReleaseDirectory is null ? Environment.GetEnvironmentVariable("DAGGER_ARENA2") ?? Path.Combine(repository, DefaultArena2) : null)
+            ?? throw args.Invalid("name the folder Daggerfall is installed in, or its ARENA2 folder.");
         bool cinematics = FindOnPath("ffmpeg") is not null && FindOnPath("ffprobe") is not null;
         Inputs inputs = new(
             Portable(Arena2Folder(Path.GetFullPath(arena2, invoked)) ?? arena2, invoked, repository),
@@ -97,7 +100,7 @@ internal static class ImportCommand
         if (missing.Length != 0)
         {
             string next = missing.Any(entry => entry.StartsWith("Arena2 ", StringComparison.Ordinal))
-                ? $"{Environment.NewLine}Point --arena2 at a complete copy of the game's ARENA2 folder, or at the folder Daggerfall is installed in."
+                ? $"{Environment.NewLine}Name a complete copy of the game's ARENA2 folder, or the folder Daggerfall is installed in."
                 : "";
             throw new InvalidOperationException($"missing input{(missing.Length == 1 ? "" : "s")}:{Environment.NewLine}  {string.Join(Environment.NewLine + "  ", missing)}{next}");
         }
@@ -122,6 +125,8 @@ internal static class ImportCommand
         }
 
         DataContainers.Pack(args.Switch("--compress"));
+        // A player keeps only the containers; the staging tree and the records are the developer's.
+        if (ImportLayout.ReleaseDirectory is not null) Directory.Delete("local", recursive: true);
         Console.WriteLine($"import: finished in {(Environment.TickCount64 - started) / 1000}s");
         return 0;
     }

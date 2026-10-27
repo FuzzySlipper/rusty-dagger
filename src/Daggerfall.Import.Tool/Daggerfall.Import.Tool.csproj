@@ -17,4 +17,13 @@
     <ProjectReference Include="../Daggerfall.Import/Daggerfall.Import.csproj" />
     <InternalsVisibleTo Include="Daggerfall.Import.Tests" />
   </ItemGroup>
+  <!-- A release runs the tool from tools/Daggerfall.Import.Tool/, with no repository: the tracked files the import
+       reads (data/ and content/, which holds only tracked files) are published beside it at their repository
+       paths, so its own directory is the root it imports in. -->
+  <ItemGroup>
+    <None Include="../../data/**" Link="data/%(RecursiveDir)%(Filename)%(Extension)" Visible="false"
+          CopyToOutputDirectory="Never" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="../../content/**" Link="content/%(RecursiveDir)%(Filename)%(Extension)" Visible="false"
+          CopyToOutputDirectory="Never" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

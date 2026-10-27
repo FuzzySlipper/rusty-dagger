@@ -69,11 +69,35 @@ internal static class Program
 
     internal static int Main(string[] args)
     {
+        int status = Run(Release(args));
+        // A player who dropped a folder onto the tool on Windows gets a console of its own, which closes on exit.
+        if (ImportLayout.ReleaseDirectory is not null && OperatingSystem.IsWindows() && !Console.IsInputRedirected)
+        {
+            Console.WriteLine("Press Enter to close.");
+            Console.ReadLine();
+        }
+
+        return status;
+    }
+
+    /// <summary>
+    /// In a release, a folder named first is an import of it, so a player can run the tool on their Daggerfall
+    /// folder, or drop the folder onto it, without naming the command.
+    /// </summary>
+    internal static string[] Release(string[] args) =>
+        ImportLayout.ReleaseDirectory is not null && args.Length != 0 && !Commands.ContainsKey(args[0]) && !args[0].StartsWith('-')
+            ? ["import", "--arena2", args[0], .. args[1..]]
+            : args;
+
+    private static int Run(string[] args)
+    {
         try
         {
             if (args.Length == 0 || !Commands.TryGetValue(args[0], out ToolCommand? command))
             {
-                throw new ArgumentException($"usage: daggerfall-import-tool <{string.Join('|', Commands.Keys)}> [options]; each command prints its own options when they are wrong.");
+                throw new ArgumentException(ImportLayout.ReleaseDirectory is null
+                    ? $"usage: daggerfall-import-tool <{string.Join('|', Commands.Keys)}> [options]; each command prints its own options when they are wrong."
+                    : "usage: Daggerfall.Import.Tool <the folder Daggerfall is installed in, or its ARENA2 folder> [--music <a folder of the game's music recordings>]");
             }
 
             return command.Invoke(args);
