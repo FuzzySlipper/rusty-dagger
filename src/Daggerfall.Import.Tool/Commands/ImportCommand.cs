@@ -24,7 +24,8 @@ namespace Daggerfall.Import.Tool.Commands;
 internal static class ImportCommand
 {
     private const string DefaultArena2 = "local/arena2";
-    private const string DefaultDonor = "/home/research/daggerfall-unity";
+    /// <summary>The Daggerfall Unity values the import reads, tracked in the repository under DFU's own paths.</summary>
+    internal const string Donor = "data/daggerfall-unity";
     private const string Inventory = ImportLayout.Inventory;
     private const string UiAssets = "data/ui-authored-assets.json";
     private const string UiOriginal = AuthoredUi.ProductDirectory;
@@ -48,11 +49,13 @@ internal static class ImportCommand
         "Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv",
         "Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Flats.csv",
         "Assets/StreamingAssets/Tables/QuestList-Classic.txt",
+        .. new[] { "GlobalVars", "StaticMessages", "Places", "Sounds", "Diseases", "Spells", "Items", "Factions", "Foes" }
+            .Select(table => $"Assets/StreamingAssets/Tables/Quests-{table}.txt"),
     ];
 
     public static ToolCommand Command { get; } = new("import",
     [
-        CommandOption.Optional("--arena2", "DIR"), CommandOption.Optional("--donor", "DIR"), CommandOption.Optional("--music", "DIR"),
+        CommandOption.Optional("--arena2", "DIR"), CommandOption.Optional("--music", "DIR"),
         CommandOption.Optional("--sprite-authoring", "DIR"), CommandOption.Optional("--block-variants", "FILE"),
         CommandOption.Optional("--repository", "DIR"), CommandOption.Optional("--only", "STEP[,STEP...]"),
         CommandOption.Switch("--compress"),
@@ -61,19 +64,24 @@ internal static class ImportCommand
     /// <summary>One import step: the label <c>--only</c> names it by, and the tool command it runs.</summary>
     internal sealed record Step(string Label, IReadOnlyList<string> Arguments);
 
-    /// <summary>The inputs a run reads, as repository-relative paths where they lie inside the repository.</summary>
-    internal sealed record Inputs(string Arena2, string Donor, string? Music, string? SpriteAuthoring, string? BlockVariants);
+    /// <summary>
+    /// The inputs a run reads, as repository-relative paths where they lie inside the repository. The cinematics
+    /// are converted only when FFmpeg is on PATH; without it the game plays with none.
+    /// </summary>
+    internal sealed record Inputs(string Arena2, string? Music, string? SpriteAuthoring, string? BlockVariants, bool Cinematics = true);
 
     private static int Run(CommandArguments args)
     {
         string invoked = Directory.GetCurrentDirectory();
         string repository = ImportLayout.RepositoryRoot(args);
+        string arena2 = args.Optional("--arena2") ?? Environment.GetEnvironmentVariable("DAGGER_ARENA2") ?? Path.Combine(repository, DefaultArena2);
+        bool cinematics = FindOnPath("ffmpeg") is not null && FindOnPath("ffprobe") is not null;
         Inputs inputs = new(
-            Portable(args.Optional("--arena2") ?? Environment.GetEnvironmentVariable("DAGGER_ARENA2") ?? Path.Combine(repository, DefaultArena2), invoked, repository),
-            Portable(args.Optional("--donor") ?? Environment.GetEnvironmentVariable("DAGGER_DONOR_ROOT") ?? DefaultDonor, invoked, repository),
+            Portable(Arena2Folder(Path.GetFullPath(arena2, invoked)) ?? arena2, invoked, repository),
             args.Optional("--music") is { } music ? Portable(music, invoked, repository) : null,
             args.Optional("--sprite-authoring") is { } sprites ? Portable(sprites, invoked, repository) : null,
-            args.Optional("--block-variants") is { } variants ? Portable(variants, invoked, repository) : null);
+            args.Optional("--block-variants") is { } variants ? Portable(variants, invoked, repository) : null,
+            cinematics);
         IReadOnlyList<Step> steps = Steps(inputs, repository);
         HashSet<string>? only = args.Optional("--only") is { } names
             ? [.. names.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)]
@@ -87,11 +95,18 @@ internal static class ImportCommand
 
         string[] missing = [.. MissingInputs(inputs, repository)];
         if (missing.Length != 0)
-            throw new InvalidOperationException($"missing input{(missing.Length == 1 ? "" : "s")}:{Environment.NewLine}  {string.Join(Environment.NewLine + "  ", missing)}");
+        {
+            string next = missing.Any(entry => entry.StartsWith("Arena2 ", StringComparison.Ordinal))
+                ? $"{Environment.NewLine}Point --arena2 at a complete copy of the game's ARENA2 folder, or at the folder Daggerfall is installed in."
+                : "";
+            throw new InvalidOperationException($"missing input{(missing.Length == 1 ? "" : "s")}:{Environment.NewLine}  {string.Join(Environment.NewLine + "  ", missing)}{next}");
+        }
         Directory.SetCurrentDirectory(repository);
 
         // The cinematics' bytes depend on the FFmpeg build (each artifact records it), so name it up front.
-        Console.WriteLine($"import: {FirstLine("ffmpeg", "-version")}");
+        Console.WriteLine(cinematics
+            ? $"import: {FirstLine("ffmpeg", "-version")}"
+            : "import: warning: ffmpeg and ffprobe are not both on PATH, so the cinematics are not converted and the game plays without them; install FFmpeg and import again to add them.");
         long started = Environment.TickCount64;
         if (only is null)
         {
@@ -118,7 +133,7 @@ internal static class ImportCommand
     internal static IReadOnlyList<Step> Steps(Inputs inputs, string repository)
     {
         string arena2 = inputs.Arena2;
-        string Donor(string path) => $"{inputs.Donor}/{path}";
+        static string Donor(string path) => $"{ImportCommand.Donor}/{path}";
         const string staging = ImportLayout.Staging;
         const string records = ImportLayout.Records;
         const string imported = ImportLayout.ImportedPayload;
@@ -172,8 +187,11 @@ internal static class ImportCommand
         Add("quests", "quests", "--arena2", arena2, "--quest-text", Donor("Assets/StreamingAssets/Quests"),
             "--tables", Donor("Assets/StreamingAssets/Tables"), "--pack", imported, "--records", importRecords, "--inventory", Inventory, "--update");
         Add("videos", "videos", "--arena2", arena2, "--pack", imported, "--inventory", Inventory, "--update");
-        Add("cinematic-media-vid", "cinematic-media", "--arena2", arena2, "--pack", imported, "--out", staging, "--kind", "vid", "--update");
-        Add("cinematic-media-flc", "cinematic-media", "--arena2", arena2, "--pack", imported, "--out", staging, "--kind", "flc", "--update");
+        if (inputs.Cinematics)
+        {
+            Add("cinematic-media-vid", "cinematic-media", "--arena2", arena2, "--pack", imported, "--out", staging, "--kind", "vid", "--update");
+            Add("cinematic-media-flc", "cinematic-media", "--arena2", arena2, "--pack", imported, "--out", staging, "--kind", "flc", "--update");
+        }
         Add("building-name-inputs", "building-name-inputs", "--maps-file", Donor("Assets/Scripts/API/MapsFile.cs"),
             "--label", "daggerfall-unity/Assets/Scripts/API/MapsFile.cs", "--pack", imported, "--update");
 
@@ -255,6 +273,10 @@ internal static class ImportCommand
         {
             yield return $"Arena2 directory '{inputs.Arena2}' (link local/arena2 to the game's ARENA2 folder or pass --arena2)";
         }
+        else if (!IsFile(Path.Combine(inputs.Arena2, "MAPS.BSA")) && !IsFile(Path.Combine(inputs.Arena2, "BLOCKS.BSA")))
+        {
+            yield return $"Arena2 folder: '{inputs.Arena2}' is not Daggerfall's ARENA2 folder and none was found inside it";
+        }
         else
         {
             foreach (string file in Arena2Files.Where(file => !IsFile(Path.Combine(inputs.Arena2, file))))
@@ -265,25 +287,29 @@ internal static class ImportCommand
             if (!IsDirectory(Path.Combine(inputs.Arena2, "books"))) yield return $"Arena2 books directory '{inputs.Arena2}/books'";
         }
 
-        if (!IsDirectory(inputs.Donor))
-        {
-            yield return $"Daggerfall Unity checkout '{inputs.Donor}' (set DAGGER_DONOR_ROOT or pass --donor)";
-        }
-        else
-        {
-            foreach (string file in DonorFiles.Where(file => !IsFile(Path.Combine(inputs.Donor, file))))
-                yield return $"donor file '{inputs.Donor}/{file}'";
-            if (!IsDirectory(Path.Combine(inputs.Donor, "Assets/StreamingAssets/Quests")))
-                yield return $"donor quest text '{inputs.Donor}/Assets/StreamingAssets/Quests'";
-        }
+        foreach (string file in DonorFiles.Where(file => !IsFile(Path.Combine(Donor, file))))
+            yield return $"tracked file '{Donor}/{file}'";
+        if (!IsDirectory(Path.Combine(Donor, "Assets/StreamingAssets/Quests")))
+            yield return $"tracked directory '{Donor}/Assets/StreamingAssets/Quests'";
 
         if (inputs.Music is { } music && !IsDirectory(music)) yield return $"music folder '{music}' (a folder of <track>.<ext> recordings, or leave out --music)";
-        if (FindOnPath("ffmpeg") is null) yield return "ffmpeg on PATH (the cinematics are converted with it)";
-        if (FindOnPath("ffprobe") is null) yield return "ffprobe on PATH (the cinematics are checked with it)";
         if (inputs.SpriteAuthoring is { } sprites && !IsDirectory(sprites)) yield return $"sprite authoring root '{sprites}'";
         foreach (string file in new[] { Inventory, UiAssets, Authored }.Where(file => !IsFile(file)))
             yield return $"tracked file '{file}'";
         if (!IsDirectory(UiOriginal)) yield return $"tracked directory '{UiOriginal}'";
+    }
+
+    /// <summary>
+    /// The ARENA2 folder a caller pointed at: the folder itself, or the one an installation holds a few levels
+    /// down (GOG and Steam keep it at <c>DF/DAGGER/ARENA2</c>). Null when the path is no folder or holds none,
+    /// which the input check then names.
+    /// </summary>
+    internal static string? Arena2Folder(string path)
+    {
+        static bool IsArena2(string directory) => File.Exists(Path.Combine(directory, "MAPS.BSA")) || File.Exists(Path.Combine(directory, "BLOCKS.BSA"));
+        if (!Directory.Exists(path) || IsArena2(path)) return null;
+        EnumerationOptions search = new() { RecurseSubdirectories = true, MaxRecursionDepth = 3, MatchCasing = MatchCasing.CaseInsensitive, IgnoreInaccessible = true };
+        return Directory.EnumerateDirectories(path, "ARENA2", search).Where(IsArena2).Order(StringComparer.Ordinal).FirstOrDefault();
     }
 
     /// <summary>

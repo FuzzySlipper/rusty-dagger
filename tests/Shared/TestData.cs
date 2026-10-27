@@ -1,8 +1,9 @@
 namespace WorldRpg.Tests.Support;
 
 /// <summary>
-/// Where tests find the repository and the operator-supplied data a clean checkout does not carry:
-/// the Arena2 corpus and the donor checkout. Each root can be relocated through its environment variable.
+/// Where tests find the repository, the operator-supplied Arena2 corpus a clean checkout does not carry, and
+/// the Daggerfall Unity files the import reads, tracked under <c>data/daggerfall-unity</c>. Each root can be
+/// relocated through its environment variable; the donor's points at a full Daggerfall Unity checkout.
 /// </summary>
 internal static class TestData
 {
@@ -17,8 +18,8 @@ internal static class TestData
     /// <summary>The Arena2 corpus: <c>DAGGER_ARENA2</c> when set, else <c>local/arena2</c> in the repository.</summary>
     public static string CorpusRoot => Configured(CorpusVariable) ?? Path.Combine(RepositoryRoot, "local", "arena2");
 
-    /// <summary>The donor checkout: <c>DAGGER_DONOR_ROOT</c> when set, else the research checkout.</summary>
-    public static string DonorRoot => Configured(DonorVariable) ?? "/home/research/daggerfall-unity";
+    /// <summary>The donor files: <c>DAGGER_DONOR_ROOT</c> when set, else the tracked <c>data/daggerfall-unity</c>.</summary>
+    public static string DonorRoot => Configured(DonorVariable) ?? Path.Combine(RepositoryRoot, "data", "daggerfall-unity");
 
     public static string Corpus(string relative) => Path.Combine(CorpusRoot, relative);
 
@@ -48,7 +49,7 @@ internal static class TestData
     internal static string? MissingCorpus(string[] entries) => Missing("Arena2 corpus", CorpusRoot, CorpusVariable, entries);
 
     /// <summary>Why a test needing these donor entries cannot run, or null when they are all present.</summary>
-    internal static string? MissingDonor(string[] entries) => Missing("donor checkout", DonorRoot, DonorVariable, entries);
+    internal static string? MissingDonor(string[] entries) => Missing("donor files", DonorRoot, DonorVariable, entries);
 
     private static string? Missing(string label, string root, string variable, string[] entries)
     {

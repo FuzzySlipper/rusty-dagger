@@ -18,11 +18,13 @@ identifiers (`<track>.<ext>`, such as the donor installation's song folder `loca
 ## Daggerfall Unity
 
 [Daggerfall Unity](https://github.com/Interkarma/daggerfall-unity) is this project's behaviour and
-content reference. It is not vendored and no Daggerfall Unity code is compiled into the product. Some
-import steps read tables from an operator's Daggerfall Unity checkout (for example the enemy table in
-`EnemyBasics.cs`, the item templates, the spell-cost tables in `FormulaHelper.cs`, the quest text and
-quest tables, and the internal strings), and the values they produce land in the ignored generated
-content. Daggerfall Unity is distributed under the following licence:
+content reference. No Daggerfall Unity code is compiled into the product. The Daggerfall Unity files the
+import reads are copied unmodified into `data/daggerfall-unity/`, at their Daggerfall Unity paths, with its
+licence beside them: the enemy table in `EnemyBasics.cs`, the race, item and maps sources, the item and
+magic-item templates, the spell-cost tables in `FormulaHelper.cs`, the internal string and flat-caption
+tables, the classic quest list and quest tables, and the rewritten classic quest scripts of
+`StreamingAssets/Quests`. The values the import takes from them land in the data container it writes on the
+player's machine. Daggerfall Unity is distributed under the following licence:
 
 ```text
 MIT License

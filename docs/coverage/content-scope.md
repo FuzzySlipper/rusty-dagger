@@ -64,6 +64,15 @@ record relationships and classic semantics; their Unity bootstrap, singleton, se
 and distribution topology is excluded by the coverage plan. Donor consultation is evidence for
 the proposed records, not permission to move donor ownership into Rusty Dagger.
 
+The donor values the import reads are tracked under `data/daggerfall-unity/`, at the donor's own
+paths and under its MIT licence: the enemy, race, item, magic-item and spell-cost tables, the
+item enumerations and maps constants, the internal string and flat-caption tables, the classic
+quest list and quest tables, and the 265 rewritten classic quest scripts of
+`StreamingAssets/Quests` (DFU's decompilation of the QBN/QRC pairs in ARENA2, about 1.6 MB). An
+import needs no donor checkout. The cinematics (CNT-025, CNT-026) are converted only when FFmpeg
+is on `PATH`; an import without it publishes their records with no artifact, and the game treats
+each as skipped.
+
 Current Rusty Dagger content is under `content/worldrpg/`, the data container and `src/Daggerfall.Import/`. The
 published baseline is the `daggerfall.base` pack plus one `daggerfall.privateers-hold` pack.
 The current import manifest is
