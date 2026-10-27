@@ -44,6 +44,8 @@ function svgElement(name: string, attributes: Record<string, string>): SVGElemen
   for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, value);
   return element;
 }
+/** A height as the slice field shows it: to the centimetre, without float noise such as 0.9199999. */
+const metres = (value: number): string => String(Math.round(value * 100) / 100);
 const PLAYER_ARROW = 'M 0 -6 L 4 5 L 0 2 L -4 5 Z';
 /** How near a point a press or hover must be to reach it, in diagram units. */
 const POINT_REACH = 8;
@@ -353,9 +355,9 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
   button('Zoom in', () => { zoom = Math.min(MAX_ZOOM, zoom * ZOOM_STEP); }); button('Zoom out', () => { zoom = Math.max(MIN_ZOOM, zoom / ZOOM_STEP); });
   button('Rotate left', () => { playerUp = false; rotation -= 45; }); button('Rotate right', () => { playerUp = false; rotation += 45; });
   button('North up', () => { playerUp = false; rotation = 0; }); button('Player up', () => { playerUp = true; });
-  button('Center on me', () => { if (current) { centerX = current.player.x; centerZ = current.player.z; level.value = String(current.player.y); } });
-  button('Level up', () => { all.checked = false; level.value = String(Number(level.value) + .5); });
-  button('Level down', () => { all.checked = false; level.value = String(Number(level.value) - .5); });
+  button('Center on me', () => { if (current) { centerX = current.player.x; centerZ = current.player.z; level.value = metres(current.player.y); } });
+  button('Level up', () => { all.checked = false; level.value = metres(Number(level.value) + .5); });
+  button('Level down', () => { all.checked = false; level.value = metres(Number(level.value) - .5); });
   button('Travel destinations', travel);
   level.addEventListener('change', () => { all.checked = false; draw(); }); all.addEventListener('change', draw);
   names.addEventListener('change', paintPoints);
@@ -366,7 +368,7 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
       current = value; controls.hidden = buildings.hidden = legend.hidden = value === null; view.hidden = value === null;
       heading.textContent = value ? `${value.name} map` : 'Map';
       if (value && identity !== `${value.kind}:${value.id}`) {
-        identity = `${value.kind}:${value.id}`; centerX = value.player.x; centerZ = value.player.z; rotation = 0; playerUp = false; all.checked = true; level.value = String(value.player.y);
+        identity = `${value.kind}:${value.id}`; centerX = value.player.x; centerZ = value.player.z; rotation = 0; playerUp = false; all.checked = true; level.value = metres(value.player.y);
         const extent = Math.max(40, ...value.areas.flatMap(area => [Math.abs(area.minX - centerX), Math.abs(area.maxX - centerX), Math.abs(area.minZ - centerZ), Math.abs(area.maxZ - centerZ)]));
         zoom = Math.max(MIN_ZOOM, 140 / extent);
       }
