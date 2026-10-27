@@ -117,7 +117,7 @@ public sealed class DataContainerImportTests : IDisposable
 
         Assert.Contains("missing inputs:", refusal.Message, StringComparison.Ordinal);
         Assert.Contains("Arena2 directory 'absent'", refusal.Message, StringComparison.Ordinal);
-        Assert.Contains("Point --arena2 at a complete copy of the game's ARENA2 folder, or at the folder Daggerfall is installed in.", refusal.Message, StringComparison.Ordinal);
+        Assert.Contains("Name a complete copy of the game's ARENA2 folder, or the folder Daggerfall is installed in.", refusal.Message, StringComparison.Ordinal);
         Assert.False(Directory.Exists(Path.Combine(root, "local")));
         Assert.Equal(before, Directory.GetCurrentDirectory());
     }
@@ -135,6 +135,25 @@ public sealed class DataContainerImportTests : IDisposable
         Assert.Null(ImportCommand.Arena2Folder(arena2));
         Assert.Null(ImportCommand.Arena2Folder(Directory.CreateDirectory(Path.Combine(root, "Documents")).FullName));
         Assert.Null(ImportCommand.Arena2Folder(Path.Combine(root, "absent")));
+    }
+
+    [Fact]
+    public void A_tool_published_into_a_release_with_its_inputs_beside_it_installs_beside_the_product()
+    {
+        string release = Directory.CreateDirectory(Path.Combine(root, "RustyDagger")).FullName;
+        string tool = Directory.CreateDirectory(Path.Combine(release, "tools", "Daggerfall.Import.Tool")).FullName;
+
+        // Neither a tool without its inputs nor one in a directory with no product.rpak is in a release.
+        Assert.Null(ImportLayout.FindRelease(tool));
+        Directory.CreateDirectory(Path.Combine(tool, "data"));
+        File.WriteAllText(Path.Combine(tool, ImportLayout.Inventory), "id\n");
+        Assert.Null(ImportLayout.FindRelease(tool));
+
+        File.WriteAllBytes(Path.Combine(release, "product.rpak"), []);
+        Assert.Equal(release, ImportLayout.FindRelease(tool));
+        // Tests run from a build, never a release, so the containers stay in local/.
+        Assert.Null(ImportLayout.ReleaseDirectory);
+        Assert.Equal(ImportLayout.DataContainer, ImportLayout.Installed(ImportLayout.DataContainer));
     }
 
     [Fact]

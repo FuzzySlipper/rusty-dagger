@@ -198,6 +198,28 @@ directly:
 dotnet msbuild src/WorldRpg.Host/WorldRpg.Host.csproj -t:VerifyRustyEngineAot
 ```
 
+### A release for players
+
+`rusty build --release <dir>` (with `--aot` for NativeAOT on Linux) writes a
+directory that runs where no .NET, `rusty` or checkout is installed:
+
+```text
+rusty-dagger[.exe]          the launcher a player starts; the game opens its own window
+product.rpak                the product: UI, tracked content (no Daggerfall data)
+coreclr/ | native/          the product's code
+bin/, share/, dotnet/       the Engine host, its licences and the .NET runtime
+tools/Daggerfall.Import.Tool/   the import, with the tracked files it reads
+daggerfall-data.rpak, music.rpak   written by the import from the player's own files
+```
+
+The player imports once: drop the folder Daggerfall is installed in (or its
+`ARENA2` folder) onto `tools/Daggerfall.Import.Tool/Daggerfall.Import.Tool`, or run
+it with that folder, adding `--music <folder>` for the score. It writes both
+containers beside `product.rpak` and keeps nothing else. Until then, or when the
+data is damaged or from another importer, the game's entry screen names the step.
+A release build outside `rusty dev` opens a window; the dev loop keeps streaming
+to the browser page unless given `--output window`.
+
 Engine contributors may use `rusty dev --engine-source /absolute/rusty-engine`.
 That explicit opt-in supplies source references and a source runtime pack;
 normal downstream builds never discover an adjacent checkout.

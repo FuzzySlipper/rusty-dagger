@@ -81,8 +81,16 @@ public sealed class ArchitectureLawTests
         foreach (string offline in new[] { "Daggerfall.Import", "WorldRpg.SpriteAuthoring" })
             Assert.Empty(XDocument.Load(ProjectFile(offline)).Descendants("PackageReference"));
 
+        // A release ships the import tool beside the product (RustyEngineProductTool) without linking it; any
+        // other item that names the importer would compile or load it into the product.
         foreach (string project in ActiveRuntimeProjects())
-            Assert.DoesNotContain("Daggerfall.Import", File.ReadAllText(ProjectFile(project)), StringComparison.Ordinal);
+        {
+            string[] uses = [.. XDocument.Load(ProjectFile(project)).Descendants()
+                .Where(item => item.Name.LocalName != "RustyEngineProductTool"
+                    && ((string?)item.Attribute("Include") ?? "").Contains("Daggerfall.Import", StringComparison.Ordinal))
+                .Select(item => $"{item.Name.LocalName} {item.Attribute("Include")!.Value}")];
+            Assert.True(uses.Length == 0, $"{project} uses the offline importer: {string.Join(", ", uses)}");
+        }
     }
 
     [Fact]

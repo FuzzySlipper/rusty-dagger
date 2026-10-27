@@ -59,12 +59,29 @@ internal static class ImportLayout
     public const string Inventory = "data/content-source-manifest.csv";
 
     /// <summary>
-    /// The repository root a command works in: <c>--repository</c>, or the current directory. A directory that
-    /// is not one is refused with the command's usage, since every path the import writes is below it.
+    /// The release the tool was installed into by <c>rusty build --release</c>, which puts it in
+    /// <c>tools/&lt;project&gt;/</c> with the tracked inputs it reads beside it; null when it runs from a repository.
+    /// </summary>
+    public static string? ReleaseDirectory { get; } = FindRelease(AppContext.BaseDirectory);
+
+    internal static string? FindRelease(string toolDirectory)
+    {
+        string release = Path.GetFullPath(Path.Combine(toolDirectory, "..", ".."));
+        return File.Exists(Path.Combine(release, "product.rpak")) && File.Exists(Path.Combine(toolDirectory, Inventory)) ? release : null;
+    }
+
+    /// <summary>Where a container is installed: beside <c>product.rpak</c> in a release, in <c>local/</c> in a repository.</summary>
+    public static string Installed(string container) =>
+        ReleaseDirectory is { } release ? Path.Combine(release, Path.GetFileName(container)) : container;
+
+    /// <summary>
+    /// The repository root a command works in: <c>--repository</c>, or the current directory; in a release, the
+    /// tool's own directory, which holds the tracked inputs. A directory that is not one is refused with the
+    /// command's usage, since every path the import writes is below it.
     /// </summary>
     public static string RepositoryRoot(CommandArguments args)
     {
-        string repository = Path.GetFullPath(args.Optional("--repository") ?? Directory.GetCurrentDirectory());
+        string repository = Path.GetFullPath(args.Optional("--repository") ?? (ReleaseDirectory is null ? Directory.GetCurrentDirectory() : AppContext.BaseDirectory));
         return File.Exists(Path.Combine(repository, Inventory))
             ? repository
             : throw args.Invalid($"'{repository}' is not the repository root: it has no '{Inventory}'. Run from the repository or pass --repository.");
@@ -159,11 +176,11 @@ internal static class DataContainers
         WriteDescriptor(ImportLayout.Staging);
         if (Directory.Exists(ImportLayout.MusicTracks)) WriteMusicDescriptor(ImportLayout.MusicTracks);
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions());
-        PackOne(host, ImportLayout.Staging, ImportLayout.DataContainer, compress);
+        PackOne(host, ImportLayout.Staging, ImportLayout.Installed(ImportLayout.DataContainer), compress);
         if (Directory.Exists(ImportLayout.MusicTracks))
-            PackOne(host, ImportLayout.MusicTracks, ImportLayout.MusicContainer, compress);
+            PackOne(host, ImportLayout.MusicTracks, ImportLayout.Installed(ImportLayout.MusicContainer), compress);
         else
-            Console.WriteLine($"music container: no tracks were staged, so '{ImportLayout.MusicContainer}' is left as it is; the product plays no score without one");
+            Console.WriteLine($"music container: no tracks were staged, so '{ImportLayout.Installed(ImportLayout.MusicContainer)}' is left as it is; the product plays no score without one");
     }
 
     /// <summary>Packs one directory into one container and checks the container against the directory.</summary>

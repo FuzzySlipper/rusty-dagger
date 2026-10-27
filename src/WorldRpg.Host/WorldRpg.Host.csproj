@@ -20,6 +20,12 @@
          installed beside the product: in a release beside product.rpak, under rusty dev in the repository's
          local/ directory, where the import command writes them. -->
     <RustyEngineProductInstalledContent>../../local</RustyEngineProductInstalledContent>
+    <!-- A release (rusty build with its release option) names the launcher a player starts; the import tool ships in
+         tools/Daggerfall.Import.Tool/ and installs the containers beside product.rpak. -->
+    <RustyEngineProductLauncherName>rusty-dagger</RustyEngineProductLauncherName>
+    <!-- A player's game opens its own window. The development loop keeps streaming to the browser page, where
+         the playtests drive it, unless rusty dev is given its window output. -->
+    <RustyEngineProductRenderOutput Condition="'$(RustyEngineProductContentSource)' != 'true' and '$(RustyEngineProductRenderOutput)' == ''">window</RustyEngineProductRenderOutput>
     <!-- rusty dev stages with RustyEngineProductContentSource; the Host words its next steps for that loop
          (HostBuild.DevelopmentLoop) and warns rather than refuses stale imported data there. -->
     <DefineConstants Condition="'$(RustyEngineProductContentSource)' == 'true'">$(DefineConstants);WORLDRPG_DEVELOPMENT_LOOP</DefineConstants>
@@ -41,6 +47,7 @@
     <ProjectReference Include="../WorldRpg.Kit/WorldRpg.Kit.csproj" />
     <ProjectReference Include="../WorldRpg.Rulesets.Daggerfall/WorldRpg.Rulesets.Daggerfall.csproj" />
     <ProjectReference Include="../WorldRpg.Rulesets.Daggerfall.Variants/WorldRpg.Rulesets.Daggerfall.Variants.csproj" />
+    <RustyEngineProductTool Include="../Daggerfall.Import.Tool/Daggerfall.Import.Tool.csproj" />
     <PackageReference Include="Rusty.Engine" Version="[$(RustyEnginePackageVersion)]">
       <ExcludeAssets Condition="'$(RustyEngineUseSourceDevelopment)' == 'true'">compile;runtime</ExcludeAssets>
     </PackageReference>

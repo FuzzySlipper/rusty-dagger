@@ -9,6 +9,15 @@ converted from it. The operator supplies their own copy of the game's `ARENA2` d
 `local/daggerfall-data.rpak` on their machine (ignored by Git). See
 [content scope](docs/coverage/content-scope.md) for what is generated and what is authored.
 
+## What a release redistributes
+
+A release (`rusty build --release`) carries the product, the Engine host with its own third-party
+licences in `share/third-party/`, the .NET runtime (MIT, its licence and notices in `dotnet/`), and the
+import tool with the tracked files it reads, among them the Daggerfall Unity files in
+`tools/Daggerfall.Import.Tool/data/daggerfall-unity/` with their licence below. It carries nothing derived
+from *The Elder Scrolls II: Daggerfall*: the player's import writes `daggerfall-data.rpak` and `music.rpak`
+on their own machine.
+
 ## Music (not redistributed)
 
 The score is packed from an operator-supplied folder of recordings named by the classic song
