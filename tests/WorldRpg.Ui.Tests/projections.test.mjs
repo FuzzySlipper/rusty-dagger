@@ -377,6 +377,23 @@ test('a drawn tooltip goes away when the slot it named is filled', async () => {
   } finally { f.dispose(); }
 });
 
+test('a tooltip shown for a focused control goes when the screen holding the control closes', async () => {
+  const f = fixture();
+  try {
+    const host = document.createElement('div');
+    const control = document.createElement('button');
+    control.dataset.tooltip = 'Begin a new game now with these choices and a background completed automatically';
+    host.append(control); f.root.querySelector('.dagger-hud').append(host);
+    control.focus();
+    const tip = [...document.querySelectorAll('.dagger-tooltip')].find(element => !element.hidden);
+    assert.equal(tip?.textContent, control.dataset.tooltip);
+    // The screen closes from the control's own action: its panel is hidden and focus never leaves the control.
+    host.hidden = true;
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.equal(tip.hidden, true, 'A control that is no longer on screen takes its tooltip with it.');
+  } finally { f.dispose(); }
+});
+
 test('an item tooltip shows published labels and values without internal template identities', () => {
   const f = fixture();
   try {
@@ -4188,12 +4205,12 @@ test('the skin publishes the kit as custom properties and reports the primitives
 
 test('the interface scale fits the reference layout to the window unless the player chose one', () => {
   const range = { minimum: 0.5, maximum: 3, step: 0.25 };
+  // Automatic is the exact fit of the 1920x1080 layout (1080p is the minimum the game supports).
   assert.equal(uiScale.chooseScale(1920, 1080, null, range), 1);
-  assert.equal(uiScale.chooseScale(2560, 1440, null, range), 1.25);
+  assert.equal(uiScale.chooseScale(2560, 1440, null, range), 1.333);
   assert.equal(uiScale.chooseScale(3840, 2160, null, range), 2);
-  assert.equal(uiScale.chooseScale(1280, 720, null, range), 0.5);
-  assert.equal(uiScale.chooseScale(3440, 1440, null, range), 1.25, 'an ultrawide window is bounded by its height');
-  assert.equal(uiScale.chooseScale(200, 100, null, range), 0.5, 'the bounds hold');
+  assert.equal(uiScale.chooseScale(3440, 1440, null, range), 1.333, 'an ultrawide window is bounded by its height');
+  assert.equal(uiScale.chooseScale(7680, 4320, null, range), 3, 'the bounds hold');
   assert.equal(uiScale.chooseScale(1920, 1080, 1.5, range), 1.5, "the player's choice wins");
   assert.equal(uiScale.chooseScale(1920, 1080, 9, range), 3);
   const f = fixture();
@@ -4308,7 +4325,7 @@ test('arrow navigation treats a wide row the focus sits over as in line, ahead o
     // The spellbook as drawn: a tab far above, a wide row just above, and Back under the row's left end.
     const rects = new Map([[tab, [420, 265, 50, 20]], [row, [422, 432, 233, 28]], [back, [420, 492, 75, 20]]]);
     window.HTMLElement.prototype.getBoundingClientRect = function () {
-      const [left, top, width, height] = this === document.documentElement ? [0, 0, 1280, 720] : rects.get(this) ?? [-9999, -9999, 0, 0];
+      const [left, top, width, height] = this === document.documentElement ? [0, 0, 1920, 1080] : rects.get(this) ?? [-9999, -9999, 0, 0];
       return { left, top, width, height, right: left + width, bottom: top + height, x: left, y: top };
     };
     // Only the three drawn controls are laid out; the rest of the page is not.
@@ -4337,7 +4354,7 @@ test('arrow navigation passes over a control the page cannot focus for the next 
     // A column: tab, then row, then Back. The row refuses focus, as the window's Servo refuses an SVG point.
     const rects = new Map([[tab, [420, 100, 75, 20]], [row, [420, 200, 75, 20]], [back, [420, 300, 75, 20]]]);
     window.HTMLElement.prototype.getBoundingClientRect = function () {
-      const [left, top, width, height] = this === document.documentElement ? [0, 0, 1280, 720] : rects.get(this) ?? [-9999, -9999, 0, 0];
+      const [left, top, width, height] = this === document.documentElement ? [0, 0, 1920, 1080] : rects.get(this) ?? [-9999, -9999, 0, 0];
       return { left, top, width, height, right: left + width, bottom: top + height, x: left, y: top };
     };
     window.Element.prototype.getClientRects = function () { return rects.has(this) ? [this.getBoundingClientRect()] : []; };
