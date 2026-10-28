@@ -17,6 +17,20 @@ export interface UiAction { readonly action: string; readonly [field: string]: s
 
 export interface BundleProjection { readonly current: string; readonly options: readonly { readonly id: string; readonly title: string }[]; }
 
+/** The entry screen's import of the missing content: where it is, what to say, and the tool's recent output. */
+export interface ContentImport {
+  readonly state: 'idle' | 'choosing' | 'running' | 'installed' | 'failed';
+  readonly status: string;
+  readonly output: string;
+}
+
+export interface Unavailable {
+  readonly title: string;
+  readonly problems: readonly string[];
+  /** Offered when the ruleset can produce the missing content from the player's own files; null otherwise. */
+  readonly import?: ContentImport | null;
+}
+
 export interface DaggerHud {
   /** Detect spells' contacts: each bearing is clockwise from north, as the view's yaw reads. */
   readonly detectors?: readonly { readonly source: string; readonly kind: string; readonly label?: string; readonly contacts: readonly {
@@ -55,8 +69,8 @@ export interface DaggerHud {
   readonly uiArtDemanded?: UiArt | null;
   readonly panelRequest?: PanelRequest | null;
   readonly saveSlots?: SaveSlotProjection;
-  /** Why no game can be played, with the step that fixes each problem; the entry screen then offers nothing to play. */
-  readonly unavailable?: { readonly title: string; readonly problems: readonly string[] } | null;
+  /** Why no game can be played, with the step that fixes each problem; the entry screen then offers nothing to play but Import. */
+  readonly unavailable?: Unavailable | null;
   /** The games the entry screen offers while a new game can still choose one; absent or null otherwise. */
   readonly bundles?: BundleProjection | null;
   readonly controls?: ControlsProjection;

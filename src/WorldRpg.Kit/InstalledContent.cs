@@ -91,7 +91,19 @@ public sealed record InstalledContentDescription(string Revision, IReadOnlyList<
 /// <param name="Required">Whether the ruleset's games compose without it; an optional container that is absent is left out.</param>
 /// <param name="DevelopmentStep">What a developer does to produce it, shown when it is absent, unreadable or stale under the development loop.</param>
 /// <param name="ReleaseStep">What a player does to produce it, shown in a release.</param>
-public sealed record InstalledContentRequirement(string Name, string Title, bool Required, string DevelopmentStep, string ReleaseStep);
+/// <param name="Import">How the entry screen produces it from a folder the player chooses; null when it cannot.</param>
+public sealed record InstalledContentRequirement(string Name, string Title, bool Required, string DevelopmentStep, string ReleaseStep,
+    InstalledContentImport? Import = null);
+
+/// <summary>
+/// How a container is produced from the player's own files on the entry screen: the product's declared tool that
+/// writes it, what the folder picker asks for, and the tool's arguments for the chosen folder and the directory
+/// the host opens installed containers from.
+/// </summary>
+/// <param name="Tool">The declared tool's project name (<c>RustyEngineProductTool</c>).</param>
+/// <param name="FolderPrompt">The folder picker's title.</param>
+/// <param name="Arguments">The tool's arguments for the chosen folder and the installed-content directory.</param>
+public sealed record InstalledContentImport(string Tool, string FolderPrompt, Func<string, string, IReadOnlyList<string>> Arguments);
 
 /// <summary>
 /// Optional ruleset seam for content installed beside the product: the containers the ruleset's games read, whether
@@ -115,5 +127,18 @@ public interface IInstalledContentRuleset
     IGameSession CreateUnavailableSession(GameUnavailableContext context);
 }
 
-/// <summary>What an unavailable session shows: the problems that stop play, each with the step that fixes it.</summary>
-public sealed record GameUnavailableContext(IEngineContext Engine, IReadOnlyList<string> Problems);
+/// <summary>
+/// What an unavailable session shows: the problems that stop play, each with the step that fixes it, and the
+/// import that produces the required container from the entry screen, when the ruleset declares one.
+/// </summary>
+public sealed record GameUnavailableContext(IEngineContext Engine, IReadOnlyList<string> Problems, InstalledContentRequirement? Importable = null);
+
+/// <summary>
+/// An unavailable session that can produce its missing container: once its import has installed it, the host
+/// opens the installed containers again and composes the game.
+/// </summary>
+public interface IInstalledContentImportSession : IGameSession
+{
+    /// <summary>Whether an import has installed the container since the last take, so the host should open the game.</summary>
+    bool TakeReopenRequest();
+}

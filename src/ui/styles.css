@@ -297,6 +297,9 @@
 .dagger-entry-unavailable h2 { margin: 0 0 .5rem; font-size: 1.1rem; }
 .dagger-entry-unavailable ul { margin: 0; padding-left: 1.25rem; font-size: .9rem; }
 .dagger-entry-unavailable li + li { margin-top: .5rem; }
+.dagger-entry-import-status { margin: .75rem 0 .5rem; font-size: .9rem; }
+.dagger-entry-import-output { max-height: 12rem; margin: 0 0 .5rem; padding: .5rem; overflow: auto; font-size: .75rem; white-space: pre-wrap; overflow-wrap: anywhere; background: rgb(0 0 0 / .5); border: 1px solid rgb(255 255 255 / .1); }
+.dagger-entry-import-row { display: flex; gap: .5rem; }
 
 .dagger-character-art { display: flex; align-items: flex-start; gap: 1rem; }
 .dagger-character-art img { image-rendering: pixelated; max-height: 16.25rem; min-height: 5rem; width: auto; }

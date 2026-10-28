@@ -8,12 +8,13 @@ namespace Daggerfall.Import.Tool.Commands;
 internal static class PackCommand
 {
     public static ToolCommand Command { get; } = new("pack",
-        [CommandOption.Optional("--repository", "DIR"), CommandOption.Switch("--compress")], Run);
+        [CommandOption.Optional("--repository", "DIR"), CommandOption.Optional("--install", "DIR"), CommandOption.Switch("--compress")], Run);
 
     private static int Run(CommandArguments args)
     {
+        string? install = args.Optional("--install") is { } named ? Path.GetFullPath(named) : null;
         Directory.SetCurrentDirectory(ImportLayout.RepositoryRoot(args));
-        DataContainers.Pack(args.Switch("--compress"));
+        DataContainers.Pack(args.Switch("--compress"), install);
         return 0;
     }
 }

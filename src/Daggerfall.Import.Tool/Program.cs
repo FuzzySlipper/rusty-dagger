@@ -69,9 +69,11 @@ internal static class Program
 
     internal static int Main(string[] args)
     {
-        int status = Run(Release(args));
+        string[] command = Release(args);
+        int status = Run(command);
         // A player who dropped a folder onto the tool on Windows gets a console of its own, which closes on exit.
-        if (ImportLayout.ReleaseDirectory is not null && OperatingSystem.IsWindows() && !Console.IsInputRedirected)
+        // The game runs the tool with its command spelled out and no console, so it never waits there.
+        if (command != args && OperatingSystem.IsWindows() && !Console.IsInputRedirected)
         {
             Console.WriteLine("Press Enter to close.");
             Console.ReadLine();

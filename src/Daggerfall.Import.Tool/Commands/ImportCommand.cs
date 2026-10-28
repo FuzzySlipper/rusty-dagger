@@ -57,7 +57,7 @@ internal static class ImportCommand
     [
         CommandOption.Optional("--arena2", "DIR"), CommandOption.Optional("--music", "DIR"),
         CommandOption.Optional("--sprite-authoring", "DIR"), CommandOption.Optional("--block-variants", "FILE"),
-        CommandOption.Optional("--repository", "DIR"), CommandOption.Optional("--only", "STEP[,STEP...]"),
+        CommandOption.Optional("--repository", "DIR"), CommandOption.Optional("--install", "DIR"), CommandOption.Optional("--only", "STEP[,STEP...]"),
         CommandOption.Switch("--compress"),
     ], Run);
 
@@ -74,6 +74,8 @@ internal static class ImportCommand
     {
         string invoked = Directory.GetCurrentDirectory();
         string repository = ImportLayout.RepositoryRoot(args);
+        // The product names the directory the host opens containers from; by hand they go to the release or local/.
+        string? install = args.Optional("--install") is { } named ? Path.GetFullPath(named, invoked) : null;
         // A release has no local/arena2: the player names the folder.
         string arena2 = args.Optional("--arena2")
             ?? (ImportLayout.ReleaseDirectory is null ? Environment.GetEnvironmentVariable("DAGGER_ARENA2") ?? Path.Combine(repository, DefaultArena2) : null)
@@ -124,7 +126,7 @@ internal static class ImportCommand
             if (status != 0) throw new InvalidOperationException($"step '{step.Label}' failed with exit status {status}; nothing was packed.");
         }
 
-        DataContainers.Pack(args.Switch("--compress"));
+        DataContainers.Pack(args.Switch("--compress"), install);
         // A player keeps only the containers; the staging tree and the records are the developer's.
         if (ImportLayout.ReleaseDirectory is not null) Directory.Delete("local", recursive: true);
         Console.WriteLine($"import: finished in {(Environment.TickCount64 - started) / 1000}s");

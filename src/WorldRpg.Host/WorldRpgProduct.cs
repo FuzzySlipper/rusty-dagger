@@ -34,8 +34,11 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     private const string BundleChoiceKey = "selected";
 
     private readonly ProductCreateContext _context;
-    // The containers installed beside the product, opened once at create and kept for the product's life.
-    private readonly IReadOnlyList<InstalledContent> _installed;
+    // The containers installed beside the product, opened at create and kept for the product's life, or until an
+    // import on the entry screen installs them again.
+    private IReadOnlyList<InstalledContent> _installed = [];
+    // The bundle the product was created to start, which an entry-screen import composes again.
+    private readonly GameBundleId _startBundle;
     // The game composed now; null while the product runs the unavailable screen and no game can be played.
     private ResolvedGameComposition? _composition;
     private IGameRuleset? _ruleset;
@@ -87,9 +90,21 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         ArgumentNullException.ThrowIfNull(context);
         _context = context;
         _explicitRuleset = ruleset;
+        _startBundle = bundle;
         // Each change of the loading screen is published by whichever session is current then: a new game or a
         // load replaces the session part-way through its work.
         _loading = new LoadingScreen(() => (_session as ILoadingScreenSession)?.PublishLoading());
+        _session = OpenGame(bundle);
+    }
+
+    /// <summary>
+    /// Opens the installed containers and composes the game, or, when that cannot be done, the ruleset's unavailable
+    /// session that says why; either is published before it is returned.
+    /// </summary>
+    private IGameSession OpenGame(GameBundleId bundle)
+    {
+        ProductCreateContext context = _context;
+        IGameRuleset? ruleset = _explicitRuleset;
         // The containers the ruleset's games read are opened before any game is composed, so a pack they carry
         // resolves like one of the product's own and a container that cannot be read is named on the entry screen.
         IInstalledContentRuleset? installedRuleset = InstalledContentRuleset(ruleset);
@@ -129,18 +144,17 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         if (problems.Count == 0)
         {
             (ResolvedGameComposition composition, IGameRuleset selected) = selection ?? throw new InvalidOperationException("No game was composed.");
-            if (StartGame(composition, selected, installedRuleset, problems) is { } session)
-            {
-                _session = session;
-                return;
-            }
+            if (StartGame(composition, selected, installedRuleset, problems) is { } session) return session;
         }
 
         // A container read fails only once the game starts reading it, so a session that met a damaged one
-        // while it was created is set aside like a game that never composed.
-        _session = installedRuleset!.CreateUnavailableSession(new GameUnavailableContext(context.Engine, problems));
-        try { _session.PublishInitial(); }
-        catch { _session.Dispose(); DisposeInstalled(); throw; }
+        // while it was created is set aside like a game that never composed. The required container's import,
+        // when the ruleset declares one, is offered there.
+        IGameSession unavailable = installedRuleset!.CreateUnavailableSession(new GameUnavailableContext(context.Engine, problems,
+            installedRuleset.InstalledContent.FirstOrDefault(requirement => requirement.Required && requirement.Import is not null)));
+        try { unavailable.PublishInitial(); }
+        catch { unavailable.Dispose(); DisposeInstalled(); throw; }
+        return unavailable;
     }
 
     /// <summary>
@@ -379,6 +393,25 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             opened?.Session.Dispose();
             choosing.ReportBundleOutcome($"The game '{title}' could not be opened: {error.Message}");
         });
+    }
+
+    /// <summary>
+    /// Opens the game again once the entry screen's import installed its container: the unavailable session and the
+    /// containers opened at start are let go, and the game is composed as at create, still at the entry screen.
+    /// True when the session was replaced, so nothing else reads the one that asked.
+    /// </summary>
+    private bool HonorInstalledContentReopen()
+    {
+        if (_session is not IInstalledContentImportSession importing || !importing.TakeReopenRequest()) return false;
+        _session.Dispose();
+        DisposeInstalled();
+        _installed = [];
+        (_composition, _ruleset, _compositionIdentity) = (null, null, null);
+        _session = OpenGame(_startBundle);
+        if (_session is IModeAwareGameSession aware) aware.ApplyProductMode(_mode);
+        Record(new(_mode, _mode, ProductModeChangeOutcome.AlreadyInMode, "the entry screen imported the content the game reads"));
+        ReportBundleNotice();
+        return true;
     }
 
     /// <summary>Makes the chosen game's opened session the running one and remembers the choice.</summary>
@@ -665,6 +698,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         // a step rather than after it.
         AdoptSessionRequest();
         ProductUpdateResult result = _session.Update(update);
+        if (HonorInstalledContentReopen()) return result;
         PersistRequestedPlayerPreferences();
         AdoptSessionRequest();
         HonorPlayerDefeatOutcomeRequests();

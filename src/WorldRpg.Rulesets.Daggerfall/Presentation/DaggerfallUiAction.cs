@@ -42,6 +42,7 @@ internal enum DaggerfallUiActionKind
     LootClose, LootTake, LootTakeAll,
     SaveGame, LoadGame, SaveSlots, SaveSlot, LoadSlot, DeleteSlot, BundleSelect,
     DeathNewGame, DeathLoadGame, DeathQuit,
+    ContentImport, ContentImportCancel,
 }
 
 /// <summary>Which of the session's input phases an action is admitted in.</summary>
@@ -264,6 +265,9 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.DeathNewGame, DaggerfallDeathPresentation.NewGameAction, DaggerfallUiPhases.Dead, Unrecognized),
         new(DaggerfallUiActionKind.DeathLoadGame, DaggerfallDeathPresentation.LoadGameAction, DaggerfallUiPhases.Dead, Unrecognized),
         new(DaggerfallUiActionKind.DeathQuit, DaggerfallDeathPresentation.QuitAction, DaggerfallUiPhases.Dead, Unrecognized),
+        // The entry screen's import, which only the unavailable session acts on: a game that runs has its content.
+        new(DaggerfallUiActionKind.ContentImport, "content-import", DaggerfallUiPhases.Held),
+        new(DaggerfallUiActionKind.ContentImportCancel, "content-import-cancel", DaggerfallUiPhases.Held),
     ];
 
     private static readonly Dictionary<string, DaggerfallUiActionRule> ByWire = Rules.ToDictionary(rule => rule.Wire, StringComparer.Ordinal);
@@ -545,6 +549,7 @@ internal static class DaggerfallUiAction
                 return fields.SetEquals(["action", "note"]) && !string.IsNullOrWhiteSpace(note) ? new(action, Note: note) : null;
             if (action == "menu") return fields.SetEquals(["action", "open"]) ? new(action, Open: open) : null;
             if (action == "save-slots") return fields.SetEquals(["action"]) ? new(action) : null;
+            if (action is "content-import" or "content-import-cancel") return fields.SetEquals(["action"]) ? new(action) : null;
             if (action == "save-slot")
                 return fields.IsSubsetOf(["action", "key", "label", "confirm"])
                     && !string.IsNullOrWhiteSpace(label)

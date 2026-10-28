@@ -1,6 +1,6 @@
 import { fitPixelArt, image } from './art.js';
 import { button, type Send } from './host.js';
-import { isBundles, isSaveSlots, type BundleProjection, type DaggerHud, type SaveSlotEntry } from './projection.js';
+import { isBundles, isSaveSlots, type BundleProjection, type DaggerHud, type SaveSlotEntry, type Unavailable } from './projection.js';
 import { createCycler, type Cycler } from './cycler.js';
 import { invalidate, redraw } from './redraw.js';
 import { BEGIN_ACTION, TITLE_MODE, screenForMode } from './screens.js';
@@ -64,7 +64,16 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
   unavailable.dataset.testid = 'entry-unavailable'; unavailable.setAttribute('role', 'alert'); unavailable.hidden = true;
   const unavailableTitle = document.createElement('h2');
   const unavailableProblems = document.createElement('ul');
-  unavailable.append(unavailableTitle, unavailableProblems);
+  // Import converts the player's own Daggerfall folder in place of the missing data: the host shows its folder
+  // picker, the tool's output scrolls below while it runs, and the game opens once it has finished.
+  const importStatus = document.createElement('p'); importStatus.className = 'dagger-entry-import-status'; importStatus.setAttribute('role', 'status');
+  const importOutput = document.createElement('pre'); importOutput.className = 'dagger-entry-import-output'; importOutput.dataset.testid = 'entry-import-output';
+  const importButton = button('Import'); importButton.className = 'dagger-entry-import'; importButton.dataset.testid = 'entry-import';
+  importButton.addEventListener('click', () => send({ action: 'content-import' }));
+  const importCancel = button('Cancel'); importCancel.className = 'dagger-entry-import-cancel'; importCancel.dataset.testid = 'entry-import-cancel';
+  importCancel.addEventListener('click', () => send({ action: 'content-import-cancel' }));
+  const importRow = document.createElement('div'); importRow.className = 'dagger-entry-import-row'; importRow.append(importButton, importCancel);
+  unavailable.append(unavailableTitle, unavailableProblems, importStatus, importOutput, importRow);
   // The outcome of a choice sits above the controls, so a long one never covers them.
   actions.append(unavailable, outcome, saved, bundle, buttons);
   root.append(actions);
@@ -85,7 +94,7 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
   let mode: string | null = null;
   let pickScreens: readonly string[] = [];
   let bundles: BundleProjection | null = null;
-  let blocked: { readonly title: string; readonly problems: readonly string[] } | null = null;
+  let blocked: Unavailable | null = null;
 
   const draw = (): void => {
     root.hidden = !title;
@@ -99,10 +108,24 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
     unavailable.hidden = blocked === null;
     if (blocked !== null) {
       const shown = blocked;
-      redraw(unavailable, JSON.stringify(shown), () => {
+      redraw(unavailableProblems, JSON.stringify([shown.title, shown.problems]), () => {
         unavailableTitle.textContent = shown.title;
         unavailableProblems.replaceChildren(...shown.problems.map(problem => { const item = document.createElement('li'); item.textContent = problem; return item; }));
       });
+      const importing = shown.import ?? null;
+      const busy = importing !== null && (importing.state === 'choosing' || importing.state === 'running');
+      importStatus.hidden = importing === null;
+      importStatus.textContent = importing?.status ?? '';
+      importOutput.hidden = importing === null || importing.output === '';
+      if (importOutput.textContent !== (importing?.output ?? '')) {
+        importOutput.textContent = importing?.output ?? '';
+        importOutput.scrollTop = importOutput.scrollHeight;
+      }
+      const offered = importing !== null && !busy && importing.state !== 'installed';
+      if (!offered && importButton.contains(document.activeElement) && importing?.state === 'running') importCancel.focus();
+      importButton.hidden = !offered;
+      importCancel.hidden = importing?.state !== 'running';
+      if (offered && !importRow.contains(document.activeElement)) importButton.focus();
     }
     begin.hidden = creating || blocked !== null;
     // While creating, what blocks Start is shown beside it; the title's outcome plate stays for title choices.
@@ -158,7 +181,7 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
         ? value.character.creation.mode ?? null : value.character.creation.summary ? 'character-pick' : null : null;
       pickScreens = value.pickScreens ?? [];
       bundles = isBundles(value.bundles) ? value.bundles : null;
-      blocked = value.unavailable ? { title: value.unavailable.title, problems: value.unavailable.problems } : null;
+      blocked = value.unavailable ?? null;
       outcome.textContent = value.lastOutcome;
       draw();
     },

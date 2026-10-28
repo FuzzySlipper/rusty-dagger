@@ -102,6 +102,9 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.DaedraAnswer:
                 ChangeSummoning(action); break;
             case DaggerfallUiActionKind.Begin:
+            // A running game already has its content; only the unavailable session imports it.
+            case DaggerfallUiActionKind.ContentImport:
+            case DaggerfallUiActionKind.ContentImportCancel:
                 break;
             case DaggerfallUiActionKind.LegalChoice: ChooseLegal(action.Revision!, action.Key!); break;
             case DaggerfallUiActionKind.CreateItemSelect: ChooseCreateItem(action.Revision!, action.Key!); break;

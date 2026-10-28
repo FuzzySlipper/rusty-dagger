@@ -138,7 +138,33 @@ public sealed class WorldRpgInstalledContentTests : IDisposable
         });
     }
 
-    private void Pack(string container, string revision, bool describesPack, bool compress = false)
+    [Fact]
+    public void An_import_on_the_unavailable_screen_opens_the_game_it_installed_without_a_restart()
+    {
+        InstalledRuleset ruleset = new(Data, Music);
+
+        _host.Call(engine =>
+        {
+            using WorldRpgProduct product = Product(engine, ruleset);
+            product.Start();
+
+            // The required container's import is offered; the optional one's is not.
+            Assert.Same(InstalledRuleset.DataImport, ruleset.Unavailable!.Importable!.Import);
+            Assert.Empty(ruleset.Composed);
+            ImportingSession importing = Assert.Single(ruleset.Importing);
+
+            // The session's import installs the container, as the declared tool would, and asks the host to reopen.
+            importing.Install = () => Pack(Data, CurrentRevision, describesPack: true, within: engine);
+            product.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d), []));
+
+            Assert.True(importing.Disposed);
+            ResolvedGameComposition composition = Assert.Single(ruleset.Composed);
+            Assert.Equal(["test.imported"], composition.ContentPacks.Select(pack => pack.Id.Value));
+            Assert.Equal(ProductMode.Title, product.Mode);
+        });
+    }
+
+    private void Pack(string container, string revision, bool describesPack, bool compress = false, IEngineContext? within = null)
     {
         string staged = Directory.CreateDirectory(Path.Combine(_root, "staged-" + Guid.NewGuid().ToString("N"))).FullName;
         string packs = describesPack
@@ -149,7 +175,9 @@ public sealed class WorldRpgInstalledContentTests : IDisposable
         Write(staged, InstalledContent.DescriptionPath, $$"""{"kind":"worldrpg.data-container","importerRevision":"{{revision}}","contentPacks":[{{packs}}]}{{padding}}""");
         Write(staged, "payload/imported.json", "imported" + padding);
         Write(staged, InstalledRuleset.SessionReadPath, "detail" + padding);
-        _host.Call(engine => ProductContentBundle.PackContainer(engine.Content, staged, container, compress));
+        // Inside a product call the container is packed through that call's Engine, as a tool's would be beside it.
+        if (within is not null) ProductContentBundle.PackContainer(within.Content, staged, container, compress);
+        else _host.Call(engine => ProductContentBundle.PackContainer(engine.Content, staged, container, compress));
     }
 
     /// <summary>
@@ -198,6 +226,10 @@ public sealed class WorldRpgInstalledContentTests : IDisposable
     {
         internal const string ReleaseStep = "Import the test data.";
 
+        internal static readonly InstalledContentImport DataImport = new("TestImport", "Choose the test files", (folder, install) => [folder, install]);
+
+        internal List<ImportingSession> Importing { get; } = [];
+
         /// <summary>The entry the session reads from the required container as it is created.</summary>
         internal const string SessionReadPath = "payload/detail.json";
 
@@ -209,7 +241,7 @@ public sealed class WorldRpgInstalledContentTests : IDisposable
 
         public IReadOnlyList<InstalledContentRequirement> InstalledContent { get; } =
         [
-            new(data, "the test data", Required: true, DevelopmentStep: "Run the test import.", ReleaseStep: ReleaseStep),
+            new(data, "the test data", Required: true, DevelopmentStep: "Run the test import.", ReleaseStep: ReleaseStep, Import: DataImport),
             new(music, "the test music", Required: false, DevelopmentStep: "Run the test import with music.", ReleaseStep: "Import the test music."),
         ];
 
@@ -221,7 +253,9 @@ public sealed class WorldRpgInstalledContentTests : IDisposable
         public IGameSession CreateUnavailableSession(GameUnavailableContext context)
         {
             Unavailable = context;
-            return new QuietSession();
+            ImportingSession session = new();
+            Importing.Add(session);
+            return session;
         }
 
         public IGameSession CreateSession(GameSessionContext context)
@@ -231,6 +265,35 @@ public sealed class WorldRpgInstalledContentTests : IDisposable
                 if (installed.Contains(SessionReadPath)) installed.Container.ReadBytes(SessionReadPath);
             return new QuietSession();
         }
+    }
+
+    /// <summary>An unavailable session whose import, once given one, installs the container in its next update.</summary>
+    private sealed class ImportingSession : IInstalledContentImportSession
+    {
+        internal Action? Install { get; set; }
+
+        internal bool Disposed { get; private set; }
+
+        private bool _installed;
+
+        public void PublishInitial()
+        {
+        }
+
+        public ProductUpdateResult Update(ProductUpdate update)
+        {
+            if (Install is { } install) { install(); Install = null; _installed = true; }
+            return ProductUpdateResult.None;
+        }
+
+        public bool TakeReopenRequest()
+        {
+            bool installed = _installed;
+            _installed = false;
+            return installed;
+        }
+
+        public void Dispose() => Disposed = true;
     }
 
     private sealed class QuietSession : IGameSession
