@@ -157,6 +157,24 @@ public sealed class DataContainerImportTests : IDisposable
     }
 
     [Fact]
+    public void The_game_names_where_the_containers_go_and_a_tool_run_from_its_build_output_finds_its_repository()
+    {
+        string install = Path.Combine(root, "installed");
+        Assert.Equal(Path.Combine(install, "daggerfall-data.rpak"), ImportLayout.Installed(ImportLayout.DataContainer, install));
+        Assert.Equal(Path.Combine(install, "music.rpak"), ImportLayout.Installed(ImportLayout.MusicContainer, install));
+
+        // The host runs the tool from its build output in the installed-content directory, so the repository is the
+        // one that build output lies in.
+        string repository = Directory.CreateDirectory(Path.Combine(root, "repo")).FullName;
+        Directory.CreateDirectory(Path.Combine(repository, "data"));
+        File.WriteAllText(Path.Combine(repository, ImportLayout.Inventory), "id\n");
+        string output = Directory.CreateDirectory(Path.Combine(repository, "src", "Daggerfall.Import.Tool", "bin", "Debug", "net10.0")).FullName;
+        Assert.Equal(repository, ImportLayout.EnclosingRepository(output));
+        Assert.Null(ImportLayout.EnclosingRepository(Directory.CreateDirectory(Path.Combine(root, "elsewhere")).FullName));
+        Assert.Contains("--install", Program.Commands["import"].Usage, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Without_FFmpeg_the_import_converts_no_cinematics_and_changes_nothing_else()
     {
         IReadOnlyList<ImportCommand.Step> with = ImportCommand.Steps(new("local/arena2", null, null, null), root);

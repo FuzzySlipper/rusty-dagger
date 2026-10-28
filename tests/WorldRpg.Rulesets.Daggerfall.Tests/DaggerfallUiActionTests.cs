@@ -249,6 +249,9 @@ public sealed class DaggerfallUiActionTests
     [InlineData("{\"action\":\"travel-map\",\"open\":true,\"region\":-1,\"page\":0}", false)]
     [InlineData("{\"action\":\"travel-map\",\"open\":true,\"region\":17,\"page\":-1}", false)]
     [InlineData("{\"action\":\"travel-map\"}", false)]
+    [InlineData("{\"action\":\"content-import\"}", true)]
+    [InlineData("{\"action\":\"content-import-cancel\"}", true)]
+    [InlineData("{\"action\":\"content-import\",\"key\":\"x\"}", false)]
     public void Travel_map_views_are_opened_closed_or_turned_by_region_and_sheet(string json, bool accepted) =>
         Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
 

@@ -1710,6 +1710,45 @@ test('a projected quest prompt renders once and returns the selected semantic ch
   } finally { f.dispose(); }
 });
 
+test('a title that cannot start offers Import, shows the tool while it runs and offers it again after a failure', () => {
+  const f = fixture();
+  try {
+    const q = id => f.root.querySelector(`[data-testid="${id}"]`);
+    const blocked = (state, status, output = '') => ({ mode: 'title', unavailable: { title: 'Daggerfall cannot start',
+      problems: ['The Daggerfall data is not imported. Choose Import and select the folder Daggerfall is installed in, or its ARENA2 folder.'],
+      import: { state, status, output } } });
+    f.publish(blocked('idle', 'Import converts your own copy of Daggerfall.'));
+    assert.equal(q('entry-unavailable').hidden, false);
+    assert.equal(q('entry-import').hidden, false);
+    assert.equal(q('entry-import-cancel').hidden, true);
+    assert.equal(q('entry-import-output').hidden, true);
+    assert.equal(document.activeElement, q('entry-import'));
+    // Nothing that starts a game is offered beside it.
+    assert.equal(f.root.querySelector('.dagger-entry-begin').hidden, true);
+    q('entry-import').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'content-import' });
+
+    // While the tool runs its output scrolls below and only Cancel is offered.
+    f.publish(blocked('running', 'Importing /games/Daggerfall…', 'staged step 1\nstaged step 2'));
+    assert.equal(q('entry-import').hidden, true);
+    assert.equal(q('entry-import-cancel').hidden, false);
+    assert.equal(q('entry-import-output').textContent, 'staged step 1\nstaged step 2');
+    assert.match(f.root.querySelector('.dagger-entry-import-status').textContent, /Importing \/games\/Daggerfall/);
+    q('entry-import-cancel').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'content-import-cancel' });
+
+    // A failure keeps the last output and offers Import again.
+    f.publish(blocked('failed', 'The import was cancelled. Choose Import to try again.', 'staged step 2'));
+    assert.equal(q('entry-import').hidden, false);
+    assert.equal(q('entry-import-cancel').hidden, true);
+    assert.equal(q('entry-import-output').textContent, 'staged step 2');
+
+    // A screen whose content cannot be imported offers no Import.
+    f.publish({ mode: 'title', unavailable: { title: 'Daggerfall cannot start', problems: ['No game can be composed.'], import: null } });
+    assert.equal(q('entry-import').hidden, true);
+  } finally { f.dispose(); }
+});
+
 test('the title screen offers the games the product publishes and sends the one chosen', () => {
   const f = fixture();
   try {

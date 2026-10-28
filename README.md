@@ -212,11 +212,15 @@ tools/Daggerfall.Import.Tool/   the import, with the tracked files it reads
 daggerfall-data.rpak, music.rpak   written by the import from the player's own files
 ```
 
-The player imports once: drop the folder Daggerfall is installed in (or its
-`ARENA2` folder) onto `tools/Daggerfall.Import.Tool/Daggerfall.Import.Tool`, or run
-it with that folder, adding `--music <folder>` for the score. It writes both
-containers beside `product.rpak` and keeps nothing else. Until then, or when the
-data is damaged or from another importer, the game's entry screen names the step.
+The player imports once, from the game: while the data is missing, damaged or
+from another importer, the entry screen says why and offers **Import**. It shows
+the desktop's folder picker for the folder Daggerfall is installed in (or its
+`ARENA2` folder), runs the shipped import tool there with its output on screen,
+and opens the game when it has finished, with no restart. The tool can also be
+run by hand, or a folder dropped onto
+`tools/Daggerfall.Import.Tool/Daggerfall.Import.Tool`, adding `--music <folder>`
+for the score. It writes the containers beside `product.rpak` and keeps nothing
+else.
 A release build outside `rusty dev` opens a window; the dev loop keeps streaming
 to the browser page unless given `--output window`.
 

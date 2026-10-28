@@ -57,6 +57,14 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
     /// <summary>The import tool <c>rusty build --release</c> ships, from the game's folder.</summary>
     private const string ReleaseImportTool = "tools/Daggerfall.Import.Tool/Daggerfall.Import.Tool";
 
+    /// <summary>
+    /// The entry screen's import of the Daggerfall data: the declared import tool, run on the folder the player
+    /// chooses and told to install the container where the host opens it.
+    /// </summary>
+    internal static readonly InstalledContentImport DataImport = new("Daggerfall.Import.Tool",
+        "Choose the folder Daggerfall is installed in, or its ARENA2 folder",
+        (folder, install) => ["import", "--arena2", folder, "--install", install]);
+
     /// <summary>The import command a developer runs in the repository root to produce the containers.</summary>
     private const string ImportCommand = "dotnet run --project src/Daggerfall.Import.Tool -- import --music local/Sound";
 
@@ -67,8 +75,9 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
     public IReadOnlyList<InstalledContentRequirement> InstalledContent { get; } =
     [
         new(DaggerfallData.DataContainerName, "the Daggerfall data", Required: true,
-            DevelopmentStep: $"With the game's ARENA2 folder at local/arena2, run `{ImportCommand}` in the repository root.",
-            ReleaseStep: $"Drop the folder Daggerfall is installed in (or its ARENA2 folder) onto {ReleaseImportTool} in the game's folder, or run it with that folder."),
+            DevelopmentStep: $"Choose Import, or with the game's ARENA2 folder at local/arena2 run `{ImportCommand}` in the repository root.",
+            ReleaseStep: "Choose Import and select the folder Daggerfall is installed in, or its ARENA2 folder.",
+            Import: DataImport),
         new(DaggerfallMusicBundle.ContainerName, "the Daggerfall music", Required: false,
             DevelopmentStep: $"Run `{ImportCommand}` with a folder of <track>.<ext> recordings, such as the Daggerfall Unity song pack.",
             ReleaseStep: $"Run {ReleaseImportTool} with the folder Daggerfall is installed in and --music with a folder of the game's music recordings (<track>.<ext>)."),
