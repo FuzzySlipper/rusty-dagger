@@ -228,6 +228,26 @@ Engine contributors may use `rusty dev --engine-source /absolute/rusty-engine`.
 That explicit opt-in supplies source references and a source runtime pack;
 normal downstream builds never discover an adjacent checkout.
 
+For image-generation reference sets, the importer can export every item template
+and artifact, and the spell icons with their casting and world-effect companions:
+
+```sh
+dotnet run --project src/Daggerfall.Import.Tool -- export-items
+dotnet run --project src/Daggerfall.Import.Tool -- export-spells
+```
+
+These write `local/exports/daggerfall-items-r01/` and
+`local/exports/daggerfall-spells-r01/`. Each has an `index.html` visual catalog,
+CSV index and JSON manifests; each item or spell has its own directory with
+native-resolution PNGs and source record/frame identities. Items include player
+body and clothing variants, dyes, masks, artifacts and applicable normal/enchanted
+first-person animation frames. Spells link all selectable icons to the independent
+element and target choices that select casting hands and world effects. Missing
+source art is recorded explicitly. Pass `--output` with a fresh directory for a
+new export; existing experiments are preserved. `--arena2` relocates the source,
+and `export-items --donor` relocates the Daggerfall Unity input tables. The
+extracted images stay in ignored `local/`.
+
 `WorldRpg.SpriteWorkbench` is a separate package-backed, developer-only authoring
 product. It reads the neutral inspection document the importer's `sprite-inspection`
 command writes (the launch script stages it) and never references the importer.

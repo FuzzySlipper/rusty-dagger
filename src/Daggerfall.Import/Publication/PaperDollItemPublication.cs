@@ -199,14 +199,12 @@ public static class PaperDollItemPublication
                 string baseId = MediaId(number, record);
                 artifacts.Add(Emit(baseId, frame.Width, frame.Height, pixels, palette));
                 Dictionary<string, string> dyes = new(StringComparer.Ordinal);
-                IEnumerable<(string Dye, byte[]? Table)> swaps = artifactTexture ? new (string, byte[]?)[] { (UnchangedDye, null) } : clothing
-                    ? ClothingDyes.Select(dye => (dye.Dye, (byte[]?)[.. Enumerable.Range(dye.Start, 16).Select(value => (byte)value)]))
-                    : MetalDyes;
-                int dyeStart = clothing ? ClothingDyeStart : MetalDyeStart;
-                foreach ((string dye, byte[]? table) in swaps)
+                IReadOnlyDictionary<string, byte[]> variants = artifactTexture
+                    ? new Dictionary<string, byte[]> { [UnchangedDye] = pixels }
+                    : DyeVariants(pixels, clothing);
+                foreach ((string dye, byte[] dyed) in variants)
                 {
-                    byte[]? dyed = table is null ? null : Dye(pixels, dyeStart, table);
-                    if (dyed is null)
+                    if (ReferenceEquals(dyed, pixels))
                     {
                         dyes[dye] = baseId;
                         continue;
@@ -236,6 +234,20 @@ public static class PaperDollItemPublication
         }
 
         return new PaperDollItemPass(images, artifacts, sources);
+    }
+
+    /// <summary>
+    /// Classic clothing or metal palette swaps, shared by paper-doll publication and reference exports.
+    /// A dye that changes no pixel returns the supplied array; callers can keep its aliases together.
+    /// </summary>
+    public static IReadOnlyDictionary<string, byte[]> DyeVariants(byte[] pixels, bool clothing)
+    {
+        IEnumerable<(string Dye, byte[]? Table)> swaps = clothing
+            ? ClothingDyes.Select(dye => (dye.Dye, (byte[]?)[.. Enumerable.Range(dye.Start, 16).Select(value => (byte)value)]))
+            : MetalDyes;
+        return swaps.ToDictionary(swap => swap.Dye,
+            swap => swap.Table is null ? pixels : Dye(pixels, clothing ? ClothingDyeStart : MetalDyeStart, swap.Table) ?? pixels,
+            StringComparer.Ordinal);
     }
 
     /// <summary>The record in one dye, or null when the dye changes no pixel of it.</summary>

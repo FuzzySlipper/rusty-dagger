@@ -65,6 +65,9 @@ internal static class Program
         SpriteOverlayValidateCommand.Command,
         SpriteOverlayWriteCommand.Command,
         SpriteOverlayDiscardCommand.Command,
+        // Local image-generation reference sets (never product content).
+        ReferenceExportCommands.Items,
+        ReferenceExportCommands.Spells,
     }.ToDictionary(command => command.Name, StringComparer.Ordinal);
 
     internal static int Main(string[] args)

@@ -56,8 +56,13 @@ public sealed class ImportToolCommandTests
                 Refuses([.. without, option.Name, "--unknown"]);
             }
         }
-        Assert.Equal(1, Run([name]).Code);
-        Assert.Contains(command.Usage, Run([name]).Error, StringComparison.Ordinal);
+        // Reference exports have useful defaults and intentionally run with only the verb. Do not write
+        // the operator's default export directories just to test the shared argument grammar.
+        if (command.Options.Any(option => option.IsRequired))
+        {
+            Assert.Equal(1, Run([name]).Code);
+            Assert.Contains(command.Usage, Run([name]).Error, StringComparison.Ordinal);
+        }
 
         void Refuses(string[] args)
         {
