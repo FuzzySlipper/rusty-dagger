@@ -12,16 +12,18 @@ export const REFERENCE_WIDTH = 1920;
 export const REFERENCE_HEIGHT = 1080;
 
 /**
- * The scale the interface uses: the player's chosen scale when there is one, otherwise the largest
- * step at which the reference layout still fits the window, within the published bounds.
+ * The scale the interface uses: the player's chosen scale when there is one, otherwise the exact fit
+ * of the reference layout to the window, within the published bounds. The fit is not rounded to the
+ * player's steps, so the interface fills the window at any size; it is cut to a thousandth so it never
+ * overflows by a rounding error.
  */
 export function chooseScale(width: number, height: number, chosen: number | null, range: UiScaleRange): number {
   const clamp = (value: number): number => Math.min(range.maximum, Math.max(range.minimum, value));
   if (chosen !== null) return clamp(chosen);
   if (!(width > 0) || !(height > 0)) return clamp(1);
   const fit = Math.min(width / REFERENCE_WIDTH, height / REFERENCE_HEIGHT);
-  // A tiny epsilon keeps an exact fit (3840/1920 = 2) from rounding down a step.
-  return clamp(Math.floor(fit / range.step + 1e-9) * range.step);
+  // A tiny epsilon keeps an exact fit (3840/1920 = 2) from rounding down.
+  return clamp(Math.floor(fit * 1000 + 1e-9) / 1000);
 }
 
 /**

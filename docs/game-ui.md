@@ -389,10 +389,14 @@ outlines (1-2 px) stay in pixels. The Engine's UI scale
 the one owner that calls it:
 
 - The layout is designed for a 1920x1080 window in CSS pixels at UI scale 1.
-- While the player has chosen automatic, the scale is the largest step at
-  which that layout still fits the window. For example, 1 at 1080p, 1.25 at
-  1440p and 2 at 4K (with the operating system at 100%), and 0.5 for a
-  1280x720 window. It follows the window as it resizes.
+  **1080p is the minimum the game supports:** UI work, tests and window runs
+  target 1920x1080 or larger, and nothing smaller is designed, tested or
+  reported as a defect.
+- While the player has chosen automatic, the scale is the exact fit of that
+  layout to the window, within the bounds: 1 at 1080p, 1.33 at 1440p and 2 at
+  4K (with the operating system at 100%). It is not rounded to the stepper's
+  steps, so the UI fills the window at any size. It follows the window as it
+  resizes.
 - The player can choose a scale instead, in Settings ("Interface scale": a
   stepper plus Automatic). The choice is a player preference that
   `DaggerfallControlSettings.UiScale` persists, never TypeScript state.

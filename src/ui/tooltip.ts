@@ -22,12 +22,20 @@ export function mountTooltips(root: HTMLElement): { dispose(): void } {
     if (!text || !shownFor.isConnected) hide(null);
     else tip.textContent = text;
   });
+  // A screen that closes hides or moves its controls without the focused one losing focus first (Quick start
+  // closes character creation from its own button), so while a tooltip shows, a control that is no longer on
+  // screen takes its tooltip with it.
+  const gone = new MutationObserver(() => {
+    if (shownFor !== null && (!shownFor.isConnected || shownFor.closest('[hidden]') !== null || !root.contains(shownFor))) hide(null);
+  });
   const show = (target: Element): void => {
     const text = target.getAttribute('data-tooltip');
     if (!text) return;
     shownFor = target;
     watch.disconnect();
     watch.observe(target, { attributes: true, attributeFilter: ['data-tooltip'] });
+    gone.disconnect();
+    gone.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ['hidden'] });
     tip.textContent = text;
     (target.closest('dialog[open]') ?? root).append(tip);
     tip.hidden = false;
@@ -40,6 +48,7 @@ export function mountTooltips(root: HTMLElement): { dispose(): void } {
     if (target !== null && target !== shownFor) return;
     shownFor = null;
     watch.disconnect();
+    gone.disconnect();
     tip.hidden = true;
   };
   const owner = (event: Event): Element | null => {
@@ -67,6 +76,7 @@ export function mountTooltips(root: HTMLElement): { dispose(): void } {
       root.removeEventListener('focusout', onOut);
       window.removeEventListener('blur', onLeave);
       watch.disconnect();
+      gone.disconnect();
       tip.remove();
     },
   };

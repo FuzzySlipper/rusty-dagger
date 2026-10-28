@@ -247,6 +247,10 @@ That workflow distinguishes DSH and Codex tools. DSH's reviewer routing remains
 valid for DSH agents. Codex agents use their available collaboration lifecycle;
 when using Prime, its persistent upstream checker, reuse checker, and Senior
 cover these responsibilities without a second reviewer roster.
+1080p (1920x1080) is the minimum window the game supports. UI tests, window
+runs and screenshots use 1920x1080 or larger, and a window run brings the window
+to at least that size first. Nothing smaller is designed, tested or reported as
+a defect.
 Use focused compilation and semantic checks appropriate to the change. Broader
 interactive evaluation can inform later reconciliation without becoming each
 task's definition of done. Stop an upstream-blocked task honestly and continue
