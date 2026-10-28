@@ -491,6 +491,12 @@ public static class DaggerfallItemTemplatesBuilder
         [130] = "weapon.bow",
     };
 
+    /// <summary>The shared first-person weapon family a template uses, or empty for other items.</summary>
+    public static string WeaponMediaIdForTemplate(int index) => WeaponMedia.GetValueOrDefault(index, string.Empty);
+
+    /// <summary>The normalized catalog groups for an item, including templates absent from donor enums.</summary>
+    public static IReadOnlyList<string> GroupsForTemplate(int index) => TemplateGroups.GetValueOrDefault(index, []);
+
     /// <summary>The donor group names by numeric value.</summary>
     public static readonly IReadOnlyDictionary<int, string> GroupNames = new Dictionary<int, string>
     {
@@ -547,7 +553,7 @@ public static class DaggerfallItemTemplatesBuilder
                 substitute.WorldTextureRecord,
                 substitute.PlayerTextureArchive,
                 substitute.PlayerTextureRecord,
-                WeaponMedia.GetValueOrDefault(substitute.Index, string.Empty),
+                WeaponMediaIdForTemplate(substitute.Index),
                 substitute.DrawOrderOrEffect));
         }
 
