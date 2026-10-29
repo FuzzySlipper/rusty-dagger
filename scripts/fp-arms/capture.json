@@ -1,0 +1,48 @@
+{
+  "arms": {
+    "glb": "../../local/fp-arms/arms.glb",
+    "upper": "CATRigRArm1",
+    "lower": "CATRigRArm21",
+    "twist": "CATRigRArm22",
+    "hand": "CATRigRArmPalm",
+    "fingers": [
+      ["CATRigRArmDigit21", "CATRigRArmDigit22", "CATRigRArmDigit23"],
+      ["CATRigRArmDigit31", "CATRigRArmDigit32", "CATRigRArmDigit33"],
+      ["CATRigRArmDigit41", "CATRigRArmDigit42", "CATRigRArmDigit43"],
+      ["CATRigRArmDigit51", "CATRigRArmDigit52", "CATRigRArmDigit53"]
+    ],
+    "thumb": ["CATRigRArmDigit11", "CATRigRArmDigit12", "CATRigRArmDigit13"],
+    "copyFingers": [
+      ["CATRigRArmDigit21", "CATRigRArmDigit31"],
+      ["CATRigRArmDigit22", "CATRigRArmDigit32"],
+      ["CATRigRArmDigit23", "CATRigRArmDigit33"]
+    ],
+    "hideOff": "CATRigLArm1",
+    "turn": [0, 180, 0],
+    "scale": 0.85,
+    "shoulder": [0.2, -0.265, 0.05],
+    "pole": [0.76, -0.4, -0.02],
+    "clip": "Hands_Gun_03_Mesh",
+    "frame": 0
+  },
+  "item": {
+    "glb": "../../local/fp-arms/dagger.glb",
+    "grip": 0.095,
+    "keypoints": {
+      "pommel": [0, 0, 0.0595],
+      "guardUp": [0, 0.034, -0.052],
+      "guardDown": [0, -0.034, -0.052],
+      "stoneRight": [0.021, 0, -0.052],
+      "stoneLeft": [-0.021, 0, -0.052],
+      "tip": [0, 0, -0.312],
+      "edgeUp": [0, 0.0254, -0.182],
+      "edgeDown": [0, -0.0254, -0.182]
+    }
+  },
+  "camera": {
+    "width": 320,
+    "height": 200,
+    "pixelAspect": 1.2,
+    "fovY": 65
+  }
+}
