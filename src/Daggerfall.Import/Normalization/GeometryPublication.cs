@@ -370,14 +370,19 @@ public static class GeometryPublicationBuilder
                     }
                 }
 
+                // The mesh is drawn with whole repeats of its texture per uv unit, so the source's sub-texel
+                // coordinates become fractions of the record's own extent here, as the donor scales them by
+                // the base archive's record. A climate swap draws a record of the same extent. A record with
+                // no extent has no picture to place, and its material is already reported unresolved.
+                (int Width, int Height)? extent = request.Textures.TryGetRecord(archive, textureRecord, out TextureRecordFacts? facts)
+                    && facts is { Width: > 0, Height: > 0 } ? (facts.Width, facts.Height) : null;
                 List<NormalizedVector3> polygon = new(plane.Points.Count);
                 List<NormalizedVector2> planeUvs = new(plane.Points.Count);
                 foreach (Arch3dPoint point in plane.Points)
                 {
-                    // The source's own corrected coordinates travel with the mesh: a texture's extent is a
-                    // fact about the material, and binding the two is the consumer's business.
                     polygon.Add(MeshGeometry.ToRightHanded(Arena2SourceTransform.ToImportPoint(point)));
-                    planeUvs.Add(new(point.U, point.V));
+                    Arena2TextureUv uv = extent is { } size ? Arena2SourceTransform.ToTextureUv(point, size.Width, size.Height) : default;
+                    planeUvs.Add(new(uv.U, uv.V));
                 }
 
                 (int fanStart, int fanCount) = MeshGeometry.AppendPolygon(vertices, normals, uvs, triangles, polygon, planeUvs, MeshGeometry.Normal(polygon));
