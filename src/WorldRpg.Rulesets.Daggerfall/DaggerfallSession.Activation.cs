@@ -31,6 +31,8 @@ internal sealed partial class DaggerfallSession
         appearance.UseEnemyAudibleRange(() => EnemyAudibleRange);
         appearance.UsePlayerVampireGender(() => State.RacialOverrides.Current?.IsVampire == true ? State.Character.Identity.Gender == DaggerfallCharacterGender.Female : null);
         appearance.UsePlayerBeastForm(() => State.RacialOverrides.Current is { State.BeastForm: true } form ? form.State.Kind : null);
+        if (_tuning.Viewmodel.Style != DaggerfallViewmodelStyle.Classic && _composition.HeldArt is { } art)
+            appearance.UseHeldArt(_engine, art, _tuning.Viewmodel.Style);
     }
 
     /// <summary>
