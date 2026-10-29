@@ -70,7 +70,8 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
 
     /// <summary>
     /// The containers the player's own Daggerfall files are converted into: the data every game reads, and the
-    /// optional score, whose tracks are read by name.
+    /// optional score, whose tracks are read by name; and the optional 3D first-person art, built on a development
+    /// checkout.
     /// </summary>
     public IReadOnlyList<InstalledContentRequirement> InstalledContent { get; } =
     [
@@ -81,6 +82,9 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
         new(DaggerfallMusicBundle.ContainerName, "the Daggerfall music", Required: false,
             DevelopmentStep: $"Run `{ImportCommand}` with a folder of <track>.<ext> recordings, such as the Daggerfall Unity song pack.",
             ReleaseStep: $"Run {ReleaseImportTool} with the folder Daggerfall is installed in and --music with a folder of the game's music recordings (<track>.<ext>)."),
+        new(DaggerfallHeldArt.ContainerName, "the 3D first-person arms", Required: false,
+            DevelopmentStep: "Run `scripts/fp-arms/build.sh` in the repository root (scripts/fp-arms/README.md).",
+            ReleaseStep: "Build first-person.rpak on a development checkout with scripts/fp-arms/build.sh and place it beside the product."),
     ];
 
     /// <summary>
@@ -139,6 +143,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
             NewGameQuests = admitted.Definitions.NewGame.Quests,
             DisabledQuestSelection = admitted.DisabledQuestSelection,
             Music = admitted.Music,
+            HeldArt = admitted.HeldArt,
             Blocks = admitted.Blocks,
             Seams = DaggerfallSeamSelection.From(context.Composition.Variants, _variants),
             Loading = context.Loading,
@@ -227,8 +232,9 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
                 throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' admits no quest source for the new-game quests {string.Join(", ", missingNewGameQuests.Select(file => $"'{file}'"))}.");
             DaggerfallPublishedClassicMedia classicMedia = DaggerfallPublishedClassicMedia.Read(data, inputs.ClassicPresentation);
             DaggerfallMusicBundle? music = DaggerfallMusicBundle.For(selected);
+            DaggerfallHeldArt? heldArt = DaggerfallHeldArt.For(selected);
             DaggerfallTuning tuning = DaggerfallTuning.Read(selected.Tuning.Payload.Span);
-            return new DaggerfallAdmittedContent(definitions, blocks, inputs, profiles, questReceipts, disabledQuestSelection, tuning, classicMedia, new DaggerfallSiteAudioBundles(data, profiles), data, music);
+            return new DaggerfallAdmittedContent(definitions, blocks, inputs, profiles, questReceipts, disabledQuestSelection, tuning, classicMedia, new DaggerfallSiteAudioBundles(data, profiles), data, music, heldArt);
         });
 
     /// <summary>The one pack a bundle must select for a role every session reads exactly once.</summary>
@@ -251,5 +257,6 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
         DaggerfallPublishedClassicMedia ClassicMedia,
         DaggerfallSiteAudioBundles Audio,
         DaggerfallData Data,
-        DaggerfallMusicBundle? Music);
+        DaggerfallMusicBundle? Music,
+        DaggerfallHeldArt? HeldArt);
 }

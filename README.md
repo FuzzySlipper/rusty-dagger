@@ -152,6 +152,11 @@ from `local/` under `rusty dev`, beside `product.rpak` in a release. To work on 
 importer, rerun one command (its staging paths are the defaults) or `import --only
 STEP`, then `pack`.
 
+An optional third container, `local/first-person.rpak`, holds 3D first-person arms
+and weapons with motion captured from the classic weapon animations; the tuning's
+`viewmodel.style` (`classic`, `held` or `heldRetro`) chooses it over the sprites.
+`scripts/fp-arms/build.sh` builds it ([scripts/fp-arms](scripts/fp-arms/README.md)).
+
 Ordinary edit-run development is CoreCLR through the pinned runtime:
 
 ```bash

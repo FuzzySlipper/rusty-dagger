@@ -107,6 +107,12 @@ internal sealed partial class DaggerfallSession
                 _music = new DaggerfallMusicDirector(engine.Audio, ResolveMusicClip, ReportMusicRetired, tuning.Music.AlternatePlaylists);
                 ReportMissingTracks(music);
             }
+            // A 3D viewmodel without its art draws the classic sprites; say why once rather than silently.
+            if (tuning.Viewmodel.Style != DaggerfallViewmodelStyle.Classic && composition.HeldArt is null)
+                engine.Diagnostics.Publish(new DiagnosticsPublishRequest(DiagnosticsSeverity.Warning, DiagnosticsDisposition.Accepted,
+                    "daggerfall.viewmodel", "art.missing",
+                    $"viewmodel.style is {tuning.Viewmodel.Style} but {DaggerfallHeldArt.ContainerName} is not installed, so the classic weapon sprites are drawn.",
+                    string.Empty));
             _random = engine.Random;
             tuning = tuning.Validate();
             _definitions = definitions;

@@ -432,12 +432,10 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                         rotation, Vector3.One), arrowVisual, true, RenderLayer.Scene));
             }
         }
-        if (viewmodel is { } weapon)
-        {
-            facts.Add(new AppearanceFact(weapon.EntityId, false, 0, weapon.Transform, weapon.Appearance, true, RenderLayer.Viewmodel));
-        }
+        if (viewmodel is { } weapon) AppendViewmodelFacts(facts, weapon);
         appendSnapshotFacts?.Invoke(facts);
         appearance.PublishSnapshot([.. facts]);
+        ReachHeld();
         completeSnapshot?.Invoke();
     }
 
@@ -837,6 +835,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         foreach (EffectVisual effect in effects.AsEnumerable().Reverse()) effect.Dispose(ref failures);
         effects.Clear();
         if (viewmodel is { } weapon) { viewmodel = null; weapon.Dispose(ref failures); }
+        if (held is { } drawn) { held = null; Dispose(drawn, ref failures); }
         foreach (IDisposable value in nextRetired.AsEnumerable().Reverse()) Dispose(value, ref failures);
         foreach (IDisposable value in priorRetired.AsEnumerable().Reverse()) Dispose(value, ref failures);
         nextRetired.Clear(); priorRetired.Clear();
@@ -1328,6 +1327,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
             visual = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, weapon.Frames[0].Id, new Vector2(.5F, 0F), new Vector2(weapon.Frames[0].Width, weapon.Frames[0].Height), BillboardMode.None, SpriteSizeMode.Pixel, style.RenderOrder, SpriteDepthPolicy.DepthTestOff, new Color(1F, 1F, 1F, 1F)));
             viewmodel = new ViewmodelVisual(weapon, NextVisualEntityId(), new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), atlas, visual);
+            CreateHeld(weapon);
             StartWeaponAction("idle");
         }
         catch
@@ -1395,6 +1395,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             appearance.ControlSpritePlayback(new SpritePlaybackControlRequest(staged, SpritePlaybackControl.Start));
             SpritePlayback? old = viewmodel.Playback;
             viewmodel.Playback = staged;
+            StartHeldAction(name, frameSeconds, action, viewmodel.HitFrame);
             // Imported cells retain classic placement; Engine fits the complete
             // canvas to the viewport and advances the selected sequence.
             viewmodel.Strike = name != "idle";
@@ -1441,6 +1442,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         RetireUnreportedImpact();
         viewmodel = null;
         Retire(weapon);
+        RetireHeld();
     }
 
     private ulong NextVisualEntityId() => DaggerfallPresentationObjectIds.Take(ref nextVisualEntityId,

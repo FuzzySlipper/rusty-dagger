@@ -34,6 +34,7 @@ internal sealed record DaggerfallTuning(
     internal DaggerfallStrikeEnchantmentTuning StrikeEnchantments { get; init; } = new(5, 2.25d);
     internal DaggerfallDetectionTuning Detection { get; init; } = new(14d);
     internal DaggerfallMusicTuning Music { get; init; } = new(AlternatePlaylists: false);
+    internal DaggerfallViewmodelTuning Viewmodel { get; init; } = DaggerfallViewmodelTuning.Classic;
     internal DaggerfallWorldOriginTuning WorldOrigin { get; init; } = new(500f);
     internal DaggerfallCivilianWanderTuning CivilianWander { get; init; } = DaggerfallCivilianWanderTuning.Classic;
     internal DaggerfallSwimmingTuning Swimming { get; init; } = DaggerfallSwimmingTuning.Classic;
@@ -314,6 +315,7 @@ internal sealed record DaggerfallTuning(
                 root.GetProperty("lycanthropy").GetProperty("minimumHealth").GetInt32()),
             Detection = new(root.GetProperty("detection").GetProperty("maximumDistance").GetDouble()),
             Music = new DaggerfallMusicTuning(root.GetProperty("music").GetProperty("alternatePlaylists").GetBoolean()),
+            Viewmodel = DaggerfallViewmodelTuning.Read(root.GetProperty("viewmodel")),
             WorldOrigin = new(root.GetProperty("worldOrigin").GetProperty("verticalRebaseDistance").GetSingle()),
             CivilianWander = new(root.GetProperty("civilianWander").GetProperty("movementSpeedUnitsPerSecond").GetSingle(),
                 root.GetProperty("civilianWander").GetProperty("waypointDistance").GetSingle(),
@@ -615,6 +617,39 @@ internal readonly record struct PlayerInitialLook(float YawRadians, float PitchR
 
 /// <summary>Chooses the donor's standard or alternate playlists; JSON admission requires a Boolean.</summary>
 internal sealed record DaggerfallMusicTuning(bool AlternatePlaylists);
+
+/// <summary>How the first-person weapon is drawn.</summary>
+internal enum DaggerfallViewmodelStyle
+{
+    /// <summary>The classic weapon sprites.</summary>
+    Classic,
+    /// <summary>The 3D arms and weapon of the first-person art, moving by its held motion.</summary>
+    Held,
+    /// <summary>The 3D art sampled at the classic frame time and held between samples, without blending.</summary>
+    HeldRetro,
+}
+
+/// <summary>
+/// The first-person weapon's look. A 3D style draws the art installed beside the product
+/// (<see cref="Presentation.DaggerfallHeldArt"/>) for the weapons it covers and strikes it has motion for, and the
+/// classic sprites otherwise.
+/// </summary>
+internal sealed record DaggerfallViewmodelTuning(DaggerfallViewmodelStyle Style)
+{
+    internal static DaggerfallViewmodelTuning Classic { get; } = new(DaggerfallViewmodelStyle.Classic);
+
+    internal static DaggerfallViewmodelTuning Read(JsonElement section)
+    {
+        string style = section.GetProperty("style").GetString() ?? "";
+        return style switch
+        {
+            "classic" => Classic,
+            "held" => new(DaggerfallViewmodelStyle.Held),
+            "heldRetro" => new(DaggerfallViewmodelStyle.HeldRetro),
+            _ => throw new InvalidDataException($"viewmodel.style '{style}' is not one of classic, held, heldRetro."),
+        };
+    }
+}
 
 internal sealed record DaggerfallDetectionTuning(double MaximumDistance)
 {

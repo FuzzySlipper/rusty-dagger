@@ -3,6 +3,8 @@ using WorldRpg.Kit;
 using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Content;
 
+using WorldRpg.Rulesets.Daggerfall.Presentation;
+
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
@@ -44,6 +46,9 @@ internal sealed record DaggerfallSessionComposition(
 
     /// <summary>The score read by name from the music container; null composes a silent session.</summary>
     internal DaggerfallMusicBundle? Music { get; init; }
+
+    /// <summary>The 3D first-person art installed beside the product, or none; drawn when the viewmodel tuning asks for it.</summary>
+    internal DaggerfallHeldArt? HeldArt { get; init; }
 
     /// <summary>The compiled effect catalog; null composes the ruleset's own disease and poison families.</summary>
     internal DaggerfallEffectCatalog? Effects { get; init; }

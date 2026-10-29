@@ -203,6 +203,9 @@
   "music": {
     "alternatePlaylists": false
   },
+  "viewmodel": {
+    "style": "classic"
+  },
   "presentationAudio": {
     "volume": 1.0,
     "pitch": 1.0,
