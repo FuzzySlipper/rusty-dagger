@@ -330,8 +330,8 @@ Rusty Dagger stands on the work of the [Daggerfall Unity](https://github.com/Int
 project (Daggerfall Workshop and its contributors). Its years of reverse-engineering of the
 classic file formats, formulas and behaviour are the reference this project's importer and
 ruleset are checked against, and several import tables and playlists come from it. It is used
-under the MIT licence; see [third-party notices](THIRD_PARTY_NOTICES.md). *The Elder Scrolls II:
-Daggerfall* is Bethesda Softworks' game, and its data is supplied by the player.
+under the MIT licence; see [third-party notices](THIRD_PARTY_NOTICES.md). 
+*The Elder Scrolls II: Daggerfall* is Bethesda Softworks' game, and its data is supplied by the player. Bethesda remains the credited author of the inspiration for ideas that were further developed here.  
 
 ## Guidance and proof
 

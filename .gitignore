@@ -3,6 +3,7 @@
 /node_modules/
 __pycache__/
 .letta/
+.claude/
 src/ui/generated/
 src/sprite-ui/generated/
 # The pair's UI declarations, which each UI build copies here so its tsconfig names them without a version.
