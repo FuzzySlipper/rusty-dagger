@@ -34,8 +34,7 @@ request and owning task override older wording. Den owns live task status and
 dependencies. If it is unreachable, report the failed read; do not invent task
 records or infer dependency completion from source or Git. Continue work whose
 scope and authority are already established, pausing only decisions or actions
-that depend on unavailable Den information. This is the owner-approved project
-exception to a blanket Den-unavailable stop rule.
+that depend on unavailable Den information. 
 
 ## Current product graph
 
@@ -76,9 +75,8 @@ plug-in ABI. Named explicitly composed Kit services and typed RuleEvents are
 encouraged where they make gameplay ownership and contribution discoverable.
 
 Keep the game's own files and assets out of Git: never commit the Arena2
-directory, the music, or media extracted from them (images, sprites, textures,
-audio, video, including as base64 inside JSON). The derived output is not
-committed either, because it is reproducible: `content/` holds only tracked,
+directory, the music, or media directly extracted from them (images, sprites, textures,
+audio, video). The derived output is not committed either because it is reproducible: `content/` holds only tracked,
 authored files (pack, bundle and tuning descriptors, the authored
 `daggerfall.base` and site payloads, tuning payloads and the authored UI art),
 and `data/` the importer's inputs. Everything derived from the operator's
@@ -88,7 +86,9 @@ packs' descriptors in its `worldrpg/data-container.json`) and the optional
 `music.rpak`, built on checkout by one cross-platform command,
 `dotnet run --project src/Daggerfall.Import.Tool -- import --music local/Sound`.
 The product opens them beside itself (in `local/` under `rusty dev`, beside
-`product.rpak` in a release); never write derived files into `content/`.
+`product.rpak` in a release).
+
+If new content is created that is merely inspired by extracted Arean2 content then it can be committed and treated as normal game content since it has become identifiable original work. Everything in this repo already has been credited as owing design inspiration to the original Bethesda game and so is covered by that attribution. 
 
 Small facts that trace back to the game are not sensitive. Identifiers, names,
 record and template numbers, counts, short text excerpts and JSON describing
