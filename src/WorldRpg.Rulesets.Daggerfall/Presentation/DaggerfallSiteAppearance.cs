@@ -571,7 +571,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             catch (Exception exception)
             {
                 failures ??= [];
-                failures.Add(new InvalidOperationException($"retired {value.GetType().Name} was not released", exception));
+                failures.Add(new InvalidOperationException($"retired {value.GetType().Name} was not released: {exception.Message}", exception));
             }
         }
 
