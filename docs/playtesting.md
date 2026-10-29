@@ -110,6 +110,20 @@ report them; names with spaces are quoted.
 | `world.find SERVICE` | The people of the current place offering a service (`training`, `food-drink`, `buy-spells`, `shop`, …): those loaded now with their target ids, and those placed in its buildings, each with the `world.enter` line that reaches it. |
 | `world.goto TARGET` | Stands within reach of a loaded person, door or container, facing it. The target is a `navigation.targets` id or label. A door or portal is approached from its outside; other targets from the side nearest the player. The spot must fit the body, have floor below, and have a clear line from the eye to the target. |
 
+Developer overrides of the player's possessions and progress go through the same owners play uses (the item factory
+and equipment rules, currency, skill progression, the level-up and vitals), so the result behaves and saves as if
+earned. Like the movement commands they wait while a screen or question is open.
+
+| Command | What it does |
+|---|---|
+| `player.items FILTER` | The item names `player.give` and `player.hold` take that contain FILTER (`""` for all), the weapon and armour materials, and the skill ids. |
+| `player.give ITEM COUNT` | Gives COUNT of an item, named as the game labels it (`"Steel Dagger"`), by template name or index, with an optional material first (`"ebony 113"`); a weapon or armour without a material takes one rolled for the player's level. A stackable item comes as one stack. |
+| `player.hold ITEM` | Gives one item and wields it in the main hand, drawn, through the ordinary equip rules: the quickest way to test a weapon's first-person view or animation. |
+| `player.gold AMOUNT` | Gives gold. |
+| `player.skill SKILL VALUE` | Sets a skill (`short-blade`, …) within 0–100. |
+| `player.levelup` | Raises the career's level skills until the next level is due and opens the ordinary level-up on the character sheet. |
+| `player.heal` | Restores health, fatigue and magicka. |
+
 For example, to reach the Temple of Kynareth's trainer from anywhere:
 `world.enter Charing "Temple of Kynareth"`, then `world.find training`, then
 `world.goto Actor:<id>`.

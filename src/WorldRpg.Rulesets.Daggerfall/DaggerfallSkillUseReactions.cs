@@ -195,6 +195,20 @@ internal sealed class DaggerfallSkillUseReactions
         return true;
     }
 
+    /// <summary>Every skill progression knows, by id.</summary>
+    internal IReadOnlyList<string> Skills => [.. _skills.Select(skill => skill.Value)];
+
+    /// <summary>The skills whose sum decides the level: the career's primary and major skills.</summary>
+    internal IReadOnlyList<string> LevelSkills => [.. Career.PrimarySkills, .. Career.MajorSkills];
+
+    /// <summary>A developer override: sets a permanent skill, within 0 and the skill cap, and answers the value set.</summary>
+    internal int SetPermanentSkill(string skill, int value)
+    {
+        DaggerfallStatId id = RequireSkill(skill);
+        DaggerfallStatModifiers.AdjustPermanent(_stats, id, Math.Clamp(value, 0, MaximumSkillValue) - Permanent(id));
+        return Permanent(id);
+    }
+
     /// <summary>Starts classic level eligibility from the skill set a newly committed career grants.</summary>
     internal void RebaseForCareerSelection()
     {
