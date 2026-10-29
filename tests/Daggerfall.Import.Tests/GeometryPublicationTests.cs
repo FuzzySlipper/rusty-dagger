@@ -164,6 +164,21 @@ public sealed class GeometryPublicationTests
     }
 
     [CorpusFact]
+    public void Publishes_texture_coordinates_as_repeats_of_the_records_extent()
+    {
+        // Mesh 444 is a city gatehouse. Its first plane draws the 64x64 record 317/2 and states the source
+        // coordinates (2048, 1317) in sixteenths of a texel, which are two repeats across and about 1.29
+        // down. Published as source units, the face repeated its texture thousands of times and drew noise.
+        GeometryMeshArtifact mesh = Assert.Single(Publish(["444"], Textures()).Meshes);
+        using EngineBinaryContent.StaticMesh artifact = EngineBinaryContent.ReadStaticMesh(
+            Publish(["444"], Textures()).Artifacts.Single(artifact => artifact.RelativePath == mesh.RelativePath).Bytes);
+        float[] uvs = Assert.IsType<float[]>(artifact.Uvs);
+        (float U, float V)[] coordinates = [.. Enumerable.Range(0, uvs.Length / 2).Select(index => (uvs[index * 2], uvs[(index * 2) + 1]))];
+        Assert.Contains((2F, 1317F / 1024F), coordinates);
+        Assert.All(coordinates, coordinate => Assert.True(MathF.Abs(coordinate.U) <= 8F && MathF.Abs(coordinate.V) <= 8F, $"{coordinate} is not a few repeats"));
+    }
+
+    [CorpusFact]
     public void Reports_a_texture_record_that_declares_nothing_to_bind()
     {
         // The leaf parsed, which is not the same as its record being bindable: eight records in the corpus
