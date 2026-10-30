@@ -82,7 +82,7 @@ All four pilots ran with the unchanged recipe and read well.
 
 ## Suggested next batches
 
-Pilots are done. Next: 10494-R1 review, then bodies B1 (28), creatures C1, faces F1, spell icons I1/I2 and T1, fire E2–E5, effects X1/X2, and the rest of worn W1–W3 using the neutral-base procedure.
+Bodies B1 (28) is done: all 32 bodies are converted with the detailed template, in two batches (`b1-male`, `b1-female`). Next: 10494-R1 review, then creatures C1 (the boar and werewolf dolls are full framed scenes, 125×198, with a stone border, moon and forest, so they need their own pilot; the 16 vampire heads and 2 beast heads are small heads like the faces), faces F1, spell icons I1/I2 and T1, fire E2–E5, effects X1/X2, and the rest of worn W1–W3 using the neutral-base procedure.
 
 ## Original first six batches
 
