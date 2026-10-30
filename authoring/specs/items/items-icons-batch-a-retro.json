@@ -1,0 +1,301 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy adventure inventory art. Keep the source's local colours: do not tint every material brown or add brass simply to match the UI. Use a restrained palette with distinct light, middle and dark families, clear silhouette and legible material masses. Detail hierarchy: silhouette first, a few large planes or folds second, sparse material marks third. Keep the original class of mundane object, its opening and visible components; no extra handles, gemstones, runes, faces, symbols, chains or elaborate fantasy embellishment. Do not convert this into pixel art, a photoreal product photograph, a glossy mobile-game loot icon or a dramatic scene. No text, labels, border, vignette, decorative frame, hand, person, pedestal, scenery or second object.",
+  "presentation": "One isolated item on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the object. Full object visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Inventory icons batch A (gems, metals, teeth, sundries) / Qwen then retro",
+  "selection": "Batch of unique world sprites from the full icon conversion (rusty-dagger #10458). Each sprite is generated once; sharing is stated in its uncertainty text.",
+  "items": [
+    {
+      "id": "ruby",
+      "directory": "gems/item-000-ruby",
+      "image": "world/texture-254-record-000-frame-000-source.png",
+      "name": "Ruby (7x9)",
+      "content": "One cut ruby gemstone lying flat, upright rectangular step cut, aspect about 0.8:1. Deep red outer facets with a pale cream-yellow rectangular table at the centre and orange highlights along the left and lower edges. Preserve the rectangular outline and the bright central table. No setting, ring, sparkle star, text or second stone.",
+      "uncertainty": "The pixels read as a rectangular step-cut stone; whether the pale centre is a flat table or a reflection is unresolved and is interpreted as a flat table. Sprite shared by: item-000-ruby.",
+      "invention": "Resolve a few clean facets, a restrained highlight and a thin darker edge. Keep it a single plain stone."
+    },
+    {
+      "id": "emerald",
+      "directory": "gems/item-001-emerald",
+      "image": "world/texture-254-record-001-frame-000-source.png",
+      "name": "Emerald (9x7)",
+      "content": "One cut emerald gemstone lying flat, rectangular step cut slightly wider than tall, aspect about 1.3:1. Green outer facets from dark to mid green with a pale yellow-green table at the centre; a small dark red notch at the left edge. Preserve the rectangular outline and bright central table. No setting, text or second stone.",
+      "uncertainty": "The small dark red patch at the left edge is not explained; it is interpreted as a tiny reflected facet in shadow and not drawn as a separate feature. Sprite shared by: item-001-emerald.",
+      "invention": "Resolve a few clean facets, a restrained highlight and a thin darker edge. Keep it a single plain stone."
+    },
+    {
+      "id": "diamond",
+      "directory": "gems/item-003-diamond",
+      "image": "world/texture-254-record-003-frame-000-source.png",
+      "name": "Diamond (7x9)",
+      "content": "One cut diamond gemstone lying flat, upright rectangular step cut, aspect about 0.8:1. Pale white-cream centre table, grey-lilac facets, and a brownish-orange edge band on the outside. Preserve the rectangular outline and bright pale table. No setting, sparkle star, text or second stone.",
+      "uncertainty": "The brown edge could be a metal rim or tinted facets; it is interpreted as tinted warm facets on the stone, not a setting. Sprite shared by: item-003-diamond, item-274-soul-trap.",
+      "invention": "Resolve a few clean facets, a restrained highlight and a thin darker edge. Keep it a single plain stone."
+    },
+    {
+      "id": "jade",
+      "directory": "gems/item-004-jade",
+      "image": "world/texture-254-record-004-frame-000-source.png",
+      "name": "Jade (11x9)",
+      "content": "One rough polished jade stone, aspect about 1.2:1. A rounded, slightly lumpy pale green-grey stone with a light upper-left face, darker green body to the right and a brown earthy patch at the lower left. Preserve the lumpy rounded form and the brown patch. No carving, setting, text or second stone.",
+      "uncertainty": "Whether the brown patch is soil, raw matrix rock or a wooden base is unresolved; it is interpreted as raw brown rock still attached to the stone. Sprite shared by: item-004-jade.",
+      "invention": "Resolve a few clean facets, a restrained highlight and a thin darker edge. Keep it a single plain stone."
+    },
+    {
+      "id": "turquoise",
+      "directory": "gems/item-005-turquoise",
+      "image": "world/texture-254-record-005-frame-000-source.png",
+      "name": "Turquoise (12x6)",
+      "content": "One small polished turquoise stone lying flat, aspect about 2:1. A smooth rounded teal stone, mid teal with a pale blue highlight at the upper right and darker teal underside, a small paler patch at the lower right end. Preserve the low flat lozenge shape. No setting, carving, text or second stone.",
+      "uncertainty": "The lower right pale patch is interpreted as a worn lighter spot on the stone. Sprite shared by: item-005-turquoise.",
+      "invention": "Resolve a few clean facets, a restrained highlight and a thin darker edge. Keep it a single plain stone."
+    },
+    {
+      "id": "malachite",
+      "directory": "gems/item-006-malachite",
+      "image": "world/texture-254-record-007-frame-000-source.png",
+      "name": "Malachite (11x7)",
+      "content": "One small polished malachite stone, aspect about 1.6:1. A rounded teal-green stone sloping up to the left, with lighter teal faces on the upper left and darker green-grey body to the lower right. Preserve the sloping rounded shape. No setting, carving, text or second stone.",
+      "uncertainty": "Banding of malachite is not resolved by the pixels; it is interpreted as a few soft curved darker bands. Sprite shared by: item-006-malachite.",
+      "invention": "Resolve a few clean facets, a restrained highlight and a thin darker edge. Keep it a single plain stone."
+    },
+    {
+      "id": "amber",
+      "directory": "gems/item-007-amber",
+      "image": "world/texture-254-record-008-frame-000-source.png",
+      "name": "Amber (12x7)",
+      "content": "One lump of amber, aspect about 1.7:1. A rounded translucent orange-gold lump with bright yellow-orange highlights at the upper right and deeper red-brown shadow at the lower left; a tiny pale chip at the lower right end. Preserve the single rounded lump with warm glassy colouring. No insect, setting, text or second stone.",
+      "uncertainty": "Inclusions are not shown; none are drawn. The pale chip is interpreted as a small bright edge catch. Sprite shared by: item-007-amber.",
+      "invention": "Resolve a few clean facets, a restrained highlight and a thin darker edge. Keep it a single plain stone."
+    },
+    {
+      "id": "ring",
+      "directory": "jewellery/item-135-ring",
+      "image": "world/texture-216-record-004-frame-000-source.png",
+      "name": "Ring (5x3)",
+      "content": "One plain gold finger ring seen from the front and slightly above, aspect about 1.7:1 (very tiny source). A narrow gold band with a bright yellow highlight along its centre and darker ochre edges. Preserve the plain narrow band shape. No gem, engraving, inscription or second ring.",
+      "uncertainty": "The source is only 5x3 pixels; the ring is interpreted as a plain gold band lying on its side, with its hollow centre implied. Sprite shared by: item-135-ring.",
+      "invention": "Resolve band thickness, a restrained gold highlight and a faint hollow. Keep it plain."
+    },
+    {
+      "id": "mark",
+      "directory": "jewellery/item-137-mark",
+      "image": "world/texture-209-record-009-frame-000-source.png",
+      "name": "Mark (23x11)",
+      "content": "One flat cloth or leather patch ('mark'), seen obliquely, aspect about 2:1. A slanted irregular grey-lilac sheet with small scattered orange, green and pink-magenta speckles and a dark underside at the lower left. Preserve the slanted flat sheet shape and the sparse coloured speckles. No text, symbol, figure or border.",
+      "uncertainty": "The material is ambiguous (parchment, cloth, a mineral slab or a mottled hide); it is interpreted as a flat piece of mottled grey cloth with a few coloured flecks. This is a guess for owner review. Sprite shared by: item-137-mark.",
+      "invention": "Resolve a few soft folds, a thin edge thickness and sparse speckles. Do not add writing."
+    },
+    {
+      "id": "torc",
+      "directory": "jewellery/item-138-torc",
+      "image": "world/texture-211-record-048-frame-000-source.png",
+      "name": "Torc (40x20)",
+      "content": "One thin gold torc (open neck ring) lying flat, wide oval, aspect about 2:1. A slender dark-gold wire band forms a large open oval with a gap at the bottom between two small round gold terminal knobs. Preserve the open oval, the very thin band and the two knobs at the lower middle. No gems, engraving, chain or text.",
+      "uncertainty": "The band is darker and thinner than the terminals; it is interpreted as a uniform twisted gold wire. Twist detail is invented. Sprite shared by: item-138-torc.",
+      "invention": "Resolve a gentle rope twist, plain round terminals and a restrained gold highlight. Keep the wire thin."
+    },
+    {
+      "id": "mercury",
+      "directory": "metal-ingredients/item-065-mercury",
+      "image": "world/texture-254-record-061-frame-000-source.png",
+      "name": "Mercury (12x4)",
+      "content": "One small low ingot-like heap of mercury ore or quicksilver metal, aspect about 3:1. A flat low pale silver-grey lump with a bright white top edge, mid grey body and a dark grey underside. Preserve the long, flat, low shape. No container, label or text.",
+      "uncertainty": "Whether this is a bar, a puddle or a lump is unresolved; it is interpreted as a flat low silver bar-like lump. This is a guess for owner review. Sprite shared by: item-065-mercury.",
+      "invention": "Resolve simple surface texture, a few soft highlights and shadow planes. Keep it a plain ingredient."
+    },
+    {
+      "id": "tin",
+      "directory": "metal-ingredients/item-066-tin",
+      "image": "world/texture-254-record-064-frame-000-source.png",
+      "name": "Tin (16x4)",
+      "content": "One small tin bar, aspect about 4:1. A long low bar-like piece of dull silver-grey metal with pale top highlights and a dark grey underside, a slightly thinner dark tail at the right end. Preserve the long low shape. No stamp, label or text.",
+      "uncertainty": "The right-hand tail may be a second smaller piece or a broken end; it is interpreted as a tapering end of the same bar. Sprite shared by: item-066-tin.",
+      "invention": "Resolve simple surface texture, a few soft highlights and shadow planes. Keep it a plain ingredient."
+    },
+    {
+      "id": "brass",
+      "directory": "metal-ingredients/item-067-brass",
+      "image": "world/texture-254-record-066-frame-000-source.png",
+      "name": "Brass (14x8)",
+      "content": "One small lump of brass ore, aspect about 1.75:1. A low rounded cluster mixing orange-copper, grey metal, brown earth and a few pink-magenta flecks. Preserve the single lumpy low mass and its orange and grey colours. No tools, text or second piece.",
+      "uncertainty": "The mix of materials is unresolved; it is interpreted as a rough metal-ore lump with orange and grey metal veins in brown rock. Sprite shared by: item-067-brass, item-068-lodestone, item-072-copper.",
+      "invention": "Resolve simple surface texture, a few soft highlights and shadow planes. Keep it a plain ingredient."
+    },
+    {
+      "id": "sulphur",
+      "directory": "metal-ingredients/item-069-sulphur",
+      "image": "world/texture-254-record-067-frame-000-source.png",
+      "name": "Sulphur (16x6)",
+      "content": "One flat low pile of sulphur crust, aspect about 2.7:1. A long low irregular piece of deep red-orange mineral with darker red-brown cracks and a few lighter orange patches. Preserve the long low shape and the red colouring even though the name suggests yellow. No container, label or text.",
+      "uncertainty": "The red colour is kept as drawn; the texture is interpreted as a rough crystalline crust. Sprite shared by: item-069-sulphur.",
+      "invention": "Resolve simple surface texture, a few soft highlights and shadow planes. Keep it a plain ingredient."
+    },
+    {
+      "id": "lead",
+      "directory": "metal-ingredients/item-070-lead",
+      "image": "world/texture-254-record-065-frame-000-source.png",
+      "name": "Lead (11x8)",
+      "content": "One small lump of lead, aspect about 1.4:1. A rounded grey heap with a lighter grey upper face, darker grey body and a small orange-brown dot at the lower right. Preserve the single compact heap. No stamp, label or text.",
+      "uncertainty": "The small orange dot is interpreted as a tiny rust speck. Sprite shared by: item-070-lead, item-073-silver, item-075-platinum.",
+      "invention": "Resolve simple surface texture, a few soft highlights and shadow planes. Keep it a plain ingredient."
+    },
+    {
+      "id": "iron",
+      "directory": "metal-ingredients/item-071-iron",
+      "image": "world/texture-254-record-063-frame-000-source.png",
+      "name": "Iron (12x4)",
+      "content": "One small iron bar, aspect about 3:1. A long low bar-like piece of dull blue-grey metal with a slightly lighter upper face and darker lower edge. Preserve the long flat low shape and its plain blue-grey colour. No stamp, label or text.",
+      "uncertainty": "Whether it is a bar or a lump is unresolved; it is interpreted as a plain short bar. Sprite shared by: item-071-iron.",
+      "invention": "Resolve simple surface texture, a few soft highlights and shadow planes. Keep it a plain ingredient."
+    },
+    {
+      "id": "gold",
+      "directory": "metal-ingredients/item-074-gold",
+      "image": "world/texture-254-record-062-frame-000-source.png",
+      "name": "Gold (12x5)",
+      "content": "One small heap of gold, aspect about 2.4:1. A low mound of bright yellow gold with pale lemon highlights and darker ochre shadow at the bottom. Preserve the low rounded heap and its yellow colouring. No coins, gems, container or text.",
+      "uncertainty": "Whether this is nuggets, dust or a bar is unresolved; it is interpreted as a small heap of gold lumps. Sprite shared by: item-074-gold.",
+      "invention": "Resolve simple surface texture, a few soft highlights and shadow planes. Keep it a plain ingredient."
+    },
+    {
+      "id": "big-tooth",
+      "directory": "miscellaneous-ingredients1/item-056-big-tooth",
+      "image": "world/texture-254-record-057-frame-000-source.png",
+      "name": "Big Tooth (8x23)",
+      "content": "One large curved fang tooth standing upright, aspect about 1:3. A pale cream-ivory tooth with a warm tan body, a rounded wide upper root end and a long tapering point curving down to the bottom. At the top a dark red fleshy or bloody root tuft with a pink-mauve patch. Preserve the upright orientation, the wide tooth body and the red root at the top. No gems, wire, text or second tooth.",
+      "uncertainty": "The red top is interpreted as a bloody or fleshy root of the tooth; this is a guess for owner review. Sprite shared by: item-056-big-tooth.",
+      "invention": "Resolve simple surface texture, a few soft highlights and shadow planes. Keep it a plain ingredient."
+    },
+    {
+      "id": "medium-tooth",
+      "directory": "miscellaneous-ingredients1/item-057-medium-tooth",
+      "image": "world/texture-254-record-058-frame-000-source.png",
+      "name": "Medium Tooth (7x20)",
+      "content": "One medium curved fang tooth standing upright, aspect about 1:2.9. Cream-ivory tooth with tan shading, a wide rounded upper body and a tapering point at the bottom, with a dark red fleshy root tuft and a small pink-mauve patch at the top. Preserve the upright orientation and the red root. No gems, wire, text or second tooth.",
+      "uncertainty": "The red top is interpreted as a bloody or fleshy root. The small pale dot at the lower right is not drawn. Sprite shared by: item-057-medium-tooth.",
+      "invention": "Resolve simple surface texture, a few soft highlights and shadow planes. Keep it a plain ingredient."
+    },
+    {
+      "id": "small-tooth",
+      "directory": "miscellaneous-ingredients1/item-058-small-tooth",
+      "image": "world/texture-254-record-059-frame-000-source.png",
+      "name": "Small Tooth (6x17)",
+      "content": "One small curved fang tooth standing upright, aspect about 1:2.8. Cream-ivory tooth with tan shading and a tapering point at the bottom, with a dark red fleshy root tuft and small pink-mauve patch at the top. Preserve the upright orientation and the red root. No gems, wire, text or second tooth.",
+      "uncertainty": "The red top is interpreted as a bloody or fleshy root. Sprite shared by: item-058-small-tooth.",
+      "invention": "Resolve simple surface texture, a few soft highlights and shadow planes. Keep it a plain ingredient."
+    },
+    {
+      "id": "ivory",
+      "directory": "miscellaneous-ingredients2/item-076-ivory",
+      "image": "world/texture-254-record-070-frame-000-source.png",
+      "name": "Ivory (6x12)",
+      "content": "One short upright block of ivory, aspect about 1:2. A pale off-white to lilac-grey rectangular tusk section with a light right face, a mid grey left face and a small dark red spot at the bottom edge. Preserve the narrow upright rectangular block. No carving, text or second piece.",
+      "uncertainty": "The red mark at the bottom is interpreted as a small stain. Sprite shared by: item-076-ivory.",
+      "invention": "Resolve simple surface texture, a few soft highlights and shadow planes. Keep it a plain ingredient."
+    },
+    {
+      "id": "pearl",
+      "directory": "miscellaneous-ingredients2/item-077-pearl",
+      "image": "world/texture-254-record-006-frame-000-source.png",
+      "name": "Pearl (14x11)",
+      "content": "One pearl, aspect about 1.3:1. A round grey-white pearl with a bright pale cream highlight at the upper left, lilac-pink and warm cream colour in the lower half and a thin dark brown edge. Preserve the single round pearl and its warm pink-cream lower half. No shell, setting, text or second pearl.",
+      "uncertainty": "The grey upper tone and brown rim are interpreted as pearl shading and a soft contour, not a shell. Sprite shared by: item-077-pearl.",
+      "invention": "Resolve a few clean facets, a restrained highlight and a thin darker edge. Keep it a single plain stone."
+    },
+    {
+      "id": "holy-water",
+      "directory": "religious-items/item-262-holy-water",
+      "image": "world/texture-211-record-049-frame-000-source.png",
+      "name": "Holy Water (23x28)",
+      "content": "One tall ornate stemmed fountain basin or chalice, seen from slightly above, aspect about 0.8:1. A wide shallow dark-green bowl with a gold rim holds turquoise water at the top; below is a green bulbous body with a gold collar, a short dark green stem with a gold band, and a wide flat dark-green foot with a gold rim. Preserve the stacked bowl, stem and foot and the turquoise water. No text, figures or extra handles.",
+      "uncertainty": "It could be a small font or a goblet; it is interpreted as a stemmed bowl vessel with a gold-rimmed green body. Sprite shared by: item-262-holy-water.",
+      "invention": "Resolve gloss on the green body, a plain gold rim, and a few ripple highlights in the water. Keep ornament minimal."
+    },
+    {
+      "id": "large-sack",
+      "directory": "useless-items1/item-087-large-sack",
+      "image": "world/texture-205-record-017-frame-000-source.png",
+      "name": "Large Sack (37x27)",
+      "content": "One large cloth sack lying diagonally on its side, the full body low at the lower left and the tied neck folded up to the upper right, aspect about 1.4:1. Pale tan cloth with brown shading along the lower edge and a darker opening at the neck. Preserve the diagonal lie and rounded body. Do not make it stand upright. No text, patch, drawstring tail or coins.",
+      "uncertainty": "A pink-mauve patch on the body is interpreted as a small stain or mend; the weave and neck fold are interpretations. Sprite shared by: item-087-large-sack.",
+      "invention": "Resolve broad cloth folds, a little weave and a few seams. Keep the silhouette soft and the colour pale tan."
+    },
+    {
+      "id": "quiver",
+      "directory": "useless-items1/item-088-quiver",
+      "image": "world/texture-205-record-042-frame-000-source.png",
+      "name": "Quiver (35x15)",
+      "content": "One arrow quiver lying on its side, aspect about 2.3:1. A long brown leather tube with a dark open end at the right, a lighter rim, and thin leather straps looping below at the left. Preserve the horizontal tube, its dark opening at the right and the straps. No arrows, text or second quiver.",
+      "uncertainty": "The pixels show an empty tube; no arrows are drawn. The strap shape is an interpretation. Sprite shared by: item-088-quiver.",
+      "invention": "Resolve leather grain, stitching along the seam and a plain rim. Keep the straps thin."
+    },
+    {
+      "id": "backpack",
+      "directory": "useless-items1/item-089-backpack",
+      "image": "world/texture-205-record-044-frame-000-source.png",
+      "name": "Backpack (48x15)",
+      "content": "One dark leather backpack lying flat, seen low and from slightly above, aspect about 3.2:1. A dark brown-black leather body with a small blue-teal buckle or flap area at the right and thin dark straps trailing out to the left and right. Preserve the low flat shape and the thin straps. No pouches, text or extra gear.",
+      "uncertainty": "The source is very dark; the leather is interpreted as dark brown, and the teal is interpreted as a metal buckle. Sprite shared by: item-089-backpack.",
+      "invention": "Resolve leather folds, stitching and a plain buckle. Keep the colours dark and low-contrast."
+    },
+    {
+      "id": "large-chest",
+      "directory": "useless-items1/item-092-large-chest",
+      "image": "world/texture-205-record-024-frame-000-source.png",
+      "name": "Large Chest (42x37)",
+      "content": "One large wooden treasure chest, seen from the front-left corner with its flat lid showing, aspect about 1.15:1. A flat reddish-brown lid with a patch of green moss or paint, and dark brown front and side faces with dark iron straps and small teal-blue metal corner fittings. The front is dark, the right side darker. Preserve the boxy shape, the lighter lid and the dark body. No lock plate details beyond the source, gems, coins, text or open lid.",
+      "uncertainty": "The green patch on the lid is interpreted as moss or green paint, not a symbol. Strap and corner details are interpretations. Sprite shared by: item-092-large-chest.",
+      "invention": "Resolve wood grain, iron straps, teal-tinted corner plates and plain edge wear. Keep the body very dark."
+    },
+    {
+      "id": "holy-candle",
+      "directory": "religious-items/item-269-holy-candle",
+      "image": "world/texture-210-record-004-frame-000-source.png",
+      "name": "Holy Candle (15x21)",
+      "content": "One short thick candle standing in a flat gold dish, aspect about 0.7:1. Pale grey wax candle with a bright orange and yellow flame and a wide flat gold saucer base. Preserve the single flame, the grey candle body and the gold dish. No text, symbol or second candle.",
+      "uncertainty": "This is frame 0 of a five-frame flame animation. The grey wax is kept as drawn. Sprite shared by: item-269-holy-candle.",
+      "invention": "Resolve wax thickness, a small wick, a plain gold saucer with a bright rim highlight and a simple flame."
+    }
+  ],
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "icons-a",
+      "model": "krea2-turbo",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ]
+}

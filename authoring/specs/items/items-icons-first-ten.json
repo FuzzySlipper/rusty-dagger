@@ -1,0 +1,131 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy adventure inventory art. Keep the source's local colours: do not tint every material brown or add brass simply to match the UI. Use a restrained palette with distinct light, middle and dark families, clear silhouette and legible material masses. Detail hierarchy: silhouette first, a few large planes or folds second, sparse material marks third. Keep the original class of mundane object, its opening and visible components; no extra handles, gemstones, runes, faces, symbols, chains or elaborate fantasy embellishment. Do not convert this into pixel art, a photoreal product photograph, a glossy mobile-game loot icon or a dramatic scene. No text, labels, border, vignette, decorative frame, hand, person, pedestal, scenery or second object.",
+  "presentation": "One isolated item on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the object. Full object visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Inventory icons, first ten (jewellery, books, vessels, plants, sundries)",
+  "selection": "First ten new unique world sprites of the full icon conversion (rusty-dagger #10458), chosen across families that the sixteen weapon/armour sprites did not cover. Each sprite is generated once; sharing is stated in its uncertainty text.",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "icons-first-ten",
+      "model": "qwen-edit",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "conditioning": "reference"
+    }
+  ],
+  "items": [
+    {
+      "id": "amulet",
+      "directory": "jewellery/item-133-amulet",
+      "image": "world/texture-254-record-056-frame-000-source.png",
+      "name": "Amulet (23x23)",
+      "content": "One loose chain necklace with a pendant amulet, seen flat from the front, overall roughly square. A thin pale grey-silver chain makes a wide open loop in the upper right, with a few small copper-orange links; the loop hangs down to the left and joins a star-shaped pendant at the lower left. The pendant is a small eight-pointed silver star-burst with copper-orange points and a small green stone with a bright centre at its middle. Preserve the open chain loop and the pendant's position at the lower left. No second pendant, clasp, text or extra gems.",
+      "uncertainty": "The chain's exact link shape and the star's thickness are not resolved by the pixels; the green centre may be a small round stone or enamel and is interpreted as a stone. Sprite shared by: item-055-holy-relic, item-133-amulet, item-258-prayer-beads, item-259-rare-symbol, item-260-common-symbol.",
+      "invention": "Resolve chain links as plain oval silver links with a few copper ones, thin metal thickness on the star points, and a faceted green cabochon. Keep fittings plain."
+    },
+    {
+      "id": "spellbook",
+      "directory": "misc-items/item-132-spellbook",
+      "image": "world/texture-209-record-004-frame-000-source.png",
+      "name": "Spellbook (63x23)",
+      "content": "One closed thick book lying flat, seen obliquely from above, wider than tall, overall aspect about 3.3:1. Dark green cloth or leather cover with yellow-gold corner caps and a small yellow-gold ornament on the front cover; the right side shows pale page edges. The spine runs along the left and the book's thickness is visible along the lower edge. Preserve the oblique angle, the corner caps and the pale page block at the lower right. No clasp, title text, symbol, gem or open pages.",
+      "uncertainty": "The cover ornament is only a few yellow pixels; it is interpreted as a small simple gold emblem without a recognisable symbol. Sprite shared by: item-132-spellbook.",
+      "invention": "Resolve leather grain, worn gold corner caps, page-edge lines and a plain gold cover plate. Keep the cover emblem abstract and small."
+    },
+    {
+      "id": "pure-water",
+      "directory": "miscellaneous-ingredients1/item-059-pure-water",
+      "image": "world/texture-205-record-001-frame-000-source.png",
+      "name": "Pure Water (24x29)",
+      "content": "One narrow-necked round-bottomed glass flask standing upright, aspect about 1:1.3. A thin cork stopper sits in the neck. The glass is blue-green with pale cyan highlights along both sides; the lower belly is filled with a bright yellow liquid with a dark amber base and a small pale highlight, while the neck and upper body are empty glass. Preserve the cork, the neck, the wide rounded belly and the liquid level in the lower half. No label, bubbles, text, hand or second bottle.",
+      "uncertainty": "The liquid is yellow in the pixels despite the name; the colour is kept as drawn. The glass thickness and cork shape are interpretations. Sprite shared by: item-059-pure-water.",
+      "invention": "Resolve glass thickness, a restrained pale reflection, dark translucent interior and a plain brown cork. Keep the cyan edge and yellow liquid."
+    },
+    {
+      "id": "glass-jar",
+      "directory": "useless-items1/item-082-glass-jar",
+      "image": "world/texture-205-record-003-frame-000-source.png",
+      "name": "Glass Jar (24x29)",
+      "content": "One squat wide-mouthed glass jar standing upright, aspect about 0.8:1. The jar has a short neck with a pale cyan rim ring, sloping shoulders and a wide rounded body. The glass is teal with cyan edges and a bright highlight at the upper right of the shoulder; the interior is dark grey-black and empty. Preserve the rim, the sloping shoulders, the wide body and the dark interior. No lid, label, contents, text or second jar.",
+      "uncertainty": "Whether the dark interior is liquid or empty dark glass is unresolved; it is interpreted as dark empty translucent glass. Sprite shared by: item-082-glass-jar, item-252-oil.",
+      "invention": "Resolve the rim thickness, glass wall thickness, a restrained highlight and cool reflected edges. Keep it plain."
+    },
+    {
+      "id": "small-sack",
+      "directory": "useless-items1/item-086-small-sack",
+      "image": "world/texture-205-record-018-frame-000-source.png",
+      "name": "Small Sack (26x17)",
+      "content": "One small cloth sack lying diagonally on its side, the full body low at the left and the tied neck folded up to the upper right, overall aspect about 1.5:1. The sack is tan to light brown cloth with darker brown shadow folds along the lower left and a darker opening at the neck end. Preserve the diagonal lie, the rounded full body at the left and the folded neck at the upper right. Do not make it stand upright. No drawstring tail, text, patch or coins.",
+      "uncertainty": "The fabric weave and the exact fold of the neck are not resolved; the neck is interpreted as a loosely folded cloth opening. Sprite shared by: item-086-small-sack.",
+      "invention": "Resolve broad cloth folds, a little weave near edges and small seam stitches. Keep the silhouette soft and the colour tan."
+    },
+    {
+      "id": "ginkgo-leaves",
+      "directory": "plant-ingredients2/item-027-ginkgo-leaves",
+      "image": "world/texture-254-record-020-frame-000-source.png",
+      "name": "Ginkgo Leaves (23x23)",
+      "content": "One loose sprig of ginkgo plant ingredient, roughly square. Three or four broad fan-shaped green leaves on thin dark green stems spreading up and to the sides, with thin stems joining below. The leaves are mid green with lighter green upper edges and darker green lower areas; the stems are very dark green. Preserve the leaf count, their positions at the upper left, upper right and middle right, and the thin stems below. No flowers, fruit, roots, text or second plant.",
+      "uncertainty": "Leaf edges and veins are not resolved; the fan shape is an interpretation, with a notched outer edge kept simple. Sprite shared by: item-027-ginkgo-leaves.",
+      "invention": "Resolve a few radiating veins, a gently scalloped leaf edge and thin tapering stems. Keep the cluster loose and sparse."
+    },
+    {
+      "id": "decanter",
+      "directory": "useless-items1/item-084-decanter",
+      "image": "world/texture-205-record-043-frame-000-source.png",
+      "name": "Decanter (8x18)",
+      "content": "One tall slender glass decanter standing upright, aspect about 1:2.2. A narrow pale grey-white neck and stopper-like top over a slightly wider body; the lower body is green with lighter yellow-green highlights and dark green shadows. Preserve the tall narrow proportions, the pale grey top and the green lower body. No label, handle, text, cork detail beyond a simple stopper, or second vessel.",
+      "uncertainty": "The pale upper part could be a glass neck, a stopper or both; it is interpreted as a glass neck with a plain stopper. The green may be liquid or green glass and is interpreted as green liquid in clear glass. Sprite shared by: item-084-decanter.",
+      "invention": "Resolve glass thickness, a simple stopper, a narrow neck and a restrained highlight. Keep the proportions tall and narrow."
+    },
+    {
+      "id": "candle",
+      "directory": "useless-items2/item-253-candle",
+      "image": "world/texture-210-record-003-frame-000-source.png",
+      "name": "Candle (9x19)",
+      "content": "One short thick candle standing upright on its own base, aspect about 1:2.1. A pale grey-white wax body, slightly wider at the base with a few darker grey shadow planes, topped by a small flame: orange outer flame with a yellow-white core. Preserve the short thick candle, the single flame and the plain base. No candlestick, holder, dish, dripping wax beyond a little, text or second candle.",
+      "uncertainty": "This is the first frame of a five-frame flicker animation; only the static first frame is drawn and later frames are not covered. The wax colour is grey in the pixels and kept as pale grey-white. Sprite shared by: item-253-candle.",
+      "invention": "Resolve wax thickness, a few soft drip marks, a thin black wick and a simple teardrop flame. Keep the flame small and the wax matte."
+    },
+    {
+      "id": "cactus",
+      "directory": "plant-ingredients2/item-032-cactus",
+      "image": "world/texture-254-record-025-frame-000-source.png",
+      "name": "Cactus (24x23)",
+      "content": "One cluster of cactus pads, roughly square. Several broad rounded dark-green pads joined together, a larger pad at the lower right and smaller pads at the upper left and upper right, with small yellow-gold flower buds at the tips of a few pads. The pads are dark grey-green with lighter green faces and dark spotted marks. Preserve the cluster arrangement, the yellow buds at three tips and the dark spots. No pot, soil, spines drawn as long needles, text or second plant.",
+      "uncertainty": "The small dark marks are interpreted as areoles with tiny spines. Whether the yellow points are flowers or fruit is unresolved; they are interpreted as small yellow flower buds. Sprite shared by: item-032-cactus.",
+      "invention": "Resolve pad thickness, subtle waxy highlights, a sparse scatter of small spine clusters and plain yellow buds. Keep the cluster compact."
+    },
+    {
+      "id": "bracelet",
+      "directory": "jewellery/item-136-bracelet",
+      "image": "world/texture-216-record-021-frame-000-source.png",
+      "name": "Bracelet (15x13)",
+      "content": "One broad hollow metal cuff bracelet seen slightly from above, roughly 1.15:1. A wide band of dull antique gold or brass forms an oval ring whose opening shows dark in the middle and a small flesh-coloured patch at the upper and lower inner edges. The band has darker brown shading on the left and lighter yellow highlights on the right. Preserve the broad cuff with the visible hollow opening. It must not become a thin bangle or gain gems. No gems, engraving, text, clasp or hand.",
+      "uncertainty": "The pixel dither on the band does not establish a surface pattern; it is interpreted as hammered or lightly worn metal. The flesh-coloured patches are interpreted as an interior lining or reflected light, not a wrist. Sprite shared by: item-136-bracelet.",
+      "invention": "Resolve the cuff's thickness, a gently worn brass surface, a narrow dark interior and a restrained highlight. Keep the band broad and plain."
+    }
+  ]
+}

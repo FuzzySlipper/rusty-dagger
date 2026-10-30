@@ -1,0 +1,157 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy adventure inventory art. Keep the source's local colours: do not tint every material brown or add brass simply to match the UI. Use a restrained palette with distinct light, middle and dark families, clear silhouette and legible material masses. Detail hierarchy: silhouette first, a few large planes or folds second, sparse material marks third. Keep the original class of mundane object, its opening and visible components; no extra handles, gemstones, runes, faces, symbols, chains or elaborate fantasy embellishment. Do not convert this into pixel art, a photoreal product photograph, a glossy mobile-game loot icon or a dramatic scene. No text, labels, border, vignette, decorative frame, hand, person, pedestal, scenery or second object.",
+  "presentation": "One isolated item on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the object. Full object visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Inventory icons batch F (remaining sprites), part 2 (furniture, quest and religious items) / Qwen then retro",
+  "selection": "Batch of unique world sprites from the full icon conversion (rusty-dagger #10458). Each sprite is generated once; sharing is stated in its uncertainty text.",
+  "items": [
+    {
+      "id": "tanto",
+      "directory": "armor/item-109-buckler",
+      "image": "world/texture-207-record-010-frame-000-source.png",
+      "name": "Tanto (54x26)",
+      "content": "One round hat-like Japanese helmet, aspect about 2:1. A flat wide dark conical metal cap with a pointed small spike at the top and a wide flat brim around it. Preserve the low wide conical shape and the spike. No face, text or crest.",
+      "uncertainty": "The sprite is named tanto but reads as a flat kasa-style cap or shield; it is interpreted as a wide conical metal hat. This is a guess for owner review. Sprite shared by: item-109-buckler, item-110-round-shield, item-114-tanto.",
+      "invention": "Resolve dark metal planes, a rim and a simple finial."
+    },
+    {
+      "id": "cuirass",
+      "directory": "armor/item-102-cuirass",
+      "image": "world/texture-207-record-011-frame-000-source.png",
+      "name": "Cuirass (47x25)",
+      "content": "One cuirass lying on its side, aspect about 1.9:1. A rounded dark steel torso armour seen from the side, with two open tubular ends at the left and right and green-grey highlights along the upper edge. Preserve the rounded shape with its two open ends. No body, straps detail, text or crest.",
+      "uncertainty": "Orientation is interpreted as lying on its side showing the neck and waist openings. Sprite shared by: item-102-cuirass.",
+      "invention": "Resolve plate planes, rivets and a rim."
+    },
+    {
+      "id": "helm",
+      "directory": "armor/item-107-helm",
+      "image": "world/texture-207-record-012-frame-000-source.png",
+      "name": "Helm (16x16)",
+      "content": "One round helmet, roughly square. A smooth dark round steel helm with a pale highlight at the upper left and a darker lower edge. Preserve the round dome. No face, plume, visor detail or text.",
+      "uncertainty": "Visor and brim are not resolved; it is interpreted as a plain closed round helm. Sprite shared by: item-107-helm.",
+      "invention": "Resolve a polished dome, a rim and a faint reflection."
+    },
+    {
+      "id": "bracer",
+      "directory": "armor/item-103-gauntlets",
+      "image": "world/texture-207-record-013-frame-000-source.png",
+      "name": "Bracer (37x13)",
+      "content": "One bracer lying flat, aspect about 2.8:1. A dark steel forearm guard with a scaled green-grey surface, tapering from a wider left end to a narrower right end. Preserve the tapering tube. No arm, text or straps beyond a hint.",
+      "uncertainty": "The scale pattern is interpreted as overlapping small plates. Sprite shared by: item-103-gauntlets, item-104-greaves, item-105-left-pauldron, item-106-right-pauldron, item-134-bracer.",
+      "invention": "Resolve overlapping plates, a rim and plain straps."
+    },
+    {
+      "id": "katana",
+      "directory": "weapons/item-121-katana",
+      "image": "world/texture-207-record-015-frame-000-source.png",
+      "name": "Katana (70x8)",
+      "content": "One katana lying nearly horizontal, aspect about 8.75:1. A very long thin slightly curved silver blade pointing left, with a thin dark handle and a small round guard at the right. Preserve the very long thin shape. No scabbard, text or hand.",
+      "uncertainty": "The curve is slight and interpreted as a single-edged curved blade. Sprite shared by: item-121-katana.",
+      "invention": "Resolve a steel blade with a hamon-like edge highlight, a small guard and a wrapped grip."
+    },
+    {
+      "id": "arrow",
+      "directory": "weapons/item-131-arrow",
+      "image": "world/texture-207-record-016-frame-000-source.png",
+      "name": "Arrow (49x10)",
+      "content": "One arrow lying nearly horizontal, aspect about 4.9:1. A thin brown shaft with a grey metal head pointing left and green and yellow fletching at the right. Preserve the long thin shape, head at the left and fletching at the right. No quiver, text or hand.",
+      "uncertainty": "Fletching colours are kept as green and yellow. Sprite shared by: item-131-arrow.",
+      "invention": "Resolve wood grain, a steel head and feather fletching."
+    },
+    {
+      "id": "book",
+      "directory": "books/item-277-book",
+      "image": "world/texture-209-record-002-frame-000-source.png",
+      "name": "Book (39x15)",
+      "content": "One closed book lying flat, aspect about 2.6:1. A tan-brown book seen obliquely with a pale page edge at the lower side and a dark binding. Preserve the closed flat slab shape. No text, clasp, symbol or title.",
+      "uncertainty": "No cover marks are visible; it is interpreted as a plain leather book. Sprite shared by: item-277-book.",
+      "invention": "Resolve leather grain, page edges and a plain spine."
+    },
+    {
+      "id": "bandage",
+      "directory": "useless-items2/item-249-bandage",
+      "image": "world/texture-211-record-000-frame-000-source.png",
+      "name": "Bandage (27x11)",
+      "content": "One roll of bandage, aspect about 2.5:1. A loose heap of pale grey-white cloth bandage strips with folded layers and a loose end curling at the right. Preserve the loose bundle of strips. No blood, text or container.",
+      "uncertainty": "The folds are interpretations. Sprite shared by: item-249-bandage.",
+      "invention": "Resolve cloth weave, soft folds and a loose end."
+    },
+    {
+      "id": "warhammer",
+      "directory": "weapons/item-126-warhammer",
+      "image": "world/texture-214-record-003-frame-000-source.png",
+      "name": "Warhammer (24x8)",
+      "content": "One warhammer lying nearly horizontal, aspect about 3:1. A long brown wooden handle running left to right with a dark steel hammer head at the right end, extended by a small point on top. Preserve the long handle and the head at the right. No text, decoration or hand.",
+      "uncertainty": "The head is interpreted as a dark steel blunt head. Sprite shared by: item-126-warhammer.",
+      "invention": "Resolve wood grain, steel faces and a plain butt."
+    },
+    {
+      "id": "clay-jar",
+      "directory": "useless-items1/item-085-clay-jar",
+      "image": "world/texture-218-record-000-frame-000-source.png",
+      "name": "Clay Jar (25x21)",
+      "content": "One round clay jar, aspect about 1.2:1. A wide round-bellied jar in warm orange-brown with purple-brown mottling, a wide dark open mouth with a rim at the top and a narrower foot. Preserve the squat round shape and open mouth. No lid, painted pattern, text or contents.",
+      "uncertainty": "The mottled colour is interpreted as an uneven fired glaze. Sprite shared by: item-085-clay-jar.",
+      "invention": "Resolve a rough clay surface, a rim and soft glaze variation."
+    },
+    {
+      "id": "sapphire",
+      "directory": "gems/item-002-sapphire",
+      "image": "world/texture-254-record-002-frame-000-source.png",
+      "name": "Sapphire (7x9)",
+      "content": "One cut blue sapphire, aspect about 0.78:1. A rectangular blue stone with a deep blue outer edge and a pale cyan-white highlight on the inner lower side. Preserve the tall rectangular cut and the blue colour. No setting, text or sparkle effects.",
+      "uncertainty": "Facet layout is interpreted as an emerald-style step cut with a bright inner facet. Sprite shared by: item-002-sapphire.",
+      "invention": "Resolve a few clean facets, a restrained highlight and a thin darker edge. Keep it a single plain stone."
+    },
+    {
+      "id": "red-rose",
+      "directory": "plant-ingredients1/item-019-red-rose",
+      "image": "world/texture-254-record-026-frame-000-source.png",
+      "name": "Red Rose (24x21)",
+      "content": "One red rose with leaves lying diagonally, aspect about 1.14:1. A red rose bloom at the upper right with dark red shading, a small red bud at the left, thin green stems and dark green leaves crossing at the lower left. Preserve the bloom, the bud and the leaves. No thorns detail, ribbon or text.",
+      "uncertainty": "Leaves and stems are interpretations from a sparse dark source. Sprite shared by: item-019-red-rose.",
+      "invention": "Resolve petal layers, a green stem and a few leaves."
+    }
+  ],
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "icons-f2",
+      "model": "krea2-turbo",
+      "host": "den-nimo",
+      "url": "http://192.168.1.23:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ]
+}

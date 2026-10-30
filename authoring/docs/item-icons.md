@@ -1,0 +1,71 @@
+# Item icon conversion
+
+Converts the Daggerfall item export's `world` role (TEXTURE.2xx inventory and dropped-item art) into the
+repository's own icons. The accepted recipe is **Qwen painted reconstruction, then Krea 2 turbo retro at
+denoise 0.35, then broad back-projection at 0.5 (`bp-broad-half`)**, then a transparent cut-out.
+
+## Where things live
+
+| Path | What | Git |
+| --- | --- | --- |
+| `authoring/df-raw/items/` | The importer's item export (`export-items`): per-item pages, `index.csv`, native source PNGs | ignored |
+| `authoring/gen-raw/items/` | Finals, `texture-<archive>-record-<record>-frame-<frame>.png`, 1024² RGBA. A redone sprite overwrites its file | ignored |
+| `authoring/gen-raw/studies/` | Working runs (Qwen, retro, back-projection, cut-out, compare sheets) | ignored |
+| `authoring/review/` | Generated review page, `items-ledger.csv`, thumbnails | ignored |
+| `authoring/specs/items/` | Contract specs, one pair per batch (`items-icons-NAME.json` and `-retro.json`) | tracked |
+| `authoring/ledger/items-notes.json` | The only hand-edited tracking input: status and notes per sprite key | tracked |
+| `authoring/tools/items/` | Batch runner, post-process, finalize, flame compositing, ledger builder | tracked |
+
+`local/` no longer holds any of this. The generic ComfyUI generator (`tools/lora-training/generate.py`),
+the LAN environment script and `asset-resources` stay in the asset-pipeline checkout (`ASSET_PIPELINE`,
+default `~/dev/asset-pipeline`); host and model notes are in its `docs/asset-hosts.md`.
+
+## Run a batch
+
+Write the contracts first (below), add `specs/items/items-icons-NAME.json` and `-retro.json`, then:
+
+```sh
+authoring/tools/items/run_batch.sh NAME den-m5 m5-comfy      # or den-nimo nimo-comfy
+python3 authoring/tools/items/review_ledger.py               # rebuild authoring/review/
+```
+
+Both stages run on the named host. den-m5 and den-nimo each have the Qwen-Image-2.1 and Krea 2 weights, so two
+batches can run side by side, one per host. Different hosts are not bit-identical; keep a batch on one host.
+Do not move a finished batch's finals by hand: `finalize.py` copies the cut-outs into `gen-raw/items/`.
+
+## Contracts
+
+A spec copies the style card, collection rules, presentation, seed and routes from
+`specs/items/items-equip-world.json` and replaces `items`. Each item has `id`, `directory`, `image`, `name`,
+`content`, `uncertainty` and `invention`.
+
+- Generate each unique sprite once. Templates that share it are named in `uncertainty`; the engine recolours it.
+- Score identity before polish. State unresolved features as interpretations and forbid unsupported gems,
+  symbols, handles, text and extra parts.
+- Keep descriptions short for tiny sprites. Where a material or object is genuinely ambiguous, say so in
+  `uncertainty` and end it with "This is a guess for owner review." The ledger turns that phrase into the
+  `needs-owner-review` status and a "guess" tag.
+- If the source pixels disagree with the template's name (a tomato in a "wine rack" slot), depict the pixels and
+  flag the mismatch.
+- Animated sprites: convert frame 0 as a normal item. Convert frames 1+ with an `items-icons-frames-*.json`
+  batch; only the flame differs, so `composite.py` keeps frame 0's body and takes just the flame region.
+
+## Transparency
+
+`postprocess.py cutout` turns the flat background into alpha: the background is the border colour, enclosed
+ground regions are kept or removed by the source sprite's own alpha (so a glass jar stays solid and a chain loop
+stays open), and the edge is softened and decontaminated.
+
+## Review ledger
+
+`review_ledger.py` joins the export, the specs, the post-process metrics and `gen-raw/items/` into one row per
+`archive-record-frame` key and writes `review/index.html` (cards, filters, detail) and `review/items-ledger.csv`.
+Status is derived (`unconverted`, `converted`, or `needs-owner-review` for a flagged guess) unless
+`ledger/items-notes.json` sets `accepted`, `redo` or `skipped` with a note. Rows whose extra frames exist are
+shown as separate frames.
+
+## Related
+
+- Recipe measurements and rationale: [reference/item-art-studies.md](reference/item-art-studies.md),
+  [reference/item-art-prompts.md](reference/item-art-prompts.md), [reference/dagger-retro.md](reference/dagger-retro.md).
+- Task context lives in Den (tasks 10494–10496); this directory holds the process, not the status.

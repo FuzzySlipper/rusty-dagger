@@ -118,7 +118,7 @@ internal static class ItemReferenceExport
             "All 288 template indices are retained, including furniture with no 2D source art. Player records include body morphology, gender, variants, cloak interiors, one-handed alternatives, material/clothing dyes and masks. The file name retains archive, record and frame.\n" +
             "First-person frames are original unmirrored pixels; normal/enchanted families are separate. Bow record 0 contains the entire firing cycle. Shared animations are copied into each applicable item directory. Color aliases in manifests avoid duplicate unchanged dye images. Armor/clothing have no dedicated first-person sprites.\n" +
             "Artifacts have their own folders and base-item links. magic-templates.json describes ordinary magical items reusing base art. No image generation jobs have been submitted.\n" +
-            "Reproduce from the repository root: dotnet run --project src/Daggerfall.Import.Tool -- export-items --output local/exports/NEW_ITEMS_DIRECTORY\n" +
+            "Reproduce from the repository root: dotnet run --project src/Daggerfall.Import.Tool -- export-items --output authoring/df-raw/NEW_ITEMS_DIRECTORY\n" +
             "Use a fresh output directory to preserve experiments. Extracted game art stays in ignored local/; do not commit it.",
             ["daggerfall-unity/Assets/Resources/ItemTemplates.txt", "daggerfall-unity/Assets/Resources/MagicItemTemplates.txt",
                 "daggerfall-unity/Assets/Scripts/Game/Items/ItemHelper.cs: GetItemImage, GetWeaponType, artifactTextureIndexMappings",

@@ -11,7 +11,9 @@ src/ui/engine-types/
 src/sprite-ui/engine-types/
 src/WorldRpg.SpriteWorkbench/workbench-content/
 # Operator-local sprite-workbench overlays (run-sprite-workbench.sh default authoring root).
-/authoring/
+/authoring/df-raw/
+/authoring/gen-raw/
+/authoring/review/
 **/bin/
 **/obj/
 

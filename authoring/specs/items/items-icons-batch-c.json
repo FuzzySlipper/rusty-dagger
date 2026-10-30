@@ -1,0 +1,257 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy adventure inventory art. Keep the source's local colours: do not tint every material brown or add brass simply to match the UI. Use a restrained palette with distinct light, middle and dark families, clear silhouette and legible material masses. Detail hierarchy: silhouette first, a few large planes or folds second, sparse material marks third. Keep the original class of mundane object, its opening and visible components; no extra handles, gemstones, runes, faces, symbols, chains or elaborate fantasy embellishment. Do not convert this into pixel art, a photoreal product photograph, a glossy mobile-game loot icon or a dramatic scene. No text, labels, border, vignette, decorative frame, hand, person, pedestal, scenery or second object.",
+  "presentation": "One isolated item on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the object. Full object visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Inventory icons batch C (creature ingredients, coins, deed, candelabra)",
+  "selection": "Batch of unique world sprites from the full icon conversion (rusty-dagger #10458). Each sprite is generated once; sharing is stated in its uncertainty text.",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "icons-c",
+      "model": "qwen-edit",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "conditioning": "reference"
+    }
+  ],
+  "items": [
+    {
+      "id": "werewolf-blood",
+      "directory": "creature-ingredients1/item-033-werewolf-s-blood",
+      "image": "world/texture-206-record-034-frame-000-source.png",
+      "name": "Werewolf Blood (47x8)",
+      "content": "A thin horizontal splatter streak of dark red blood, aspect about 5.9:1. A long narrow trail of small deep red and dark brown-red droplets and flecks, slightly denser at the centre and thinning to both ends, with no solid mass. Preserve the very thin wide scattered streak. No container, hand, text, animal or large puddle.",
+      "uncertainty": "Whether this is a splatter, a smear or a thin spray is unresolved; it is interpreted as a thin horizontal splatter of blood droplets. Sprite shared by: item-033-werewolf-s-blood, item-050-giant-s-blood.",
+      "invention": "Resolve glossy droplets of varied small sizes and a few thin smears. Keep it sparse and wide."
+    },
+    {
+      "id": "fairy-dragon-scales",
+      "directory": "creature-ingredients1/item-035-fairy-dragon-s-scales",
+      "image": "world/texture-254-record-037-frame-000-source.png",
+      "name": "Fairy Dragon Scales (15x10)",
+      "content": "A small heap of fairy dragon scales, aspect about 1.5:1. A low irregular cluster of small overlapping plum-purple and mauve scales with darker purple-black gaps and a dark base at the lower left. Preserve the low cluster and the purple colouring. No container, text, gems or whole creature.",
+      "uncertainty": "Scale shape is unresolved; interpreted as small rounded overlapping scales. Sprite shared by: item-035-fairy-dragon-s-scales.",
+      "invention": "Resolve plain surface texture, a few soft highlights and shadow planes. Keep it a single plain ingredient."
+    },
+    {
+      "id": "wraith-essence",
+      "directory": "creature-ingredients1/item-038-wraith-essence",
+      "image": "world/texture-254-record-047-frame-000-source.png",
+      "name": "Wraith Essence (22x8)",
+      "content": "A small wisp of wraith essence resting low, aspect about 2.8:1. A low irregular smoky shape in dark brown and tan with bright orange glowing spots at its upper left, fading to dark grey at the right. Preserve the low horizontal wisp and its orange glow. No face, skull, container, text or large flame.",
+      "uncertainty": "The material is ambiguous (smoke, ash or glowing residue); it is interpreted as a low drifting smoky residue with a few orange glowing embers. This is a guess for owner review. Sprite shared by: item-038-wraith-essence, item-045-lich-dust, item-078-indulcet, item-079-sursum, item-081-aegrotat.",
+      "invention": "Resolve soft smoke edges as painted shapes and a few glowing orange accents. Keep it low and small."
+    },
+    {
+      "id": "ectoplasm",
+      "directory": "creature-ingredients1/item-039-ectoplasm",
+      "image": "world/texture-254-record-044-frame-000-source.png",
+      "name": "Ectoplasm (22x22)",
+      "content": "A lump of ectoplasm, roughly square, hanging as a drooping slime shape. A grey-lilac irregular mass with two dark hollow spots near the top, orange-brown edge highlights along the top and sides, and dark dripping tendrils at the bottom. Preserve the tall drooping mass with dark spots and dark drips below. No face, skull, eyes, container or text.",
+      "uncertainty": "The two dark spots might be holes or eyes; they are interpreted as hollows in the slime, not eyes. The material is a guess for owner review. Sprite shared by: item-039-ectoplasm.",
+      "invention": "Resolve wet translucent sheen as a few painted highlights, smooth drooping edges and dark drips. Do not make a face."
+    },
+    {
+      "id": "ghoul-tongue",
+      "directory": "creature-ingredients1/item-040-ghoul-s-tongue",
+      "image": "world/texture-254-record-045-frame-000-source.png",
+      "name": "Ghoul Tongue (24x12)",
+      "content": "A severed ghoul's tongue lying curled, aspect about 2:1. A long wet reddish-orange tongue with dark red-brown shadow, curling in an S shape: a wide upper-left end, a narrow brown-red middle fold and a tapering tip curling up at the right. Preserve the S curl. No teeth, mouth, container or text.",
+      "uncertainty": "The brown vertical part in the middle is interpreted as the shadowed underside of a fold. Sprite shared by: item-040-ghoul-s-tongue.",
+      "invention": "Resolve wet gloss, a few papillae marks and soft fold shadows. Keep it a single curled tongue."
+    },
+    {
+      "id": "spider-venom",
+      "directory": "creature-ingredients1/item-041-spider-s-venom",
+      "image": "world/texture-254-record-046-frame-000-source.png",
+      "name": "Spider Venom (8x16)",
+      "content": "One small narrow glass vial standing upright, aspect about 1:2. A teal-blue glass tube with a wide flat pale cyan rim at the top, a pale cyan reflection stripe down the neck, and a lower half filled with bright orange-yellow liquid. Preserve the tall narrow shape, rim and orange liquid in the lower half. No cork, label, text or hand.",
+      "uncertainty": "The stopper is not visible; the rim is interpreted as an open glass lip. Sprite shared by: item-041-spider-s-venom.",
+      "invention": "Resolve glass thickness, a restrained highlight stripe and a simple rim. Keep it plain."
+    },
+    {
+      "id": "troll-blood",
+      "directory": "creature-ingredients1/item-042-troll-s-blood",
+      "image": "world/texture-206-record-033-frame-000-source.png",
+      "name": "Troll Blood (61x10)",
+      "content": "A thin horizontal splatter streak of dark red blood, aspect about 6:1. A long narrow trail of small deep red and dark brown-red droplets and flecks, with one slightly brighter red spot near the centre, thinning toward both ends, with no solid mass. Preserve the very thin wide scattered streak. No container, hand, text, creature or large puddle.",
+      "uncertainty": "Whether this is a splatter, a smear or a thin spray is unresolved; it is interpreted as a thin horizontal splatter of blood droplets. Sprite shared by: item-042-troll-s-blood, item-061-orc-s-blood.",
+      "invention": "Resolve glossy droplets of varied small sizes and a few thin smears. Keep it sparse and wide."
+    },
+    {
+      "id": "snake-venom",
+      "directory": "creature-ingredients1/item-043-snake-venom",
+      "image": "world/texture-254-record-052-frame-000-source.png",
+      "name": "Snake Venom (8x16)",
+      "content": "One small narrow glass vial standing upright, aspect about 1:2. A teal-blue glass tube with a wide flat pale cyan rim at the top, a pale cyan reflection stripe down the neck, and a lower half filled with a speckled green-yellow liquid with orange flecks. Preserve the tall narrow shape, rim and green liquid in the lower half. No cork, label, text or hand.",
+      "uncertainty": "The liquid is mixed green, yellow and orange in the pixels; it is interpreted as a murky yellow-green liquid with a few orange flecks. Sprite shared by: item-043-snake-venom, item-060-rain-water, item-062-elixir-vitae, item-063-nectar, item-064-ichor.",
+      "invention": "Resolve glass thickness, a restrained highlight stripe and a simple rim. Keep it plain."
+    },
+    {
+      "id": "gorgon-snake",
+      "directory": "creature-ingredients1/item-044-gorgon-snake",
+      "image": "world/texture-254-record-054-frame-000-source.png",
+      "name": "Gorgon Snake (23x21)",
+      "content": "One coiled green snake, roughly square. A mid-green snake with a light green head with orange eye dots at the upper left, a body in dark green with paler green belly scales looping down and around to the lower left, and a thin tapering tail trailing right with dark red-brown colour at the end and at the head's lower left. Preserve the coil and the head at the upper left. No other snakes, hair, face, text or weapons.",
+      "uncertainty": "The red-brown parts near the head and tail are interpreted as dried blood on a severed specimen, not tongues or flames. This is a guess for owner review. Sprite shared by: item-044-gorgon-snake.",
+      "invention": "Resolve small scales, a simple eye and a pale belly. Keep it one single snake."
+    },
+    {
+      "id": "basilisk-eye",
+      "directory": "creature-ingredients1/item-051-basilisk-s-eye",
+      "image": "world/texture-254-record-050-frame-000-source.png",
+      "name": "Basilisk Eye (16x14)",
+      "content": "One basilisk eyeball, aspect about 1.15:1. A round bright yellow-green eye with a darker green rim, a dark vertical slit pupil at the centre and pale lime highlights at the upper left and lower right. Preserve the round shape, the vertical slit and green colour. No eyelid, face, blood, text or optic nerve beyond a hint.",
+      "uncertainty": "The dark centre is interpreted as a vertical slit pupil. Sprite shared by: item-051-basilisk-s-eye.",
+      "invention": "Resolve a wet glossy sheen, a faint iris texture and a restrained highlight. Keep it a single eyeball."
+    },
+    {
+      "id": "daedra-heart",
+      "directory": "creature-ingredients1/item-053-daedra-s-heart",
+      "image": "world/texture-254-record-051-frame-000-source.png",
+      "name": "Daedra Heart (24x20)",
+      "content": "One daedra heart, aspect about 1.2:1. A rounded dark red-brown heart shape with a bright red lit area on the upper left, a purple-mauve patch on the upper right, and a spreading ragged dark red smear along the bottom. Preserve the rounded lump and the smear below. No face, flames, text or container.",
+      "uncertainty": "The smear at the bottom is interpreted as blood pooled under the heart; the purple patch is interpreted as a vessel or shadowed lobe. Sprite shared by: item-053-daedra-s-heart.",
+      "invention": "Resolve wet gloss, a few vessels at the top and soft shadow planes. Keep it a heart, not a creature."
+    },
+    {
+      "id": "saint-hair",
+      "directory": "creature-ingredients1/item-054-saint-s-hair",
+      "image": "world/texture-254-record-055-frame-000-source.png",
+      "name": "Saint Hair (17x23)",
+      "content": "One lock of silver-grey hair, aspect about 0.75:1. A tapering lock of pale grey and silver hair strands sweeping from the lower left up to the upper right, with warm brown and orange strand accents on the left edge and dark grey shading at the right. Preserve the slender tapering lock and its diagonal sweep. No ribbon, container, text or head.",
+      "uncertainty": "The brown accents are interpreted as warm strands among the grey, not a binding. Sprite shared by: item-036-nymph-hair, item-054-saint-s-hair.",
+      "invention": "Resolve a few long flowing strands and soft shading. Keep it a single lock."
+    },
+    {
+      "id": "dragon-scales",
+      "directory": "creature-ingredients2/item-046-dragon-s-scales",
+      "image": "world/texture-254-record-048-frame-000-source.png",
+      "name": "Dragon Scales (24x17)",
+      "content": "A small heap of dragon scales, aspect about 1.4:1. A dense low cluster of overlapping green scales: dark green with lighter blue-green highlights on the upper edges of each scale. Preserve the low rounded heap and its green colour. No container, text, claws or whole creature.",
+      "uncertainty": "Scale shape is interpreted as small rounded-rectangular overlapping scales. Sprite shared by: item-046-dragon-s-scales.",
+      "invention": "Resolve plain surface texture, a few soft highlights and shadow planes. Keep it a single plain ingredient."
+    },
+    {
+      "id": "giant-scorpion-stinger",
+      "directory": "creature-ingredients2/item-047-giant-scorpion-stinger",
+      "image": "world/texture-254-record-038-frame-000-source.png",
+      "name": "Giant Scorpion Stinger (20x18)",
+      "content": "One giant scorpion stinger, aspect about 1.1:1. A curved tapering brown tail tip curling up and to the right, with a rounded tan bulb at the lower left, a ringed dark-brown segmented curve and a thin dark point at the upper right. Preserve the curve, the bulb at the lower left and the point at the upper right. No other body parts, text or container.",
+      "uncertainty": "Segment rings and the stinger tip are interpretations. Sprite shared by: item-047-giant-scorpion-stinger.",
+      "invention": "Resolve glossy chitin segments, a small pale highlight and a sharp dark tip."
+    },
+    {
+      "id": "small-scorpion-stinger",
+      "directory": "creature-ingredients2/item-048-small-scorpion-stinger",
+      "image": "world/texture-254-record-039-frame-000-source.png",
+      "name": "Small Scorpion Stinger (14x13)",
+      "content": "One small scorpion stinger, aspect about 1.1:1. A curved tapering brown tail tip curling up and to the right, with a rounded tan bulb at the lower left, a ringed dark-brown segmented curve and a thin dark point at the upper right. Preserve the curve, the bulb at the lower left and the point at the upper right. No other body parts, text or container.",
+      "uncertainty": "Segment rings and the stinger tip are interpretations. It is a smaller version of the giant stinger. Sprite shared by: item-048-small-scorpion-stinger.",
+      "invention": "Resolve glossy chitin segments, a small pale highlight and a sharp dark tip."
+    },
+    {
+      "id": "mummy-wrappings",
+      "directory": "creature-ingredients2/item-049-mummy-wrappings",
+      "image": "world/texture-254-record-041-frame-000-source.png",
+      "name": "Mummy Wrappings (23x21)",
+      "content": "A bundle of old mummy wrappings, roughly square. A rolled tan bandage coil at the lower left with a dark brown spiral centre and a long loose strip of tan-brown cloth rising in an S-curve to the upper right, ending in a few ragged dark strands at the upper left. Preserve the coil at the lower left and the long curling strip. No body, face, container or text.",
+      "uncertainty": "The darker threads at the top are interpreted as ragged loose ends of the cloth. Sprite shared by: item-049-mummy-wrappings.",
+      "invention": "Resolve cloth weave near edges, soft folds and frayed ends. Keep the colour tan and aged."
+    },
+    {
+      "id": "gryphon-feather",
+      "directory": "creature-ingredients2/item-052-gryphon-s-feather",
+      "image": "world/texture-254-record-053-frame-000-source.png",
+      "name": "Gryphon Feather (23x22)",
+      "content": "One large gryphon feather lying diagonally, roughly square. A long dark brown feather with a thin central shaft, a ragged vane of dark brown, black and rust-brown barbs, a few purple flecks and a bare orange-brown quill at the lower left. Preserve the diagonal lie, the ragged vane and the quill end. No bird, other feathers, text or ribbon.",
+      "uncertainty": "The very dark source is interpreted as dark brown barbs with a few purple-brown flecks; the exact barb layout is invented. Sprite shared by: item-052-gryphon-s-feather.",
+      "invention": "Resolve individual barbs, a pale shaft and a warm quill tip."
+    },
+    {
+      "id": "wereboar-tusk",
+      "directory": "creature-ingredients3/item-034-wereboar-s-tusk",
+      "image": "world/texture-254-record-042-frame-000-source.png",
+      "name": "Wereboar Tusk (24x24)",
+      "content": "One curved boar tusk, roughly square. A pale cream-tan curved tusk arcing from a thick rounded base at the lower left up and over to a slender tapered point at the top, with a bright pale highlight on the base and warm tan shading along the right edge. Preserve the sweeping curve and the thick base at the lower left. No jewellery, text or head.",
+      "uncertainty": "The base cut is interpreted as a flat root end. Sprite shared by: item-034-wereboar-s-tusk.",
+      "invention": "Resolve a smooth ivory surface, a few faint growth lines and a restrained highlight."
+    },
+    {
+      "id": "unicorn-horn",
+      "directory": "creature-ingredients3/item-037-unicorn-horn",
+      "image": "world/texture-254-record-043-frame-000-source.png",
+      "name": "Unicorn Horn (24x24)",
+      "content": "One unicorn horn lying diagonally, roughly square. A long slender tapering horn rising from the lower left to the upper right, in tan and brown bands with grey-blue shadowed spiral grooves, thick at the lower left base and narrowing to a point at the upper right. Preserve the diagonal lie, the spiral banding and the thick base at the lower left. No head, jewellery, glow, text or stand.",
+      "uncertainty": "The banding is interpreted as spiral grooves on a bone-coloured horn; the pale colour is kept tan and brown. Sprite shared by: item-037-unicorn-horn.",
+      "invention": "Resolve spiral grooves, subtle ivory shading and a plain base. Keep it a single horn."
+    },
+    {
+      "id": "gold-pieces",
+      "directory": "currency/item-276-gold-pieces",
+      "image": "world/texture-216-record-001-frame-000-source.png",
+      "name": "Gold Pieces (39x14)",
+      "content": "A small heap of gold coins, aspect about 2.8:1. A low pile of round bright yellow-gold coins with pale highlights and darker ochre shadow gaps, with a few loose coins at both ends. Preserve the low wide heap and the loose coins at left and right. No chest, bag, text, faces or gems.",
+      "uncertainty": "Individual coins are seen edge-on and flat; they are interpreted as simple round coins without engraving. Sprite shared by: item-276-gold-pieces.",
+      "invention": "Resolve coin rims, restrained highlights and a few overlaps. Keep the coins plain, unmarked."
+    },
+    {
+      "id": "deed",
+      "directory": "deeds/item-099-deed-to-townhouse",
+      "image": "world/texture-209-record-008-frame-000-source.png",
+      "name": "Deed (61x19)",
+      "content": "One rolled or folded deed document lying flat, aspect about 3.2:1. A long wide flat tan parchment sheet with a pointed raised fold at the centre top and slightly upturned ends, shaded darker brown along the lower edge. Preserve the flat wide silhouette and the central raised point. No seal, ribbon, text, writing or ink marks.",
+      "uncertainty": "Whether this is a folded sheet or a roll is unresolved; it is interpreted as a loosely folded parchment sheet. This is a guess for owner review. Sprite shared by: item-099-deed-to-townhouse, item-100-deed-to-house, item-101-deed-to-manor, item-278-potion-recipe, item-279-parchment, item-285-house-deed, item-286-ship-deed, item-287-map.",
+      "invention": "Resolve paper fibre, soft folds and edge thickness. Do not add writing."
+    },
+    {
+      "id": "quaesto-vil",
+      "directory": "drugs/item-080-quaesto-vil",
+      "image": "world/texture-254-record-040-frame-000-source.png",
+      "name": "Quaesto Vil (16x24)",
+      "content": "One Quaesto Vil plant cutting, aspect about 0.67:1. A thin twisting brown root-like stalk rising from a gnarled foot at the lower left, curving up to a small crown of dark green leaves and drooping green stems at the top right. Preserve the tall curving stalk and the small leaf crown. No flowers, text or pot.",
+      "uncertainty": "Leaf and root shapes are interpretations. Sprite shared by: item-080-quaesto-vil.",
+      "invention": "Resolve bark texture, a few veins and thin hanging fronds."
+    },
+    {
+      "id": "large-pillow",
+      "directory": "furniture/item-235-large-pillow",
+      "image": "world/texture-200-record-011-frame-000-source.png",
+      "name": "Large Pillow (28x15)",
+      "content": "One large grey cushion pillow lying flat, aspect about 1.9:1. A plump rectangular grey pillow seen obliquely, pale grey on top with a darker grey underside, with pinched corners at the left, upper right and lower right. Preserve the rounded rectangular cushion with pinched corners. No pattern, tassels, text or stand.",
+      "uncertainty": "The colour is grey in the pixels and is kept as pale lilac-grey cloth. Sprite shared by: item-235-large-pillow, item-236-small-pillow.",
+      "invention": "Resolve soft cloth wrinkles, seams and corner pinches."
+    },
+    {
+      "id": "candelabra",
+      "directory": "furniture/item-246-candelabra",
+      "image": "world/texture-210-record-005-frame-000-source.png",
+      "name": "Candelabra (27x47)",
+      "content": "One tall three-branch candelabra standing upright, aspect about 0.6:1. A slim yellow-gold stem rising from a round flat base, splitting into three curved arms: one at the top centre and one on each side, each holding a short grey wax candle with a small orange and yellow flame. Preserve the three candles, the symmetrical arms and the slim stem. No dripping chains, extra branches, text or ornament.",
+      "uncertainty": "This is frame 0 of a five-frame flame animation. The grey wax is kept as drawn. Sprite shared by: item-246-candelabra.",
+      "invention": "Resolve brass thickness, plain turned details, simple wax drips and small flames."
+    }
+  ]
+}

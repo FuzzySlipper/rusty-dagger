@@ -1,0 +1,113 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy adventure inventory art. Keep the source's local colours: do not tint every material brown or add brass simply to match the UI. Use a restrained palette with distinct light, middle and dark families, clear silhouette and legible material masses. Detail hierarchy: silhouette first, a few large planes or folds second, sparse material marks third. Keep the original class of mundane object, its opening and visible components; no extra handles, gemstones, runes, faces, symbols, chains or elaborate fantasy embellishment. Do not convert this into pixel art, a photoreal product photograph, a glossy mobile-game loot icon or a dramatic scene. No text, labels, border, vignette, decorative frame, hand, person, pedestal, scenery or second object.",
+  "presentation": "One isolated item on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the object. Full object visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Inventory icons animation frames, part 1",
+  "selection": "Flame animation frames 1+ of the lit-candle sprites (rusty-dagger #10458); only the flame differs from frame 0.",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "icons-e1",
+      "model": "qwen-edit",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "conditioning": "reference"
+    }
+  ],
+  "items": [
+    {
+      "id": "candelabra-f1",
+      "directory": "furniture/item-246-candelabra",
+      "image": "world/texture-210-record-005-frame-001-source.png",
+      "name": "Candelabra (27x47) frame 1",
+      "content": "One tall three-branch candelabra standing upright, aspect about 0.6:1. A slim yellow-gold stem rising from a round flat base, splitting into three curved arms: one at the top centre and one on each side, each holding a short grey wax candle with a small orange and yellow flame. Preserve the three candles, the symmetrical arms and the slim stem. No dripping chains, extra branches, text or ornament.",
+      "uncertainty": "This is frame 0 of a five-frame flame animation. The grey wax is kept as drawn. Sprite shared by: item-246-candelabra. This is animation frame 1; only the flame differs from frame 0, so the object body must match frame 0.",
+      "invention": "Resolve brass thickness, plain turned details, simple wax drips and small flames."
+    },
+    {
+      "id": "candelabra-f2",
+      "directory": "furniture/item-246-candelabra",
+      "image": "world/texture-210-record-005-frame-002-source.png",
+      "name": "Candelabra (27x47) frame 2",
+      "content": "One tall three-branch candelabra standing upright, aspect about 0.6:1. A slim yellow-gold stem rising from a round flat base, splitting into three curved arms: one at the top centre and one on each side, each holding a short grey wax candle with a small orange and yellow flame. Preserve the three candles, the symmetrical arms and the slim stem. No dripping chains, extra branches, text or ornament.",
+      "uncertainty": "This is frame 0 of a five-frame flame animation. The grey wax is kept as drawn. Sprite shared by: item-246-candelabra. This is animation frame 2; only the flame differs from frame 0, so the object body must match frame 0.",
+      "invention": "Resolve brass thickness, plain turned details, simple wax drips and small flames."
+    },
+    {
+      "id": "candelabra-f3",
+      "directory": "furniture/item-246-candelabra",
+      "image": "world/texture-210-record-005-frame-003-source.png",
+      "name": "Candelabra (27x47) frame 3",
+      "content": "One tall three-branch candelabra standing upright, aspect about 0.6:1. A slim yellow-gold stem rising from a round flat base, splitting into three curved arms: one at the top centre and one on each side, each holding a short grey wax candle with a small orange and yellow flame. Preserve the three candles, the symmetrical arms and the slim stem. No dripping chains, extra branches, text or ornament.",
+      "uncertainty": "This is frame 0 of a five-frame flame animation. The grey wax is kept as drawn. Sprite shared by: item-246-candelabra. This is animation frame 3; only the flame differs from frame 0, so the object body must match frame 0.",
+      "invention": "Resolve brass thickness, plain turned details, simple wax drips and small flames."
+    },
+    {
+      "id": "candelabra-f4",
+      "directory": "furniture/item-246-candelabra",
+      "image": "world/texture-210-record-005-frame-004-source.png",
+      "name": "Candelabra (27x47) frame 4",
+      "content": "One tall three-branch candelabra standing upright, aspect about 0.6:1. A slim yellow-gold stem rising from a round flat base, splitting into three curved arms: one at the top centre and one on each side, each holding a short grey wax candle with a small orange and yellow flame. Preserve the three candles, the symmetrical arms and the slim stem. No dripping chains, extra branches, text or ornament.",
+      "uncertainty": "This is frame 0 of a five-frame flame animation. The grey wax is kept as drawn. Sprite shared by: item-246-candelabra. This is animation frame 4; only the flame differs from frame 0, so the object body must match frame 0.",
+      "invention": "Resolve brass thickness, plain turned details, simple wax drips and small flames."
+    },
+    {
+      "id": "holy-candle-f1",
+      "directory": "religious-items/item-269-holy-candle",
+      "image": "world/texture-210-record-004-frame-001-source.png",
+      "name": "Holy Candle (15x21) frame 1",
+      "content": "One short thick candle standing in a flat gold dish, aspect about 0.7:1. Pale grey wax candle with a bright orange and yellow flame and a wide flat gold saucer base. Preserve the single flame, the grey candle body and the gold dish. No text, symbol or second candle.",
+      "uncertainty": "This is frame 0 of a five-frame flame animation. The grey wax is kept as drawn. Sprite shared by: item-269-holy-candle. This is animation frame 1; only the flame differs from frame 0, so the object body must match frame 0.",
+      "invention": "Resolve wax thickness, a small wick, a plain gold saucer with a bright rim highlight and a simple flame."
+    },
+    {
+      "id": "holy-candle-f2",
+      "directory": "religious-items/item-269-holy-candle",
+      "image": "world/texture-210-record-004-frame-002-source.png",
+      "name": "Holy Candle (15x21) frame 2",
+      "content": "One short thick candle standing in a flat gold dish, aspect about 0.7:1. Pale grey wax candle with a bright orange and yellow flame and a wide flat gold saucer base. Preserve the single flame, the grey candle body and the gold dish. No text, symbol or second candle.",
+      "uncertainty": "This is frame 0 of a five-frame flame animation. The grey wax is kept as drawn. Sprite shared by: item-269-holy-candle. This is animation frame 2; only the flame differs from frame 0, so the object body must match frame 0.",
+      "invention": "Resolve wax thickness, a small wick, a plain gold saucer with a bright rim highlight and a simple flame."
+    },
+    {
+      "id": "holy-candle-f3",
+      "directory": "religious-items/item-269-holy-candle",
+      "image": "world/texture-210-record-004-frame-003-source.png",
+      "name": "Holy Candle (15x21) frame 3",
+      "content": "One short thick candle standing in a flat gold dish, aspect about 0.7:1. Pale grey wax candle with a bright orange and yellow flame and a wide flat gold saucer base. Preserve the single flame, the grey candle body and the gold dish. No text, symbol or second candle.",
+      "uncertainty": "This is frame 0 of a five-frame flame animation. The grey wax is kept as drawn. Sprite shared by: item-269-holy-candle. This is animation frame 3; only the flame differs from frame 0, so the object body must match frame 0.",
+      "invention": "Resolve wax thickness, a small wick, a plain gold saucer with a bright rim highlight and a simple flame."
+    },
+    {
+      "id": "holy-candle-f4",
+      "directory": "religious-items/item-269-holy-candle",
+      "image": "world/texture-210-record-004-frame-004-source.png",
+      "name": "Holy Candle (15x21) frame 4",
+      "content": "One short thick candle standing in a flat gold dish, aspect about 0.7:1. Pale grey wax candle with a bright orange and yellow flame and a wide flat gold saucer base. Preserve the single flame, the grey candle body and the gold dish. No text, symbol or second candle.",
+      "uncertainty": "This is frame 0 of a five-frame flame animation. The grey wax is kept as drawn. Sprite shared by: item-269-holy-candle. This is animation frame 4; only the flame differs from frame 0, so the object body must match frame 0.",
+      "invention": "Resolve wax thickness, a small wick, a plain gold saucer with a bright rim highlight and a simple flame."
+    }
+  ]
+}

@@ -1,0 +1,157 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy adventure inventory art. Keep the source's local colours: do not tint every material brown or add brass simply to match the UI. Use a restrained palette with distinct light, middle and dark families, clear silhouette and legible material masses. Detail hierarchy: silhouette first, a few large planes or folds second, sparse material marks third. Keep the original class of mundane object, its opening and visible components; no extra handles, gemstones, runes, faces, symbols, chains or elaborate fantasy embellishment. Do not convert this into pixel art, a photoreal product photograph, a glossy mobile-game loot icon or a dramatic scene. No text, labels, border, vignette, decorative frame, hand, person, pedestal, scenery or second object.",
+  "presentation": "One isolated item on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the object. Full object visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Inventory icons batch F (remaining sprites), part 1 (furniture, quest and religious items) / Qwen then retro",
+  "selection": "Batch of unique world sprites from the full icon conversion (rusty-dagger #10458). Each sprite is generated once; sharing is stated in its uncertainty text.",
+  "items": [
+    {
+      "id": "lantern",
+      "directory": "useless-items2/item-248-lantern",
+      "image": "world/texture-200-record-010-frame-000-source.png",
+      "name": "Lantern (18x38)",
+      "content": "One hanging lantern, aspect about 0.47:1. A tall narrow dark metal lantern with a small ring at the top, a pointed cap, thin dark frame bars and glass panes glowing warm yellow-orange from a bright flame inside, on a small dark base. Preserve the tall narrow shape and the glowing panes. No chain, text, smoke or hand.",
+      "uncertainty": "The glow is interpreted as a lit candle behind glass panes. Sprite shared by: item-248-lantern.",
+      "invention": "Resolve metal bars, glass panes with warm glow and a simple cap."
+    },
+    {
+      "id": "boots",
+      "directory": "armor/item-108-boots",
+      "image": "world/texture-204-record-001-frame-000-source.png",
+      "name": "Boots (48x27)",
+      "content": "One pair of dark leather boots lying together, aspect about 1.8:1. Two black-green boots with tall shafts, one standing at the upper right and one lying on its side at the lower left, with brown soles and straps at the ankles. Preserve the pair of boots and the dark colouring. No feet, legs, text or buckle ornament.",
+      "uncertainty": "Which boot is which and strap details are interpretations. The sprite is shared across clothing templates recoloured in engine. Sprite shared by: item-108-boots.",
+      "invention": "Resolve leather creases, soles and plain straps."
+    },
+    {
+      "id": "glass-bottle",
+      "directory": "useless-items1/item-083-glass-bottle",
+      "image": "world/texture-205-record-011-frame-000-source.png",
+      "name": "Glass Bottle (10x25)",
+      "content": "One empty glass bottle standing upright, aspect about 0.4:1. A tall narrow teal-blue glass bottle with a short neck and rim at the top, a bright pale highlight at the middle and a dark empty interior. Preserve the narrow tall shape and the highlight. No cork, label, liquid, text or hand.",
+      "uncertainty": "The bottle is interpreted as empty glass. Sprite shared by: item-083-glass-bottle.",
+      "invention": "Resolve glass thickness, a restrained highlight and a plain rim."
+    },
+    {
+      "id": "small-chest",
+      "directory": "useless-items1/item-090-small-chest",
+      "image": "world/texture-205-record-021-frame-000-source.png",
+      "name": "Small Chest (33x29)",
+      "content": "One small closed chest, aspect about 1.15:1. A wooden chest in warm brown with a rounded teal-green lid, a metal lock plate at the front left and a checkered brown front. Preserve the box shape, rounded lid and lock plate. No gold, text, open lid or extra chains.",
+      "uncertainty": "The checkered front is interpreted as woven or banded wood; the green lid is kept as a patinated top. Sprite shared by: item-090-small-chest.",
+      "invention": "Resolve wood grain, simple metal bands and a lock plate."
+    },
+    {
+      "id": "wakizashi",
+      "directory": "weapons/item-117-wakizashi",
+      "image": "world/texture-207-record-002-frame-000-source.png",
+      "name": "Wakizashi (29x62)",
+      "content": "One short Japanese sword standing upright, aspect about 0.47:1. A slim dark blade pointing down-left with a small round pommel at the top right and a dark grip, no visible guard detail. Preserve the narrow diagonal shape. No scabbard, text or hand.",
+      "uncertainty": "The orientation is a diagonal near-vertical lie. Sprite is shared by several weapon templates recoloured in engine. Sprite shared by: item-117-wakizashi, item-118-broadsword, item-119-saber, item-120-longsword, item-122-claymore, item-123-dai-katana.",
+      "invention": "Resolve a steel blade with a faint edge highlight, a wrapped grip and a plain pommel."
+    },
+    {
+      "id": "shortsword",
+      "directory": "weapons/item-116-shortsword",
+      "image": "world/texture-207-record-003-frame-000-source.png",
+      "name": "Shortsword (58x21)",
+      "content": "One short sword lying diagonally, aspect about 2.8:1. A straight grey blade rising to the upper right with a small red stain near the middle, a dark crossguard and a brown wrapped grip at the lower left. Preserve the long diagonal and the grip at the left. No scabbard, text or hand.",
+      "uncertainty": "The red mark is interpreted as a small dried bloodstain. Sprite shared by: item-116-shortsword.",
+      "invention": "Resolve a steel blade with an edge highlight, a plain guard and a wrapped grip."
+    },
+    {
+      "id": "war-axe",
+      "directory": "weapons/item-127-battle-axe",
+      "image": "world/texture-207-record-004-frame-000-source.png",
+      "name": "War Axe (45x12)",
+      "content": "One war axe lying nearly horizontal, aspect about 3.75:1. A long brown wooden handle running right to left, with a broad steel axe head with a curved edge on the left. Preserve the long handle and the broad head at the left. No text, decoration or hand.",
+      "uncertainty": "The axe head is interpreted as a single-bladed steel head. Sprite shared by: item-127-battle-axe, item-128-war-axe.",
+      "invention": "Resolve wood grain, a steel head with an edge highlight and a plain butt."
+    },
+    {
+      "id": "holy-dagger",
+      "directory": "religious-items/item-270-holy-dagger",
+      "image": "world/texture-207-record-005-frame-000-source.png",
+      "name": "Holy Dagger (37x8)",
+      "content": "One holy dagger lying horizontally, aspect about 4.6:1. A slender silver-blue blade with a faint teal sheen pointing left, a gold crossguard and a gold and dark grip with a pommel at the right. Preserve the horizontal lie and gold hilt. No glow, symbols, text or hand.",
+      "uncertainty": "The blue sheen is interpreted as a polished silvery blade. Sprite shared by: item-113-dagger, item-270-holy-dagger.",
+      "invention": "Resolve a polished blade, a gold hilt and a wrapped grip."
+    },
+    {
+      "id": "flail",
+      "directory": "weapons/item-124-mace",
+      "image": "world/texture-207-record-006-frame-000-source.png",
+      "name": "Flail (41x15)",
+      "content": "One spiked flail lying nearly horizontal, aspect about 2.7:1. A dark long handle at the right running into a dark spiked ball head at the left with several short pale metal spikes pointing up. Preserve the handle and the spiked head. No chain detail beyond a hint, text or hand.",
+      "uncertainty": "The head and handle join are interpretations. Sprite shared by: item-124-mace, item-125-flail.",
+      "invention": "Resolve dark iron, short spikes and a plain handle."
+    },
+    {
+      "id": "staff",
+      "directory": "jewellery/item-140-wand",
+      "image": "world/texture-207-record-007-frame-000-source.png",
+      "name": "Staff (71x9)",
+      "content": "One long wooden staff lying nearly horizontal, aspect about 7.9:1. A very thin straight brown wooden pole with a slightly darker, thicker end at the right. Preserve the very long thin shape. No ornaments, text or hand.",
+      "uncertainty": "This is a plain staff; no head ornament is visible. Sprite shared by: item-115-staff, item-140-wand.",
+      "invention": "Resolve wood grain and subtle knots along a thin pole."
+    },
+    {
+      "id": "long-bow",
+      "directory": "weapons/item-129-short-bow",
+      "image": "world/texture-207-record-008-frame-000-source.png",
+      "name": "Long Bow (57x17)",
+      "content": "One long bow lying nearly horizontal, aspect about 3.4:1. A curved brown wooden bow arcing from the left to the right with a thin pale string along the inner side. Preserve the long gentle curve. No arrows, quiver, text or hand.",
+      "uncertainty": "The thin string is interpreted as a light bowstring. Sprite shared by: item-129-short-bow, item-130-long-bow.",
+      "invention": "Resolve wood grain, tips and a thin string."
+    },
+    {
+      "id": "tower-shield",
+      "directory": "armor/item-111-kite-shield",
+      "image": "world/texture-207-record-009-frame-000-source.png",
+      "name": "Tower Shield (55x24)",
+      "content": "One tower shield lying curved, aspect about 2.3:1. A wide curved shield face in dark green-grey metal with a lighter top edge and a black underside, seen from the side. Preserve the broad curved shape. No emblem, text or arm.",
+      "uncertainty": "The surface is interpreted as dark steel plate. Sprite shared by: item-111-kite-shield, item-112-tower-shield.",
+      "invention": "Resolve metal plates, a rim and faint scratches."
+    }
+  ],
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "icons-f1",
+      "model": "krea2-turbo",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ]
+}

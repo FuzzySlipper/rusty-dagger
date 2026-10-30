@@ -18,14 +18,14 @@ internal static class ReferenceExportCommands
     {
         ItemReferenceExport.Run(args.Optional("--arena2") ?? "local/arena2",
             args.Optional("--donor") ?? "data/daggerfall-unity",
-            args.Optional("--output") ?? "local/exports/daggerfall-items-r01");
+            args.Optional("--output") ?? "authoring/df-raw/items");
         return 0;
     });
 
     public static ToolCommand Spells { get; } = new("export-spells", [Arena2, Output], args =>
     {
         SpellReferenceExport.Run(args.Optional("--arena2") ?? "local/arena2",
-            args.Optional("--output") ?? "local/exports/daggerfall-spells-r01");
+            args.Optional("--output") ?? "authoring/df-raw/spells");
         return 0;
     });
 }

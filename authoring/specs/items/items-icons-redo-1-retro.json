@@ -1,0 +1,67 @@
+{
+  "seed": 27302,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy adventure inventory art. Keep the source's local colours: do not tint every material brown or add brass simply to match the UI. Use a restrained palette with distinct light, middle and dark families, clear silhouette and legible material masses. Detail hierarchy: silhouette first, a few large planes or folds second, sparse material marks third. Keep the original class of mundane object, its opening and visible components; no extra handles, gemstones, runes, faces, symbols, chains or elaborate fantasy embellishment. Do not convert this into pixel art, a photoreal product photograph, a glossy mobile-game loot icon or a dramatic scene. No text, labels, border, vignette, decorative frame, hand, person, pedestal, scenery or second object.",
+  "presentation": "One isolated item on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the object. Full object visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Inventory icons redo: tin, emerald / Qwen then retro",
+  "selection": "Batch of unique world sprites from the full icon conversion (rusty-dagger #10458). Each sprite is generated once; sharing is stated in its uncertainty text.",
+  "items": [
+    {
+      "id": "emerald",
+      "directory": "gems/item-001-emerald",
+      "image": "world/texture-254-record-001-frame-000-source.png",
+      "name": "Emerald (9x7)",
+      "content": "One cut emerald gemstone lying flat, rectangular step cut slightly wider than tall, aspect about 1.3:1. Green outer facets from dark to mid green with a pale yellow-green table at the centre. Preserve the rectangular outline and bright central table. No setting, text or second stone.",
+      "uncertainty": "The pixels read as a rectangular step-cut stone with a pale central table. The stray red pixels of the source were removed from the input (owner-approved) and nothing should be drawn outside the stone. Sprite shared by: item-001-emerald.",
+      "invention": "Resolve a few clean facets, a restrained highlight and a thin darker edge. Keep it a single plain stone."
+    },
+    {
+      "id": "tin",
+      "directory": "metal-ingredients/item-066-tin",
+      "image": "world/texture-254-record-064-frame-000-source.png",
+      "name": "Tin (16x4)",
+      "content": "One small tin ingot lying flat, a plain rectangular bar seen from a low three-quarter angle, aspect about 4:1. The whole bar is one uniform piece of dull silver-grey metal: a pale top face with bright highlights toward the left, a mid grey front face and a dark grey underside. Both ends are plain squared-off ends of the same bar, the right end only slightly darker and thinner in shadow. Preserve the long low bar shape. No handle, tang, blade, tool, stamp, label or text.",
+      "uncertainty": "The right-hand end of the source is thinner and darker; it is interpreted as the shadowed end of the same bar, not a separate part. Redo: the first attempt turned that end into a handle. Sprite shared by: item-066-tin.",
+      "invention": "Resolve simple surface texture, a few soft highlights and shadow planes. Keep it a plain ingredient."
+    }
+  ],
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "icons-redo-1",
+      "model": "krea2-turbo",
+      "host": "den-nimo",
+      "url": "http://192.168.1.23:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ]
+}
