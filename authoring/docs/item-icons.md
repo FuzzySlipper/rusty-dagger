@@ -9,6 +9,7 @@ denoise 0.35, then broad back-projection at 0.5 (`bp-broad-half`)**, then a tran
 | Path | What | Git |
 | --- | --- | --- |
 | `authoring/df-raw/items/` | The importer's item export (`export-items`): per-item pages, `index.csv`, native source PNGs | ignored |
+| `authoring/df-raw/spells/`, `paper-doll/`, `effects/` | `export-spells`, `export-paper-doll` (BODY, FACE, were and vampire heads) and `export-effects` (TEXTURE.380 and 434): the source art for the other visual-refresh tasks | ignored |
 | `authoring/gen-raw/items/` | Finals, `texture-<archive>-record-<record>-frame-<frame>.png`, 1024² RGBA. A redone sprite overwrites its file | ignored |
 | `authoring/gen-raw/studies/` | Working runs (Qwen, retro, back-projection, cut-out, compare sheets) | ignored |
 | `authoring/review/` | Generated review page, `items-ledger.csv`, thumbnails | ignored |

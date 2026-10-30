@@ -234,15 +234,16 @@ That explicit opt-in supplies source references and a source runtime pack;
 normal downstream builds never discover an adjacent checkout.
 
 For image-generation reference sets, the importer can export every item template
-and artifact, and the spell icons with their casting and world-effect companions:
+and artifact, the spell icons with their casting and world-effect companions, the paper-doll bodies and heads, and the shared effect archives:
 
 ```sh
 dotnet run --project src/Daggerfall.Import.Tool -- export-items
 dotnet run --project src/Daggerfall.Import.Tool -- export-spells
+dotnet run --project src/Daggerfall.Import.Tool -- export-paper-doll
+dotnet run --project src/Daggerfall.Import.Tool -- export-effects
 ```
 
-These write `authoring/df-raw/items/` and
-`authoring/df-raw/spells/`. Each has an `index.html` visual catalog,
+These write `authoring/df-raw/items/`, `spells/`, `paper-doll/` and `effects/`. Each has an `index.html` visual catalog,
 CSV index and JSON manifests; each item or spell has its own directory with
 native-resolution PNGs and source record/frame identities. Items include player
 body and clothing variants, dyes, masks, artifacts and applicable normal/enchanted
