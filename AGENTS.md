@@ -1,311 +1,164 @@
-# Rusty Dagger / WorldRpg product guidance
-
-## Direction and authority
+# Rusty Dagger / WorldRpg agent guidance
 
 Rusty Dagger is the reference repository and proving product for **WorldRpg**:
 an opinionated construction kit and reference host for world-centric, real-time,
-first-person systemic RPGs. The world is the durable center of gravity; story,
-quests, progression, combat, and characters inhabit and unfold it rather than
-forming a mandatory linear spine.
-
-The durable formula is:
+first-person systemic RPGs. The world is the center of gravity; story, quests,
+progression, combat and characters inhabit it rather than forming a linear spine.
 
 > **Engine guarantees. Kit shapes. Ruleset decides. Bundle assembles. Host launches.**
 
-Daggerfall is the first compiled ruleset, compatibility corpus, content source,
-and game-bundle family. It is not implicit WorldRpg architecture. The C# path is
-an evolving mainline product path, not a spike or a compatibility exercise.
+Daggerfall is the first compiled ruleset, compatibility corpus, content source
+and game-bundle family. It is not implicit WorldRpg architecture.
 
-- Dagger checkout: `/home/dev/rusty-dagger`
-- paired Engine checkout: `/home/dev/rusty-engine`
-- Dagger Den project: `rusty-dagger`
-- current intended gameplay design: [WorldRpg gameplay design](docs/gameplay-design.md)
-- current shared boundary brief: `[doc: rusty-engine/downstream-csharp-agent-brief]`
-- structure history: Board post #139 and completed campaigns #7322 / #7533
-- coverage direction and task planning: `docs/daggerfall-coverage-plan.md`
-- coverage scope contract and decision register (DEC-01–11): `docs/daggerfall-task-preparation.md`
-- stable inventory IDs and dispositions: `docs/coverage/` (feature ledger F001–F141 and specialist inventories)
-- coverage backlog: Den feature parents, indexed in `[doc: rusty-dagger/feature-backlog-ordering]`; Den owns tasks, their inventory-ID mapping, live status and dependencies
-- archived planning snapshots (task index, feature map, preparation packet, ledger): Den documents `[doc: rusty-dagger/daggerfall-task-index-2026-09]`, `[doc: rusty-dagger/daggerfall-feature-map-2026-09]`, `[doc: rusty-dagger/daggerfall-task-preparation-2026-09]`, `[doc: rusty-dagger/daggerfall-feature-ledger-2026-09]`
+## Sources of truth
 
-Before substantial work, resolve the current Den task and project guidance, then
-read the downstream brief for C# organization or Engine-boundary work. The user
-request and owning task override older wording. Den owns live task status and
-dependencies. If it is unreachable, report the failed read; do not invent task
-records or infer dependency completion from source or Git. Continue work whose
-scope and authority are already established, pausing only decisions or actions
-that depend on unavailable Den information. 
+Den (project `rusty-dagger`) owns tasks, their status, dependencies and
+evidence. This file and the repository docs describe how the product is built,
+not where work stands; don't record progress, completion or "current" task
+state here. Before substantial work, read the owning Den task. The user request
+and that task override older wording elsewhere. If Den is unreachable, say so
+and don't invent task records or infer completion from source or Git.
 
-## Current product graph
+- Gameplay and persistence design: [docs/gameplay-design.md](docs/gameplay-design.md)
+- Actors and mechanics owners: [docs/actors-and-mechanics.md](docs/actors-and-mechanics.md)
+- Game UI: [docs/game-ui.md](docs/game-ui.md)
+- Coverage direction: `docs/daggerfall-coverage-plan.md`; scope contract and
+  decisions: `docs/daggerfall-task-preparation.md`; stable inventory IDs:
+  `docs/coverage/` (`content-scope.md` names each content section's owner)
+- Engine boundary brief (C# organization or Engine-boundary work):
+  `[doc: rusty-engine/downstream-csharp-agent-brief]`
+- Review lanes and packets: `docs/agent-review/`
+- The paired Engine checkout is `rusty-engine`, beside this one.
 
-**Implemented today:** `src/WorldRpg.Kit/` contains the safe composition
-contract and reusable world-RPG mechanisms, while `src/WorldRpg.Rulesets.Daggerfall/` owns Daggerfall policy and session composition,
-`src/WorldRpg.Host/` owns product lifecycle, built-in selection, and the one
-ordinary product entry. `src/WorldRpg.Rulesets.Daggerfall.Variants/` holds the
-compiled rules variants a bundle may select. The immutable `Rusty.Engine` SDK generates CoreCLR and
-NativeAOT composition beneath ignored `obj` output. Inside the ruleset, session
-composition and most owners sit at the project root, domain folders (`World/`,
-`Policies/`, `Content/`, `Presentation/` and others) group related owners, and
-`Modules/` holds combat, behavior, loot, interaction, encounter and transport
-owners. Folder placement is organization, not an architecture boundary.
-
-The foundation and C# migration campaigns are complete. The current product uses
-composed actors, typed rules, and current-state persistence. Reconcile older
-coverage work separately; `docs/code-migration-map.md` records disposition.
+## Projects and ownership
 
 | Owner | Responsibility |
 | --- | --- |
-| `WorldRpg.Kit` | Reusable and reasonably uncertain world-RPG mechanisms: typed IDs, compiled ruleset/session contracts, bundle/content-pack/tuning resolution, controls, actor lifetime, spatial session stepping, progression, bounded facts, structured UI values, and thin Engine-backed inventory coordination. It is not a universal RPG framework. |
-| `WorldRpg.Rulesets.Daggerfall.Variants` | Compiled rules variants: deliberate deviations from classic Daggerfall that a game bundle selects with `variants`. Each declares a manifest (ruleset, claimed seams, its own tuning profile and content packs) and replaces whole seam owners; classic owners are the default and never branch on a variant. It references the classic ruleset; classic never references it. |
-| `WorldRpg.Host` | Current reference-product lifecycle, explicit built-in ruleset/default selection, the entry screen's game-bundle choice (offered through `IGameBundleChoiceSession` and remembered across starts), and session construction. Launcher selection and diagnostics expand later. It may select Daggerfall, never interpret Daggerfall rules or source files. |
-| `WorldRpg.Rulesets.Daggerfall` | Daggerfall identities, formulas, attack and reward policy, content interpretation, presentation meaning, save behavior, and Daggerfall session composition. |
-| `WorldRpg.Host` product metadata | The one explicit product type and bundle declaration. The SDK generates ABI, lifecycle adaptation, services, handles, and both loader compositions beneath `obj`; there is no checked NativeProduct assembly. |
-| `Daggerfall.Import` | Offline Arena2 and Daggerfall Unity knowledge, source formats, conversion quirks, provenance, and differential validation. Runtime code consumes normalized packs, not source-shaped data. |
-| `WorldRpg.SpriteAuthoring` | Product-neutral sprite inspection document and authored-overlay contract shared by `Daggerfall.Import` and the sprite workbench. It has no references or packages and carries no ruleset vocabulary. |
-| `WorldRpg.SpriteWorkbench` | Admitted developer-only Engine product for inspecting sprite atlases and writing authored overlays; not part of a game bundle. It references only `WorldRpg.Kit` and `WorldRpg.SpriteAuthoring`, never the importer or a ruleset, and the architecture laws scan it like the shipped product. |
-| Content packs | Authored actors, items, worlds, placements, encounters, quests, assets, and scenario state interpreted by a ruleset. |
-| TypeScript UI | Thin DOM presentation of Engine-delivered projections and semantic actions. It owns neither gameplay state nor game-world rendering. Game UI follows [docs/game-ui.md](docs/game-ui.md). |
+| `WorldRpg.Kit` | Reusable world-RPG mechanisms: typed IDs, ruleset/session contracts, bundle/content-pack/tuning resolution, controls, actor lifetime, spatial session stepping, progression, bounded facts, structured UI values, inventory/equipment, targeting, attack execution, effects, AI coordination, corpse/loot and typed notifications. Not a universal RPG framework. |
+| `WorldRpg.Rulesets.Daggerfall` | Daggerfall identities, formulas, attack and reward policy, content interpretation, presentation meaning, save behavior and session composition. Domain folders and `Modules/` are organization, not boundaries. |
+| `WorldRpg.Rulesets.Daggerfall.Variants` | Compiled deviations from classic rules that a bundle selects with `variants`. Each declares a manifest (ruleset, claimed seams, tuning profile, content packs) and replaces whole seam owners. Classic owners never branch on a variant and never reference this project. |
+| `WorldRpg.Host` | Product lifecycle, the one product type and bundle declaration, built-in ruleset/default selection, the entry screen's bundle choice, and session construction. It may select Daggerfall; it never interprets Daggerfall rules or source files. |
+| `Daggerfall.Import` | Offline Arena2 and Daggerfall Unity knowledge: source formats, conversion quirks, provenance, differential validation. Runtime code consumes normalized packs, not source-shaped data. |
+| `WorldRpg.SpriteAuthoring` | Product-neutral sprite inspection document and overlay contract. No references, packages or ruleset vocabulary. |
+| `WorldRpg.SpriteWorkbench` | Developer-only Engine product for sprite atlases and overlays, not part of a bundle. References only Kit and SpriteAuthoring. |
+| Content packs | Authored actors, items, worlds, placements, encounters, quests, assets and scenario state that a ruleset interprets. |
+| TypeScript UI | Thin DOM presentation of Engine-delivered projections and semantic actions. It owns no gameplay state and no world rendering. |
 
-Rulesets are **compiled** into the SDK-generated product composition. Content packs, typed tuning
-profiles, and game bundles are **loaded**. Adding code-bearing ruleset semantics
-requires a product rebuild; changing valid content/tuning does not. Do not add
-runtime assembly loading, reflection discovery, `Assembly.Load`, ambient
-`Resolve<T>()` lookup, generic command buses, a new gameplay DSL, or a universal
-plug-in ABI. Named explicitly composed Kit services and typed RuleEvents are
-encouraged where they make gameplay ownership and contribution discoverable.
+The `Rusty.Engine` SDK generates the ABI, lifecycle adaptation and both
+CoreCLR and NativeAOT compositions beneath ignored `obj/`. Never edit or commit
+generated `obj/` sources.
 
-Keep the game's own files and assets out of Git: never commit the Arena2
-directory, the music, or media directly extracted from them (images, sprites, textures,
-audio, video). The derived output is not committed either because it is reproducible: `content/` holds only tracked,
-authored files (pack, bundle and tuning descriptors, the authored
-`daggerfall.base` and site payloads, tuning payloads and the authored UI art),
-and `data/` the importer's inputs. Everything derived from the operator's
-`local/arena2`, the donor checkout and a music folder lives in two content
-containers in the ignored `local/`, `daggerfall-data.rpak` (with the derived
-packs' descriptors in its `worldrpg/data-container.json`) and the optional
-`music.rpak`, built on checkout by one cross-platform command,
-`dotnet run --project src/Daggerfall.Import.Tool -- import --music local/Sound`.
-The product opens them beside itself (in `local/` under `rusty dev`, beside
-`product.rpak` in a release).
+Rulesets are **compiled** into the product; content packs, typed tuning
+profiles and game bundles are **loaded**. Code-bearing rule changes need a
+rebuild; valid content or tuning changes don't. No runtime assembly loading,
+reflection discovery, ambient `Resolve<T>()`, generic command buses, gameplay
+DSL or plug-in ABI. Explicitly composed, named Kit services and typed RuleEvents
+are the way to make contributions discoverable.
 
-If new content is created that is merely inspired by extracted Arean2 content then it can be committed and treated as normal game content since it has become identifiable original work. Everything in this repo already has been credited as owing design inspiration to the original Bethesda game and so is covered by that attribution. 
+## Kit, Daggerfall and tuning
 
-Small facts that trace back to the game are not sensitive. Identifiers, names,
-record and template numbers, counts, short text excerpts and JSON describing
-records may go in tests, fixtures, documents and authored files where they are
-needed; do not strip or block them merely because they came from Arena2. Never
-commit, hand-edit or copy an authored value into generated output; change the
-importer or the authored file. `docs/coverage/content-scope.md` names each
-section's owner.
+Reusable mechanisms start in the Kit; when placement is uncertain, prefer the
+Kit and keep concrete Daggerfall policy behind ruleset-owned definitions. The
+Kit never mentions Daggerfall, Arena2, Privateer's Hold or DFUnity vocabulary;
+those belong to the ruleset, its content and presentation, and the importer.
+Don't move Daggerfall vocabulary into the Kit by renaming it.
 
-## Kit, Daggerfall, and tuning rules
+Give each value one home: adjustable rule values are typed, validated tuning
+handles; actor, item, encounter and world values are content; algorithmic
+invariants stay beside their algorithm; source quirks stay in the importer;
+product defaults stay in the Host. Keep compact structural constants local.
 
-Reusable mechanisms begin in `WorldRpg.Kit`; when placement is genuinely
-uncertain, prefer Kit and keep concrete Daggerfall policy behind ruleset-owned
-definitions and configuration. The canary validates that seam later; it is not a
-promotion gate. Do not make Kit universal or move Daggerfall vocabulary merely
-by renaming it.
+## Gameplay composition
 
-Daggerfall assumptions are legal only in the Daggerfall ruleset, Daggerfall
-content packs, Daggerfall presentation, and `Daggerfall.Import`. The Host may
-choose a built-in Daggerfall ruleset/bundle only at its explicit catalog/default
-composition seam. The Kit must not mention Daggerfall, Arena2, Privateer's Hold,
-or DFUnity vocabulary.
+Compose Engine `Actor` in Kit/Dagger facades with named properties (`Stats`,
+`Inventory`, `Equipment`, `Targeting`) over the attached components.
+`DaggerActorFactory` assembles actors and `DaggerfallState.Kit` provides the
+session services. Factories create components; wrapping an entity never does.
+Keep runtime EntityId, kind/origin TypeId and durable product identity distinct.
 
-Give each value one honest home:
+Use direct methods for simple reads and actions, typed RuleEvents where
+participants contribute, and typed notifications for completed changes.
+Gameplay mutates through canonical Kit owners; it doesn't need proposals,
+snapshots, receipts or rollback.
 
-- Adjustable ruleset values use discoverable, validated, typed tuning handles.
-- Actor, item, encounter, and world values belong in content packs.
-- Algorithmic invariants stay beside the owning algorithm.
-- Source-format quirks stay in `Daggerfall.Import`.
-- Product default selection stays in the Host.
-
-Do not solve this with magic numbers hidden in call sites or a const field for
-every authored value. Keep compact structural constants local and promote a
-value only when it is genuinely adjustable or authored data.
-
-## Gameplay composition direction
-
-Read [WorldRpg gameplay design](docs/gameplay-design.md) before gameplay or
-persistence work. It promotes Board #146 to current repository guidance, records
-the landed owners, and replaces the post's historical sequencing and survey.
-Use it to interpret older task implementation wording while preserving required
-gameplay behavior and explicit current user/task decisions.
-
-The substantial reusable Kit shapes concrete rules and content. Kit owns actor
-conventions, targeting/current target, inventory/equipment workflows, attack
-execution, reusable effects/progression, AI coordination, corpse/loot machinery,
-and typed resolution/notifications. Dagger supplies formulas, eligibility,
-capacities, timing policy, and content meaning. `DaggerActorFactory` assembles
-actors and `DaggerfallState.Kit` provides the named session services.
-
-Compose Engine `Actor` in Kit/Dagger facades with named properties such as
-`Stats`, `Inventory`, `Equipment` and `Targeting` over the actual attached
-components. Explicit factories construct entities; wrapping an entity never
-silently creates components. Keep runtime EntityId, kind/origin TypeId and
-product durable identity distinct. No reflection scanning, duplicate actor graph
-or Unity-style cache/rebinding machinery.
-
-Use direct methods for simple reads/actions, typed RuleEvents for interactions
-with real participant contributions, and typed notifications for completed
-changes. Explicitly compose base rules and contributors. Application rules may
-mutate through canonical Kit owners; ordinary gameplay does not require
-proposal/acceptance, snapshots, receipts, revision guards or rollback. Preserve
-real gameplay eligibility, update ordering and native lifetime requirements.
-Optional diagnostics must not become mandatory replay/audit work.
-
-Engine `ProductStateStore` stores current bytes without product-schema policy;
-`JsonProductStateCodec` accepts source-generated `JsonTypeInfo` for AOT-safe JSON.
-Capture meaningful state at explicit save boundaries. Rebuild shared mechanics
-references and restore authored stat inputs before tracks using the Engine
-capture/rebuild helpers. Do not serialize native handles or infer product
-identity from runtime entity IDs.
+Saves use Engine `ProductStateStore` with `JsonProductStateCodec` and
+source-generated `JsonTypeInfo`. Capture meaningful state at explicit save
+boundaries, rebuild shared mechanics references, and restore authored stat
+inputs before tracks. Never serialize native handles or derive identity from
+runtime entity IDs. Only the current schema exists: breaking development saves
+is fine, so add no schema versions, migrations or compatibility readers. Report
+malformed data or missing definitions; don't silently drop state.
 
 ## Engine boundary
 
 > The product decides. The Engine guarantees.
 
-The product owns application/gameplay logic, authoritative state, entities,
-catalogs, content meaning, policy, and ordering within each Engine-admitted
-update. Engine owns reusable host lifecycle/admission, input, rendering and
-resources, spatial mechanisms, and published service families.
+The product owns gameplay logic, authoritative state, catalogs, content
+meaning, policy and ordering within each Engine-admitted update. The Engine owns
+host lifecycle, input, rendering and resources, spatial mechanisms, and its
+published services (Look, Spatial, Appearance, Random, UI, Content, Persistence,
+Animation, Audio, CameraView, mechanics `Stat`/`Track`/`StatsComponent`,
+inventory, equipment and effects facades). Check the packaged contract when you
+use one.
 
-Use direct safe named C# Engine APIs. The packaged SDK supplies managed
-`EntityStore`, optional composed `Actor`, creation-time `EntityTypeId` metadata,
-and ordinary class components. Mechanics uses one `Stat` (double-backed with
-integer/float accessors), `Track` sharing its maximum Stat, and `StatsComponent`;
-reuse the inventory, equipment and effects facades where they fit. Dagger's
-current owners are documented in `docs/actors-and-mechanics.md`.
+- One Engine-admitted update. The `Rusty.Engine.Application` phases are
+  optional. No second loop, clock, timer, thread, scheduler, ECS or renderer;
+  product game time advances inside admitted updates.
+- Safe C# only: no `unsafe`, pointers, `Native*`, `GCHandle`, raw statuses,
+  handwritten native declarations or downstream Rust.
+- If a needed behavior isn't in the safe API, confirm no wrapper exposes it,
+  then implement it upstream if that's authorized, or file one narrow
+  `rusty-engine` request and report the block. Don't rebuild Engine machinery
+  downstream or fake a substitute path.
+- Use the packaged SDK and runtime pack. `rusty dev` is ordinary development;
+  NativeAOT is an explicit fidelity/release target; `--engine-source` is an
+  explicit contributor override only.
+- Move the Engine pin only with `rusty update`, in a worktree, and commit it
+  with the code that needs it in the same turn. An uncommitted pin in the shared
+  checkout blocks everyone's next pull.
 
-Use generated safe services for native Look, Spatial, Appearance, Random, UI,
-Content/ContentStore, Persistence, Animation, Audio and CameraView mechanisms.
-Reverify the actual packaged contract when using a capability; this list is
-boundary routing, not an API catalog. Dagger owns definitions, formulas and policy.
+## Game files and assets
 
-Do not write downstream Rust or move product logic into Rust. Ordinary safe
-product code must not use `unsafe`, pointers, `Native*`, `GCHandle`, raw
-statuses, or handwritten native declarations. Generated `obj/` sources are
-ignored output: never edit or commit them.
+Never commit the Arena2 directory, the music, or media extracted directly from
+them. Don't commit reproducible or ephemeral output either: importer output
+(the `local/*.rpak` containers built by `Daggerfall.Import.Tool import`), study
+renders and other WIP. Fix generated output by changing the importer or the
+authored source, never by hand. Finished art made for the game, including art
+inspired by the original, is ordinary content: commit the finals. Small facts
+from the game (identifiers, names, record numbers, short excerpts) are fine
+wherever they're useful.
 
-If a required behavior is absent from the safe API: name the behavior and Engine
-owner and confirm no safe wrapper already exposes it. If the owning Engine
-change is already authorized, implement it upstream and continue the dependent
-work. Otherwise file or link one narrow purpose-neutral `rusty-engine` request
-when authorized and report the blocked behavior at that boundary. Do not
-reimplement Engine machinery in C#, TypeScript, or downstream Rust, and do not
-substitute a fake proof path or parallel host.
+## Donors
 
-## Update, donors, and evidence
+The original game and `/home/research/daggerfall-unity` are references for
+behavior and content, not for code style or architecture. Consult donor
+behavior when implementing Daggerfall compatibility; independently specified
+WorldRpg features don't need it. Adapt UI concepts to thin DOM presentation and
+semantic actions. Don't port Unity widgets, MonoBehaviours, singletons,
+Resources loading, Unity serialization or DFU GameManager topology. No MIDI
+playback.
 
-There is one Engine-admitted update. Host/ruleset code may use the optional
-`Rusty.Engine.Application` phases when it simplifies the product or implement
-`IEngineProduct.Update` directly; it must not create a second loop, clock,
-timer, thread, browser authority, parallel ECS, scheduler, or renderer.
-Product game-time/calendar state and explicit rest/travel time advancement are
-allowed inside admitted updates; they do not establish an independent clock.
+## Working
 
-The original game and `/home/research/daggerfall-unity` are behavior and content
-references, not a code-style or architecture template. Consult exact donor
-behavior when implementing Daggerfall compatibility or donor-derived behavior;
-independently specified WorldRpg features and Rusty integration fixes do not
-require donor research. Adapt UI concepts and semantic actions to thin
-DOM presentation; do not port Unity widgets, scene wiring, MonoBehaviours,
-god singletons, Resources loading, Unity serialization, or Unity import bridges.
-Offline import into Rusty-friendly packs replaces DFU content-reader bootstrap
-and Arena2 application-path setup. Product orchestration, modes, and saves use
-the existing Rusty owners, not DFU GameManager/StateManager topology. See the
-coverage plan for explicit exclusions and music scope (no MIDI playback).
-
-The removed `gameplay/`, Rust crates, Angular, HTTP server, Studio adapter,
-scripts, and gates are historical semantic donors only. Preserve useful
-semantics; do not revive their runtime/evaluator/package/transport topology.
-The installed runtime pack owns the browser shell, renderer, transport, and
-host. SDK-generated CoreCLR/NativeAOT composition is ignored `obj` output, not
-another product runtime or an authority source. Do not recreate the former
-`src/browser-bundle/` assembly path.
-
-## Coverage execution and drift
-
-Plan dependencies and explicit behavior/interoperability contracts using
-`docs/daggerfall-coverage-plan.md`. Incremental implementation is fine, but a
-proof-only slice or demonstration is not a completed task. Do not add default
-interactive deliverable gates. A demo passing does not establish implementation
-completeness. Do not leave no-op branches, hardcoded examples, parallel paths,
-or partial adapters to satisfy a demonstration. Include the task's real callers,
-state changes, content, and save/UI interoperability where applicable.
-
-Before creating a mechanism, check both the current Engine surface and existing
-rusty-dagger owners for reuse or extension. Narrow drift reviews should separately
-check upstream reinvention, local duplication, ownership/tuning leakage, and
-behavior/interoperability completeness. Review the task's change and relevant
-callers; report concrete source-backed defects, not new scope or stylistic
-preferences. The root reconciles findings. This is not a mandatory multi-review
-ceremony for every edit; the plan describes how to assign bounded review lanes.
-The always-on reuse lanes, reviewer packets, and revision-round rules live in
-`docs/agent-review/` (policy: `[doc: rusty-dagger/agent-review-workflow]`).
-That workflow distinguishes DSH and Codex tools. DSH's reviewer routing remains
-valid for DSH agents. Codex agents use their available collaboration lifecycle;
-when using Prime, its persistent upstream checker, reuse checker, and Senior
-cover these responsibilities without a second reviewer roster.
-1080p (1920x1080) is the minimum window the game supports. UI tests, window
-runs and screenshots use 1920x1080 or larger, and a window run brings the window
-to at least that size first. Nothing smaller is designed, tested or reported as
-a defect.
-Use focused compilation and semantic checks appropriate to the change. Broader
-interactive evaluation can inform later reconciliation without becoming each
-task's definition of done. Stop an upstream-blocked task honestly and continue
-independent ready work; never invent a substitute to unblock the queue.
-
-Use the packaged SDK and matched runtime pack for focused safe compilation and
-CoreCLR staging. `rusty dev` is ordinary development; NativeAOT is an explicit
-fidelity/release target. `--engine-source` is available only as an explicit
-Engine-contributor override, never a downstream default. Do not run retired
-Rust/Angular/broad browser/packaging gates unless the task explicitly calls for
-them. Keep this file and the README factual and compact; the migration map
-records current and target ownership in detail.
-
-## Documentation and check posture
-
-Keep durable repository documents free of commit revisions and pinned versions: a
-stale pin in prose invites a later agent to roll the code back to match the
-document, and the document is not the owner of that identity. Exact revisions
-belong in logged Den records, or in machine-checked configuration such as
-`Directory.Build.props`, which the `rusty` CLI reads. Move the Engine pin with
-`rusty update`, which installs the newest published pair, rewrites that file, and
-lists the release notes; never hand-edit a version into prose. Commit and push a
-pin move together with the code it needs in the same turn, and do it in a
-worktree: an uncommitted pin left in the shared checkout blocks the next pull for
-every other agent. Durable documents
-describe current state; evidence, receipts and dated reports go to Den records,
-not the repository.
-
-A hard failure must name the loss it prevents. Where the consequence is
-recoverable, warn and report the actual observed value instead. Keep hard stops
-for data loss, an ownership-boundary violation, or a silently wrong artifact. A
-concrete collision is a real hard stop; a merely potential one is not.
-
-Only the current product schema exists during development. Breaking development
-saves is acceptable. Do not introduce schema versions, migration branches,
-historical readers, compatibility fingerprints, or unknown-section preservation.
-Plan serialization around meaningful values and relationships, not preservation
-of old builds. Report malformed current data or missing definitions clearly; do
-not silently drop state and call the load successful.
-
-Rescoping during implementation is expected, but the deferred requirement must
-move to a concrete receiving task — that task's required behavior and verification,
-or a new follow-up task — and the source task's record points at it. A note that a
-task became narrower does not hold the requirement: a concern is only passed on
-while some task is still carrying it.
-
-Tests are evidence of intended behavior, not an independent source of product
-authority. When an authorized change supersedes an existing expectation, update,
-replace, or remove the affected test in the same change. Do not preserve obsolete
-production behavior, add compatibility machinery, or abandon the requested design
-merely to satisfy an old test.
-
-## Git
-
-Commit and push the work of a turn or task directly. This is a solo repository
-used for backup and change tracking, so there is no push-approval ceremony and no
-blast-radius review. Keep each commit scoped to the work that produced it, and
-leave unrelated dirty files alone.
+- **Tasks are complete behavior.** Include the real callers, state changes,
+  content and save/UI interoperability. A demo, proof slice, hardcoded example
+  or partial adapter isn't a finished task. When rescoping, move the deferred
+  requirement to a concrete receiving task and point to it.
+- **Reuse first.** Before creating a mechanism, check the Engine surface and
+  existing owners.
+- **Checks.** Run focused compilation and tests suited to the change. Window
+  runs, UI tests and screenshots use at least 1920x1080, which is the minimum
+  supported window.
+- **Tests** record intended behavior, not authority. When a change supersedes
+  an expectation, update or remove the test in the same change.
+- **Failures.** A hard failure must name the loss it prevents: data loss, an
+  ownership violation or a silently wrong artifact. Otherwise warn and report
+  the observed value.
+- **Docs** describe current design, not history or status. No commit hashes or
+  pinned versions in prose; evidence and dated reports go to Den.
+- **Code** should be clear and small: match surrounding style, name things for
+  what they mean, and leave no dead branches, parallel paths or speculative
+  abstraction.
+- **Git.** Commit and push each turn's or task's work directly to `main`. This
+  is a solo repository. Keep commits scoped and leave unrelated dirty files
+  alone.
