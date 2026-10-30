@@ -29,8 +29,9 @@ blender -b --factory-startup --python scripts/fp-arms/build-dagger.py -- local/f
 ```
 
 - The arms are asset-pipeline's shared first-person arm set (`tools/fps-arms`) in its Daggerfall look
-  (`sets/dagger.json`): an MPFB hand with forearm twist joints, a teal sleeve and a slim bronze gauntlet and glove,
-  shaped against the classic WEAPON02 and WEAPON10 frames. The generator, the look and the MPFB hand are CC0 or our
+  (`sets/dagger.json`): an MPFB hand with forearm twist joints, a grey sleeve and a brown leather glove with a short
+  cuff, shaped and coloured against the classic unarmed WEAPON10 frames; the weapon frames' own painted gloves are not
+  followed. The generator, the look and the MPFB hand are CC0 or our
   own. `arms-provenance.json` records the asset-pipeline commit the build used (and any uncommitted changes under its
   arms and capture tools) and the GLB's sha256. Change the look in asset-pipeline, not here.
 - `build-dagger.py` builds the dagger procedurally in the Engine's held-look frame (origin at the grip, length along
