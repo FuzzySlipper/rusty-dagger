@@ -46,7 +46,7 @@ Source: `df-raw/paper-doll/` (bodies, faces, creatures) and the `player/` folder
 | 10495-B1 | Remaining bodies | 28 | Same race/gender grid. Must stay mutually consistent, so one host and one seed policy. |
 | 10495-C1 | Creature paper dolls (werewolf, wereboar, wolf) and vampire heads | 20 | Mixed sizes. |
 | 10495-F1…F4 | Faces, 16 files × 10 heads | 160, four batches of 40 | Tiny (about 26×35). Likely needs a different recipe from item icons: pilot 10 first. |
-| 10495-W0 | Identify the worn archives | 0 images | Archives 432 and 433 (27 frames each) are exported to `df-raw/effects/` for the owner to identify; 201, 209, 213 are still unnamed. Name them before batching. |
+| 10495-W0 | Identify the worn archives | 0 images | Done: 432 and 433 are the artifact paper-doll art, male and female (26 artifacts each; the donor also uses them as artifact world art). They are already in `df-raw/items/artifacts/*/player` and `world`. 201, 209, 213 (shared layers, 7 frames in all) are still unnamed. |
 | 10495-W1 (**P**) | One body morph, clothing | about 100 | Archives 235–242 are clothing per body morph, about 100 garments each. Pilot one morph. |
 | 10495-W2 | Same morph, armor | about 37 | Archives 245–252, about 37 pieces each. |
 | 10495-W3 | Weapons and shields worn on the doll | 28 | Archive 234. |
@@ -69,7 +69,20 @@ Source: `df-raw/spells/` and `df-raw/effects/`.
 | 10496-X2 | Magic sparkle (20) and inventory glints (TEXTURE.434, 7 not already in 380) | about 27 | Same. |
 | 10496-H | Casting hands | 0 | **G3 (decided): not converted.** All first-person animation sprites become an animated hand mesh with special effects as needed. |
 
-## Suggested first six batches
+## Pilot results
+
+All four pilots ran with the unchanged recipe and read well.
+
+- **Bodies (4, done):** male human, female human, male Khajiit, female Argonian. Headless figures, neck stump, undergarments, tail and scales all survive.
+- **Spell icons (8, done):** the abstract bursts become painted energy blooms; the full-square tile (icon-001) keeps its square shape with a transparent surround.
+- **Fire effect (19, done):** impact and projectile frames keep their relative sizes and fade/flicker progression when drawn independently.
+- **Worn equipment (12, male human, done):** armor, shields, boots and trousers are good. Open finding: the clothing sprites are drawn in placeholder blue (the game tints them per dye), so the converted shirts, robes and cloaks are blue. Decide how dyeing works for the new art (neutral base plus tint, or one converted image per dye) before queueing the rest of clothing.
+
+## Suggested next batches
+
+Pilots are done. Next: 10494-R1 review, then bodies B1 (28), creatures C1, faces F1, spell icons I1/I2 and T1, fire E2–E5, effects X1/X2, and the rest of worn W1–W3 once the dye question is answered.
+
+## Original first six batches
 
 1. 10494-R1 (owner review of what already exists, plus redo-2).
 2. T1 tooling.
