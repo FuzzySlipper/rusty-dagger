@@ -1,0 +1,77 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy RPG equipment illustration, opaque gouache-like colour modelling, broad painted planes, believable cloth folds and metal planes, sparse dry-brush marks, selective dark accents along occluding contours. Slightly irregular handmade edges, original local colours; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy RPG equipment art. Keep the source's silhouette, the parts of the body it covers, its pose and its local colours: do not tint every material brown. Draw only the garment or armour piece itself, as worn on an invisible, headless body: no skin, no body, head, hands or feet unless the source clearly shows them. No weapon, text, border, scenery, shadow or second figure.",
+  "presentation": "One isolated garment on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the garment. The whole garment visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Neutral-base clothing pilot",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "worn",
+      "model": "qwen-edit",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "conditioning": "reference"
+    }
+  ],
+  "task": "Task: Redraw a very small classic fantasy RPG worn-equipment paper-doll layer as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+  "items": [
+    {
+      "id": "short-shirt",
+      "directory": "mens-clothing/item-165-short-shirt",
+      "image": "player/male-human/variant-04/texture-241-record-054-frame-000-source.png",
+      "content": "One short loose undyed pale grey-white shirt seen from the front, aspect about 1.25:1. A short-sleeved pullover with a rounded neckline, a bunched hem and soft folds. Undyed pale grey-white linen with soft grey shadow folds. Preserve the neutral pale grey-white colour and short sleeves. No body, arms, head, text.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source's placeholder blue was replaced by a neutral pale grey so the garment can be tinted per dye in the game: keep the cloth a neutral, undyed grey-white with no blue, brown or other colour cast.",
+      "invention": "Resolve cloth folds, a collar seam and sleeve hems.",
+      "name": "short-shirt (53x42)"
+    },
+    {
+      "id": "shirt-vest-sash",
+      "directory": "mens-clothing/item-166-short-shirt",
+      "image": "player/male-human/variant-07/texture-241-record-062-frame-000-source.png",
+      "content": "One undyed pale grey-white short shirt with a dark green sleeveless vest worn over the front and a red cloth sash wrapped around the waist, seen from the front, aspect about 0.7:1. The shirt has short sleeves and bunched folds, the vest is dark green with a lighter edge, the sash is bright red with darker folds. Preserve the three colours: pale grey-white shirt, dark green vest, red sash. No body, arms, head, text.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source's placeholder blue was replaced by a neutral pale grey so the garment can be tinted per dye in the game: keep the cloth a neutral, undyed grey-white with no blue, brown or other colour cast.",
+      "invention": "Resolve cloth folds, vest lacing and sash knots.",
+      "name": "shirt-vest-sash (53x77)"
+    },
+    {
+      "id": "plain-robes",
+      "directory": "mens-clothing/item-163-plain-robes",
+      "image": "player/male-human/variant-00/texture-241-record-047-frame-000-source.png",
+      "content": "One long hooded robe seen from the front, aspect about 0.48:1 (twice as tall as wide). A undyed pale grey-white wool robe with a deep hood pushed back at the neck, wide sleeves, a loosely tied belt at the waist and a flared hem reaching the ground, with one small round gap in the fabric at the right hip. Preserve the neutral pale grey-white colour, the hood and the long flared hem. No body, face, hands, text.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source's placeholder blue was replaced by a neutral pale grey so the garment can be tinted per dye in the game: keep the cloth a neutral, undyed grey-white with no blue, brown or other colour cast. The hole at the right hip is kept; the body layer shows through.",
+      "invention": "Resolve cloth folds, hem and hood lining.",
+      "name": "plain-robes (71x149)"
+    },
+    {
+      "id": "casual-cloak",
+      "directory": "mens-clothing/item-154-casual-cloak",
+      "image": "player/male-human/variant-01/texture-241-record-023-frame-000-source.png",
+      "content": "One long undyed pale grey-white cloak with a pointed hood seen from the front, aspect about 0.5:1 (twice as tall as wide). A hood at the top with a dark inner lining, a front opening, and the cloth falling in a long curve to the left with a trailing point at the lower right. Undyed pale grey-white cloth with darker grey folds. Preserve the neutral pale grey-white colour, the hood and the long trailing shape. No body, face, hands, text.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source's placeholder blue was replaced by a neutral pale grey so the garment can be tinted per dye in the game: keep the cloth a neutral, undyed grey-white with no blue, brown or other colour cast.",
+      "invention": "Resolve cloth folds, the hood lining and a brooch-free edge.",
+      "name": "casual-cloak (79x161)"
+    }
+  ]
+}
