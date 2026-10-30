@@ -10,7 +10,7 @@ The game draws the art from two parts:
 
 - **The held definition**, `content/worldrpg/first-person/daggerfall.held.json`: tracked, authored content. It names
   the classic weapon visuals the look replaces (`weapon.dagger.steel`), the arms rig (joints, forearm twist shares,
-  turn, scale, palm and grip calibration, as rusty-riders' `shared` profile), the arms (shoulder, elbow pole, hold,
+  turn, scale, palm and grip calibration), the arms (shoulder, elbow pole, hold,
   hand closures), the look (its model, the stance that seats it at rest, the hand's grip and hold on it) and the held
   motion, its tracks keyed by the classic strike ids such as `strikeDown`. Its models are container paths.
 - **The container**, `local/first-person.rpak` (ignored): the generated models `first-person/arms.glb` and
@@ -51,16 +51,18 @@ the workbench tuned there; every other value is kept. Review the diff before com
 Both models are reproducible and land in the ignored `local/fp-arms/`:
 
 ```sh
-blender -b --factory-startup --python ../asset-pipeline/tools/fps-arms/generate.py -- --params ../asset-pipeline/tools/fps-arms/sets/dagger.json --out local/fp-arms/arms.glb
+blender -b --factory-startup --python ../asset-pipeline/tools/fps-arms/adopt.py -- --params ../asset-pipeline/tools/fps-arms/sets/psx-dagger.json --out local/fp-arms/arms.glb
 blender -b --factory-startup --python scripts/fp-arms/build-dagger.py -- local/fp-arms/dagger.glb
 ```
 
-- The arms are asset-pipeline's shared first-person arm set (`tools/fps-arms`) in its Daggerfall look
-  (`sets/dagger.json`): an MPFB hand with forearm twist joints, a grey sleeve and a brown leather glove with a short
-  cuff, shaped and coloured against the classic unarmed WEAPON10 frames; the weapon frames' own painted gloves are not
-  followed. The generator, the look and the MPFB hand are CC0 or our
-  own. `arms-provenance.json` records the asset-pipeline commit the build used (and any uncommitted changes under its
-  arms and capture tools) and the GLB's sha256. Change the look in asset-pipeline, not here.
+- The arms are Drillimpact's [PSX First Person Arms](https://drillimpact.itch.io/psx-first-person-arms-free) 1.1.0
+  (CC0 1.0), kept in asset-pipeline (`tools/fps-arms/packs/psx-drillimpact/`) and adopted by its `tools/fps-arms/adopt.py`
+  in the Daggerfall look (`sets/psx-dagger.json`): the pack's low-poly mesh, skeleton and clips with forearm twist
+  joints added, its painted bare arms repainted as a brown leather glove and grey sleeve after the classic unarmed
+  WEAPON10 frames, and a leather cuff at the wrist. The rig holds with the pack's own `knife_idle` clip, so its grip
+  calibration is zero, and its palm offset is where that clip holds its knife. `arms-provenance.json` records the
+  asset-pipeline commit the build used (and any uncommitted changes under its arms and capture tools) and the GLB's
+  sha256. Change the look in asset-pipeline, not here.
 - `build-dagger.py` builds the dagger procedurally in the Engine's held-look frame (origin at the grip, length along
   -Z, up +Y), proportioned from the WEAPON02 frames.
 - `capture.json` names the arms rig, the dagger's keypoints and the classic camera: the 320x200 canvas shown at 4:3

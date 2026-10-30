@@ -1,26 +1,26 @@
 {
   "arms": {
     "glb": "../../local/fp-arms/arms.glb",
-    "upper": "R_Upperarm",
-    "lower": "R_Forearm",
+    "upper": "upper_arm.R",
+    "lower": "forearm.R",
     "twist": [
-      {"joint": "R_ForearmTwist1", "share": 0.45},
-      {"joint": "R_ForearmTwist2", "share": 0.85}
+      {"joint": "forearm_twist.01.R", "share": 0.45},
+      {"joint": "forearm_twist.02.R", "share": 0.85}
     ],
-    "hand": "R_Hand",
+    "hand": "hand.R",
     "fingers": [
-      ["R_Index1", "R_Index2", "R_Index3"],
-      ["R_Middle1", "R_Middle2", "R_Middle3"],
-      ["R_Ring1", "R_Ring2", "R_Ring3"],
-      ["R_Pinky1", "R_Pinky2", "R_Pinky3"]
+      ["f_index.01.R", "f_index.02.R", "f_index.03.R"],
+      ["f_middle.01.R", "f_middle.02.R", "f_middle.03.R"],
+      ["f_ring.01.R", "f_ring.02.R", "f_ring.03.R"],
+      ["f_pinky.01.R", "f_pinky.02.R", "f_pinky.03.R"]
     ],
-    "thumb": ["R_Thumb1", "R_Thumb2", "R_Thumb3"],
-    "hideOff": "L_Upperarm",
-    "turn": [0, 0, 0],
+    "thumb": ["thumb.01.R", "thumb.02.R", "thumb.03.R"],
+    "hideOff": "upper_arm.L",
+    "turn": [0, 180, 0],
     "scale": 1,
     "shoulder": [0.2, -0.265, 0.05],
     "pole": [0.5, -0.75, 0.05],
-    "clip": "grip",
+    "clip": "knife_idle",
     "frame": 1
   },
   "item": {
