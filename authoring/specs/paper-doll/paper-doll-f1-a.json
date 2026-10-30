@@ -1,0 +1,383 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Highly detailed lurid pulp-fantasy character portrait in the manner of 1970s and 80s paperback cover art (Frank Frazetta, Boris Vallejo): glossy airbrushed oil rendering, strongly modelled features with defined brows, eyes, nose, lips and cheekbones, fine skin detail and sheen, individual strands of hair and beard, warm rim light against deep shadow, sharp specular highlights, rich saturated colour. Crisp, confident, finely detailed forms rather than flat broad shapes; keep the original local colours. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded fantasy RPG character portraits in a restrained palette. Keep the source's expression, head angle, skin tone, hair and features. A head and neck only, cut flat across the neck as in the source. No body, clothing, weapon, text, border, scenery or second figure.",
+  "presentation": "One isolated head on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the head. The whole head visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Paper doll faces F1 a",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "faces",
+      "model": "qwen-edit",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "conditioning": "reference"
+    }
+  ],
+  "task": "Task: Redraw a very small classic fantasy RPG paper-doll head as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+  "items": [
+    {
+      "id": "face00-0",
+      "directory": "faces/face00i0",
+      "image": "face00i0-record-000-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Warm tan skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face00-0 (20x27)"
+    },
+    {
+      "id": "face00-1",
+      "directory": "faces/face00i0",
+      "image": "face00i0-record-001-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Warm tan skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face00-1 (30x29)"
+    },
+    {
+      "id": "face00-2",
+      "directory": "faces/face00i0",
+      "image": "face00i0-record-002-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Warm tan skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face00-2 (20x29)"
+    },
+    {
+      "id": "face00-4",
+      "directory": "faces/face00i0",
+      "image": "face00i0-record-004-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Warm tan skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face00-4 (29x29)"
+    },
+    {
+      "id": "face00-5",
+      "directory": "faces/face00i0",
+      "image": "face00i0-record-005-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Warm tan skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face00-5 (25x32)"
+    },
+    {
+      "id": "face00-6",
+      "directory": "faces/face00i0",
+      "image": "face00i0-record-006-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Warm tan skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face00-6 (22x29)"
+    },
+    {
+      "id": "face00-7",
+      "directory": "faces/face00i0",
+      "image": "face00i0-record-007-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Warm tan skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face00-7 (23x29)"
+    },
+    {
+      "id": "face00-8",
+      "directory": "faces/face00i0",
+      "image": "face00i0-record-008-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Warm tan skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face00-8 (24x33)"
+    },
+    {
+      "id": "face00-9",
+      "directory": "faces/face00i0",
+      "image": "face00i0-record-009-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Warm tan skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face00-9 (29x32)"
+    },
+    {
+      "id": "face01-0",
+      "directory": "faces/face01i0",
+      "image": "face01i0-record-000-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Deep dark-brown skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face01-0 (19x26)"
+    },
+    {
+      "id": "face01-1",
+      "directory": "faces/face01i0",
+      "image": "face01i0-record-001-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Deep dark-brown skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face01-1 (20x27)"
+    },
+    {
+      "id": "face01-2",
+      "directory": "faces/face01i0",
+      "image": "face01i0-record-002-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Deep dark-brown skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face01-2 (28x30)"
+    },
+    {
+      "id": "face01-3",
+      "directory": "faces/face01i0",
+      "image": "face01i0-record-003-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Deep dark-brown skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face01-3 (29x28)"
+    },
+    {
+      "id": "face01-4",
+      "directory": "faces/face01i0",
+      "image": "face01i0-record-004-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Deep dark-brown skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face01-4 (30x29)"
+    },
+    {
+      "id": "face01-5",
+      "directory": "faces/face01i0",
+      "image": "face01i0-record-005-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Deep dark-brown skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face01-5 (31x27)"
+    },
+    {
+      "id": "face01-6",
+      "directory": "faces/face01i0",
+      "image": "face01i0-record-006-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Deep dark-brown skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face01-6 (24x27)"
+    },
+    {
+      "id": "face01-7",
+      "directory": "faces/face01i0",
+      "image": "face01i0-record-007-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Deep dark-brown skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face01-7 (33x27)"
+    },
+    {
+      "id": "face01-8",
+      "directory": "faces/face01i0",
+      "image": "face01i0-record-008-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Deep dark-brown skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face01-8 (30x27)"
+    },
+    {
+      "id": "face01-9",
+      "directory": "faces/face01i0",
+      "image": "face01i0-record-009-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Deep dark-brown skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face01-9 (31x25)"
+    },
+    {
+      "id": "face02-0",
+      "directory": "faces/face02i0",
+      "image": "face02i0-record-000-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Pale sandy skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face02-0 (24x28)"
+    },
+    {
+      "id": "face02-2",
+      "directory": "faces/face02i0",
+      "image": "face02i0-record-002-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Pale sandy skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face02-2 (22x25)"
+    },
+    {
+      "id": "face02-3",
+      "directory": "faces/face02i0",
+      "image": "face02i0-record-003-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Pale sandy skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face02-3 (25x29)"
+    },
+    {
+      "id": "face02-4",
+      "directory": "faces/face02i0",
+      "image": "face02i0-record-004-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Pale sandy skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face02-4 (31x39)"
+    },
+    {
+      "id": "face02-5",
+      "directory": "faces/face02i0",
+      "image": "face02i0-record-005-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Pale sandy skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face02-5 (27x28)"
+    },
+    {
+      "id": "face02-6",
+      "directory": "faces/face02i0",
+      "image": "face02i0-record-006-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Pale sandy skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face02-6 (31x27)"
+    },
+    {
+      "id": "face02-7",
+      "directory": "faces/face02i0",
+      "image": "face02i0-record-007-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Pale sandy skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face02-7 (29x27)"
+    },
+    {
+      "id": "face02-8",
+      "directory": "faces/face02i0",
+      "image": "face02i0-record-008-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Pale sandy skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face02-8 (25x35)"
+    },
+    {
+      "id": "face02-9",
+      "directory": "faces/face02i0",
+      "image": "face02i0-record-009-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Pale sandy skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face02-9 (31x30)"
+    },
+    {
+      "id": "face03-0",
+      "directory": "faces/face03i0",
+      "image": "face03i0-record-000-frame-000-source.png",
+      "content": "One male dark elf head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Ash blue-grey skin, pointed ears and glowing red eyes. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face03-0 (31x27)"
+    },
+    {
+      "id": "face03-1",
+      "directory": "faces/face03i0",
+      "image": "face03i0-record-001-frame-000-source.png",
+      "content": "One male dark elf head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Ash blue-grey skin, pointed ears and glowing red eyes. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face03-1 (25x36)"
+    },
+    {
+      "id": "face03-2",
+      "directory": "faces/face03i0",
+      "image": "face03i0-record-002-frame-000-source.png",
+      "content": "One male dark elf head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Ash blue-grey skin, pointed ears and glowing red eyes. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face03-2 (26x28)"
+    },
+    {
+      "id": "face03-3",
+      "directory": "faces/face03i0",
+      "image": "face03i0-record-003-frame-000-source.png",
+      "content": "One male dark elf head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Ash blue-grey skin, pointed ears and glowing red eyes. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face03-3 (27x29)"
+    },
+    {
+      "id": "face03-5",
+      "directory": "faces/face03i0",
+      "image": "face03i0-record-005-frame-000-source.png",
+      "content": "One male dark elf head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Ash blue-grey skin, pointed ears and glowing red eyes. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face03-5 (29x32)"
+    },
+    {
+      "id": "face03-6",
+      "directory": "faces/face03i0",
+      "image": "face03i0-record-006-frame-000-source.png",
+      "content": "One male dark elf head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Ash blue-grey skin, pointed ears and glowing red eyes. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face03-6 (31x31)"
+    },
+    {
+      "id": "face03-7",
+      "directory": "faces/face03i0",
+      "image": "face03i0-record-007-frame-000-source.png",
+      "content": "One male dark elf head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Ash blue-grey skin, pointed ears and glowing red eyes. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face03-7 (26x30)"
+    },
+    {
+      "id": "face03-8",
+      "directory": "faces/face03i0",
+      "image": "face03i0-record-008-frame-000-source.png",
+      "content": "One male dark elf head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Ash blue-grey skin, pointed ears and glowing red eyes. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face03-8 (26x31)"
+    },
+    {
+      "id": "face03-9",
+      "directory": "faces/face03i0",
+      "image": "face03i0-record-009-frame-000-source.png",
+      "content": "One male dark elf head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Ash blue-grey skin, pointed ears and glowing red eyes. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face03-9 (28x28)"
+    },
+    {
+      "id": "face04-0",
+      "directory": "faces/face04i0",
+      "image": "face04i0-record-000-frame-000-source.png",
+      "content": "One male elf head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Golden-brown skin and pointed ears. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. Facial hair only where the input shows it; otherwise the face is clean-shaven. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face04-0 (25x31)"
+    }
+  ]
+}
