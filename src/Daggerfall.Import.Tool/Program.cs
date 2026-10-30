@@ -68,6 +68,8 @@ internal static class Program
         // Local image-generation reference sets (never product content).
         ReferenceExportCommands.Items,
         ReferenceExportCommands.Spells,
+        ReferenceExportCommands.PaperDoll,
+        ReferenceExportCommands.Effects,
     }.ToDictionary(command => command.Name, StringComparer.Ordinal);
 
     internal static int Main(string[] args)

@@ -28,4 +28,18 @@ internal static class ReferenceExportCommands
             args.Optional("--output") ?? "authoring/df-raw/spells");
         return 0;
     });
+
+    public static ToolCommand PaperDoll { get; } = new("export-paper-doll", [Arena2, Output], args =>
+    {
+        MediaReferenceExport.RunPaperDoll(args.Optional("--arena2") ?? "local/arena2",
+            args.Optional("--output") ?? "authoring/df-raw/paper-doll");
+        return 0;
+    });
+
+    public static ToolCommand Effects { get; } = new("export-effects", [Arena2, Output], args =>
+    {
+        MediaReferenceExport.RunEffects(args.Optional("--arena2") ?? "local/arena2",
+            args.Optional("--output") ?? "authoring/df-raw/effects");
+        return 0;
+    });
 }
