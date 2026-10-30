@@ -2,7 +2,8 @@ import type { RustyApplicationUiContext } from '@rusty-engine/product-ui';
 import { createLiveDebugHttpTransport, mountDeveloperShell, type DeveloperShellMount, type LiveDebugTransport } from '@rusty-engine/live-debug';
 
 /**
- * Developer tools: the Engine's developer shell docked beside play, with Dagger's own panel. This is diagnostic UI
+ * Developer tools: the Engine's developer shell docked beside play, with Dagger's own panel and the first-person
+ * workbench (the Engine tunables panel over the ruleset's held-art workbench, `held.motion*`). This is diagnostic UI
  * (`docs/game-ui.md` "Diagnostic UI"): it lives outside the game's shell and skin, carries no game state, and opens
  * only when the host runs with live-debug, which it asks the host before opening. The Dagger panel pauses and steps
  * the Engine's held time, flies the Engine's observer camera, and turns the ruleset's debug overlay sets on and off;
@@ -41,9 +42,14 @@ export function mountDeveloperTools(root: HTMLElement, context: Pick<RustyApplic
     presentation: 'tabs',
     side: 'right',
     transport,
-    onClose: options.onChange,
+    // However the shell closes, the motion viewer returns the hands to what they wield.
+    onClose: () => {
+      void transport.execute('held.motion.off').catch(() => {});
+      options.onChange();
+    },
     panels: [
       { kind: 'product', title: 'Dagger', mount: element => mountDaggerPanel(element, transport) },
+      { kind: 'tunables', title: 'Workbench' },
       { kind: 'console' },
       // The pane lists the product's inspection targets (player, dialogue, door) in its own subject choice and frames
       // the chosen one with its default framings; it opens on the player.

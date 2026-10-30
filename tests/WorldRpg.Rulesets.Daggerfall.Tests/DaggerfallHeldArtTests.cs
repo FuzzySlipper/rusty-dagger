@@ -8,15 +8,15 @@ using Xunit;
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
-/// Checks the 3D first-person art is read from its container: the authored rig and arms
-/// (scripts/fp-arms) with the strike-down captured from the classic animation (a fixture copy of the bake).
+/// Checks the 3D first-person art is read from the authored held definition (content/worldrpg/first-person), whose
+/// strike-down was seeded from a capture of the classic animation, drawn with the container's models.
 /// </summary>
 public sealed class DaggerfallHeldArtTests
 {
     [Fact]
     public void The_captured_strike_loads_through_the_engine_records_and_lands_its_hit_on_the_commit()
     {
-        DaggerfallHeldArt art = DaggerfallHeldArt.Read(Container(Document()));
+        DaggerfallHeldArt art = Read(Document());
 
         Assert.True(art.Draws("weapon.dagger.steel"));
         Assert.False(art.Draws("weapon.00"));
@@ -42,7 +42,7 @@ public sealed class DaggerfallHeldArtTests
         JsonObject tracks = document["motion"]!["tracks"]!.AsObject();
         tracks["thrust"] = tracks["strikeDown"]!.DeepClone();
 
-        InvalidDataException refusal = Assert.Throws<InvalidDataException>(() => DaggerfallHeldArt.Read(Container(document)));
+        InvalidDataException refusal = Assert.Throws<InvalidDataException>(() => Read(document));
 
         Assert.Contains("motion.tracks.thrust", refusal.Message, StringComparison.Ordinal);
     }
@@ -50,9 +50,9 @@ public sealed class DaggerfallHeldArtTests
     [Fact]
     public void A_model_the_container_does_not_carry_is_refused_by_name()
     {
-        InvalidDataException refusal = Assert.Throws<InvalidDataException>(() => DaggerfallHeldArt.Read(Container(Document(), withModels: false)));
+        InvalidDataException refusal = Assert.Throws<InvalidDataException>(() => Read(Document(), withModels: false));
 
-        Assert.Contains("'first-person/arms.glb' is not in the container", refusal.Message, StringComparison.Ordinal);
+        Assert.Contains("'first-person/arms.glb' is not in first-person.rpak", refusal.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -83,29 +83,19 @@ public sealed class DaggerfallHeldArtTests
         }
     }
 
-    // The document build.sh assembles: the authored rig and arms, and the captured look and motion.
-    private static JsonObject Document()
-    {
-        string root = TestData.RepositoryRoot;
-        JsonObject captured = JsonNode.Parse(File.ReadAllText(Path.Combine(root, "tests/WorldRpg.Rulesets.Daggerfall.Tests/Fixtures/first-person-strike-down.json")))!.AsObject();
-        return new JsonObject
-        {
-            ["weapons"] = new JsonArray("weapon.dagger.steel"),
-            ["rig"] = JsonNode.Parse(File.ReadAllText(Path.Combine(root, "scripts/fp-arms/rig.json"))),
-            ["arms"] = JsonNode.Parse(File.ReadAllText(Path.Combine(root, "scripts/fp-arms/arms.json"))),
-            ["look"] = captured["look"]!.DeepClone(),
-            ["motion"] = captured["motion"]!.DeepClone(),
-        };
-    }
+    // The authored held definition.
+    internal static JsonObject Document() =>
+        JsonNode.Parse(File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content", DaggerfallHeldArt.DocumentPath)))!.AsObject();
 
-    private static ProductContentBundle Container(JsonObject document, bool withModels = true)
+    // The definition read over a container that carries its models (or none).
+    internal static DaggerfallHeldArt Read(JsonObject document, bool withModels = true)
     {
         BundleContentFake service = new();
         service.Container(DaggerfallHeldArt.ContainerName);
-        service.Add(DaggerfallHeldArt.ContainerName, DaggerfallHeldArt.DocumentPath, System.Text.Encoding.UTF8.GetBytes(document.ToJsonString()));
         if (withModels)
             foreach (string model in new[] { "first-person/arms.glb", "first-person/dagger.glb" })
                 service.Add(DaggerfallHeldArt.ContainerName, model, [7]);
-        return new ProductContent(Array.Empty<ProductContentFile>(), service).OpenContainer(DaggerfallHeldArt.ContainerName);
+        ProductContentBundle container = new ProductContent(Array.Empty<ProductContentFile>(), service).OpenContainer(DaggerfallHeldArt.ContainerName);
+        return DaggerfallHeldArt.Read(container, System.Text.Encoding.UTF8.GetBytes(document.ToJsonString()));
     }
 }

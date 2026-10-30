@@ -291,6 +291,12 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             registrar.Register(new DeveloperWorldDebugModule(() => (IDeveloperWorldSession)_session));
         if (_session is IDeveloperPlayerSession)
             registrar.Register(new DeveloperPlayerDebugModule(() => (IDeveloperPlayerSession)_session));
+        if (_session is IDeveloperHeldSession)
+        {
+            IDeveloperHeldSession Held() => (IDeveloperHeldSession)_session;
+            registrar.Register(new DeveloperHeldDebugModule(Held));
+            registrar.Register(DeveloperHeldDebugModule.Workbench(_context.Engine.ContentSource, Held));
+        }
     }
 
     /// <summary>The mode the product runs its session under.</summary>
