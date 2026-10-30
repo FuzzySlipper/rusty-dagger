@@ -1,0 +1,50 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy adventure inventory art. Keep the source's local colours: do not tint every material brown or add brass simply to match the UI. Use a restrained palette with distinct light, middle and dark families, clear silhouette and legible material masses. Detail hierarchy: silhouette first, a few large planes or folds second, sparse material marks third. Keep the original class of mundane object, its opening and visible components; no extra handles, gemstones, runes, faces, symbols, chains or elaborate fantasy embellishment. Do not convert this into pixel art, a photoreal product photograph, a glossy mobile-game loot icon or a dramatic scene. No text, labels, border, vignette, decorative frame, hand, person, pedestal, scenery or second object.",
+  "presentation": "One isolated item on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the object. Full object visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Redo 2",
+  "selection": "Batch of unique world sprites from the full icon conversion (rusty-dagger #10458). Each sprite is generated once; sharing is stated in its uncertainty text.",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "icons-d1",
+      "model": "qwen-edit",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "conditioning": "reference"
+    }
+  ],
+  "items": [
+    {
+      "id": "cloth-amulet",
+      "directory": "jewellery/item-139-cloth-amulet",
+      "image": "world/texture-204-record-009-frame-000-source.png",
+      "name": "Belt with two pouches (88x31)",
+      "content": "One leather belt with two pouches lying flat, aspect about 2.8:1. A long dark brown-grey strap that arcs in a shallow S-curve across the middle, with a small rounded cloth or leather pouch at the left end and a second, slightly lower pouch at the right end, each with a flap closing the top. Pale highlight along the upper edges of the pouches. Preserve the long low shape with a pouch at each end. No gems, pendant, chain, amulet or text.",
+      "uncertainty": "Owner reading: the sprite is a belt with two pouches, not an amulet, even though the item is named Cloth Amulet. Redo of the earlier cord interpretation. Sprite shared by: item-139-cloth-amulet.",
+      "invention": "Resolve stitching, a buckle-less strap with a few leather folds and a slight sheen on the pouch flaps. Keep it a single plain belt."
+    }
+  ]
+}
