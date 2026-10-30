@@ -1,7 +1,7 @@
 <!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Item icon conversion review</title>
+<title>Art conversion review</title>
 <style>
 :root{--bg:#252830;--panel:#343943;--ink:#eee;--mute:#a8afbd;--link:#a9d6ff;
 --unconverted:#8a8f99;--converted:#6aa9ff;--needs-owner-review:#f0b84a;--accepted:#5fc98a;--redo:#f07a7a;--skipped:#6b6f78}
@@ -40,7 +40,7 @@ dt{color:var(--mute)}dd{margin:0;overflow-wrap:anywhere}
 .frames img.cur{outline:2px solid #fff}
 </style>
 <header>
-  <h1>Item icon conversion review <span id="count" style="font-weight:normal;color:var(--mute)"></span></h1>
+  <h1>Art conversion review <span id="count" style="font-weight:normal;color:var(--mute)"></span></h1>
   <div class="bar" id="statuses"></div>
   <div class="bar" style="margin-top:8px">
     <input id="q" placeholder="Search name, category, id" size="24">
@@ -58,7 +58,7 @@ const rows = DATA.rows, statuses = DATA.statuses;
 const colour = s => `var(--${s})`;
 const bgs = {checker:'repeating-conic-gradient(#3a3f4a 0% 25%,#2f333c 0% 50%) 0 0/16px 16px',dark:'#1b1d22',light:'#e8e8e8',game:'#4a4036'};
 const state = {status:new Set(), cat:'', q:'', sort:'order', guess:false, shared:false, frames:false, err:false};
-const animated = new Set(rows.filter(r => r.frame > 0).map(r => `${r.archive}-${r.record}`));
+const animated = new Set(rows.filter(r => r.frame > 0).map(r => r.group));
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -78,7 +78,7 @@ function visible() {
     (!state.cat || r.categories.includes(state.cat)) &&
     (!q || (r.users.join(' ') + ' ' + r.categories.join(' ') + ' ' + r.key + ' ' + r.spec_id).toLowerCase().includes(q)) &&
     (!state.guess || r.guess) && (!state.shared || r.users.length > 1) &&
-    (!state.frames || animated.has(`${r.archive}-${r.record}`)) && (!state.err || (r.error ?? 0) >= 8));
+    (!state.frames || animated.has(r.group)) && (!state.err || (r.error ?? 0) >= 8));
   const by = {order: (a, b) => a.key.localeCompare(b.key), error: (a, b) => (b.error ?? -1) - (a.error ?? -1),
     status: (a, b) => statuses.indexOf(a.status) - statuses.indexOf(b.status) || a.key.localeCompare(b.key),
     name: (a, b) => a.users[0].localeCompare(b.users[0])};
@@ -88,7 +88,7 @@ function visible() {
 function render() {
   statusBar();
   const v = visible(), bg = bgs[$('bg').value];
-  $('count').textContent = `${v.length} of ${rows.length} sprite frames`;
+  $('count').textContent = `${v.length} of ${rows.length} source images`;
   $('grid').innerHTML = v.map(r => `<div class="card" data-k="${r.key}" style="--c:${colour(r.status)};--bgp:${bg}">
     <div class="pair"><div class="s"><img loading="lazy" src="${r.thumb_src}"></div><div>${r.thumb ? `<img loading="lazy" src="${r.thumb}">` : '<span class="none">no final</span>'}</div></div>
     <div class="meta"><span class="name">${esc(r.name)}${r.frame ? ` · frame ${r.frame}` : ''}</span><span>${r.error != null ? 'err ' + r.error : ''}</span></div>
@@ -98,17 +98,17 @@ function render() {
 
 function detail(k) {
   const r = rows.find(x => x.key === k), bg = bgs[$('bg').value];
-  const sibs = rows.filter(x => x.archive === r.archive && x.record === r.record);
+  const sibs = rows.filter(x => x.group === r.group);
   $('dlg').innerHTML = `<div class="big" style="--bgp:${bg}"><div class="s"><img src="${r.source}"></div><div>${r.final ? `<a href="${r.final}" target="_blank"><img src="${r.final}"></a>` : '<span class="none">no final</span>'}</div></div>
   ${sibs.length > 1 ? `<div class="frames" style="--bgp:${bg}">${sibs.map(s => `<img class="${s.key === k ? 'cur' : ''}" src="${s.thumb || s.thumb_src}" data-k="${s.key}" title="frame ${s.frame}">`).join('')}</div>` : ''}
-  <dl><dt>Sprite</dt><dd>${esc(r.name)} — texture ${r.archive}, record ${r.record}, frame ${r.frame} (${r.size})</dd>
+  <dl><dt>Sprite</dt><dd>${esc(r.name)} — ${r.label} (${r.size})</dd>
   <dt>Status</dt><dd style="color:${colour(r.status)}">${r.status}${r.error != null ? ` · back-projection error ${r.error}` : ''}</dd>
   <dt>Used by</dt><dd>${esc(r.users.join(', '))}</dd><dt>Category</dt><dd>${esc(r.categories.join(', '))}</dd>
   <dt>Run</dt><dd>${esc(r.spec)} / ${esc(r.spec_id)}</dd>
   ${r.note ? `<dt>Note</dt><dd>${esc(r.note)}</dd>` : ''}
   <dt>Contract</dt><dd>${esc(r.contract)}</dd><dt>Uncertainty</dt><dd>${esc(r.uncertainty)}</dd>
   <dt>Files</dt><dd>${esc(r.source)}<br>${esc(r.final)}</dd></dl>
-  <p><button class="chip" onclick="dlg.close()">Close</button> <span style="color:var(--mute)">Edit status and notes in authoring/ledger/items-notes.json, then rebuild.</span></p>`;
+  <p><button class="chip" onclick="dlg.close()">Close</button> <span style="color:var(--mute)">Edit status and notes in authoring/${DATA.notes}, then rebuild.</span></p>`;
   $('dlg').querySelectorAll('.frames img').forEach(i => i.onclick = () => detail(i.dataset.k));
   if (!$('dlg').open) $('dlg').showModal();
 }

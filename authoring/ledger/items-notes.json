@@ -1,162 +1,194 @@
 {
-  "205-001-000": {
+  "texture-205-record-001-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "205-003-000": {
+  "texture-205-record-003-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "205-017-000": {
+  "texture-205-record-017-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "205-018-000": {
+  "texture-205-record-018-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "205-024-000": {
+  "texture-205-record-024-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "205-042-000": {
+  "texture-205-record-042-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "205-043-000": {
+  "texture-205-record-043-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "205-044-000": {
+  "texture-205-record-044-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "209-004-000": {
+  "texture-209-record-004-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "209-009-000": {
+  "texture-209-record-009-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "210-003-000": {
+  "texture-210-record-003-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "210-004-000": {
+  "texture-210-record-004-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "211-048-000": {
+  "texture-211-record-048-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "211-049-000": {
+  "texture-211-record-049-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "216-004-000": {
+  "texture-216-record-004-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "216-021-000": {
+  "texture-216-record-021-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "254-000-000": {
+  "texture-254-record-000-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "254-001-000": {
+  "texture-254-record-001-frame-000": {
     "status": "converted",
     "note": "Redone with seed 27302 after owner review of batch A (emerald drifted or had a stray pixel); awaiting re-review."
   },
-  "254-003-000": {
+  "texture-254-record-003-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "254-004-000": {
+  "texture-254-record-004-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "254-005-000": {
+  "texture-254-record-005-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "254-006-000": {
+  "texture-254-record-006-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "254-007-000": {
+  "texture-254-record-007-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "254-008-000": {
+  "texture-254-record-008-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "254-020-000": {
+  "texture-254-record-020-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "254-025-000": {
+  "texture-254-record-025-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "254-056-000": {
+  "texture-254-record-056-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "254-057-000": {
+  "texture-254-record-057-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "254-058-000": {
+  "texture-254-record-058-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "254-059-000": {
+  "texture-254-record-059-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "254-061-000": {
+  "texture-254-record-061-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "254-062-000": {
+  "texture-254-record-062-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "254-063-000": {
+  "texture-254-record-063-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "254-064-000": {
+  "texture-254-record-064-frame-000": {
     "status": "converted",
     "note": "Redone with seed 27302 after owner review of batch A (tin drifted or had a stray pixel); awaiting re-review."
   },
-  "254-065-000": {
+  "texture-254-record-065-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "254-066-000": {
+  "texture-254-record-066-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "254-067-000": {
+  "texture-254-record-067-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "254-070-000": {
+  "texture-254-record-070-frame-000": {
     "status": "accepted",
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
-  "204-009-000": {
+  "texture-204-record-009-frame-000": {
     "status": "accepted",
     "note": "Redo 2: belt with two pouches (owner reading). Owner accepted."
   },
-  "211-057-000": {
-    "status": "converted",
-    "note": "Redo 3: owner-directed subject, a pumpkin with green leaves and dirt in a gold frame. Awaiting review."
+  "texture-211-record-057-frame-000": {
+    "status": "accepted",
+    "note": "Redo 3: owner-directed pumpkin still-life. Owner accepted."
+  },
+  "texture-204-record-000-frame-000": {
+    "status": "accepted",
+    "note": "Straps: current look is fine; the original is unidentifiable."
+  },
+  "texture-209-record-008-frame-000": {
+    "status": "accepted",
+    "note": "Deed: accepted as is."
+  },
+  "texture-211-record-054-frame-000": {
+    "status": "accepted",
+    "note": "Totem: accepted as is."
+  },
+  "texture-213-record-001-frame-000": {
+    "status": "accepted",
+    "note": "Wine Rack sprite is a tomato in the original (a Daggerfall template bug); kept as a tomato."
+  },
+  "texture-254-record-044-frame-000": {
+    "status": "accepted",
+    "note": "Ectoplasm: accepted as is."
+  },
+  "texture-254-record-047-frame-000": {
+    "status": "accepted",
+    "note": "Wraith Essence: accepted as is."
+  },
+  "texture-254-record-054-frame-000": {
+    "status": "accepted",
+    "note": "Gorgon Snake: accepted as is."
+  },
+  "texture-207-record-010-frame-000": {
+    "status": "redo",
+    "note": "Owner reading: a spiked metal buckler lying on the ground, spike pointing straight up (shared by buckler, round shield and tanto). Redo 4 running."
   }
 }
