@@ -26,7 +26,7 @@ import hashlib, json, subprocess, sys
 pipeline, look, out = sys.argv[1:]
 git = lambda *a: subprocess.run(["git", "-C", pipeline, *a], capture_output=True, text=True, check=True).stdout.strip()
 json.dump({
-    "asset": "first-person arms, Daggerfall look (teal sleeve, bronze gauntlet and glove)",
+    "asset": "first-person arms, Daggerfall look (grey sleeve, brown leather glove)",
     "source": f"asset-pipeline {look} over sets/base.json; hand from MPFB (CC0) via tools/fps-arms/hands/mpfb-default.json",
     "commit": git("rev-parse", "HEAD"),
     "uncommitted": git("status", "--porcelain", "--", "tools/fps-arms", "tools/fp-capture").splitlines(),
