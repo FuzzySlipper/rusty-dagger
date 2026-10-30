@@ -12,8 +12,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// The 3D first-person art, opened from the optional container installed beside the product
 /// (<see cref="ContainerName"/>): rigged arms and the held weapons that replace the classic weapon sprites
 /// when the viewmodel tuning asks for them. Built on the operator's machine by
-/// <c>scripts/fp-arms/build.sh</c> (the arms derive from a purchased asset, so neither they nor the
-/// container are committed); its motion is captured from video of the classic weapon animations.
+/// <c>scripts/fp-arms/build.sh</c> from asset-pipeline's generated arms and a local capture; its motion
+/// is captured from video of the classic weapon animations.
 /// </summary>
 /// <remarks>
 /// The container holds <see cref="DocumentPath"/> and the GLBs it names. The document names the classic
