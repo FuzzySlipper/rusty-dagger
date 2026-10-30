@@ -432,7 +432,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                         rotation, Vector3.One), arrowVisual, true, RenderLayer.Scene));
             }
         }
-        if (viewmodel is { } weapon) AppendViewmodelFacts(facts, weapon);
+        AppendViewmodelFacts(facts, viewmodel);
         appendSnapshotFacts?.Invoke(facts);
         appearance.PublishSnapshot([.. facts]);
         ReachHeld();

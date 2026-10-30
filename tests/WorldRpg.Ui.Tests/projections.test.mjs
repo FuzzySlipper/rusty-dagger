@@ -1036,17 +1036,21 @@ test('the developer key opens the developer tools only when the host serves live
     const shell = developer.shells.at(-1);
     assert.equal(shell.isOpen, true);
     assert.equal(note.hidden, true);
-    assert.deepEqual(shell.options.panels.map(panel => panel.kind), ['product', 'console', 'view', 'scene', 'metrics']);
+    assert.deepEqual(shell.options.panels.map(panel => panel.kind), ['product', 'tunables', 'console', 'view', 'scene', 'metrics']);
     assert.equal(shell.options.panels[0].title, 'Dagger');
+    assert.equal(shell.options.panels[1].title, 'Workbench');
     // The view pane opens on the player and keeps its own valid framings.
-    assert.equal(shell.options.panels[2].options.subject, 'target player');
-    assert.equal(shell.options.panels[2].options.framings, undefined);
+    assert.equal(shell.options.panels[3].options.subject, 'target player');
+    assert.equal(shell.options.panels[3].options.framings, undefined);
     assert.equal(f.modes.at(-1), 'interface', 'The open tools hold the cursor, so play stops taking input.');
 
-    // Closing (the key again, or the shell's own Close) gives gameplay its input back at once.
+    // Closing (the key again, or the shell's own Close) gives gameplay its input back at once, and the workbench's
+    // motion viewer gives the hands back what they wield.
     const focusesBefore = f.focuses.length;
+    developer.commands.length = 0;
     key(); await settle();
     assert.equal(shell.isOpen, false);
+    assert.deepEqual(developer.commands, ['held.motion.off']);
     assert.equal(f.modes.at(-1), 'gameplay');
     assert.ok(f.focuses.length > focusesBefore, 'Gameplay focus is taken back without a click.');
 

@@ -318,7 +318,9 @@ The planning expansion is therefore finite and record-oriented:
 The game's files, the media extracted from them and the bulk generated payloads are not committed
 and not redistributed; small derived facts (identifiers, names, numbers, short text, record JSON)
 in tests, fixtures and documents are fine (`AGENTS.md`). Git tracks `content/` (descriptors,
-hand-authored payloads, tuning and the authored UI art under `worldrpg/media/ui/authored/`) and the
+hand-authored payloads, tuning, the authored UI art under `worldrpg/media/ui/authored/` and the held
+definition of the 3D first-person art under `worldrpg/first-person/`, whose models are built into the ignored
+`local/first-person.rpak` by `scripts/fp-arms/build.sh`) and the
 importer's own inputs under `data/`; an architecture law fails a run that finds an untracked file under
 `content/`. Everything derived from the operator's files is built on each checkout by one cross-platform
 command, the import tool's `import`

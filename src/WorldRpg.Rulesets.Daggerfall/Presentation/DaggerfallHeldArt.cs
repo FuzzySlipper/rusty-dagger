@@ -9,39 +9,39 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>
-/// The 3D first-person art, opened from the optional container installed beside the product
-/// (<see cref="ContainerName"/>): rigged arms and the held weapons that replace the classic weapon sprites
-/// when the viewmodel tuning asks for them. Built on the operator's machine by
-/// <c>scripts/fp-arms/build.sh</c> from asset-pipeline's generated arms and a local capture; its motion
-/// is captured from video of the classic weapon animations.
+/// The 3D first-person art: the authored held definition in the product's content (<see cref="DocumentPath"/>) drawn
+/// with the models in the optional container installed beside the product (<see cref="ContainerName"/>): rigged arms
+/// and the held weapons that replace the classic weapon sprites when the viewmodel tuning asks for them. The container
+/// is built on the operator's machine by <c>scripts/fp-arms/build.sh</c> from asset-pipeline's generated arms and the
+/// procedural dagger. The definition's look and motion were seeded from a capture of the classic weapon animations
+/// (<c>scripts/fp-arms/seed.py</c>) and are tuned in the developer workbench, which saves back to it.
 /// </summary>
 /// <remarks>
-/// The container holds <see cref="DocumentPath"/> and the GLBs it names. The document names the classic
-/// weapon visuals its look replaces, the arms rig and the Engine's held arms, the look (its model, the
-/// stance that seats it at rest, and where and how the hand holds it), and its held motion, whose tracks are
-/// keyed by the classic strike action ids. A container that is present but malformed is refused by file and
-/// field rather than drawn wrong.
+/// The definition names the classic weapon visuals its look replaces, the arms rig and the Engine's held arms, the look
+/// (its model, the stance that seats it at rest, and where and how the hand holds it), and its held motion, whose
+/// tracks are keyed by the classic strike action ids. Its models are container paths. A definition that names what
+/// cannot be drawn is refused by file and field rather than drawn wrong. Its records are the Engine's tunable
+/// first-person records, so edits to the loaded art show on the next draw.
 /// </remarks>
 internal sealed class DaggerfallHeldArt
 {
     /// <summary>The container's file name, installed beside the product.</summary>
     internal const string ContainerName = "first-person.rpak";
 
-    /// <summary>The art's description inside the container.</summary>
-    internal const string DocumentPath = "first-person/held.json";
+    /// <summary>The held definition: a content-root path, so <c>content/worldrpg/first-person/</c> in the repository.</summary>
+    internal const string DocumentPath = "worldrpg/first-person/daggerfall.held.json";
 
     private DaggerfallHeldArt(ProductContentBundle container, DaggerfallHeldArtDocument document)
     {
         Container = container;
         Document = document;
-        Stance = document.Look.Stance;
     }
 
     internal ProductContentBundle Container { get; }
 
     internal DaggerfallHeldArtDocument Document { get; }
 
-    internal HeldStance Stance { get; }
+    internal HeldStance Stance => Document.Look.Stance;
 
     /// <summary>Whether this art draws the classic weapon visual <paramref name="resourceId"/>.</summary>
     internal bool Draws(string resourceId) => Document.Weapons.Contains(resourceId, StringComparer.Ordinal);
@@ -50,24 +50,24 @@ internal sealed class DaggerfallHeldArt
     internal static DaggerfallHeldArt? For(ResolvedGameComposition composition)
     {
         ArgumentNullException.ThrowIfNull(composition);
-        return composition.Installed.FirstOrDefault(installed => installed.Name == ContainerName)?.Container is { } container ? Read(container) : null;
+        return composition.Installed.FirstOrDefault(installed => installed.Name == ContainerName)?.Container is { } container
+            ? Read(container, composition.Content.ReadBytes(DocumentPath)) : null;
     }
 
-    /// <summary>Reads and checks the art's description.</summary>
-    /// <exception cref="InvalidDataException">The description is missing, unreadable, or names what cannot be drawn.</exception>
-    internal static DaggerfallHeldArt Read(ProductContentBundle container)
+    /// <summary>Reads and checks the held definition against the container's models.</summary>
+    /// <exception cref="InvalidDataException">The definition is unreadable, or names what cannot be drawn.</exception>
+    internal static DaggerfallHeldArt Read(ProductContentBundle container, ReadOnlyMemory<byte> definition)
     {
         ArgumentNullException.ThrowIfNull(container);
-        string source = $"{ContainerName}:{DocumentPath}";
         DaggerfallHeldArtDocument document;
         try
         {
-            document = JsonSerializer.Deserialize(container.ReadBytes(DocumentPath).Span, DaggerfallHeldArtJson.Default.DaggerfallHeldArtDocument)
-                ?? throw new InvalidDataException($"{source} is empty.");
+            document = JsonSerializer.Deserialize(definition.Span, DaggerfallHeldArtJson.Default.DaggerfallHeldArtDocument)
+                ?? throw new InvalidDataException($"{DocumentPath} is empty.");
         }
-        catch (Exception exception) when (exception is JsonException or FileNotFoundException)
+        catch (JsonException exception)
         {
-            throw new InvalidDataException($"{source} cannot be read: {exception.Message}", exception);
+            throw new InvalidDataException($"{DocumentPath} cannot be read: {exception.Message}", exception);
         }
         List<string> problems = [];
         void Add(IEnumerable<HeldProblem> found, string under) => problems.AddRange(found.Select(problem => $"{problem.Under(under).Field}: {problem.Message}"));
@@ -78,14 +78,14 @@ internal sealed class DaggerfallHeldArt
         foreach (string action in document.Motion.Tracks.Keys.Where(action => !NormalizedClassicWeapon.StrikeActions.Contains(action)))
             problems.Add($"motion.tracks.{action}: is not a classic strike action ({string.Join(", ", NormalizedClassicWeapon.StrikeActions)}).");
         foreach (string model in new[] { document.Rig.Model, document.Look.Model }.Where(model => !container.Entries.ToArray().Any(entry => entry.Path == model)))
-            problems.Add($"'{model}' is not in the container.");
+            problems.Add($"'{model}' is not in {ContainerName}.");
         return problems.Count == 0
             ? new DaggerfallHeldArt(container, document)
-            : throw new InvalidDataException($"{source}: {string.Join(" ", problems)}");
+            : throw new InvalidDataException($"{DocumentPath}: {string.Join(" ", problems)}");
     }
 }
 
-/// <summary>The first-person art's description (<see cref="DaggerfallHeldArt.DocumentPath"/>).</summary>
+/// <summary>The held definition (<see cref="DaggerfallHeldArt.DocumentPath"/>).</summary>
 /// <param name="Weapons">The classic weapon visuals (resource ids) the look replaces.</param>
 /// <param name="Rig">The arms model and how to drive it; its model is a container path.</param>
 /// <param name="Arms">The shoulder, elbow pole, default hold and hand closures.</param>
@@ -96,9 +96,13 @@ internal sealed record DaggerfallHeldArtDocument(IReadOnlyList<string> Weapons, 
 /// <summary>
 /// A held weapon: its model (a container path, already in look space: origin at the grip, length along -Z,
 /// up side +Y), the stance that seats it at rest, the point the hand holds (look space) and how the hand is
-/// turned on it (<see cref="HandAim.Hold"/>, degrees).
+/// turned on it (<see cref="HandAim.Hold"/>, degrees). The grip and hold are tuned in place.
 /// </summary>
-internal sealed record DaggerfallHeldLook(string Model, HeldStance Stance, Vector3 Grip, Vector3 Hold);
+internal sealed record DaggerfallHeldLook(string Model, HeldStance Stance, Vector3 Grip, Vector3 Hold)
+{
+    public Vector3 Grip { get; set; } = Grip;
+    public Vector3 Hold { get; set; } = Hold;
+}
 
 /// <summary>A <see cref="Vector3"/> as three numbers, <c>[x, y, z]</c>.</summary>
 internal sealed class DaggerfallVector3Json : JsonConverter<Vector3>

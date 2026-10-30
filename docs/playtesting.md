@@ -128,6 +128,26 @@ For example, to reach the Temple of Kynareth's trainer from anywhere:
 `world.enter Charing "Temple of Kynareth"`, then `world.find training`, then
 `world.goto Actor:<id>`.
 
+The motion viewer draws the 3D first-person art (`viewmodel.style` `held` or
+`heldRetro`, with `local/first-person.rpak` installed; `scripts/fp-arms/README.md`)
+through the game's own held viewmodel, without the click attack's random strike. A
+look is a classic weapon visual the art draws (`weapon.dagger.steel`) and an action
+one of its classic strikes with motion (`strikeDown`). It shows the look whatever
+the hands wield; swings still land on their hidden sprites. A strike is timed as
+play times it at the visual's authored frame rate, with the hit on the melee hit frame.
+
+| Command | What it does |
+|---|---|
+| `held.motion LOOK ACTION` | Shows the look at rest in the viewer's hand (main at first) with the strike, and lists its keys: phase, moment, time, curve and pose. |
+| `held.motion.hand HAND` | Shows it in the `main` or `off` hand (mirrored). |
+| `held.motion.key N` | Holds key N's pose exactly (-1 is rest). |
+| `held.motion.next` / `held.motion.prev` | Holds the next or previous key, through rest. |
+| `held.motion.play SPEED` | Plays the strike from rest at SPEED (1 as in play, 0.25 a quarter; 0.01 to 4). |
+| `held.motion.at SECONDS` | Shows the strike paused SECONDS after its start, as the Engine plays it (`heldRetro` holds each classic frame's sample). |
+| `held.motion.off` | Gives the hands back what they wield. Closing the developer tools does this too. |
+
+Without the container, or under `classic`, each command answers why and how to fix it.
+
 ## Developer tools
 
 The **`** key in play, or the game menu's **Developer tools**, opens the Engine's
@@ -149,6 +169,17 @@ when closed. Its tabs:
   - **Overlays:** a checkbox per set. A ruleset set is built only while it is on
     (`world.overlay-on` / `world.overlay-off`) and drawn by
     `engine.inspect.overlay show set NAME`.
+- **Workbench:** the first-person workbench, the Engine's tunables panel over the
+  motion viewer. Its choosers pick the look, strike and hand; its timeline holds a
+  key, scrubs to a moment and plays at 0.1× to 2×; its values are the look's stance
+  and the hand's grip and hold on it, each key's phase, moment and curve, the held
+  key's pose, and the arms' shoulder and elbow pole and the rig's turn, scale and
+  palm. A value shows at once on the loaded art. **Save** writes the changed values
+  into the authored held definition, `content/worldrpg/first-person/daggerfall.held.json`,
+  keeping the file's other bytes; **Reset** sets them back to the file's. The
+  console takes the same as `tunables.describe`, `tunables.set ID VALUE`,
+  `tunables.diff` and `tunables.save PATH SHA256`. It shows nothing but a notice
+  without the container or under `classic`.
 - **Console, View, Scene, Metrics:** the Engine's own panels. The View pane frames
   the inspection targets `player`, `dialogue` (the person spoken to) and `door` (the
   nearest door or portal).
@@ -182,7 +213,11 @@ Engine module with current-session delegates. The developer commands are Kit's
 resolves places, buildings and targets. The overlay sets are Kit's
 `DeveloperInspectionDebugModule` over `IDeveloperInspectionSession`, with the
 Engine's `InspectionTargetsDebugModule` and `SpatialClearanceDebugModule`; Dagger
-builds each set from its owners at presentation. The panel is `src/ui/developer.ts`. Kit defines the optional session
+builds each set from its owners at presentation. The motion viewer is Kit's
+`DeveloperHeldDebugModule` over `IDeveloperHeldSession`, and the Workbench tab the
+Engine's `TunablesDebugModule` over the same session; Dagger's
+`DaggerfallHeldWorkbench` drives the site's `DaggerfallHeldViewmodel` and
+`DaggerfallHeldTunables` binds each value to the held definition. The panel is `src/ui/developer.ts`. Kit defines the optional session
 interface and read-only targeting mechanisms. Dagger supplies live ruleset facts,
 control mappings, hostility, equipment and animation policy. Crew owns bounded
 input, time coordination and capture. Querying does not activate targets, spend

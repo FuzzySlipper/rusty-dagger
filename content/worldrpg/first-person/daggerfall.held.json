@@ -1,0 +1,359 @@
+{
+  "weapons": ["weapon.dagger.steel"],
+  "rig": {
+    "model": "first-person/arms.glb",
+    "clip": "grip",
+    "turn": [0, 0, 0],
+    "scale": 1,
+    "main": {
+      "upper": "R_Upperarm",
+      "lower": "R_Forearm",
+      "hand": "R_Hand",
+      "fingers": [
+        ["R_Index1", "R_Index2", "R_Index3"],
+        ["R_Middle1", "R_Middle2", "R_Middle3"],
+        ["R_Ring1", "R_Ring2", "R_Ring3"],
+        ["R_Pinky1", "R_Pinky2", "R_Pinky3"]
+      ],
+      "thumb": ["R_Thumb1", "R_Thumb2", "R_Thumb3"],
+      "twist": [
+        {
+          "joint": "R_ForearmTwist1",
+          "share": 0.45
+        },
+        {
+          "joint": "R_ForearmTwist2",
+          "share": 0.85
+        }
+      ]
+    },
+    "off": {
+      "upper": "L_Upperarm",
+      "lower": "L_Forearm",
+      "hand": "L_Hand",
+      "fingers": [
+        ["L_Index1", "L_Index2", "L_Index3"],
+        ["L_Middle1", "L_Middle2", "L_Middle3"],
+        ["L_Ring1", "L_Ring2", "L_Ring3"],
+        ["L_Pinky1", "L_Pinky2", "L_Pinky3"]
+      ],
+      "thumb": ["L_Thumb1", "L_Thumb2", "L_Thumb3"],
+      "twist": [
+        {
+          "joint": "L_ForearmTwist1",
+          "share": 0.45
+        },
+        {
+          "joint": "L_ForearmTwist2",
+          "share": 0.85
+        }
+      ]
+    },
+    "digits": "Native",
+    "palm": [-0.006, 0.085, -0.035],
+    "grip": {
+      "main": {
+        "fingers": [
+          [0, 1, 0],
+          [1, 0, -1],
+          [3, 0, -4],
+          [7, 0, -7]
+        ],
+        "thumb": [
+          [0, -5],
+          [-2, 0],
+          [0, 1]
+        ]
+      }
+    }
+  },
+  "arms": {
+    "shoulder": [0.2, -0.265, 0.05],
+    "pole": [0.5, -0.75, 0.05],
+    "hold": [19, -97, -14],
+    "hands": {
+      "close": {
+        "fingers": [2, 2, 2],
+        "thumb": [
+          [1, -1],
+          [2, 0],
+          [2, 0]
+        ]
+      },
+      "open": {
+        "fingers": [-62, -70, -45],
+        "thumb": [
+          [0, 10],
+          [-70, 0],
+          [-70, 0]
+        ]
+      },
+      "pose": {
+        "fingers": [
+          [62, 70, 45],
+          [62, 70, 45],
+          [62, 70, 45],
+          [62, 69, 45]
+        ],
+        "thumb": [
+          [10, 21],
+          [26, -72],
+          [-23, -75]
+        ]
+      }
+    }
+  },
+  "look": {
+    "model": "first-person/dagger.glb",
+    "stance": {
+      "grip": [0.1151, -0.253, -0.3262],
+      "toward": [0.2909, 0.1763, -0.5127],
+      "up": [0.0309, -0.409, -0.912]
+    },
+    "grip": [0.0154, -0.00821, -0.01057],
+    "hold": [13.39, -90.0, 15.05]
+  },
+  "motion": {
+    "poses": {
+      "rest": {
+        "position": [0, 0, 0],
+        "rotation": [0, 0, 0]
+      },
+      "strikeDown-01": {
+        "position": [-0.0023, 0.0008, -0.005],
+        "rotation": [0.5, -1.68, 0.03]
+      },
+      "strikeDown-02": {
+        "position": [-0.0172, 0.0332, -0.0105],
+        "rotation": [8.55, -5.31, 2.4]
+      },
+      "strikeDown-03": {
+        "position": [-0.0321, 0.0876, -0.016],
+        "rotation": [25.04, -2.28, 0.93]
+      },
+      "strikeDown-04": {
+        "position": [-0.0496, 0.1241, 0.0019],
+        "rotation": [22.77, -6.35, -5.54]
+      },
+      "strikeDown-05": {
+        "position": [-0.0516, 0.1656, -0.05],
+        "rotation": [42.73, 1.34, -24.92]
+      },
+      "strikeDown-06": {
+        "position": [-0.0321, 0.1873, -0.0884],
+        "rotation": [57.0, -2.31, -70.07]
+      },
+      "strikeDown-07": {
+        "position": [-0.0142, 0.1948, -0.1016],
+        "rotation": [61.64, -11.65, -110.16]
+      },
+      "strikeDown-08": {
+        "position": [-0.0173, 0.1937, -0.1015],
+        "rotation": [61.65, -15.55, -122.05]
+      },
+      "strikeDown-09": {
+        "position": [-0.0189, 0.1916, -0.102],
+        "rotation": [59.28, -15.75, -111.18]
+      },
+      "strikeDown-10": {
+        "position": [-0.0343, 0.1899, -0.0992],
+        "rotation": [53.78, -14.75, -87.86]
+      },
+      "strikeDown-11": {
+        "position": [-0.0375, 0.1935, -0.0968],
+        "rotation": [42.82, -10.77, -79.67]
+      },
+      "strikeDown-12": {
+        "position": [-0.0625, 0.0687, -0.1265],
+        "rotation": [23.93, 45.68, -8.8]
+      },
+      "strikeDown-13": {
+        "position": [-0.0656, -0.0305, -0.1317],
+        "rotation": [-9.93, 15.71, 16.7]
+      },
+      "strikeDown-14": {
+        "position": [-0.0832, -0.0509, -0.125],
+        "rotation": [-19.65, 41.99, -10.84]
+      },
+      "strikeDown-15": {
+        "position": [-0.0835, -0.0506, -0.1249],
+        "rotation": [-20.29, 40.22, -9.33]
+      },
+      "strikeDown-16": {
+        "position": [-0.0814, -0.0651, -0.1233],
+        "rotation": [-30.88, 29.3, -0.88]
+      },
+      "strikeDown-17": {
+        "position": [-0.0769, -0.0816, -0.1188],
+        "rotation": [-41.27, 19.04, 8.13]
+      },
+      "strikeDown-18": {
+        "position": [-0.052, -0.1206, -0.079],
+        "rotation": [-67.5, -38.65, 69.35]
+      },
+      "strikeDown-19": {
+        "position": [-0.0054, -0.057, -0.0588],
+        "rotation": [-27.2, -1.08, 18.81]
+      },
+      "strikeDown-20": {
+        "position": [-0.0008, 0.0012, 0.0028],
+        "rotation": [-0.53, -0.13, 0.03]
+      },
+      "strikeDown-21": {
+        "position": [-0.0003, 0.0002, 0.0006],
+        "rotation": [-0.14, -0.23, 0.11]
+      }
+    },
+    "tracks": {
+      "strikeDown": [
+        {
+          "pose": "strikeDown-01",
+          "phase": "Windup",
+          "at": 0.1136,
+          "ease": "Linear",
+          "grip": 0
+        },
+        {
+          "pose": "strikeDown-02",
+          "phase": "Windup",
+          "at": 0.1818,
+          "ease": "Linear",
+          "grip": 0
+        },
+        {
+          "pose": "strikeDown-03",
+          "phase": "Windup",
+          "at": 0.25,
+          "ease": "Linear",
+          "grip": 0
+        },
+        {
+          "pose": "strikeDown-04",
+          "phase": "Windup",
+          "at": 0.2727,
+          "ease": "Linear",
+          "grip": 0
+        },
+        {
+          "pose": "strikeDown-05",
+          "phase": "Windup",
+          "at": 0.3409,
+          "ease": "Linear",
+          "grip": 0
+        },
+        {
+          "pose": "strikeDown-06",
+          "phase": "Windup",
+          "at": 0.4091,
+          "ease": "Linear",
+          "grip": 0
+        },
+        {
+          "pose": "strikeDown-07",
+          "phase": "Windup",
+          "at": 0.4773,
+          "ease": "Linear",
+          "grip": 0
+        },
+        {
+          "pose": "strikeDown-08",
+          "phase": "Windup",
+          "at": 0.5455,
+          "ease": "Linear",
+          "grip": 0
+        },
+        {
+          "pose": "strikeDown-09",
+          "phase": "Windup",
+          "at": 0.6136,
+          "ease": "Linear",
+          "grip": 0
+        },
+        {
+          "pose": "strikeDown-10",
+          "phase": "Windup",
+          "at": 0.7045,
+          "ease": "Linear",
+          "grip": 0
+        },
+        {
+          "pose": "strikeDown-11",
+          "phase": "Windup",
+          "at": 0.9773,
+          "ease": "Linear",
+          "grip": 0
+        },
+        {
+          "pose": "strikeDown-12",
+          "phase": "Windup",
+          "at": 1.0,
+          "ease": "Linear",
+          "grip": 0
+        },
+        {
+          "pose": "strikeDown-13",
+          "phase": "Commit",
+          "at": 0.0333,
+          "ease": "Linear",
+          "grip": 0
+        },
+        {
+          "pose": "strikeDown-14",
+          "phase": "Commit",
+          "at": 0.0667,
+          "ease": "Linear",
+          "grip": 0
+        },
+        {
+          "pose": "strikeDown-15",
+          "phase": "Commit",
+          "at": 0.5667,
+          "ease": "Linear",
+          "grip": 0
+        },
+        {
+          "pose": "strikeDown-16",
+          "phase": "Commit",
+          "at": 0.7,
+          "ease": "Linear",
+          "grip": 0
+        },
+        {
+          "pose": "strikeDown-17",
+          "phase": "Commit",
+          "at": 0.7667,
+          "ease": "Linear",
+          "grip": 0
+        },
+        {
+          "pose": "strikeDown-18",
+          "phase": "Commit",
+          "at": 1.0,
+          "ease": "Linear",
+          "grip": 0
+        },
+        {
+          "pose": "strikeDown-19",
+          "phase": "Recovery",
+          "at": 0.4667,
+          "ease": "Linear",
+          "grip": 0
+        },
+        {
+          "pose": "strikeDown-20",
+          "phase": "Recovery",
+          "at": 0.5333,
+          "ease": "Linear",
+          "grip": 0
+        },
+        {
+          "pose": "strikeDown-21",
+          "phase": "Recovery",
+          "at": 1.0,
+          "ease": "Linear",
+          "grip": 0
+        }
+      ]
+    }
+  }
+}
