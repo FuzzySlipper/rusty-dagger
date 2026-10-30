@@ -60,7 +60,7 @@ blender -b --factory-startup --python scripts/fp-arms/build-dagger.py -- local/f
   (CC0 1.0), kept in asset-pipeline (`tools/fps-arms/packs/psx-drillimpact/`) and adopted by its `tools/fps-arms/adopt.py`
   in the Daggerfall look (`sets/psx-dagger.json`): the pack's low-poly mesh, skeleton and clips with forearm twist
   joints added, its painted bare arms repainted as a brown leather glove and grey sleeve after the classic unarmed
-  WEAPON10 frames, the glove's edge raised where it meets the sleeve. The rig holds with the pack's own `knife_idle` clip, so its grip
+  WEAPON10 frames, the glove's edge cut into the mesh at the wrist. The rig holds with the pack's own `knife_idle` clip, so its grip
   calibration is zero, and its palm offset is where that clip holds its knife. `arms-provenance.json` records the
   asset-pipeline commit the build used (and any uncommitted changes under its arms and capture tools) and the GLB's
   sha256. Change the look in asset-pipeline, not here.
