@@ -1,0 +1,229 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Hand-painted 1990s fantasy RPG effect illustration, luminous opaque gouache-like colour modelling, a bright core falling to darker saturated edges, ragged painted edges and a few fine flecks. Original local colours. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded fantasy RPG effect art in a restrained palette. Keep the source's silhouette, size relationship between its parts, colours and the arrangement of its bright and dark regions: this is one frame of a short animation, so show exactly this stage and do not make it a finished explosion, ball or splash if the source is smaller or fainter. No creature, hand, text, border, scenery or second object.",
+  "presentation": "One isolated effect on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the effect. The whole effect visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Effects x1 / Qwen then retro",
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "fx",
+      "model": "krea2-turbo",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ],
+  "task": "Task: Redraw a very small classic fantasy RPG combat or magic effect sprite as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+  "items": [
+    {
+      "id": "blood-0",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-000-frame-000-source.png",
+      "content": "Frame 1 of 5 of a blood splash from a wound, fading out. A small round blot of bright red blood with a darker red edge and two pale-pink highlights, aspect about 1:1. Preserve the stage shown here, its size relative to the frame and its colours. No body, weapon, face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that splashes out and fades. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve glossy wet red, thin spikes and fine droplets.",
+      "name": "blood-0 (64x57)"
+    },
+    {
+      "id": "blood-1",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-000-frame-001-source.png",
+      "content": "Frame 2 of 5 of a blood splash from a wound, fading out. A fresh blood splash: a bright red centre throwing out several thin ragged red spikes and drips, mostly downward and to the right, aspect about 1.1:1. Preserve the stage shown here, its size relative to the frame and its colours. No body, weapon, face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that splashes out and fades. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve glossy wet red, thin spikes and fine droplets.",
+      "name": "blood-1 (64x57)"
+    },
+    {
+      "id": "blood-2",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-000-frame-002-source.png",
+      "content": "Frame 3 of 5 of a blood splash from a wound, fading out. A larger blood splash: dark red with bright red streaks, many thin ragged spikes and drips flung outward, aspect about 1.1:1. Preserve the stage shown here, its size relative to the frame and its colours. No body, weapon, face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that splashes out and fades. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve glossy wet red, thin spikes and fine droplets.",
+      "name": "blood-2 (64x57)"
+    },
+    {
+      "id": "blood-3",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-000-frame-003-source.png",
+      "content": "Frame 4 of 5 of a blood splash from a wound, fading out. A thinning blood splash: separate thin red streaks and droplets in a loose ring, with an empty middle, aspect about 1.1:1. Preserve the stage shown here, its size relative to the frame and its colours. No body, weapon, face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that splashes out and fades. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve glossy wet red, thin spikes and fine droplets.",
+      "name": "blood-3 (64x57)"
+    },
+    {
+      "id": "blood-4",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-000-frame-004-source.png",
+      "content": "Frame 5 of 5 of a blood splash from a wound, fading out. A very faint blood spatter: a few small dull red specks and short streaks loosely scattered, almost gone, aspect about 1.1:1. Preserve the stage shown here, its size relative to the frame and its colours. No body, weapon, face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that splashes out and fades. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve glossy wet red, thin spikes and fine droplets.",
+      "name": "blood-4 (64x57)"
+    },
+    {
+      "id": "corpse",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-001-frame-000-source.png",
+      "content": "A slain fighter lying on his back on a pool of dark red blood, seen from a low side view, aspect about 2.4:1: only green boots, brown and tan clothing, a dark belt and pale hands are readable at this size, with the dark red blood pool spreading beneath and past the body. Preserve the low wide shape, the green boots and the red pool. No face detail, text or symbol.",
+      "uncertainty": "The source is a very small 86 by 36 pixel pile of a fallen body; clothing detail is mostly guessed. Treat it as a generic slain fighter.",
+      "invention": "Resolve cloth folds, leather boots and the glossy blood pool without adding other objects.",
+      "name": "corpse (86x36)"
+    },
+    {
+      "id": "remains",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-004-frame-000-source.png",
+      "content": "A heap of grey bones with a human skull at the upper centre, one long thigh bone leaning upright to the right of the skull, a short bone lying horizontally in front, and ribs and small bones scattered at the left, aspect about 2.1:1. Weathered pale grey-white bone with dark grey shadow. Preserve the arrangement of the skull and bones. No flesh, text or symbol.",
+      "uncertainty": "The source is a 62 by 29 pixel pile of bones; the skull faces the viewer and the other bones are loosely read.",
+      "invention": "Resolve bone surfaces, cracks and shadows without adding other objects.",
+      "name": "remains (62x29)"
+    },
+    {
+      "id": "dust-0",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-002-frame-000-source.png",
+      "content": "Frame 1 of 5 of a puff of dust kicked up, fading out. A tiny puff of pale grey and white dust: a few separate light grey specks clustered around a small white centre, aspect about 1:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that disperses and fades. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft dust grains. Keep it abstract dust.",
+      "name": "dust-0 (32x31)"
+    },
+    {
+      "id": "dust-1",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-002-frame-001-source.png",
+      "content": "Frame 2 of 5 of a puff of dust kicked up, fading out. A thin sparse ring of dull grey dust specks, drifting outward, aspect about 1:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that disperses and fades. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft dust grains. Keep it abstract dust.",
+      "name": "dust-1 (32x31)"
+    },
+    {
+      "id": "dust-2",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-002-frame-002-source.png",
+      "content": "Frame 3 of 5 of a puff of dust kicked up, fading out. A wider sparse scatter of faint grey dust specks, aspect about 1:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that disperses and fades. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft dust grains. Keep it abstract dust.",
+      "name": "dust-2 (32x31)"
+    },
+    {
+      "id": "dust-3",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-002-frame-003-source.png",
+      "content": "Frame 4 of 5 of a puff of dust kicked up, fading out. A very sparse, wide scatter of a few faint grey specks, almost gone, aspect about 1:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that disperses and fades. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft dust grains. Keep it abstract dust.",
+      "name": "dust-3 (32x31)"
+    },
+    {
+      "id": "dust-4",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-002-frame-004-source.png",
+      "content": "Frame 5 of 5 of a puff of dust kicked up, fading out. Almost nothing: a handful of faint grey specks. Do not add anything else. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that disperses and fades. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft dust grains. Keep it abstract dust.",
+      "name": "dust-4 (32x31)"
+    },
+    {
+      "id": "coin-0",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-006-frame-000-source.png",
+      "content": "Frame 1 of 8 of a pair of small gold coins tumbling in the air, a loop. Small flat gold coins, side by side or one above the other as in the source, each shown at a different angle: a broad rounded oval face or a thin edge-on sliver, olive gold with a darker olive rim and a bright gold highlight. Preserve how many coins there are, their angles and their sizes in this frame. No hand, text or symbol.",
+      "uncertainty": "This is one frame of a tumbling loop of small gold coins; the count and angles vary between frames. Each frame is drawn on its own, so keep to this frame's arrangement.",
+      "invention": "Resolve metal shading and a bright rim. Keep it simple coins.",
+      "name": "coin-0 (49x35)"
+    },
+    {
+      "id": "coin-1",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-006-frame-001-source.png",
+      "content": "Frame 2 of 8 of a pair of small gold coins tumbling in the air, a loop. Small flat gold coins, side by side or one above the other as in the source, each shown at a different angle: a broad rounded oval face or a thin edge-on sliver, olive gold with a darker olive rim and a bright gold highlight. Preserve how many coins there are, their angles and their sizes in this frame. No hand, text or symbol.",
+      "uncertainty": "This is one frame of a tumbling loop of small gold coins; the count and angles vary between frames. Each frame is drawn on its own, so keep to this frame's arrangement.",
+      "invention": "Resolve metal shading and a bright rim. Keep it simple coins.",
+      "name": "coin-1 (49x35)"
+    },
+    {
+      "id": "coin-2",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-006-frame-002-source.png",
+      "content": "Frame 3 of 8 of a pair of small gold coins tumbling in the air, a loop. Small flat gold coins, side by side or one above the other as in the source, each shown at a different angle: a broad rounded oval face or a thin edge-on sliver, olive gold with a darker olive rim and a bright gold highlight. Preserve how many coins there are, their angles and their sizes in this frame. No hand, text or symbol.",
+      "uncertainty": "This is one frame of a tumbling loop of small gold coins; the count and angles vary between frames. Each frame is drawn on its own, so keep to this frame's arrangement.",
+      "invention": "Resolve metal shading and a bright rim. Keep it simple coins.",
+      "name": "coin-2 (49x35)"
+    },
+    {
+      "id": "coin-3",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-006-frame-003-source.png",
+      "content": "Frame 4 of 8 of a pair of small gold coins tumbling in the air, a loop. Small flat gold coins, side by side or one above the other as in the source, each shown at a different angle: a broad rounded oval face or a thin edge-on sliver, olive gold with a darker olive rim and a bright gold highlight. Preserve how many coins there are, their angles and their sizes in this frame. No hand, text or symbol.",
+      "uncertainty": "This is one frame of a tumbling loop of small gold coins; the count and angles vary between frames. Each frame is drawn on its own, so keep to this frame's arrangement.",
+      "invention": "Resolve metal shading and a bright rim. Keep it simple coins.",
+      "name": "coin-3 (49x35)"
+    },
+    {
+      "id": "coin-4",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-006-frame-004-source.png",
+      "content": "Frame 5 of 8 of a pair of small gold coins tumbling in the air, a loop. Small flat gold coins, side by side or one above the other as in the source, each shown at a different angle: a broad rounded oval face or a thin edge-on sliver, olive gold with a darker olive rim and a bright gold highlight. Preserve how many coins there are, their angles and their sizes in this frame. No hand, text or symbol.",
+      "uncertainty": "This is one frame of a tumbling loop of small gold coins; the count and angles vary between frames. Each frame is drawn on its own, so keep to this frame's arrangement.",
+      "invention": "Resolve metal shading and a bright rim. Keep it simple coins.",
+      "name": "coin-4 (49x35)"
+    },
+    {
+      "id": "coin-5",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-006-frame-005-source.png",
+      "content": "Frame 6 of 8 of a pair of small gold coins tumbling in the air, a loop. Small flat gold coins, side by side or one above the other as in the source, each shown at a different angle: a broad rounded oval face or a thin edge-on sliver, olive gold with a darker olive rim and a bright gold highlight. Preserve how many coins there are, their angles and their sizes in this frame. No hand, text or symbol.",
+      "uncertainty": "This is one frame of a tumbling loop of small gold coins; the count and angles vary between frames. Each frame is drawn on its own, so keep to this frame's arrangement.",
+      "invention": "Resolve metal shading and a bright rim. Keep it simple coins.",
+      "name": "coin-5 (49x35)"
+    },
+    {
+      "id": "coin-6",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-006-frame-006-source.png",
+      "content": "Frame 7 of 8 of a pair of small gold coins tumbling in the air, a loop. Small flat gold coins, side by side or one above the other as in the source, each shown at a different angle: a broad rounded oval face or a thin edge-on sliver, olive gold with a darker olive rim and a bright gold highlight. Preserve how many coins there are, their angles and their sizes in this frame. No hand, text or symbol.",
+      "uncertainty": "This is one frame of a tumbling loop of small gold coins; the count and angles vary between frames. Each frame is drawn on its own, so keep to this frame's arrangement.",
+      "invention": "Resolve metal shading and a bright rim. Keep it simple coins.",
+      "name": "coin-6 (49x35)"
+    },
+    {
+      "id": "coin-7",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-006-frame-007-source.png",
+      "content": "Frame 8 of 8 of a pair of small gold coins tumbling in the air, a loop. Small flat gold coins, side by side or one above the other as in the source, each shown at a different angle: a broad rounded oval face or a thin edge-on sliver, olive gold with a darker olive rim and a bright gold highlight. Preserve how many coins there are, their angles and their sizes in this frame. No hand, text or symbol.",
+      "uncertainty": "This is one frame of a tumbling loop of small gold coins; the count and angles vary between frames. Each frame is drawn on its own, so keep to this frame's arrangement.",
+      "invention": "Resolve metal shading and a bright rim. Keep it simple coins.",
+      "name": "coin-7 (49x35)"
+    }
+  ]
+}
