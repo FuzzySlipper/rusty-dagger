@@ -1,0 +1,167 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Highly detailed lurid pulp-fantasy character painting in the manner of 1970s and 80s paperback cover art (Frank Frazetta, Boris Vallejo): glossy airbrushed oil rendering, heroic strongly modelled anatomy with every muscle group, tendon, vein and knuckle defined, fine skin detail and sheen, warm rim light against deep shadow, sharp specular highlights, rich saturated colour. Crisp, confident, finely detailed forms rather than flat broad shapes; keep the original local colours. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy RPG character art in a restrained palette. Keep the source's pose, skin tone, proportions, build and any garment colour. A standing human figure seen from the front, headless: the figure ends in a flat-cut neck stump at the top, and no head, hair, face or hood is drawn. No weapon, armour, clothing beyond what the source shows, text, border, scenery, shadow or second figure.",
+  "presentation": "One isolated figure on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the figure. The whole figure visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Paper doll bodies b1-female",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "bodies",
+      "model": "qwen-edit",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "conditioning": "reference"
+    }
+  ],
+  "task": "Task: Redraw a very small classic fantasy RPG paper-doll body as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+  "items": [
+    {
+      "id": "f0-bare",
+      "directory": "bodies/body10i0",
+      "image": "body10i0-record-000-frame-000-source.png",
+      "content": "One headless standing slender female human body seen from the front, aspect about 1:2.1 (tall). Warm tan skin, arms hanging with the fists loosely closed near the hips, bare legs and bare feet planted slightly apart. The figure is bare, with smooth plain anatomy and no underwear, the hands held loosely in front. Preserve the pose and proportions. The figure ends in a flat-cut neck stump at the top. No head, hair, ears, horns, clothing other than any stated, armour or weapon.",
+      "uncertainty": "The figure is a headless base body for a layered paper doll: the head, armour and clothing are separate layers. Sub-pixel anatomy is reconstructed; the pose and colours are not changed.",
+      "invention": "Resolve believable anatomy, skin or fur or scale detail, fingers, toes.",
+      "name": "f0-bare (66x143)"
+    },
+    {
+      "id": "f1-bare",
+      "directory": "bodies/body11i0",
+      "image": "body11i0-record-000-frame-000-source.png",
+      "content": "One headless standing slender female human body seen from the front, aspect about 1:2.1 (tall). Deep reddish dark-brown skin, arms hanging with the fists loosely closed near the hips, bare legs and bare feet planted slightly apart. The figure is bare, with smooth plain anatomy and no underwear, the hands held loosely in front. Preserve the pose and proportions. The figure ends in a flat-cut neck stump at the top. No head, hair, ears, horns, clothing other than any stated, armour or weapon.",
+      "uncertainty": "The figure is a headless base body for a layered paper doll: the head, armour and clothing are separate layers. Sub-pixel anatomy is reconstructed; the pose and colours are not changed.",
+      "invention": "Resolve believable anatomy, skin or fur or scale detail, fingers, toes.",
+      "name": "f1-bare (66x143)"
+    },
+    {
+      "id": "f1-clad",
+      "directory": "bodies/body11i1",
+      "image": "body11i1-record-000-frame-000-source.png",
+      "content": "One headless standing slender female human body seen from the front, aspect about 1:2.1 (tall). Deep reddish dark-brown skin, arms hanging with the fists loosely closed near the hips, bare legs and bare feet planted slightly apart. A blue cloth bikini top and small blue brief are worn. Preserve the pose, proportions and blue undergarment. The figure ends in a flat-cut neck stump at the top. No head, hair, ears, horns, clothing other than any stated, armour or weapon.",
+      "uncertainty": "The figure is a headless base body for a layered paper doll: the head, armour and clothing are separate layers. Sub-pixel anatomy is reconstructed; the pose and colours are not changed.",
+      "invention": "Resolve believable anatomy, skin or fur or scale detail, fingers, toes and the folds of the blue cloth.",
+      "name": "f1-clad (66x143)"
+    },
+    {
+      "id": "f2-bare",
+      "directory": "bodies/body12i0",
+      "image": "body12i0-record-000-frame-000-source.png",
+      "content": "One headless standing slender female human body seen from the front, aspect about 1:2.1 (tall). Pale sandy-tan skin, arms hanging with the fists loosely closed near the hips, bare legs and bare feet planted slightly apart. The figure is bare, with smooth plain anatomy and no underwear, the hands held loosely in front. Preserve the pose and proportions. The figure ends in a flat-cut neck stump at the top. No head, hair, ears, horns, clothing other than any stated, armour or weapon.",
+      "uncertainty": "The figure is a headless base body for a layered paper doll: the head, armour and clothing are separate layers. Sub-pixel anatomy is reconstructed; the pose and colours are not changed.",
+      "invention": "Resolve believable anatomy, skin or fur or scale detail, fingers, toes.",
+      "name": "f2-bare (66x143)"
+    },
+    {
+      "id": "f2-clad",
+      "directory": "bodies/body12i1",
+      "image": "body12i1-record-000-frame-000-source.png",
+      "content": "One headless standing slender female human body seen from the front, aspect about 1:2.1 (tall). Pale sandy-tan skin, arms hanging with the fists loosely closed near the hips, bare legs and bare feet planted slightly apart. A blue cloth bikini top and small blue brief are worn. Preserve the pose, proportions and blue undergarment. The figure ends in a flat-cut neck stump at the top. No head, hair, ears, horns, clothing other than any stated, armour or weapon.",
+      "uncertainty": "The figure is a headless base body for a layered paper doll: the head, armour and clothing are separate layers. Sub-pixel anatomy is reconstructed; the pose and colours are not changed.",
+      "invention": "Resolve believable anatomy, skin or fur or scale detail, fingers, toes and the folds of the blue cloth.",
+      "name": "f2-clad (66x143)"
+    },
+    {
+      "id": "f3-bare",
+      "directory": "bodies/body13i0",
+      "image": "body13i0-record-000-frame-000-source.png",
+      "content": "One headless standing slender female elf body seen from the front, aspect about 1:2.1 (tall). Ash blue-grey skin, arms hanging with the fists loosely closed near the hips, bare legs and bare feet planted slightly apart. The figure is bare, with smooth plain anatomy and no underwear, the hands held loosely in front. Preserve the pose and proportions. The figure ends in a flat-cut neck stump at the top. No head, hair, ears, horns, clothing other than any stated, armour or weapon.",
+      "uncertainty": "The figure is a headless base body for a layered paper doll: the head, armour and clothing are separate layers. Sub-pixel anatomy is reconstructed; the pose and colours are not changed.",
+      "invention": "Resolve believable anatomy, skin or fur or scale detail, fingers, toes.",
+      "name": "f3-bare (66x143)"
+    },
+    {
+      "id": "f3-clad",
+      "directory": "bodies/body13i1",
+      "image": "body13i1-record-000-frame-000-source.png",
+      "content": "One headless standing slender female elf body seen from the front, aspect about 1:2.1 (tall). Ash blue-grey skin, arms hanging with the fists loosely closed near the hips, bare legs and bare feet planted slightly apart. A blue cloth bikini top and small blue brief are worn. Preserve the pose, proportions and blue undergarment. The figure ends in a flat-cut neck stump at the top. No head, hair, ears, horns, clothing other than any stated, armour or weapon.",
+      "uncertainty": "The figure is a headless base body for a layered paper doll: the head, armour and clothing are separate layers. Sub-pixel anatomy is reconstructed; the pose and colours are not changed.",
+      "invention": "Resolve believable anatomy, skin or fur or scale detail, fingers, toes and the folds of the blue cloth.",
+      "name": "f3-clad (66x143)"
+    },
+    {
+      "id": "f4-bare",
+      "directory": "bodies/body14i0",
+      "image": "body14i0-record-000-frame-000-source.png",
+      "content": "One headless standing slender female elf body seen from the front, aspect about 1:2.1 (tall). Medium golden-brown skin, arms hanging with the fists loosely closed near the hips, bare legs and bare feet planted slightly apart. The figure is bare, with smooth plain anatomy and no underwear, the hands held loosely in front. Preserve the pose and proportions. The figure ends in a flat-cut neck stump at the top. No head, hair, ears, horns, clothing other than any stated, armour or weapon.",
+      "uncertainty": "The figure is a headless base body for a layered paper doll: the head, armour and clothing are separate layers. Sub-pixel anatomy is reconstructed; the pose and colours are not changed.",
+      "invention": "Resolve believable anatomy, skin or fur or scale detail, fingers, toes.",
+      "name": "f4-bare (66x143)"
+    },
+    {
+      "id": "f4-clad",
+      "directory": "bodies/body14i1",
+      "image": "body14i1-record-000-frame-000-source.png",
+      "content": "One headless standing slender female elf body seen from the front, aspect about 1:2.1 (tall). Medium golden-brown skin, arms hanging with the fists loosely closed near the hips, bare legs and bare feet planted slightly apart. A blue cloth bikini top and small blue brief are worn. Preserve the pose, proportions and blue undergarment. The figure ends in a flat-cut neck stump at the top. No head, hair, ears, horns, clothing other than any stated, armour or weapon.",
+      "uncertainty": "The figure is a headless base body for a layered paper doll: the head, armour and clothing are separate layers. Sub-pixel anatomy is reconstructed; the pose and colours are not changed.",
+      "invention": "Resolve believable anatomy, skin or fur or scale detail, fingers, toes and the folds of the blue cloth.",
+      "name": "f4-clad (66x143)"
+    },
+    {
+      "id": "f5-bare",
+      "directory": "bodies/body15i0",
+      "image": "body15i0-record-000-frame-000-source.png",
+      "content": "One headless standing slender female elf body seen from the front, aspect about 1:2.1 (tall). Light tan skin, arms hanging with the fists loosely closed near the hips, bare legs and bare feet planted slightly apart. The figure is bare, with smooth plain anatomy and no underwear, the hands held loosely in front. Preserve the pose and proportions. The figure ends in a flat-cut neck stump at the top. No head, hair, ears, horns, clothing other than any stated, armour or weapon.",
+      "uncertainty": "The figure is a headless base body for a layered paper doll: the head, armour and clothing are separate layers. Sub-pixel anatomy is reconstructed; the pose and colours are not changed.",
+      "invention": "Resolve believable anatomy, skin or fur or scale detail, fingers, toes.",
+      "name": "f5-bare (66x143)"
+    },
+    {
+      "id": "f5-clad",
+      "directory": "bodies/body15i1",
+      "image": "body15i1-record-000-frame-000-source.png",
+      "content": "One headless standing slender female elf body seen from the front, aspect about 1:2.1 (tall). Light tan skin, arms hanging with the fists loosely closed near the hips, bare legs and bare feet planted slightly apart. A blue cloth bikini top and small blue brief are worn. Preserve the pose, proportions and blue undergarment. The figure ends in a flat-cut neck stump at the top. No head, hair, ears, horns, clothing other than any stated, armour or weapon.",
+      "uncertainty": "The figure is a headless base body for a layered paper doll: the head, armour and clothing are separate layers. Sub-pixel anatomy is reconstructed; the pose and colours are not changed.",
+      "invention": "Resolve believable anatomy, skin or fur or scale detail, fingers, toes and the folds of the blue cloth.",
+      "name": "f5-clad (66x143)"
+    },
+    {
+      "id": "f6-bare",
+      "directory": "bodies/body16i0",
+      "image": "body16i0-record-000-frame-000-source.png",
+      "content": "One headless standing slender female cat-person body seen from the front, aspect about 1:2.1 (tall). Pale sandy tan fur-covered skin, arms hanging with the fists loosely closed near the hips, bare legs and bare feet planted slightly apart, and a thin curled tail hanging at the lower right behind the legs. The figure is bare, with smooth plain anatomy and no underwear, the hands held loosely in front. Preserve the pose and proportions. The figure ends in a flat-cut neck stump at the top. No head, hair, ears, horns, clothing other than any stated, armour or weapon.",
+      "uncertainty": "The figure is a headless base body for a layered paper doll: the head, armour and clothing are separate layers. Sub-pixel anatomy is reconstructed; the pose and colours are not changed. The fine fur texture is too small to read, so it is shown as short smooth fur.",
+      "invention": "Resolve believable anatomy, skin or fur or scale detail, fingers, toes.",
+      "name": "f6-bare (66x141)"
+    },
+    {
+      "id": "f6-clad",
+      "directory": "bodies/body16i1",
+      "image": "body16i1-record-000-frame-000-source.png",
+      "content": "One headless standing slender female cat-person body seen from the front, aspect about 1:2.1 (tall). Pale sandy tan fur-covered skin, arms hanging with the fists loosely closed near the hips, bare legs and bare feet planted slightly apart, and a thin curled tail hanging at the lower right behind the legs. A blue cloth bikini top and small blue brief are worn. Preserve the pose, proportions and blue undergarment. The figure ends in a flat-cut neck stump at the top. No head, hair, ears, horns, clothing other than any stated, armour or weapon.",
+      "uncertainty": "The figure is a headless base body for a layered paper doll: the head, armour and clothing are separate layers. Sub-pixel anatomy is reconstructed; the pose and colours are not changed. The fine fur texture is too small to read, so it is shown as short smooth fur.",
+      "invention": "Resolve believable anatomy, skin or fur or scale detail, fingers, toes and the folds of the blue cloth.",
+      "name": "f6-clad (66x141)"
+    },
+    {
+      "id": "f7-bare",
+      "directory": "bodies/body17i0",
+      "image": "body17i0-record-000-frame-000-source.png",
+      "content": "One headless standing slender female lizard-person body seen from the front, aspect about 1:2.1 (tall). Dark green scaly skin with a lighter yellow-green scaled band running down the chest and belly, arms hanging with the fists loosely closed near the hips, bare legs and bare feet planted slightly apart, clawed hands and feet, and a tail curling at the lower left behind the legs. The figure is bare, with smooth plain anatomy and no underwear, the hands held loosely in front. Preserve the pose and proportions. The figure ends in a flat-cut neck stump at the top. No head, hair, ears, horns, clothing other than any stated, armour or weapon.",
+      "uncertainty": "The figure is a headless base body for a layered paper doll: the head, armour and clothing are separate layers. Sub-pixel anatomy is reconstructed; the pose and colours are not changed. The scale pattern is too small to read, so it is shown as fine overlapping scales with the pale ventral band.",
+      "invention": "Resolve believable anatomy, skin or fur or scale detail, fingers, toes.",
+      "name": "f7-bare (66x141)"
+    }
+  ]
+}
