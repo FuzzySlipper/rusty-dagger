@@ -1,0 +1,328 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy RPG equipment illustration, opaque gouache-like colour modelling, broad painted planes, believable cloth folds and metal planes, sparse dry-brush marks, selective dark accents along occluding contours. Slightly irregular handmade edges, original local colours; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy RPG equipment art. Keep the source's silhouette, the parts of the body it covers, its pose and its local colours: do not tint every material brown. Draw only the garment or armour piece itself, as worn on an invisible, headless body: no skin, no body, head, hands or feet unless the source clearly shows them. No weapon, text, border, scenery, shadow or second figure.",
+  "presentation": "One isolated garment on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the garment. The whole garment visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Worn armor, male human / Qwen then retro",
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "worn",
+      "model": "krea2-turbo",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ],
+  "task": "Task: Redraw a very small classic fantasy RPG worn-equipment paper-doll layer as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+  "items": [
+    {
+      "id": "boots-000",
+      "directory": "armor/item-108-boots",
+      "image": "player/male-human/variant-00/texture-251-record-000-frame-000-source.png",
+      "content": "One pair of boots seen from the front, aspect about 1.3:1: two tall boots side by side, brown leather at the toes and heels with grey steel shin plates. Preserve the two-tone leather and steel make. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve leather stitching, steel plate edges and rivets.",
+      "name": "boots-000 (63x49)"
+    },
+    {
+      "id": "boots-001",
+      "directory": "armor/item-108-boots",
+      "image": "player/male-human/variant-01/texture-251-record-001-frame-000-source.png",
+      "content": "One pair of steel boots seen from the front, aspect about 1.5:1: two tall plain polished grey steel boots side by side with a rounded toe and a flared top. Preserve the plain grey steel colour. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve plate edges and steel highlights.",
+      "name": "boots-001 (63x42)"
+    },
+    {
+      "id": "boots-002",
+      "directory": "armor/item-108-boots",
+      "image": "player/male-human/variant-02/texture-251-record-002-frame-000-source.png",
+      "content": "One pair of steel boots seen from the front, aspect about 1.5:1: two tall grey steel boots side by side with thin yellow-gold trim at the top and on the toe and ankle bands. Preserve the gold trim on grey steel. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve plate edges, gold trim and steel highlights.",
+      "name": "boots-002 (63x42)"
+    },
+    {
+      "id": "cuirass-003",
+      "directory": "armor/item-102-cuirass",
+      "image": "player/male-human/variant-00/texture-251-record-003-frame-000-source.png",
+      "content": "One leather breastplate seen from the front, aspect about 0.75:1: a rounded brown leather chest piece with darker brown shading on the left and a notched shoulder line. Preserve the brown leather colour and rounded shape. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve leather grain, stitched seams and worn edges.",
+      "name": "cuirass-003 (38x50)"
+    },
+    {
+      "id": "cuirass-005",
+      "directory": "armor/item-102-cuirass",
+      "image": "player/male-human/variant-02/texture-251-record-005-frame-000-source.png",
+      "content": "One steel breastplate seen from the front, aspect about 0.8:1: grey steel plates with a dark underside, a rounded chest and a flared high collar edged with thin yellow-gold trim, gold trim also along the bottom edge. Preserve the gold trim on grey steel. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve plate edges, rivets and steel highlights.",
+      "name": "cuirass-005 (38x49)"
+    },
+    {
+      "id": "cuirass-006",
+      "directory": "armor/item-102-cuirass",
+      "image": "player/male-human/variant-03/texture-251-record-006-frame-000-source.png",
+      "content": "One banded steel cuirass seen from the front, aspect about 0.55:1 (taller than wide): grey steel in many overlapping horizontal bands down the torso, with a short skirt of hanging steel strips at the bottom. Preserve the overlapping bands and grey steel colour. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve plate edges, rivets and steel highlights.",
+      "name": "cuirass-006 (44x80)"
+    },
+    {
+      "id": "cuirass-007",
+      "directory": "armor/item-102-cuirass",
+      "image": "player/male-human/variant-04/texture-251-record-007-frame-000-source.png",
+      "content": "One chain-mail shirt seen from the front, aspect about 0.6:1: dark grey interlinked rings with lighter grey highlights, a short sleeveless torso with a rough ragged lower hem. Preserve the dark mail colour. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve individual rings and a rough hem.",
+      "name": "cuirass-007 (49x73)"
+    },
+    {
+      "id": "gauntlets-008",
+      "directory": "armor/item-103-gauntlets",
+      "image": "player/male-human/variant-00/texture-251-record-008-frame-000-source.png",
+      "content": "One pair of brown leather gauntlets seen from the front, aspect about 2.2:1: two clenched fists, side by side, in plain brown leather. Preserve the brown leather colour and the two clenched fists. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve leather grain, stitched seams and knuckle shaping.",
+      "name": "gauntlets-008 (65x30)"
+    },
+    {
+      "id": "gauntlets-009",
+      "directory": "armor/item-103-gauntlets",
+      "image": "player/male-human/variant-01/texture-251-record-009-frame-000-source.png",
+      "content": "One pair of steel gauntlets seen from the front, aspect about 2.2:1: two clenched fists, side by side, in grey steel with thin yellow-gold trim bands at the wrist. Preserve the grey steel with gold trim. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve plate edges, gold trim and steel highlights.",
+      "name": "gauntlets-009 (65x29)"
+    },
+    {
+      "id": "greaves-010",
+      "directory": "armor/item-104-greaves",
+      "image": "player/male-human/variant-00/texture-251-record-010-frame-000-source.png",
+      "content": "One pair of brown leather leg guards seen from the front, aspect about 0.9:1: two large padded brown leather leg pieces side by side with rounded knee guards and a ragged lower edge. Preserve the brown leather colour. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve leather grain, stitched seams and worn edges.",
+      "name": "greaves-010 (43x46)"
+    },
+    {
+      "id": "greaves-012",
+      "directory": "armor/item-104-greaves",
+      "image": "player/male-human/variant-02/texture-251-record-012-frame-000-source.png",
+      "content": "One pair of steel leg armour seen from the front, aspect about 0.9:1: two plain polished grey steel leg guards side by side with rounded knee caps. Preserve the grey steel colour. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve plate edges, rivets and steel highlights.",
+      "name": "greaves-012 (46x49)"
+    },
+    {
+      "id": "greaves-013",
+      "directory": "armor/item-104-greaves",
+      "image": "player/male-human/variant-03/texture-251-record-013-frame-000-source.png",
+      "content": "One set of leg armour seen from the front, aspect about 0.75:1: a dark chain-mail skirt at the top with a brown leather belt and a yellow-gold buckle at the centre, and below it two grey steel leg guards with rounded knee caps. Preserve the belt with buckle, the mail top and the grey steel guards. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve chain-mail rings, leather stitching, the buckle and plate edges.",
+      "name": "greaves-013 (46x62)"
+    },
+    {
+      "id": "greaves-014",
+      "directory": "armor/item-104-greaves",
+      "image": "player/male-human/variant-04/texture-251-record-014-frame-000-source.png",
+      "content": "One pair of steel leg armour seen from the front, aspect about 1:1: two grey steel leg guards side by side with rounded knee caps and yellow-gold trim bands across each leg. Preserve the gold bands on grey steel. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve plate edges, gold trim and steel highlights.",
+      "name": "greaves-014 (47x49)"
+    },
+    {
+      "id": "greaves-015",
+      "directory": "armor/item-104-greaves",
+      "image": "player/male-human/variant-05/texture-251-record-015-frame-000-source.png",
+      "content": "One set of leg armour seen from the front, aspect about 0.75:1: a dark chain-mail skirt at the top with a brown leather belt and a yellow-gold buckle, and below it two grey steel leg guards with rounded knee caps and yellow-gold trim bands. Preserve the belt with buckle, the mail top, the gold bands and the grey steel guards. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve chain-mail rings, leather stitching, the buckle and plate edges.",
+      "name": "greaves-015 (47x62)"
+    },
+    {
+      "id": "greaves-016",
+      "directory": "armor/item-104-greaves",
+      "image": "player/male-human/variant-06/texture-251-record-016-frame-000-source.png",
+      "content": "One set of leg armour seen from the front, aspect about 0.75:1: a dark chain-mail skirt at the top and below it two plain grey steel leg guards with rounded knee caps. Preserve the dark mail top and the grey steel guards. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve chain-mail rings and plate edges.",
+      "name": "greaves-016 (46x62)"
+    },
+    {
+      "id": "left-pauldron-017",
+      "directory": "armor/item-105-left-pauldron",
+      "image": "player/male-human/variant-00/texture-251-record-017-frame-000-source.png",
+      "content": "One brown leather arm guard (shoulder and forearm) in one piece, seen from the front, aspect about 0.65:1: a padded brown leather shoulder cap narrowing down to a bracer, ragged along the lower edge. Preserve the brown leather colour. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve leather grain, stitched seams and worn edges.",
+      "name": "left-pauldron-017 (34x52)"
+    },
+    {
+      "id": "left-pauldron-019",
+      "directory": "armor/item-105-left-pauldron",
+      "image": "player/male-human/variant-02/texture-251-record-019-frame-000-source.png",
+      "content": "One steel arm guard (shoulder cap and forearm) in one piece, seen from the front, aspect about 0.6:1: grey steel plates running down from a rounded shoulder cap to a bracer, with a small dark gap at the elbow. Preserve the grey steel colour. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve plate edges, rivets and steel highlights.",
+      "name": "left-pauldron-019 (39x63)"
+    },
+    {
+      "id": "left-pauldron-020",
+      "directory": "armor/item-105-left-pauldron",
+      "image": "player/male-human/variant-03/texture-251-record-020-frame-000-source.png",
+      "content": "One steel arm guard (shoulder and forearm) in one piece, seen from the front, aspect about 0.6:1: grey steel plates with thin yellow-gold trim and a hanging yellow-gold cord at the shoulder. Preserve the gold trim on grey steel. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve plate edges, gold trim and steel highlights.",
+      "name": "left-pauldron-020 (39x63)"
+    },
+    {
+      "id": "left-pauldron-021",
+      "directory": "armor/item-105-left-pauldron",
+      "image": "player/male-human/variant-04/texture-251-record-021-frame-000-source.png",
+      "content": "One arm guard (shoulder cap, mail sleeve and forearm) in one piece, seen from the front, aspect about 0.6:1: a rounded grey steel shoulder cap at the top, dark chain mail below it and a small steel plate at the elbow. Preserve the grey steel cap and the dark mail. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve plate edges, chain-mail rings and steel highlights.",
+      "name": "left-pauldron-021 (33x57)"
+    },
+    {
+      "id": "right-pauldron-022",
+      "directory": "armor/item-106-right-pauldron",
+      "image": "player/male-human/variant-00/texture-251-record-022-frame-000-source.png",
+      "content": "One brown leather arm piece seen from the front, aspect about 0.45:1 (much taller than wide): a thin curved brown leather shoulder strap at the top with a few narrow brown straps hanging down. Preserve the brown leather colour and the thin hanging straps. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve leather grain and stitched seams.",
+      "name": "right-pauldron-022 (24x55)"
+    },
+    {
+      "id": "right-pauldron-023",
+      "directory": "armor/item-106-right-pauldron",
+      "image": "player/male-human/variant-01/texture-251-record-023-frame-000-source.png",
+      "content": "One steel arm guard seen from the front, aspect about 0.45:1 (much taller than wide): a narrow grey steel shoulder plate at the top tapering to thin steel bands down the arm. Preserve the grey steel colour. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve plate edges, rivets and steel highlights.",
+      "name": "right-pauldron-023 (24x55)"
+    },
+    {
+      "id": "right-pauldron-024",
+      "directory": "armor/item-106-right-pauldron",
+      "image": "player/male-human/variant-02/texture-251-record-024-frame-000-source.png",
+      "content": "One steel arm guard seen from the front, aspect about 0.42:1 (much taller than wide): a narrow grey steel shoulder plate at the top and a plate near the elbow with a dark gap between them. Preserve the grey steel colour. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve plate edges, rivets and steel highlights.",
+      "name": "right-pauldron-024 (24x58)"
+    },
+    {
+      "id": "right-pauldron-025",
+      "directory": "armor/item-106-right-pauldron",
+      "image": "player/male-human/variant-03/texture-251-record-025-frame-000-source.png",
+      "content": "One steel arm guard seen from the front, aspect about 0.42:1 (much taller than wide): grey steel plates with thin yellow-gold trim and a small yellow-gold ring and cord at the shoulder. Preserve the gold trim on grey steel. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve plate edges, gold trim and steel highlights.",
+      "name": "right-pauldron-025 (24x58)"
+    },
+    {
+      "id": "right-pauldron-026",
+      "directory": "armor/item-106-right-pauldron",
+      "image": "player/male-human/variant-04/texture-251-record-026-frame-000-source.png",
+      "content": "One chain-mail arm guard seen from the front, aspect about 0.45:1 (much taller than wide): a narrow grey steel shoulder plate at the top and a dark chain-mail sleeve below it. Preserve the dark mail colour. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve chain-mail rings and plate edges.",
+      "name": "right-pauldron-026 (24x55)"
+    },
+    {
+      "id": "helm-027",
+      "directory": "armor/item-107-helm",
+      "image": "player/male-human/variant-00/texture-251-record-027-frame-000-source.png",
+      "content": "One open helmet seen from the front, aspect about 1.3:1: a rounded yellow-gold cap with a brim and two short cheek flaps hanging at the sides, with no face guard. Preserve the polished gold colour and the open shape. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve metal plate edges, rivets and gold highlights.",
+      "name": "helm-027 (49x37)"
+    },
+    {
+      "id": "helm-028",
+      "directory": "armor/item-107-helm",
+      "image": "player/male-human/variant-01/texture-251-record-028-frame-000-source.png",
+      "content": "One light steel helmet seen from the front, aspect about 1.2:1: a plain grey steel rounded cap with a short nasal guard pointing down at the centre and small cheek pieces. Preserve the plain grey steel colour. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve plate edges, rivets and steel highlights.",
+      "name": "helm-028 (50x43)"
+    },
+    {
+      "id": "helm-029",
+      "directory": "armor/item-107-helm",
+      "image": "player/male-human/variant-02/texture-251-record-029-frame-000-source.png",
+      "content": "One dark steel helmet seen from the front, aspect about 1.1:1: a rounded dark grey steel cap with a long nasal guard down the centre and cheek pieces. Preserve the dark steel colour. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve plate edges, rivets and steel highlights.",
+      "name": "helm-029 (40x35)"
+    },
+    {
+      "id": "helm-031",
+      "directory": "armor/item-107-helm",
+      "image": "player/male-human/variant-04/texture-251-record-031-frame-000-source.png",
+      "content": "One closed great helm seen from the front, aspect about 0.95:1: polished grey steel with a vertical ridge down the centre of the visor, horizontal breathing slits and a blue feather plume at the upper left. Preserve the grey steel and the blue plume. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve plate edges, rivets, steel highlights and the feather plume.",
+      "name": "helm-031 (43x45)"
+    },
+    {
+      "id": "helm-032",
+      "directory": "armor/item-107-helm",
+      "image": "player/male-human/variant-05/texture-251-record-032-frame-000-source.png",
+      "content": "One horned helmet seen from the front, aspect about 1.15:1: a rounded grey steel helm with a nasal guard and cheek pieces, and a curved tan horn rising from each side. Preserve the grey steel and the two curved horns. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve plate edges, rivets, steel highlights and horn grain.",
+      "name": "helm-032 (50x43)"
+    },
+    {
+      "id": "buckler-033",
+      "directory": "armor/item-109-buckler",
+      "image": "player/male-human/base/texture-251-record-033-frame-000-source.png",
+      "content": "One round buckler shield seen from the front, aspect about 0.85:1: a wooden brown face with a raised grey steel boss at the centre, a grey steel rim and yellow-gold studs round the edge. Preserve the brown face, steel rim and gold studs. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve wood grain, steel rim, rivets and the boss.",
+      "name": "buckler-033 (36x42)"
+    },
+    {
+      "id": "kite-shield-035",
+      "directory": "armor/item-111-kite-shield",
+      "image": "player/male-human/base/texture-251-record-035-frame-000-source.png",
+      "content": "One tall kite shield seen from the front, aspect about 0.7:1: a brown leather-covered pointed shield with a grey steel strip curving down the left centre and a worn steel edge. Preserve the brown face and steel strip. No body, head, arms, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small, so the finer construction is read from the silhouette and shading.",
+      "invention": "Resolve leather grain, steel edge and rivets.",
+      "name": "kite-shield-035 (48x67)"
+    }
+  ]
+}

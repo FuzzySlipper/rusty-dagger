@@ -1,0 +1,355 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Hand-painted 1990s fantasy RPG effect illustration, luminous opaque gouache-like colour modelling, a bright core falling to darker saturated edges, ragged painted edges and a few fine flecks. Original local colours. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded fantasy RPG effect art in a restrained palette. Keep the source's silhouette, size relationship between its parts, colours and the arrangement of its bright and dark regions: this is one frame of a short animation, so show exactly this stage and do not make it a finished explosion, ball or splash if the source is smaller or fainter. No creature, hand, text, border, scenery or second object.",
+  "presentation": "One isolated effect on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the effect. The whole effect visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Effects x2 / Qwen then retro",
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "fx",
+      "model": "krea2-turbo",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ],
+  "task": "Task: Redraw a very small classic fantasy RPG combat or magic effect sprite as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+  "items": [
+    {
+      "id": "sparkle-0",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-003-frame-000-source.png",
+      "content": "Frame 1 of 20 of a sparkle of magic that builds and fades. A very faint sprinkle of a few tiny gold and white dots, almost nothing. Mostly on the left and centre, aspect about 1:1. Preserve the count and the placement of the sparkles in this frame. No hand, face, symbol or text.",
+      "uncertainty": "This is one frame of a longer twinkling sequence that grows to a cluster of sparkles and then thins out. Each frame is drawn on its own, so keep to this frame's count and placement.",
+      "invention": "Resolve crisp four-point star shapes and tiny glints. Keep them abstract sparkles.",
+      "name": "sparkle-0 (47x50)"
+    },
+    {
+      "id": "sparkle-1",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-003-frame-001-source.png",
+      "content": "Frame 2 of 20 of a sparkle of magic that builds and fades. A few small gold four-point sparkles and tiny blue-white glints, loosely scattered. Mostly on the left and centre, aspect about 1:1. Preserve the count and the placement of the sparkles in this frame. No hand, face, symbol or text.",
+      "uncertainty": "This is one frame of a longer twinkling sequence that grows to a cluster of sparkles and then thins out. Each frame is drawn on its own, so keep to this frame's count and placement.",
+      "invention": "Resolve crisp four-point star shapes and tiny glints. Keep them abstract sparkles.",
+      "name": "sparkle-1 (47x50)"
+    },
+    {
+      "id": "sparkle-2",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-003-frame-002-source.png",
+      "content": "Frame 3 of 20 of a sparkle of magic that builds and fades. A few small gold four-point sparkles and tiny blue-white glints, loosely scattered. Mostly on the left and centre, aspect about 1:1. Preserve the count and the placement of the sparkles in this frame. No hand, face, symbol or text.",
+      "uncertainty": "This is one frame of a longer twinkling sequence that grows to a cluster of sparkles and then thins out. Each frame is drawn on its own, so keep to this frame's count and placement.",
+      "invention": "Resolve crisp four-point star shapes and tiny glints. Keep them abstract sparkles.",
+      "name": "sparkle-2 (47x50)"
+    },
+    {
+      "id": "sparkle-3",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-003-frame-003-source.png",
+      "content": "Frame 4 of 20 of a sparkle of magic that builds and fades. Several gold and blue-white four-point sparkles of different sizes, with tiny green and blue flecks around them. Mostly on the left and centre, aspect about 1:1. Preserve the count and the placement of the sparkles in this frame. No hand, face, symbol or text.",
+      "uncertainty": "This is one frame of a longer twinkling sequence that grows to a cluster of sparkles and then thins out. Each frame is drawn on its own, so keep to this frame's count and placement.",
+      "invention": "Resolve crisp four-point star shapes and tiny glints. Keep them abstract sparkles.",
+      "name": "sparkle-3 (47x50)"
+    },
+    {
+      "id": "sparkle-4",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-003-frame-004-source.png",
+      "content": "Frame 5 of 20 of a sparkle of magic that builds and fades. A rich cluster of gold four-point star sparkles and pale blue-white sparkles of different sizes, with tiny green and blue flecks around them. Mostly on the left and centre, aspect about 1:1. Preserve the count and the placement of the sparkles in this frame. No hand, face, symbol or text.",
+      "uncertainty": "This is one frame of a longer twinkling sequence that grows to a cluster of sparkles and then thins out. Each frame is drawn on its own, so keep to this frame's count and placement.",
+      "invention": "Resolve crisp four-point star shapes and tiny glints. Keep them abstract sparkles.",
+      "name": "sparkle-4 (47x50)"
+    },
+    {
+      "id": "sparkle-5",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-003-frame-005-source.png",
+      "content": "Frame 6 of 20 of a sparkle of magic that builds and fades. A rich cluster of gold four-point star sparkles and pale blue-white sparkles of different sizes, with tiny green and blue flecks around them. Mostly on the left and centre, aspect about 1:1. Preserve the count and the placement of the sparkles in this frame. No hand, face, symbol or text.",
+      "uncertainty": "This is one frame of a longer twinkling sequence that grows to a cluster of sparkles and then thins out. Each frame is drawn on its own, so keep to this frame's count and placement.",
+      "invention": "Resolve crisp four-point star shapes and tiny glints. Keep them abstract sparkles.",
+      "name": "sparkle-5 (47x50)"
+    },
+    {
+      "id": "sparkle-6",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-003-frame-006-source.png",
+      "content": "Frame 7 of 20 of a sparkle of magic that builds and fades. A dense cluster of bright gold four-point star sparkles and pale blue-white sparkles, with tiny green and blue flecks around them, at its fullest. Mostly on the left and centre, aspect about 1:1. Preserve the count and the placement of the sparkles in this frame. No hand, face, symbol or text.",
+      "uncertainty": "This is one frame of a longer twinkling sequence that grows to a cluster of sparkles and then thins out. Each frame is drawn on its own, so keep to this frame's count and placement.",
+      "invention": "Resolve crisp four-point star shapes and tiny glints. Keep them abstract sparkles.",
+      "name": "sparkle-6 (47x50)"
+    },
+    {
+      "id": "sparkle-7",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-003-frame-007-source.png",
+      "content": "Frame 8 of 20 of a sparkle of magic that builds and fades. A dense cluster of bright gold four-point star sparkles and pale blue-white sparkles, with tiny green and blue flecks around them, at its fullest. Mostly on the left and centre, aspect about 1:1. Preserve the count and the placement of the sparkles in this frame. No hand, face, symbol or text.",
+      "uncertainty": "This is one frame of a longer twinkling sequence that grows to a cluster of sparkles and then thins out. Each frame is drawn on its own, so keep to this frame's count and placement.",
+      "invention": "Resolve crisp four-point star shapes and tiny glints. Keep them abstract sparkles.",
+      "name": "sparkle-7 (47x50)"
+    },
+    {
+      "id": "sparkle-8",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-003-frame-008-source.png",
+      "content": "Frame 9 of 20 of a sparkle of magic that builds and fades. A dense cluster of bright gold four-point star sparkles and pale blue-white sparkles, with tiny green and blue flecks around them, at its fullest. Mostly on the left and centre, aspect about 1:1. Preserve the count and the placement of the sparkles in this frame. No hand, face, symbol or text.",
+      "uncertainty": "This is one frame of a longer twinkling sequence that grows to a cluster of sparkles and then thins out. Each frame is drawn on its own, so keep to this frame's count and placement.",
+      "invention": "Resolve crisp four-point star shapes and tiny glints. Keep them abstract sparkles.",
+      "name": "sparkle-8 (47x50)"
+    },
+    {
+      "id": "sparkle-9",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-003-frame-009-source.png",
+      "content": "Frame 10 of 20 of a sparkle of magic that builds and fades. A dense cluster of bright gold four-point star sparkles and pale blue-white sparkles, with tiny green and blue flecks around them, at its fullest. Mostly on the left and centre, aspect about 1:1. Preserve the count and the placement of the sparkles in this frame. No hand, face, symbol or text.",
+      "uncertainty": "This is one frame of a longer twinkling sequence that grows to a cluster of sparkles and then thins out. Each frame is drawn on its own, so keep to this frame's count and placement.",
+      "invention": "Resolve crisp four-point star shapes and tiny glints. Keep them abstract sparkles.",
+      "name": "sparkle-9 (47x50)"
+    },
+    {
+      "id": "sparkle-10",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-003-frame-010-source.png",
+      "content": "Frame 11 of 20 of a sparkle of magic that builds and fades. A rich cluster of gold four-point star sparkles and pale blue-white sparkles of different sizes, with tiny green and blue flecks around them. Mostly on the left and centre, aspect about 1:1. Preserve the count and the placement of the sparkles in this frame. No hand, face, symbol or text.",
+      "uncertainty": "This is one frame of a longer twinkling sequence that grows to a cluster of sparkles and then thins out. Each frame is drawn on its own, so keep to this frame's count and placement.",
+      "invention": "Resolve crisp four-point star shapes and tiny glints. Keep them abstract sparkles.",
+      "name": "sparkle-10 (47x50)"
+    },
+    {
+      "id": "sparkle-11",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-003-frame-011-source.png",
+      "content": "Frame 12 of 20 of a sparkle of magic that builds and fades. A rich cluster of gold four-point star sparkles and pale blue-white sparkles of different sizes, with tiny green and blue flecks around them. Mostly on the left and centre, aspect about 1:1. Preserve the count and the placement of the sparkles in this frame. No hand, face, symbol or text.",
+      "uncertainty": "This is one frame of a longer twinkling sequence that grows to a cluster of sparkles and then thins out. Each frame is drawn on its own, so keep to this frame's count and placement.",
+      "invention": "Resolve crisp four-point star shapes and tiny glints. Keep them abstract sparkles.",
+      "name": "sparkle-11 (47x50)"
+    },
+    {
+      "id": "sparkle-12",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-003-frame-012-source.png",
+      "content": "Frame 13 of 20 of a sparkle of magic that builds and fades. A rich cluster of gold four-point star sparkles and pale blue-white sparkles of different sizes, with tiny green and blue flecks around them. Mostly on the left and centre, aspect about 1:1. Preserve the count and the placement of the sparkles in this frame. No hand, face, symbol or text.",
+      "uncertainty": "This is one frame of a longer twinkling sequence that grows to a cluster of sparkles and then thins out. Each frame is drawn on its own, so keep to this frame's count and placement.",
+      "invention": "Resolve crisp four-point star shapes and tiny glints. Keep them abstract sparkles.",
+      "name": "sparkle-12 (47x50)"
+    },
+    {
+      "id": "sparkle-13",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-003-frame-013-source.png",
+      "content": "Frame 14 of 20 of a sparkle of magic that builds and fades. A rich cluster of gold four-point star sparkles and pale blue-white sparkles of different sizes, with tiny green and blue flecks around them. Mostly on the left and centre, aspect about 1:1. Preserve the count and the placement of the sparkles in this frame. No hand, face, symbol or text.",
+      "uncertainty": "This is one frame of a longer twinkling sequence that grows to a cluster of sparkles and then thins out. Each frame is drawn on its own, so keep to this frame's count and placement.",
+      "invention": "Resolve crisp four-point star shapes and tiny glints. Keep them abstract sparkles.",
+      "name": "sparkle-13 (47x50)"
+    },
+    {
+      "id": "sparkle-14",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-003-frame-014-source.png",
+      "content": "Frame 15 of 20 of a sparkle of magic that builds and fades. Several gold and blue-white four-point sparkles of different sizes, with tiny green and blue flecks around them. Mostly on the left and centre, aspect about 1:1. Preserve the count and the placement of the sparkles in this frame. No hand, face, symbol or text.",
+      "uncertainty": "This is one frame of a longer twinkling sequence that grows to a cluster of sparkles and then thins out. Each frame is drawn on its own, so keep to this frame's count and placement.",
+      "invention": "Resolve crisp four-point star shapes and tiny glints. Keep them abstract sparkles.",
+      "name": "sparkle-14 (47x50)"
+    },
+    {
+      "id": "sparkle-15",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-003-frame-015-source.png",
+      "content": "Frame 16 of 20 of a sparkle of magic that builds and fades. Several gold and blue-white four-point sparkles of different sizes, with tiny green and blue flecks around them. Mostly on the left and centre, aspect about 1:1. Preserve the count and the placement of the sparkles in this frame. No hand, face, symbol or text.",
+      "uncertainty": "This is one frame of a longer twinkling sequence that grows to a cluster of sparkles and then thins out. Each frame is drawn on its own, so keep to this frame's count and placement.",
+      "invention": "Resolve crisp four-point star shapes and tiny glints. Keep them abstract sparkles.",
+      "name": "sparkle-15 (47x50)"
+    },
+    {
+      "id": "sparkle-16",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-003-frame-016-source.png",
+      "content": "Frame 17 of 20 of a sparkle of magic that builds and fades. Several gold and blue-white four-point sparkles of different sizes, with tiny green and blue flecks around them. Mostly on the left and centre, aspect about 1:1. Preserve the count and the placement of the sparkles in this frame. No hand, face, symbol or text.",
+      "uncertainty": "This is one frame of a longer twinkling sequence that grows to a cluster of sparkles and then thins out. Each frame is drawn on its own, so keep to this frame's count and placement.",
+      "invention": "Resolve crisp four-point star shapes and tiny glints. Keep them abstract sparkles.",
+      "name": "sparkle-16 (47x50)"
+    },
+    {
+      "id": "sparkle-17",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-003-frame-017-source.png",
+      "content": "Frame 18 of 20 of a sparkle of magic that builds and fades. Several gold and blue-white four-point sparkles of different sizes, with tiny green and blue flecks around them. Mostly on the left and centre, aspect about 1:1. Preserve the count and the placement of the sparkles in this frame. No hand, face, symbol or text.",
+      "uncertainty": "This is one frame of a longer twinkling sequence that grows to a cluster of sparkles and then thins out. Each frame is drawn on its own, so keep to this frame's count and placement.",
+      "invention": "Resolve crisp four-point star shapes and tiny glints. Keep them abstract sparkles.",
+      "name": "sparkle-17 (47x50)"
+    },
+    {
+      "id": "sparkle-18",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-003-frame-018-source.png",
+      "content": "Frame 19 of 20 of a sparkle of magic that builds and fades. Several gold and blue-white four-point sparkles of different sizes, with tiny green and blue flecks around them. Mostly on the left and centre, aspect about 1:1. Preserve the count and the placement of the sparkles in this frame. No hand, face, symbol or text.",
+      "uncertainty": "This is one frame of a longer twinkling sequence that grows to a cluster of sparkles and then thins out. Each frame is drawn on its own, so keep to this frame's count and placement.",
+      "invention": "Resolve crisp four-point star shapes and tiny glints. Keep them abstract sparkles.",
+      "name": "sparkle-18 (47x50)"
+    },
+    {
+      "id": "sparkle-19",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-003-frame-019-source.png",
+      "content": "Frame 20 of 20 of a sparkle of magic that builds and fades. Several gold and blue-white four-point sparkles of different sizes, with tiny green and blue flecks around them. Mostly on the left and centre, aspect about 1:1. Preserve the count and the placement of the sparkles in this frame. No hand, face, symbol or text.",
+      "uncertainty": "This is one frame of a longer twinkling sequence that grows to a cluster of sparkles and then thins out. Each frame is drawn on its own, so keep to this frame's count and placement.",
+      "invention": "Resolve crisp four-point star shapes and tiny glints. Keep them abstract sparkles.",
+      "name": "sparkle-19 (47x50)"
+    },
+    {
+      "id": "wisp-0",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-005-frame-000-source.png",
+      "content": "Frame 1 of 9 of a thin crackling trail of magical light. A thin vertical curling wisp of pale cyan and teal light with a few tiny blue sparks, a thin dotted line at the lower left, aspect about 1.3:1. Preserve the placement and shape of the strokes in this frame. No face, symbol or text.",
+      "uncertainty": "This is one frame of a jittering sequence of thin light strokes whose shape changes completely between frames. Each frame is drawn on its own, so keep to this frame's strokes.",
+      "invention": "Resolve thin glowing strokes and tiny sparks. Keep it abstract light.",
+      "name": "wisp-0 (51x39)"
+    },
+    {
+      "id": "wisp-1",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-005-frame-001-source.png",
+      "content": "Frame 2 of 9 of a thin crackling trail of magical light. A short thin cyan arc low along the bottom with a few tiny blue sparks, aspect about 1.3:1. Preserve the placement and shape of the strokes in this frame. No face, symbol or text.",
+      "uncertainty": "This is one frame of a jittering sequence of thin light strokes whose shape changes completely between frames. Each frame is drawn on its own, so keep to this frame's strokes.",
+      "invention": "Resolve thin glowing strokes and tiny sparks. Keep it abstract light.",
+      "name": "wisp-1 (51x39)"
+    },
+    {
+      "id": "wisp-2",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-005-frame-002-source.png",
+      "content": "Frame 3 of 9 of a thin crackling trail of magical light. A thin cyan wisp curving up along the left with a green-teal tip and tiny sparks, aspect about 1.3:1. Preserve the placement and shape of the strokes in this frame. No face, symbol or text.",
+      "uncertainty": "This is one frame of a jittering sequence of thin light strokes whose shape changes completely between frames. Each frame is drawn on its own, so keep to this frame's strokes.",
+      "invention": "Resolve thin glowing strokes and tiny sparks. Keep it abstract light.",
+      "name": "wisp-2 (51x39)"
+    },
+    {
+      "id": "wisp-3",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-005-frame-003-source.png",
+      "content": "Frame 4 of 9 of a thin crackling trail of magical light. A thin curling cyan and pale blue streak along the right with a bright white-blue spark, aspect about 1.3:1. Preserve the placement and shape of the strokes in this frame. No face, symbol or text.",
+      "uncertainty": "This is one frame of a jittering sequence of thin light strokes whose shape changes completely between frames. Each frame is drawn on its own, so keep to this frame's strokes.",
+      "invention": "Resolve thin glowing strokes and tiny sparks. Keep it abstract light.",
+      "name": "wisp-3 (51x39)"
+    },
+    {
+      "id": "wisp-4",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-005-frame-004-source.png",
+      "content": "Frame 5 of 9 of a thin crackling trail of magical light. A wide low pale blue and cyan streak with a white-blue tip on the right, aspect about 1.3:1. Preserve the placement and shape of the strokes in this frame. No face, symbol or text.",
+      "uncertainty": "This is one frame of a jittering sequence of thin light strokes whose shape changes completely between frames. Each frame is drawn on its own, so keep to this frame's strokes.",
+      "invention": "Resolve thin glowing strokes and tiny sparks. Keep it abstract light.",
+      "name": "wisp-4 (51x39)"
+    },
+    {
+      "id": "wisp-5",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-005-frame-005-source.png",
+      "content": "Frame 6 of 9 of a thin crackling trail of magical light. A thin curling cyan streak rising at the left, bending to the right along the top with tiny blue sparks, aspect about 1.3:1. Preserve the placement and shape of the strokes in this frame. No face, symbol or text.",
+      "uncertainty": "This is one frame of a jittering sequence of thin light strokes whose shape changes completely between frames. Each frame is drawn on its own, so keep to this frame's strokes.",
+      "invention": "Resolve thin glowing strokes and tiny sparks. Keep it abstract light.",
+      "name": "wisp-5 (51x39)"
+    },
+    {
+      "id": "wisp-6",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-005-frame-006-source.png",
+      "content": "Frame 7 of 9 of a thin crackling trail of magical light. A thin dotted cyan line along the bottom with tiny sparks, almost nothing else, aspect about 1.3:1. Preserve the placement and shape of the strokes in this frame. No face, symbol or text.",
+      "uncertainty": "This is one frame of a jittering sequence of thin light strokes whose shape changes completely between frames. Each frame is drawn on its own, so keep to this frame's strokes.",
+      "invention": "Resolve thin glowing strokes and tiny sparks. Keep it abstract light.",
+      "name": "wisp-6 (51x39)"
+    },
+    {
+      "id": "wisp-7",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-005-frame-007-source.png",
+      "content": "Frame 8 of 9 of a thin crackling trail of magical light. A thin vertical curling cyan wisp at the left with tiny sparks, aspect about 1.3:1. Preserve the placement and shape of the strokes in this frame. No face, symbol or text.",
+      "uncertainty": "This is one frame of a jittering sequence of thin light strokes whose shape changes completely between frames. Each frame is drawn on its own, so keep to this frame's strokes.",
+      "invention": "Resolve thin glowing strokes and tiny sparks. Keep it abstract light.",
+      "name": "wisp-7 (51x39)"
+    },
+    {
+      "id": "wisp-8",
+      "directory": "texture-380",
+      "image": "effect/texture-380-record-005-frame-008-source.png",
+      "content": "Frame 9 of 9 of a thin crackling trail of magical light. A thin dotted cyan and green line along the bottom with a few tiny sparks, aspect about 1.3:1. Preserve the placement and shape of the strokes in this frame. No face, symbol or text.",
+      "uncertainty": "This is one frame of a jittering sequence of thin light strokes whose shape changes completely between frames. Each frame is drawn on its own, so keep to this frame's strokes.",
+      "invention": "Resolve thin glowing strokes and tiny sparks. Keep it abstract light.",
+      "name": "wisp-8 (51x39)"
+    },
+    {
+      "id": "puff-0",
+      "directory": "texture-434",
+      "image": "effect/texture-434-record-000-frame-000-source.png",
+      "content": "Frame 1 of 5 of a blue magical impact puff, fading out. A small round soft blue puff with a paler blue centre, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy puff to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glowing gradients and fine specks. Keep it abstract energy.",
+      "name": "puff-0 (86x70)"
+    },
+    {
+      "id": "puff-1",
+      "directory": "texture-434",
+      "image": "effect/texture-434-record-000-frame-001-source.png",
+      "content": "Frame 2 of 5 of a blue magical impact puff, fading out. A larger round puff: a pale blue-white core inside a mid-blue soft ball with teal edges, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy puff to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glowing gradients and fine specks. Keep it abstract energy.",
+      "name": "puff-1 (86x70)"
+    },
+    {
+      "id": "puff-2",
+      "directory": "texture-434",
+      "image": "effect/texture-434-record-000-frame-002-source.png",
+      "content": "Frame 3 of 5 of a blue magical impact puff, fading out. A larger ragged cloud: mottled teal and pale blue with white patches and dark specks round the edge, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy puff to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glowing gradients and fine specks. Keep it abstract energy.",
+      "name": "puff-2 (86x70)"
+    },
+    {
+      "id": "puff-3",
+      "directory": "texture-434",
+      "image": "effect/texture-434-record-000-frame-003-source.png",
+      "content": "Frame 4 of 5 of a blue magical impact puff, fading out. A thinning, broken cloud of dull teal with a few faint pale patches and dark specks, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy puff to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glowing gradients and fine specks. Keep it abstract energy.",
+      "name": "puff-3 (86x70)"
+    },
+    {
+      "id": "puff-4",
+      "directory": "texture-434",
+      "image": "effect/texture-434-record-000-frame-004-source.png",
+      "content": "Frame 5 of 5 of a blue magical impact puff, fading out. Almost nothing: a few tiny dark teal specks. Do not add anything else. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy puff to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glowing gradients and fine specks. Keep it abstract energy.",
+      "name": "puff-4 (86x70)"
+    }
+  ]
+}

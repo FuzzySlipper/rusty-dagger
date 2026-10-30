@@ -86,6 +86,8 @@ Bodies B1 (28) is done: all 32 bodies are converted with the detailed template, 
 
 Converted after F1 (specs `spells-i1`, `i2`, `e2`, `e3`): spell icons I1 (25 bursts and clouds) and I2 (36 swirls, branching clusters, lattices, flames, moons and comets, using the `icons-shapes` template) on den-m5; fire-sibling effects E2 (cold and poison, 36) and E3 (shock and magic, 35) on den-nimo. Held back: the five targeting icons and the four 16x16 element icons are framed UI tiles with a hand or skull, so they need their own contract and pilot (T1); the late fading impact frames (the almost-empty ones) sometimes gain a small bright speck the source lacks, worth a glance in review; the shared-effects magic sparkle and TEXTURE.380/434 effects (X1/X2) follow.
 
+Queued next (specs `effects-x1`, `effects-x2`, `worn-armor-male-human`): X1 (blood splash, corpse, dust, bones, coin: 20) and X2 (magic sparkle 20, spark wisps 9, blue puff 5: 34) from TEXTURE.380 and 434; W2 for the male human morph (the 31 armor layers the pilot skipped). TEXTURE.434 is a copy of 380 apart from its record 0, so its duplicate keys take the 380 finals; the shared-effects sparkle likewise. Record 7 of 380 is a blank placeholder and is skipped. The other morphs wait on G2.
+
 ## Original first six batches
 
 1. 10494-R1 (owner review of what already exists, plus redo-2).
