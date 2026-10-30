@@ -152,7 +152,11 @@
     "note": "Owner reviewed and accepted the first ten and batch A sheets."
   },
   "204-009-000": {
+    "status": "accepted",
+    "note": "Redo 2: belt with two pouches (owner reading). Owner accepted."
+  },
+  "211-057-000": {
     "status": "converted",
-    "note": "Redo 2: reinterpreted as a belt with two pouches (owner reading; the item is named Cloth Amulet). Awaiting review."
+    "note": "Redo 3: owner-directed subject, a pumpkin with green leaves and dirt in a gold frame. Awaiting review."
   }
 }
