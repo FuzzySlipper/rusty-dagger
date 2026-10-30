@@ -76,11 +76,13 @@ All four pilots ran with the unchanged recipe and read well.
 - **Bodies (4, done):** male human, female human, male Khajiit, female Argonian. Headless figures, neck stump, undergarments, tail and scales all survive.
 - **Spell icons (8, done):** the abstract bursts become painted energy blooms; the full-square tile (icon-001) keeps its square shape with a transparent surround.
 - **Fire effect (19, done):** impact and projectile frames keep their relative sizes and fade/flicker progression when drawn independently.
-- **Worn equipment (12, male human, done):** armor, shields, boots and trousers are good. Open finding: the clothing sprites are drawn in placeholder blue (the game tints them per dye), so the converted shirts, robes and cloaks are blue. Decide how dyeing works for the new art (neutral base plus tint, or one converted image per dye) before queueing the rest of clothing.
+- **Bodies, detailed prompt (4, done):** the `bodies-detailed` template (pulp-fantasy paperback painting style, defined anatomy) replaced the first bodies result and is far more detailed. It is also more realistic than the item art, so check it beside the armor before using it for faces and the other bodies.
+- **Clothing, neutral base (4, done):** the placeholder blue is neutralised to pale grey in a copy of the source (`gen-raw/source-edits/worn-neutral`) before conversion, and the result tints cleanly (shown multiplied by blue, gold, red and green). Fixed-colour parts such as the vest and sash would be left out of the tint by the game's dye mask.
+- **Worn equipment (12, male human, done):** armor, shields, boots and trousers are good. The clothing sprites are drawn in placeholder blue (the game tints them per dye); decided: neutral base plus tint, as in the neutral-base pilot above. Procedure for the rest of clothing: neutralise the blue in a source copy, then convert from it.
 
 ## Suggested next batches
 
-Pilots are done. Next: 10494-R1 review, then bodies B1 (28), creatures C1, faces F1, spell icons I1/I2 and T1, fire E2–E5, effects X1/X2, and the rest of worn W1–W3 once the dye question is answered.
+Pilots are done. Next: 10494-R1 review, then bodies B1 (28), creatures C1, faces F1, spell icons I1/I2 and T1, fire E2–E5, effects X1/X2, and the rest of worn W1–W3 using the neutral-base procedure.
 
 ## Original first six batches
 

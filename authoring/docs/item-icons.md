@@ -68,6 +68,12 @@ A spec copies the style card, collection rules, presentation, seed and routes fr
 ground regions are kept or removed by the source sprite's own alpha (so a glass jar stays solid and a chain loop
 stays open), and the edge is softened and decontaminated.
 
+## Clean-up and source edits
+
+- `tools/items/despeckle.py FINAL.png` removes small detached flecks from a final (not for effects that carry embers).
+- To convert from an edited source (for example neutralising a dye-placeholder colour), write the edited copy with its manifest under `gen-raw/source-edits/NAME/` in the same directory layout and run the batch with `SOURCE=` pointing at it.
+- `paper-doll/templates/bodies-detailed.json` is the more detailed pulp-fantasy style for figures; `bodies.json` is the plainer painted style.
+
 ## Review ledger
 
 `review_ledger.py --area A` joins the export, the specs, the post-process metrics and `gen-raw/A/` into one row per

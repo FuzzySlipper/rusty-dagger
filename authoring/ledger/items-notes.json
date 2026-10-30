@@ -188,7 +188,7 @@
     "note": "Gorgon Snake: accepted as is."
   },
   "texture-207-record-010-frame-000": {
-    "status": "redo",
-    "note": "Owner reading: a spiked metal buckler lying on the ground, spike pointing straight up (shared by buckler, round shield and tanto). Redo 4 running."
+    "status": "converted",
+    "note": "Redo 5: spiked buckler with the gold inner rim line restored; floating bits removed with despeckle.py. Awaiting review."
   }
 }
