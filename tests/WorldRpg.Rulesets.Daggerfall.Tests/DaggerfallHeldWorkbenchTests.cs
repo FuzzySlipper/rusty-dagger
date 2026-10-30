@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Rusty.Engine;
 using Rusty.Engine.Debugging;
 using Rusty.Engine.FirstPerson;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
@@ -78,7 +79,7 @@ public sealed class DaggerfallHeldWorkbenchTests
 
         for (int key = -1; key < keys.Length; key++)
         {
-            List<TunableGroup> groups = DaggerfallHeldTunables.For(art.Document, "strikeDown", timing, key, () => { });
+            List<TunableGroup> groups = DaggerfallHeldTunables.For(art.Document, "strikeDown", timing, key, new HashSet<string>(), () => { });
             Assert.Equal(key >= 0, groups.Any(group => group.Id.StartsWith("pose.", StringComparison.Ordinal)));
             foreach (TunableControl control in groups.SelectMany(group => group.Tunables).Select(tunable => tunable.Control))
             {
@@ -96,20 +97,80 @@ public sealed class DaggerfallHeldWorkbenchTests
     {
         DaggerfallHeldArt art = DaggerfallHeldArtTests.Read(DaggerfallHeldArtTests.Document());
         int redraws = 0;
-        List<TunableGroup> groups = DaggerfallHeldTunables.For(art.Document, "strikeDown", DaggerfallHeldViewmodel.Timing(.1F, 2, 5), 0, () => redraws++);
+        List<TunableGroup> groups = DaggerfallHeldTunables.For(art.Document, "strikeDown", DaggerfallHeldViewmodel.Timing(.1F, 2, 5), 0, new HashSet<string>(), () => redraws++);
         Tunable Control(string id) => groups.SelectMany(group => group.Tunables).Single(tunable => tunable.Control.Id == id);
         MotionKey first = art.Document.Motion.Tracks["strikeDown"][0];
 
         Control("stance.grip.x").Set(.2F);
         Control("look.hold.y").Set(-80);
-        Control("key.0.phase").Set(Array.IndexOf(Enum.GetValues<MotionPhase>(), MotionPhase.Commit));
-        Control("pose.position.y").Set(.05F);
+        Control("keys.strikeDown.0.phase").Set(Array.IndexOf(Enum.GetValues<MotionPhase>(), MotionPhase.Commit));
+        Control($"pose.{first.Pose}.position.y").Set(.05F);
 
         Assert.Equal(.2F, art.Stance.Grip.X);
         Assert.Equal(-80, art.Document.Look.Hold.Y);
         Assert.Equal(MotionPhase.Commit, art.Document.Motion.Tracks["strikeDown"][0].Phase);
         Assert.Equal(.05F, art.Document.Motion.Poses[first.Pose].Position.Y);
         Assert.Equal(4, redraws);
+    }
+
+    [Fact]
+    public void Poses_set_at_two_keys_are_still_saved_after_the_viewer_plays_or_scrubs_the_strike()
+    {
+        JsonObject authored = DaggerfallHeldArtTests.Document();
+        DaggerfallHeldArt art = DaggerfallHeldArtTests.Read(authored);
+        PhaseTiming timing = DaggerfallHeldViewmodel.Timing(.1F, 2, 5);
+        MotionKey[] keys = art.Document.Motion.Tracks["strikeDown"];
+        string firstPose = keys[0].Pose, lastPose = keys[^1].Pose;
+        Assert.NotEqual(firstPose, lastPose);
+        // The workbench's page as it holds a key; playing or scrubbing holds none (-1).
+        HashSet<string> edited = [];
+        int held = 0;
+        TunablesPage Page() => new(DaggerfallHeldWorkbench.Title, DaggerfallHeldTunables.For(art.Document, "strikeDown", timing, held, edited, () => { }));
+        Source source = new(authored.ToJsonString());
+        TunablesDebugModule module = new(source, Page, (_, _) => null);
+
+        Assert.True(module.Set($"pose.{firstPose}.position.y", .0421F).Succeeded);
+        held = keys.Length - 1;
+        Assert.True(module.Set($"pose.{lastPose}.rotation.x", 12.5F).Succeeded);
+        held = -1;
+
+        string diff = module.Diff().Message;
+        string sha = JsonNode.Parse(diff)!["files"]![0]!["sha256"]!.GetValue<string>();
+        Assert.True(module.Save(DaggerfallHeldArt.DocumentPath, sha).Succeeded);
+        JsonNode saved = source.Saved();
+        Assert.Equal(.0421F, Resolve(saved, $"/motion/poses/{firstPose}/position/1")!.GetValue<float>(), 4);
+        Assert.Equal(12.5F, Resolve(saved, $"/motion/poses/{lastPose}/rotation/0")!.GetValue<float>(), 2);
+    }
+
+    // The developer content source over one held definition: reads it and applies the RFC 6902 replacements Save sends.
+    private sealed class Source(string json) : IContentSourceService
+    {
+        private readonly List<JsonArray> edits = [];
+
+        public ReadOnlyMemory<byte> Read(ContentSourceReadRequest request) =>
+            request.Path == DaggerfallHeldArt.DocumentPath ? System.Text.Encoding.UTF8.GetBytes(json) : throw new FileNotFoundException(request.Path);
+
+        public ContentSha256 Edit(ContentSourceEditRequest request)
+        {
+            edits.Add(JsonNode.Parse(request.Edits)!.AsArray());
+            return default;
+        }
+
+        internal JsonNode Saved()
+        {
+            JsonNode document = JsonNode.Parse(json)!;
+            foreach (JsonNode? edit in edits.SelectMany(batch => batch))
+            {
+                Assert.Equal("replace", edit!["op"]!.GetValue<string>());
+                string pointer = edit["path"]!.GetValue<string>();
+                int split = pointer.LastIndexOf('/');
+                JsonNode parent = Resolve(document, pointer[..split])!;
+                string token = pointer[(split + 1)..];
+                if (parent is JsonArray items) items[int.Parse(token)] = edit["value"]!.DeepClone();
+                else parent[token] = edit["value"]!.DeepClone();
+            }
+            return document;
+        }
     }
 
     // The workbench refuses before it reaches the site's appearance.

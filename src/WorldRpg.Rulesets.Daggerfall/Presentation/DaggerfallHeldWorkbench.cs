@@ -35,6 +35,8 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
     private string? strike;
     private bool offHand;
     private int key = -1;
+    // The key and pose groups set on the page, which it keeps binding (so Save writes them) after the viewer moves on.
+    private readonly HashSet<string> edited = [];
 
     /// <summary>The look shown (a classic weapon visual the art draws), the strike whose keys it steps, the hand, and the held key (-1: none).</summary>
     internal (string? Look, string? Strike, bool OffHand, int Key) Viewing => (look, strike, offHand, key);
@@ -139,7 +141,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
         var (timing, _) = Timing(look!, strike!)!.Value;
         MotionKey[] keys = Keys;
         string[] still = [.. NormalizedClassicWeapon.StrikeActions.Except(Strikes)];
-        return new(Title, DaggerfallHeldTunables.For(art!.Document, strike!, timing, key, publish))
+        return new(Title, DaggerfallHeldTunables.For(art!.Document, strike!, timing, key, edited, publish))
         {
             Choosers =
             [

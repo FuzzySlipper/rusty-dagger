@@ -28,7 +28,8 @@ tools' **Workbench** tab (the **`** key) and the `held.motion*` commands (`docs/
 commands") show the dagger look in either hand with a chosen strike, hold each key, scrub to any moment and play at
 any speed, and tune the stance, the hand's grip and hold, each key's phase, moment and curve, the held key's pose, the
 arms' reach and the rig's palm. Each change shows at once; **Save** writes it into the held definition, keeping its
-formatting, and the change is committed like any content. A new strike's track and poses are added to the definition
+formatting, and the change is committed like any content. Keys and poses set on the page stay on it, marked edited,
+after the viewer moves to another key or strike, so Save still writes them. A new strike's track and poses are added to the definition
 by hand (a track for a strike that is not a classic strike id is refused) and then tuned in the workbench.
 
 ## Seeding from a capture
