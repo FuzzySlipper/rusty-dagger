@@ -1,0 +1,139 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Highly detailed lurid pulp-fantasy character portrait in the manner of 1970s and 80s paperback cover art (Frank Frazetta, Boris Vallejo): glossy airbrushed oil rendering, strongly modelled features with defined brows, eyes, nose, lips and cheekbones, fine skin detail and sheen, individual strands of hair and beard, warm rim light against deep shadow, sharp specular highlights, rich saturated colour. Crisp, confident, finely detailed forms rather than flat broad shapes; keep the original local colours. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded fantasy RPG character portraits in a restrained palette. Keep the source's expression, head angle, skin tone, hair and features. A head and neck only, cut flat across the neck as in the source. No body, clothing, weapon, text, border, scenery or second figure.",
+  "presentation": "One isolated head on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the head. The whole head visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Paper doll faces pilot / Qwen then retro",
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "faces",
+      "model": "krea2-turbo",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ],
+  "task": "Task: Redraw a very small classic fantasy RPG paper-doll head as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+  "items": [
+    {
+      "id": "face00-3",
+      "directory": "faces/face00i0",
+      "image": "face00i0-record-003-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Warm tan skin; a thick black beard and moustache with dark swept hair and a small gold earring. Preserve the hair, facial hair, headgear, markings and expression exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face00-3 (29x30)"
+    },
+    {
+      "id": "face02-1",
+      "directory": "faces/face02i0",
+      "image": "face02i0-record-001-frame-000-source.png",
+      "content": "One male human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Pale sandy skin; long wavy blond hair and a full blond moustache and beard. Preserve the hair, facial hair, headgear, markings and expression exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face02-1 (31x31)"
+    },
+    {
+      "id": "face03-4",
+      "directory": "faces/face03i0",
+      "image": "face03i0-record-004-frame-000-source.png",
+      "content": "One male dark elf head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Ash blue-grey skin, pointed ears and glowing red eyes; long silver-white hair and a stern expression. Preserve the hair, facial hair, headgear, markings and expression exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face03-4 (32x32)"
+    },
+    {
+      "id": "face06-6",
+      "directory": "faces/face06i0",
+      "image": "face06i0-record-006-frame-000-source.png",
+      "content": "One male cat-person with facial paint head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Tan skin marked with painted stripes; dark hair and blue stripes of face paint across the eyes. Preserve the hair, facial hair, headgear, markings and expression exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face06-6 (30x29)"
+    },
+    {
+      "id": "face07-6",
+      "directory": "faces/face07i0",
+      "image": "face07i0-record-006-frame-000-source.png",
+      "content": "One male lizard-person head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Green scaly skin, yellow-slit red eyes and a ridged brow; a gold-framed red jewel on the brow and a ridged crest. Preserve the hair, facial hair, headgear, markings and expression exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face07-6 (31x25)"
+    },
+    {
+      "id": "face10-2",
+      "directory": "faces/face10i0",
+      "image": "face10i0-record-002-frame-000-source.png",
+      "content": "One female human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Warm tan skin; long wavy teal-green hair. Preserve the hair, facial hair, headgear, markings and expression exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face10-2 (26x35)"
+    },
+    {
+      "id": "face12-2",
+      "directory": "faces/face12i0",
+      "image": "face12i0-record-002-frame-000-source.png",
+      "content": "One female human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Pale skin; blonde hair in a thick plait over one shoulder. Preserve the hair, facial hair, headgear, markings and expression exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face12-2 (30x41)"
+    },
+    {
+      "id": "face13-3",
+      "directory": "faces/face13i0",
+      "image": "face13i0-record-003-frame-000-source.png",
+      "content": "One female dark elf head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Ash blue-grey skin, pointed ears and glowing red eyes; red hair with a green headband. Preserve the hair, facial hair, headgear, markings and expression exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face13-3 (30x26)"
+    },
+    {
+      "id": "face15-1",
+      "directory": "faces/face15i0",
+      "image": "face15i0-record-001-frame-000-source.png",
+      "content": "One female elf head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Light tan skin and pointed ears; short curly dark-green hair like leaves. Preserve the hair, facial hair, headgear, markings and expression exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face15-1 (33x29)"
+    },
+    {
+      "id": "face17-6",
+      "directory": "faces/face17i0",
+      "image": "face17i0-record-006-frame-000-source.png",
+      "content": "One female lizard-person head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Green scaly skin, red eyes and a spiked, ridged head; spiked fins around the head and a wide mouth. Preserve the hair, facial hair, headgear, markings and expression exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face17-6 (36x29)"
+    }
+  ]
+}
