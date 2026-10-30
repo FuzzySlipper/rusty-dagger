@@ -241,8 +241,8 @@ dotnet run --project src/Daggerfall.Import.Tool -- export-items
 dotnet run --project src/Daggerfall.Import.Tool -- export-spells
 ```
 
-These write `local/exports/daggerfall-items-r01/` and
-`local/exports/daggerfall-spells-r01/`. Each has an `index.html` visual catalog,
+These write `authoring/df-raw/items/` and
+`authoring/df-raw/spells/`. Each has an `index.html` visual catalog,
 CSV index and JSON manifests; each item or spell has its own directory with
 native-resolution PNGs and source record/frame identities. Items include player
 body and clothing variants, dyes, masks, artifacts and applicable normal/enchanted
@@ -263,7 +263,7 @@ bash src/scripts/run-sprite-workbench.sh
 ```
 
 The default uses Privateer's Hold and saves to `authoring/sprites/privateers-hold.json`;
-`authoring/` is operator-local output and ignored by Git. To select another
+`authoring/` also holds the art-conversion workflow ([authoring/README.md](authoring/README.md)); only its `df-raw/`, `gen-raw/` and `review/` are ignored by Git. To select another
 publication, writable authoring root, overlay, or port, pass them in order or set
 `RUSTY_WORKBENCH_PUBLICATION`, `RUSTY_WORKBENCH_AUTHORING`, `RUSTY_WORKBENCH_OVERLAY`
 or `RUSTY_WORKBENCH_PORT`; an omitted argument falls back to its variable, then the default:

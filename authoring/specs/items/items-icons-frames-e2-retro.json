@@ -1,0 +1,112 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy adventure inventory art. Keep the source's local colours: do not tint every material brown or add brass simply to match the UI. Use a restrained palette with distinct light, middle and dark families, clear silhouette and legible material masses. Detail hierarchy: silhouette first, a few large planes or folds second, sparse material marks third. Keep the original class of mundane object, its opening and visible components; no extra handles, gemstones, runes, faces, symbols, chains or elaborate fantasy embellishment. Do not convert this into pixel art, a photoreal product photograph, a glossy mobile-game loot icon or a dramatic scene. No text, labels, border, vignette, decorative frame, hand, person, pedestal, scenery or second object.",
+  "presentation": "One isolated item on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the object. Full object visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Inventory icons animation frames, part 2 / Qwen then retro",
+  "selection": "Flame animation frames 1+ of the lit-candle sprites (rusty-dagger #10458); only the flame differs from frame 0.",
+  "items": [
+    {
+      "id": "torch-f1",
+      "directory": "useless-items2/item-247-torch",
+      "image": "world/texture-210-record-006-frame-001-source.png",
+      "name": "Torch (16x94) frame 1",
+      "content": "One thin unlit-looking hand torch standing upright, aspect about 0.17:1. A very thin dark brown stick with a small bright yellow and orange flame at its top. Preserve the very tall narrow shape and the tiny flame at the top. No holder, text or smoke.",
+      "uncertainty": "This is frame 0 of a flame animation. The stick is interpreted as a plain wooden handle. Sprite shared by: item-247-torch. This is animation frame 1; only the flame differs from frame 0, so the object body must match frame 0.",
+      "invention": "Resolve wood grain on a thin shaft and a small painted flame."
+    },
+    {
+      "id": "torch-f2",
+      "directory": "useless-items2/item-247-torch",
+      "image": "world/texture-210-record-006-frame-002-source.png",
+      "name": "Torch (16x94) frame 2",
+      "content": "One thin unlit-looking hand torch standing upright, aspect about 0.17:1. A very thin dark brown stick with a small bright yellow and orange flame at its top. Preserve the very tall narrow shape and the tiny flame at the top. No holder, text or smoke.",
+      "uncertainty": "This is frame 0 of a flame animation. The stick is interpreted as a plain wooden handle. Sprite shared by: item-247-torch. This is animation frame 2; only the flame differs from frame 0, so the object body must match frame 0.",
+      "invention": "Resolve wood grain on a thin shaft and a small painted flame."
+    },
+    {
+      "id": "torch-f3",
+      "directory": "useless-items2/item-247-torch",
+      "image": "world/texture-210-record-006-frame-003-source.png",
+      "name": "Torch (16x94) frame 3",
+      "content": "One thin unlit-looking hand torch standing upright, aspect about 0.17:1. A very thin dark brown stick with a small bright yellow and orange flame at its top. Preserve the very tall narrow shape and the tiny flame at the top. No holder, text or smoke.",
+      "uncertainty": "This is frame 0 of a flame animation. The stick is interpreted as a plain wooden handle. Sprite shared by: item-247-torch. This is animation frame 3; only the flame differs from frame 0, so the object body must match frame 0.",
+      "invention": "Resolve wood grain on a thin shaft and a small painted flame."
+    },
+    {
+      "id": "candle-f1",
+      "directory": "useless-items2/item-253-candle",
+      "image": "world/texture-210-record-003-frame-001-source.png",
+      "name": "Candle (9x19) frame 1",
+      "content": "One short thick candle standing upright on its own base, aspect about 1:2.1. A pale grey-white wax body, slightly wider at the base with a few darker grey shadow planes, topped by a small flame: orange outer flame with a yellow-white core. Preserve the short thick candle, the single flame and the plain base. No candlestick, holder, dish, dripping wax beyond a little, text or second candle.",
+      "uncertainty": "This is the first frame of a five-frame flicker animation; only the static first frame is drawn and later frames are not covered. The wax colour is grey in the pixels and kept as pale grey-white. Sprite shared by: item-253-candle. This is animation frame 1; only the flame differs from frame 0, so the object body must match frame 0.",
+      "invention": "Resolve wax thickness, a few soft drip marks, a thin black wick and a simple teardrop flame. Keep the flame small and the wax matte."
+    },
+    {
+      "id": "candle-f2",
+      "directory": "useless-items2/item-253-candle",
+      "image": "world/texture-210-record-003-frame-002-source.png",
+      "name": "Candle (9x19) frame 2",
+      "content": "One short thick candle standing upright on its own base, aspect about 1:2.1. A pale grey-white wax body, slightly wider at the base with a few darker grey shadow planes, topped by a small flame: orange outer flame with a yellow-white core. Preserve the short thick candle, the single flame and the plain base. No candlestick, holder, dish, dripping wax beyond a little, text or second candle.",
+      "uncertainty": "This is the first frame of a five-frame flicker animation; only the static first frame is drawn and later frames are not covered. The wax colour is grey in the pixels and kept as pale grey-white. Sprite shared by: item-253-candle. This is animation frame 2; only the flame differs from frame 0, so the object body must match frame 0.",
+      "invention": "Resolve wax thickness, a few soft drip marks, a thin black wick and a simple teardrop flame. Keep the flame small and the wax matte."
+    },
+    {
+      "id": "candle-f3",
+      "directory": "useless-items2/item-253-candle",
+      "image": "world/texture-210-record-003-frame-003-source.png",
+      "name": "Candle (9x19) frame 3",
+      "content": "One short thick candle standing upright on its own base, aspect about 1:2.1. A pale grey-white wax body, slightly wider at the base with a few darker grey shadow planes, topped by a small flame: orange outer flame with a yellow-white core. Preserve the short thick candle, the single flame and the plain base. No candlestick, holder, dish, dripping wax beyond a little, text or second candle.",
+      "uncertainty": "This is the first frame of a five-frame flicker animation; only the static first frame is drawn and later frames are not covered. The wax colour is grey in the pixels and kept as pale grey-white. Sprite shared by: item-253-candle. This is animation frame 3; only the flame differs from frame 0, so the object body must match frame 0.",
+      "invention": "Resolve wax thickness, a few soft drip marks, a thin black wick and a simple teardrop flame. Keep the flame small and the wax matte."
+    },
+    {
+      "id": "candle-f4",
+      "directory": "useless-items2/item-253-candle",
+      "image": "world/texture-210-record-003-frame-004-source.png",
+      "name": "Candle (9x19) frame 4",
+      "content": "One short thick candle standing upright on its own base, aspect about 1:2.1. A pale grey-white wax body, slightly wider at the base with a few darker grey shadow planes, topped by a small flame: orange outer flame with a yellow-white core. Preserve the short thick candle, the single flame and the plain base. No candlestick, holder, dish, dripping wax beyond a little, text or second candle.",
+      "uncertainty": "This is the first frame of a five-frame flicker animation; only the static first frame is drawn and later frames are not covered. The wax colour is grey in the pixels and kept as pale grey-white. Sprite shared by: item-253-candle. This is animation frame 4; only the flame differs from frame 0, so the object body must match frame 0.",
+      "invention": "Resolve wax thickness, a few soft drip marks, a thin black wick and a simple teardrop flame. Keep the flame small and the wax matte."
+    }
+  ],
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "icons-e2",
+      "model": "krea2-turbo",
+      "host": "den-nimo",
+      "url": "http://192.168.1.23:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ]
+}

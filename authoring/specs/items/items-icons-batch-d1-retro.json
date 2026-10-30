@@ -1,0 +1,157 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy adventure inventory art. Keep the source's local colours: do not tint every material brown or add brass simply to match the UI. Use a restrained palette with distinct light, middle and dark families, clear silhouette and legible material masses. Detail hierarchy: silhouette first, a few large planes or folds second, sparse material marks third. Keep the original class of mundane object, its opening and visible components; no extra handles, gemstones, runes, faces, symbols, chains or elaborate fantasy embellishment. Do not convert this into pixel art, a photoreal product photograph, a glossy mobile-game loot icon or a dramatic scene. No text, labels, border, vignette, decorative frame, hand, person, pedestal, scenery or second object.",
+  "presentation": "One isolated item on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the object. Full object visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Inventory icons batch D, part 1 (furniture, quest and religious items) / Qwen then retro",
+  "selection": "Batch of unique world sprites from the full icon conversion (rusty-dagger #10458). Each sprite is generated once; sharing is stated in its uncertainty text.",
+  "items": [
+    {
+      "id": "shrubbery",
+      "directory": "furniture/item-250-shrubbery",
+      "image": "world/texture-213-record-015-frame-000-source.png",
+      "name": "Shrubbery (59x41)",
+      "content": "One low shrub of long thin dark green blades, aspect about 1.45:1. A fan of many slender pointed grass-like leaves in dark green with a few lighter olive streaks, arching up and outward from a small dark centre at the bottom. Preserve the fan of arching blades, widest at the top. No flowers, pot, soil or text.",
+      "uncertainty": "Whether it is a grass clump or a spiky shrub is unresolved; it is interpreted as a clump of arching blades. Sprite shared by: item-250-shrubbery.",
+      "invention": "Resolve a few separate blades, soft highlights along their ridges and dark gaps between them."
+    },
+    {
+      "id": "large-statue",
+      "directory": "furniture/item-266-large-statue",
+      "image": "world/texture-202-record-000-frame-000-source.png",
+      "name": "Large Statue (34x149)",
+      "content": "One tall narrow statue on a plinth, aspect about 0.23:1. A black stone figure with a horned head and a stylised face on a long slender body, standing on a square dark plinth with a lighter top edge. Preserve the very tall narrow proportion, the horned head and the plinth. No pedestal inscriptions, text, wings or weapons.",
+      "uncertainty": "The horned head is interpreted as a stylised mask or horned bust; the body is a simple tapering column. Sprite shared by: item-266-large-statue.",
+      "invention": "Resolve carved stone planes, a faint highlight on the horns and a plain plinth."
+    },
+    {
+      "id": "altar",
+      "directory": "furniture/item-272-altar",
+      "image": "world/texture-211-record-053-frame-000-source.png",
+      "name": "Altar (38x20)",
+      "content": "One low altar block, aspect about 1.9:1. A teal-green stone table with a wider flat top slab, a recessed front panel with a gold round boss at its centre, and darker teal base. Preserve the wide low block, the front panel and the gold boss. No text, candles, offerings or symbols.",
+      "uncertainty": "The gold boss is interpreted as a plain round gold disc. Sprite shared by: item-272-altar.",
+      "invention": "Resolve stone texture, bevelled edges and a simple metallic boss."
+    },
+    {
+      "id": "font",
+      "directory": "furniture/item-273-font",
+      "image": "world/texture-212-record-002-frame-000-source.png",
+      "name": "Font (78x64)",
+      "content": "One stone font standing alone, aspect about 1.2:1. A wide octagonal dark grey stone basin seen from slightly above with teal water inside, and a slender dark pedestal rising from the centre of the basin to a pointed finial. Preserve the octagonal basin, the water and the central spire. No figures, text or side spouts.",
+      "uncertainty": "The central spire is interpreted as a plain pedestal with a pointed top. Sprite shared by: item-273-font.",
+      "invention": "Resolve stone block faces, a thin water surface and a plain central pedestal."
+    },
+    {
+      "id": "cloth-amulet",
+      "directory": "jewellery/item-139-cloth-amulet",
+      "image": "world/texture-204-record-009-frame-000-source.png",
+      "name": "Cloth Amulet (88x31)",
+      "content": "One cloth amulet lying flat, aspect about 2.8:1. A long dark brown-grey draped band of cloth with a pale highlight along its upper edge, bunched at the left and right ends with a slight S-curve across the middle. Preserve the long low draped shape. No gems, metal, pendant, chain or text.",
+      "uncertainty": "The object is a very low dark band; it is interpreted as a cloth cord or ribbon amulet, with the ends bunched. This is a guess for owner review. Sprite shared by: item-139-cloth-amulet.",
+      "invention": "Resolve a few cloth folds and a slight sheen. Keep it a single plain draped band."
+    },
+    {
+      "id": "straps",
+      "directory": "mens-clothing/item-141-straps",
+      "image": "world/texture-204-record-000-frame-000-source.png",
+      "name": "Straps (47x25)",
+      "content": "A loose pile of folded cloth and clothing, aspect about 1.9:1. Overlapping rounded folded garments heaped together: teal, mauve-pink, olive green and golden yellow pieces on the left and centre, with a pale grey-white piece on the right. Preserve the loose heap and the mix of colours. No person, hanger, text or pattern.",
+      "uncertainty": "The sprite is shared by 76 clothing templates (recoloured in engine). Individual garments are not identifiable; it is interpreted as a heap of folded fabrics. This is a guess for owner review. Sprite shared by: item-141-straps, item-142-armbands, item-143-kimono, item-144-fancy-armbands, item-145-sash, item-146-eodoric, item-147-shoes, item-148-tall-boots, item-149-boots, item-150-sandals, item-151-casual-pants, item-152-breeches, item-153-short-skirt, item-154-casual-cloak, item-155-formal-cloak, item-156-khajiit-suit, item-157-dwynnen-surcoat, item-158-short-tunic, item-159-formal-tunic, item-160-toga, item-161-reversible-tunic, item-162-loincloth, item-163-plain-robes, item-164-priest-robes, item-165-short-shirt, item-166-short-shirt, item-167-long-shirt, item-168-long-shirt, item-169-short-shirt, item-170-short-shirt, item-171-long-shirt, item-172-long-shirt, item-173-open-tunic, item-174-wrap, item-175-long-skirt, item-176-anticlere-surcoat, item-177-challenger-straps, item-178-short-shirt, item-179-long-shirt, item-180-vest, item-181-champion-straps, item-182-brassiere, item-183-formal-brassiere, item-184-peasant-blouse, item-185-eodoric, item-186-shoes, item-187-tall-boots, item-188-boots, item-189-sandals, item-190-casual-pants, item-191-casual-cloak, item-192-formal-cloak, item-193-khajiit-suit, item-194-formal-eodoric, item-195-evening-gown, item-196-day-gown, item-197-casual-dress, item-198-strapless-dress, item-199-loincloth, item-200-plain-robes, item-201-priestess-robes, item-202-short-shirt, item-203-short-shirt, item-204-long-shirt, item-205-long-shirt, item-206-short-shirt, item-207-short-shirt, item-208-long-shirt, item-209-long-shirt, item-210-open-tunic, item-211-wrap, item-212-long-skirt, item-213-tights, item-214-short-shirt, item-215-long-shirt, item-216-vest.",
+      "invention": "Resolve soft cloth folds and seams. Keep each garment a plain, flat colour."
+    },
+    {
+      "id": "letter-of-credit",
+      "directory": "misc-items/item-275-letter-of-credit",
+      "image": "world/texture-209-record-007-frame-000-source.png",
+      "name": "Letter Of Credit (62x19)",
+      "content": "One letter of credit lying flat, aspect about 3.3:1. A wide flat tan parchment sheet with slightly curled corners and a small red wax mark near the right end, darker brown along the lower edge. Preserve the flat wide silhouette and the small red mark at the right. No writing, text, ribbon or ink marks.",
+      "uncertainty": "The red mark is interpreted as a small wax seal. Sprite shared by: item-275-letter-of-credit.",
+      "invention": "Resolve paper fibre, edge thickness and a plain round wax seal. Do not add writing."
+    },
+    {
+      "id": "painting",
+      "directory": "paintings/item-284-painting",
+      "image": "world/texture-211-record-057-frame-000-source.png",
+      "name": "Painting (43x31)",
+      "content": "One framed painting, aspect about 1.4:1. A wide thick gold ornate frame around a dark scene of brown and green tones, with a lighter brown central shape. Preserve the thick gold frame and the dark picture inside it. No text, signature or hanging cord.",
+      "uncertainty": "The picture is too small to read; it is interpreted as a dark brown and green landscape with a lighter brown shape in the middle. This is a guess for owner review. Sprite shared by: item-284-painting.",
+      "invention": "Resolve frame moulding and a loosely painted dark scene."
+    },
+    {
+      "id": "telescope",
+      "directory": "quest-items/item-254-telescope",
+      "image": "world/texture-208-record-004-frame-000-source.png",
+      "name": "Telescope (38x55)",
+      "content": "One brass telescope on a tripod, aspect about 0.7:1. A long brown-and-brass tube pointing up and to the right, mounted on a black three-legged tripod with the legs spread to a wide base. Preserve the tilted tube and the tripod. No stars, text or person.",
+      "uncertainty": "The tube is interpreted as brown leather with brass rings. Sprite shared by: item-254-telescope.",
+      "invention": "Resolve brass rings, a lens at the end and slim tripod legs."
+    },
+    {
+      "id": "scales",
+      "directory": "quest-items/item-255-scales",
+      "image": "world/texture-208-record-003-frame-000-source.png",
+      "name": "Scales (32x30)",
+      "content": "One set of balance scales on a base, aspect about 1.07:1. A copper-orange central post on a wide round base, with a curved beam across the top and two thin chains on each side hanging down to two small shallow pans at equal heights. Preserve the symmetrical beam, chains and two pans. No weights, text or coins.",
+      "uncertainty": "The pans are interpreted as empty shallow dishes. Sprite shared by: item-255-scales.",
+      "invention": "Resolve the copper surface, thin chains and plain pans."
+    },
+    {
+      "id": "globe",
+      "directory": "quest-items/item-256-globe",
+      "image": "world/texture-208-record-000-frame-000-source.png",
+      "name": "Globe (54x74)",
+      "content": "One globe on a stand, aspect about 0.73:1. A blue sphere with dark landmasses held in a thin brass ring frame on a short brass stem and a round yellow-gold base. Preserve the sphere inside its ring and the base. No text, labels or map lettering.",
+      "uncertainty": "Continents are not identifiable; they are interpreted as dark brown landmasses on blue ocean. Sprite shared by: item-256-globe.",
+      "invention": "Resolve a glossy sphere, a thin brass ring and a turned base."
+    },
+    {
+      "id": "skeleton",
+      "directory": "quest-items/item-257-skeleton",
+      "image": "world/texture-206-record-010-frame-000-source.png",
+      "name": "Skeleton (31x100)",
+      "content": "One small standing skeleton on a flat base, aspect about 0.31:1. A pale grey-white skeleton standing upright with a round skull, a ribcage, two arms at the sides and thin legs, on a small dark base. Preserve the tall narrow standing pose. No clothing, weapon, text or background.",
+      "uncertainty": "Fine bone details are inferred from a tiny source. Sprite shared by: item-257-skeleton.",
+      "invention": "Resolve a clear skull, ribs and limb bones in a simple readable way."
+    }
+  ],
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "icons-d1",
+      "model": "krea2-turbo",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ]
+}

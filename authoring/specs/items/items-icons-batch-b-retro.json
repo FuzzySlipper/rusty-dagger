@@ -1,0 +1,247 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy adventure inventory art. Keep the source's local colours: do not tint every material brown or add brass simply to match the UI. Use a restrained palette with distinct light, middle and dark families, clear silhouette and legible material masses. Detail hierarchy: silhouette first, a few large planes or folds second, sparse material marks third. Keep the original class of mundane object, its opening and visible components; no extra handles, gemstones, runes, faces, symbols, chains or elaborate fantasy embellishment. Do not convert this into pixel art, a photoreal product photograph, a glossy mobile-game loot icon or a dramatic scene. No text, labels, border, vignette, decorative frame, hand, person, pedestal, scenery or second object.",
+  "presentation": "One isolated item on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the object. Full object visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Inventory icons batch B (plants) / Qwen then retro",
+  "selection": "Batch of unique world sprites from the full icon conversion (rusty-dagger #10458). Each sprite is generated once; sharing is stated in its uncertainty text.",
+  "items": [
+    {
+      "id": "twigs",
+      "directory": "plant-ingredients1/item-008-twigs",
+      "image": "world/texture-254-record-009-frame-000-source.png",
+      "name": "Twigs (23x12)",
+      "content": "A loose small bundle of dry brown twigs lying slantwise, aspect about 2:1. Several thin dark and mid brown sticks crossing at different angles with a few short side shoots. Preserve the sparse thin crossing sticks. No leaves, binding, text or knots.",
+      "uncertainty": "Twig count and joints are interpretations. Sprite shared by: item-008-twigs.",
+      "invention": "Resolve a few veins or stems, simple overlapping shapes and plain shading. Keep the plant sparse and recognisable."
+    },
+    {
+      "id": "green-leaves",
+      "directory": "plant-ingredients1/item-009-green-leaves",
+      "image": "world/texture-254-record-010-frame-000-source.png",
+      "name": "Green Leaves (19x10)",
+      "content": "A short sprig of green leaves lying slantwise, aspect about 1.9:1. A thin dark brown stem from the lower left with small mid-green leaves along it rising to the upper right. Preserve the thin stem and scattered small leaves. No flowers or berries.",
+      "uncertainty": "Leaf shape is unresolved; interpreted as small plain oval leaves. Sprite shared by: item-009-green-leaves.",
+      "invention": "Resolve a few veins or stems, simple overlapping shapes and plain shading. Keep the plant sparse and recognisable."
+    },
+    {
+      "id": "red-flowers",
+      "directory": "plant-ingredients1/item-010-red-flowers",
+      "image": "world/texture-254-record-011-frame-000-source.png",
+      "name": "Red Flowers (16x12)",
+      "content": "A small sprig with three red flowers, aspect about 1.3:1. Three deep red blossoms with orange-yellow centres: a larger one at the upper left, a small one at the upper right and one at the lower left, joined by thin dark green stems with a few small leaves at the lower right. Preserve the three blossoms and their positions. No extra buds or text.",
+      "uncertainty": "Petal count is unresolved; flowers are interpreted as simple cup-shaped blossoms. Sprite shared by: item-010-red-flowers.",
+      "invention": "Resolve a few veins or stems, simple overlapping shapes and plain shading. Keep the plant sparse and recognisable."
+    },
+    {
+      "id": "yellow-flowers",
+      "directory": "plant-ingredients1/item-011-yellow-flowers",
+      "image": "world/texture-254-record-012-frame-000-source.png",
+      "name": "Yellow Flowers (15x15)",
+      "content": "A small cluster of yellow flowers, roughly square. Several bright yellow blossoms with pale lemon highlights and a dark red-brown centre at the middle, grouped at the upper right and lower left, with thin green stems and a few green leaves at the left. Preserve the yellow cluster and the dark centres. No other colours or text.",
+      "uncertainty": "Petal shape is unresolved; interpreted as simple open blossoms. Sprite shared by: item-011-yellow-flowers.",
+      "invention": "Resolve a few veins or stems, simple overlapping shapes and plain shading. Keep the plant sparse and recognisable."
+    },
+    {
+      "id": "root-tendrils",
+      "directory": "plant-ingredients1/item-012-root-tendrils",
+      "image": "world/texture-254-record-013-frame-000-source.png",
+      "name": "Root Tendrils (24x13)",
+      "content": "A tangle of dry brown roots lying slantwise, aspect about 1.9:1. A thick pale-brown root at the lower left splitting into several thin dark brown rootlets spreading to the right and up. Preserve the thick left end and thin branching rootlets. No soil, leaves or text.",
+      "uncertainty": "Whether the lighter part is peeled root or a knot is unresolved; interpreted as a light-brown thick root. Sprite shared by: item-012-root-tendrils.",
+      "invention": "Resolve a few veins or stems, simple overlapping shapes and plain shading. Keep the plant sparse and recognisable."
+    },
+    {
+      "id": "root-bulb",
+      "directory": "plant-ingredients1/item-013-root-bulb",
+      "image": "world/texture-254-record-014-frame-000-source.png",
+      "name": "Root Bulb (12x14)",
+      "content": "A small root bulb with a short green stem, aspect about 0.85:1. A lumpy brown bulb with orange-brown shading at the centre, thin dark rootlets spreading below and sideways, and a short green stalk rising from the top. Preserve the stalk above, the bulb and the rootlets. No soil, flowers or text.",
+      "uncertainty": "Bulb shape is interpreted as a round lumpy tuber. Sprite shared by: item-013-root-bulb.",
+      "invention": "Resolve a few veins or stems, simple overlapping shapes and plain shading. Keep the plant sparse and recognisable."
+    },
+    {
+      "id": "pine-branch",
+      "directory": "plant-ingredients1/item-014-pine-branch",
+      "image": "world/texture-254-record-015-frame-000-source.png",
+      "name": "Pine Branch (24x14)",
+      "content": "A pine branch lying diagonally, aspect about 1.7:1. A thin brown woody stem with a pale cut end at the lower left and dark blue-green needle clusters along it rising to the upper right. Preserve the diagonal lie and the cut end. No cones or text.",
+      "uncertainty": "The very dark needles are interpreted as short dark green needles in clusters. No cone is shown. Sprite shared by: item-014-pine-branch.",
+      "invention": "Resolve a few veins or stems, simple overlapping shapes and plain shading. Keep the plant sparse and recognisable."
+    },
+    {
+      "id": "green-berries",
+      "directory": "plant-ingredients1/item-015-green-berries",
+      "image": "world/texture-254-record-016-frame-000-source.png",
+      "name": "Green Berries (13x14)",
+      "content": "A small sprig of three clusters of green berries, aspect about 0.93:1. Round light green berries in three bunches (upper centre, lower left, lower right) joined by thin dark green stems with a few leaves. Preserve the three bunches. No flowers or text.",
+      "uncertainty": "Berry count within each bunch is an interpretation. Sprite shared by: item-015-green-berries.",
+      "invention": "Resolve a few veins or stems, simple overlapping shapes and plain shading. Keep the plant sparse and recognisable."
+    },
+    {
+      "id": "red-berries",
+      "directory": "plant-ingredients1/item-016-red-berries",
+      "image": "world/texture-254-record-017-frame-000-source.png",
+      "name": "Red Berries (13x14)",
+      "content": "A small sprig of three clusters of red berries, aspect about 0.93:1. Round deep red berries in three bunches (upper centre, left, lower right) on thin dark green stems with a few leaves. Preserve the three bunches. No flowers or text.",
+      "uncertainty": "Berry count within each bunch is an interpretation. Sprite shared by: item-016-red-berries.",
+      "invention": "Resolve a few veins or stems, simple overlapping shapes and plain shading. Keep the plant sparse and recognisable."
+    },
+    {
+      "id": "yellow-berries",
+      "directory": "plant-ingredients1/item-017-yellow-berries",
+      "image": "world/texture-254-record-018-frame-000-source.png",
+      "name": "Yellow Berries (13x14)",
+      "content": "A small sprig of three clusters of yellow berries, aspect about 0.93:1. Round golden-yellow berries in three bunches (upper centre, left, lower right) on thin dark green stems with a few leaves. Preserve the three bunches. No flowers or text.",
+      "uncertainty": "Berry count within each bunch is an interpretation. Sprite shared by: item-017-yellow-berries.",
+      "invention": "Resolve a few veins or stems, simple overlapping shapes and plain shading. Keep the plant sparse and recognisable."
+    },
+    {
+      "id": "clover",
+      "directory": "plant-ingredients1/item-018-clover",
+      "image": "world/texture-254-record-019-frame-000-source.png",
+      "name": "Clover (13x12)",
+      "content": "A small sprig of clover with several leaves, aspect about 1.1:1. Broad mid-green leaves in lobes, two at the upper left, two at the upper right and two lower, with dark green shadow shapes and a thin dark stem. Preserve the stacked lobed leaves and the central stem. No flowers or text.",
+      "uncertainty": "Whether it is a three-leaf or four-leaf arrangement is unresolved; interpreted as paired broad leaves. Sprite shared by: item-018-clover.",
+      "invention": "Resolve a few veins or stems, simple overlapping shapes and plain shading. Keep the plant sparse and recognisable."
+    },
+    {
+      "id": "yellow-rose",
+      "directory": "plant-ingredients1/item-020-yellow-rose",
+      "image": "world/texture-254-record-027-frame-000-source.png",
+      "name": "Yellow Rose (24x21)",
+      "content": "A single yellow rose with a leafy stem, aspect about 1.15:1. A large layered yellow-gold blossom at the upper right with dark ochre shadow, a small yellow bud at the left, and long thin dark green stems with small leaves curving across the bottom and up the left. Preserve the blossom, bud and stems. No thorns beyond tiny hints, no text.",
+      "uncertainty": "Petal layering is an interpretation. Sprite shared by: item-020-yellow-rose.",
+      "invention": "Resolve a few veins or stems, simple overlapping shapes and plain shading. Keep the plant sparse and recognisable."
+    },
+    {
+      "id": "red-poppy",
+      "directory": "plant-ingredients1/item-023-red-poppy",
+      "image": "world/texture-254-record-030-frame-000-source.png",
+      "name": "Red Poppy (24x21)",
+      "content": "A red poppy plant, aspect about 1.15:1. A large open deep-red poppy with a dark centre at the middle left and a smaller red poppy at the right, a small red bud at the upper centre, thin green stems and a few leaves along the bottom. Preserve the two open blooms with dark centres and the bud. No text.",
+      "uncertainty": "Petal count is unresolved; interpreted as broad overlapping red petals around a dark centre. Sprite shared by: item-023-red-poppy.",
+      "invention": "Resolve a few veins or stems, simple overlapping shapes and plain shading. Keep the plant sparse and recognisable."
+    },
+    {
+      "id": "golden-poppy",
+      "directory": "plant-ingredients1/item-025-golden-poppy",
+      "image": "world/texture-254-record-032-frame-000-source.png",
+      "name": "Golden Poppy (24x21)",
+      "content": "A golden-orange poppy plant, aspect about 1.15:1. A large open orange poppy with a dark brown centre at the middle left and a smaller orange poppy at the right, a small orange bud at the upper centre, thin green stems and a few leaves along the bottom. Preserve the two open blooms and the bud. No text.",
+      "uncertainty": "Petal count is unresolved; interpreted as broad overlapping orange petals. Sprite shared by: item-025-golden-poppy.",
+      "invention": "Resolve a few veins or stems, simple overlapping shapes and plain shading. Keep the plant sparse and recognisable."
+    },
+    {
+      "id": "black-rose",
+      "directory": "plant-ingredients2/item-021-black-rose",
+      "image": "world/texture-254-record-028-frame-000-source.png",
+      "name": "Black Rose (23x21)",
+      "content": "A single black rose with a leafy stem, aspect about 1.1:1. A layered dark charcoal-grey blossom with pale grey highlights and small orange-brown edge accents at the upper right, a small grey bud at the left, and long thin dark green stems with leaves across the bottom. Preserve the dark grey blossom. Do not turn the petals red. No text.",
+      "uncertainty": "The orange-brown edge pixels are interpreted as warm edge tinting; petal layering is an interpretation. Sprite shared by: item-021-black-rose.",
+      "invention": "Resolve a few veins or stems, simple overlapping shapes and plain shading. Keep the plant sparse and recognisable."
+    },
+    {
+      "id": "white-rose",
+      "directory": "plant-ingredients2/item-022-white-rose",
+      "image": "world/texture-254-record-029-frame-000-source.png",
+      "name": "White Rose (24x21)",
+      "content": "A single white rose with a leafy stem, aspect about 1.15:1. A large layered cream-white and pale peach blossom at the upper right, a small cream bud at the left, and long thin dark green stems and leaves curving across the bottom and up the left. Preserve the blossom, bud and stems. No text.",
+      "uncertainty": "Petal layering is an interpretation. Sprite shared by: item-022-white-rose.",
+      "invention": "Resolve a few veins or stems, simple overlapping shapes and plain shading. Keep the plant sparse and recognisable."
+    },
+    {
+      "id": "black-poppy",
+      "directory": "plant-ingredients2/item-024-black-poppy",
+      "image": "world/texture-254-record-031-frame-000-source.png",
+      "name": "Black Poppy (24x21)",
+      "content": "A black poppy plant, aspect about 1.15:1. A large open charcoal-grey poppy with a black centre at the middle left and a smaller grey poppy at the right, a small grey bud at the upper centre, thin green stems and a few leaves along the bottom. Preserve the grey open blooms with dark centres. Do not turn the petals red. No text.",
+      "uncertainty": "Petal count is unresolved; interpreted as broad overlapping grey petals with pale highlights. Sprite shared by: item-024-black-poppy.",
+      "invention": "Resolve a few veins or stems, simple overlapping shapes and plain shading. Keep the plant sparse and recognisable."
+    },
+    {
+      "id": "white-poppy",
+      "directory": "plant-ingredients2/item-026-white-poppy",
+      "image": "world/texture-254-record-033-frame-000-source.png",
+      "name": "White Poppy (24x21)",
+      "content": "A white poppy plant, aspect about 1.15:1. A large open cream-white poppy with a black centre at the middle left and orange-brown stamen touches, a smaller cream poppy at the right with a black centre, a small cream bud at the upper centre, thin green stems and leaves along the bottom. Preserve the two open blooms with black centres and the bud. No text.",
+      "uncertainty": "Petal count is unresolved; interpreted as broad overlapping cream petals. Sprite shared by: item-026-white-poppy.",
+      "invention": "Resolve a few veins or stems, simple overlapping shapes and plain shading. Keep the plant sparse and recognisable."
+    },
+    {
+      "id": "bamboo",
+      "directory": "plant-ingredients2/item-028-bamboo",
+      "image": "world/texture-254-record-021-frame-000-source.png",
+      "name": "Bamboo (24x24)",
+      "content": "A bamboo cutting, roughly square. An upright brown segmented stalk running from the bottom centre to the top with a few side branches, carrying thin dark green leaves in clusters on both sides. Preserve the upright main stalk and the sparse leaf clusters. No pot or text.",
+      "uncertainty": "Leaf shape is interpreted as long narrow bamboo leaves. Sprite shared by: item-028-bamboo.",
+      "invention": "Resolve a few veins or stems, simple overlapping shapes and plain shading. Keep the plant sparse and recognisable."
+    },
+    {
+      "id": "palm",
+      "directory": "plant-ingredients2/item-029-palm",
+      "image": "world/texture-254-record-022-frame-000-source.png",
+      "name": "Palm (22x20)",
+      "content": "A palm frond cutting, aspect about 1.1:1. A brown stalk rising from the lower left and fanning into a drooping crown of long mid-green palm leaves, with lighter green on upper edges and dark green shadows beneath. Preserve the fan of drooping leaves over a diagonal stalk. No coconuts or text.",
+      "uncertainty": "Leaf shape is interpreted as long pinnate fronds. Sprite shared by: item-029-palm.",
+      "invention": "Resolve a few veins or stems, simple overlapping shapes and plain shading. Keep the plant sparse and recognisable."
+    },
+    {
+      "id": "aloe",
+      "directory": "plant-ingredients2/item-030-aloe",
+      "image": "world/texture-254-record-023-frame-000-source.png",
+      "name": "Aloe (24x24)",
+      "content": "A potted aloe plant, roughly square. A rosette of long, narrow, pointed dark green leaves rising and spreading outward from the centre, set in a small shallow dark-gold clay dish or pot at the bottom. Preserve the upright leaf rosette and the low gold-brown pot. No flowers or text.",
+      "uncertainty": "The dish may be a pot or a clump of soil; interpreted as a shallow golden-brown pot. Sprite shared by: item-030-aloe.",
+      "invention": "Resolve a few veins or stems, simple overlapping shapes and plain shading. Keep the plant sparse and recognisable."
+    },
+    {
+      "id": "fig",
+      "directory": "plant-ingredients2/item-031-fig",
+      "image": "world/texture-254-record-024-frame-000-source.png",
+      "name": "Fig (24x18)",
+      "content": "A fig plant cutting, aspect about 1.3:1. A dense heap of broad rounded green leaves, light and mid green with dark green shadows, and a tiny dark red-brown spot near the top suggesting a fruit. Preserve the compact leafy mass. No fruit beyond the one small spot, no text.",
+      "uncertainty": "The leaf shapes are mostly unresolved; interpreted as broad lobed fig leaves. The red-brown dot is interpreted as a small fruit hidden in leaves. Sprite shared by: item-031-fig.",
+      "invention": "Resolve a few veins or stems, simple overlapping shapes and plain shading. Keep the plant sparse and recognisable."
+    }
+  ],
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "icons-b",
+      "model": "krea2-turbo",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ]
+}

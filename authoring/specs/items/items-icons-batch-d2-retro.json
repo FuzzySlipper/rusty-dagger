@@ -1,0 +1,157 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy adventure inventory art. Keep the source's local colours: do not tint every material brown or add brass simply to match the UI. Use a restrained palette with distinct light, middle and dark families, clear silhouette and legible material masses. Detail hierarchy: silhouette first, a few large planes or folds second, sparse material marks third. Keep the original class of mundane object, its opening and visible components; no extra handles, gemstones, runes, faces, symbols, chains or elaborate fantasy embellishment. Do not convert this into pixel art, a photoreal product photograph, a glossy mobile-game loot icon or a dramatic scene. No text, labels, border, vignette, decorative frame, hand, person, pedestal, scenery or second object.",
+  "presentation": "One isolated item on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the object. Full object visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Inventory icons batch D, part 2 (furniture, quest and religious items) / Qwen then retro",
+  "selection": "Batch of unique world sprites from the full icon conversion (rusty-dagger #10458). Each sprite is generated once; sharing is stated in its uncertainty text.",
+  "items": [
+    {
+      "id": "totem",
+      "directory": "quest-items/item-280-totem",
+      "image": "world/texture-211-record-054-frame-000-source.png",
+      "name": "Totem (43x19)",
+      "content": "One small totem, aspect about 2.3:1. A round pale tan carved disc face at the left end with a darker eye-like mark, joined to a gold handle running diagonally to the lower right with a dark green fringe at its end. Preserve the round disc at the left and the gold handle. No text, gems or extra faces.",
+      "uncertainty": "The object is ambiguous: the disc could be a mask or a mirror; it is interpreted as a carved disc on a gold handle. This is a guess for owner review. Sprite shared by: item-280-totem.",
+      "invention": "Resolve a worn disc surface, a gold handle and a short fringe."
+    },
+    {
+      "id": "dead-body",
+      "directory": "quest-items/item-281-dead-body",
+      "image": "world/texture-380-record-001-frame-000-source.png",
+      "name": "Dead Body (86x36)",
+      "content": "One body lying on the ground in a pool of blood, aspect about 2.4:1. A person lying face-up with the head at the left, wearing a dark tunic and green boots with the feet at the right, with a spreading dark red pool of blood under the body. Preserve the horizontal lying pose and the blood pool. No weapons, text, gore details or background.",
+      "uncertainty": "Clothing and pose details are inferred from a small source. Sprite shared by: item-281-dead-body.",
+      "invention": "Resolve a plain clothed figure and a flat glossy blood pool. Keep gore minimal."
+    },
+    {
+      "id": "mantella",
+      "directory": "quest-items/item-282-mantella",
+      "image": "world/texture-211-record-055-frame-000-source.png",
+      "name": "Mantella (34x31)",
+      "content": "One mantella frog sitting on a mound, aspect about 1.1:1. A bright green frog with darker green spots, squatting upright with its head at the top and its legs folded, on a low brown earth or sand mound with tan edges. Preserve the squatting frog and the brown mound. No water, plants, text or other animals.",
+      "uncertainty": "The mound is interpreted as brown earth. Sprite shared by: item-282-mantella.",
+      "invention": "Resolve moist skin sheen, a simple eye and a few dark spots."
+    },
+    {
+      "id": "finger",
+      "directory": "quest-items/item-283-finger",
+      "image": "world/texture-211-record-056-frame-000-source.png",
+      "name": "Finger (36x20)",
+      "content": "One severed finger lying flat, aspect about 1.8:1. A pale tan finger lying diagonally with a rounded tip at the left and a cut, red-pink end at the lower right. Preserve the single finger and its red cut end. No ring, hand, text or large blood pool.",
+      "uncertainty": "The red-pink end is interpreted as the cut end of the finger. Sprite shared by: item-283-finger.",
+      "invention": "Resolve skin creases, a knuckle and a small nail. Keep gore minimal."
+    },
+    {
+      "id": "bell",
+      "directory": "religious-items/item-261-bell",
+      "image": "world/texture-211-record-047-frame-000-source.png",
+      "name": "Bell (12x29)",
+      "content": "One small hand bell standing upright, aspect about 0.41:1. A narrow brown handle rising from a flared gold bell with a darker lip. Preserve the tall narrow shape, the thin handle and the flared bell. No clapper detail, text or inscriptions.",
+      "uncertainty": "The handle is interpreted as a thin wooden stem. Sprite shared by: item-261-bell.",
+      "invention": "Resolve brass sheen, a simple rim and a plain wooden handle."
+    },
+    {
+      "id": "talisman",
+      "directory": "religious-items/item-263-talisman",
+      "image": "world/texture-211-record-050-frame-000-source.png",
+      "name": "Talisman (40x33)",
+      "content": "One talisman staff held upright at an angle, aspect about 1.2:1. A gold shaft rising diagonally to the upper left, topped by a glowing pale pink and white orb in a gold claw setting, with a grey feather fan at the upper right and a few teal and red ribbons trailing at the lower left. Preserve the orb at the top left, the grey feathers and the trailing ribbons. No text, runes or extra gems.",
+      "uncertainty": "The orb colour and feather details are interpretations. The sprite is shared by the talisman and religious item templates. Sprite shared by: item-263-talisman, item-264-religious-item.",
+      "invention": "Resolve a gold shaft, a glassy orb, grey feather barbs and loose ribbons."
+    },
+    {
+      "id": "small-statue",
+      "directory": "religious-items/item-265-small-statue",
+      "image": "world/texture-202-record-005-frame-000-source.png",
+      "name": "Small Statue (24x40)",
+      "content": "One small statue on a plinth, aspect about 0.6:1. A black stone standing figure in a cloak with its head bowed, on a square dark plinth. Preserve the single standing figure and the plinth. No text, weapons or wings.",
+      "uncertainty": "Figure details are inferred from a small source; it is interpreted as a robed standing figure. Sprite shared by: item-265-small-statue.",
+      "invention": "Resolve carved stone planes and a plain plinth."
+    },
+    {
+      "id": "icon",
+      "directory": "religious-items/item-267-icon",
+      "image": "world/texture-211-record-051-frame-000-source.png",
+      "name": "Icon (43x30)",
+      "content": "One religious icon on a stand, aspect about 1.4:1. A framed portrait of a face in a patterned dark red, gold and blue frame, flanked by two small lit candles on short holders at left and right, with a gold lamp or dish at the bottom centre. Preserve the central framed portrait and the two small candles. No text, halos or inscriptions.",
+      "uncertainty": "The portrait is a small face; it is interpreted as a plain painted portrait without a specific identity. Sprite shared by: item-267-icon.",
+      "invention": "Resolve a decorated frame, a simple painted face and small candle flames."
+    },
+    {
+      "id": "scarab",
+      "directory": "religious-items/item-268-scarab",
+      "image": "world/texture-211-record-052-frame-000-source.png",
+      "name": "Scarab (39x24)",
+      "content": "One scarab beetle, aspect about 1.6:1. A large blue-green beetle seen from above with a smooth domed shell with darker blue segments, a small head at the right and short legs at its lower edge. Preserve the domed shell and the blue-green colour. No wings, jewellery, text or glyphs.",
+      "uncertainty": "The shell may be carved stone or a living beetle; it is interpreted as a polished blue-green stone scarab. Sprite shared by: item-268-scarab.",
+      "invention": "Resolve a polished shell sheen, a centre seam and a simple head."
+    },
+    {
+      "id": "holy-tome",
+      "directory": "religious-items/item-271-holy-tome",
+      "image": "world/texture-209-record-000-frame-000-source.png",
+      "name": "Holy Tome (63x31)",
+      "content": "One stack of holy books, aspect about 2:1. Three stacked closed books: a green book on top, a tan-brown book in the middle and a dark green book at the bottom with a yellow ribbon marker hanging out at the right. Preserve the three books and the yellow ribbon. No text, symbols or clasps.",
+      "uncertainty": "Spine and cover details are interpretations. The ribbon is interpreted as a bookmark. Sprite shared by: item-271-holy-tome.",
+      "invention": "Resolve cloth bindings, page edges and a plain ribbon. Do not add lettering."
+    },
+    {
+      "id": "wine-rack",
+      "directory": "useless-items1/item-091-wine-rack",
+      "image": "world/texture-213-record-001-frame-000-source.png",
+      "name": "Wine Rack (17x13)",
+      "content": "One red tomato-like fruit, aspect about 1.3:1. A round plump red fruit with orange-red highlights on the upper left and a dark red-brown shaded lower edge, with a small green leafy cap at the top. Preserve the round red fruit and green cap. No stem tools, text or plate.",
+      "uncertainty": "The source depicts a red fruit, not a wine rack; the sprite is shown as-is (a likely mismatch in the item template), interpreted as a tomato. This is a guess for owner review. Sprite shared by: item-091-wine-rack.",
+      "invention": "Resolve a glossy skin, a few highlights and a small green calyx."
+    },
+    {
+      "id": "torch",
+      "directory": "useless-items2/item-247-torch",
+      "image": "world/texture-210-record-006-frame-000-source.png",
+      "name": "Torch (16x94)",
+      "content": "One thin unlit-looking hand torch standing upright, aspect about 0.17:1. A very thin dark brown stick with a small bright yellow and orange flame at its top. Preserve the very tall narrow shape and the tiny flame at the top. No holder, text or smoke.",
+      "uncertainty": "This is frame 0 of a flame animation. The stick is interpreted as a plain wooden handle. Sprite shared by: item-247-torch.",
+      "invention": "Resolve wood grain on a thin shaft and a small painted flame."
+    }
+  ],
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "icons-d2",
+      "model": "krea2-turbo",
+      "host": "den-nimo",
+      "url": "http://192.168.1.23:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ]
+}

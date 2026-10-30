@@ -1,0 +1,124 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Item icon conversion review</title>
+<style>
+:root{--bg:#252830;--panel:#343943;--ink:#eee;--mute:#a8afbd;--link:#a9d6ff;
+--unconverted:#8a8f99;--converted:#6aa9ff;--needs-owner-review:#f0b84a;--accepted:#5fc98a;--redo:#f07a7a;--skipped:#6b6f78}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px system-ui;margin:0}
+a{color:var(--link)}
+header{position:sticky;top:0;z-index:5;background:#1d2027;border-bottom:1px solid #444a54;padding:10px 24px}
+h1{font-size:18px;margin:0 0 8px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{border:1px solid #555c68;border-radius:14px;padding:2px 10px;cursor:pointer;background:transparent;color:var(--ink);font:inherit}
+.chip.on{background:#fff2;border-color:#fff8}
+.chip i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+input,select{background:#2c3039;color:var(--ink);border:1px solid #555c68;border-radius:4px;padding:3px 6px;font:inherit}
+main{display:flex;flex-wrap:wrap;gap:14px;padding:18px 24px}
+.card{background:var(--panel);width:310px;border-radius:6px;padding:10px;cursor:pointer;border-top:4px solid var(--c,#888)}
+.card:hover{outline:1px solid #fff6}
+.pair{display:flex;gap:6px}
+.pair div{flex:1;height:140px;display:flex;align-items:center;justify-content:center;background:var(--bgp);border-radius:3px;overflow:hidden}
+.pair img{max-width:100%;max-height:100%;object-fit:contain}
+.pair .s img{image-rendering:pixelated}
+.pair .none{color:var(--mute);font-size:12px}
+.meta{margin-top:6px;display:flex;justify-content:space-between;gap:6px;font-size:13px;color:var(--mute)}
+.name{color:var(--ink);font-size:14px;overflow-wrap:anywhere}
+.tag{font-size:11px;border-radius:3px;padding:0 5px;background:#fff2}
+.tag.g{background:#f0b84a33;color:#f0b84a}
+dialog{background:var(--panel);color:var(--ink);border:1px solid #666;border-radius:8px;max-width:1100px;width:92vw;padding:16px}
+dialog::backdrop{background:#000a}
+.big{display:flex;gap:12px;flex-wrap:wrap}
+.big>div{flex:1;min-width:300px;background:var(--bgp);display:flex;align-items:center;justify-content:center;min-height:300px;border-radius:4px}
+.big img{max-width:100%;max-height:60vh;object-fit:contain}
+.big .s img{image-rendering:pixelated;width:100%}
+dl{display:grid;grid-template-columns:120px 1fr;gap:4px 12px;margin:12px 0 0}
+dt{color:var(--mute)}dd{margin:0;overflow-wrap:anywhere}
+.frames{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.frames img{width:72px;height:72px;object-fit:contain;background:var(--bgp);border-radius:3px;cursor:pointer}
+.frames img.cur{outline:2px solid #fff}
+</style>
+<header>
+  <h1>Item icon conversion review <span id="count" style="font-weight:normal;color:var(--mute)"></span></h1>
+  <div class="bar" id="statuses"></div>
+  <div class="bar" style="margin-top:8px">
+    <input id="q" placeholder="Search name, category, id" size="24">
+    <select id="cat"><option value="">All categories</option></select>
+    <select id="sort"><option value="order">Archive order</option><option value="error">Error, high first</option><option value="status">Status</option><option value="name">Name</option></select>
+    <select id="bg"><option value="checker">Checker</option><option value="dark">Dark</option><option value="light">Light</option><option value="game">Game panel</option></select>
+    <button class="chip" id="fguess">Guesses</button><button class="chip" id="fshared">Shared sprites</button><button class="chip" id="fframes">Animated</button><button class="chip" id="ferr">Error &ge; 8</button>
+  </div>
+</header>
+<main id="grid"></main>
+<dialog id="dlg"></dialog>
+<script>
+const DATA = __DATA__;
+const rows = DATA.rows, statuses = DATA.statuses;
+const colour = s => `var(--${s})`;
+const bgs = {checker:'repeating-conic-gradient(#3a3f4a 0% 25%,#2f333c 0% 50%) 0 0/16px 16px',dark:'#1b1d22',light:'#e8e8e8',game:'#4a4036'};
+const state = {status:new Set(), cat:'', q:'', sort:'order', guess:false, shared:false, frames:false, err:false};
+const animated = new Set(rows.filter(r => r.frame > 0).map(r => `${r.archive}-${r.record}`));
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const cats = [...new Set(rows.flatMap(r => r.categories))].sort();
+for (const c of cats) $('cat').insertAdjacentHTML('beforeend', `<option>${esc(c)}</option>`);
+
+function statusBar() {
+  const n = Object.fromEntries(statuses.map(s => [s, rows.filter(r => r.status === s).length]));
+  $('statuses').innerHTML = statuses.map(s => `<button class="chip ${state.status.has(s) ? 'on' : ''}" data-s="${s}"><i style="background:${colour(s)}"></i>${s} ${n[s]}</button>`).join('');
+  $('statuses').querySelectorAll('button').forEach(b => b.onclick = () => { state.status.has(b.dataset.s) ? state.status.delete(b.dataset.s) : state.status.add(b.dataset.s); render(); });
+}
+
+function visible() {
+  const q = state.q.toLowerCase();
+  let v = rows.filter(r =>
+    (!state.status.size || state.status.has(r.status)) &&
+    (!state.cat || r.categories.includes(state.cat)) &&
+    (!q || (r.users.join(' ') + ' ' + r.categories.join(' ') + ' ' + r.key + ' ' + r.spec_id).toLowerCase().includes(q)) &&
+    (!state.guess || r.guess) && (!state.shared || r.users.length > 1) &&
+    (!state.frames || animated.has(`${r.archive}-${r.record}`)) && (!state.err || (r.error ?? 0) >= 8));
+  const by = {order: (a, b) => a.key.localeCompare(b.key), error: (a, b) => (b.error ?? -1) - (a.error ?? -1),
+    status: (a, b) => statuses.indexOf(a.status) - statuses.indexOf(b.status) || a.key.localeCompare(b.key),
+    name: (a, b) => a.users[0].localeCompare(b.users[0])};
+  return v.sort(by[state.sort]);
+}
+
+function render() {
+  statusBar();
+  const v = visible(), bg = bgs[$('bg').value];
+  $('count').textContent = `${v.length} of ${rows.length} sprite frames`;
+  $('grid').innerHTML = v.map(r => `<div class="card" data-k="${r.key}" style="--c:${colour(r.status)};--bgp:${bg}">
+    <div class="pair"><div class="s"><img loading="lazy" src="${r.thumb_src}"></div><div>${r.thumb ? `<img loading="lazy" src="${r.thumb}">` : '<span class="none">no final</span>'}</div></div>
+    <div class="meta"><span class="name">${esc(r.name)}${r.frame ? ` · frame ${r.frame}` : ''}</span><span>${r.error != null ? 'err ' + r.error : ''}</span></div>
+    <div class="meta"><span>${esc(r.categories.join(', '))} · ${r.size}</span><span>${r.guess ? '<span class="tag g">guess</span> ' : ''}${r.users.length > 1 ? `<span class="tag">×${r.users.length}</span>` : ''}</span></div></div>`).join('');
+  $('grid').querySelectorAll('.card').forEach(c => c.onclick = () => detail(c.dataset.k));
+}
+
+function detail(k) {
+  const r = rows.find(x => x.key === k), bg = bgs[$('bg').value];
+  const sibs = rows.filter(x => x.archive === r.archive && x.record === r.record);
+  $('dlg').innerHTML = `<div class="big" style="--bgp:${bg}"><div class="s"><img src="${r.source}"></div><div>${r.final ? `<a href="${r.final}" target="_blank"><img src="${r.final}"></a>` : '<span class="none">no final</span>'}</div></div>
+  ${sibs.length > 1 ? `<div class="frames" style="--bgp:${bg}">${sibs.map(s => `<img class="${s.key === k ? 'cur' : ''}" src="${s.thumb || s.thumb_src}" data-k="${s.key}" title="frame ${s.frame}">`).join('')}</div>` : ''}
+  <dl><dt>Sprite</dt><dd>${esc(r.name)} — texture ${r.archive}, record ${r.record}, frame ${r.frame} (${r.size})</dd>
+  <dt>Status</dt><dd style="color:${colour(r.status)}">${r.status}${r.error != null ? ` · back-projection error ${r.error}` : ''}</dd>
+  <dt>Used by</dt><dd>${esc(r.users.join(', '))}</dd><dt>Category</dt><dd>${esc(r.categories.join(', '))}</dd>
+  <dt>Run</dt><dd>${esc(r.spec)} / ${esc(r.spec_id)}</dd>
+  ${r.note ? `<dt>Note</dt><dd>${esc(r.note)}</dd>` : ''}
+  <dt>Contract</dt><dd>${esc(r.contract)}</dd><dt>Uncertainty</dt><dd>${esc(r.uncertainty)}</dd>
+  <dt>Files</dt><dd>${esc(r.source)}<br>${esc(r.final)}</dd></dl>
+  <p><button class="chip" onclick="dlg.close()">Close</button> <span style="color:var(--mute)">Edit status and notes in authoring/ledger/items-notes.json, then rebuild.</span></p>`;
+  $('dlg').querySelectorAll('.frames img').forEach(i => i.onclick = () => detail(i.dataset.k));
+  if (!$('dlg').open) $('dlg').showModal();
+}
+
+$('q').oninput = e => { state.q = e.target.value; render(); };
+$('cat').onchange = e => { state.cat = e.target.value; render(); };
+$('sort').onchange = e => { state.sort = e.target.value; render(); };
+$('bg').onchange = render;
+for (const [id, f] of [['fguess','guess'],['fshared','shared'],['fframes','frames'],['ferr','err']])
+  $(id).onclick = () => { state[f] = !state[f]; $(id).classList.toggle('on', state[f]); render(); };
+$('dlg').onclick = e => { if (e.target === $('dlg')) $('dlg').close(); };
+render();
+</script>

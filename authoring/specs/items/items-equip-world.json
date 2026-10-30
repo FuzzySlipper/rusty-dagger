@@ -1,0 +1,185 @@
+{
+ "seed": 27301,
+ "size": 1024,
+ "occupancy": 0.74,
+ "background": "#30343b",
+ "styles": {
+  "painted": {
+   "label": "Painted adventure",
+   "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+  },
+  "inked": {
+   "label": "Inked dark fantasy / UI kin",
+   "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+  },
+  "gouache": {
+   "label": "Warm storybook gouache",
+   "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+  },
+  "etched": {
+   "label": "Tinted engraving",
+   "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+  }
+ },
+ "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy adventure inventory art. Keep the source's local colours: do not tint every material brown or add brass simply to match the UI. Use a restrained palette with distinct light, middle and dark families, clear silhouette and legible material masses. Detail hierarchy: silhouette first, a few large planes or folds second, sparse material marks third. Keep the original class of mundane object, its opening and visible components; no extra handles, gemstones, runes, faces, symbols, chains or elaborate fantasy embellishment. Do not convert this into pixel art, a photoreal product photograph, a glossy mobile-game loot icon or a dramatic scene. No text, labels, border, vignette, decorative frame, hand, person, pedestal, scenery or second object.",
+ "presentation": "One isolated item on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the object. Full object visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+ "title": "Dagger weapon and armour world sprites",
+ "selection": "All sixteen unique world sprites used by the weapon and armour templates (items 102-131). Several templates share one sprite; each sprite is generated once under the directory named here, and the sharing is stated in its uncertainty text.",
+ "routes": [
+  {
+   "id": "qwen-base",
+   "label": "Qwen / painted baseline",
+   "group": "equip-world",
+   "model": "qwen-edit",
+   "host": "den-m5",
+   "url": "http://192.168.1.24:8188",
+   "conditioning": "reference"
+  }
+ ],
+ "items": [
+  {
+   "id": "dagger",
+   "directory": "weapons/item-113-dagger",
+   "image": "world/texture-207-record-005-frame-000-source.png",
+   "name": "Dagger (37x8)",
+   "content": "One short complete dagger lying horizontally, point to the left, grip to the right, broad side view, overall aspect about 4.6:1. A straight double-edged steel blade with a sharp left point takes the left half; the blade is blue-grey with pale cool highlights. A short perpendicular antique-brass crossguard divides blade from a reddish dark-brown grip. The right end has a small brass pommel cap. Preserve the horizontal orientation, blade length relative to the hilt, slim outline and small simple fittings. No scabbard, hand, jewel, inscription or second blade.",
+   "uncertainty": "Same world sprite as the earlier ten-item study. The tiny highlight marks do not establish blade engraving or grip decoration.",
+   "invention": "Resolve blade bevels, restrained steel reflections, simple brass thickness and worn brown grip texture. Keep the silhouette slender and the fittings plain."
+  },
+  {
+   "id": "staff",
+   "directory": "weapons/item-115-staff",
+   "image": "world/texture-207-record-007-frame-000-source.png",
+   "name": "Staff (71x9)",
+   "content": "One long plain wooden quarterstaff lying almost horizontally with a very slight downward slope to the right, overall aspect about 8:1. A single straight round shaft of mid-brown wood, slightly lighter along its upper edge, with no head ornament. Preserve the long thin straight silhouette and the gentle tilt. No crystal, orb, carving, metal cap, cloth wrap or second object.",
+   "uncertainty": "The sprite resolves only a thin brown line; grain, end shape and any wear are not visible.",
+   "invention": "Resolve plain wood grain, a softly worn surface and simple rounded ends. Keep it a mundane walking staff."
+  },
+  {
+   "id": "shortsword",
+   "directory": "weapons/item-116-shortsword",
+   "image": "world/texture-207-record-003-frame-000-source.png",
+   "name": "Shortsword (58x21)",
+   "content": "One short straight sword lying diagonally, pommel and grip at the lower left, point at the upper right, aspect about 2.8:1. A dark steel blade with a short plain crossguard, a dark grip and a round brass pommel at the lower-left end. A few small dull red-brown marks lie along the upper half of the blade. Preserve the diagonal, the short blade-to-hilt ratio and the plain fittings. No scabbard, hand, gem, glowing rune or second blade.",
+   "uncertainty": "The red marks are unresolved: render them only as small dull rust or old stain marks on the steel, not fresh blood and not magical light.",
+   "invention": "Resolve a central fuller, bevelled edges, small nicks, a wrapped grip and simple guard thickness."
+  },
+  {
+   "id": "longsword",
+   "directory": "weapons/item-120-longsword",
+   "image": "world/texture-207-record-002-frame-000-source.png",
+   "name": "Longsword (29x62)",
+   "content": "One long straight sword seen almost upright and tilted, round pommel at the top right, point at the bottom left, aspect about 1:2.1 tall. A long narrow dark steel blade, a short crossguard below a dark grip and a small round pommel. Preserve the steep diagonal, the long blade relative to the hilt and the narrow outline. No scabbard, hand, gem, inscription or second blade.",
+   "uncertainty": "This one world sprite is shared by the wakizashi, broadsword, saber, longsword, claymore and dai-katana. The blade cross-section and guard shape are not resolved.",
+   "invention": "Resolve blade bevels and a fuller, cool dark steel reflections, a leather-wrapped grip and plain iron guard and pommel."
+  },
+  {
+   "id": "katana",
+   "directory": "weapons/item-121-katana",
+   "image": "world/texture-207-record-015-frame-000-source.png",
+   "name": "Katana (70x8)",
+   "content": "One long slender single-edged sword lying horizontally, gently curved blade on the left with the point at the far left, long grip on the right, aspect about 8.7:1. Pale silver blade, a small dark round guard, then a long tan grip with a regular diamond wrap pattern ending at a small dark cap. Preserve the slight curve, the slender profile and the long grip. No scabbard, hand, tassel, inscription or second blade.",
+   "uncertainty": "The wrap pattern reads as regular light/dark alternation; the exact binding style is not resolved.",
+   "invention": "Resolve a bright edge and a darker spine, a crisp curved temper line, the guard thickness and tight wrapped grip texture."
+  },
+  {
+   "id": "mace",
+   "directory": "weapons/item-124-mace",
+   "image": "world/texture-207-record-006-frame-000-source.png",
+   "name": "Mace (41x15)",
+   "content": "One heavy flanged or spiked mace lying horizontally, head on the left, handle extending to the right, aspect about 2.7:1. The head is a dark iron cylinder bristling with short pale spikes above and below; the handle is a long dark iron or blackened shaft. Preserve the head-to-handle proportion, the ragged spiky top and bottom edges and the straight handle. No chain, gem, glowing effect, hand or second weapon.",
+   "uncertainty": "This sprite is shared by the mace and the flail. Spike count and spacing are approximate; the handle material is unresolved.",
+   "invention": "Resolve forged spike facets, hammered iron surface, a plain grip wrap and a simple end cap."
+  },
+  {
+   "id": "warhammer",
+   "directory": "weapons/item-126-warhammer",
+   "image": "world/texture-214-record-003-frame-000-source.png",
+   "name": "Warhammer (24x8)",
+   "content": "One warhammer lying horizontally, a tan wooden haft running from the left edge, a blocky dark iron head at the right end, aspect about 3:1. The haft is light brown with a darker underside; the head is a squat dark grey block. Preserve the long low haft, the heavy blocky right end and the low horizontal outline. No spikes, ornament, gem, hand or second weapon.",
+   "uncertainty": "This 24x8 sprite is very coarse: the head shape, any back spike and the haft end are unresolved.",
+   "invention": "Resolve a simple rectangular hammer face, iron straps where the head meets the haft, and plain wood grain."
+  },
+  {
+   "id": "battle-axe",
+   "directory": "weapons/item-127-battle-axe",
+   "image": "world/texture-207-record-004-frame-000-source.png",
+   "name": "Battle Axe (45x12)",
+   "content": "One axe lying horizontally, a single broad steel blade at the left end and a long wooden haft running to the right, aspect about 3.75:1. The axe head is blue-grey steel with a curved cutting edge; the haft is mid-brown wood. Preserve the head size relative to the haft, the low horizontal silhouette and the single blade. No second blade, spike, ornament, hand or second weapon.",
+   "uncertainty": "This sprite is shared by the battle axe and war axe. The head's rear profile is not resolved.",
+   "invention": "Resolve forged edge bevel, steel reflections, an iron collar at the head and worn wood grain."
+  },
+  {
+   "id": "bow",
+   "directory": "weapons/item-129-short-bow",
+   "image": "world/texture-207-record-008-frame-000-source.png",
+   "name": "Bow (57x17)",
+   "content": "One unstrung-looking recurve bow lying diagonally, lower-left limb tip to upper-right limb tip, aspect about 3.4:1. A slim brown wooden bow with a darker centre grip and gently recurved ends; a thin pale string runs straight between the tips. Preserve the long low diagonal, the shallow curve and the thin string. No arrow, quiver, hand, ornament or second bow.",
+   "uncertainty": "This sprite is shared by the short bow and long bow. The string is barely resolved; the grip wrap is unresolved.",
+   "invention": "Resolve laminated wood grain, a leather-wrapped grip and small horn or wood tips."
+  },
+  {
+   "id": "arrow",
+   "directory": "weapons/item-131-arrow",
+   "image": "world/texture-207-record-016-frame-000-source.png",
+   "name": "Arrow (49x10)",
+   "content": "One single arrow lying horizontally, a pale steel broadhead point at the left, a straight wooden shaft, and fletching at the right end in yellow and green. Aspect about 4.9:1. Preserve the single shaft, the left point and the right fletching colours. No bow, quiver, bundle, hand or second arrow.",
+   "uncertainty": "The fletching colours read as yellow and green; feather count is unresolved.",
+   "invention": "Resolve the broadhead's bevels, a thread binding behind the head and feather vanes."
+  },
+  {
+   "id": "round-shield",
+   "directory": "armor/item-110-round-shield",
+   "image": "world/texture-207-record-010-frame-000-source.png",
+   "name": "Round Shield (54x26)",
+   "content": "One round shield lying face up, seen from a low oblique angle so it reads as a wide flattened ellipse, aspect about 2:1. Dark iron face with a bronze or brass ring around the rim and a tall pointed central spike boss rising from the middle. Preserve the low oblique view, the flattened ellipse and the tall central spike. No emblem, painted device, hand, strap visible on top or second object.",
+   "uncertainty": "This world sprite is shared by the buckler, round shield and, in this export's mapping, the tanto. The face material between rim and boss is unresolved.",
+   "invention": "Resolve hammered iron, rivets on the rim ring and a forged conical boss."
+  },
+  {
+   "id": "kite-shield",
+   "directory": "armor/item-111-kite-shield",
+   "image": "world/texture-207-record-009-frame-000-source.png",
+   "name": "Kite Shield (55x24)",
+   "content": "One long curved shield lying on its side, seen obliquely, the curved upper edge running from the lower left to the upper right, aspect about 2.3:1. Mostly dark iron with a thin olive-bronze trim along the left curved edge. Preserve the curved trough-like form, the long low outline and the dark colouring. No emblem, painted device, hand or second object.",
+   "uncertainty": "This sprite is shared by the kite and tower shields; the exact outline of the far edge is unresolved.",
+   "invention": "Resolve the curved metal plate, a riveted trim band and modest dents."
+  },
+  {
+   "id": "cuirass",
+   "directory": "armor/item-102-cuirass",
+   "image": "world/texture-207-record-011-frame-000-source.png",
+   "name": "Cuirass (47x25)",
+   "content": "One dark iron breastplate cuirass lying on its back, seen obliquely, aspect about 1.9:1. Two large dark rounded openings sit at the left and right ends (the arm holes), with a raised rounded chest between them catching a soft highlight. Small bronze accents along the edges. Preserve the wide low outline, the two dark openings and the dark iron colouring. No body, mannequin, emblem, cape or second object.",
+   "uncertainty": "The neck opening and back plate are not resolved; the bronze accents may be rivets or edge trim.",
+   "invention": "Resolve plate seams, edge rolls, rivets and leather strap ends."
+  },
+  {
+   "id": "plate-piece",
+   "directory": "armor/item-103-gauntlets",
+   "image": "world/texture-207-record-013-frame-000-source.png",
+   "name": "Armour Piece (37x13)",
+   "content": "One dark armour piece lying lengthwise, a long low bulky form, aspect about 2.8:1, with a speckled mail-like upper surface and a smooth dark lower edge. Faint olive and teal flecks in the dark grey. Preserve the long low outline and the dark colouring. No body, emblem or second object.",
+   "uncertainty": "This one world sprite is shared by gauntlets, greaves and both pauldrons. Which piece it shows is unresolved: draw a plausible generic arm or leg plate with mail backing, not a clearly identifiable glove or shoulder.",
+   "invention": "Resolve mail rings on the upper surface, a plate edge and leather strap ends."
+  },
+  {
+   "id": "helm",
+   "directory": "armor/item-107-helm",
+   "image": "world/texture-207-record-012-frame-000-source.png",
+   "name": "Helm (16x16)",
+   "content": "One dark iron rounded helmet seen from the front at a slight angle, nearly round outline, aspect about 1:1. A smooth dark grey dome with a soft highlight on the upper left; the lower edge narrows slightly. Preserve the round outline and dark colouring. No horns, crest, plume, face, visor slits not supported by the source, or second object.",
+   "uncertainty": "At 16x16 the face opening and any brim are not resolved.",
+   "invention": "Resolve a riveted brim band, a subtle central ridge and hammered surface."
+  },
+  {
+   "id": "boots",
+   "directory": "armor/item-108-boots",
+   "image": "world/texture-204-record-001-frame-000-source.png",
+   "name": "Boots (48x27)",
+   "content": "One pair of dark boots: the right boot stands upright with its shaft rising at the right, the left boot lies on its side across the lower left, aspect about 1.8:1. Dark grey leather or plate with faint teal and brown flecks. Preserve the arrangement of one standing and one lying boot and the dark colouring. No legs, spurs, buckles not supported by the source, or third boot.",
+   "uncertainty": "Material is unresolved between dark leather and armoured plate.",
+   "invention": "Resolve stitched seams, sole edges, folds at the ankles and small plate or leather patches."
+  }
+ ]
+}
