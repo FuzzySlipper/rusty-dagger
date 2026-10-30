@@ -1,0 +1,365 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Hand-painted 1990s fantasy RPG effect illustration, luminous opaque gouache-like colour modelling, a bright core falling to darker saturated edges, ragged painted edges and a few fine flecks. Original local colours. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded fantasy RPG effect art in a restrained palette. Keep the source's silhouette, size relationship between its parts, colours and the arrangement of its bright and dark regions: this is one frame of a short animation, so show exactly this stage and do not make it a finished explosion, ball or splash if the source is smaller or fainter. No creature, hand, text, border, scenery or second object.",
+  "presentation": "One isolated effect on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the effect. The whole effect visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Cold and poison effects",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "fx",
+      "model": "qwen-edit",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "conditioning": "reference"
+    }
+  ],
+  "task": "Task: Redraw a very small classic fantasy RPG combat or magic effect sprite as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+  "items": [
+    {
+      "id": "cold-impact-0",
+      "directory": "elements/cold",
+      "image": "world-effects/impact/texture-376-record-001-frame-000-source.png",
+      "content": "Frame 1 of 8 of a frost spell's impact flash, fading out. A small round soft blue puff with a paler blue centre, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve glassy facets, soft glints and fine sparkles. Keep it abstract ice.",
+      "name": "cold-impact-0 (52x41)"
+    },
+    {
+      "id": "cold-impact-1",
+      "directory": "elements/cold",
+      "image": "world-effects/impact/texture-376-record-001-frame-001-source.png",
+      "content": "Frame 2 of 8 of a frost spell's impact flash, fading out. A larger round puff of frost: a pale blue-white core inside a mid-blue soft ball, a few dark flecks at the edge, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve glassy facets, soft glints and fine sparkles. Keep it abstract ice.",
+      "name": "cold-impact-1 (52x41)"
+    },
+    {
+      "id": "cold-impact-2",
+      "directory": "elements/cold",
+      "image": "world-effects/impact/texture-376-record-001-frame-002-source.png",
+      "content": "Frame 3 of 8 of a frost spell's impact flash, fading out. A larger ragged cloud of frost: mottled mid-blue with cream-white patches and scattered dark specks round the edge, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve glassy facets, soft glints and fine sparkles. Keep it abstract ice.",
+      "name": "cold-impact-2 (52x41)"
+    },
+    {
+      "id": "cold-impact-3",
+      "directory": "elements/cold",
+      "image": "world-effects/impact/texture-376-record-001-frame-003-source.png",
+      "content": "Frame 4 of 8 of a frost spell's impact flash, fading out. A wide ragged cloud of frost, mottled blue with a few cream-white patches, thinner at the edge with dark specks scattered around, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve glassy facets, soft glints and fine sparkles. Keep it abstract ice.",
+      "name": "cold-impact-3 (52x41)"
+    },
+    {
+      "id": "cold-impact-4",
+      "directory": "elements/cold",
+      "image": "world-effects/impact/texture-376-record-001-frame-004-source.png",
+      "content": "Frame 5 of 8 of a frost spell's impact flash, fading out. A wide, thinning, broken cloud of dull blue frost with a few faint cream patches and many dark specks, starting to disperse, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve glassy facets, soft glints and fine sparkles. Keep it abstract ice.",
+      "name": "cold-impact-4 (52x41)"
+    },
+    {
+      "id": "cold-impact-5",
+      "directory": "elements/cold",
+      "image": "world-effects/impact/texture-376-record-001-frame-005-source.png",
+      "content": "Frame 6 of 8 of a frost spell's impact flash, fading out. A faint broken wisp of dull blue-grey frost with scattered dark specks, mostly dissolved, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve glassy facets, soft glints and fine sparkles. Keep it abstract ice.",
+      "name": "cold-impact-5 (52x41)"
+    },
+    {
+      "id": "cold-impact-6",
+      "directory": "elements/cold",
+      "image": "world-effects/impact/texture-376-record-001-frame-006-source.png",
+      "content": "Frame 7 of 8 of a frost spell's impact flash, fading out. A very faint scrap of dark grey-blue smudge with a few specks, almost gone, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve glassy facets, soft glints and fine sparkles. Keep it abstract ice.",
+      "name": "cold-impact-6 (52x41)"
+    },
+    {
+      "id": "cold-impact-7",
+      "directory": "elements/cold",
+      "image": "world-effects/impact/texture-376-record-001-frame-007-source.png",
+      "content": "Frame 8 of 8 of a frost spell's impact flash, fading out. Almost nothing: a handful of tiny dark specks. Do not add anything else. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve glassy facets, soft glints and fine sparkles. Keep it abstract ice.",
+      "name": "cold-impact-7 (52x41)"
+    },
+    {
+      "id": "cold-projectile-0",
+      "directory": "elements/cold",
+      "image": "world-effects/projectile/texture-376-record-000-frame-000-source.png",
+      "content": "Frame 1 of 10 of a looping frost spell projectile. A spiky crystal of ice seen from the front, aspect about 1.3:1: many sharp glassy blue facets radiating from a pale blue-white centre, with deep blue shaded facets and a few small bright cyan sparkles floating around it. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve glassy facets, soft glints and fine sparkles. Keep it abstract ice.",
+      "name": "cold-projectile-0 (78x63)"
+    },
+    {
+      "id": "cold-projectile-1",
+      "directory": "elements/cold",
+      "image": "world-effects/projectile/texture-376-record-000-frame-001-source.png",
+      "content": "Frame 2 of 10 of a looping frost spell projectile. A spiky crystal of ice seen from the front, aspect about 1.3:1: many sharp glassy blue facets radiating from a pale blue-white centre, with deep blue shaded facets and a few small bright cyan sparkles floating around it. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve glassy facets, soft glints and fine sparkles. Keep it abstract ice.",
+      "name": "cold-projectile-1 (78x63)"
+    },
+    {
+      "id": "cold-projectile-2",
+      "directory": "elements/cold",
+      "image": "world-effects/projectile/texture-376-record-000-frame-002-source.png",
+      "content": "Frame 3 of 10 of a looping frost spell projectile. A spiky crystal of ice seen from the front, aspect about 1.3:1: many sharp glassy blue facets radiating from a pale blue-white centre, with deep blue shaded facets and a few small bright cyan sparkles floating around it. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve glassy facets, soft glints and fine sparkles. Keep it abstract ice.",
+      "name": "cold-projectile-2 (78x63)"
+    },
+    {
+      "id": "cold-projectile-3",
+      "directory": "elements/cold",
+      "image": "world-effects/projectile/texture-376-record-000-frame-003-source.png",
+      "content": "Frame 4 of 10 of a looping frost spell projectile. A spiky crystal of ice seen from the front, aspect about 1.3:1: many sharp glassy blue facets radiating from a pale blue-white centre, with deep blue shaded facets and a few small bright cyan sparkles floating around it. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve glassy facets, soft glints and fine sparkles. Keep it abstract ice.",
+      "name": "cold-projectile-3 (78x63)"
+    },
+    {
+      "id": "cold-projectile-4",
+      "directory": "elements/cold",
+      "image": "world-effects/projectile/texture-376-record-000-frame-004-source.png",
+      "content": "Frame 5 of 10 of a looping frost spell projectile. A spiky crystal of ice seen from the front, aspect about 1.3:1: many sharp glassy blue facets radiating from a pale blue-white centre, with deep blue shaded facets and a few small bright cyan sparkles floating around it. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve glassy facets, soft glints and fine sparkles. Keep it abstract ice.",
+      "name": "cold-projectile-4 (78x63)"
+    },
+    {
+      "id": "cold-projectile-5",
+      "directory": "elements/cold",
+      "image": "world-effects/projectile/texture-376-record-000-frame-005-source.png",
+      "content": "Frame 6 of 10 of a looping frost spell projectile. A spiky crystal of ice seen from the front, aspect about 1.3:1: many sharp glassy blue facets radiating from a pale blue-white centre, with deep blue shaded facets and a few small bright cyan sparkles floating around it. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve glassy facets, soft glints and fine sparkles. Keep it abstract ice.",
+      "name": "cold-projectile-5 (78x63)"
+    },
+    {
+      "id": "cold-projectile-6",
+      "directory": "elements/cold",
+      "image": "world-effects/projectile/texture-376-record-000-frame-006-source.png",
+      "content": "Frame 7 of 10 of a looping frost spell projectile. A spiky crystal of ice seen from the front, aspect about 1.3:1: many sharp glassy blue facets radiating from a pale blue-white centre, with deep blue shaded facets and a few small bright cyan sparkles floating around it. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve glassy facets, soft glints and fine sparkles. Keep it abstract ice.",
+      "name": "cold-projectile-6 (78x63)"
+    },
+    {
+      "id": "cold-projectile-7",
+      "directory": "elements/cold",
+      "image": "world-effects/projectile/texture-376-record-000-frame-007-source.png",
+      "content": "Frame 8 of 10 of a looping frost spell projectile. A spiky crystal of ice seen from the front, aspect about 1.3:1: many sharp glassy blue facets radiating from a pale blue-white centre, with deep blue shaded facets and a few small bright cyan sparkles floating around it. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve glassy facets, soft glints and fine sparkles. Keep it abstract ice.",
+      "name": "cold-projectile-7 (78x63)"
+    },
+    {
+      "id": "cold-projectile-8",
+      "directory": "elements/cold",
+      "image": "world-effects/projectile/texture-376-record-000-frame-008-source.png",
+      "content": "Frame 9 of 10 of a looping frost spell projectile. A spiky crystal of ice seen from the front, aspect about 1.3:1: many sharp glassy blue facets radiating from a pale blue-white centre, with deep blue shaded facets and a few small bright cyan sparkles floating around it. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve glassy facets, soft glints and fine sparkles. Keep it abstract ice.",
+      "name": "cold-projectile-8 (78x63)"
+    },
+    {
+      "id": "cold-projectile-9",
+      "directory": "elements/cold",
+      "image": "world-effects/projectile/texture-376-record-000-frame-009-source.png",
+      "content": "Frame 10 of 10 of a looping frost spell projectile. A spiky crystal of ice seen from the front, aspect about 1.3:1: many sharp glassy blue facets radiating from a pale blue-white centre, with deep blue shaded facets and a few small bright cyan sparkles floating around it. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve glassy facets, soft glints and fine sparkles. Keep it abstract ice.",
+      "name": "cold-projectile-9 (78x63)"
+    },
+    {
+      "id": "poison-impact-0",
+      "directory": "elements/poison",
+      "image": "world-effects/impact/texture-377-record-001-frame-000-source.png",
+      "content": "Frame 1 of 8 of a poison spell's impact flash, fading out. A small round soft green puff with a paler green centre, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft billowing gas, mottled shading and fine specks. Keep it abstract gas.",
+      "name": "poison-impact-0 (52x41)"
+    },
+    {
+      "id": "poison-impact-1",
+      "directory": "elements/poison",
+      "image": "world-effects/impact/texture-377-record-001-frame-001-source.png",
+      "content": "Frame 2 of 8 of a poison spell's impact flash, fading out. A larger round puff of gas: a pale green-white core inside a mid-green soft ball, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft billowing gas, mottled shading and fine specks. Keep it abstract gas.",
+      "name": "poison-impact-1 (52x41)"
+    },
+    {
+      "id": "poison-impact-2",
+      "directory": "elements/poison",
+      "image": "world-effects/impact/texture-377-record-001-frame-002-source.png",
+      "content": "Frame 3 of 8 of a poison spell's impact flash, fading out. A larger ragged cloud of gas: mottled mid-green with white-green patches and scattered dark specks round the edge, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft billowing gas, mottled shading and fine specks. Keep it abstract gas.",
+      "name": "poison-impact-2 (52x41)"
+    },
+    {
+      "id": "poison-impact-3",
+      "directory": "elements/poison",
+      "image": "world-effects/impact/texture-377-record-001-frame-003-source.png",
+      "content": "Frame 4 of 8 of a poison spell's impact flash, fading out. A wide ragged cloud of gas, mottled green with a few white patches, thinner at the edge with dark specks scattered around, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft billowing gas, mottled shading and fine specks. Keep it abstract gas.",
+      "name": "poison-impact-3 (52x41)"
+    },
+    {
+      "id": "poison-impact-4",
+      "directory": "elements/poison",
+      "image": "world-effects/impact/texture-377-record-001-frame-004-source.png",
+      "content": "Frame 5 of 8 of a poison spell's impact flash, fading out. A wide, thinning, broken cloud of dull green and grey gas with a few pale patches, starting to disperse, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft billowing gas, mottled shading and fine specks. Keep it abstract gas.",
+      "name": "poison-impact-4 (52x41)"
+    },
+    {
+      "id": "poison-impact-5",
+      "directory": "elements/poison",
+      "image": "world-effects/impact/texture-377-record-001-frame-005-source.png",
+      "content": "Frame 6 of 8 of a poison spell's impact flash, fading out. A faint broken wisp of dull green-grey gas with scattered dark specks, mostly dissolved, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft billowing gas, mottled shading and fine specks. Keep it abstract gas.",
+      "name": "poison-impact-5 (52x41)"
+    },
+    {
+      "id": "poison-impact-6",
+      "directory": "elements/poison",
+      "image": "world-effects/impact/texture-377-record-001-frame-006-source.png",
+      "content": "Frame 7 of 8 of a poison spell's impact flash, fading out. A very faint scrap of dark grey smudge with a hint of green, almost gone, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft billowing gas, mottled shading and fine specks. Keep it abstract gas.",
+      "name": "poison-impact-6 (52x41)"
+    },
+    {
+      "id": "poison-impact-7",
+      "directory": "elements/poison",
+      "image": "world-effects/impact/texture-377-record-001-frame-007-source.png",
+      "content": "Frame 8 of 8 of a poison spell's impact flash, fading out. Almost nothing: a handful of tiny dark specks. Do not add anything else. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft billowing gas, mottled shading and fine specks. Keep it abstract gas.",
+      "name": "poison-impact-7 (52x41)"
+    },
+    {
+      "id": "poison-projectile-0",
+      "directory": "elements/poison",
+      "image": "world-effects/projectile/texture-377-record-000-frame-000-source.png",
+      "content": "Frame 1 of 10 of a looping poison spell projectile. A lumpy ball of toxic green gas seen from the front, aspect about 1.3:1: mid olive-green with lighter lime highlights, darker green in the folds and a ragged dark fringe with a few tiny dark specks. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft billowing gas, mottled shading and fine specks. Keep it abstract gas.",
+      "name": "poison-projectile-0 (37x32)"
+    },
+    {
+      "id": "poison-projectile-1",
+      "directory": "elements/poison",
+      "image": "world-effects/projectile/texture-377-record-000-frame-001-source.png",
+      "content": "Frame 2 of 10 of a looping poison spell projectile. A lumpy ball of toxic green gas seen from the front, aspect about 1.3:1: mid olive-green with lighter lime highlights, darker green in the folds and a ragged dark fringe with a few tiny dark specks. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft billowing gas, mottled shading and fine specks. Keep it abstract gas.",
+      "name": "poison-projectile-1 (37x32)"
+    },
+    {
+      "id": "poison-projectile-2",
+      "directory": "elements/poison",
+      "image": "world-effects/projectile/texture-377-record-000-frame-002-source.png",
+      "content": "Frame 3 of 10 of a looping poison spell projectile. A lumpy ball of toxic green gas seen from the front, aspect about 1.3:1: mid olive-green with lighter lime highlights, darker green in the folds and a ragged dark fringe with a few tiny dark specks. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft billowing gas, mottled shading and fine specks. Keep it abstract gas.",
+      "name": "poison-projectile-2 (37x32)"
+    },
+    {
+      "id": "poison-projectile-3",
+      "directory": "elements/poison",
+      "image": "world-effects/projectile/texture-377-record-000-frame-003-source.png",
+      "content": "Frame 4 of 10 of a looping poison spell projectile. A lumpy ball of toxic green gas seen from the front, aspect about 1.3:1: mid olive-green with lighter lime highlights, darker green in the folds and a ragged dark fringe with a few tiny dark specks. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft billowing gas, mottled shading and fine specks. Keep it abstract gas.",
+      "name": "poison-projectile-3 (37x32)"
+    },
+    {
+      "id": "poison-projectile-4",
+      "directory": "elements/poison",
+      "image": "world-effects/projectile/texture-377-record-000-frame-004-source.png",
+      "content": "Frame 5 of 10 of a looping poison spell projectile. A lumpy ball of toxic green gas seen from the front, aspect about 1.3:1: mid olive-green with lighter lime highlights, darker green in the folds and a ragged dark fringe with a few tiny dark specks. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft billowing gas, mottled shading and fine specks. Keep it abstract gas.",
+      "name": "poison-projectile-4 (37x32)"
+    },
+    {
+      "id": "poison-projectile-5",
+      "directory": "elements/poison",
+      "image": "world-effects/projectile/texture-377-record-000-frame-005-source.png",
+      "content": "Frame 6 of 10 of a looping poison spell projectile. A lumpy ball of toxic green gas seen from the front, aspect about 1.3:1: mid olive-green with lighter lime highlights, darker green in the folds and a ragged dark fringe with a few tiny dark specks. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft billowing gas, mottled shading and fine specks. Keep it abstract gas.",
+      "name": "poison-projectile-5 (37x32)"
+    },
+    {
+      "id": "poison-projectile-6",
+      "directory": "elements/poison",
+      "image": "world-effects/projectile/texture-377-record-000-frame-006-source.png",
+      "content": "Frame 7 of 10 of a looping poison spell projectile. A lumpy ball of toxic green gas seen from the front, aspect about 1.3:1: mid olive-green with lighter lime highlights, darker green in the folds and a ragged dark fringe with a few tiny dark specks. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft billowing gas, mottled shading and fine specks. Keep it abstract gas.",
+      "name": "poison-projectile-6 (37x32)"
+    },
+    {
+      "id": "poison-projectile-7",
+      "directory": "elements/poison",
+      "image": "world-effects/projectile/texture-377-record-000-frame-007-source.png",
+      "content": "Frame 8 of 10 of a looping poison spell projectile. A lumpy ball of toxic green gas seen from the front, aspect about 1.3:1: mid olive-green with lighter lime highlights, darker green in the folds and a ragged dark fringe with a few tiny dark specks. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft billowing gas, mottled shading and fine specks. Keep it abstract gas.",
+      "name": "poison-projectile-7 (37x32)"
+    },
+    {
+      "id": "poison-projectile-8",
+      "directory": "elements/poison",
+      "image": "world-effects/projectile/texture-377-record-000-frame-008-source.png",
+      "content": "Frame 9 of 10 of a looping poison spell projectile. A lumpy ball of toxic green gas seen from the front, aspect about 1.3:1: mid olive-green with lighter lime highlights, darker green in the folds and a ragged dark fringe with a few tiny dark specks. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft billowing gas, mottled shading and fine specks. Keep it abstract gas.",
+      "name": "poison-projectile-8 (37x32)"
+    },
+    {
+      "id": "poison-projectile-9",
+      "directory": "elements/poison",
+      "image": "world-effects/projectile/texture-377-record-000-frame-009-source.png",
+      "content": "Frame 10 of 10 of a looping poison spell projectile. A lumpy ball of toxic green gas seen from the front, aspect about 1.3:1: mid olive-green with lighter lime highlights, darker green in the folds and a ragged dark fringe with a few tiny dark specks. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft billowing gas, mottled shading and fine specks. Keep it abstract gas.",
+      "name": "poison-projectile-9 (37x32)"
+    }
+  ]
+}

@@ -1,0 +1,373 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.78,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Hand-painted 1990s fantasy RPG spell effect illustration, luminous opaque gouache-like colour modelling with a hot bright core falling to darker saturated edges, broad painted planes and a few fine glowing flecks. Original local colours. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of spell icons in a restrained fantasy palette. Keep the source's colours, silhouette and the arrangement of its bright and dark regions: a swirl, cloud, lattice, flame, crescent or comet of magical energy that fills most of a square. Abstract magical energy only: no hands, wizard, wand, book, creature, rune, letter, symbol, text, border or frame; the shape named in the contract is the only shape.",
+  "presentation": "One isolated magical energy shape on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the magical energy shape. The whole magical energy shape visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Spell icons I2: shapes / Qwen then retro",
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "icons",
+      "model": "krea2-turbo",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ],
+  "task": "Task: Redraw a tiny 16 by 16 classic fantasy RPG spell selector icon as a newly illustrated high resolution magical emblem. The source is an abstract shape of coloured magical energy named in the contract: reconstruct a convincing painted version of that energy; do not enlarge or trace the pixel blocks.",
+  "items": [
+    {
+      "id": "icon-024",
+      "directory": "icons/icon-024",
+      "image": "icon.png",
+      "content": "One loose spiral swirl of mauve-pink magical energy filling most of a square, aspect about 1:1: a thick band winding inward from the lower right around to a small curl at the centre, brightest (light pink) along the inner curl and fading to ragged speckles on the outer edge. Preserve the direction of the spiral and the speckled edge. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-024 (16x16)"
+    },
+    {
+      "id": "icon-025",
+      "directory": "icons/icon-025",
+      "image": "icon.png",
+      "content": "One loose spiral swirl of mid grey magical energy filling most of a square, aspect about 1:1: a thick band winding inward from the lower right around to a small curl at the centre, brightest (pale silver) along the inner curl and fading to ragged speckles on the outer edge. Preserve the direction of the spiral and the speckled edge. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-025 (16x16)"
+    },
+    {
+      "id": "icon-026",
+      "directory": "icons/icon-026",
+      "image": "icon.png",
+      "content": "One loose spiral swirl of blue magical energy filling most of a square, aspect about 1:1: a thick band winding inward from the lower right around to a small curl at the centre, brightest (bright pale blue) along the inner curl and fading to ragged speckles on the outer edge. Preserve the direction of the spiral and the speckled edge. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-026 (16x16)"
+    },
+    {
+      "id": "icon-027",
+      "directory": "icons/icon-027",
+      "image": "icon.png",
+      "content": "One loose spiral swirl of light grey magical energy filling most of a square, aspect about 1:1: a thick band winding inward from the lower right around to a small curl at the centre, brightest (white) along the inner curl and fading to ragged speckles on the outer edge. Preserve the direction of the spiral and the speckled edge. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-027 (16x16)"
+    },
+    {
+      "id": "icon-028",
+      "directory": "icons/icon-028",
+      "image": "icon.png",
+      "content": "One loose spiral swirl of olive-yellow magical energy filling most of a square, aspect about 1:1: a thick band winding inward from the lower right around to a small curl at the centre, brightest (bright yellow) along the inner curl and fading to ragged speckles on the outer edge. Preserve the direction of the spiral and the speckled edge. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-028 (16x16)"
+    },
+    {
+      "id": "icon-029",
+      "directory": "icons/icon-029",
+      "image": "icon.png",
+      "content": "One loose spiral swirl of sage green magical energy filling most of a square, aspect about 1:1: a thick band winding inward from the lower right around to a small curl at the centre, brightest (pale green) along the inner curl and fading to ragged speckles on the outer edge. Preserve the direction of the spiral and the speckled edge. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-029 (16x16)"
+    },
+    {
+      "id": "icon-030",
+      "directory": "icons/icon-030",
+      "image": "icon.png",
+      "content": "One loose spiral swirl of fire-coloured magical energy filling most of a square, aspect about 1:1: a thick band winding inward around to a small bright curl at the centre, a pale yellow-orange core with deep orange and then dark red along the outer band, with ragged speckles at the outer edge. Preserve the direction of the spiral. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-030 (16x16)"
+    },
+    {
+      "id": "icon-031",
+      "directory": "icons/icon-031",
+      "image": "icon.png",
+      "content": "One cluster of magical energy, aspect about 1:1: two glowing mauve and dark purple blobs at the upper left and upper right, a smaller blob below the left one, and dark, near-black smoky tendrils trailing from them down and to the right. The blobs are the brightest part; the dark tendrils fade to nothing. Preserve the arrangement of the blobs and the dark trailing wisps. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-031 (16x16)"
+    },
+    {
+      "id": "icon-032",
+      "directory": "icons/icon-032",
+      "image": "icon.png",
+      "content": "One cluster of magical energy, aspect about 1:1: two glowing blue blobs at the upper left and upper right, a smaller blob below the left one, and dark, near-black smoky tendrils trailing from them down and to the right. The blobs are the brightest part; the dark tendrils fade to nothing. Preserve the arrangement of the blobs and the dark trailing wisps. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-032 (16x16)"
+    },
+    {
+      "id": "icon-033",
+      "directory": "icons/icon-033",
+      "image": "icon.png",
+      "content": "One cluster of magical energy, aspect about 1:1: two glowing teal blobs at the upper left and upper right, a smaller blob below the left one, and dark, near-black smoky tendrils trailing from them down and to the right. The blobs are the brightest part; the dark tendrils fade to nothing. Preserve the arrangement of the blobs and the dark trailing wisps. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-033 (16x16)"
+    },
+    {
+      "id": "icon-034",
+      "directory": "icons/icon-034",
+      "image": "icon.png",
+      "content": "One cluster of magical energy, aspect about 1:1: two glowing olive-yellow blobs at the upper left and upper right, a smaller blob below the left one, and dark, near-black smoky tendrils trailing from them down and to the right. The blobs are the brightest part; the dark tendrils fade to nothing. Preserve the arrangement of the blobs and the dark trailing wisps. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-034 (16x16)"
+    },
+    {
+      "id": "icon-035",
+      "directory": "icons/icon-035",
+      "image": "icon.png",
+      "content": "One cluster of magical energy, aspect about 1:1: two glowing brown and rust orange blobs at the upper left and upper right, a smaller blob below the left one, and dark, near-black smoky tendrils trailing from them down and to the right. The blobs are the brightest part; the dark tendrils fade to nothing. Preserve the arrangement of the blobs and the dark trailing wisps. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-035 (16x16)"
+    },
+    {
+      "id": "icon-036",
+      "directory": "icons/icon-036",
+      "image": "icon.png",
+      "content": "One cluster of magical energy, aspect about 1:1: two glowing green blobs at the upper left and upper right, a smaller blob below the left one, and dark, near-black smoky tendrils trailing from them down and to the right. The blobs are the brightest part; the dark tendrils fade to nothing. Preserve the arrangement of the blobs and the dark trailing wisps. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-036 (16x16)"
+    },
+    {
+      "id": "icon-037",
+      "directory": "icons/icon-037",
+      "image": "icon.png",
+      "content": "One cluster of magical energy, aspect about 1:1: two glowing grey blobs at the upper left and upper right, a smaller blob below the left one, and dark, near-black smoky tendrils trailing from them down and to the right. The blobs are the brightest part; the dark tendrils fade to nothing. Preserve the arrangement of the blobs and the dark trailing wisps. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-037 (16x16)"
+    },
+    {
+      "id": "icon-047",
+      "directory": "icons/icon-047",
+      "image": "icon.png",
+      "content": "One tangled lattice of mauve-pink with pale pink sparks: a ragged knotted network of crossing bands of magical energy filling most of a square, aspect about 1:1, with small gaps between the bands and bright sparks at some crossings. Preserve the knotted network and the gaps. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-047 (16x16)"
+    },
+    {
+      "id": "icon-048",
+      "directory": "icons/icon-048",
+      "image": "icon.png",
+      "content": "One tangled lattice of silver-grey with white sparks: a ragged knotted network of crossing bands of magical energy filling most of a square, aspect about 1:1, with small gaps between the bands and bright sparks at some crossings. Preserve the knotted network and the gaps. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-048 (16x16)"
+    },
+    {
+      "id": "icon-049",
+      "directory": "icons/icon-049",
+      "image": "icon.png",
+      "content": "One tangled lattice of blue with pale blue sparks: a ragged knotted network of crossing bands of magical energy filling most of a square, aspect about 1:1, with small gaps between the bands and bright sparks at some crossings. Preserve the knotted network and the gaps. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-049 (16x16)"
+    },
+    {
+      "id": "icon-050",
+      "directory": "icons/icon-050",
+      "image": "icon.png",
+      "content": "One tangled lattice of teal with pale teal sparks: a ragged knotted network of crossing bands of magical energy filling most of a square, aspect about 1:1, with small gaps between the bands and bright sparks at some crossings. Preserve the knotted network and the gaps. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-050 (16x16)"
+    },
+    {
+      "id": "icon-051",
+      "directory": "icons/icon-051",
+      "image": "icon.png",
+      "content": "One tangled lattice of yellow with pale yellow sparks: a ragged knotted network of crossing bands of magical energy filling most of a square, aspect about 1:1, with small gaps between the bands and bright sparks at some crossings. Preserve the knotted network and the gaps. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-051 (16x16)"
+    },
+    {
+      "id": "icon-052",
+      "directory": "icons/icon-052",
+      "image": "icon.png",
+      "content": "One tangled lattice of sage green with pale green sparks: a ragged knotted network of crossing bands of magical energy filling most of a square, aspect about 1:1, with small gaps between the bands and bright sparks at some crossings. Preserve the knotted network and the gaps. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-052 (16x16)"
+    },
+    {
+      "id": "icon-053",
+      "directory": "icons/icon-053",
+      "image": "icon.png",
+      "content": "One tangled lattice of orange with cream sparks: a ragged knotted network of crossing bands of magical energy filling most of a square, aspect about 1:1, with small gaps between the bands and bright sparks at some crossings. Preserve the knotted network and the gaps. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-053 (16x16)"
+    },
+    {
+      "id": "icon-054",
+      "directory": "icons/icon-054",
+      "image": "icon.png",
+      "content": "One star-shaped burst of fire-coloured magical energy, aspect about 1:1: a hot bright yellow core with short pointed rays of yellow and orange, surrounded by a scatter of separate red and dark red speckles. Preserve the star shape and the scatter. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-054 (16x16)"
+    },
+    {
+      "id": "icon-055",
+      "directory": "icons/icon-055",
+      "image": "icon.png",
+      "content": "One rounded tuft of teal magical energy shaped like a soft flame, aspect about 1:1, flat at the bottom with several ragged points rising at the top; brightest (pale blue-white along the lower edge) and darker toward the edges. Preserve the rounded base and the ragged points. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-055 (16x16)"
+    },
+    {
+      "id": "icon-056",
+      "directory": "icons/icon-056",
+      "image": "icon.png",
+      "content": "One rounded tuft of blue magical energy shaped like a soft flame, aspect about 1:1, flat at the bottom with several ragged points rising at the top; brightest (pale grey-blue along the lower edge) and darker toward the edges. Preserve the rounded base and the ragged points. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-056 (16x16)"
+    },
+    {
+      "id": "icon-057",
+      "directory": "icons/icon-057",
+      "image": "icon.png",
+      "content": "One rounded tuft of green with bright yellow magical energy shaped like a soft flame, aspect about 1:1, flat at the bottom with several ragged points rising at the top; brightest (lime at the lower left) and darker toward the edges. Preserve the rounded base and the ragged points. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-057 (16x16)"
+    },
+    {
+      "id": "icon-058",
+      "directory": "icons/icon-058",
+      "image": "icon.png",
+      "content": "One rounded tuft of red magical energy shaped like a soft flame, aspect about 1:1, flat at the bottom with several ragged points rising at the top; brightest (orange at the lower centre) and darker toward the edges. Preserve the rounded base and the ragged points. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-058 (16x16)"
+    },
+    {
+      "id": "icon-059",
+      "directory": "icons/icon-059",
+      "image": "icon.png",
+      "content": "One rounded tuft of yellow and orange magical energy shaped like a soft flame, aspect about 1:1, flat at the bottom with several ragged points rising at the top; brightest (pale yellow at the lower centre) and darker toward the edges. Preserve the rounded base and the ragged points. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-059 (16x16)"
+    },
+    {
+      "id": "icon-060",
+      "directory": "icons/icon-060",
+      "image": "icon.png",
+      "content": "One full round disc of pale cream and light peach magical light, aspect about 1:1, with faint grey mottled shading at its lower and left edge and a thin grey rim. Preserve the full round shape. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-060 (16x16)"
+    },
+    {
+      "id": "icon-061",
+      "directory": "icons/icon-061",
+      "image": "icon.png",
+      "content": "One lopsided gibbous shape of pale cream magical light, aspect about 1:1, the right side bulging round and the left side cut away by a soft grey shadow curve, with a thin grey rim. Preserve the lopsided shape and the shadow curve. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-061 (16x16)"
+    },
+    {
+      "id": "icon-062",
+      "directory": "icons/icon-062",
+      "image": "icon.png",
+      "content": "One wide crescent of pale cream and silver-grey magical light, aspect about 1:1, the horns pointing up and to the right, thickest at the lower left, with a grey rim. Preserve the crescent shape and its orientation. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-062 (16x16)"
+    },
+    {
+      "id": "icon-063",
+      "directory": "icons/icon-063",
+      "image": "icon.png",
+      "content": "One thin crescent of cream magical light, aspect about 1:1, a slim curved sliver along the lower left sweeping up to the right, pale cream at the bright middle fading to grey at the tips, with a thin grey rim. Preserve the slim crescent shape and its orientation. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-063 (16x16)"
+    },
+    {
+      "id": "icon-064",
+      "directory": "icons/icon-064",
+      "image": "icon.png",
+      "content": "One comet of mauve-pink magical energy, aspect about 1:1: a bright cream-white head at the lower left and a thin curved tail that arcs up and to the right, thinning into a dotted trail of separate fading specks at the top right. Preserve the curve of the tail and the dotted trail. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-064 (16x16)"
+    },
+    {
+      "id": "icon-065",
+      "directory": "icons/icon-065",
+      "image": "icon.png",
+      "content": "One comet of teal magical energy, aspect about 1:1: a bright pale blue-white head at the lower left and a thin curved tail that arcs up and to the right, thinning into a dotted trail of separate fading specks at the top right. Preserve the curve of the tail and the dotted trail. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-065 (16x16)"
+    },
+    {
+      "id": "icon-066",
+      "directory": "icons/icon-066",
+      "image": "icon.png",
+      "content": "One comet of yellow magical energy, aspect about 1:1: a bright pale yellow head at the lower left and a thin curved tail that arcs up and to the right, thinning into a dotted trail of separate fading specks at the top right. Preserve the curve of the tail and the dotted trail. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-066 (16x16)"
+    },
+    {
+      "id": "icon-067",
+      "directory": "icons/icon-067",
+      "image": "icon.png",
+      "content": "One comet of green magical energy, aspect about 1:1: a bright pale lime head at the lower left and a thin curved tail that arcs up and to the right, thinning into a dotted trail of separate fading specks at the top right. Preserve the curve of the tail and the dotted trail. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-067 (16x16)"
+    },
+    {
+      "id": "icon-068",
+      "directory": "icons/icon-068",
+      "image": "icon.png",
+      "content": "One comet of orange magical energy, aspect about 1:1: a bright cream head at the lower left and a thin curved tail that arcs up and to the right, thinning into a dotted trail of separate fading specks at the top right. Preserve the curve of the tail and the dotted trail. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy shape is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "icon-068 (16x16)"
+    }
+  ]
+}

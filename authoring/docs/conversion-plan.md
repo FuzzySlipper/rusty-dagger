@@ -84,6 +84,8 @@ All four pilots ran with the unchanged recipe and read well.
 
 Bodies B1 (28) is done: all 32 bodies are converted with the detailed template, in two batches (`b1-male`, `b1-female`). Faces F1 is done: all 160 heads converted with the `faces-detailed` template in four batches (`f1-a`…`f1-d`) plus a redo of the drifted pilot head; hair, headgear, markings and skin or scale colour hold across the set, and a contact sheet review found one female head (a goatee) worth a redo. Next: 10494-R1 review, then creatures C1 (the boar and werewolf dolls are full framed scenes, 125×198, with a stone border, moon and forest, so they need their own pilot; the 16 vampire heads and 2 beast heads are small heads like the faces), spell icons I1/I2 and T1, fire E2–E5, effects X1/X2, and the rest of worn W1–W3 using the neutral-base procedure.
 
+Queued after F1 (specs `spells-i1`, `i2`, `e2`, `e3`): spell icons I1 (25 bursts and clouds) and I2 (36 swirls, branching clusters, lattices, flames, moons and comets, using the `icons-shapes` template) on den-m5; fire-sibling effects E2 (cold and poison, 36) and E3 (shock and magic, 35) on den-nimo. Held back: the five targeting icons and the four 16x16 element icons are framed UI tiles with a hand or skull, so they need their own contract and pilot (T1); the shared-effects magic sparkle and TEXTURE.380/434 effects (X1/X2) follow.
+
 ## Original first six batches
 
 1. 10494-R1 (owner review of what already exists, plus redo-2).

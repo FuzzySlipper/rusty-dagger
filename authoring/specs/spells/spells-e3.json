@@ -1,0 +1,356 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Hand-painted 1990s fantasy RPG effect illustration, luminous opaque gouache-like colour modelling, a bright core falling to darker saturated edges, ragged painted edges and a few fine flecks. Original local colours. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded fantasy RPG effect art in a restrained palette. Keep the source's silhouette, size relationship between its parts, colours and the arrangement of its bright and dark regions: this is one frame of a short animation, so show exactly this stage and do not make it a finished explosion, ball or splash if the source is smaller or fainter. No creature, hand, text, border, scenery or second object.",
+  "presentation": "One isolated effect on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the effect. The whole effect visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Shock and magic effects",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "fx",
+      "model": "qwen-edit",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "conditioning": "reference"
+    }
+  ],
+  "task": "Task: Redraw a very small classic fantasy RPG combat or magic effect sprite as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+  "items": [
+    {
+      "id": "shock-impact-0",
+      "directory": "elements/shock",
+      "image": "world-effects/impact/texture-378-record-001-frame-000-source.png",
+      "content": "Frame 1 of 8 of a lightning spell's impact flash, fading out. A small round glowing blue ball, brighter pale blue in the centre, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve thin glowing arcs and a soft glow. Keep it abstract electricity.",
+      "name": "shock-impact-0 (52x41)"
+    },
+    {
+      "id": "shock-impact-1",
+      "directory": "elements/shock",
+      "image": "world-effects/impact/texture-378-record-001-frame-001-source.png",
+      "content": "Frame 2 of 8 of a lightning spell's impact flash, fading out. A larger round crackling ball: a white-blue core inside a mid-blue glow, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve thin glowing arcs and a soft glow. Keep it abstract electricity.",
+      "name": "shock-impact-1 (52x41)"
+    },
+    {
+      "id": "shock-impact-2",
+      "directory": "elements/shock",
+      "image": "world-effects/impact/texture-378-record-001-frame-002-source.png",
+      "content": "Frame 3 of 8 of a lightning spell's impact flash, fading out. A larger ragged flash: mottled teal and cyan with pale white-blue patches and scattered dark specks round the edge, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve thin glowing arcs and a soft glow. Keep it abstract electricity.",
+      "name": "shock-impact-2 (52x41)"
+    },
+    {
+      "id": "shock-impact-3",
+      "directory": "elements/shock",
+      "image": "world-effects/impact/texture-378-record-001-frame-003-source.png",
+      "content": "Frame 4 of 8 of a lightning spell's impact flash, fading out. A wide ragged flash, mottled teal with a few pale patches, thinner at the edge with dark specks, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve thin glowing arcs and a soft glow. Keep it abstract electricity.",
+      "name": "shock-impact-3 (52x41)"
+    },
+    {
+      "id": "shock-impact-4",
+      "directory": "elements/shock",
+      "image": "world-effects/impact/texture-378-record-001-frame-004-source.png",
+      "content": "Frame 5 of 8 of a lightning spell's impact flash, fading out. A wide, thinning, broken flash of dull teal with a few faint pale patches and dark specks, starting to disperse, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve thin glowing arcs and a soft glow. Keep it abstract electricity.",
+      "name": "shock-impact-4 (52x41)"
+    },
+    {
+      "id": "shock-impact-5",
+      "directory": "elements/shock",
+      "image": "world-effects/impact/texture-378-record-001-frame-005-source.png",
+      "content": "Frame 6 of 8 of a lightning spell's impact flash, fading out. A faint broken wisp of dark teal and green-grey with scattered dark specks, mostly dissolved, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve thin glowing arcs and a soft glow. Keep it abstract electricity.",
+      "name": "shock-impact-5 (52x41)"
+    },
+    {
+      "id": "shock-impact-6",
+      "directory": "elements/shock",
+      "image": "world-effects/impact/texture-378-record-001-frame-006-source.png",
+      "content": "Frame 7 of 8 of a lightning spell's impact flash, fading out. A very faint scrap of dark green-grey smudge with a few specks, almost gone, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve thin glowing arcs and a soft glow. Keep it abstract electricity.",
+      "name": "shock-impact-6 (52x41)"
+    },
+    {
+      "id": "shock-impact-7",
+      "directory": "elements/shock",
+      "image": "world-effects/impact/texture-378-record-001-frame-007-source.png",
+      "content": "Frame 8 of 8 of a lightning spell's impact flash, fading out. Almost nothing: a handful of tiny dark specks. Do not add anything else. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve thin glowing arcs and a soft glow. Keep it abstract electricity.",
+      "name": "shock-impact-7 (52x41)"
+    },
+    {
+      "id": "shock-projectile-0",
+      "directory": "elements/shock",
+      "image": "world-effects/projectile/texture-378-record-000-frame-000-source.png",
+      "content": "Frame 1 of 7 of a looping lightning spell projectile. A ball of crackling electricity seen from the front, aspect about 1.3:1: a pale cyan-white glowing core wrapped in thin curling pale cyan and white arcs that whip outward, with a faint blue glow. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve thin glowing arcs and a soft glow. Keep it abstract electricity.",
+      "name": "shock-projectile-0 (67x59)"
+    },
+    {
+      "id": "shock-projectile-1",
+      "directory": "elements/shock",
+      "image": "world-effects/projectile/texture-378-record-000-frame-001-source.png",
+      "content": "Frame 2 of 7 of a looping lightning spell projectile. A ball of crackling electricity seen from the front, aspect about 1.3:1: a pale cyan-white glowing core wrapped in thin curling pale cyan and white arcs that whip outward, with a faint blue glow. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve thin glowing arcs and a soft glow. Keep it abstract electricity.",
+      "name": "shock-projectile-1 (67x59)"
+    },
+    {
+      "id": "shock-projectile-2",
+      "directory": "elements/shock",
+      "image": "world-effects/projectile/texture-378-record-000-frame-002-source.png",
+      "content": "Frame 3 of 7 of a looping lightning spell projectile. A ball of crackling electricity seen from the front, aspect about 1.3:1: a pale cyan-white glowing core wrapped in thin curling pale cyan and white arcs that whip outward, with a faint blue glow. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve thin glowing arcs and a soft glow. Keep it abstract electricity.",
+      "name": "shock-projectile-2 (67x59)"
+    },
+    {
+      "id": "shock-projectile-3",
+      "directory": "elements/shock",
+      "image": "world-effects/projectile/texture-378-record-000-frame-003-source.png",
+      "content": "Frame 4 of 7 of a looping lightning spell projectile. A ball of crackling electricity seen from the front, aspect about 1.3:1: a pale cyan-white glowing core wrapped in thin curling pale cyan and white arcs that whip outward, with a faint blue glow. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve thin glowing arcs and a soft glow. Keep it abstract electricity.",
+      "name": "shock-projectile-3 (67x59)"
+    },
+    {
+      "id": "shock-projectile-4",
+      "directory": "elements/shock",
+      "image": "world-effects/projectile/texture-378-record-000-frame-004-source.png",
+      "content": "Frame 5 of 7 of a looping lightning spell projectile. A ball of crackling electricity seen from the front, aspect about 1.3:1: a pale cyan-white glowing core wrapped in thin curling pale cyan and white arcs that whip outward, with a faint blue glow. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve thin glowing arcs and a soft glow. Keep it abstract electricity.",
+      "name": "shock-projectile-4 (67x59)"
+    },
+    {
+      "id": "shock-projectile-5",
+      "directory": "elements/shock",
+      "image": "world-effects/projectile/texture-378-record-000-frame-005-source.png",
+      "content": "Frame 6 of 7 of a looping lightning spell projectile. A ball of crackling electricity seen from the front, aspect about 1.3:1: a pale cyan-white glowing core wrapped in thin curling pale cyan and white arcs that whip outward, with a faint blue glow. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve thin glowing arcs and a soft glow. Keep it abstract electricity.",
+      "name": "shock-projectile-5 (67x59)"
+    },
+    {
+      "id": "shock-projectile-6",
+      "directory": "elements/shock",
+      "image": "world-effects/projectile/texture-378-record-000-frame-006-source.png",
+      "content": "Frame 7 of 7 of a looping lightning spell projectile. A ball of crackling electricity seen from the front, aspect about 1.3:1: a pale cyan-white glowing core wrapped in thin curling pale cyan and white arcs that whip outward, with a faint blue glow. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve thin glowing arcs and a soft glow. Keep it abstract electricity.",
+      "name": "shock-projectile-6 (67x59)"
+    },
+    {
+      "id": "magic-impact-0",
+      "directory": "elements/magic",
+      "image": "world-effects/impact/texture-379-record-001-frame-000-source.png",
+      "content": "Frame 1 of 10 of a magic spell's impact flash, fading out. A small dim dark-teal ball with a few tiny white sparkles, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glow, fine sparkles and a thin ring. Keep it abstract magic.",
+      "name": "magic-impact-0 (114x79)"
+    },
+    {
+      "id": "magic-impact-1",
+      "directory": "elements/magic",
+      "image": "world-effects/impact/texture-379-record-001-frame-001-source.png",
+      "content": "Frame 2 of 10 of a magic spell's impact flash, fading out. A small dark-teal ball with a few tiny white sparkles at its centre, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glow, fine sparkles and a thin ring. Keep it abstract magic.",
+      "name": "magic-impact-1 (114x79)"
+    },
+    {
+      "id": "magic-impact-2",
+      "directory": "elements/magic",
+      "image": "world-effects/impact/texture-379-record-001-frame-002-source.png",
+      "content": "Frame 3 of 10 of a magic spell's impact flash, fading out. A small burst of yellow-white sparks around a dark-teal core, aspect about 1.2:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glow, fine sparkles and a thin ring. Keep it abstract magic.",
+      "name": "magic-impact-2 (114x79)"
+    },
+    {
+      "id": "magic-impact-3",
+      "directory": "elements/magic",
+      "image": "world-effects/impact/texture-379-record-001-frame-003-source.png",
+      "content": "Frame 4 of 10 of a magic spell's impact flash, fading out. A bursting star of yellow-white sparks with short rays flung outward around a dark-teal core, aspect about 1.3:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glow, fine sparkles and a thin ring. Keep it abstract magic.",
+      "name": "magic-impact-3 (114x79)"
+    },
+    {
+      "id": "magic-impact-4",
+      "directory": "elements/magic",
+      "image": "world-effects/impact/texture-379-record-001-frame-004-source.png",
+      "content": "Frame 5 of 10 of a magic spell's impact flash, fading out. A wide burst: a teal glowing ball with many thin yellow-green spark lines flung outward, aspect about 1.4:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glow, fine sparkles and a thin ring. Keep it abstract magic.",
+      "name": "magic-impact-4 (114x79)"
+    },
+    {
+      "id": "magic-impact-5",
+      "directory": "elements/magic",
+      "image": "world-effects/impact/texture-379-record-001-frame-005-source.png",
+      "content": "Frame 6 of 10 of a magic spell's impact flash, fading out. A wide burst: a teal glowing ball with thin green spark lines and a few white flecks flung outward, aspect about 1.4:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glow, fine sparkles and a thin ring. Keep it abstract magic.",
+      "name": "magic-impact-5 (114x79)"
+    },
+    {
+      "id": "magic-impact-6",
+      "directory": "elements/magic",
+      "image": "world-effects/impact/texture-379-record-001-frame-006-source.png",
+      "content": "Frame 7 of 10 of a magic spell's impact flash, fading out. A thinning burst of dark-teal haze with a few white sparks and scattered green spark lines, aspect about 1.4:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glow, fine sparkles and a thin ring. Keep it abstract magic.",
+      "name": "magic-impact-6 (114x79)"
+    },
+    {
+      "id": "magic-impact-7",
+      "directory": "elements/magic",
+      "image": "world-effects/impact/texture-379-record-001-frame-007-source.png",
+      "content": "Frame 8 of 10 of a magic spell's impact flash, fading out. A faint scatter of dark-teal haze with a few white sparks and green specks, aspect about 1.4:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glow, fine sparkles and a thin ring. Keep it abstract magic.",
+      "name": "magic-impact-7 (114x79)"
+    },
+    {
+      "id": "magic-impact-8",
+      "directory": "elements/magic",
+      "image": "world-effects/impact/texture-379-record-001-frame-008-source.png",
+      "content": "Frame 9 of 10 of a magic spell's impact flash, fading out. A very faint scatter of a few green specks and one or two white sparks, almost gone, aspect about 1.4:1. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glow, fine sparkles and a thin ring. Keep it abstract magic.",
+      "name": "magic-impact-8 (114x79)"
+    },
+    {
+      "id": "magic-impact-9",
+      "directory": "elements/magic",
+      "image": "world-effects/impact/texture-379-record-001-frame-009-source.png",
+      "content": "Frame 10 of 10 of a magic spell's impact flash, fading out. Almost nothing: a handful of tiny green and white specks. Do not add anything else. Preserve the stage shown here, its size relative to the frame and its colours. No face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a small energy burst to almost nothing. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glow, fine sparkles and a thin ring. Keep it abstract magic.",
+      "name": "magic-impact-9 (114x79)"
+    },
+    {
+      "id": "magic-projectile-0",
+      "directory": "elements/magic",
+      "image": "world-effects/projectile/texture-379-record-000-frame-000-source.png",
+      "content": "Frame 1 of 10 of a looping magic spell projectile. A glowing oval of dark green-teal magical energy seen from the front, aspect about 1.3:1: a bright yellow-white four-point star sparkle at its centre, smaller white sparkles scattered over it and a thin orange-red ring just inside the oval edge. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft glow, fine sparkles and a thin ring. Keep it abstract magic.",
+      "name": "magic-projectile-0 (75x55)"
+    },
+    {
+      "id": "magic-projectile-1",
+      "directory": "elements/magic",
+      "image": "world-effects/projectile/texture-379-record-000-frame-001-source.png",
+      "content": "Frame 2 of 10 of a looping magic spell projectile. A glowing oval of dark green-teal magical energy seen from the front, aspect about 1.3:1: a bright yellow-white four-point star sparkle at its centre, smaller white sparkles scattered over it and a thin orange-red ring just inside the oval edge. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft glow, fine sparkles and a thin ring. Keep it abstract magic.",
+      "name": "magic-projectile-1 (75x55)"
+    },
+    {
+      "id": "magic-projectile-2",
+      "directory": "elements/magic",
+      "image": "world-effects/projectile/texture-379-record-000-frame-002-source.png",
+      "content": "Frame 3 of 10 of a looping magic spell projectile. A glowing oval of dark green-teal magical energy seen from the front, aspect about 1.3:1: a bright yellow-white four-point star sparkle at its centre, smaller white sparkles scattered over it and a thin orange-red ring just inside the oval edge. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft glow, fine sparkles and a thin ring. Keep it abstract magic.",
+      "name": "magic-projectile-2 (75x55)"
+    },
+    {
+      "id": "magic-projectile-3",
+      "directory": "elements/magic",
+      "image": "world-effects/projectile/texture-379-record-000-frame-003-source.png",
+      "content": "Frame 4 of 10 of a looping magic spell projectile. A glowing oval of dark green-teal magical energy seen from the front, aspect about 1.3:1: a bright yellow-white four-point star sparkle at its centre, smaller white sparkles scattered over it and a thin orange-red ring just inside the oval edge. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft glow, fine sparkles and a thin ring. Keep it abstract magic.",
+      "name": "magic-projectile-3 (75x55)"
+    },
+    {
+      "id": "magic-projectile-4",
+      "directory": "elements/magic",
+      "image": "world-effects/projectile/texture-379-record-000-frame-004-source.png",
+      "content": "Frame 5 of 10 of a looping magic spell projectile. A glowing oval of dark green-teal magical energy seen from the front, aspect about 1.3:1: a bright yellow-white four-point star sparkle at its centre, smaller white sparkles scattered over it and a thin orange-red ring just inside the oval edge. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft glow, fine sparkles and a thin ring. Keep it abstract magic.",
+      "name": "magic-projectile-4 (75x55)"
+    },
+    {
+      "id": "magic-projectile-5",
+      "directory": "elements/magic",
+      "image": "world-effects/projectile/texture-379-record-000-frame-005-source.png",
+      "content": "Frame 6 of 10 of a looping magic spell projectile. A glowing oval of dark green-teal magical energy seen from the front, aspect about 1.3:1: a bright yellow-white four-point star sparkle at its centre, smaller white sparkles scattered over it and a thin orange-red ring just inside the oval edge. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft glow, fine sparkles and a thin ring. Keep it abstract magic.",
+      "name": "magic-projectile-5 (75x55)"
+    },
+    {
+      "id": "magic-projectile-6",
+      "directory": "elements/magic",
+      "image": "world-effects/projectile/texture-379-record-000-frame-006-source.png",
+      "content": "Frame 7 of 10 of a looping magic spell projectile. A glowing oval of dark green-teal magical energy seen from the front, aspect about 1.3:1: a bright yellow-white four-point star sparkle at its centre, smaller white sparkles scattered over it and a thin orange-red ring just inside the oval edge. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft glow, fine sparkles and a thin ring. Keep it abstract magic.",
+      "name": "magic-projectile-6 (75x55)"
+    },
+    {
+      "id": "magic-projectile-7",
+      "directory": "elements/magic",
+      "image": "world-effects/projectile/texture-379-record-000-frame-007-source.png",
+      "content": "Frame 8 of 10 of a looping magic spell projectile. A glowing oval of dark green-teal magical energy seen from the front, aspect about 1.3:1: a bright yellow-white four-point star sparkle at its centre, smaller white sparkles scattered over it and a thin orange-red ring just inside the oval edge. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft glow, fine sparkles and a thin ring. Keep it abstract magic.",
+      "name": "magic-projectile-7 (75x55)"
+    },
+    {
+      "id": "magic-projectile-8",
+      "directory": "elements/magic",
+      "image": "world-effects/projectile/texture-379-record-000-frame-008-source.png",
+      "content": "Frame 9 of 10 of a looping magic spell projectile. A glowing oval of dark green-teal magical energy seen from the front, aspect about 1.3:1: a bright yellow-white four-point star sparkle at its centre, smaller white sparkles scattered over it and a thin orange-red ring just inside the oval edge. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft glow, fine sparkles and a thin ring. Keep it abstract magic.",
+      "name": "magic-projectile-8 (75x55)"
+    },
+    {
+      "id": "magic-projectile-9",
+      "directory": "elements/magic",
+      "image": "world-effects/projectile/texture-379-record-000-frame-009-source.png",
+      "content": "Frame 10 of 10 of a looping magic spell projectile. A glowing oval of dark green-teal magical energy seen from the front, aspect about 1.3:1: a bright yellow-white four-point star sparkle at its centre, smaller white sparkles scattered over it and a thin orange-red ring just inside the oval edge. Preserve the outline of this frame and where its brightest parts sit. No face, symbol or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft glow, fine sparkles and a thin ring. Keep it abstract magic.",
+      "name": "magic-projectile-9 (75x55)"
+    }
+  ]
+}
