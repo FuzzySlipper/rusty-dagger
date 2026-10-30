@@ -1,0 +1,113 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.78,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Hand-painted 1990s fantasy RPG spell effect illustration, luminous opaque gouache-like colour modelling with a hot bright core falling to darker saturated edges, broad painted planes and a few fine glowing flecks. Original local colours. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of spell icons in a restrained fantasy palette. Keep the source's colours, silhouette and the arrangement of its bright and dark regions: a burst, bloom, shimmer or radiance of magical energy that fills most of a square. Abstract magical energy only: no hands, wizard, wand, book, creature, rune, letter, symbol, text, border or frame.",
+  "presentation": "One isolated magical energy burst on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the magical energy burst. The whole magical energy burst visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Spell icons pilot",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "icons",
+      "model": "qwen-edit",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "conditioning": "reference"
+    }
+  ],
+  "task": "Task: Redraw a tiny 16 by 16 classic fantasy RPG spell selector icon as a newly illustrated high resolution magical emblem. The source is an abstract burst of coloured magical energy: reconstruct a convincing painted version of that energy; do not enlarge or trace the pixel blocks.",
+  "items": [
+    {
+      "id": "fire-burst",
+      "directory": "icons/icon-000",
+      "image": "icon.png",
+      "content": "One irregular ragged burst of fire-coloured magical energy filling most of a square, aspect about 1:1. A hot pale-yellow core at the centre, spreading through bright orange to deep red and dark red at the ragged outer edge, with a few darker red flecks at the border. Preserve the ragged outline and the hot centre. No flame shape, symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy burst is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "fire-burst (16x16)"
+    },
+    {
+      "id": "rays-peach",
+      "directory": "icons/icon-001",
+      "image": "icon.png",
+      "content": "One full square tile of magical radiance, aspect 1:1, filled edge to edge with no transparent border. Warm peach and light orange glow with pale cream rays crossing diagonally from the corners to a bright cream centre, like a four-point star. Preserve the diagonal X of light and the square edge-to-edge fill. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy burst is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "rays-peach (16x16)"
+    },
+    {
+      "id": "teal-cloud",
+      "directory": "icons/icon-003",
+      "image": "icon.png",
+      "content": "One ragged round cloud of teal-green magical energy filling most of a square, aspect about 1:1. Mid teal with paler mint highlight spots near the centre and darker blue-green at the ragged outer edge. Preserve the cloud outline and the pale highlights. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy burst is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "teal-cloud (16x16)"
+    },
+    {
+      "id": "pink-bloom",
+      "directory": "icons/icon-005",
+      "image": "icon.png",
+      "content": "One ragged bloom of dusty pink and mauve magical energy, aspect about 1:1, with an irregular outline and darker purple-pink shadow patches. Lighter pink in the middle and at the upper left. Preserve the irregular outline. No flower petals, symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy burst is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "pink-bloom (16x16)"
+    },
+    {
+      "id": "blue-sparkle",
+      "directory": "icons/icon-006",
+      "image": "icon.png",
+      "content": "One ragged burst of blue magical energy filling most of a square, aspect about 1:1. Mid royal blue with a scatter of small pale-blue and white sparkle points and a few darker navy patches near the border. Preserve the sparkles and the ragged outline. No stars as symbols, no text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy burst is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "blue-sparkle (16x16)"
+    },
+    {
+      "id": "pink-cross",
+      "directory": "icons/icon-009",
+      "image": "icon.png",
+      "content": "One roughly square burst of pink and lilac magical energy with thin pale lines crossing in a grid pattern like a lattice of light, and small cream dots at the crossings, aspect about 1:1. Lilac-pink ground with a paler pink centre. Preserve the lattice of light lines and cream dots. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy burst is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "pink-cross (16x16)"
+    },
+    {
+      "id": "silver-cross",
+      "directory": "icons/icon-010",
+      "image": "icon.png",
+      "content": "One roughly square burst of silver-white and pale grey magical energy with brighter white lines crossing in a cross or lattice pattern, aspect about 1:1. Cool grey ground, white crossing lines, darker grey at the ragged edge. Preserve the crossing lines. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy burst is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "silver-cross (16x16)"
+    },
+    {
+      "id": "pink-dissolve",
+      "directory": "icons/icon-015",
+      "image": "icon.png",
+      "content": "One loose scatter of pink, lilac and cream magical energy particles forming a round ring around a bright cream centre, aspect about 1:1. The edge dissolves into separate small dots with transparent gaps. Preserve the dissolving particle edge and the cream centre. No symbol or text.",
+      "uncertainty": "The source is a 16 by 16 pixel selector icon of abstract magical energy; nothing in it depicts an object, so only the energy burst is reconstructed. The icon is only used as a small selector tile.",
+      "invention": "Resolve soft glowing gradients, a few fine flecks and ragged luminous edges. Keep it abstract energy.",
+      "name": "pink-dissolve (16x16)"
+    }
+  ]
+}

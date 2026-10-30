@@ -21,6 +21,9 @@ PIPELINE = Path(os.environ.get("ASSET_PIPELINE", Path.home() / "dev/asset-pipeli
 GENERATOR = PIPELINE / "tools/lora-training/generate.py"
 
 
+HOSTS = {"den-m5": "http://192.168.1.24:8188", "den-nimo": "http://192.168.1.23:8188"}
+
+
 def read(path):
     return json.loads(Path(path).read_text())
 
@@ -73,8 +76,11 @@ def export_prompts(output, plan=None):
     print(f"Literal prompts: {output / 'PROMPTS.md'}", flush=True)
 
 
-def prepare(spec_path, source, output, upstream=None):
+def prepare(spec_path, source, output, upstream=None, host=None):
     spec = read(spec_path)
+    if host:
+        for route in spec["routes"]:
+            route["host"], route["url"] = host, HOSTS[host]
     source, output = Path(source).resolve(), Path(output).resolve()
     plan = {"spec": spec, "source_root": str(source), "jobs": []}
     upstream_plan = read(upstream / "plan.json") if upstream else None
@@ -271,6 +277,7 @@ def main():
     prep.add_argument("--source", type=Path, required=True)
     prep.add_argument("--out", type=Path, required=True)
     prep.add_argument("--upstream", type=Path, help="completed study whose reconstruction feeds a route's upstream_route")
+    prep.add_argument("--host", choices=list(HOSTS), help="run every route on this host, overriding the spec")
     gen = sub.add_parser("generate")
     gen.add_argument("out", type=Path)
     gen.add_argument("--host")
@@ -281,7 +288,7 @@ def main():
     prompts.add_argument("out", type=Path)
     args = parser.parse_args()
     if args.command == "prepare":
-        prepare(args.spec, args.source, args.out, args.upstream)
+        prepare(args.spec, args.source, args.out, args.upstream, args.host)
     elif args.command == "generate":
         return generate(args.out.resolve(), args.host, args.routes)
     elif args.command == "sheets":

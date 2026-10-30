@@ -13,14 +13,12 @@ internal static class MediaReferenceExport
 
     /// <summary>
     /// Effect archives with no other export. TEXTURE.380 is the shared effect set (blood splash, corpse, sparkle) and
-    /// TEXTURE.434 the inventory glints; 432 and 433 are worn-item archives exported for identification. TEXTURE.370-372 (interior surfaces) and 374 (doors) are world surfaces, not effects.
+    /// TEXTURE.434 the inventory glints. TEXTURE.370-372 (interior surfaces) and 374 (doors) are world surfaces, not effects.
     /// </summary>
     private static readonly (int Archive, string Note)[] EffectArchives =
     [
         (380, "Shared effect set: animated blood splash (record 0), corpse (record 1) and the magic sparkle records."),
         (434, "Inventory glint textures (DaggerfallInventoryWindow coinsAnimTextureName/magicAnimTextureName): magic glint animation, a skeleton corpse and sparkle frames."),
-        (432, "Worn-item (paper doll) archive; contents not yet identified."),
-        (433, "Worn-item (paper doll) archive; contents not yet identified."),
     ];
 
     public static void RunPaperDoll(string arena2, string output)
@@ -76,7 +74,7 @@ internal static class MediaReferenceExport
         export.Finish("Daggerfall effect references", new { archives = sources.Count },
             new { note = "The element missiles and impacts (TEXTURE.375-379) and the casting hands are in the spell export; TEXTURE.380 records 1 and 3 also appear there and in the item export." },
             "Open index.html for the visual catalog. Every record and frame of each archive, native resolution, ART_PAL.COL with index 0 transparent.\n" +
-            "380 is the shared effect set and 434 the inventory glints; 432 and 433 are worn-item archives exported for identification. TEXTURE.370-372 (interior surfaces) and 374 (doors) are world surfaces and are not exported here.\n" +
+            "380 is the shared effect set and 434 the inventory glints. TEXTURE.370-372 (interior surfaces) and 374 (doors) are world surfaces and are not exported here.\n" +
             "Reproduce: dotnet run --project src/Daggerfall.Import.Tool -- export-effects --output authoring/df-raw/NEW_EFFECTS_DIRECTORY\n" +
             "Use a fresh output directory to preserve experiments. No generation jobs have been submitted. Extracted art stays in ignored authoring/df-raw/.",
             sources);

@@ -1,0 +1,220 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Hand-painted 1990s fantasy RPG effect illustration, luminous opaque gouache-like colour modelling, a bright core falling to darker saturated edges, ragged painted edges and a few fine flecks. Original local colours. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded fantasy RPG effect art in a restrained palette. Keep the source's silhouette, size relationship between its parts, colours and the arrangement of its bright and dark regions: this is one frame of a short animation, so show exactly this stage and do not make it a finished explosion, ball or splash if the source is smaller or fainter. No creature, hand, text, border, scenery or second object.",
+  "presentation": "One isolated effect on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the effect. The whole effect visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Fire effect pilot / Qwen then retro",
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "fx",
+      "model": "krea2-turbo",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ],
+  "task": "Task: Redraw a very small classic fantasy RPG combat or magic effect sprite as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+  "items": [
+    {
+      "id": "impact-0",
+      "directory": "elements/fire",
+      "image": "world-effects/impact/texture-375-record-001-frame-000-source.png",
+      "content": "Frame 1 of 9 of a fire spell's impact flash, fading out. A small round fireball: a bright yellow core inside a mid-orange ball with ragged dark-red edges, wrapped by one thin orange elliptical ring of light just outside the ball, aspect about 1.3:1. Preserve the stage shown here, its size relative to the frame and its colours. No flame tongues, face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a fireball with a ring to a burnt-out scrap. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glowing gradients, ragged luminous edges and a few fine embers. Keep it abstract fire.",
+      "name": "impact-0 (73x53)"
+    },
+    {
+      "id": "impact-1",
+      "directory": "elements/fire",
+      "image": "world-effects/impact/texture-375-record-001-frame-001-source.png",
+      "content": "Frame 2 of 9 of a fire spell's impact flash, fading out. A round fireball: a bright yellow core inside a mid-orange ball with ragged dark-red edges, wrapped by one thin orange elliptical ring of light, the ring a little wider than in the previous frame, aspect about 1.3:1. Preserve the stage shown here, its size relative to the frame and its colours. No flame tongues, face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a fireball with a ring to a burnt-out scrap. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glowing gradients, ragged luminous edges and a few fine embers. Keep it abstract fire.",
+      "name": "impact-1 (73x53)"
+    },
+    {
+      "id": "impact-2",
+      "directory": "elements/fire",
+      "image": "world-effects/impact/texture-375-record-001-frame-002-source.png",
+      "content": "Frame 3 of 9 of a fire spell's impact flash, fading out. A round fireball slightly larger than before, a smaller yellow core inside an orange ball with ragged edges, with a wide thin orange ring clearly separated from the ball, aspect about 1.3:1. Preserve the stage shown here, its size relative to the frame and its colours. No flame tongues, face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a fireball with a ring to a burnt-out scrap. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glowing gradients, ragged luminous edges and a few fine embers. Keep it abstract fire.",
+      "name": "impact-2 (73x53)"
+    },
+    {
+      "id": "impact-3",
+      "directory": "elements/fire",
+      "image": "world-effects/impact/texture-375-record-001-frame-003-source.png",
+      "content": "Frame 4 of 9 of a fire spell's impact flash, fading out. A round fireball: a duller yellow core in an orange ball, with a very wide, thin, broken faint orange ring around it that is starting to dissolve into dots, aspect about 1.3:1. Preserve the stage shown here, its size relative to the frame and its colours. No flame tongues, face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a fireball with a ring to a burnt-out scrap. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glowing gradients, ragged luminous edges and a few fine embers. Keep it abstract fire.",
+      "name": "impact-3 (73x53)"
+    },
+    {
+      "id": "impact-4",
+      "directory": "elements/fire",
+      "image": "world-effects/impact/texture-375-record-001-frame-004-source.png",
+      "content": "Frame 5 of 9 of a fire spell's impact flash, fading out. A dimmer orange fireball with no ring: a faint small yellow spot in an orange ragged ball with darker red edges, aspect about 1.3:1. Preserve the stage shown here, its size relative to the frame and its colours. No flame tongues, face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a fireball with a ring to a burnt-out scrap. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glowing gradients, ragged luminous edges and a few fine embers. Keep it abstract fire.",
+      "name": "impact-4 (73x53)"
+    },
+    {
+      "id": "impact-5",
+      "directory": "elements/fire",
+      "image": "world-effects/impact/texture-375-record-001-frame-005-source.png",
+      "content": "Frame 6 of 9 of a fire spell's impact flash, fading out. A smaller fading fireball of dull orange-red and brown, ragged edges, no bright core, aspect about 1.3:1. Preserve the stage shown here, its size relative to the frame and its colours. No flame tongues, face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a fireball with a ring to a burnt-out scrap. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glowing gradients, ragged luminous edges and a few fine embers. Keep it abstract fire.",
+      "name": "impact-5 (73x53)"
+    },
+    {
+      "id": "impact-6",
+      "directory": "elements/fire",
+      "image": "world-effects/impact/texture-375-record-001-frame-006-source.png",
+      "content": "Frame 7 of 9 of a fire spell's impact flash, fading out. A small dull orange and brown ember cloud, ragged and fading, much smaller than the first frames, aspect about 1.3:1. Preserve the stage shown here, its size relative to the frame and its colours. No flame tongues, face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a fireball with a ring to a burnt-out scrap. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glowing gradients, ragged luminous edges and a few fine embers. Keep it abstract fire.",
+      "name": "impact-6 (73x53)"
+    },
+    {
+      "id": "impact-7",
+      "directory": "elements/fire",
+      "image": "world-effects/impact/texture-375-record-001-frame-007-source.png",
+      "content": "Frame 8 of 9 of a fire spell's impact flash, fading out. A tiny scrap of dark red-brown smoke-like ember with a few dark specks, nearly burnt out, aspect about 1.5:1. Preserve the stage shown here, its size relative to the frame and its colours. No flame tongues, face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a fireball with a ring to a burnt-out scrap. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glowing gradients, ragged luminous edges and a few fine embers. Keep it abstract fire.",
+      "name": "impact-7 (73x53)"
+    },
+    {
+      "id": "impact-8",
+      "directory": "elements/fire",
+      "image": "world-effects/impact/texture-375-record-001-frame-008-source.png",
+      "content": "Frame 9 of 9 of a fire spell's impact flash, fading out. A tiny scrap of very dark brown ash, almost gone, aspect about 1.5:1. Preserve the stage shown here, its size relative to the frame and its colours. No flame tongues, face, symbol or text.",
+      "uncertainty": "This is one frame of a short animation that fades from a fireball with a ring to a burnt-out scrap. Each frame is drawn on its own, so keep to the stage shown and do not add detail from other frames.",
+      "invention": "Resolve soft glowing gradients, ragged luminous edges and a few fine embers. Keep it abstract fire.",
+      "name": "impact-8 (73x53)"
+    },
+    {
+      "id": "projectile-0",
+      "directory": "elements/fire",
+      "image": "world-effects/projectile/texture-375-record-000-frame-000-source.png",
+      "content": "Frame 1 of 10 of a looping fire spell projectile. A large irregular flaming ball seen from the front, aspect about 1.3:1: a very bright pale-cream and pale-yellow centre fading through light orange to a ragged dark-orange and brown-red fringe, with a few small separate orange flecks drifting just below the lower edge. Preserve the ragged outline and the bright centre of this frame. No flame tongues drawn as a symbol, face or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the ragged outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft glowing gradients, ragged luminous edges and a few fine embers. Keep it abstract fire.",
+      "name": "projectile-0 (60x47)"
+    },
+    {
+      "id": "projectile-1",
+      "directory": "elements/fire",
+      "image": "world-effects/projectile/texture-375-record-000-frame-001-source.png",
+      "content": "Frame 2 of 10 of a looping fire spell projectile. A large irregular flaming ball seen from the front, aspect about 1.3:1: a very bright pale-cream and pale-yellow centre fading through light orange to a ragged dark-orange and brown-red fringe, with a few small separate orange flecks drifting just below the lower edge. Preserve the ragged outline and the bright centre of this frame. No flame tongues drawn as a symbol, face or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the ragged outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft glowing gradients, ragged luminous edges and a few fine embers. Keep it abstract fire.",
+      "name": "projectile-1 (60x47)"
+    },
+    {
+      "id": "projectile-2",
+      "directory": "elements/fire",
+      "image": "world-effects/projectile/texture-375-record-000-frame-002-source.png",
+      "content": "Frame 3 of 10 of a looping fire spell projectile. A large irregular flaming ball seen from the front, aspect about 1.3:1: a very bright pale-cream and pale-yellow centre fading through light orange to a ragged dark-orange and brown-red fringe, with a few small separate orange flecks drifting just below the lower edge. Preserve the ragged outline and the bright centre of this frame. No flame tongues drawn as a symbol, face or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the ragged outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft glowing gradients, ragged luminous edges and a few fine embers. Keep it abstract fire.",
+      "name": "projectile-2 (60x47)"
+    },
+    {
+      "id": "projectile-3",
+      "directory": "elements/fire",
+      "image": "world-effects/projectile/texture-375-record-000-frame-003-source.png",
+      "content": "Frame 4 of 10 of a looping fire spell projectile. A large irregular flaming ball seen from the front, aspect about 1.3:1: a very bright pale-cream and pale-yellow centre fading through light orange to a ragged dark-orange and brown-red fringe, with a few small separate orange flecks drifting just below the lower edge. Preserve the ragged outline and the bright centre of this frame. No flame tongues drawn as a symbol, face or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the ragged outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft glowing gradients, ragged luminous edges and a few fine embers. Keep it abstract fire.",
+      "name": "projectile-3 (60x47)"
+    },
+    {
+      "id": "projectile-4",
+      "directory": "elements/fire",
+      "image": "world-effects/projectile/texture-375-record-000-frame-004-source.png",
+      "content": "Frame 5 of 10 of a looping fire spell projectile. A large irregular flaming ball seen from the front, aspect about 1.3:1: a very bright pale-cream and pale-yellow centre fading through light orange to a ragged dark-orange and brown-red fringe, with a few small separate orange flecks drifting just below the lower edge. Preserve the ragged outline and the bright centre of this frame. No flame tongues drawn as a symbol, face or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the ragged outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft glowing gradients, ragged luminous edges and a few fine embers. Keep it abstract fire.",
+      "name": "projectile-4 (60x47)"
+    },
+    {
+      "id": "projectile-5",
+      "directory": "elements/fire",
+      "image": "world-effects/projectile/texture-375-record-000-frame-005-source.png",
+      "content": "Frame 6 of 10 of a looping fire spell projectile. A large irregular flaming ball seen from the front, aspect about 1.3:1: a very bright pale-cream and pale-yellow centre fading through light orange to a ragged dark-orange and brown-red fringe, with a few small separate orange flecks drifting just below the lower edge. Preserve the ragged outline and the bright centre of this frame. No flame tongues drawn as a symbol, face or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the ragged outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft glowing gradients, ragged luminous edges and a few fine embers. Keep it abstract fire.",
+      "name": "projectile-5 (60x47)"
+    },
+    {
+      "id": "projectile-6",
+      "directory": "elements/fire",
+      "image": "world-effects/projectile/texture-375-record-000-frame-006-source.png",
+      "content": "Frame 7 of 10 of a looping fire spell projectile. A large irregular flaming ball seen from the front, aspect about 1.3:1: a very bright pale-cream and pale-yellow centre fading through light orange to a ragged dark-orange and brown-red fringe, with a few small separate orange flecks drifting just below the lower edge. Preserve the ragged outline and the bright centre of this frame. No flame tongues drawn as a symbol, face or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the ragged outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft glowing gradients, ragged luminous edges and a few fine embers. Keep it abstract fire.",
+      "name": "projectile-6 (60x47)"
+    },
+    {
+      "id": "projectile-7",
+      "directory": "elements/fire",
+      "image": "world-effects/projectile/texture-375-record-000-frame-007-source.png",
+      "content": "Frame 8 of 10 of a looping fire spell projectile. A large irregular flaming ball seen from the front, aspect about 1.3:1: a very bright pale-cream and pale-yellow centre fading through light orange to a ragged dark-orange and brown-red fringe, with a few small separate orange flecks drifting just below the lower edge. Preserve the ragged outline and the bright centre of this frame. No flame tongues drawn as a symbol, face or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the ragged outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft glowing gradients, ragged luminous edges and a few fine embers. Keep it abstract fire.",
+      "name": "projectile-7 (60x47)"
+    },
+    {
+      "id": "projectile-8",
+      "directory": "elements/fire",
+      "image": "world-effects/projectile/texture-375-record-000-frame-008-source.png",
+      "content": "Frame 9 of 10 of a looping fire spell projectile. A large irregular flaming ball seen from the front, aspect about 1.3:1: a very bright pale-cream and pale-yellow centre fading through light orange to a ragged dark-orange and brown-red fringe, with a few small separate orange flecks drifting just below the lower edge. Preserve the ragged outline and the bright centre of this frame. No flame tongues drawn as a symbol, face or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the ragged outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft glowing gradients, ragged luminous edges and a few fine embers. Keep it abstract fire.",
+      "name": "projectile-8 (60x47)"
+    },
+    {
+      "id": "projectile-9",
+      "directory": "elements/fire",
+      "image": "world-effects/projectile/texture-375-record-000-frame-009-source.png",
+      "content": "Frame 10 of 10 of a looping fire spell projectile. A large irregular flaming ball seen from the front, aspect about 1.3:1: a very bright pale-cream and pale-yellow centre fading through light orange to a ragged dark-orange and brown-red fringe, with a few small separate orange flecks drifting just below the lower edge. Preserve the ragged outline and the bright centre of this frame. No flame tongues drawn as a symbol, face or text.",
+      "uncertainty": "This is one frame of a flickering loop; consecutive frames differ only in the ragged outline and the placement of the flecks. Each frame is drawn on its own, so keep to this frame's outline.",
+      "invention": "Resolve soft glowing gradients, ragged luminous edges and a few fine embers. Keep it abstract fire.",
+      "name": "projectile-9 (60x47)"
+    }
+  ]
+}
