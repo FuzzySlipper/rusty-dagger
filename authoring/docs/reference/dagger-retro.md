@@ -3,7 +3,7 @@
 # Dagger sprites: retro paint and assisted animation
 
 Status: **measured texture experiment; historical unfinished upper-body rig study**.
-Tested 2026-10-17 after the four-view sprite reconstruction. The user accepted
+Tested 2026-10-17 after the four-view sprite reconstruction. Patch accepted
 four views as the continuing route; no new front-only controls were generated.
 
 The [mage walk and attack follow-up](dagger-mage-animation.md) repairs the

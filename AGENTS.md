@@ -15,7 +15,7 @@ and game-bundle family. It is not implicit WorldRpg architecture.
 Den (project `rusty-dagger`) owns tasks, their status, dependencies and
 evidence. This file and the repository docs describe how the product is built,
 not where work stands; don't record progress, completion or "current" task
-state here. Before substantial work, read the owning Den task. The user request
+state here. Before substantial work, read the owning Den task. Patch's request
 and that task override older wording elsewhere. If Den is unreachable, say so
 and don't invent task records or infer completion from source or Git.
 

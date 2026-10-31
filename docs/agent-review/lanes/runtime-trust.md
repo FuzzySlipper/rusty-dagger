@@ -4,7 +4,7 @@
 refactors have landed and ordinary trusted-path code is the established gravity.
 The refactors have landed: `docs/gameplay-design.md` ("Direct mutation, concrete
 safeguards", "Admit content once") describes the current trusted-path shape.
-Whether that shape is now the established gravity is an owner decision; until
+Whether that shape is now the established gravity is a decision for Patch; until
 the Den policy document `rusty-dagger/agent-review-workflow` demotes the lane to
 optional or retires it, run it on every task. It is not meant as a permanent tax.
 

@@ -2,7 +2,7 @@
 
 Counts are unique source frames (identical pixels shared by several items or elements are counted once) taken from `authoring/df-raw/`. Batch sizes follow what has worked so far: 24–50 frames per run, one host per batch, one review pass per batch in `authoring/review/`.
 
-The recipe is the owner-accepted one (Qwen painted reconstruction, Krea retro at denoise 0.35, back-projection 0.5, transparent cut-out). It is proven for object sprites of roughly 10–90 px. Everything below the "Recipe fit" rows is a guess until its pilot batch has been reviewed.
+The recipe is the one Patch accepted (Qwen painted reconstruction, Krea retro at denoise 0.35, back-projection 0.5, transparent cut-out). It is proven for object sprites of roughly 10–90 px. Everything below the "Recipe fit" rows is a guess until its pilot batch has been reviewed.
 
 ## Order of work
 
@@ -11,7 +11,7 @@ The recipe is the owner-accepted one (Qwen painted reconstruction, Krea retro at
 3. Pilot batches (marked **P**) for each new art type. Review each before queueing the rest of its area.
 4. Grind the remaining batches, one area at a time.
 
-Decision gates (owner) are marked **G**. Nothing after a gate is queued until the answer is recorded here.
+Decision gates (Patch) are marked **G**. Nothing after a gate is queued until the answer is recorded here.
 
 ## Tooling pass T1 (before any 10495/10496 batch)
 
@@ -26,11 +26,11 @@ Status: 147 of 147 frames have a final. See the ledger for status.
 
 | Batch | Content | Count | Notes |
 | --- | --- | --- | --- |
-| 10494-R1 | Owner review pass of existing finals | 10 flagged guesses, tin, emerald, belt | Tanto, straps, totem, painting, wine-rack, lantern, torch, skeleton, black rose, fig, batch C guesses. Record accepted / redo / skipped in `ledger/items-notes.json`. |
+| 10494-R1 | Review pass by Patch of existing finals | 10 flagged guesses, tin, emerald, belt | Tanto, straps, totem, painting, wine-rack, lantern, torch, skeleton, black rose, fig, batch C guesses. Record accepted / redo / skipped in `ledger/items-notes.json`. |
 | 10494-R2 | Redo anything R1 marks `redo` | tbd | One spec `redo-N` per round. |
 | 10494-C | Count reconciliation | 0 images | Task says 173 sprites; the export holds 132 records / 147 frames. Find the 26 missing, or correct the task text. |
 
-Redo-2 (the belt with two pouches, formerly "cloth amulet") is converted and accepted. Redo-3 (the painting, now a pumpkin still-life with leaves and dirt) follows the owner direction to pick a subject instead of an abstract blob; use the same approach for the other guesses.
+Redo-2 (the belt with two pouches, formerly "cloth amulet") is converted and accepted. Redo-3 (the painting, now a pumpkin still-life with leaves and dirt) follows the direction from Patch to pick a subject instead of an abstract blob; use the same approach for the other guesses.
 
 Out of scope: first-person item art and casting hands. They become an animated hand mesh with special effects as needed (12,352 extracted first-person PNGs stay in `df-raw/items` as reference only).
 
@@ -90,10 +90,10 @@ All four pilots ran with the unchanged recipe and read well.
 | v3 | 25 / 8 | 768 | 665 s | shapes drift (greaves, pauldron gaps) |
 | v4 | 12 / 5 | 768 | 451 s | shapes drift |
 
-The owner's RTX 5090 (`--host den-5090`, no resource wrapper; the LoRA there is
+Patch's RTX 5090 (`--host den-5090`, no resource wrapper; the LoRA there is
 `Retro_Dark_Fantasy_Illustration_krea2_3352765_epoch_8`) ran the same 6 pieces at 10 / 5 in
 75 s (37 s Qwen, 38 s retro), about 10x faster than den-nimo's 759 s, with output
-indistinguishable from the nimo runs. It is the owner's on-demand machine, so ask before
+indistinguishable from the nimo runs. It is Patch's on-demand machine, so ask before
 queueing long batches there.
 
 Steps can drop to 10 / 5 at 1024 without a visible loss; a 768 canvas changes
@@ -117,7 +117,7 @@ Queued next (specs `effects-x1`, `effects-x2`, `worn-armor-male-human`): X1 (blo
 
 ## Original first six batches
 
-1. 10494-R1 (owner review of what already exists, plus redo-2).
+1. 10494-R1 (review by Patch of what already exists, plus redo-2).
 2. T1 tooling.
 3. 10495-P1 (bodies pilot), after G1.
 4. 10496-P1 (spell icons pilot).

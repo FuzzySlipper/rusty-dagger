@@ -136,7 +136,7 @@ Select (`button-8`) opens the inventory, Y (`button-3`) the character, and X
 ## Drag and drop
 
 Native HTML5 drag and drop is not used. The desktop window refuses it (the
-owner's decision on rusty-engine #10045), and a test fails if anything in
+Patch's decision on rusty-engine #10045), and a test fails if anything in
 `src/ui` makes an element draggable or handles a native drop. Every drag goes
 through the one drag owner, `src/ui/drag.ts`, which follows the Engine's
 pointer-event recipe:
@@ -468,7 +468,7 @@ small parchment note: a texture and a thin border, with no frame.
 ## Authored UI art
 
 **Direction.** The kit is inked dark-fantasy illustration with a tight
-palette, not pixel art on a grid (the owner's pick on #10120). Weathered stone
+palette, not pixel art on a grid (Patch's pick on #10120). Weathered stone
 and brass is the chrome: HUD, inventory, character sheet, menus, buttons,
 slots, title. Parchment is only for surfaces the player reads: dialogue,
 books and letters, journal, quest and message pop-ups, tooltips. A parchment
