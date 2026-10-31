@@ -219,7 +219,7 @@ no-op because the 255-colour palette is dense; the item-ramp grade is subtle
 and adds little after back-projection. It does not fix a failed reconstruction:
 the sapphire remains block-derived.
 
-The owner judged the back-projected colours closer to Daggerfall. The
+Patch judged the back-projected colours closer to Daggerfall. The
 follow-up (`items-ten-bp-compare-20261028`) adds a half-strength variant,
 which blends half of the converged correction in OKLab, and applies both
 strengths to direct Krea retro. Half strength roughly halves the error and
@@ -231,7 +231,7 @@ Krea's broadened or rearranged shapes take the source colour in the wrong
 places, giving blotches inside the bottle body, a mottled dagger blade and a
 greyed lower shield at full strength. Back-projection still corrects direct
 Krea's colour, notably the bandage and rose, and gives the sapphire its
-source blue while keeping Krea's facets. Strength remains an owner choice.
+source blue while keeping Krea's facets. Strength remains a choice for Patch.
 
 `items-bp-strength-compare-20261028` adds 0.7 (`bp-broad-07`) on the ten
 Qwen→retro items and on the sack/bracelet style-pass seeds 27101–27103. Use
@@ -240,7 +240,7 @@ on every seed: errors per item agree within about 0.5. Back-projection also
 shrinks the colour spread between seeds in proportion to strength, about 5×
 at 1.0. At 1.0 it adds soft airbrushed gradients inside flat painted shapes.
 At 0.7 most of the colour correction remains and the flat value shapes
-survive. **The owner selected 0.5 (2026-10-28)** as the compromise between
+survive. **Patch selected 0.5 (2026-10-28)** as the compromise between
 source colour and the retro pass's own paint character, and judged the result
 much better than earlier attempts. The provisional recipe is therefore Qwen
 painted reconstruction → Krea retro 0.35 → broad back-projection at 0.5
@@ -256,7 +256,7 @@ retro LoRA adds a purple-blue cast with copper accents and multicoloured
 mottling (mail, boots), which 0.5 back-projection only halves. The retro pass
 also drifted a few identities: the lying boot became a tube, the axe edge
 serrated, and the dagger grip gained a red motif. Dark armour may need higher
-back-projection or a lower redraw strength. The owner accepted the icons and
+back-projection or a lower redraw strength. Patch accepted the icons and
 world textures as broadly acceptable at 0.5, small drifts included.
 
 **First-person frames** (`items-first-person.json`, `-retro.json`) use two
@@ -285,15 +285,15 @@ box out 1:1 at the size a 320×200 frame shows it on that screen. At 1080p,
 closest to Qwen). 2048 / 0.35 gave finer but busier hatching and a more
 ornate guard, at about four times the Krea time (≈265 s per frame on den-m5).
 
-The unarmed fist is a **leather-gloved fist**, not a bare hand: owner
-correction, 2026-10-28. The first contract had wrongly told the model the
+The unarmed fist is a **leather-gloved fist**, not a bare hand: correction
+from Patch, 2026-10-28. The first contract had wrongly told the model the
 source read as bare skin. `items-first-person-glove.json` and
 `items-first-person-glove-retro.json` (2048 / 0.25) describe the glove at
 length and forbid skin anywhere. The model followed it at every stage
 (`items-first-person-glove-compare-20261028`): it drew a stitched brown glove
 with a cuff, and the broad error fell from 17.2 to 5.5 after Qwen and to 2.8
-after back-projection at 0.5. When a source's material is ambiguous, ask the
-owner rather than guessing in the contract.
+after back-projection at 0.5. When a source's material is ambiguous, ask
+Patch rather than guessing in the contract.
 
 The same long glove wording on the dagger idle frame
 (`items-first-person-glove-dagger*.json`,
@@ -314,7 +314,7 @@ material changes to a small component, keep the faithful reconstruction and
 edit that component only, by instruction edit or masked inpaint, rather than
 re-describing it in the reconstruction prompt.
 
-The owner then spotted the deeper fault: the gloved runs hold the dagger with
+Patch then spotted the deeper fault: the gloved runs hold the dagger with
 the back of the hand to the camera, like a left hand. The source and the
 bare-hand reconstruction show the right hand from its finger side. Our
 contracts' "seen from behind" and "seam across the back of the hand" wording
@@ -323,14 +323,14 @@ seeds with an explicit right-hand, finger-side grip, a back-of-hand
 prohibition and no proportion wording. Neither seed complied: both still show
 a large back-of-hand view (`items-first-person-glove-dagger-grip-compare-20261028`).
 Multi-seed two-pass specs now take each job's own seed's upstream image
-(`routes[].seeds`). The owner considers exact first-person framing and pivots
+(`routes[].seeds`). Patch considers exact first-person framing and pivots
 negotiable, so they can be fixed by our own crop. Grip orientation is not.
 
 The fix that worked was to change the material after reconstruction, not in
 its prompt. `tools/texture-edit/qwen_edit.py` was run on the bare-hand Qwen
 reconstruction with "make the hand a plain brown leather glove … keep exactly
 the same hand pose, grip, finger positions, size and position; change nothing
-else". This is Qwen-Image-2.1 int8 on the owner's 5090, about 8 s warm.
+else". This is Qwen-Image-2.1 int8 on Patch's 5090, about 8 s warm.
 
 - **Seed 27401:** failed; the background turned to noise.
 - **Seeds 27402 and 27403:** kept the blade, guard and background (mean change
@@ -420,7 +420,7 @@ COMFY_URL=http://192.168.1.20:8188 python3 tools/item-art-study/h3_anim.py workf
 `h3_anim.py workflow` uses [`comfy_ui.py`](../tools/item-art-study/comfy_ui.py), which converts any
 API-format `prompt.json` into the frontend's workflow format using the server's `/object_info`
 for slot and widget order. Without a layout it places nodes in columns by graph depth. The
-strike-down clip with softened keys (seed 28302) is installed on the owner's 5090 as
+strike-down clip with softened keys (seed 28302) is installed on Patch's 5090 as
 **h3-anim-dagger-strike-down-softened** (softening as nodes) and
 **h3-anim-dagger-strike-down-exact** (the submitted graph, which converts back to it with no
 differences). The ComfyUI softening (area, then bicubic) matches the PIL keys to within
@@ -441,7 +441,7 @@ Results (rusty-dagger `local/image-gen-tests/dagger-anim-h3-compare-20261028/`):
     poses and cut.
   - The blade-tip-only final frames end each clip on a smear.
 
-**Strike-down revision** (owner direction 2026-10-28, rusty-dagger
+**Strike-down revision** (direction from Patch, 2026-10-28, rusty-dagger
 `local/image-gen-tests/dagger-anim-h3-strike-down-revision-20261028/`). The
 goals were a minimal prompt and nothing cut off except at the bottom. The
 canvas is 1344×832, with room above and beside the 3× screen.
@@ -476,7 +476,7 @@ canvas is 1344×832, with room above and beside the 3× screen.
   bookend. Evenly spaced pins over very uneven pose changes look like the
   cause; spacing pins by pose change is the next thing to try.
 
-**Direction (owner, 2026-10-29):** first-person weapons move to a 3D arm
+**Direction (Patch, 2026-10-29):** first-person weapons move to a 3D arm
 with regular animations rather than regenerated sprite frames. These H3 clips
 become the motion source: track the dagger in the clip, then bake the path
 into Engine held motion. Den task rusty-dagger #10457 has the plan.
@@ -549,16 +549,16 @@ one attractive-image score:
 | Style | The actual medium, edge treatment and palette; does the pair belong together? |
 | Readability | What remains at 64, 128 and 256 pixels? |
 | Presentation | Crop, background, framing, extraneous object or cast shadow |
-| Disposition | Explore / retry with one change / reject / owner-selected direction |
+| Disposition | Explore / retry with one change / reject / Patch-selected direction |
 
-Once the owner chooses a direction, freeze a candidate recipe with its style
+Once Patch chooses a direction, freeze a candidate recipe with its style
 card, graph, model, LoRAs, strengths, sampler, steps, reference preprocessing and
 output policy. Test at least two fresh seeds per item before making a
 consistency claim. Then try held-out subjects with different materials and
 shapes, such as a weapon, glass vessel, book, plant ingredient and clothing.
 The two discovery items cannot establish generalisation to those categories.
 
-Keep a small set of owner-approved anchors and explicit anti-examples. Future
+Keep a small set of Patch-approved anchors and explicit anti-examples. Future
 items are judged against that set at the same display size, without replacing
 anchors with unreviewed new generations. An anchor image used as a second style
 reference is a separate experiment: preserve the first reference's content and
