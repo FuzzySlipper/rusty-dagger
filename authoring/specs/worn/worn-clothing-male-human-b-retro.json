@@ -40,7 +40,8 @@
       ],
       "prompt_prefix": "dark_fantasy_illustration,\n\n",
       "upstream_route": "qwen-base",
-      "upstream_style": "painted"
+      "upstream_style": "painted",
+      "steps": 5
     }
   ],
   "task": "Task: Redraw a very small classic fantasy RPG worn-equipment paper-doll layer as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
