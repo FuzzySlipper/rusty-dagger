@@ -21,7 +21,7 @@ PIPELINE = Path(os.environ.get("ASSET_PIPELINE", Path.home() / "dev/asset-pipeli
 GENERATOR = PIPELINE / "tools/lora-training/generate.py"
 
 
-HOSTS = {"den-m5": "http://192.168.1.24:8188", "den-nimo": "http://192.168.1.23:8188"}
+HOSTS = {"den-m5": "http://192.168.1.24:8188", "den-nimo": "http://192.168.1.23:8188", "den-5090": "http://192.168.1.20:8188"}
 
 
 def read(path):

@@ -1,0 +1,96 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy RPG equipment illustration, opaque gouache-like colour modelling, broad painted planes, believable cloth folds and metal planes, sparse dry-brush marks, selective dark accents along occluding contours. Slightly irregular handmade edges, original local colours; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy RPG equipment art. Keep the source's silhouette, the parts of the body it covers, its pose and its local colours: do not tint every material brown. Draw only the garment or armour piece itself, as worn on an invisible, headless body: no skin, no body, head, hands or feet unless the source clearly shows them. No weapon, text, border, scenery, shadow or second figure.",
+  "presentation": "One isolated garment on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the garment. The whole garment visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "speed 5090",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "worn",
+      "model": "qwen-edit",
+      "host": "den-5090",
+      "url": "http://192.168.1.20:8188",
+      "conditioning": "reference",
+      "steps": 10
+    }
+  ],
+  "task": "Task: Redraw a very small classic fantasy RPG worn-equipment paper-doll layer as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+  "items": [
+    {
+      "id": "cuirass",
+      "directory": "armor/item-102-cuirass",
+      "image": "player/male-human/variant-01/texture-251-record-004-frame-000-source.png",
+      "content": "One steel breastplate (cuirass) seen from the front, aspect about 0.75:1. Polished grey steel plates with a dark underside, a rounded chest and a flared upper edge at the right shoulder. Preserve the rounded plate shape and the grey steel colour. No body, head, arms, straps showing a person, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pixels are small; the shoulder flare is read as a high collar plate.",
+      "invention": "Resolve plate edges, rivets, steel highlights and a rolled hem.",
+      "name": "cuirass (38x50)"
+    },
+    {
+      "id": "greaves",
+      "directory": "armor/item-104-greaves",
+      "image": "player/male-human/variant-01/texture-251-record-011-frame-000-source.png",
+      "content": "One pair of leg armour (greaves) seen from the front, aspect about 0.7:1. A dark chain-mail skirt at the top with a narrow dark belt and a small yellow-gold buckle at the centre, and below it two brown leather leg guards with rounded knee caps. Preserve the belt with buckle, the chain-mail top and the two brown leg guards. No legs, feet, body, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The brown lower shapes are read as leather greaves with rounded knee guards.",
+      "invention": "Resolve chain-mail rings, leather stitching, the buckle and metal rivets.",
+      "name": "greaves (42x62)"
+    },
+    {
+      "id": "pauldron",
+      "directory": "armor/item-105-left-pauldron",
+      "image": "player/male-human/variant-01/texture-251-record-018-frame-000-source.png",
+      "content": "One steel arm guard (pauldron and vambrace) in one piece, seen from the front, aspect about 0.6:1 (taller than wide). Grey steel plates in overlapping bands running down from a rounded shoulder cap at the top to a narrower cuff at the bottom, with a slight outward curve. Preserve the overlapping bands and the grey steel colour. No arm, hand, body, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The shape is read as an overlapping-lames arm guard.",
+      "invention": "Resolve plate edges, rivets, steel highlights.",
+      "name": "pauldron (33x57)"
+    },
+    {
+      "id": "helm",
+      "directory": "armor/item-107-helm",
+      "image": "player/male-human/variant-03/texture-251-record-030-frame-000-source.png",
+      "content": "One gold-coloured helmet seen from the front, aspect about 0.9:1. A rounded yellow-gold cap with a narrow open face slot and cheek pieces, topped by a tall red plume crest rising from the crown. Preserve the gold colour, the face slot and the red plume. No face, head, text or crest emblem.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The red top is read as a horsehair plume.",
+      "invention": "Resolve hammered gold surface, rivets, plume strands.",
+      "name": "helm (46x43)"
+    },
+    {
+      "id": "round-shield",
+      "directory": "armor/item-110-round-shield",
+      "image": "player/male-human/base/texture-251-record-034-frame-000-source.png",
+      "content": "One round shield seen from the front, aspect about 0.8:1. A wooden disc with visible vertical plank grain and a dark steel rim carrying short spikes around the edge, and a round steel boss at the centre. Preserve the wooden planks, the steel boss and the spiked rim. No hand, arm, emblem, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The rim marks are read as short spikes on a steel rim.",
+      "invention": "Resolve wood grain, iron straps, rivets and the polished boss.",
+      "name": "round-shield (49x63)"
+    },
+    {
+      "id": "tall-boots",
+      "directory": "mens-clothing/item-148-tall-boots",
+      "image": "player/male-human/base/texture-241-record-011-frame-000-source.png",
+      "content": "One pair of tall brown leather boots seen from the front, standing side by side, aspect about 1:1. Long boot shafts rising to the knee, rounded toes, a darker sole and a lighter brown highlight along each shaft. Preserve the two boots and the brown leather colour. No legs, feet, laces showing a person, text.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The pair is shown without legs, as worn on an invisible body.",
+      "invention": "Resolve leather creases, stitching, a heel and sole.",
+      "name": "tall-boots (64x64)"
+    }
+  ]
+}
