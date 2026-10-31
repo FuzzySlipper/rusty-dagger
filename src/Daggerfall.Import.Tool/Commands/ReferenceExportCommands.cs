@@ -42,4 +42,13 @@ internal static class ReferenceExportCommands
             args.Optional("--output") ?? "authoring/df-raw/effects");
         return 0;
     });
+
+    public static ToolCommand DirectionalSprites { get; } = new("export-directional-sprites",
+        [Arena2, Output, CommandOption.Optional("--baseline", "MOBILE_EXPORT_DIR")], args =>
+    {
+        DirectionalSpriteReferenceExport.Run(args.Optional("--arena2") ?? "local/arena2",
+            args.Optional("--baseline") ?? "local/exports/daggerfall-mobile-idle-unmirrored-r01",
+            args.Optional("--output") ?? "local/exports/daggerfall-remaining-directional-unmirrored-r01");
+        return 0;
+    });
 }

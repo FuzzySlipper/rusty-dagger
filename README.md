@@ -241,6 +241,7 @@ dotnet run --project src/Daggerfall.Import.Tool -- export-items
 dotnet run --project src/Daggerfall.Import.Tool -- export-spells
 dotnet run --project src/Daggerfall.Import.Tool -- export-paper-doll
 dotnet run --project src/Daggerfall.Import.Tool -- export-effects
+dotnet run --project src/Daggerfall.Import.Tool -- export-directional-sprites
 ```
 
 These write `authoring/df-raw/items/`, `spells/`, `paper-doll/` and `effects/`. Each has an `index.html` visual catalog,
@@ -253,6 +254,13 @@ source art is recorded explicitly. Pass `--output` with a fresh directory for a
 new export; existing experiments are preserved. `--arena2` relocates the source,
 and `export-items --donor` relocates the Daggerfall Unity input tables. The
 extracted images stay in ignored `local/`.
+
+The [directional sprite export](docs/directional-sprite-exports.md) compares the
+existing `local/exports/daggerfall-mobile-idle-unmirrored-r01/` corpus with the
+original townspeople and supplemental character archives. It writes
+`local/exports/daggerfall-remaining-directional-unmirrored-r01/`, retaining five
+unmirrored source views and every animation phase, and records already-covered
+guards, duplicate archives and static-billboard exclusions.
 
 `WorldRpg.SpriteWorkbench` is a separate package-backed, developer-only authoring
 product. It reads the neutral inspection document the importer's `sprite-inspection`
