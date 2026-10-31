@@ -70,6 +70,7 @@ internal static class Program
         ReferenceExportCommands.Spells,
         ReferenceExportCommands.PaperDoll,
         ReferenceExportCommands.Effects,
+        ReferenceExportCommands.DirectionalSprites,
     }.ToDictionary(command => command.Name, StringComparer.Ordinal);
 
     internal static int Main(string[] args)
