@@ -100,8 +100,7 @@ def main():
     ap.add_argument("--item", action="append", required=True, help="worn art key, in draw order")
     ap.add_argument("--name", action="append", help="what each item is (cuirass, boots ...), same order as --item")
     ap.add_argument("--reach", action="append", type=int, help=f"doll units each item's repaint may extend past the classic "
-                    f"item (default {REACH}), same order as --item; footwear needs more, as generated feet reach past "
-                    "classic boots")
+                    f"item (default {REACH}), same order as --item")
     ap.add_argument("--seed", type=int, default=4101)
     ap.add_argument("--paper-doll", type=Path, help="body finals directory to look in first (e.g. bodies.py OUT/finals)")
     a = ap.parse_args()
