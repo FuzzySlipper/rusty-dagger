@@ -28,7 +28,7 @@ import numpy as np
 from PIL import Image, ImageFilter
 from scipy import ndimage
 
-from doll_preview import GROUND, MORPH, doll_layer, placed, worn_layer
+from doll_preview import FINALS, GROUND, MORPH, doll_layer, placed, worn_layer
 
 PIPELINE = Path(os.environ.get("ASSET_PIPELINE", Path.home() / "dev/asset-pipeline"))
 QWEN = PIPELINE / "tools/texture-edit/qwen_edit.py"
@@ -51,10 +51,13 @@ def mask_image(alpha, reach):
     return grown.filter(ImageFilter.GaussianBlur(reach / 3))
 
 
-def qwen(image, prompt, seed, out, mask=None):
+def qwen(images, prompt, seed, out, mask=None):
+    """One Qwen edit of the first image (the others are references), skipped when OUT already exists."""
     if out.exists():
         return
-    argv = [sys.executable, str(QWEN), "--image", str(image), "--prompt", prompt, "--seed", str(seed), "--out", str(out)]
+    argv = [sys.executable, str(QWEN), "--prompt", prompt, "--seed", str(seed), "--out", str(out)]
+    for image in images if isinstance(images, list) else [images]:
+        argv += ["--image", str(image)]
     subprocess.run(argv + (["--mask", str(mask)] if mask else []), cwd=PIPELINE, check=True)
 
 
@@ -78,7 +81,10 @@ def main():
     ap.add_argument("--item", action="append", required=True, help="worn art key, in draw order")
     ap.add_argument("--name", action="append", help="what each item is (cuirass, boots ...), same order as --item")
     ap.add_argument("--seed", type=int, default=4101)
+    ap.add_argument("--paper-doll", type=Path, help="body finals directory to look in first (e.g. bodies.py OUT/finals)")
     a = ap.parse_args()
+    if a.paper_doll:
+        FINALS["paper-doll"].insert(0, a.paper_doll.resolve())
     a.out = a.out.resolve()
     names = a.name or [key for key in a.item]
     if len(names) != len(a.item):
@@ -119,7 +125,7 @@ def main():
         isolated = Image.open(isolated_path).convert("RGB").resize(dressed.size)
         layer = lift(np.array(dressed), np.array(isolated), np.array(mask, np.float32) / 255, k)
         Image.fromarray(layer, "RGBA").save(a.out / "layers" / f"{key}.png")
-        (a.out / "layers" / f"{key}.json").write_text(json.dumps({"rect": [bx, by, bw, bh], "body": body.final.name, "seed": a.seed}))
+        (a.out / "layers" / f"{key}.json").write_text(json.dumps({"rect": [bx, by, bw, bh], "body": str(body.final), "seed": a.seed}))
         figure = dressed
         print(f"{stem}: dressed", flush=True)
     figure.save(a.out / "dressed.png")
