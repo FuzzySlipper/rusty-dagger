@@ -38,6 +38,9 @@ DF_DOLL = AUTHORING / "df-raw" / "paper-doll"
 DF_ITEMS = AUTHORING / "df-raw" / "items"
 # Where finals are looked for, first match first: --paper-doll and --worn put a directory in front.
 FINALS = {"paper-doll": [AUTHORING / "gen-raw" / "paper-doll"], "worn": [AUTHORING / "gen-raw" / "worn"]}
+# Where worn sources are read, first match first: a source edit (gen-raw/source-edits/worn-neutral-mens, with
+# the dye placeholder neutralised) in the export's layout goes in front.
+WORN_SOURCES = [DF_ITEMS]
 
 ORIGIN = (200, 8)            # the donor's paperDollOrigin
 DOLL = (110, 184)            # the donor's doll size
@@ -72,7 +75,7 @@ def doll_layer(family, name, record, label):
 def worn_sources(role):
     """Every player-layer source for one body (e.g. female-human), by art key."""
     found = {}
-    for path in sorted(glob.glob(str(DF_ITEMS / "*" / "*" / "manifest.json"))):
+    for path in [p for root in WORN_SOURCES for p in sorted(glob.glob(str(root / "*" / "*" / "manifest.json")))]:
         for e in json.load(open(path))["images"]:
             if e["file"].endswith("-source.png") and e["role"].split("/")[1:2] == [role]:
                 key = Path(e["file"]).name.removesuffix("-source.png")
@@ -82,7 +85,7 @@ def worn_sources(role):
 
 def worn_layer(key, role):
     if key not in worn_sources(role):
-        raise SystemExit(f"No {role} player layer named {key} in {DF_ITEMS}.")
+        raise SystemExit(f"No {role} player layer named {key} in {[str(r) for r in WORN_SOURCES]}.")
     source, entry = worn_sources(role)[key]
     return Layer(key, source, entry, final("worn", f"{key}.png"))
 

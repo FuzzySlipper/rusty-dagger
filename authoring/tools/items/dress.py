@@ -34,7 +34,7 @@ from PIL import Image, ImageFilter
 from scipy import ndimage
 
 from postprocess import srgb_to_oklab
-from doll_preview import FINALS, GROUND, MORPH, doll_layer, placed, worn_layer
+from doll_preview import FINALS, GROUND, MORPH, WORN_SOURCES, doll_layer, placed, worn_layer
 
 PIPELINE = Path(os.environ.get("ASSET_PIPELINE", Path.home() / "dev/asset-pipeline"))
 QWEN = PIPELINE / "tools/texture-edit/qwen_edit.py"
@@ -43,13 +43,15 @@ KEY = (60, 140)      # distance from pure green over which an isolated pixel fad
 BODY_HUE = (0.02, 0.05)  # OKLab a-b distance from the body beneath over which a rim pixel fades from body to item
 EDGE = 3             # doll units from the key's edge in which body-coloured pixels are trimmed
 ISOLATION_TRIES = 3
+DIFFERENCE = (0.03, 0.08)  # OKLab distance from the figure beneath over which a pixel fades from body to item
+GHOST = 20           # median green cast (G less mean R, B) of kept pixels past which an isolation is a translucent ghost
 
-PROMPT = ("The figure wears a crude, pixelated, low-resolution {name}. Repaint only that piece as finely painted "
-          "fantasy armour actually worn on this body: fitted to its anatomy and pose, overlapping what it covers, with the "
+PROMPT = ("The figure wears a crude, pixelated, low-resolution {name}. Repaint only that piece, finely painted, as "
+          "it would actually be worn on this body: fitted to its anatomy and pose, overlapping what it covers, with the "
           "same painting style, brushwork and light from the upper left as the rest of the figure, and soft contact "
           "shadow where it meets the body. Keep the piece's silhouette, the parts of the body it covers, its construction "
-          "and exactly its colours and materials as the pixelated piece shows them. Do not change the body, the pose, any "
-          "other armour or the flat background, and add nothing else.")
+          "and exactly its colours and materials as the pixelated piece shows them. Do not change the body, the head, the "
+          "pose, any other clothing or armour or the flat background, and add nothing else.")
 ISOLATE = ("Keep only the {name} exactly as it is, every pixel of it unchanged. Replace everything else - the body, "
            "all skin including toes, fingers and the neck, cloth, all other armour and the background - with flat pure "
            "green, RGB 0,255,0.")
@@ -75,6 +77,26 @@ def ramp(x, bounds):
     return np.clip((x - bounds[0]) / (bounds[1] - bounds[0]), 0, 1)
 
 
+def green_cast(dressed, isolated, region):
+    """How much greener the isolation keeps the piece than the dressed figure shows it (median over kept pixels).
+
+    Qwen sometimes isolates a pale piece as a translucent green-tinted ghost, which keys to scattered fragments."""
+    kept = (np.sqrt(((isolated.astype(np.float32) - (0, 255, 0)) ** 2).sum(2)) > KEY[1]) & (region > 0.5)
+    if not kept.any():
+        return 0.0
+    green = lambda a: a[..., 1].astype(np.float32) - (a[..., 0].astype(np.float32) + a[..., 2]) / 2
+    return float(np.median((green(isolated) - green(dressed))[kept]))
+
+
+def difference_isolation(dressed, beneath):
+    """An isolation made by keying the dressed figure against the figure beneath (OKLab distance): the fallback
+    when every Qwen isolation fails. It holds for a piece unlike the skin it covers (pale cloth); a piece the
+    colour of that skin (bronze plate) keys away, which is why Qwen isolates first."""
+    lab = lambda a: srgb_to_oklab(a.astype(np.float32) / 255)
+    t = ramp(np.sqrt(((lab(dressed) - lab(beneath)) ** 2).sum(2)), DIFFERENCE)[..., None]
+    return (t * dressed + (1 - t) * np.array((0, 255, 0), np.float32) + .5).astype(np.uint8)
+
+
 def lift(dressed, beneath, isolated, region, classic, k):
     """The item layer: where the isolated piece is not green, less body-coloured rim beyond the classic item."""
     dressed, beneath = dressed.astype(np.float32) / 255, beneath.astype(np.float32) / 255
@@ -91,51 +113,96 @@ def lift(dressed, beneath, isolated, region, classic, k):
     return np.dstack([np.clip(colour, 0, 1) * 255 + .5, a * 255 + .5]).astype(np.uint8)
 
 
+def on_canvas(layer, rect, k, size):
+    """A generated layer (a head) drawn on the body canvas, whose doll-space rect is `rect`, at k px per unit."""
+    image, (x, y, w, h) = placed(layer, "canvas", 1024, 0.74)
+    drawn = image.resize((round(w * k), round(h * k)), Image.Resampling.LANCZOS)
+    canvas = Image.new("RGBA", size)
+    canvas.paste(drawn, (round((x - rect[0]) * k), round((y - rect[1]) * k)))
+    return canvas
+
+
+def items_from(a):
+    """The items to dress, in order: --spec entries, or --item with its --name and --reach."""
+    if a.spec:
+        return [{"reach": REACH} | entry for entry in json.load(open(a.spec))["items"]]
+    names = a.name or list(a.item)
+    reaches = a.reach or [REACH] * len(a.item)
+    if len(names) != len(a.item) or len(reaches) != len(a.item):
+        raise SystemExit("Give one --name and one --reach per --item, or none.")
+    return [{"item": key, "name": name, "reach": reach} for key, name, reach in zip(a.item, names, reaches)]
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("out", type=Path)
     ap.add_argument("--race", type=int, default=0, choices=range(8))
     ap.add_argument("--gender", default="male", choices=("male", "female"))
     ap.add_argument("--body-layer", default="i1", choices=("i0", "i1"))
-    ap.add_argument("--item", action="append", required=True, help="worn art key, in draw order")
+    ap.add_argument("--spec", type=Path, help="JSON {\"items\": [{\"item\", \"name\", \"reach\", \"head\", \"behind\"}]}, in draw "
+                    "order; head: dress it over head --face (helms); behind: the layer is drawn behind the body (cloak linings)")
+    ap.add_argument("--item", action="append", help="worn art key, in draw order")
     ap.add_argument("--name", action="append", help="what each item is (cuirass, boots ...), same order as --item")
     ap.add_argument("--reach", action="append", type=int, help=f"doll units each item's repaint may extend past the classic "
                     f"item (default {REACH}), same order as --item")
+    ap.add_argument("--each", action="store_true", help="dress every item alone on the body, not each over the last: a "
+                    "library of layers that combine freely")
+    ap.add_argument("--face", type=int, default=0, help="head record drawn for items that need the head (default 0)")
+    ap.add_argument("--source", type=Path, action="append", default=[],
+                    help="worn source edit to read first, in the export's layout (e.g. gen-raw/source-edits/worn-neutral-mens)")
     ap.add_argument("--seed", type=int, default=4101)
-    ap.add_argument("--paper-doll", type=Path, help="body finals directory to look in first (e.g. bodies.py OUT/finals)")
+    ap.add_argument("--paper-doll", type=Path, action="append", default=[],
+                    help="body or head finals directory to look in first; repeat, first wins")
     a = ap.parse_args()
-    if a.paper_doll:
-        FINALS["paper-doll"].insert(0, a.paper_doll.resolve())
+    if not a.spec and not a.item:
+        raise SystemExit("Give --spec or --item.")
+    FINALS["paper-doll"][:0] = [d.resolve() for d in a.paper_doll]
+    WORN_SOURCES[:0] = [d.resolve() for d in a.source]
     a.out = a.out.resolve()
-    names = a.name or [key for key in a.item]
-    reaches = a.reach or [REACH] * len(a.item)
-    if len(names) != len(a.item) or len(reaches) != len(a.item):
-        raise SystemExit("Give one --name and one --reach per --item, or none.")
+    items = items_from(a)
 
     number = a.race + (10 if a.gender == "female" else 0)
     body = doll_layer("bodies", f"body{number:02d}{a.body_layer}", 0, "body")
     if body.final is None:
         raise SystemExit(f"No generated body final for body{number:02d}{a.body_layer}.")
-    final, (bx, by, bw, bh) = placed(body, "canvas", 1024, 0.74)
+    final, rect = placed(body, "canvas", 1024, 0.74)
+    bx, by, bw, bh = rect
     k = final.width / bw  # canvas pixels per doll unit
     if abs(k - round(k)) > 1e-6:
         raise SystemExit(f"The body canvas is {k} px per doll unit; whole pixels keep the classic items crisp.")
     k = round(k)
-    figure = Image.new("RGBA", final.size, GROUND)
-    figure.alpha_composite(final)
-    figure = figure.convert("RGB")
+    bare = Image.new("RGBA", final.size, GROUND)
+    bare.alpha_composite(final)
+    head = None
+    if any(entry.get("head") for entry in items):
+        head = on_canvas(doll_layer("faces", f"face{number:02d}i0", a.face, "head"), rect, k, final.size)
+    figure = bare.convert("RGB")
 
     (a.out / "layers").mkdir(parents=True, exist_ok=True)
     figure.save(a.out / "step-0-body.png")
     role = f"{a.gender}-{MORPH[a.race]}"
-    for step, (key, name, reach) in enumerate(zip(a.item, names, reaches), 1):
+    failed = []
+    for step, entry in enumerate(items, 1):
+        key, name, reach = entry["item"], entry["name"], entry["reach"]
+        if a.each:
+            figure = bare.copy()
+            if entry.get("head"):
+                figure.alpha_composite(head)
+            figure = figure.convert("RGB")
         item = worn_layer(key, role)
         at = (round((item.x - bx) * k), round((item.y - by) * k))
         classic = item.source.resize((item.source.width * k, item.source.height * k), Image.Resampling.NEAREST)
         alpha = Image.new("L", figure.size)
         alpha.paste(classic.getchannel("A"), at)
-        init = figure.copy()
-        init.paste(classic.convert("RGB"), at, classic.getchannel("A"))
+        if entry.get("behind"):
+            # Drawn behind the body: only what shows past the figure is the item.
+            init = Image.new("RGBA", figure.size, GROUND)
+            init.paste(classic, at, classic.getchannel("A"))
+            init.alpha_composite(final)
+            init = init.convert("RGB")
+        else:
+            init = figure.copy()
+            init.paste(classic.convert("RGB"), at, classic.getchannel("A"))
         stem = f"step-{step}-{key}"
         init.save(a.out / f"{stem}-init.png")
         mask = mask_image(alpha, reach * k)
@@ -144,23 +211,36 @@ def main():
         qwen(a.out / f"{stem}-init.png", PROMPT.format(name=name), a.seed, dressed_path, a.out / f"{stem}-mask.png")
         dressed = Image.open(dressed_path).convert("RGB")
         for attempt in range(ISOLATION_TRIES):
-            # A failed isolation keeps nothing, or tints the whole figure green; try the next seed.
+            # A failed isolation keeps nothing, tints the whole figure green or keeps a green ghost; try the next seed.
             isolated_path = a.out / f"{stem}-isolated{'' if attempt == 0 else f'-{attempt}'}.png"
             qwen(dressed_path, ISOLATE.format(name=name), a.seed + attempt, isolated_path)
             isolated = Image.open(isolated_path).convert("RGB").resize(dressed.size)
             layer = lift(np.array(dressed), np.array(figure), np.array(isolated), np.array(mask, np.float32) / 255,
                          np.array(alpha), k)
             kept = layer[..., 3].sum() / max(1, np.array(alpha).sum())
-            if 0.15 < kept < 3:
+            cast = green_cast(np.array(dressed), np.array(isolated), np.array(mask, np.float32) / 255)
+            if 0.15 < kept < 3 and cast < GHOST:
                 break
-            print(f"{stem}: isolation {attempt} kept {kept:.2f} of the classic item's area; retrying", flush=True)
+            print(f"{stem}: isolation {attempt} kept {kept:.2f} of the classic item's area, green cast {cast:.0f}; retrying", flush=True)
         else:
-            raise SystemExit(f"{stem}: no isolation kept the piece; inspect the {stem}-isolated*.png images.")
+            isolated = difference_isolation(np.array(dressed), np.array(figure))
+            Image.fromarray(isolated).save(a.out / f"{stem}-isolated-difference.png")
+            layer = lift(np.array(dressed), np.array(figure), isolated, np.array(mask, np.float32) / 255, np.array(alpha), k)
+            kept = layer[..., 3].sum() / max(1, np.array(alpha).sum())
+            if not 0.15 < kept < 3:
+                print(f"{stem}: no isolation kept the piece; inspect the {stem}-isolated*.png images", flush=True)
+                failed.append(key)
+                continue
+            print(f"{stem}: isolated by difference from the figure beneath (kept {kept:.2f})", flush=True)
         Image.fromarray(layer, "RGBA").save(a.out / "layers" / f"{key}.png")
         (a.out / "layers" / f"{key}.json").write_text(json.dumps({"rect": [bx, by, bw, bh], "body": str(body.final), "seed": a.seed}))
-        figure = dressed
+        if not a.each:
+            figure = dressed
         print(f"{stem}: dressed", flush=True)
-    figure.save(a.out / "dressed.png")
+    if not a.each:
+        figure.save(a.out / "dressed.png")
+    if failed:
+        raise SystemExit(f"No layer for {len(failed)} items: {' '.join(failed)}")
 
 
 if __name__ == "__main__":
