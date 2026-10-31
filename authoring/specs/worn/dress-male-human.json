@@ -1,0 +1,556 @@
+{
+ "items": [
+  {
+   "item": "texture-241-record-000-frame-000",
+   "name": "harness of crossing leather straps worn over the chest"
+  },
+  {
+   "item": "texture-241-record-001-frame-000",
+   "name": "harness of crossing leather straps worn over the chest"
+  },
+  {
+   "item": "texture-241-record-002-frame-000",
+   "name": "harness of crossing leather straps worn over the chest"
+  },
+  {
+   "item": "texture-241-record-003-frame-000",
+   "name": "harness of crossing leather straps worn over the chest"
+  },
+  {
+   "item": "texture-241-record-004-frame-000",
+   "name": "pair of small gold armbands, one at each side"
+  },
+  {
+   "item": "texture-241-record-005-frame-000",
+   "name": "short kimono-style jacket with a leather belt and a gold buckle"
+  },
+  {
+   "item": "texture-241-record-006-frame-000",
+   "name": "pair of small gold armbands, one at each side"
+  },
+  {
+   "item": "texture-241-record-007-frame-000",
+   "name": "hanging cloth sash with a knotted waist and long trailing ends"
+  },
+  {
+   "item": "texture-241-record-008-frame-000",
+   "name": "hanging cloth sash with a knotted waist and long trailing ends"
+  },
+  {
+   "item": "texture-241-record-009-frame-000",
+   "name": "ornamental gold collar with a row of long hanging gold strips"
+  },
+  {
+   "item": "texture-241-record-010-frame-000",
+   "name": "pair of low leather shoes, side by side"
+  },
+  {
+   "item": "texture-241-record-011-frame-000",
+   "name": "pair of tall leather boots, side by side"
+  },
+  {
+   "item": "texture-241-record-012-frame-000",
+   "name": "pair of leather boots, side by side"
+  },
+  {
+   "item": "texture-241-record-013-frame-000",
+   "name": "criss-crossed red leather laces wound round the ankles and lower shins over the bare feet (no boot)"
+  },
+  {
+   "item": "texture-241-record-014-frame-000",
+   "name": "pair of leather boots, side by side"
+  },
+  {
+   "item": "texture-241-record-015-frame-000",
+   "name": "thin red leather sandal straps round the ankles over the bare feet"
+  },
+  {
+   "item": "texture-241-record-016-frame-000",
+   "name": "pair of loose trousers"
+  },
+  {
+   "item": "texture-241-record-017-frame-000",
+   "name": "pair of loose trousers"
+  },
+  {
+   "item": "texture-241-record-018-frame-000",
+   "name": "pair of loose trousers"
+  },
+  {
+   "item": "texture-241-record-019-frame-000",
+   "name": "pair of loose trousers"
+  },
+  {
+   "item": "texture-241-record-020-frame-000",
+   "name": "short wrapped cloth skirt"
+  },
+  {
+   "item": "texture-241-record-021-frame-000",
+   "name": "dark inner lining of a cloak, hanging behind the figure and showing only past its outline",
+   "behind": true
+  },
+  {
+   "item": "texture-241-record-022-frame-000",
+   "name": "hanging cloak drawn as the thin drape of cloth that falls down one side of the body"
+  },
+  {
+   "item": "texture-241-record-023-frame-000",
+   "name": "hanging cloak drawn as the thin drape of cloth that falls down one side of the body"
+  },
+  {
+   "item": "texture-241-record-024-frame-000",
+   "name": "hanging cloak drawn as the thin drape of cloth that falls down one side of the body"
+  },
+  {
+   "item": "texture-241-record-025-frame-000",
+   "name": "hanging cloak drawn as the thin drape of cloth that falls down one side of the body"
+  },
+  {
+   "item": "texture-241-record-026-frame-000",
+   "name": "hanging cloak drawn as the thin drape of cloth that falls down one side of the body"
+  },
+  {
+   "item": "texture-241-record-027-frame-000",
+   "name": "hanging cloak drawn as the thin drape of cloth that falls down one side of the body"
+  },
+  {
+   "item": "texture-241-record-030-frame-000",
+   "name": "dark inner lining of a cloak, hanging behind the figure and showing only past its outline",
+   "behind": true
+  },
+  {
+   "item": "texture-241-record-031-frame-000",
+   "name": "hanging formal cloak drawn as the thin drape of cloth that falls down one side of the body"
+  },
+  {
+   "item": "texture-241-record-032-frame-000",
+   "name": "hanging formal cloak drawn as the thin drape of cloth that falls down one side of the body"
+  },
+  {
+   "item": "texture-241-record-033-frame-000",
+   "name": "close-fitting black full-body suit of cloth with long sleeves and legs, no head"
+  },
+  {
+   "item": "texture-241-record-034-frame-000",
+   "name": "sleeved surcoat with grey sleeves and a front panel of diagonal brown-and-cream stripes"
+  },
+  {
+   "item": "texture-241-record-035-frame-000",
+   "name": "short tunic with sleeves"
+  },
+  {
+   "item": "texture-241-record-036-frame-000",
+   "name": "short tunic with sleeves with a green leather vest laced over it"
+  },
+  {
+   "item": "texture-241-record-039-frame-000",
+   "name": "formal long-sleeved tunic with a pattern of repeated diamonds"
+  },
+  {
+   "item": "texture-241-record-040-frame-000",
+   "name": "formal long-sleeved tunic with a pattern of repeated diamonds with a brown leather belt with a small gold buckle"
+  },
+  {
+   "item": "texture-241-record-041-frame-000",
+   "name": "draped toga of plain cloth with a coloured band at the waist with a red cloth sash wrapped at the waist"
+  },
+  {
+   "item": "texture-241-record-042-frame-000",
+   "name": "reversible tunic with a red cloth sash wrapped at the waist and a brown leather belt with a small gold buckle"
+  },
+  {
+   "item": "texture-241-record-043-frame-000",
+   "name": "reversible tunic"
+  },
+  {
+   "item": "texture-241-record-044-frame-000",
+   "name": "cloth loincloth"
+  },
+  {
+   "item": "texture-241-record-045-frame-000",
+   "name": "cloth loincloth"
+  },
+  {
+   "item": "texture-241-record-046-frame-000",
+   "name": "cloth loincloth"
+  },
+  {
+   "item": "texture-241-record-047-frame-000",
+   "name": "plain long robe with a hood and sleeves"
+  },
+  {
+   "item": "texture-241-record-048-frame-000",
+   "name": "plain long robe with sleeves"
+  },
+  {
+   "item": "texture-241-record-049-frame-000",
+   "name": "long priest's robe with sleeves and white vertical stripes down the front"
+  },
+  {
+   "item": "texture-241-record-050-frame-000",
+   "name": "short-sleeved cloth shirt"
+  },
+  {
+   "item": "texture-241-record-051-frame-000",
+   "name": "short-sleeved cloth shirt"
+  },
+  {
+   "item": "texture-241-record-052-frame-000",
+   "name": "short-sleeved cloth shirt with a green leather vest laced over it"
+  },
+  {
+   "item": "texture-241-record-053-frame-000",
+   "name": "short-sleeved cloth shirt with a green leather vest laced over it"
+  },
+  {
+   "item": "texture-241-record-054-frame-000",
+   "name": "short-sleeved cloth shirt"
+  },
+  {
+   "item": "texture-241-record-055-frame-000",
+   "name": "short-sleeved cloth shirt with a brown leather belt with a small gold buckle"
+  },
+  {
+   "item": "texture-241-record-056-frame-000",
+   "name": "short-sleeved cloth shirt with a brown leather belt with a small gold buckle"
+  },
+  {
+   "item": "texture-241-record-057-frame-000",
+   "name": "short-sleeved cloth shirt with a green leather vest laced over it and a brown leather belt with a small gold buckle"
+  },
+  {
+   "item": "texture-241-record-058-frame-000",
+   "name": "short-sleeved cloth shirt with a green leather vest laced over it and a brown leather belt with a small gold buckle"
+  },
+  {
+   "item": "texture-241-record-059-frame-000",
+   "name": "short-sleeved cloth shirt with a red cloth sash wrapped at the waist"
+  },
+  {
+   "item": "texture-241-record-060-frame-000",
+   "name": "short-sleeved cloth shirt with a red cloth sash wrapped at the waist"
+  },
+  {
+   "item": "texture-241-record-061-frame-000",
+   "name": "short-sleeved cloth shirt with a green leather vest laced over it and a red cloth sash wrapped at the waist"
+  },
+  {
+   "item": "texture-241-record-062-frame-000",
+   "name": "short-sleeved cloth shirt with a green leather vest laced over it and a red cloth sash wrapped at the waist"
+  },
+  {
+   "item": "texture-241-record-063-frame-000",
+   "name": "long-sleeved cloth shirt"
+  },
+  {
+   "item": "texture-241-record-064-frame-000",
+   "name": "long-sleeved cloth shirt"
+  },
+  {
+   "item": "texture-241-record-065-frame-000",
+   "name": "long-sleeved cloth shirt with a green leather vest laced over it"
+  },
+  {
+   "item": "texture-241-record-066-frame-000",
+   "name": "long-sleeved cloth shirt with a green leather vest laced over it"
+  },
+  {
+   "item": "texture-241-record-067-frame-000",
+   "name": "long-sleeved cloth shirt"
+  },
+  {
+   "item": "texture-241-record-068-frame-000",
+   "name": "long-sleeved cloth shirt"
+  },
+  {
+   "item": "texture-241-record-069-frame-000",
+   "name": "long-sleeved cloth shirt"
+  },
+  {
+   "item": "texture-241-record-070-frame-000",
+   "name": "long-sleeved cloth shirt with a green leather vest laced over it"
+  },
+  {
+   "item": "texture-241-record-071-frame-000",
+   "name": "long-sleeved cloth shirt with a green leather vest laced over it"
+  },
+  {
+   "item": "texture-241-record-076-frame-000",
+   "name": "short-sleeved cloth shirt"
+  },
+  {
+   "item": "texture-241-record-077-frame-000",
+   "name": "short-sleeved cloth shirt"
+  },
+  {
+   "item": "texture-241-record-078-frame-000",
+   "name": "short-sleeved cloth shirt with a green leather vest laced over it"
+  },
+  {
+   "item": "texture-241-record-079-frame-000",
+   "name": "short-sleeved cloth shirt with a green leather vest laced over it"
+  },
+  {
+   "item": "texture-241-record-080-frame-000",
+   "name": "short-sleeved cloth shirt with a brown leather belt with a small gold buckle"
+  },
+  {
+   "item": "texture-241-record-081-frame-000",
+   "name": "short-sleeved cloth shirt"
+  },
+  {
+   "item": "texture-241-record-082-frame-000",
+   "name": "short-sleeved cloth shirt with a green leather vest laced over it and a brown leather belt with a small gold buckle"
+  },
+  {
+   "item": "texture-241-record-083-frame-000",
+   "name": "short-sleeved cloth shirt with a green leather vest laced over it"
+  },
+  {
+   "item": "texture-241-record-084-frame-000",
+   "name": "short-sleeved cloth shirt with a red cloth sash wrapped at the waist"
+  },
+  {
+   "item": "texture-241-record-085-frame-000",
+   "name": "short-sleeved cloth shirt with a red cloth sash wrapped at the waist"
+  },
+  {
+   "item": "texture-241-record-086-frame-000",
+   "name": "short-sleeved cloth shirt with a green leather vest laced over it and a red cloth sash wrapped at the waist"
+  },
+  {
+   "item": "texture-241-record-087-frame-000",
+   "name": "short-sleeved cloth shirt with a green leather vest laced over it and a red cloth sash wrapped at the waist"
+  },
+  {
+   "item": "texture-241-record-088-frame-000",
+   "name": "long-sleeved cloth shirt"
+  },
+  {
+   "item": "texture-241-record-089-frame-000",
+   "name": "long-sleeved cloth shirt"
+  },
+  {
+   "item": "texture-241-record-090-frame-000",
+   "name": "long-sleeved cloth shirt with a green leather vest laced over it"
+  },
+  {
+   "item": "texture-241-record-091-frame-000",
+   "name": "long-sleeved cloth shirt with a green leather vest laced over it"
+  },
+  {
+   "item": "texture-241-record-092-frame-000",
+   "name": "long-sleeved cloth shirt"
+  },
+  {
+   "item": "texture-241-record-093-frame-000",
+   "name": "long-sleeved cloth shirt"
+  },
+  {
+   "item": "texture-241-record-094-frame-000",
+   "name": "long-sleeved cloth shirt with a green leather vest laced over it"
+  },
+  {
+   "item": "texture-241-record-095-frame-000",
+   "name": "long-sleeved cloth shirt with a green leather vest laced over it"
+  },
+  {
+   "item": "texture-241-record-100-frame-000",
+   "name": "open-fronted sleeved tunic with white stripes at the collar"
+  },
+  {
+   "item": "texture-241-record-101-frame-000",
+   "name": "cloth wrap with a woven pattern and a red edging"
+  },
+  {
+   "item": "texture-241-record-102-frame-000",
+   "name": "long cloth skirt with a leather belt and a gold buckle at the top"
+  },
+  {
+   "item": "texture-241-record-103-frame-000",
+   "name": "long cloth skirt with a leather belt and a gold buckle at the top"
+  },
+  {
+   "item": "texture-241-record-104-frame-000",
+   "name": "sleeved surcoat with a green front panel, grey sleeves and a leather belt with a gold buckle"
+  },
+  {
+   "item": "texture-241-record-105-frame-000",
+   "name": "harness of crossing leather straps with a broad leather belt and a gold buckle"
+  },
+  {
+   "item": "texture-241-record-106-frame-000",
+   "name": "short-sleeved cloth shirt"
+  },
+  {
+   "item": "texture-241-record-107-frame-000",
+   "name": "short-sleeved cloth shirt"
+  },
+  {
+   "item": "texture-241-record-108-frame-000",
+   "name": "long-sleeved cloth shirt"
+  },
+  {
+   "item": "texture-241-record-109-frame-000",
+   "name": "black leather vest laced up the front with gold cords"
+  },
+  {
+   "item": "texture-241-record-110-frame-000",
+   "name": "harness of crossing leather straps with a broad leather belt and a gold buckle"
+  },
+  {
+   "item": "texture-251-record-000-frame-000",
+   "name": "pair of boots: two tall boots side by side, brown leather at the toes and heels with grey steel shin plates"
+  },
+  {
+   "item": "texture-251-record-001-frame-000",
+   "name": "pair of steel boots: two tall plain polished grey steel boots side by side with a rounded toe and a flared top"
+  },
+  {
+   "item": "texture-251-record-002-frame-000",
+   "name": "pair of steel boots: two tall grey steel boots side by side with thin yellow-gold trim at the top and on the toe and ankle bands"
+  },
+  {
+   "item": "texture-251-record-003-frame-000",
+   "name": "leather breastplate: a rounded brown leather chest piece with darker brown shading on the left and a notched shoulder line"
+  },
+  {
+   "item": "texture-251-record-004-frame-000",
+   "name": "dark steel breastplate: rounded overlapping grey steel plates with a high collar"
+  },
+  {
+   "item": "texture-251-record-005-frame-000",
+   "name": "steel breastplate: grey steel plates with a dark underside, a rounded chest and a flared high collar edged with thin yellow-gold trim, gold trim also along the bottom edge"
+  },
+  {
+   "item": "texture-251-record-006-frame-000",
+   "name": "banded steel cuirass: grey steel in many overlapping horizontal bands down the torso, with a short skirt of hanging steel strips at the bottom"
+  },
+  {
+   "item": "texture-251-record-007-frame-000",
+   "name": "chain-mail shirt: dark grey interlinked rings with lighter grey highlights, a short sleeveless torso with a rough ragged lower hem"
+  },
+  {
+   "item": "texture-251-record-008-frame-000",
+   "name": "pair of brown leather gauntlets: two clenched fists, side by side, in plain brown leather"
+  },
+  {
+   "item": "texture-251-record-009-frame-000",
+   "name": "pair of steel gauntlets: two clenched fists, side by side, in grey steel with thin yellow-gold trim bands at the wrist"
+  },
+  {
+   "item": "texture-251-record-010-frame-000",
+   "name": "pair of brown leather leg guards: two large padded brown leather leg pieces side by side with rounded knee guards and a ragged lower edge"
+  },
+  {
+   "item": "texture-251-record-011-frame-000",
+   "name": "set of leg armour: a dark chain-mail skirt with a brown leather belt and a yellow-gold buckle, over two brown leather leg guards with rounded knee guards"
+  },
+  {
+   "item": "texture-251-record-012-frame-000",
+   "name": "pair of steel leg armour: two plain polished grey steel leg guards side by side with rounded knee caps"
+  },
+  {
+   "item": "texture-251-record-013-frame-000",
+   "name": "set of leg armour: a dark chain-mail skirt at the top with a brown leather belt and a yellow-gold buckle at the centre, and below it two grey steel leg guards with rounded knee caps"
+  },
+  {
+   "item": "texture-251-record-014-frame-000",
+   "name": "pair of steel leg armour: two grey steel leg guards side by side with rounded knee caps and yellow-gold trim bands across each leg"
+  },
+  {
+   "item": "texture-251-record-015-frame-000",
+   "name": "set of leg armour: a dark chain-mail skirt at the top with a brown leather belt and a yellow-gold buckle, and below it two grey steel leg guards with rounded knee caps and yellow-gold trim bands"
+  },
+  {
+   "item": "texture-251-record-016-frame-000",
+   "name": "set of leg armour: a dark chain-mail skirt at the top and below it two plain grey steel leg guards with rounded knee caps"
+  },
+  {
+   "item": "texture-251-record-017-frame-000",
+   "name": "brown leather arm guard (shoulder and forearm) in one piece a padded brown leather shoulder cap narrowing down to a bracer, ragged along the lower edge"
+  },
+  {
+   "item": "texture-251-record-018-frame-000",
+   "name": "steel arm guard (shoulder cap and forearm) in one piece: overlapping grey steel plates from a rounded shoulder cap down to a bracer"
+  },
+  {
+   "item": "texture-251-record-019-frame-000",
+   "name": "steel arm guard (shoulder cap and forearm) in one piece grey steel plates running down from a rounded shoulder cap to a bracer, with a small dark gap at the elbow"
+  },
+  {
+   "item": "texture-251-record-020-frame-000",
+   "name": "steel arm guard (shoulder and forearm) in one piece grey steel plates with thin yellow-gold trim and a hanging yellow-gold cord at the shoulder"
+  },
+  {
+   "item": "texture-251-record-021-frame-000",
+   "name": "arm guard (shoulder cap, mail sleeve and forearm) in one piece a rounded grey steel shoulder cap at the top, dark chain mail below it and a small steel plate at the elbow"
+  },
+  {
+   "item": "texture-251-record-022-frame-000",
+   "name": "brown leather arm piece: a thin curved brown leather shoulder strap at the top with a few narrow brown straps hanging down"
+  },
+  {
+   "item": "texture-251-record-023-frame-000",
+   "name": "steel arm guard: a narrow grey steel shoulder plate at the top tapering to thin steel bands down the arm"
+  },
+  {
+   "item": "texture-251-record-024-frame-000",
+   "name": "steel arm guard: a narrow grey steel shoulder plate at the top and a plate near the elbow with a dark gap between them"
+  },
+  {
+   "item": "texture-251-record-025-frame-000",
+   "name": "steel arm guard: grey steel plates with thin yellow-gold trim and a small yellow-gold ring and cord at the shoulder"
+  },
+  {
+   "item": "texture-251-record-026-frame-000",
+   "name": "chain-mail arm guard: a narrow grey steel shoulder plate at the top and a dark chain-mail sleeve below it"
+  },
+  {
+   "item": "texture-251-record-027-frame-000",
+   "name": "open helmet: a rounded yellow-gold cap with a brim and two short cheek flaps hanging at the sides, with no face guard",
+   "head": true
+  },
+  {
+   "item": "texture-251-record-028-frame-000",
+   "name": "light steel helmet: a plain grey steel rounded cap with a short nasal guard pointing down at the centre and small cheek pieces",
+   "head": true
+  },
+  {
+   "item": "texture-251-record-029-frame-000",
+   "name": "dark steel helmet: a rounded dark grey steel cap with a long nasal guard down the centre and cheek pieces",
+   "head": true
+  },
+  {
+   "item": "texture-251-record-030-frame-000",
+   "name": "gold helmet with a tall red plume crest and cheek guards",
+   "head": true
+  },
+  {
+   "item": "texture-251-record-031-frame-000",
+   "name": "closed great helm: polished grey steel with a vertical ridge down the centre of the visor, horizontal breathing slits and a blue feather plume at the upper left",
+   "head": true
+  },
+  {
+   "item": "texture-251-record-032-frame-000",
+   "name": "horned helmet: a rounded grey steel helm with a nasal guard and cheek pieces, and a curved tan horn rising from each side",
+   "head": true
+  },
+  {
+   "item": "texture-251-record-033-frame-000",
+   "name": "round buckler shield: a wooden brown face with a raised grey steel boss at the centre, a grey steel rim and yellow-gold studs round the edge"
+  },
+  {
+   "item": "texture-251-record-034-frame-000",
+   "name": "round wooden shield: vertical plank grain, a dark steel rim with short spikes and a steel boss"
+  },
+  {
+   "item": "texture-251-record-035-frame-000",
+   "name": "tall kite shield: a brown leather-covered pointed shield with a grey steel strip curving down the left centre and a worn steel edge"
+  },
+  {
+   "item": "texture-251-record-036-frame-000",
+   "name": "large tall shield: a pale grey steel face and a black rim with rivets"
+  }
+ ]
+}
