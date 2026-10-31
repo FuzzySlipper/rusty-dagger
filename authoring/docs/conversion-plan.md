@@ -100,6 +100,13 @@ Steps can drop to 10 / 5 at 1024 without a visible loss; a 768 canvas changes
 the construction of the piece, so it is not used. Remaining worn batches use
 10 / 5 (`routes[].steps` in the spec).
 
+Female-human morph series (archives 237 clothing, 247 armor; 138 layers) ran on the 5090 at 10 / 5
+steps in four chunks of 37, 34, 34 and 33 layers, 513-612 s each (about 16 s per layer, model
+loads included), about 38 minutes in all. Neutral-grey sources live under
+`gen-raw/source-edits/worn-neutral-womens`. Known misses: the faint cloak drapes 021 and 030 and the
+lace-only boots 013 and sandals 015 were redrawn as whole garments; the Khajiit suit, vests 109/110 and
+brown pants/tights came out paler than the source.
+
 ## Suggested next batches
 
 Bodies B1 (28) is done: all 32 bodies are converted with the detailed template, in two batches (`b1-male`, `b1-female`). Faces F1 is done: all 160 heads converted with the `faces-detailed` template in four batches (`f1-a`…`f1-d`) plus a redo of the drifted pilot head; hair, headgear, markings and skin or scale colour hold across the set, and a contact sheet review found one female head (a goatee) worth a redo. Next: 10494-R1 review, then creatures C1 (the boar and werewolf dolls are full framed scenes, 125×198, with a stone border, moon and forest, so they need their own pilot; the 16 vampire heads and 2 beast heads are small heads like the faces), spell icons I1/I2 and T1, fire E2–E5, effects X1/X2, and the rest of worn W1–W3 using the neutral-base procedure.
