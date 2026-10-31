@@ -5,7 +5,7 @@
 # AREA (items, worn, paper-doll, spells, effects) picks the source root df-raw/AREA (worn reads df-raw/items), the spec directory specs/AREA and the finals gen-raw/AREA
 # (default items). NAME picks specs/AREA/PREFIX-NAME.json and PREFIX-NAME-retro.json, PREFIX being
 # items-icons for items and the area name otherwise. Qwen and retro both run on HOST
-# (den-m5 / m5-comfy or den-nimo / nimo-comfy). SOURCE=dir overrides the source root.
+# (den-m5 / m5-comfy or den-nimo / nimo-comfy; the owner's den-5090 has no resource, pass none). SOURCE=dir overrides the source root.
 # A frames-* batch composites only the flame onto frame 0 (items only).
 set -e
 N=$1; H=$2; RES=$3
@@ -19,7 +19,7 @@ PAL=${ART_PAL:-$HOME/research/daggerfall-files/ART_PAL.COL}
 D=$(date +%Y%m%d)
 Q=$ST/$PFX-$N-$D; R=$ST/$PFX-$N-retro-$D; B=$ST/$PFX-$N-bp-$D
 cd "$AP"; source legacy/tools/text-to-3d/scripts/lan-env.sh >/dev/null
-RUN() { "$HOME/.local/bin/asset-resources" run --host "$H" --resource "$RES" --owner item-art --project rusty-dagger --purpose "$1" -- "${@:2}"; }
+RUN() { if [[ $RES == none ]]; then "${@:2}"; else "$HOME/.local/bin/asset-resources" run --host "$H" --resource "$RES" --owner item-art --project rusty-dagger --purpose "$1" -- "${@:2}"; fi; }
 python3 $TOOLS/run.py prepare --spec $SPEC/$PFX-$N.json --source $RAW --out $Q --host $H
 RUN "$AREA batch $N Qwen" python3 $TOOLS/run.py generate $Q --host $H
 python3 $TOOLS/run.py prepare --spec $SPEC/$PFX-$N-retro.json --source $RAW --out $R --upstream $Q --host $H

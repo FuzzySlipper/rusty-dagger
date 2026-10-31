@@ -1,0 +1,356 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy RPG equipment illustration, opaque gouache-like colour modelling, broad painted planes, believable cloth folds and metal planes, sparse dry-brush marks, selective dark accents along occluding contours. Slightly irregular handmade edges, original local colours; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy RPG equipment art. Keep the source's silhouette, the parts of the body it covers, its pose and its local colours: do not tint every material brown. Draw only the garment or armour piece itself, as worn on an invisible, headless body: no skin, no body, head, hands or feet unless the source clearly shows them. No weapon, text, border, scenery, shadow or second figure.",
+  "presentation": "One isolated garment on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the garment. The whole garment visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Female human clothing a / Qwen then retro",
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "worn",
+      "model": "krea2-turbo",
+      "host": "den-5090",
+      "url": "http://192.168.1.20:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "Retro_Dark_Fantasy_Illustration_krea2_3352765_epoch_8.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted",
+      "steps": 5
+    }
+  ],
+  "task": "Task: Redraw a very small classic fantasy RPG worn-equipment paper-doll layer as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+  "items": [
+    {
+      "id": "brassiere-000",
+      "directory": "womens-clothing/item-182-brassiere",
+      "image": "player/female-human/variant-00/texture-237-record-000-frame-000-source.png",
+      "content": "One small bra-style bust garment seen from the front, seen from the front exactly as drawn in the input, aspect about 1.42:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "brassiere-000 (34x24)"
+    },
+    {
+      "id": "brassiere-001",
+      "directory": "womens-clothing/item-182-brassiere",
+      "image": "player/female-human/variant-01/texture-237-record-001-frame-000-source.png",
+      "content": "One small bra-style bust garment seen from the front, seen from the front exactly as drawn in the input, aspect about 2.83:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "brassiere-001 (34x12)"
+    },
+    {
+      "id": "brassiere-002",
+      "directory": "womens-clothing/item-182-brassiere",
+      "image": "player/female-human/variant-02/texture-237-record-002-frame-000-source.png",
+      "content": "One small bra-style bust garment seen from the front, seen from the front exactly as drawn in the input, aspect about 1.26:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "brassiere-002 (34x27)"
+    },
+    {
+      "id": "formal-brassiere-003",
+      "directory": "womens-clothing/item-183-formal-brassiere",
+      "image": "player/female-human/variant-00/texture-237-record-003-frame-000-source.png",
+      "content": "One ornate formal bra-style bust garment with trim and chains, seen from the front exactly as drawn in the input, aspect about 1.45:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "formal-brassiere-003 (42x29)"
+    },
+    {
+      "id": "formal-brassiere-004",
+      "directory": "womens-clothing/item-183-formal-brassiere",
+      "image": "player/female-human/variant-01/texture-237-record-004-frame-000-source.png",
+      "content": "One ornate formal bra-style bust garment with trim and chains, seen from the front exactly as drawn in the input, aspect about 2.64:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "formal-brassiere-004 (37x14)"
+    },
+    {
+      "id": "formal-brassiere-005",
+      "directory": "womens-clothing/item-183-formal-brassiere",
+      "image": "player/female-human/variant-02/texture-237-record-005-frame-000-source.png",
+      "content": "One ornate formal bra-style bust garment with trim and chains, seen from the front exactly as drawn in the input, aspect about 1.94:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "formal-brassiere-005 (35x18)"
+    },
+    {
+      "id": "formal-brassiere-006",
+      "directory": "womens-clothing/item-183-formal-brassiere",
+      "image": "player/female-human/variant-03/texture-237-record-006-frame-000-source.png",
+      "content": "One ornate formal bra-style bust garment with trim and chains, seen from the front exactly as drawn in the input, aspect about 0.94:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "formal-brassiere-006 (32x34)"
+    },
+    {
+      "id": "formal-brassiere-007",
+      "directory": "womens-clothing/item-183-formal-brassiere",
+      "image": "player/female-human/variant-04/texture-237-record-007-frame-000-source.png",
+      "content": "One ornate formal bra-style bust garment with trim and chains, seen from the front exactly as drawn in the input, aspect about 1.30:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "formal-brassiere-007 (35x27)"
+    },
+    {
+      "id": "peasant-blouse-008",
+      "directory": "womens-clothing/item-184-peasant-blouse",
+      "image": "player/female-human/base/texture-237-record-008-frame-000-source.png",
+      "content": "One loose peasant blouse with gathered puffed sleeves, seen from the front exactly as drawn in the input, aspect about 1.00:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "peasant-blouse-008 (66x66)"
+    },
+    {
+      "id": "eodoric-009",
+      "directory": "womens-clothing/item-185-eodoric",
+      "image": "player/female-human/base/texture-237-record-009-frame-000-source.png",
+      "content": "One ornamental gold collar with a row of long hanging gold strips, seen from the front exactly as drawn in the input, aspect about 0.62:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "eodoric-009 (43x69)"
+    },
+    {
+      "id": "shoes-010",
+      "directory": "womens-clothing/item-186-shoes",
+      "image": "player/female-human/base/texture-237-record-010-frame-000-source.png",
+      "content": "One pair of low leather shoes, the two shoes shown apart as in the input, seen from the front exactly as drawn in the input, aspect about 2.26:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "shoes-010 (61x27)"
+    },
+    {
+      "id": "tall-boots-011",
+      "directory": "womens-clothing/item-187-tall-boots",
+      "image": "player/female-human/variant-00/texture-237-record-011-frame-000-source.png",
+      "content": "One pair of tall leather boots seen from the front, side by side, seen from the front exactly as drawn in the input, aspect about 0.98:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "tall-boots-011 (61x62)"
+    },
+    {
+      "id": "boots-012",
+      "directory": "womens-clothing/item-188-boots",
+      "image": "player/female-human/variant-00/texture-237-record-012-frame-000-source.png",
+      "content": "One pair of leather boots, the two boots shown apart as in the input, seen from the front exactly as drawn in the input, aspect about 1.45:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "boots-012 (61x42)"
+    },
+    {
+      "id": "boots-013",
+      "directory": "womens-clothing/item-188-boots",
+      "image": "player/female-human/variant-01/texture-237-record-013-frame-000-source.png",
+      "content": "One pair of leather boots, the two boots shown apart as in the input, seen from the front exactly as drawn in the input, aspect about 1.49:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "boots-013 (61x41)"
+    },
+    {
+      "id": "boots-014",
+      "directory": "womens-clothing/item-188-boots",
+      "image": "player/female-human/variant-02/texture-237-record-014-frame-000-source.png",
+      "content": "One pair of leather boots, the two boots shown apart as in the input, seen from the front exactly as drawn in the input, aspect about 1.42:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "boots-014 (61x43)"
+    },
+    {
+      "id": "sandals-015",
+      "directory": "womens-clothing/item-189-sandals",
+      "image": "player/female-human/base/texture-237-record-015-frame-000-source.png",
+      "content": "One pair of sandals made of thin straps, shown apart as in the input, seen from the front exactly as drawn in the input, aspect about 2.65:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "sandals-015 (61x23)"
+    },
+    {
+      "id": "casual-pants-016",
+      "directory": "womens-clothing/item-190-casual-pants",
+      "image": "player/female-human/variant-00/texture-237-record-016-frame-000-source.png",
+      "content": "One pair of loose trousers, seen from the front exactly as drawn in the input, aspect about 0.70:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "casual-pants-016 (43x61)"
+    },
+    {
+      "id": "casual-pants-017",
+      "directory": "womens-clothing/item-190-casual-pants",
+      "image": "player/female-human/variant-01/texture-237-record-017-frame-000-source.png",
+      "content": "One pair of loose trousers, seen from the front exactly as drawn in the input, aspect about 0.55:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "casual-pants-017 (48x87)"
+    },
+    {
+      "id": "casual-pants-018",
+      "directory": "womens-clothing/item-190-casual-pants",
+      "image": "player/female-human/variant-02/texture-237-record-018-frame-000-source.png",
+      "content": "One pair of loose trousers, seen from the front exactly as drawn in the input, aspect about 0.75:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "casual-pants-018 (46x61)"
+    },
+    {
+      "id": "casual-pants-019",
+      "directory": "womens-clothing/item-190-casual-pants",
+      "image": "player/female-human/variant-03/texture-237-record-019-frame-000-source.png",
+      "content": "One pair of loose trousers, seen from the front exactly as drawn in the input, aspect about 0.72:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "casual-pants-019 (49x68)"
+    },
+    {
+      "id": "casual-pants-020",
+      "directory": "womens-clothing/item-190-casual-pants",
+      "image": "player/female-human/variant-04/texture-237-record-020-frame-000-source.png",
+      "content": "One pair of loose trousers, seen from the front exactly as drawn in the input, aspect about 0.73:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "casual-pants-020 (47x64)"
+    },
+    {
+      "id": "casual-cloak-021",
+      "directory": "womens-clothing/item-191-casual-cloak",
+      "image": "player/female-human/cloak-interior/texture-237-record-021-frame-000-source.png",
+      "content": "One hanging cloak drawn as the thin drape of cloth that falls down one side of the body, seen from the front exactly as drawn in the input, aspect about 0.58:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "casual-cloak-021 (63x108)"
+    },
+    {
+      "id": "casual-cloak-022",
+      "directory": "womens-clothing/item-191-casual-cloak",
+      "image": "player/female-human/variant-00/texture-237-record-022-frame-000-source.png",
+      "content": "One hanging cloak drawn as the thin drape of cloth that falls down one side of the body, seen from the front exactly as drawn in the input, aspect about 0.60:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "casual-cloak-022 (78x130)"
+    },
+    {
+      "id": "casual-cloak-023",
+      "directory": "womens-clothing/item-191-casual-cloak",
+      "image": "player/female-human/variant-01/texture-237-record-023-frame-000-source.png",
+      "content": "One hanging cloak drawn as the thin drape of cloth that falls down one side of the body, seen from the front exactly as drawn in the input, aspect about 0.48:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "casual-cloak-023 (78x163)"
+    },
+    {
+      "id": "casual-cloak-024",
+      "directory": "womens-clothing/item-191-casual-cloak",
+      "image": "player/female-human/variant-02/texture-237-record-024-frame-000-source.png",
+      "content": "One hanging cloak drawn as the thin drape of cloth that falls down one side of the body, seen from the front exactly as drawn in the input, aspect about 0.42:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "casual-cloak-024 (69x163)"
+    },
+    {
+      "id": "casual-cloak-025",
+      "directory": "womens-clothing/item-191-casual-cloak",
+      "image": "player/female-human/variant-03/texture-237-record-025-frame-000-source.png",
+      "content": "One hanging cloak drawn as the thin drape of cloth that falls down one side of the body, seen from the front exactly as drawn in the input, aspect about 0.53:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "casual-cloak-025 (69x130)"
+    },
+    {
+      "id": "casual-cloak-026",
+      "directory": "womens-clothing/item-191-casual-cloak",
+      "image": "player/female-human/variant-04/texture-237-record-026-frame-000-source.png",
+      "content": "One hanging cloak drawn as the thin drape of cloth that falls down one side of the body, seen from the front exactly as drawn in the input, aspect about 0.51:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "casual-cloak-026 (67x131)"
+    },
+    {
+      "id": "casual-cloak-027",
+      "directory": "womens-clothing/item-191-casual-cloak",
+      "image": "player/female-human/variant-05/texture-237-record-027-frame-000-source.png",
+      "content": "One hanging cloak drawn as the thin drape of cloth that falls down one side of the body, seen from the front exactly as drawn in the input, aspect about 0.41:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "casual-cloak-027 (67x164)"
+    },
+    {
+      "id": "formal-cloak-030",
+      "directory": "womens-clothing/item-192-formal-cloak",
+      "image": "player/female-human/cloak-interior/texture-237-record-030-frame-000-source.png",
+      "content": "One hanging formal cloak drawn as the thin drape of cloth that falls down one side of the body, seen from the front exactly as drawn in the input, aspect about 0.63:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "formal-cloak-030 (62x98)"
+    },
+    {
+      "id": "formal-cloak-031",
+      "directory": "womens-clothing/item-192-formal-cloak",
+      "image": "player/female-human/variant-00/texture-237-record-031-frame-000-source.png",
+      "content": "One hanging formal cloak drawn as the thin drape of cloth that falls down one side of the body, seen from the front exactly as drawn in the input, aspect about 0.52:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "formal-cloak-031 (70x135)"
+    },
+    {
+      "id": "formal-cloak-032",
+      "directory": "womens-clothing/item-192-formal-cloak",
+      "image": "player/female-human/variant-01/texture-237-record-032-frame-000-source.png",
+      "content": "One hanging formal cloak drawn as the thin drape of cloth that falls down one side of the body, seen from the front exactly as drawn in the input, aspect about 0.41:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "formal-cloak-032 (69x169)"
+    },
+    {
+      "id": "khajiit-suit-033",
+      "directory": "womens-clothing/item-193-khajiit-suit",
+      "image": "player/female-human/base/texture-237-record-033-frame-000-source.png",
+      "content": "One close-fitting black full-body suit of cloth with long sleeves and legs, no head, seen from the front exactly as drawn in the input, aspect about 0.46:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "khajiit-suit-033 (58x127)"
+    },
+    {
+      "id": "formal-eodoric-034",
+      "directory": "womens-clothing/item-194-formal-eodoric",
+      "image": "player/female-human/variant-00/texture-237-record-034-frame-000-source.png",
+      "content": "One ornamental gold collar with a row of long hanging gold strips, seen from the front exactly as drawn in the input, aspect about 0.48:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "formal-eodoric-034 (43x90)"
+    },
+    {
+      "id": "formal-eodoric-035",
+      "directory": "womens-clothing/item-194-formal-eodoric",
+      "image": "player/female-human/variant-01/texture-237-record-035-frame-000-source.png",
+      "content": "One ornamental gold collar with a row of long hanging gold strips, seen from the front exactly as drawn in the input, aspect about 0.39:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the female human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "formal-eodoric-035 (48x123)"
+    }
+  ]
+}
