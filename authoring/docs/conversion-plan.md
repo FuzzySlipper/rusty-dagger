@@ -80,6 +80,20 @@ All four pilots ran with the unchanged recipe and read well.
 - **Clothing, neutral base (4, done):** the placeholder blue is neutralised to pale grey in a copy of the source (`gen-raw/source-edits/worn-neutral`) before conversion, and the result tints cleanly (shown multiplied by blue, gold, red and green). Fixed-colour parts such as the vest and sash would be left out of the tint by the game's dye mask.
 - **Worn equipment (12, male human, done):** armor, shields, boots and trousers are good. The clothing sprites are drawn in placeholder blue (the game tints them per dye); decided: neutral base plus tint, as in the neutral-base pilot above. Procedure for the rest of clothing: neutralise the blue in a source copy, then convert from it.
 
+## Generation speed (worn pieces, 6-piece test on den-nimo)
+
+| Variant | Qwen steps / retro steps | Canvas | Qwen+retro time | Result vs baseline |
+| --- | --- | --- | --- | --- |
+| v0 | 25 / 8 | 1024 | 1187 s | baseline |
+| v1 | 15 / 8 | 1024 | 1011 s | same |
+| v2 | 10 / 5 | 1024 | 759 s | same |
+| v3 | 25 / 8 | 768 | 665 s | shapes drift (greaves, pauldron gaps) |
+| v4 | 12 / 5 | 768 | 451 s | shapes drift |
+
+Steps can drop to 10 / 5 at 1024 without a visible loss; a 768 canvas changes
+the construction of the piece, so it is not used. Remaining worn batches use
+10 / 5 (`routes[].steps` in the spec).
+
 ## Suggested next batches
 
 Bodies B1 (28) is done: all 32 bodies are converted with the detailed template, in two batches (`b1-male`, `b1-female`). Faces F1 is done: all 160 heads converted with the `faces-detailed` template in four batches (`f1-a`…`f1-d`) plus a redo of the drifted pilot head; hair, headgear, markings and skin or scale colour hold across the set, and a contact sheet review found one female head (a goatee) worth a redo. Next: 10494-R1 review, then creatures C1 (the boar and werewolf dolls are full framed scenes, 125×198, with a stone border, moon and forest, so they need their own pilot; the 16 vampire heads and 2 beast heads are small heads like the faces), spell icons I1/I2 and T1, fire E2–E5, effects X1/X2, and the rest of worn W1–W3 using the neutral-base procedure.
