@@ -7,8 +7,9 @@ so it takes that body's outline, light and contact shadows. Items go on in the g
   1. the classic item, scaled by whole pixels, is pasted onto the current figure where the doll draws it;
   2. Qwen repaints the figure, and only the item's region (dilated) is composited back through a feathered
      mask, so nothing outside it changes (a magenta --guide tint is not used: Qwen paints the item magenta);
-  3. Qwen is asked again, on the dressed figure, to keep only that piece on flat green, with no skin. The
-     green key of that image, inside the repaint region, is the item's alpha. Keying on a difference against
+  3. Qwen is asked again, on the dressed figure, to keep only that piece on flat green (then, failing that, blue,
+     which brown and tan pieces survive), with no skin. The key of that image, inside the repaint region, is the
+     item's alpha. Keying on a difference against
      the figure beneath alone fails wherever the piece's colour matches the skin it covers, so the body's colour
      only trims what the classic item does not cover: a pixel within EDGE doll units of the key's edge, outside
      the classic silhouette, whose hue is the body's beneath it is the body showing through or repainted (bare
@@ -39,12 +40,15 @@ from doll_preview import FINALS, GROUND, MORPH, WORN_SOURCES, doll_layer, placed
 PIPELINE = Path(os.environ.get("ASSET_PIPELINE", Path.home() / "dev/asset-pipeline"))
 QWEN = PIPELINE / "tools/texture-edit/qwen_edit.py"
 REACH = 3            # doll units the repaint may extend past the classic item
-KEY = (60, 140)      # distance from pure green over which an isolated pixel fades from key to item
+KEY = (60, 140)      # distance from the flat key colour over which an isolated pixel fades from key to item
 BODY_HUE = (0.02, 0.05)  # OKLab a-b distance from the body beneath over which a rim pixel fades from body to item
 EDGE = 3             # doll units from the key's edge in which body-coloured pixels are trimmed
-ISOLATION_TRIES = 3
+# Isolations to try, in order: (key colour name, RGB, seed offset, file suffix). Green first; Qwen erases some
+# brown and tan pieces on green (trousers, leather), and keeps them on blue.
+ISOLATIONS = [("green", (0, 255, 0), 0, ""), ("green", (0, 255, 0), 1, "-1"), ("green", (0, 255, 0), 2, "-2"),
+              ("blue", (0, 0, 255), 0, "-blue")]
 DIFFERENCE = (0.03, 0.08)  # OKLab distance from the figure beneath over which a pixel fades from body to item
-GHOST = 20           # median green cast (G less mean R, B) of kept pixels past which an isolation is a translucent ghost
+GHOST = 20           # median cast toward the key colour of kept pixels past which an isolation is a translucent ghost
 
 PROMPT = ("The figure wears a crude, pixelated, low-resolution {name}. Repaint only that piece, finely painted, as "
           "it would actually be worn on this body: fitted to its anatomy and pose, overlapping what it covers, with the "
@@ -54,7 +58,7 @@ PROMPT = ("The figure wears a crude, pixelated, low-resolution {name}. Repaint o
           "pose, any other clothing or armour or the flat background, and add nothing else.")
 ISOLATE = ("Keep only the {name} exactly as it is, every pixel of it unchanged. Replace everything else - the body, "
            "all skin including toes, fingers and the neck, cloth, all other armour and the background - with flat pure "
-           "green, RGB 0,255,0.")
+           "{key}, RGB {rgb}.")
 
 
 def mask_image(alpha, reach):
@@ -77,15 +81,17 @@ def ramp(x, bounds):
     return np.clip((x - bounds[0]) / (bounds[1] - bounds[0]), 0, 1)
 
 
-def green_cast(dressed, isolated, region):
-    """How much greener the isolation keeps the piece than the dressed figure shows it (median over kept pixels).
+def key_cast(dressed, isolated, region, key):
+    """How much more toward the key colour the isolation keeps the piece than the dressed figure shows it (median
+    over kept pixels; for green, G less mean R, B).
 
-    Qwen sometimes isolates a pale piece as a translucent green-tinted ghost, which keys to scattered fragments."""
-    kept = (np.sqrt(((isolated.astype(np.float32) - (0, 255, 0)) ** 2).sum(2)) > KEY[1]) & (region > 0.5)
+    Qwen sometimes isolates a pale piece as a translucent key-tinted ghost, which keys to scattered fragments."""
+    kept = (np.sqrt(((isolated.astype(np.float32) - key) ** 2).sum(2)) > KEY[1]) & (region > 0.5)
     if not kept.any():
         return 0.0
-    green = lambda a: a[..., 1].astype(np.float32) - (a[..., 0].astype(np.float32) + a[..., 2]) / 2
-    return float(np.median((green(isolated) - green(dressed))[kept]))
+    toward = np.array(key, np.float32) - np.mean(key)
+    toward /= toward.max()
+    return float(np.median(((isolated.astype(np.float32) - dressed) @ toward)[kept]))
 
 
 def difference_isolation(dressed, beneath):
@@ -94,13 +100,13 @@ def difference_isolation(dressed, beneath):
     colour of that skin (bronze plate) keys away, which is why Qwen isolates first."""
     lab = lambda a: srgb_to_oklab(a.astype(np.float32) / 255)
     t = ramp(np.sqrt(((lab(dressed) - lab(beneath)) ** 2).sum(2)), DIFFERENCE)[..., None]
-    return (t * dressed + (1 - t) * np.array((0, 255, 0), np.float32) + .5).astype(np.uint8)
+    return (t * dressed + (1 - t) * np.array(ISOLATIONS[0][1], np.float32) + .5).astype(np.uint8)
 
 
-def lift(dressed, beneath, isolated, region, classic, k):
-    """The item layer: where the isolated piece is not green, less body-coloured rim beyond the classic item."""
+def lift(dressed, beneath, isolated, region, classic, k, key=ISOLATIONS[0][1]):
+    """The item layer: where the isolated piece is not the key colour, less body-coloured rim beyond the classic item."""
     dressed, beneath = dressed.astype(np.float32) / 255, beneath.astype(np.float32) / 255
-    a = ramp(np.sqrt(((isolated.astype(np.float32) - (0, 255, 0)) ** 2).sum(2)), KEY) * region
+    a = ramp(np.sqrt(((isolated.astype(np.float32) - key) ** 2).sum(2)), KEY) * region
     trusted = ndimage.binary_erosion(a > 0.5, iterations=EDGE * k) | ndimage.binary_dilation(classic > 16, iterations=k)
     hue = np.sqrt(((srgb_to_oklab(dressed)[..., 1:] - srgb_to_oklab(beneath)[..., 1:]) ** 2).sum(2))
     a *= np.maximum(ramp(hue, BODY_HUE), trusted)
@@ -210,18 +216,18 @@ def main():
         dressed_path = a.out / f"{stem}.png"
         qwen(a.out / f"{stem}-init.png", PROMPT.format(name=name), a.seed, dressed_path, a.out / f"{stem}-mask.png")
         dressed = Image.open(dressed_path).convert("RGB")
-        for attempt in range(ISOLATION_TRIES):
-            # A failed isolation keeps nothing, tints the whole figure green or keeps a green ghost; try the next seed.
-            isolated_path = a.out / f"{stem}-isolated{'' if attempt == 0 else f'-{attempt}'}.png"
-            qwen(dressed_path, ISOLATE.format(name=name), a.seed + attempt, isolated_path)
+        for colour, key_rgb, offset, suffix in ISOLATIONS:
+            # A failed isolation keeps nothing, floods the figure with the key or keeps a key-tinted ghost; try the next.
+            isolated_path = a.out / f"{stem}-isolated{suffix}.png"
+            qwen(dressed_path, ISOLATE.format(name=name, key=colour, rgb=",".join(map(str, key_rgb))), a.seed + offset, isolated_path)
             isolated = Image.open(isolated_path).convert("RGB").resize(dressed.size)
             layer = lift(np.array(dressed), np.array(figure), np.array(isolated), np.array(mask, np.float32) / 255,
-                         np.array(alpha), k)
+                         np.array(alpha), k, key_rgb)
             kept = layer[..., 3].sum() / max(1, np.array(alpha).sum())
-            cast = green_cast(np.array(dressed), np.array(isolated), np.array(mask, np.float32) / 255)
+            cast = key_cast(np.array(dressed), np.array(isolated), np.array(mask, np.float32) / 255, key_rgb)
             if 0.15 < kept < 3 and cast < GHOST:
                 break
-            print(f"{stem}: isolation {attempt} kept {kept:.2f} of the classic item's area, green cast {cast:.0f}; retrying", flush=True)
+            print(f"{stem}: {colour} isolation{suffix} kept {kept:.2f} of the classic item's area, cast {cast:.0f}; trying the next", flush=True)
         else:
             isolated = difference_isolation(np.array(dressed), np.array(figure))
             Image.fromarray(isolated).save(a.out / f"{stem}-isolated-difference.png")
