@@ -22,8 +22,8 @@ import hashlib, json, subprocess, sys
 pipeline, look, out = sys.argv[1:]
 git = lambda *a: subprocess.run(["git", "-C", pipeline, *a], capture_output=True, text=True, check=True).stdout.strip()
 json.dump({
-    "asset": "first-person arms, Daggerfall look (grey sleeve, brown leather glove and cuff)",
-    "source": f"asset-pipeline {look}: Drillimpact's PSX First Person Arms 1.1.0 (CC0, tools/fps-arms/packs/psx-drillimpact) with twist joints, repaint and cuff",
+    "asset": "first-person arms, Daggerfall look (hand-painted brown leather glove and grey sleeve)",
+    "source": f"asset-pipeline {look}: Drillimpact's PSX First Person Arms 1.1.0 (CC0, tools/fps-arms/packs/psx-drillimpact) with twist joints, the glove edge cut into the mesh and a hand-painted texture",
     "commit": git("rev-parse", "HEAD"),
     "uncommitted": git("status", "--porcelain", "--", "tools/fps-arms", "tools/fp-capture").splitlines(),
     "command": f"blender -b --factory-startup --python <asset-pipeline>/tools/fps-arms/adopt.py -- --params <asset-pipeline>/{look} --out first-person/arms.glb",
