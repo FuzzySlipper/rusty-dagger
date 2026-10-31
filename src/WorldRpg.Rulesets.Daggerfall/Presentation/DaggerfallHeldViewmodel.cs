@@ -30,7 +30,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     private readonly DaggerfallHeldArt art;
     private readonly bool retro;
     private readonly FirstPersonArms arms;
-    private readonly RenderResource model;
+    private readonly RenderResource? model;
     private readonly Appearance look;
     private (TweenHandle Handle, TweenStartRequest Request)? motion;
     // A pose the look is held in, drawn as it now is, while no motion plays; null shows rest.
@@ -46,10 +46,18 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
             arms = new FirstPersonArms(engine, art.Document.Arms, art.Document.Rig, armsObject, armsModel);
         try
         {
-            using ContentReference lookModel = art.Container.OpenReference(art.Document.Look.Model);
-            model = engine.Animation.OpenAnimatedMeshFromContent(new(lookModel));
-            try { look = engine.Animation.CreateAnimatedMeshAppearance(new(model)); }
-            catch { model.Dispose(); throw; }
+            if (art.Document.Look.Model is { } path)
+            {
+                using ContentReference lookModel = art.Container.OpenReference(path);
+                model = engine.Animation.OpenAnimatedMeshFromContent(new(lookModel));
+                try { look = engine.Animation.CreateAnimatedMeshAppearance(new(model)); }
+                catch { model.Dispose(); throw; }
+            }
+            else
+            {
+                // A look with no model yet keeps its object, never shown, so its motion still has an object to play on.
+                look = engine.Graphics.CreatePrimitive(new(PrimitiveGeometry.Cube, false, new Color(1F, 1F, 1F, 1F)));
+            }
         }
         catch { arms.Dispose(); throw; }
     }
@@ -116,7 +124,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     internal void AppendFacts(List<AppearanceFact> facts, bool shown)
     {
         (Vector3 at, Quaternion turn) = Place(holding ?? HeldPose.Rest);
-        facts.Add(new AppearanceFact(WeaponObject, false, 0, new Transform(at, turn, Vector3.One), look, shown, RenderLayer.Viewmodel));
+        facts.Add(new AppearanceFact(WeaponObject, false, 0, new Transform(at, turn, Vector3.One), look, shown && model is not null, RenderLayer.Viewmodel));
         arms.Lean = Vector3.Zero;
         var (main, off) = Aims();
         arms.Aim(main, off);
@@ -137,7 +145,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
         finally
         {
             look.Dispose();
-            model.Dispose();
+            model?.Dispose();
         }
     }
 

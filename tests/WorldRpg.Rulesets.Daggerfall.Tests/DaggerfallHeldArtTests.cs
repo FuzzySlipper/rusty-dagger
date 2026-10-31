@@ -50,9 +50,21 @@ public sealed class DaggerfallHeldArtTests
     [Fact]
     public void A_model_the_container_does_not_carry_is_refused_by_name()
     {
-        InvalidDataException refusal = Assert.Throws<InvalidDataException>(() => Read(Document(), withModels: false));
+        InvalidDataException refusal = Assert.Throws<InvalidDataException>(() => Read(Document(), models: []));
 
         Assert.Contains("'first-person/arms.glb' is not in first-person.rpak", refusal.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_look_with_no_model_is_read_without_one_in_the_container()
+    {
+        JsonObject document = Document();
+        document["look"]!["model"] = null;
+
+        DaggerfallHeldArt art = Read(document, models: ["first-person/arms.glb"]);
+
+        Assert.Null(art.Document.Look.Model);
+        Assert.Empty(art.Stance.Problems());
     }
 
     [Fact]
@@ -87,14 +99,13 @@ public sealed class DaggerfallHeldArtTests
     internal static JsonObject Document() =>
         JsonNode.Parse(File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content", DaggerfallHeldArt.DocumentPath)))!.AsObject();
 
-    // The definition read over a container that carries its models (or none).
-    internal static DaggerfallHeldArt Read(JsonObject document, bool withModels = true)
+    // The definition read over a container that carries the given models (by default the arms and a dagger).
+    internal static DaggerfallHeldArt Read(JsonObject document, string[]? models = null)
     {
         BundleContentFake service = new();
         service.Container(DaggerfallHeldArt.ContainerName);
-        if (withModels)
-            foreach (string model in new[] { "first-person/arms.glb", "first-person/dagger.glb" })
-                service.Add(DaggerfallHeldArt.ContainerName, model, [7]);
+        foreach (string model in models ?? ["first-person/arms.glb", "first-person/dagger.glb"])
+            service.Add(DaggerfallHeldArt.ContainerName, model, [7]);
         ProductContentBundle container = new ProductContent(Array.Empty<ProductContentFile>(), service).OpenContainer(DaggerfallHeldArt.ContainerName);
         return DaggerfallHeldArt.Read(container, System.Text.Encoding.UTF8.GetBytes(document.ToJsonString()));
     }
