@@ -10,6 +10,7 @@ header offset less the donor's paperDollOrigin (200, 8), in the classic 110x184 
                whole canvas lands in doll space and drift from the source shows as offset or overhang.
   - overlay:   the generated doll at half strength over the classic one, to judge registration by eye.
 
+A final with a sidecar JSON naming its doll-space "rect" is drawn there instead (dress.py writes these).
 A layer with no final is drawn classic in every column. The report (printed, and written as JSON beside the
 PNG) gives each layer's doll-space rect and its overlap with the source silhouette (IoU), which is the
 registration number to watch while generating.
@@ -96,6 +97,10 @@ def placed(layer, mode, size, occupancy):
     if mode == "classic" or layer.final is None:
         return native, (layer.x, layer.y, native.width, native.height)
     final = Image.open(layer.final).convert("RGBA")
+    stated = layer.final.with_suffix(".json")
+    if stated.exists():
+        # A final made in doll space (dress.py) states its own rect.
+        return final, tuple(json.load(open(stated))["rect"])
     # Invert run.py prepare: the source was scaled by `scale` and pasted at `at` on a size x size canvas.
     scale = max(1, int(size * occupancy / max(native.size)))
     at = ((size - native.width * scale) // 2, (size - native.height * scale) // 2)
@@ -163,8 +168,11 @@ def main():
     ap.add_argument("--scale", type=int, default=4, help="output pixels per doll unit")
     ap.add_argument("--size", type=int, default=1024, help="the generation canvas size in the spec")
     ap.add_argument("--occupancy", type=float, default=0.74, help="the spec's occupancy")
+    ap.add_argument("--worn", type=Path, help="worn finals directory (default gen-raw/worn)")
     ap.add_argument("--out", type=Path)
     a = ap.parse_args()
+    if a.worn:
+        FINALS["worn"] = a.worn
 
     out_dir = AUTHORING / "review" / "paper-doll"
     common = (a.scale, a.size, a.occupancy)
