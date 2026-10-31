@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds local/first-person.rpak: the models of the 3D first-person arms and dagger (scripts/fp-arms/README.md). The
+# Builds local/first-person.rpak: the model of the 3D first-person arms (scripts/fp-arms/README.md). The
 # held definition that draws them is authored content (content/worldrpg/first-person/daggerfall.held.json), not built.
 # Needs Blender 5, the rusty CLI and an asset-pipeline checkout (ASSET_PIPELINE, default ../asset-pipeline: its
 # fps-arms adopt tool with the PSX arms pack and the Daggerfall look).
@@ -15,8 +15,7 @@ stage=local/fp-arms/staging
 rm -rf "$stage"
 mkdir -p "$stage/first-person"
 blender -b --factory-startup --python "$pipeline/tools/fps-arms/adopt.py" -- --params "$pipeline/$look" --out local/fp-arms/arms.glb | grep '^ADOPT ' | cut -c1-120
-blender -b --factory-startup --python scripts/fp-arms/build-dagger.py -- local/fp-arms/dagger.glb | grep '^BUILT'
-cp local/fp-arms/arms.glb local/fp-arms/dagger.glb "$stage/first-person/"
+cp local/fp-arms/arms.glb "$stage/first-person/"
 python3 - "$pipeline" "$look" "$stage/first-person/arms-provenance.json" <<'PY'
 import hashlib, json, subprocess, sys
 pipeline, look, out = sys.argv[1:]

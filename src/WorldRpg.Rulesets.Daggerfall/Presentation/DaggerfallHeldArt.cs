@@ -12,14 +12,14 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// The 3D first-person art: the authored held definition in the product's content (<see cref="DocumentPath"/>) drawn
 /// with the models in the optional container installed beside the product (<see cref="ContainerName"/>): rigged arms
 /// and the held weapons that replace the classic weapon sprites when the viewmodel tuning asks for them. The container
-/// is built on the operator's machine by <c>scripts/fp-arms/build.sh</c> from asset-pipeline's generated arms and the
-/// procedural dagger. The definition's look and motion were seeded from a capture of the classic weapon animations
+/// is built on the operator's machine by <c>scripts/fp-arms/build.sh</c> from asset-pipeline's adopted arms. The
+/// definition's look and motion were seeded from a capture of the classic weapon animations
 /// (<c>scripts/fp-arms/seed.py</c>) and are tuned in the developer workbench, which saves back to it.
 /// </summary>
 /// <remarks>
 /// The definition names the classic weapon visuals its look replaces, the arms rig and the Engine's held arms, the look
-/// (its model, the stance that seats it at rest, and where and how the hand holds it), and its held motion, whose
-/// tracks are keyed by the classic strike action ids. Its models are container paths. A definition that names what
+/// (its model, if it has one yet, the stance that seats it at rest, and where and how the hand holds it), and its held
+/// motion, whose tracks are keyed by the classic strike action ids. Its models are container paths. A definition that names what
 /// cannot be drawn is refused by file and field rather than drawn wrong. Its records are the Engine's tunable
 /// first-person records, so edits to the loaded art show on the next draw.
 /// </remarks>
@@ -77,7 +77,7 @@ internal sealed class DaggerfallHeldArt
         if (document.Weapons.Count == 0) problems.Add("weapons: names no classic weapon visual to replace.");
         foreach (string action in document.Motion.Tracks.Keys.Where(action => !NormalizedClassicWeapon.StrikeActions.Contains(action)))
             problems.Add($"motion.tracks.{action}: is not a classic strike action ({string.Join(", ", NormalizedClassicWeapon.StrikeActions)}).");
-        foreach (string model in new[] { document.Rig.Model, document.Look.Model }.Where(model => !container.Entries.ToArray().Any(entry => entry.Path == model)))
+        foreach (string model in new[] { document.Rig.Model, document.Look.Model }.OfType<string>().Where(model => !container.Entries.ToArray().Any(entry => entry.Path == model)))
             problems.Add($"'{model}' is not in {ContainerName}.");
         return problems.Count == 0
             ? new DaggerfallHeldArt(container, document)
@@ -95,10 +95,11 @@ internal sealed record DaggerfallHeldArtDocument(IReadOnlyList<string> Weapons, 
 
 /// <summary>
 /// A held weapon: its model (a container path, already in look space: origin at the grip, length along -Z,
-/// up side +Y), the stance that seats it at rest, the point the hand holds (look space) and how the hand is
-/// turned on it (<see cref="HandAim.Hold"/>, degrees). The grip and hold are tuned in place.
+/// up side +Y; null while the weapon has none, when the hand holds and swings the look's place empty), the stance
+/// that seats it at rest, the point the hand holds (look space) and how the hand is turned on it
+/// (<see cref="HandAim.Hold"/>, degrees). The grip and hold are tuned in place.
 /// </summary>
-internal sealed record DaggerfallHeldLook(string Model, HeldStance Stance, Vector3 Grip, Vector3 Hold)
+internal sealed record DaggerfallHeldLook(string? Model, HeldStance Stance, Vector3 Grip, Vector3 Hold)
 {
     public Vector3 Grip { get; set; } = Grip;
     public Vector3 Hold { get; set; } = Hold;
