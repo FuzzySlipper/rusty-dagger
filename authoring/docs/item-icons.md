@@ -15,7 +15,7 @@ denoise 0.35, then broad back-projection at 0.5 (`bp-broad-half`)**, then a tran
 | `authoring/review/` | Generated review pages (`index.html` for items, `<area>/index.html` for the others), `*-ledger.csv`, thumbnails | ignored |
 | `authoring/specs/<area>/` | Contract specs, one pair per batch (`items-icons-NAME.json` for items, `<area>-NAME.json` otherwise, each with `-retro.json`), and `templates/` per art type | tracked |
 | `authoring/ledger/<area>-notes.json` | The only hand-edited tracking input: status and notes per image key | tracked |
-| `authoring/tools/items/` | Batch runner, spec scaffolder, post-process, finalize, flame compositing, ledger builder, paper-doll preview, proportion check, dress-on-body worn items, shared body shapes, head trimming | tracked |
+| `authoring/tools/items/` | Batch runner, spec scaffolder, post-process, finalize, flame compositing, ledger builder, paper-doll preview, proportion check, dress-on-body worn items, shared body shapes, head trimming, shared skin | tracked |
 
 `local/` no longer holds any of this. The generic ComfyUI generator (`tools/lora-training/generate.py`),
 the LAN environment script and `asset-resources` stay in the asset-pipeline checkout (`ASSET_PIPELINE`,
@@ -78,7 +78,7 @@ stays open), and the edge is softened and decontaminated.
   - A spec lists each item with what it is (`name`, with its material where the classic pixels are ambiguous), and optionally `reach`, `head` (dress it over head `--face`: helms) and `behind` (drawn behind the body: cloak linings). `--item KEY --name WHAT` does the same for a few items.
   - `--each` paints every item alone on the bare body, so the layers combine freely. Without it each item goes on over the last, as one outfit.
   - `--source` reads the dye-neutral clothing sources first, so cloth is painted pale grey for the game's tint.
-  - Each painted piece is lifted back off through a Qwen green isolation. An isolation that keeps too little or too much of the piece, or a translucent green ghost of it, is retried with the next seed. When every seed fails, the piece is keyed against the figure beneath, which holds for pale cloth on skin. Look at the isolations anyway.
+  - Each painted piece is lifted back off through a Qwen isolation on flat green. An isolation that keeps too little or too much of the piece, or a translucent ghost of it, is retried with the next seed, then on flat blue (brown and tan pieces such as trousers survive blue when Qwen erases them on green). When every isolation fails, the piece is keyed against the figure beneath, which holds for pale cloth and dark linings (the cloaks) but leaves holes in skin-coloured pieces. Look at the isolations anyway.
   - Dress on bodies that pass `landmarks.py check`. On a body whose feet reach past the classic boots, Qwen paints open-toed sabatons around the bare toes.
 - `tools/items/landmarks.py standard` measures Daggerfall's paper-doll proportions from the classic sprites into the tracked `specs/paper-doll/proportions.json`. For each body it records the top, shoulder line and width, crotch, soles and toe tips. For each head record it records the crown, bottom and sides, all in doll units. `landmarks.py check [--paper-doll DIR ...]` measures the generated bodies and heads the same way. It fails any landmark, or any outline band (neck and shoulders, arms and torso, hips and thighs, shins, feet), that lies more than two doll units from its classic. Every doll layer is drawn to these proportions, so run the check on bodies and heads before dressing or promoting them.
 - `tools/items/bodies.py OUT` rebuilds the generated bodies so that every race of a morph shares one shape on Daggerfall's proportions, as the classic bodies do. There is one base per morph and gender: Breton for human, Dark Elf for elf.
@@ -87,6 +87,10 @@ stays open), and the edge is softened and decontaminated.
   - Every I1 is its I0 with the classic underwear painted on by Qwen. The stray pixels where classic I1 and I0 also differ are left out.
   - Each final carries a sidecar with the base's doll-space rect. Worn items dressed on the base (`dress.py --paper-doll`) then fit every race of the morph.
 - `tools/items/heads.py OUT` trims each generated head to its classic silhouette grown by a doll unit, so a head carries no more neck or hair than Daggerfall's. A head smaller than its classic one can't be fixed by trimming and needs regenerating.
+- `tools/items/skin.py OUT` gives each race's generated heads the skin of its generated body, as Daggerfall's shared palette ramp does.
+  - The skin is the classic head's pixels in the body's colours, kept where the generated colour is close to that region's core tone, so hair is left out.
+  - Each skin pixel keeps its shading and local hue offset (blush, lips), takes the body's colour at its lightness, and has its lightness moved so the head's mean skin lightness matches the body's.
+  - Hair, eyes, paint and headgear keep their colours. Run it after `heads.py` and before a doll preview.
 - `doll_preview.py` and `landmarks.py` take `--paper-doll` (and `doll_preview.py` takes `--worn`) more than once; the first directory holding a final wins.
 
 ## Review ledger
