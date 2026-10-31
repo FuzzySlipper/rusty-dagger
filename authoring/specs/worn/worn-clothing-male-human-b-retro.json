@@ -1,0 +1,463 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy RPG equipment illustration, opaque gouache-like colour modelling, broad painted planes, believable cloth folds and metal planes, sparse dry-brush marks, selective dark accents along occluding contours. Slightly irregular handmade edges, original local colours; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy RPG equipment art. Keep the source's silhouette, the parts of the body it covers, its pose and its local colours: do not tint every material brown. Draw only the garment or armour piece itself, as worn on an invisible, headless body: no skin, no body, head, hands or feet unless the source clearly shows them. No weapon, text, border, scenery, shadow or second figure.",
+  "presentation": "One isolated garment on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the garment. The whole garment visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Worn clothing, male human B / Qwen then retro",
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "worn",
+      "model": "krea2-turbo",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ],
+  "task": "Task: Redraw a very small classic fantasy RPG worn-equipment paper-doll layer as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+  "items": [
+    {
+      "id": "short-shirt-056",
+      "directory": "mens-clothing/item-166-short-shirt",
+      "image": "player/male-human/variant-01/texture-241-record-056-frame-000-source.png",
+      "content": "One short-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 0.69:1. It includes a brown leather belt with a small gold buckle. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "short-shirt-056 (53x77)"
+    },
+    {
+      "id": "short-shirt-057",
+      "directory": "mens-clothing/item-166-short-shirt",
+      "image": "player/male-human/variant-02/texture-241-record-057-frame-000-source.png",
+      "content": "One short-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 1.08:1. It includes a green leather vest laced over it and a brown leather belt with a small gold buckle. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "short-shirt-057 (53x49)"
+    },
+    {
+      "id": "short-shirt-058",
+      "directory": "mens-clothing/item-166-short-shirt",
+      "image": "player/male-human/variant-03/texture-241-record-058-frame-000-source.png",
+      "content": "One short-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 0.69:1. It includes a green leather vest laced over it and a brown leather belt with a small gold buckle. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "short-shirt-058 (53x77)"
+    },
+    {
+      "id": "short-shirt-059",
+      "directory": "mens-clothing/item-166-short-shirt",
+      "image": "player/male-human/variant-04/texture-241-record-059-frame-000-source.png",
+      "content": "One short-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 1.06:1. It includes a red cloth sash wrapped at the waist. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "short-shirt-059 (53x50)"
+    },
+    {
+      "id": "short-shirt-060",
+      "directory": "mens-clothing/item-166-short-shirt",
+      "image": "player/male-human/variant-05/texture-241-record-060-frame-000-source.png",
+      "content": "One short-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 0.69:1. It includes a red cloth sash wrapped at the waist. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "short-shirt-060 (53x77)"
+    },
+    {
+      "id": "short-shirt-061",
+      "directory": "mens-clothing/item-166-short-shirt",
+      "image": "player/male-human/variant-06/texture-241-record-061-frame-000-source.png",
+      "content": "One short-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 1.06:1. It includes a green leather vest laced over it and a red cloth sash wrapped at the waist. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "short-shirt-061 (53x50)"
+    },
+    {
+      "id": "long-shirt-063",
+      "directory": "mens-clothing/item-167-long-shirt",
+      "image": "player/male-human/variant-00/texture-241-record-063-frame-000-source.png",
+      "content": "One long-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 1.10:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "long-shirt-063 (66x60)"
+    },
+    {
+      "id": "long-shirt-064",
+      "directory": "mens-clothing/item-167-long-shirt",
+      "image": "player/male-human/variant-01/texture-241-record-064-frame-000-source.png",
+      "content": "One long-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 0.89:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "long-shirt-064 (66x74)"
+    },
+    {
+      "id": "long-shirt-065",
+      "directory": "mens-clothing/item-167-long-shirt",
+      "image": "player/male-human/variant-02/texture-241-record-065-frame-000-source.png",
+      "content": "One long-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 1.08:1. It includes a green leather vest laced over it. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "long-shirt-065 (66x61)"
+    },
+    {
+      "id": "long-shirt-066",
+      "directory": "mens-clothing/item-167-long-shirt",
+      "image": "player/male-human/variant-03/texture-241-record-066-frame-000-source.png",
+      "content": "One long-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 0.89:1. It includes a green leather vest laced over it. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "long-shirt-066 (66x74)"
+    },
+    {
+      "id": "long-shirt-067",
+      "directory": "mens-clothing/item-167-long-shirt",
+      "image": "player/male-human/variant-04/texture-241-record-067-frame-000-source.png",
+      "content": "One long-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 1.10:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "long-shirt-067 (66x60)"
+    },
+    {
+      "id": "long-shirt-068",
+      "directory": "mens-clothing/item-168-long-shirt",
+      "image": "player/male-human/variant-00/texture-241-record-068-frame-000-source.png",
+      "content": "One long-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 1.10:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "long-shirt-068 (66x60)"
+    },
+    {
+      "id": "long-shirt-069",
+      "directory": "mens-clothing/item-168-long-shirt",
+      "image": "player/male-human/variant-01/texture-241-record-069-frame-000-source.png",
+      "content": "One long-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 0.85:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "long-shirt-069 (66x78)"
+    },
+    {
+      "id": "long-shirt-070",
+      "directory": "mens-clothing/item-168-long-shirt",
+      "image": "player/male-human/variant-02/texture-241-record-070-frame-000-source.png",
+      "content": "One long-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 1.08:1. It includes a green leather vest laced over it. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "long-shirt-070 (66x61)"
+    },
+    {
+      "id": "long-shirt-071",
+      "directory": "mens-clothing/item-168-long-shirt",
+      "image": "player/male-human/variant-03/texture-241-record-071-frame-000-source.png",
+      "content": "One long-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 0.84:1. It includes a green leather vest laced over it. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "long-shirt-071 (66x79)"
+    },
+    {
+      "id": "short-shirt-076",
+      "directory": "mens-clothing/item-169-short-shirt",
+      "image": "player/male-human/variant-00/texture-241-record-076-frame-000-source.png",
+      "content": "One short-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 1.12:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "short-shirt-076 (54x48)"
+    },
+    {
+      "id": "short-shirt-077",
+      "directory": "mens-clothing/item-169-short-shirt",
+      "image": "player/male-human/variant-01/texture-241-record-077-frame-000-source.png",
+      "content": "One short-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 0.70:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "short-shirt-077 (54x77)"
+    },
+    {
+      "id": "short-shirt-078",
+      "directory": "mens-clothing/item-169-short-shirt",
+      "image": "player/male-human/variant-02/texture-241-record-078-frame-000-source.png",
+      "content": "One short-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 1.12:1. It includes a green leather vest laced over it. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "short-shirt-078 (54x48)"
+    },
+    {
+      "id": "short-shirt-079",
+      "directory": "mens-clothing/item-169-short-shirt",
+      "image": "player/male-human/variant-03/texture-241-record-079-frame-000-source.png",
+      "content": "One short-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 0.70:1. It includes a green leather vest laced over it. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "short-shirt-079 (54x77)"
+    },
+    {
+      "id": "short-shirt-080",
+      "directory": "mens-clothing/item-170-short-shirt",
+      "image": "player/male-human/variant-00/texture-241-record-080-frame-000-source.png",
+      "content": "One short-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 1.06:1. It includes a brown leather belt with a small gold buckle. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "short-shirt-080 (54x51)"
+    },
+    {
+      "id": "short-shirt-081",
+      "directory": "mens-clothing/item-170-short-shirt",
+      "image": "player/male-human/variant-01/texture-241-record-081-frame-000-source.png",
+      "content": "One short-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 0.69:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "short-shirt-081 (54x78)"
+    },
+    {
+      "id": "short-shirt-082",
+      "directory": "mens-clothing/item-170-short-shirt",
+      "image": "player/male-human/variant-02/texture-241-record-082-frame-000-source.png",
+      "content": "One short-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 1.06:1. It includes a green leather vest laced over it and a brown leather belt with a small gold buckle. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "short-shirt-082 (54x51)"
+    },
+    {
+      "id": "short-shirt-083",
+      "directory": "mens-clothing/item-170-short-shirt",
+      "image": "player/male-human/variant-03/texture-241-record-083-frame-000-source.png",
+      "content": "One short-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 0.69:1. It includes a green leather vest laced over it. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "short-shirt-083 (54x78)"
+    },
+    {
+      "id": "short-shirt-084",
+      "directory": "mens-clothing/item-170-short-shirt",
+      "image": "player/male-human/variant-04/texture-241-record-084-frame-000-source.png",
+      "content": "One short-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 1.06:1. It includes a red cloth sash wrapped at the waist. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "short-shirt-084 (54x51)"
+    },
+    {
+      "id": "short-shirt-085",
+      "directory": "mens-clothing/item-170-short-shirt",
+      "image": "player/male-human/variant-05/texture-241-record-085-frame-000-source.png",
+      "content": "One short-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 0.69:1. It includes a red cloth sash wrapped at the waist. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "short-shirt-085 (54x78)"
+    },
+    {
+      "id": "short-shirt-086",
+      "directory": "mens-clothing/item-170-short-shirt",
+      "image": "player/male-human/variant-06/texture-241-record-086-frame-000-source.png",
+      "content": "One short-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 1.06:1. It includes a green leather vest laced over it and a red cloth sash wrapped at the waist. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "short-shirt-086 (54x51)"
+    },
+    {
+      "id": "short-shirt-087",
+      "directory": "mens-clothing/item-170-short-shirt",
+      "image": "player/male-human/variant-07/texture-241-record-087-frame-000-source.png",
+      "content": "One short-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 0.69:1. It includes a green leather vest laced over it and a red cloth sash wrapped at the waist. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "short-shirt-087 (54x78)"
+    },
+    {
+      "id": "long-shirt-088",
+      "directory": "mens-clothing/item-171-long-shirt",
+      "image": "player/male-human/variant-00/texture-241-record-088-frame-000-source.png",
+      "content": "One long-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 1.07:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "long-shirt-088 (65x61)"
+    },
+    {
+      "id": "long-shirt-089",
+      "directory": "mens-clothing/item-171-long-shirt",
+      "image": "player/male-human/variant-01/texture-241-record-089-frame-000-source.png",
+      "content": "One long-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 0.84:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "long-shirt-089 (65x77)"
+    },
+    {
+      "id": "long-shirt-090",
+      "directory": "mens-clothing/item-171-long-shirt",
+      "image": "player/male-human/variant-02/texture-241-record-090-frame-000-source.png",
+      "content": "One long-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 1.07:1. It includes a green leather vest laced over it. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "long-shirt-090 (65x61)"
+    },
+    {
+      "id": "long-shirt-091",
+      "directory": "mens-clothing/item-171-long-shirt",
+      "image": "player/male-human/variant-03/texture-241-record-091-frame-000-source.png",
+      "content": "One long-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 0.84:1. It includes a green leather vest laced over it. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "long-shirt-091 (65x77)"
+    },
+    {
+      "id": "long-shirt-092",
+      "directory": "mens-clothing/item-172-long-shirt",
+      "image": "player/male-human/variant-00/texture-241-record-092-frame-000-source.png",
+      "content": "One long-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 1.07:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "long-shirt-092 (65x61)"
+    },
+    {
+      "id": "long-shirt-093",
+      "directory": "mens-clothing/item-172-long-shirt",
+      "image": "player/male-human/variant-01/texture-241-record-093-frame-000-source.png",
+      "content": "One long-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 0.83:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "long-shirt-093 (65x78)"
+    },
+    {
+      "id": "long-shirt-094",
+      "directory": "mens-clothing/item-172-long-shirt",
+      "image": "player/male-human/variant-02/texture-241-record-094-frame-000-source.png",
+      "content": "One long-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 1.07:1. It includes a green leather vest laced over it. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "long-shirt-094 (65x61)"
+    },
+    {
+      "id": "long-shirt-095",
+      "directory": "mens-clothing/item-172-long-shirt",
+      "image": "player/male-human/variant-03/texture-241-record-095-frame-000-source.png",
+      "content": "One long-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 0.83:1. It includes a green leather vest laced over it. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "long-shirt-095 (65x78)"
+    },
+    {
+      "id": "open-tunic-100",
+      "directory": "mens-clothing/item-173-open-tunic",
+      "image": "player/male-human/base/texture-241-record-100-frame-000-source.png",
+      "content": "One open-fronted sleeved tunic with white stripes at the collar, seen from the front exactly as drawn in the input, aspect about 1.16:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "open-tunic-100 (64x55)"
+    },
+    {
+      "id": "wrap-101",
+      "directory": "mens-clothing/item-174-wrap",
+      "image": "player/male-human/base/texture-241-record-101-frame-000-source.png",
+      "content": "One cloth wrap with a woven pattern and a red edging, seen from the front exactly as drawn in the input, aspect about 0.91:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "wrap-101 (41x45)"
+    },
+    {
+      "id": "long-skirt-102",
+      "directory": "mens-clothing/item-175-long-skirt",
+      "image": "player/male-human/variant-00/texture-241-record-102-frame-000-source.png",
+      "content": "One long cloth skirt with a leather belt and a gold buckle at the top, seen from the front exactly as drawn in the input, aspect about 0.62:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "long-skirt-102 (40x64)"
+    },
+    {
+      "id": "long-skirt-103",
+      "directory": "mens-clothing/item-175-long-skirt",
+      "image": "player/male-human/variant-01/texture-241-record-103-frame-000-source.png",
+      "content": "One long cloth skirt with a leather belt and a gold buckle at the top, seen from the front exactly as drawn in the input, aspect about 0.55:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "long-skirt-103 (36x65)"
+    },
+    {
+      "id": "anticlere-surcoat-104",
+      "directory": "mens-clothing/item-176-anticlere-surcoat",
+      "image": "player/male-human/base/texture-241-record-104-frame-000-source.png",
+      "content": "One sleeved surcoat with a green front panel, grey sleeves and a leather belt with a gold buckle, seen from the front exactly as drawn in the input, aspect about 1.05:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "anticlere-surcoat-104 (65x62)"
+    },
+    {
+      "id": "challenger-straps-105",
+      "directory": "mens-clothing/item-177-challenger-straps",
+      "image": "player/male-human/base/texture-241-record-105-frame-000-source.png",
+      "content": "One harness of crossing leather straps with a broad leather belt and a gold buckle, seen from the front exactly as drawn in the input, aspect about 0.71:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "challenger-straps-105 (34x48)"
+    },
+    {
+      "id": "short-shirt-106",
+      "directory": "mens-clothing/item-178-short-shirt",
+      "image": "player/male-human/variant-00/texture-241-record-106-frame-000-source.png",
+      "content": "One short-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 0.85:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "short-shirt-106 (53x62)"
+    },
+    {
+      "id": "short-shirt-107",
+      "directory": "mens-clothing/item-178-short-shirt",
+      "image": "player/male-human/variant-01/texture-241-record-107-frame-000-source.png",
+      "content": "One short-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 0.87:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "short-shirt-107 (53x61)"
+    },
+    {
+      "id": "long-shirt-108",
+      "directory": "mens-clothing/item-179-long-shirt",
+      "image": "player/male-human/base/texture-241-record-108-frame-000-source.png",
+      "content": "One long-sleeved cloth shirt, seen from the front exactly as drawn in the input, aspect about 1.05:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "long-shirt-108 (65x62)"
+    },
+    {
+      "id": "vest-109",
+      "directory": "mens-clothing/item-180-vest",
+      "image": "player/male-human/base/texture-241-record-109-frame-000-source.png",
+      "content": "One black leather vest laced up the front with gold cords, seen from the front exactly as drawn in the input, aspect about 0.83:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "vest-109 (34x41)"
+    },
+    {
+      "id": "champion-straps-110",
+      "directory": "mens-clothing/item-181-champion-straps",
+      "image": "player/male-human/base/texture-241-record-110-frame-000-source.png",
+      "content": "One harness of crossing leather straps with a broad leather belt and a gold buckle, seen from the front exactly as drawn in the input, aspect about 0.69:1. Preserve the silhouette, the parts of the body it covers, the folds and the local colours of the input. No body, skin, head, hands, feet, text or crest.",
+      "uncertainty": "This is one worn-equipment layer of the male human paper doll, drawn to sit on the headless body; the body itself is a separate layer and is not drawn here. The source is drawn in a neutral pale-grey dye base that the game tints, so keep plain cloth pale grey or white and keep any separate coloured parts (belts, vests, sashes, trim) in the colour shown.",
+      "invention": "Resolve cloth weave, folds, stitching, leather grain and metal highlights.",
+      "name": "champion-straps-110 (33x48)"
+    }
+  ]
+}

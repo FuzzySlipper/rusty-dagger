@@ -1,0 +1,301 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy RPG equipment illustration, opaque gouache-like colour modelling, broad painted planes, believable cloth folds and metal planes, sparse dry-brush marks, selective dark accents along occluding contours. Slightly irregular handmade edges, original local colours; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy RPG weapon art. Keep the source's silhouette, its orientation, its pose, the arrangement of its parts and its local colours: do not tint every material brown. Draw only the weapon itself, as held by an invisible hand: no hand, arm, body, glove or sleeve. No text, border, scenery, shadow or second figure.",
+  "presentation": "One isolated weapon on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the weapon. The whole weapon visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Worn weapons, shared / Qwen then retro",
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "worn",
+      "model": "krea2-turbo",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ],
+  "task": "Task: Redraw a very small classic fantasy RPG held-weapon paper-doll layer as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+  "items": [
+    {
+      "id": "battle-axe-000",
+      "directory": "weapons/item-127-battle-axe",
+      "image": "player/shared/left-hand/texture-234-record-000-frame-000-source.png",
+      "content": "One battle axe exactly as drawn in the input, a broad double-bit steel axe head on a brown wooden haft. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "battle-axe-000 (47x43)"
+    },
+    {
+      "id": "battle-axe-001",
+      "directory": "weapons/item-127-battle-axe",
+      "image": "player/shared/right-hand/texture-234-record-001-frame-000-source.png",
+      "content": "One battle axe exactly as drawn in the input, a broad double-bit steel axe head on a brown wooden haft. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "battle-axe-001 (47x43)"
+    },
+    {
+      "id": "broadsword-002",
+      "directory": "weapons/item-118-broadsword",
+      "image": "player/shared/left-hand/texture-234-record-002-frame-000-source.png",
+      "content": "One broadsword exactly as drawn in the input, a straight steel blade with a gold cross-guard, and a brown wrapped grip with a gold pommel. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "broadsword-002 (98x44)"
+    },
+    {
+      "id": "broadsword-003",
+      "directory": "weapons/item-118-broadsword",
+      "image": "player/shared/right-hand/texture-234-record-003-frame-000-source.png",
+      "content": "One broadsword exactly as drawn in the input, a straight steel blade with a gold cross-guard, and a brown wrapped grip with a gold pommel. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "broadsword-003 (72x99)"
+    },
+    {
+      "id": "claymore-004",
+      "directory": "weapons/item-122-claymore",
+      "image": "player/shared/base/texture-234-record-004-frame-000-source.png",
+      "content": "One claymore exactly as drawn in the input, a long straight two-handed steel blade with a gold cross-guard and a brown wrapped grip. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "claymore-004 (81x114)"
+    },
+    {
+      "id": "dagger-005",
+      "directory": "weapons/item-113-dagger",
+      "image": "player/shared/left-hand/texture-234-record-005-frame-000-source.png",
+      "content": "One dagger exactly as drawn in the input, a short straight steel blade with a gold guard and a brown wrapped grip. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "dagger-005 (56x17)"
+    },
+    {
+      "id": "dagger-006",
+      "directory": "weapons/item-113-dagger",
+      "image": "player/shared/right-hand/texture-234-record-006-frame-000-source.png",
+      "content": "One dagger exactly as drawn in the input, a short straight steel blade with a gold guard and a brown wrapped grip. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "dagger-006 (36x45)"
+    },
+    {
+      "id": "dai-katana-007",
+      "directory": "weapons/item-123-dai-katana",
+      "image": "player/shared/base/texture-234-record-007-frame-000-source.png",
+      "content": "One dai-katana exactly as drawn in the input, a long slightly curved steel blade with a flat gold guard and a brown wrapped grip. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "dai-katana-007 (80x107)"
+    },
+    {
+      "id": "flail-008",
+      "directory": "weapons/item-125-flail",
+      "image": "player/shared/base/texture-234-record-008-frame-000-source.png",
+      "content": "One flail exactly as drawn in the input, a brown wooden handle joined by a chain to a spiked grey steel ball. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "flail-008 (107x91)"
+    },
+    {
+      "id": "katana-009",
+      "directory": "weapons/item-121-katana",
+      "image": "player/shared/left-hand/texture-234-record-009-frame-000-source.png",
+      "content": "One katana exactly as drawn in the input, a slightly curved steel blade with a flat gold guard and a brown wrapped grip. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "katana-009 (95x7)"
+    },
+    {
+      "id": "katana-010",
+      "directory": "weapons/item-121-katana",
+      "image": "player/shared/right-hand/texture-234-record-010-frame-000-source.png",
+      "content": "One katana exactly as drawn in the input, a slightly curved steel blade with a flat gold guard and a brown wrapped grip. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "katana-010 (37x30)"
+    },
+    {
+      "id": "long-bow-011",
+      "directory": "weapons/item-130-long-bow",
+      "image": "player/shared/base/texture-234-record-011-frame-000-source.png",
+      "content": "One long bow exactly as drawn in the input, a long brown wooden bow with a thin bowstring. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "long-bow-011 (112x71)"
+    },
+    {
+      "id": "longsword-012",
+      "directory": "weapons/item-120-longsword",
+      "image": "player/shared/left-hand/texture-234-record-012-frame-000-source.png",
+      "content": "One longsword exactly as drawn in the input, a straight steel blade with a gold cross-guard and a brown wrapped grip with a gold pommel. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "longsword-012 (88x29)"
+    },
+    {
+      "id": "longsword-013",
+      "directory": "weapons/item-120-longsword",
+      "image": "player/shared/right-hand/texture-234-record-013-frame-000-source.png",
+      "content": "One longsword exactly as drawn in the input, a straight steel blade with a gold cross-guard and a brown wrapped grip with a gold pommel. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "longsword-013 (56x78)"
+    },
+    {
+      "id": "mace-014",
+      "directory": "weapons/item-124-mace",
+      "image": "player/shared/left-hand/texture-234-record-014-frame-000-source.png",
+      "content": "One mace exactly as drawn in the input, a brown wooden shaft with a studded grey steel flanged head. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "mace-014 (82x27)"
+    },
+    {
+      "id": "mace-015",
+      "directory": "weapons/item-124-mace",
+      "image": "player/shared/right-hand/texture-234-record-015-frame-000-source.png",
+      "content": "One mace exactly as drawn in the input, a brown wooden shaft with a studded grey steel flanged head. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "mace-015 (55x68)"
+    },
+    {
+      "id": "short-bow-016",
+      "directory": "weapons/item-129-short-bow",
+      "image": "player/shared/base/texture-234-record-016-frame-000-source.png",
+      "content": "One short bow exactly as drawn in the input, a short brown wooden bow with a thin bowstring. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "short-bow-016 (86x47)"
+    },
+    {
+      "id": "saber-017",
+      "directory": "weapons/item-119-saber",
+      "image": "player/shared/left-hand/texture-234-record-017-frame-000-source.png",
+      "content": "One saber exactly as drawn in the input, a curved steel blade with a gold hilt and hand guard. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "saber-017 (84x22)"
+    },
+    {
+      "id": "saber-018",
+      "directory": "weapons/item-119-saber",
+      "image": "player/shared/right-hand/texture-234-record-018-frame-000-source.png",
+      "content": "One saber exactly as drawn in the input, a curved steel blade with a gold hilt and hand guard. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "saber-018 (60x78)"
+    },
+    {
+      "id": "shortsword-019",
+      "directory": "weapons/item-116-shortsword",
+      "image": "player/shared/left-hand/texture-234-record-019-frame-000-source.png",
+      "content": "One shortsword exactly as drawn in the input, a short straight steel blade with a gold guard and a brown wrapped grip. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "shortsword-019 (75x20)"
+    },
+    {
+      "id": "shortsword-020",
+      "directory": "weapons/item-116-shortsword",
+      "image": "player/shared/right-hand/texture-234-record-020-frame-000-source.png",
+      "content": "One shortsword exactly as drawn in the input, a short straight steel blade with a gold guard and a brown wrapped grip. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "shortsword-020 (38x49)"
+    },
+    {
+      "id": "staff-021",
+      "directory": "weapons/item-115-staff",
+      "image": "player/shared/base/texture-234-record-021-frame-000-source.png",
+      "content": "One staff exactly as drawn in the input, a long straight brown wooden staff. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "staff-021 (102x141)"
+    },
+    {
+      "id": "tanto-022",
+      "directory": "weapons/item-114-tanto",
+      "image": "player/shared/left-hand/texture-234-record-022-frame-000-source.png",
+      "content": "One tanto exactly as drawn in the input, a short broad steel blade with a gold guard. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "tanto-022 (27x8)"
+    },
+    {
+      "id": "tanto-023",
+      "directory": "weapons/item-114-tanto",
+      "image": "player/shared/right-hand/texture-234-record-023-frame-000-source.png",
+      "content": "One tanto exactly as drawn in the input, a short broad steel blade with a gold guard. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "tanto-023 (18x24)"
+    },
+    {
+      "id": "war-axe-024",
+      "directory": "weapons/item-128-war-axe",
+      "image": "player/shared/base/texture-234-record-024-frame-000-source.png",
+      "content": "One war axe exactly as drawn in the input, a single-bit steel axe head on a long brown wooden haft. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "war-axe-024 (112x41)"
+    },
+    {
+      "id": "warhammer-025",
+      "directory": "weapons/item-126-warhammer",
+      "image": "player/shared/base/texture-234-record-025-frame-000-source.png",
+      "content": "One warhammer exactly as drawn in the input, a long brown wooden shaft with a grey steel hammer head and a spike. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "warhammer-025 (111x40)"
+    },
+    {
+      "id": "wakizashi-026",
+      "directory": "weapons/item-117-wakizashi",
+      "image": "player/shared/left-hand/texture-234-record-026-frame-000-source.png",
+      "content": "One wakizashi exactly as drawn in the input, a medium slightly curved steel blade with a flat gold guard and a brown wrapped grip. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "wakizashi-026 (56x14)"
+    },
+    {
+      "id": "wakizashi-027",
+      "directory": "weapons/item-117-wakizashi",
+      "image": "player/shared/right-hand/texture-234-record-027-frame-000-source.png",
+      "content": "One wakizashi exactly as drawn in the input, a medium slightly curved steel blade with a flat gold guard and a brown wrapped grip. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, such as a blade and a separate grip or pommel, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+      "uncertainty": "This is one held-weapon layer of the paper doll, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small and the weapon is shown at an angle, so only what the pixels show is reconstructed.",
+      "invention": "Resolve metal highlights, edge bevels, leather wrapping, wood grain and rivets.",
+      "name": "wakizashi-027 (27x44)"
+    }
+  ]
+}
