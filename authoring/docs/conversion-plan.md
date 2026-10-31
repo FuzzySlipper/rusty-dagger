@@ -90,6 +90,12 @@ All four pilots ran with the unchanged recipe and read well.
 | v3 | 25 / 8 | 768 | 665 s | shapes drift (greaves, pauldron gaps) |
 | v4 | 12 / 5 | 768 | 451 s | shapes drift |
 
+The owner's RTX 5090 (`--host den-5090`, no resource wrapper; the LoRA there is
+`Retro_Dark_Fantasy_Illustration_krea2_3352765_epoch_8`) ran the same 6 pieces at 10 / 5 in
+75 s (37 s Qwen, 38 s retro), about 10x faster than den-nimo's 759 s, with output
+indistinguishable from the nimo runs. It is the owner's on-demand machine, so ask before
+queueing long batches there.
+
 Steps can drop to 10 / 5 at 1024 without a visible loss; a 768 canvas changes
 the construction of the piece, so it is not used. Remaining worn batches use
 10 / 5 (`routes[].steps` in the spec).
