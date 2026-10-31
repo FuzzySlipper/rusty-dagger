@@ -1,0 +1,1287 @@
+{
+ "tolerance": 2.0,
+ "bodies": {
+  "body00": {
+   "top": 33.0,
+   "shoulders": 56.8,
+   "shoulder width": 49.0,
+   "crotch": 105.2,
+   "sole left": 171.0,
+   "sole right": 178.0,
+   "toe left": 30.0,
+   "toe right": 91.0,
+   "centre": 55.8,
+   "crown": 9.0,
+   "head bottom": 36.0,
+   "head left": 46.0,
+   "head right": 66.0,
+   "heads tall": 6.26,
+   "crotch fraction": 0.569,
+   "shoulders in heads": 1.81
+  },
+  "body01": {
+   "top": 34.0,
+   "shoulders": 57.5,
+   "shoulder width": 49.0,
+   "crotch": 105.8,
+   "sole left": 171.0,
+   "sole right": 178.0,
+   "toe left": 30.0,
+   "toe right": 91.0,
+   "centre": 55.5,
+   "crown": 11.0,
+   "head bottom": 37.0,
+   "head left": 46.0,
+   "head right": 65.0,
+   "heads tall": 6.42,
+   "crotch fraction": 0.568,
+   "shoulders in heads": 1.88
+  },
+  "body02": {
+   "top": 30.0,
+   "shoulders": 54.2,
+   "shoulder width": 48.0,
+   "crotch": 104.0,
+   "sole left": 171.0,
+   "sole right": 178.0,
+   "toe left": 30.0,
+   "toe right": 91.0,
+   "centre": 56.0,
+   "crown": 10.0,
+   "head bottom": 38.0,
+   "head left": 44.0,
+   "head right": 68.0,
+   "heads tall": 6.0,
+   "crotch fraction": 0.56,
+   "shoulders in heads": 1.71
+  },
+  "body03": {
+   "top": 34.0,
+   "shoulders": 57.5,
+   "shoulder width": 49.0,
+   "crotch": 105.8,
+   "sole left": 171.0,
+   "sole right": 178.0,
+   "toe left": 30.0,
+   "toe right": 91.0,
+   "centre": 55.0,
+   "crown": 11.0,
+   "head bottom": 38.0,
+   "head left": 39.0,
+   "head right": 70.0,
+   "heads tall": 6.19,
+   "crotch fraction": 0.568,
+   "shoulders in heads": 1.81
+  },
+  "body04": {
+   "top": 34.0,
+   "shoulders": 57.5,
+   "shoulder width": 49.0,
+   "crotch": 105.8,
+   "sole left": 171.0,
+   "sole right": 178.0,
+   "toe left": 30.0,
+   "toe right": 91.0,
+   "centre": 55.0,
+   "crown": 11.0,
+   "head bottom": 42.0,
+   "head left": 42.0,
+   "head right": 67.0,
+   "heads tall": 5.39,
+   "crotch fraction": 0.568,
+   "shoulders in heads": 1.58
+  },
+  "body05": {
+   "top": 34.0,
+   "shoulders": 57.5,
+   "shoulder width": 49.0,
+   "crotch": 105.8,
+   "sole left": 171.0,
+   "sole right": 178.0,
+   "toe left": 30.0,
+   "toe right": 91.0,
+   "centre": 55.0,
+   "crown": 9.0,
+   "head bottom": 39.0,
+   "head left": 37.0,
+   "head right": 71.0,
+   "heads tall": 5.63,
+   "crotch fraction": 0.573,
+   "shoulders in heads": 1.63
+  },
+  "body06": {
+   "top": 34.0,
+   "shoulders": 57.8,
+   "shoulder width": 48.0,
+   "crotch": 106.0,
+   "sole left": 171.0,
+   "sole right": 178.0,
+   "toe left": 30.0,
+   "toe right": 91.0,
+   "centre": 54.8,
+   "crown": 11.0,
+   "head bottom": 38.0,
+   "head left": 45.0,
+   "head right": 64.0,
+   "heads tall": 6.19,
+   "crotch fraction": 0.569,
+   "shoulders in heads": 1.78
+  },
+  "body07": {
+   "top": 34.0,
+   "shoulders": 55.5,
+   "shoulder width": 48.0,
+   "crotch": 105.8,
+   "sole left": 171.0,
+   "sole right": 178.0,
+   "toe left": 30.0,
+   "toe right": 91.0,
+   "centre": 55.5,
+   "crown": 16.0,
+   "head bottom": 37.0,
+   "head left": 45.0,
+   "head right": 67.0,
+   "heads tall": 7.71,
+   "crotch fraction": 0.554,
+   "shoulders in heads": 2.29
+  },
+  "body10": {
+   "top": 33.0,
+   "shoulders": 56.5,
+   "shoulder width": 45.0,
+   "crotch": 104.2,
+   "sole left": 170.0,
+   "sole right": 176.0,
+   "toe left": 31.0,
+   "toe right": 89.0,
+   "centre": 55.2,
+   "crown": 12.0,
+   "head bottom": 38.0,
+   "head left": 41.0,
+   "head right": 72.0,
+   "heads tall": 6.31,
+   "crotch fraction": 0.562,
+   "shoulders in heads": 1.73
+  },
+  "body11": {
+   "top": 33.0,
+   "shoulders": 56.5,
+   "shoulder width": 45.0,
+   "crotch": 104.2,
+   "sole left": 170.0,
+   "sole right": 176.0,
+   "toe left": 31.0,
+   "toe right": 89.0,
+   "centre": 55.2,
+   "crown": 8.0,
+   "head bottom": 44.0,
+   "head left": 48.0,
+   "head right": 70.0,
+   "heads tall": 4.67,
+   "crotch fraction": 0.573,
+   "shoulders in heads": 1.25
+  },
+  "body12": {
+   "top": 33.0,
+   "shoulders": 56.5,
+   "shoulder width": 45.0,
+   "crotch": 104.2,
+   "sole left": 170.0,
+   "sole right": 176.0,
+   "toe left": 31.0,
+   "toe right": 89.0,
+   "centre": 55.2,
+   "crown": 9.0,
+   "head bottom": 44.0,
+   "head left": 42.0,
+   "head right": 71.0,
+   "heads tall": 4.77,
+   "crotch fraction": 0.57,
+   "shoulders in heads": 1.29
+  },
+  "body13": {
+   "top": 33.0,
+   "shoulders": 56.5,
+   "shoulder width": 45.0,
+   "crotch": 104.2,
+   "sole left": 170.0,
+   "sole right": 176.0,
+   "toe left": 31.0,
+   "toe right": 89.0,
+   "centre": 55.2,
+   "crown": 11.0,
+   "head bottom": 48.0,
+   "head left": 39.0,
+   "head right": 72.0,
+   "heads tall": 4.46,
+   "crotch fraction": 0.565,
+   "shoulders in heads": 1.22
+  },
+  "body14": {
+   "top": 33.0,
+   "shoulders": 56.5,
+   "shoulder width": 45.0,
+   "crotch": 104.2,
+   "sole left": 170.0,
+   "sole right": 176.0,
+   "toe left": 31.0,
+   "toe right": 89.0,
+   "centre": 55.2,
+   "crown": 10.0,
+   "head bottom": 47.0,
+   "head left": 40.0,
+   "head right": 72.0,
+   "heads tall": 4.49,
+   "crotch fraction": 0.567,
+   "shoulders in heads": 1.22
+  },
+  "body15": {
+   "top": 33.0,
+   "shoulders": 56.5,
+   "shoulder width": 45.0,
+   "crotch": 104.2,
+   "sole left": 170.0,
+   "sole right": 176.0,
+   "toe left": 31.0,
+   "toe right": 89.0,
+   "centre": 55.2,
+   "crown": 8.0,
+   "head bottom": 42.0,
+   "head left": 42.0,
+   "head right": 74.0,
+   "heads tall": 4.94,
+   "crotch fraction": 0.573,
+   "shoulders in heads": 1.32
+  },
+  "body16": {
+   "top": 35.0,
+   "shoulders": 57.8,
+   "shoulder width": 45.2,
+   "crotch": 107.0,
+   "sole left": 170.0,
+   "sole right": 176.0,
+   "toe left": 31.0,
+   "toe right": 89.0,
+   "centre": 55.8,
+   "crown": 13.0,
+   "head bottom": 48.0,
+   "head left": 44.0,
+   "head right": 70.0,
+   "heads tall": 4.66,
+   "crotch fraction": 0.577,
+   "shoulders in heads": 1.29
+  },
+  "body17": {
+   "top": 35.0,
+   "shoulders": 58.2,
+   "shoulder width": 46.0,
+   "crotch": 106.0,
+   "sole left": 170.0,
+   "sole right": 176.0,
+   "toe left": 31.0,
+   "toe right": 89.0,
+   "centre": 55.5,
+   "crown": 13.0,
+   "head bottom": 35.0,
+   "head left": 41.0,
+   "head right": 72.0,
+   "heads tall": 7.41,
+   "crotch fraction": 0.571,
+   "shoulders in heads": 2.09
+  }
+ },
+ "heads": {
+  "face00": {
+   "0": {
+    "crown": 9.0,
+    "head bottom": 36.0,
+    "head left": 46.0,
+    "head right": 66.0
+   },
+   "1": {
+    "crown": 9.0,
+    "head bottom": 38.0,
+    "head left": 40.0,
+    "head right": 70.0
+   },
+   "2": {
+    "crown": 10.0,
+    "head bottom": 39.0,
+    "head left": 45.0,
+    "head right": 65.0
+   },
+   "3": {
+    "crown": 9.0,
+    "head bottom": 39.0,
+    "head left": 41.0,
+    "head right": 70.0
+   },
+   "4": {
+    "crown": 9.0,
+    "head bottom": 38.0,
+    "head left": 40.0,
+    "head right": 69.0
+   },
+   "5": {
+    "crown": 9.0,
+    "head bottom": 41.0,
+    "head left": 43.0,
+    "head right": 68.0
+   },
+   "6": {
+    "crown": 9.0,
+    "head bottom": 38.0,
+    "head left": 45.0,
+    "head right": 67.0
+   },
+   "7": {
+    "crown": 10.0,
+    "head bottom": 39.0,
+    "head left": 45.0,
+    "head right": 68.0
+   },
+   "8": {
+    "crown": 9.0,
+    "head bottom": 42.0,
+    "head left": 41.0,
+    "head right": 65.0
+   },
+   "9": {
+    "crown": 9.0,
+    "head bottom": 41.0,
+    "head left": 42.0,
+    "head right": 71.0
+   }
+  },
+  "face01": {
+   "0": {
+    "crown": 11.0,
+    "head bottom": 37.0,
+    "head left": 46.0,
+    "head right": 65.0
+   },
+   "1": {
+    "crown": 10.0,
+    "head bottom": 37.0,
+    "head left": 45.0,
+    "head right": 65.0
+   },
+   "2": {
+    "crown": 9.0,
+    "head bottom": 39.0,
+    "head left": 41.0,
+    "head right": 69.0
+   },
+   "3": {
+    "crown": 10.0,
+    "head bottom": 38.0,
+    "head left": 42.0,
+    "head right": 71.0
+   },
+   "4": {
+    "crown": 8.0,
+    "head bottom": 37.0,
+    "head left": 41.0,
+    "head right": 71.0
+   },
+   "5": {
+    "crown": 11.0,
+    "head bottom": 38.0,
+    "head left": 40.0,
+    "head right": 71.0
+   },
+   "6": {
+    "crown": 11.0,
+    "head bottom": 38.0,
+    "head left": 44.0,
+    "head right": 68.0
+   },
+   "7": {
+    "crown": 9.0,
+    "head bottom": 36.0,
+    "head left": 38.0,
+    "head right": 71.0
+   },
+   "8": {
+    "crown": 12.0,
+    "head bottom": 39.0,
+    "head left": 40.0,
+    "head right": 70.0
+   },
+   "9": {
+    "crown": 12.0,
+    "head bottom": 37.0,
+    "head left": 40.0,
+    "head right": 71.0
+   }
+  },
+  "face02": {
+   "0": {
+    "crown": 10.0,
+    "head bottom": 38.0,
+    "head left": 44.0,
+    "head right": 68.0
+   },
+   "1": {
+    "crown": 9.0,
+    "head bottom": 40.0,
+    "head left": 39.0,
+    "head right": 70.0
+   },
+   "2": {
+    "crown": 14.0,
+    "head bottom": 39.0,
+    "head left": 44.0,
+    "head right": 66.0
+   },
+   "3": {
+    "crown": 10.0,
+    "head bottom": 39.0,
+    "head left": 44.0,
+    "head right": 69.0
+   },
+   "4": {
+    "crown": 9.0,
+    "head bottom": 48.0,
+    "head left": 41.0,
+    "head right": 72.0
+   },
+   "5": {
+    "crown": 10.0,
+    "head bottom": 38.0,
+    "head left": 43.0,
+    "head right": 70.0
+   },
+   "6": {
+    "crown": 11.0,
+    "head bottom": 38.0,
+    "head left": 39.0,
+    "head right": 70.0
+   },
+   "7": {
+    "crown": 12.0,
+    "head bottom": 39.0,
+    "head left": 41.0,
+    "head right": 70.0
+   },
+   "8": {
+    "crown": 11.0,
+    "head bottom": 46.0,
+    "head left": 44.0,
+    "head right": 69.0
+   },
+   "9": {
+    "crown": 10.0,
+    "head bottom": 40.0,
+    "head left": 39.0,
+    "head right": 70.0
+   }
+  },
+  "face03": {
+   "0": {
+    "crown": 11.0,
+    "head bottom": 38.0,
+    "head left": 39.0,
+    "head right": 70.0
+   },
+   "1": {
+    "crown": 10.0,
+    "head bottom": 46.0,
+    "head left": 42.0,
+    "head right": 67.0
+   },
+   "2": {
+    "crown": 11.0,
+    "head bottom": 39.0,
+    "head left": 42.0,
+    "head right": 68.0
+   },
+   "3": {
+    "crown": 11.0,
+    "head bottom": 40.0,
+    "head left": 41.0,
+    "head right": 68.0
+   },
+   "4": {
+    "crown": 8.0,
+    "head bottom": 40.0,
+    "head left": 39.0,
+    "head right": 71.0
+   },
+   "5": {
+    "crown": 10.0,
+    "head bottom": 42.0,
+    "head left": 39.0,
+    "head right": 68.0
+   },
+   "6": {
+    "crown": 9.0,
+    "head bottom": 40.0,
+    "head left": 39.0,
+    "head right": 70.0
+   },
+   "7": {
+    "crown": 10.0,
+    "head bottom": 40.0,
+    "head left": 42.0,
+    "head right": 68.0
+   },
+   "8": {
+    "crown": 9.0,
+    "head bottom": 40.0,
+    "head left": 42.0,
+    "head right": 68.0
+   },
+   "9": {
+    "crown": 10.0,
+    "head bottom": 38.0,
+    "head left": 40.0,
+    "head right": 68.0
+   }
+  },
+  "face04": {
+   "0": {
+    "crown": 11.0,
+    "head bottom": 42.0,
+    "head left": 42.0,
+    "head right": 67.0
+   },
+   "1": {
+    "crown": 9.0,
+    "head bottom": 39.0,
+    "head left": 40.0,
+    "head right": 68.0
+   },
+   "2": {
+    "crown": 10.0,
+    "head bottom": 40.0,
+    "head left": 44.0,
+    "head right": 65.0
+   },
+   "3": {
+    "crown": 12.0,
+    "head bottom": 45.0,
+    "head left": 43.0,
+    "head right": 68.0
+   },
+   "4": {
+    "crown": 9.0,
+    "head bottom": 39.0,
+    "head left": 37.0,
+    "head right": 73.0
+   },
+   "5": {
+    "crown": 10.0,
+    "head bottom": 39.0,
+    "head left": 41.0,
+    "head right": 68.0
+   },
+   "6": {
+    "crown": 12.0,
+    "head bottom": 47.0,
+    "head left": 41.0,
+    "head right": 66.0
+   },
+   "7": {
+    "crown": 12.0,
+    "head bottom": 40.0,
+    "head left": 43.0,
+    "head right": 67.0
+   },
+   "8": {
+    "crown": 10.0,
+    "head bottom": 40.0,
+    "head left": 43.0,
+    "head right": 66.0
+   },
+   "9": {
+    "crown": 9.0,
+    "head bottom": 38.0,
+    "head left": 40.0,
+    "head right": 70.0
+   }
+  },
+  "face05": {
+   "0": {
+    "crown": 9.0,
+    "head bottom": 39.0,
+    "head left": 37.0,
+    "head right": 71.0
+   },
+   "1": {
+    "crown": 7.0,
+    "head bottom": 43.0,
+    "head left": 39.0,
+    "head right": 69.0
+   },
+   "2": {
+    "crown": 10.0,
+    "head bottom": 40.0,
+    "head left": 42.0,
+    "head right": 68.0
+   },
+   "3": {
+    "crown": 9.0,
+    "head bottom": 39.0,
+    "head left": 37.0,
+    "head right": 71.0
+   },
+   "4": {
+    "crown": 9.0,
+    "head bottom": 46.0,
+    "head left": 37.0,
+    "head right": 70.0
+   },
+   "5": {
+    "crown": 6.0,
+    "head bottom": 44.0,
+    "head left": 42.0,
+    "head right": 67.0
+   },
+   "6": {
+    "crown": 9.0,
+    "head bottom": 38.0,
+    "head left": 40.0,
+    "head right": 69.0
+   },
+   "7": {
+    "crown": 10.0,
+    "head bottom": 39.0,
+    "head left": 42.0,
+    "head right": 67.0
+   },
+   "8": {
+    "crown": 11.0,
+    "head bottom": 48.0,
+    "head left": 44.0,
+    "head right": 68.0
+   },
+   "9": {
+    "crown": 10.0,
+    "head bottom": 45.0,
+    "head left": 41.0,
+    "head right": 67.0
+   }
+  },
+  "face06": {
+   "0": {
+    "crown": 11.0,
+    "head bottom": 38.0,
+    "head left": 45.0,
+    "head right": 64.0
+   },
+   "1": {
+    "crown": 10.0,
+    "head bottom": 46.0,
+    "head left": 43.0,
+    "head right": 68.0
+   },
+   "2": {
+    "crown": 11.0,
+    "head bottom": 39.0,
+    "head left": 41.0,
+    "head right": 69.0
+   },
+   "3": {
+    "crown": 12.0,
+    "head bottom": 40.0,
+    "head left": 45.0,
+    "head right": 64.0
+   },
+   "4": {
+    "crown": 10.0,
+    "head bottom": 39.0,
+    "head left": 41.0,
+    "head right": 70.0
+   },
+   "5": {
+    "crown": 11.0,
+    "head bottom": 46.0,
+    "head left": 41.0,
+    "head right": 66.0
+   },
+   "6": {
+    "crown": 10.0,
+    "head bottom": 39.0,
+    "head left": 39.0,
+    "head right": 69.0
+   },
+   "7": {
+    "crown": 12.0,
+    "head bottom": 40.0,
+    "head left": 44.0,
+    "head right": 65.0
+   },
+   "8": {
+    "crown": 11.0,
+    "head bottom": 48.0,
+    "head left": 45.0,
+    "head right": 68.0
+   },
+   "9": {
+    "crown": 10.0,
+    "head bottom": 39.0,
+    "head left": 43.0,
+    "head right": 66.0
+   }
+  },
+  "face07": {
+   "0": {
+    "crown": 16.0,
+    "head bottom": 37.0,
+    "head left": 45.0,
+    "head right": 67.0
+   },
+   "1": {
+    "crown": 16.0,
+    "head bottom": 37.0,
+    "head left": 37.0,
+    "head right": 73.0
+   },
+   "2": {
+    "crown": 15.0,
+    "head bottom": 40.0,
+    "head left": 45.0,
+    "head right": 67.0
+   },
+   "3": {
+    "crown": 16.0,
+    "head bottom": 37.0,
+    "head left": 45.0,
+    "head right": 68.0
+   },
+   "4": {
+    "crown": 12.0,
+    "head bottom": 37.0,
+    "head left": 40.0,
+    "head right": 71.0
+   },
+   "5": {
+    "crown": 16.0,
+    "head bottom": 38.0,
+    "head left": 45.0,
+    "head right": 67.0
+   },
+   "6": {
+    "crown": 12.0,
+    "head bottom": 37.0,
+    "head left": 40.0,
+    "head right": 71.0
+   },
+   "7": {
+    "crown": 16.0,
+    "head bottom": 36.0,
+    "head left": 45.0,
+    "head right": 67.0
+   },
+   "8": {
+    "crown": 10.0,
+    "head bottom": 38.0,
+    "head left": 37.0,
+    "head right": 73.0
+   },
+   "9": {
+    "crown": 16.0,
+    "head bottom": 39.0,
+    "head left": 45.0,
+    "head right": 67.0
+   }
+  },
+  "face10": {
+   "0": {
+    "crown": 12.0,
+    "head bottom": 38.0,
+    "head left": 41.0,
+    "head right": 72.0
+   },
+   "1": {
+    "crown": 10.0,
+    "head bottom": 39.0,
+    "head left": 41.0,
+    "head right": 71.0
+   },
+   "2": {
+    "crown": 10.0,
+    "head bottom": 45.0,
+    "head left": 44.0,
+    "head right": 70.0
+   },
+   "3": {
+    "crown": 11.0,
+    "head bottom": 41.0,
+    "head left": 43.0,
+    "head right": 72.0
+   },
+   "4": {
+    "crown": 10.0,
+    "head bottom": 46.0,
+    "head left": 39.0,
+    "head right": 72.0
+   },
+   "5": {
+    "crown": 10.0,
+    "head bottom": 39.0,
+    "head left": 40.0,
+    "head right": 69.0
+   },
+   "6": {
+    "crown": 9.0,
+    "head bottom": 38.0,
+    "head left": 41.0,
+    "head right": 72.0
+   },
+   "7": {
+    "crown": 9.0,
+    "head bottom": 38.0,
+    "head left": 41.0,
+    "head right": 75.0
+   },
+   "8": {
+    "crown": 11.0,
+    "head bottom": 40.0,
+    "head left": 42.0,
+    "head right": 70.0
+   },
+   "9": {
+    "crown": 10.0,
+    "head bottom": 45.0,
+    "head left": 43.0,
+    "head right": 70.0
+   }
+  },
+  "face11": {
+   "0": {
+    "crown": 8.0,
+    "head bottom": 44.0,
+    "head left": 48.0,
+    "head right": 70.0
+   },
+   "1": {
+    "crown": 10.0,
+    "head bottom": 38.0,
+    "head left": 43.0,
+    "head right": 70.0
+   },
+   "2": {
+    "crown": 11.0,
+    "head bottom": 37.0,
+    "head left": 42.0,
+    "head right": 71.0
+   },
+   "3": {
+    "crown": 10.0,
+    "head bottom": 38.0,
+    "head left": 42.0,
+    "head right": 72.0
+   },
+   "4": {
+    "crown": 12.0,
+    "head bottom": 48.0,
+    "head left": 44.0,
+    "head right": 69.0
+   },
+   "5": {
+    "crown": 10.0,
+    "head bottom": 40.0,
+    "head left": 39.0,
+    "head right": 73.0
+   },
+   "6": {
+    "crown": 11.0,
+    "head bottom": 36.0,
+    "head left": 44.0,
+    "head right": 71.0
+   },
+   "7": {
+    "crown": 12.0,
+    "head bottom": 40.0,
+    "head left": 41.0,
+    "head right": 73.0
+   },
+   "8": {
+    "crown": 12.0,
+    "head bottom": 46.0,
+    "head left": 44.0,
+    "head right": 69.0
+   },
+   "9": {
+    "crown": 11.0,
+    "head bottom": 37.0,
+    "head left": 43.0,
+    "head right": 70.0
+   }
+  },
+  "face12": {
+   "0": {
+    "crown": 9.0,
+    "head bottom": 44.0,
+    "head left": 42.0,
+    "head right": 71.0
+   },
+   "1": {
+    "crown": 9.0,
+    "head bottom": 44.0,
+    "head left": 42.0,
+    "head right": 71.0
+   },
+   "2": {
+    "crown": 10.0,
+    "head bottom": 51.0,
+    "head left": 45.0,
+    "head right": 75.0
+   },
+   "3": {
+    "crown": 11.0,
+    "head bottom": 48.0,
+    "head left": 44.0,
+    "head right": 69.0
+   },
+   "4": {
+    "crown": 12.0,
+    "head bottom": 44.0,
+    "head left": 44.0,
+    "head right": 69.0
+   },
+   "5": {
+    "crown": 9.0,
+    "head bottom": 37.0,
+    "head left": 43.0,
+    "head right": 71.0
+   },
+   "6": {
+    "crown": 10.0,
+    "head bottom": 40.0,
+    "head left": 41.0,
+    "head right": 73.0
+   },
+   "7": {
+    "crown": 12.0,
+    "head bottom": 46.0,
+    "head left": 43.0,
+    "head right": 72.0
+   },
+   "8": {
+    "crown": 12.0,
+    "head bottom": 43.0,
+    "head left": 42.0,
+    "head right": 71.0
+   },
+   "9": {
+    "crown": 10.0,
+    "head bottom": 45.0,
+    "head left": 43.0,
+    "head right": 69.0
+   }
+  },
+  "face13": {
+   "0": {
+    "crown": 11.0,
+    "head bottom": 48.0,
+    "head left": 39.0,
+    "head right": 72.0
+   },
+   "1": {
+    "crown": 13.0,
+    "head bottom": 36.0,
+    "head left": 43.0,
+    "head right": 70.0
+   },
+   "2": {
+    "crown": 12.0,
+    "head bottom": 43.0,
+    "head left": 44.0,
+    "head right": 69.0
+   },
+   "3": {
+    "crown": 12.0,
+    "head bottom": 38.0,
+    "head left": 42.0,
+    "head right": 72.0
+   },
+   "4": {
+    "crown": 11.0,
+    "head bottom": 40.0,
+    "head left": 39.0,
+    "head right": 73.0
+   },
+   "5": {
+    "crown": 11.0,
+    "head bottom": 40.0,
+    "head left": 41.0,
+    "head right": 71.0
+   },
+   "6": {
+    "crown": 12.0,
+    "head bottom": 39.0,
+    "head left": 44.0,
+    "head right": 70.0
+   },
+   "7": {
+    "crown": 12.0,
+    "head bottom": 46.0,
+    "head left": 41.0,
+    "head right": 71.0
+   },
+   "8": {
+    "crown": 11.0,
+    "head bottom": 47.0,
+    "head left": 42.0,
+    "head right": 70.0
+   },
+   "9": {
+    "crown": 13.0,
+    "head bottom": 47.0,
+    "head left": 44.0,
+    "head right": 69.0
+   }
+  },
+  "face14": {
+   "0": {
+    "crown": 10.0,
+    "head bottom": 47.0,
+    "head left": 40.0,
+    "head right": 72.0
+   },
+   "1": {
+    "crown": 11.0,
+    "head bottom": 48.0,
+    "head left": 39.0,
+    "head right": 72.0
+   },
+   "2": {
+    "crown": 11.0,
+    "head bottom": 47.0,
+    "head left": 41.0,
+    "head right": 70.0
+   },
+   "3": {
+    "crown": 12.0,
+    "head bottom": 47.0,
+    "head left": 44.0,
+    "head right": 70.0
+   },
+   "4": {
+    "crown": 10.0,
+    "head bottom": 45.0,
+    "head left": 43.0,
+    "head right": 70.0
+   },
+   "5": {
+    "crown": 10.0,
+    "head bottom": 39.0,
+    "head left": 40.0,
+    "head right": 71.0
+   },
+   "6": {
+    "crown": 9.0,
+    "head bottom": 46.0,
+    "head left": 42.0,
+    "head right": 72.0
+   },
+   "7": {
+    "crown": 6.0,
+    "head bottom": 44.0,
+    "head left": 44.0,
+    "head right": 69.0
+   },
+   "8": {
+    "crown": 11.0,
+    "head bottom": 45.0,
+    "head left": 41.0,
+    "head right": 71.0
+   },
+   "9": {
+    "crown": 12.0,
+    "head bottom": 47.0,
+    "head left": 43.0,
+    "head right": 69.0
+   }
+  },
+  "face15": {
+   "0": {
+    "crown": 8.0,
+    "head bottom": 42.0,
+    "head left": 42.0,
+    "head right": 74.0
+   },
+   "1": {
+    "crown": 9.0,
+    "head bottom": 38.0,
+    "head left": 40.0,
+    "head right": 73.0
+   },
+   "2": {
+    "crown": 11.0,
+    "head bottom": 41.0,
+    "head left": 41.0,
+    "head right": 71.0
+   },
+   "3": {
+    "crown": 10.0,
+    "head bottom": 45.0,
+    "head left": 44.0,
+    "head right": 70.0
+   },
+   "4": {
+    "crown": 9.0,
+    "head bottom": 40.0,
+    "head left": 39.0,
+    "head right": 71.0
+   },
+   "5": {
+    "crown": 9.0,
+    "head bottom": 36.0,
+    "head left": 42.0,
+    "head right": 71.0
+   },
+   "6": {
+    "crown": 10.0,
+    "head bottom": 42.0,
+    "head left": 43.0,
+    "head right": 70.0
+   },
+   "7": {
+    "crown": 10.0,
+    "head bottom": 38.0,
+    "head left": 41.0,
+    "head right": 71.0
+   },
+   "8": {
+    "crown": 11.0,
+    "head bottom": 41.0,
+    "head left": 41.0,
+    "head right": 73.0
+   },
+   "9": {
+    "crown": 12.0,
+    "head bottom": 48.0,
+    "head left": 45.0,
+    "head right": 70.0
+   }
+  },
+  "face16": {
+   "0": {
+    "crown": 13.0,
+    "head bottom": 48.0,
+    "head left": 44.0,
+    "head right": 70.0
+   },
+   "1": {
+    "crown": 11.0,
+    "head bottom": 43.0,
+    "head left": 39.0,
+    "head right": 73.0
+   },
+   "2": {
+    "crown": 12.0,
+    "head bottom": 43.0,
+    "head left": 41.0,
+    "head right": 70.0
+   },
+   "3": {
+    "crown": 10.0,
+    "head bottom": 38.0,
+    "head left": 44.0,
+    "head right": 73.0
+   },
+   "4": {
+    "crown": 13.0,
+    "head bottom": 42.0,
+    "head left": 41.0,
+    "head right": 74.0
+   },
+   "5": {
+    "crown": 11.0,
+    "head bottom": 37.0,
+    "head left": 44.0,
+    "head right": 68.0
+   },
+   "6": {
+    "crown": 12.0,
+    "head bottom": 42.0,
+    "head left": 42.0,
+    "head right": 71.0
+   },
+   "7": {
+    "crown": 13.0,
+    "head bottom": 47.0,
+    "head left": 44.0,
+    "head right": 69.0
+   },
+   "8": {
+    "crown": 11.0,
+    "head bottom": 45.0,
+    "head left": 42.0,
+    "head right": 71.0
+   },
+   "9": {
+    "crown": 10.0,
+    "head bottom": 37.0,
+    "head left": 43.0,
+    "head right": 73.0
+   }
+  },
+  "face17": {
+   "0": {
+    "crown": 13.0,
+    "head bottom": 35.0,
+    "head left": 41.0,
+    "head right": 72.0
+   },
+   "1": {
+    "crown": 13.0,
+    "head bottom": 37.0,
+    "head left": 37.0,
+    "head right": 74.0
+   },
+   "2": {
+    "crown": 12.0,
+    "head bottom": 40.0,
+    "head left": 38.0,
+    "head right": 75.0
+   },
+   "3": {
+    "crown": 15.0,
+    "head bottom": 39.0,
+    "head left": 41.0,
+    "head right": 72.0
+   },
+   "4": {
+    "crown": 10.0,
+    "head bottom": 39.0,
+    "head left": 43.0,
+    "head right": 69.0
+   },
+   "5": {
+    "crown": 11.0,
+    "head bottom": 39.0,
+    "head left": 38.0,
+    "head right": 75.0
+   },
+   "6": {
+    "crown": 8.0,
+    "head bottom": 37.0,
+    "head left": 37.0,
+    "head right": 73.0
+   },
+   "7": {
+    "crown": 12.0,
+    "head bottom": 36.0,
+    "head left": 41.0,
+    "head right": 72.0
+   },
+   "8": {
+    "crown": 17.0,
+    "head bottom": 37.0,
+    "head left": 46.0,
+    "head right": 68.0
+   },
+   "9": {
+    "crown": 15.0,
+    "head bottom": 37.0,
+    "head left": 38.0,
+    "head right": 75.0
+   }
+  }
+ }
+}

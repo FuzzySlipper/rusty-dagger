@@ -171,14 +171,13 @@ def main():
     ap.add_argument("--scale", type=int, default=4, help="output pixels per doll unit")
     ap.add_argument("--size", type=int, default=1024, help="the generation canvas size in the spec")
     ap.add_argument("--occupancy", type=float, default=0.74, help="the spec's occupancy")
-    ap.add_argument("--worn", type=Path, help="worn finals directory (default gen-raw/worn)")
-    ap.add_argument("--paper-doll", type=Path, help="body and head finals directory (default gen-raw/paper-doll)")
+    ap.add_argument("--worn", type=Path, action="append", default=[], help="worn finals directory to look in first; repeat, first wins")
+    ap.add_argument("--paper-doll", type=Path, action="append", default=[],
+                    help="body or head finals directory to look in first; repeat, first wins")
     ap.add_argument("--out", type=Path)
     a = ap.parse_args()
-    if a.worn:
-        FINALS["worn"].insert(0, a.worn)
-    if a.paper_doll:
-        FINALS["paper-doll"].insert(0, a.paper_doll)
+    FINALS["worn"][:0] = a.worn
+    FINALS["paper-doll"][:0] = a.paper_doll
 
     out_dir = AUTHORING / "review" / "paper-doll"
     common = (a.scale, a.size, a.occupancy)
