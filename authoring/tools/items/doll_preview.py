@@ -36,7 +36,8 @@ from PIL import Image, ImageDraw
 AUTHORING = Path(__file__).resolve().parents[2]
 DF_DOLL = AUTHORING / "df-raw" / "paper-doll"
 DF_ITEMS = AUTHORING / "df-raw" / "items"
-FINALS = {"paper-doll": AUTHORING / "gen-raw" / "paper-doll", "worn": AUTHORING / "gen-raw" / "worn"}
+# Where finals are looked for, first match first: --paper-doll and --worn put a directory in front.
+FINALS = {"paper-doll": [AUTHORING / "gen-raw" / "paper-doll"], "worn": [AUTHORING / "gen-raw" / "worn"]}
 
 ORIGIN = (200, 8)            # the donor's paperDollOrigin
 DOLL = (110, 184)            # the donor's doll size
@@ -56,12 +57,15 @@ class Layer:
         self.x, self.y = entry["xOffset"] - ORIGIN[0], entry["yOffset"] - ORIGIN[1]
 
 
+def final(area, file):
+    return next((d / file for d in FINALS[area] if (d / file).exists()), None)
+
+
 def doll_layer(family, name, record, label):
     directory = DF_DOLL / family / name
     image = f"{name}-record-{record:03d}-frame-000-source.png"
     entry = next(e for e in json.load(open(directory / "manifest.json"))["images"] if e["file"] == image)
-    final = FINALS["paper-doll"] / f"{family}--{name}--{image.removesuffix('-source.png')}.png"
-    return Layer(label, directory / image, entry, final if final.exists() else None)
+    return Layer(label, directory / image, entry, final("paper-doll", f"{family}--{name}--{image.removesuffix('-source.png')}.png"))
 
 
 @lru_cache
@@ -80,8 +84,7 @@ def worn_layer(key, role):
     if key not in worn_sources(role):
         raise SystemExit(f"No {role} player layer named {key} in {DF_ITEMS}.")
     source, entry = worn_sources(role)[key]
-    final = FINALS["worn"] / f"{key}.png"
-    return Layer(key, source, entry, final if final.exists() else None)
+    return Layer(key, source, entry, final("worn", f"{key}.png"))
 
 
 def layers_for(race, gender, face, body_layer, items):
@@ -169,10 +172,13 @@ def main():
     ap.add_argument("--size", type=int, default=1024, help="the generation canvas size in the spec")
     ap.add_argument("--occupancy", type=float, default=0.74, help="the spec's occupancy")
     ap.add_argument("--worn", type=Path, help="worn finals directory (default gen-raw/worn)")
+    ap.add_argument("--paper-doll", type=Path, help="body and head finals directory (default gen-raw/paper-doll)")
     ap.add_argument("--out", type=Path)
     a = ap.parse_args()
     if a.worn:
-        FINALS["worn"] = a.worn
+        FINALS["worn"].insert(0, a.worn)
+    if a.paper_doll:
+        FINALS["paper-doll"].insert(0, a.paper_doll)
 
     out_dir = AUTHORING / "review" / "paper-doll"
     common = (a.scale, a.size, a.occupancy)

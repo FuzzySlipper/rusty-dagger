@@ -15,7 +15,7 @@ denoise 0.35, then broad back-projection at 0.5 (`bp-broad-half`)**, then a tran
 | `authoring/review/` | Generated review pages (`index.html` for items, `<area>/index.html` for the others), `*-ledger.csv`, thumbnails | ignored |
 | `authoring/specs/<area>/` | Contract specs, one pair per batch (`items-icons-NAME.json` for items, `<area>-NAME.json` otherwise, each with `-retro.json`), and `templates/` per art type | tracked |
 | `authoring/ledger/<area>-notes.json` | The only hand-edited tracking input: status and notes per image key | tracked |
-| `authoring/tools/items/` | Batch runner, spec scaffolder, post-process, finalize, flame compositing, ledger builder, paper-doll preview, dress-on-body worn items | tracked |
+| `authoring/tools/items/` | Batch runner, spec scaffolder, post-process, finalize, flame compositing, ledger builder, paper-doll preview, dress-on-body worn items, shared body shapes | tracked |
 
 `local/` no longer holds any of this. The generic ComfyUI generator (`tools/lora-training/generate.py`),
 the LAN environment script and `asset-resources` stay in the asset-pipeline checkout (`ASSET_PIPELINE`,
@@ -75,6 +75,7 @@ stays open), and the edge is softened and decontaminated.
 - `paper-doll/templates/bodies-detailed.json` is the more detailed pulp-fantasy style for figures; `bodies.json` is the plainer painted style.
 - `tools/items/doll_preview.py` composites paper dolls from `paper-doll` and `worn` finals, mapped back into the doll through the generation input transform, beside the classic doll and an overlay. It reports each layer's doll-space rect and its overlap (IoU) with the source silhouette. Use it to check that a body, head or worn set fits together before review: `--sheet bodies`, `--sheet faces`, or one doll with `--item KEY` repeated in draw order. Output goes to `review/paper-doll/`.
 - `tools/items/dress.py OUT --race R --gender G --item KEY --name WHAT ...` paints worn items onto a generated body one at a time in draw order (Qwen, the owner's 5090 by default), then lifts each back off through a Qwen green isolation, writing doll-space layers to `OUT/layers` for `doll_preview.py --worn OUT/layers`. Name each piece's material when the classic pixels are ambiguous, and check every isolation: a failed one tints the whole figure green; delete it and rerun with another seed.
+- `tools/items/bodies.py OUT` rebuilds the generated bodies so that every race of a morph shares one shape, as the classic bodies do (one base per morph and gender: Breton for human, Dark Elf for elf). Another race's I0 is the base recoloured to its own body's OKLab colour; every I1 is its I0 with the classic underwear painted on by Qwen. Each final carries a sidecar with the base's doll-space rect. Worn items dressed on the base (`dress.py --paper-doll`) then fit every race of the morph.
 
 ## Review ledger
 
