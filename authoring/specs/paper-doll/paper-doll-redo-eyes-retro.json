@@ -143,15 +143,6 @@
       "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
       "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
       "name": "face05-3 (34x30)"
-    },
-    {
-      "id": "face10-7",
-      "directory": "faces/face10i0",
-      "image": "face10i0-record-007-frame-000-source.png",
-      "content": "One female human head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Warm tan skin. Preserve the hair or crest, hair colour, headgear, jewellery, markings and expression exactly as in the input. The face is smooth with no beard, no stubble and no moustache. Both eyes are open, dark brown and look straight forward at the viewer. No body, shoulders, clothing, weapon, text or second head.",
-      "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
-      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
-      "name": "face10-7 (35x49)"
     }
   ]
 }
