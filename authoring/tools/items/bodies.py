@@ -55,9 +55,11 @@ def recolour(base, reference):
     # A near-grey base has almost no chroma spread; scaling it to a coloured race's would amplify its noise.
     spread = np.clip(r[theirs].std(0) / b[inside].std(0), 0.5, 1.5)
     matched = (b - b[inside].mean(0)) * spread + r[theirs].mean(0)
-    # The race's colour scales with lightness, as skin's does: a constant shift oversaturates the shadows.
-    shade = np.clip(matched[..., :1] / r[theirs][:, 0].mean(), 0, 1.5)
-    matched[..., 1:] = r[theirs][:, 1:].mean(0) * shade + (b[..., 1:] - b[inside][:, 1:].mean(0)) * spread[1:]
+    # Colour scales with lightness up to the race's average, as skin's does: a constant shift oversaturates the
+    # shadows, the base's own hue shifts at full strength turn its near-black creases blue, and highlights are
+    # lighter than the average but no more coloured.
+    shade = np.clip(matched[..., :1] / r[theirs][:, 0].mean(), 0, 1)
+    matched[..., 1:] = (r[theirs][:, 1:].mean(0) + (b[..., 1:] - b[inside][:, 1:].mean(0)) * spread[1:]) * shade
     rgb = (oklab_to_srgb(matched) * 255 + .5).astype(np.uint8)
     return Image.fromarray(np.dstack([rgb, np.array(base.getchannel("A"))]), "RGBA")
 
