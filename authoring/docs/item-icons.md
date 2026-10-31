@@ -15,7 +15,7 @@ denoise 0.35, then broad back-projection at 0.5 (`bp-broad-half`)**, then a tran
 | `authoring/review/` | Generated review pages (`index.html` for items, `<area>/index.html` for the others), `*-ledger.csv`, thumbnails | ignored |
 | `authoring/specs/<area>/` | Contract specs, one pair per batch (`items-icons-NAME.json` for items, `<area>-NAME.json` otherwise, each with `-retro.json`), and `templates/` per art type | tracked |
 | `authoring/ledger/<area>-notes.json` | The only hand-edited tracking input: status and notes per image key | tracked |
-| `authoring/tools/items/` | Batch runner, spec scaffolder, post-process, finalize, flame compositing, ledger builder | tracked |
+| `authoring/tools/items/` | Batch runner, spec scaffolder, post-process, finalize, flame compositing, ledger builder, paper-doll preview | tracked |
 
 `local/` no longer holds any of this. The generic ComfyUI generator (`tools/lora-training/generate.py`),
 the LAN environment script and `asset-resources` stay in the asset-pipeline checkout (`ASSET_PIPELINE`,
@@ -73,6 +73,7 @@ stays open), and the edge is softened and decontaminated.
 - `tools/items/despeckle.py FINAL.png` removes small detached flecks from a final (not for effects that carry embers).
 - To convert from an edited source (for example neutralising a dye-placeholder colour), write the edited copy with its manifest under `gen-raw/source-edits/NAME/` in the same directory layout and run the batch with `SOURCE=` pointing at it.
 - `paper-doll/templates/bodies-detailed.json` is the more detailed pulp-fantasy style for figures; `bodies.json` is the plainer painted style.
+- `tools/items/doll_preview.py` composites paper dolls from `paper-doll` and `worn` finals, mapped back into the doll through the generation input transform, beside the classic doll and an overlay. It reports each layer's doll-space rect and its overlap (IoU) with the source silhouette. Use it to check that a body, head or worn set fits together before review: `--sheet bodies`, `--sheet faces`, or one doll with `--item KEY` repeated in draw order. Output goes to `review/paper-doll/`.
 
 ## Review ledger
 
