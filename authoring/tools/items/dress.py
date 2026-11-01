@@ -8,7 +8,8 @@ so it takes that body's outline, light and contact shadows. Items go on in the g
      body (and the head, for helms) is recoloured to a violet key, its lightness kept, so skin left in the dressed
      piece (an open shirt's chest, a hand resting on trousers, a thigh above a boot) is told from the piece and
      left out of the layer: every race of the morph has this body's shape, so its own skin shows through there.
-     Metal pieces (spec "metal") are dressed on the body's own skin, as steel beside violet skin reflects it;
+     Metal pieces (spec "metal") and cloak linings ("behind") are dressed on the body's own skin, as steel beside
+     violet skin reflects it and a lining is painted violet in its shadow;
   2. Qwen repaints the figure, and only the item's region (dilated, its narrow gaps closed) is composited back
      through a feathered mask, so nothing outside it changes. A gap left out of the mask (an open shirt's belly)
      comes back painted along its straight pixel rows; inside the mask, skin Qwen paints there is keyed away;
@@ -46,8 +47,10 @@ GAP = 6              # doll units: gaps in the classic item narrower than twice 
 KEY = (60, 140)      # distance from the flat key colour over which an isolated pixel fades from key to item
 SKIN_KEY = np.arctan2(-0.12, 0.06)  # OKLab hue the body is dressed in (violet): no worn piece is violet
 SKIN_HUE = (0.35, 0.6)  # radians from SKIN_KEY over which a pixel fades from skin to item
-SKIN_CHROMA = (0.25, 0.5)  # share of the key's chroma at a pixel's lightness over which it is skin: cloth
-                           # beside the skin reflects a weaker violet cast, skin in shadow (a fist) keeps more
+SKIN_CHROMA = (0.6, 0.8)  # share of the key's chroma at a pixel's lightness over which it is surely skin
+FAINT_CHROMA = (0.25, 0.5)  # ... over which it is skin if as light as the body beneath: skin in shadow (a fist)
+                            # keeps that much, and so does grey cloth or steel beside the skin, which is darker
+SAME_SKIN = (0.06, 0.12)  # OKLab lightness from the body beneath over which a faintly violet pixel is not skin
 # Isolations to try, in order: (key colour name, RGB, seed offset, file suffix). Green first; Qwen erases some
 # brown and tan pieces on green (trousers, leather), and keeps them on blue.
 ISOLATIONS = [("green", (0, 255, 0), 0, ""), ("green", (0, 255, 0), 1, "-1"), ("green", (0, 255, 0), 2, "-2"),
@@ -129,11 +132,16 @@ def near_key(lab):
     return 1 - ramp(off, SKIN_HUE)
 
 
-def skinness(rgb):
-    """How surely each pixel is the violet-keyed skin, 0 to 1: near its hue, and about as saturated."""
+def skinness(rgb, beneath=None):
+    """How surely each pixel is the violet-keyed skin, 0 to 1: near its hue, and about as saturated, or more
+    faintly violet but as light as the body beneath."""
     lab = srgb_to_oklab(rgb)
-    chroma = np.sqrt((lab[..., 1:] ** 2).sum(-1))
-    return near_key(lab) * ramp(chroma / key_chroma(lab[..., 0]), SKIN_CHROMA)
+    share = np.sqrt((lab[..., 1:] ** 2).sum(-1)) / key_chroma(lab[..., 0])
+    skin = ramp(share, SKIN_CHROMA)
+    if beneath is not None:
+        same = 1 - ramp(np.abs(lab[..., 0] - srgb_to_oklab(beneath)[..., 0]), SAME_SKIN)
+        skin = np.maximum(skin, ramp(share, FAINT_CHROMA) * same)
+    return near_key(lab) * skin
 
 
 def lift(dressed, beneath, isolated, region, k, key=ISOLATIONS[0][1]):
@@ -142,7 +150,7 @@ def lift(dressed, beneath, isolated, region, k, key=ISOLATIONS[0][1]):
     a = ramp(np.sqrt(((isolated.astype(np.float32) - key) ** 2).sum(2)), KEY) * region
     # Skin in the piece (an open shirt's chest, a hand resting on trousers, a thigh above a boot) is left out:
     # every race of the morph has this body's shape, so its own skin shows through in the same place.
-    skin = skinness(dressed)
+    skin = skinness(dressed, beneath)
     a *= 1 - skin
     core = ndimage.binary_opening(a > 0.5, iterations=k)
     a = np.where(ndimage.binary_dilation(core, iterations=k), a, 0)
@@ -219,10 +227,14 @@ def main():
     if abs(k - round(k)) > 1e-6:
         raise SystemExit(f"The body canvas is {k} px per doll unit; whole pixels keep the classic items crisp.")
     k = round(k)
-    # A metal piece is dressed on the body's own skin: steel beside the violet key reflects it and keys away as skin.
-    # Pieces dressed one over another share one figure, the natural one if any is metal.
+    # Metal and linings are dressed on the body's own skin: steel beside the violet key reflects it, and a lining
+    # (which encloses no skin) is painted in its shadow, and either keys away as skin. Pieces dressed one over
+    # another share one figure, the natural one if any is either.
+    def natural_skin(entry):
+        return entry.get("metal") or entry.get("behind")
+
     def violet(entry):
-        return not entry.get("metal") and (a.each or not any(e.get("metal") for e in items))
+        return not natural_skin(entry) and (a.each or not any(natural_skin(e) for e in items))
     bodies, heads = {}, {}
     for keyed in {violet(entry) for entry in items}:
         bodies[keyed] = skin_key(natural) if keyed else natural
