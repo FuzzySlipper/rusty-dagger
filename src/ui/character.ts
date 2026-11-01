@@ -176,6 +176,11 @@ export interface PaperDollLayer extends PaperDollRect {
   readonly maskRect: PaperDollRect | null;
   /** Refreshed art, drawn smoothed; classic art keeps its pixels square. */
   readonly smooth: boolean;
+  /**
+   * Refreshed clothing, painted neutral, in its dye: where the mask is opaque (the neutral cloth) the image is
+   * brightened and multiplied by the colour.
+   */
+  readonly tint: { readonly color: string; readonly brightness: number; readonly mask: string } | null;
   readonly slot: string | null;
 }
 

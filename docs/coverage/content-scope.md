@@ -332,9 +332,13 @@ the classic publication stays the fallback. `authoring/tools/items/promote.py` w
   and 477 MB as the uncropped 1024² finals. Git holds them directly, with no LFS: at this rate the remaining 2D
   categories fit in the low hundreds of megabytes. Delivery reads each image on demand and sends it as a data URL,
   so the format also bounds what a projection carries.
-- **What the data container still carries.** Nothing classic is dropped yet. The paper doll's classic bodies,
-  heads and worn items are the fallback, and clothing is always drawn classic: it is drawn in its dye, which the
-  refreshed clothing, painted neutral for a tint, does not carry until dye application is settled.
+- **Dyes.** Refreshed clothing is painted neutral, one image per record for every dye. Promotion writes beside it a
+  dye mask (the neutral cloth the classic dye recolours, less what is coloured of its own) and states a tint per
+  classic dye (`dyeTints`: a multiply colour and a brightness), measured from the classic dyed images. The DOM
+  brightens the masked cloth and multiplies it by the dye's colour on a canvas.
+- **What the data container still carries.** Nothing classic is dropped yet: the paper doll's classic bodies, heads
+  and worn items are the Classic art fallback, and armour in a dyed material (iron, ebony and the rest) is drawn
+  classic, since the refreshed armour is steel, leather and chain.
 
 The game's files, the media extracted from them and the bulk generated payloads are not committed
 and not redistributed; small derived facts (identifiers, names, numbers, short text, record JSON)

@@ -242,7 +242,7 @@ public sealed class DaggerfallCharacterPresentationTests
     }
 
     [Fact]
-    public void Paper_doll_draws_refreshed_art_at_its_own_doll_rect_and_keeps_classic_clips_masks_and_clothing_dyes()
+    public void Paper_doll_draws_refreshed_art_at_its_own_doll_rect_with_classic_clips_and_masks_and_clothing_in_its_dye()
     {
         using Fixture f = new();
         DaggerfallCharacterIdentity identity = new DaggerfallCharacterState(f.Definitions, f.Player.Stats, f.PlayerDefinition).Identity with { Gender = DaggerfallCharacterGender.Male };
@@ -255,7 +255,7 @@ public sealed class DaggerfallCharacterPresentationTests
         DaggerfallWornItem Worn(string slot, DaggerfallItemDefinition item, string material, string? dye = null) =>
             new($"{slot}.{item.Id.Value}", slot, item,
                 new DaggerfallItemInstanceMetadata(item.Id.Value, material, 0, 1, 1, true, false, null, null, null, DaggerfallItemOwner.Player, Dye: dye), () => $"{slot} item");
-        DaggerfallWornItem[] worn = [Worn("head", helmet, "steel"), Worn("chest-clothes", shirt, "cloth", dye: "blue")];
+        DaggerfallWornItem[] worn = [Worn("head", helmet, "steel"), Worn("chest-clothes", shirt, "cloth", dye: "red")];
         PaperDollPresentation classic = DaggerfallPaperDollPolicy.Compose(f.Definitions, identity, null, worn);
         PaperDollLayerPresentation classicHelm = classic.Layers.Single(layer => layer.Slot == "head");
         PaperDollLayerPresentation classicShirt = classic.Layers.Single(layer => layer.Slot == "chest-clothes");
@@ -267,12 +267,17 @@ public sealed class DaggerfallCharacterPresentationTests
             ["replaces"] = replaces, ["mediaId"] = $"refreshed.{replaces}", ["path"] = $"worldrpg/media/refreshed/paper-doll/{replaces}.webp", ["byteLength"] = 1,
             ["doll"] = new System.Text.Json.Nodes.JsonObject { ["x"] = x, ["y"] = y, ["width"] = width, ["height"] = height },
         };
+        // The shirt's refreshed record is one neutral image for every dye, standing in for the record as published undyed.
+        string neutralShirt = classicShirt.MediaId[..classicShirt.MediaId.LastIndexOf('.')];
+        System.Text.Json.Nodes.JsonObject shirtEntry = Entry(neutralShirt, 25, 40, 60, 50);
+        shirtEntry["dyeMask"] = new System.Text.Json.Nodes.JsonObject { ["mediaId"] = $"refreshed.{neutralShirt}.dye", ["path"] = "worldrpg/media/refreshed/shirt-dye.webp", ["byteLength"] = 1 };
         System.Text.Json.Nodes.JsonObject payload = new()
         {
             ["artReplacements"] = new System.Text.Json.Nodes.JsonObject
             {
                 ["images"] = new System.Text.Json.Nodes.JsonArray(Entry(nude.MediaId, 20.5, 30.25, 70, 150), Entry(clothed.MediaId, 20.5, 30.25, 70, 150),
-                    Entry(classicHelm.MediaId, 40, 0, 30, 32), Entry(classicShirt.MediaId, 25, 40, 60, 50)),
+                    Entry(classicHelm.MediaId, 40, 0, 30, 32), shirtEntry),
+                ["dyeTints"] = new System.Text.Json.Nodes.JsonObject { ["red"] = new System.Text.Json.Nodes.JsonObject { ["multiply"] = "#fe4f1a", ["brightness"] = 1.0 } },
             },
         };
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()), "test.art");
@@ -289,8 +294,15 @@ public sealed class DaggerfallCharacterPresentationTests
         PaperDollLayerPresentation helm = refreshed.Layers.Single(layer => layer.Slot == "head");
         Assert.Equal((helm.MediaId, helm.X, helm.Y, helm.Mask), ($"refreshed.{classicHelm.MediaId}", 40d, 0d, classicHelm.Mask));
         Assert.Equal(new DaggerfallDollRect(classicHelm.X, classicHelm.Y, classicHelm.Width, classicHelm.Height), helm.MaskRect);
-        // Clothing is drawn in its dye, which the refreshed clothing does not carry yet, so it stays classic.
-        Assert.Equal(classicShirt, refreshed.Layers.Single(layer => layer.Slot == "chest-clothes"));
+        // Refreshed clothing draws its neutral image tinted in the worn dye through its dye mask.
+        PaperDollLayerPresentation shirtLayer = refreshed.Layers.Single(layer => layer.Slot == "chest-clothes");
+        Assert.Equal(($"refreshed.{neutralShirt}", 25d, true, new PaperDollTint("#fe4f1a", 1, $"refreshed.{neutralShirt}.dye")),
+            (shirtLayer.MediaId, shirtLayer.X, shirtLayer.Smooth, shirtLayer.Tint));
+        Assert.Contains($"refreshed.{neutralShirt}.dye", refreshed.MediaIds);
+        // A dye the set states no tint for keeps the classic image of that dye.
+        PaperDollPresentation purple = DaggerfallPaperDollPolicy.Compose(f.Definitions, identity, null, [Worn("chest-clothes", shirt, "cloth", dye: "purple")], art);
+        Assert.Equal(DaggerfallPaperDollPolicy.Compose(f.Definitions, identity, null, [Worn("chest-clothes", shirt, "cloth", dye: "purple")]).Layers.Single(layer => layer.Slot == "chest-clothes"),
+            purple.Layers.Single(layer => layer.Slot == "chest-clothes"));
     }
 
     [Fact]

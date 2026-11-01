@@ -6,6 +6,40 @@ import { redraw } from './redraw.js';
 import { createStepper, type Stepper } from './stepper.js';
 import { inventoryTransferRow, mountTransfer } from './transfer.js';
 
+const load = (source: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
+  const picture = document.createElement('img');
+  picture.onload = () => resolve(picture);
+  picture.onerror = () => reject(new Error('The image did not decode.'));
+  picture.src = source;
+});
+
+/**
+ * Neutral clothing in a dye: where the mask is opaque (the cloth the dye recolours) each pixel is brightened and
+ * multiplied by the colour, and the rest keeps its own colour. A canvas makes it, as the window's renderer draws
+ * no CSS mask; with no canvas to draw on, the neutral image stands (null).
+ */
+async function dyed(source: string, mask: string, color: string, brightness: number): Promise<string | null> {
+  const [art, cloth] = await Promise.all([load(source), load(mask)]);
+  const canvas = document.createElement('canvas');
+  canvas.width = art.naturalWidth;
+  canvas.height = art.naturalHeight;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (context === null) return null;
+  context.drawImage(cloth, 0, 0, canvas.width, canvas.height);
+  const weights = context.getImageData(0, 0, canvas.width, canvas.height).data;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(art, 0, 0);
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+  const tint = [1, 3, 5].map(at => parseInt(color.slice(at, at + 2), 16) / 255 * brightness);
+  const data = pixels.data;
+  for (let at = 0; at < data.length; at += 4) {
+    const weight = weights[at + 3] / 255;
+    for (let channel = 0; channel < 3; channel++) data[at + channel] = Math.min(255, data[at + channel] * (1 - weight + weight * tint[channel]));
+  }
+  context.putImageData(pixels, 0, 0);
+  return canvas.toDataURL('image/png');
+}
+
 export interface InventoryProjection {
   readonly revision: string;
   readonly items: readonly InventoryItem[];
@@ -743,9 +777,11 @@ export function mountInventory(
   shell.addEventListener('focusin', onTipOver);
   shell.addEventListener('focusout', onTipOut);
 
+  /** Each refreshed clothing image in each dye, made once: the doll redraws far more often than a dye changes. */
+  const tinted = new Map<string, Promise<string | null>>();
   /** A length in doll units; the doll draws each as a whole number of device pixels at whole UI scales. */
   const dollPixels = (value: number): string => `calc(${value} * var(--doll-pixel))`;
-  const placeLayer = (layer: PaperDollLayer): HTMLImageElement => {
+  const placeLayer = (layer: PaperDollLayer): HTMLElement[] => {
     const art = document.createElement('img');
     art.alt = '';
     art.draggable = false;
@@ -764,7 +800,19 @@ export function mountInventory(
       art.style.clipPath = `inset(${dollPixels(layer.clipTop)} 0 ${dollPixels(layer.height - layer.clipBottom)} 0)`;
       art.dataset.clip = `${layer.clipTop}-${layer.clipBottom}`;
     }
-    return art;
+    if (layer.tint === null) return [art];
+    // Refreshed clothing is drawn in its dye once the tinted image is made; until then it is held hidden.
+    const { tint } = layer;
+    art.dataset.dye = tint.color;
+    const mask = image(tint.mask);
+    art.removeAttribute('src');
+    art.dataset.artMissing = 'true';
+    if (source === null || mask === null) return [art];
+    const key = `${layer.mediaId}|${tint.mask}|${tint.color}|${tint.brightness}`;
+    if (!tinted.has(key)) tinted.set(key, dyed(source, mask, tint.color, tint.brightness));
+    // An image that does not decode leaves the neutral image standing rather than nothing.
+    void tinted.get(key)!.catch(() => null).then(result => { art.src = result ?? source; delete art.dataset.artMissing; });
+    return [art];
   };
   const drawDoll = (value: PaperDoll | null): void => {
     dollBackground.replaceChildren();
@@ -773,7 +821,7 @@ export function mountInventory(
     if (value === null) return;
     doll.style.width = dollPixels(value.width);
     doll.style.height = dollPixels(value.height);
-    dollBackground.append(placeLayer(value.background));
+    dollBackground.append(...placeLayer(value.background));
     let drawn: HTMLElement = dollLayers;
     for (const layer of value.layers) {
       const mask = layer.mask === null ? null : image(layer.mask);
@@ -804,7 +852,7 @@ export function mountInventory(
         }
         drawn.append(masked);
       }
-      drawn.append(placeLayer(layer));
+      drawn.append(...placeLayer(layer));
     }
     doll.title = value.unplaced.length === 0 ? '' : `Not drawn: ${value.unplaced.join(', ')}`;
   };

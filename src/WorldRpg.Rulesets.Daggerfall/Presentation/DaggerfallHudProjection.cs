@@ -857,6 +857,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("maskRect", layer.MaskRect is not { } mask ? builder.Null() : builder.Object(
                 ("x", builder.Number(mask.X)), ("y", builder.Number(mask.Y)), ("width", builder.Number(mask.Width)), ("height", builder.Number(mask.Height)))),
             ("smooth", builder.Boolean(layer.Smooth)),
+            ("tint", layer.Tint is not { } tint ? builder.Null() : builder.Object(
+                ("color", builder.String(tint.Color)), ("brightness", builder.Number(tint.Brightness)), ("mask", builder.String(tint.Mask)))),
             ("slot", layer.Slot is null ? builder.Null() : builder.String(layer.Slot)));
         return builder.Object(("width", builder.Number(doll.Width)), ("height", builder.Number(doll.Height)),
             ("background", Layer(doll.Background)), ("layers", builder.Array(doll.Layers.Select(Layer).ToArray())),

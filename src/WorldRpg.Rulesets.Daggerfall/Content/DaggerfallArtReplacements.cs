@@ -14,7 +14,19 @@ internal sealed record DaggerfallDollRect(double X, double Y, double Width, doub
 /// <param name="Path">Its content-root path.</param>
 /// <param name="ByteLength">Its length, as promotion recorded it.</param>
 /// <param name="Doll">Where the paper doll draws it, for a paper-doll layer.</param>
-internal sealed record DaggerfallArtReplacement(string Replaces, string MediaId, string Path, long ByteLength, DaggerfallDollRect? Doll);
+/// <param name="DyeMask">For clothing, the image of the neutral cloth a dye recolours, the same size as this one.</param>
+internal sealed record DaggerfallArtReplacement(string Replaces, string MediaId, string Path, long ByteLength, DaggerfallDollRect? Doll,
+    DaggerfallArtImage? DyeMask = null);
+
+/// <summary>One published image of the refreshed art set beside its replacement: its identity, path and length.</summary>
+internal sealed record DaggerfallArtImage(string MediaId, string Path, long ByteLength);
+
+/// <summary>
+/// How refreshed clothing, painted neutral, is drawn in one classic dye: its dye mask multiplied by
+/// <paramref name="Multiply"/> (a CSS colour), the image first brightened by <paramref name="Brightness"/> where the
+/// dye is lighter than a multiply can reach.
+/// </summary>
+internal sealed record DaggerfallDyeTint(string Multiply, double Brightness);
 
 /// <summary>
 /// The refreshed art set: generated images promoted from <c>authoring/</c> (<c>promote.py</c>), each standing in for
@@ -26,10 +38,22 @@ internal sealed class DaggerfallArtReplacements
 {
     private readonly Dictionary<string, DaggerfallArtReplacement> _byClassic;
 
-    private DaggerfallArtReplacements(Dictionary<string, DaggerfallArtReplacement> byClassic) => _byClassic = byClassic;
+    private DaggerfallArtReplacements(Dictionary<string, DaggerfallArtReplacement> byClassic, IReadOnlyDictionary<string, DaggerfallDyeTint> tints)
+    {
+        _byClassic = byClassic;
+        Tints = tints;
+    }
 
     /// <summary>Every replacement.</summary>
     internal IEnumerable<DaggerfallArtReplacement> All => _byClassic.Values;
+
+    /// <summary>Every image the set publishes: each replacement and its dye mask.</summary>
+    internal IEnumerable<DaggerfallArtImage> Images => _byClassic.Values.SelectMany(replacement =>
+        replacement.DyeMask is { } mask ? [new(replacement.MediaId, replacement.Path, replacement.ByteLength), mask]
+            : new[] { new DaggerfallArtImage(replacement.MediaId, replacement.Path, replacement.ByteLength) });
+
+    /// <summary>Each classic clothing dye's tint, by dye name.</summary>
+    internal IReadOnlyDictionary<string, DaggerfallDyeTint> Tints { get; }
 
     /// <summary>The replacement for a classic media identity, if the set has one.</summary>
     internal DaggerfallArtReplacement? For(string classicMediaId) =>
@@ -41,6 +65,7 @@ internal sealed class DaggerfallArtReplacements
     {
         Dictionary<string, DaggerfallArtReplacement> byClassic = new(StringComparer.Ordinal);
         HashSet<string> ids = new(StringComparer.Ordinal);
+        Dictionary<string, DaggerfallDyeTint> tints = new(StringComparer.Ordinal);
         try
         {
             using JsonDocument document = JsonDocument.Parse(payload);
@@ -57,15 +82,28 @@ internal sealed class DaggerfallArtReplacements
                     : null;
                 if (doll is { Width: <= 0 } or { Height: <= 0 })
                     throw new InvalidOperationException($"Content pack '{packId}' places replacement '{mediaId}' in an empty doll rect.");
-                if (!ids.Add(mediaId) || !byClassic.TryAdd(replaces, new(replaces, mediaId, path, byteLength, doll)))
+                DaggerfallArtImage? dyeMask = image.TryGetProperty("dyeMask", out JsonElement mask)
+                    ? new(mask.GetProperty("mediaId").GetString()!, mask.GetProperty("path").GetString()!, mask.GetProperty("byteLength").GetInt64())
+                    : null;
+                if (!ids.Add(mediaId) || dyeMask is not null && !ids.Add(dyeMask.MediaId) || !byClassic.TryAdd(replaces, new(replaces, mediaId, path, byteLength, doll, dyeMask)))
                     throw new InvalidOperationException($"Content pack '{packId}' names replacement '{mediaId}' for '{replaces}' twice.");
             }
+
+            if (document.RootElement.GetProperty("artReplacements").TryGetProperty("dyeTints", out JsonElement dyes))
+                foreach (JsonProperty dye in dyes.EnumerateObject())
+                {
+                    string multiply = dye.Value.GetProperty("multiply").GetString()!;
+                    double brightness = dye.Value.GetProperty("brightness").GetDouble();
+                    if (!System.Text.RegularExpressions.Regex.IsMatch(multiply, "^#[0-9a-f]{6}$") || !double.IsFinite(brightness) || brightness < 1)
+                        throw new InvalidOperationException($"Content pack '{packId}' states an unusable tint for dye '{dye.Name}'.");
+                    tints[dye.Name] = new(multiply, brightness);
+                }
         }
         catch (Exception exception) when (exception is JsonException or KeyNotFoundException or FormatException)
         {
             throw new InvalidOperationException($"Content pack '{packId}' carries an unreadable artReplacements section: {exception.Message}", exception);
         }
 
-        return new DaggerfallArtReplacements(byClassic);
+        return new DaggerfallArtReplacements(byClassic, tints);
     }
 }

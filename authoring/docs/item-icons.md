@@ -108,7 +108,8 @@ shown as separate frames.
 `accepted` into the tracked `daggerfall.art-replacements` pack: a WebP per final under
 `content/worldrpg/media/refreshed/A/` and an entry in `content/worldrpg/payloads/daggerfall.art-replacements.json`
 naming the classic media id it stands in for. A paper-doll final keeps the doll-space rect `doll_preview.py`
-draws it at, moved to its cropped content. Rerunning an area replaces that area's files and entries, so a redo
+draws it at, moved to its cropped content. Clothing also gets a dye mask, and the `worn` area states each classic
+dye's tint, measured against the import's published dyed images (so the import must have run). Rerunning an area replaces that area's files and entries, so a redo
 reaches the game by being accepted and promoted again. Nothing unaccepted or from `studies/` is promoted.
 
 ## Related

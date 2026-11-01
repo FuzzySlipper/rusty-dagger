@@ -2538,6 +2538,7 @@
         "mask": null,
         "maskRect": null,
         "smooth": false,
+        "tint": null,
         "slot": null
       },
       "layers": [
@@ -2553,6 +2554,7 @@
           "mask": null,
           "maskRect": null,
           "smooth": false,
+          "tint": null,
           "slot": null
         },
         {
@@ -2567,6 +2569,7 @@
           "mask": null,
           "maskRect": null,
           "smooth": false,
+          "tint": null,
           "slot": null
         },
         {
@@ -2581,6 +2584,7 @@
           "mask": null,
           "maskRect": null,
           "smooth": false,
+          "tint": null,
           "slot": null
         },
         {
@@ -2595,6 +2599,7 @@
           "mask": null,
           "maskRect": null,
           "smooth": false,
+          "tint": null,
           "slot": "chest-armor"
         },
         {
@@ -2609,6 +2614,7 @@
           "mask": null,
           "maskRect": null,
           "smooth": false,
+          "tint": null,
           "slot": "right-hand"
         }
       ],
