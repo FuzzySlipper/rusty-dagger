@@ -213,14 +213,15 @@ public sealed class DaggerfallCharacterPresentationTests
             // A one-handed weapon in the right hand is drawn from the record after the template's.
             layer => Assert.Equal(("item", "right-hand", "paper-doll.234.13.iron"), (layer.Kind, layer.Slot, layer.MediaId)));
         Assert.Empty(doll.Unplaced);
-        Assert.Equal(f.Definitions.CharacterPresentation.PaperDollItems[(234, 13)].Placement,
-            new DaggerfallPaperDollPlacement(doll.Layers[^1].X, doll.Layers[^1].Y, doll.Layers[^1].Width, doll.Layers[^1].Height));
+        DaggerfallPaperDollPlacement sword = f.Definitions.CharacterPresentation.PaperDollItems[(234, 13)].Placement;
+        Assert.Equal((sword.X, sword.Y, sword.Width, sword.Height), (doll.Layers[^1].X, doll.Layers[^1].Y, doll.Layers[^1].Width, doll.Layers[^1].Height));
+        Assert.All(doll.Layers, layer => Assert.False(layer.Smooth));
 
         // Equipping a helm and moving the sword to the left hand change the doll: the helm (draw order 0) is
         // the first item drawn, its mask clears what is beneath it, and the left hand draws the template's record.
-        WorldRpg.Kit.Inventory.UniqueInventoryItem sword = f.Equipment.Read().Assignments.Single(assignment => assignment.Slot.Value == "right-hand").Item;
-        f.Equipment.Unequip(sword);
-        f.Equipment.Equip(sword, [new SlotId("left-hand")]);
+        WorldRpg.Kit.Inventory.UniqueInventoryItem held = f.Equipment.Read().Assignments.Single(assignment => assignment.Slot.Value == "right-hand").Item;
+        f.Equipment.Unequip(held);
+        f.Equipment.Equip(held, [new SlotId("left-hand")]);
         WorldRpg.Kit.Inventory.UniqueInventoryItem helm = f.Equipment.Materialize(new DurableIdentityReference(DurableIdentityKind.Item, 701), new InventoryItemId("template-107-iron"));
         f.Equipment.Equip(helm, [new SlotId("head")]);
         PaperDollPresentation equipped = presentation.Read(f.Player, f.Progression).PaperDoll!;
@@ -238,6 +239,58 @@ public sealed class DaggerfallCharacterPresentationTests
         PaperDollPresentation bare = presentation.Read(f.Player, f.Progression).PaperDoll!;
         Assert.Equal([(null, null), (0, 40), (40, clothed.Placement.Height), (null, null)],
             bare.Layers.Select(layer => (layer.ClipTop, layer.ClipBottom)));
+    }
+
+    [Fact]
+    public void Paper_doll_draws_refreshed_art_at_its_own_doll_rect_and_keeps_classic_clips_masks_and_clothing_dyes()
+    {
+        using Fixture f = new();
+        DaggerfallCharacterIdentity identity = new DaggerfallCharacterState(f.Definitions, f.Player.Stats, f.PlayerDefinition).Identity with { Gender = DaggerfallCharacterGender.Male };
+        DaggerfallRaceLayers race = f.Definitions.CharacterPresentation.RequireRace(identity.RaceId);
+        DaggerfallCharacterLayerDefinition nude = race.Body(identity.Gender, clothed: false);
+        DaggerfallCharacterLayerDefinition clothed = race.Body(identity.Gender, clothed: true);
+        DaggerfallItemDefinition Template(Func<DaggerfallItemTemplateDefinition, bool> match) => f.Definitions.TemplateItems.Values.First(item => item.Template is { } template && match(template));
+        DaggerfallItemDefinition helmet = Template(template => template.Index == 107);
+        DaggerfallItemDefinition shirt = Template(template => template.Groups.Contains("MensClothing") && template.Name.Contains("Shirt", StringComparison.Ordinal));
+        DaggerfallWornItem Worn(string slot, DaggerfallItemDefinition item, string material, string? dye = null) =>
+            new($"{slot}.{item.Id.Value}", slot, item,
+                new DaggerfallItemInstanceMetadata(item.Id.Value, material, 0, 1, 1, true, false, null, null, null, DaggerfallItemOwner.Player, Dye: dye), () => $"{slot} item");
+        DaggerfallWornItem[] worn = [Worn("head", helmet, "steel"), Worn("chest-clothes", shirt, "cloth", dye: "blue")];
+        PaperDollPresentation classic = DaggerfallPaperDollPolicy.Compose(f.Definitions, identity, null, worn);
+        PaperDollLayerPresentation classicHelm = classic.Layers.Single(layer => layer.Slot == "head");
+        PaperDollLayerPresentation classicShirt = classic.Layers.Single(layer => layer.Slot == "chest-clothes");
+        Assert.NotNull(classicHelm.Mask);
+
+        // Every classic image the doll draws has a replacement with a rect of its own, as promotion writes them.
+        System.Text.Json.Nodes.JsonObject Entry(string replaces, double x, double y, double width, double height) => new()
+        {
+            ["replaces"] = replaces, ["mediaId"] = $"refreshed.{replaces}", ["path"] = $"worldrpg/media/refreshed/paper-doll/{replaces}.webp", ["byteLength"] = 1,
+            ["doll"] = new System.Text.Json.Nodes.JsonObject { ["x"] = x, ["y"] = y, ["width"] = width, ["height"] = height },
+        };
+        System.Text.Json.Nodes.JsonObject payload = new()
+        {
+            ["artReplacements"] = new System.Text.Json.Nodes.JsonObject
+            {
+                ["images"] = new System.Text.Json.Nodes.JsonArray(Entry(nude.MediaId, 20.5, 30.25, 70, 150), Entry(clothed.MediaId, 20.5, 30.25, 70, 150),
+                    Entry(classicHelm.MediaId, 40, 0, 30, 32), Entry(classicShirt.MediaId, 25, 40, 60, 50)),
+            },
+        };
+        DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()), "test.art");
+        PaperDollPresentation refreshed = DaggerfallPaperDollPolicy.Compose(f.Definitions, identity, null, worn, art);
+
+        // The body is drawn at the replacement's rect, smoothed.
+        PaperDollLayerPresentation body = refreshed.Layers.First(layer => layer.Kind == "body");
+        Assert.Equal(new PaperDollLayerPresentation("body", $"refreshed.{nude.MediaId}", 20.5, 30.25, 70, 150, Smooth: true), body);
+        // The shirt covers the upper body, so the clothed body's lower half is drawn from the waist row of the
+        // classic image, which in the replacement's rect is moved by the two rects' offset, down to its own bottom.
+        PaperDollLayerPresentation lower = refreshed.Layers.Single(layer => layer.MediaId == $"refreshed.{clothed.MediaId}");
+        Assert.Equal((clothed.Placement!.Y + 40 - 30.25, 150d), (lower.ClipTop!.Value, lower.ClipBottom!.Value));
+        // The helm keeps its classic mask, drawn where the classic helm was.
+        PaperDollLayerPresentation helm = refreshed.Layers.Single(layer => layer.Slot == "head");
+        Assert.Equal((helm.MediaId, helm.X, helm.Y, helm.Mask), ($"refreshed.{classicHelm.MediaId}", 40d, 0d, classicHelm.Mask));
+        Assert.Equal(new DaggerfallDollRect(classicHelm.X, classicHelm.Y, classicHelm.Width, classicHelm.Height), helm.MaskRect);
+        // Clothing is drawn in its dye, which the refreshed clothing does not carry yet, so it stays classic.
+        Assert.Equal(classicShirt, refreshed.Layers.Single(layer => layer.Slot == "chest-clothes"));
     }
 
     [Fact]

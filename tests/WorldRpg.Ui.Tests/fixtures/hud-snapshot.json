@@ -115,6 +115,7 @@
     "lookSensitivity": 1,
     "invertVertical": true,
     "uiScale": null,
+    "classicArt": null,
     "uiScaleRange": {
       "minimum": 0.5,
       "maximum": 3,
@@ -1133,7 +1134,7 @@
     "quote": null
   },
   "inventory": {
-    "revision": "866:1:558:0:",
+    "revision": "832:1:558:0:",
     "message": "Drag items between the grid and compatible equipment slots.",
     "encumbrance": {
       "currentClassicUnits": 7025,
@@ -2535,6 +2536,8 @@
         "clipTop": null,
         "clipBottom": null,
         "mask": null,
+        "maskRect": null,
+        "smooth": false,
         "slot": null
       },
       "layers": [
@@ -2548,6 +2551,8 @@
           "clipTop": null,
           "clipBottom": null,
           "mask": null,
+          "maskRect": null,
+          "smooth": false,
           "slot": null
         },
         {
@@ -2560,6 +2565,8 @@
           "clipTop": 40,
           "clipBottom": 145,
           "mask": null,
+          "maskRect": null,
+          "smooth": false,
           "slot": null
         },
         {
@@ -2572,6 +2579,8 @@
           "clipTop": null,
           "clipBottom": null,
           "mask": null,
+          "maskRect": null,
+          "smooth": false,
           "slot": null
         },
         {
@@ -2584,6 +2593,8 @@
           "clipTop": null,
           "clipBottom": null,
           "mask": null,
+          "maskRect": null,
+          "smooth": false,
           "slot": "chest-armor"
         },
         {
@@ -2596,6 +2607,8 @@
           "clipTop": null,
           "clipBottom": null,
           "mask": null,
+          "maskRect": null,
+          "smooth": false,
           "slot": "right-hand"
         }
       ],
@@ -2608,6 +2621,7 @@
     "contentPacks": [
       "daggerfall.imported",
       "daggerfall.base",
+      "daggerfall.art-replacements",
       "daggerfall.blocks",
       "daggerfall.privateers-hold",
       "daggerfall.castle-necromoghan",

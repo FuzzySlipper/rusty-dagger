@@ -315,12 +315,34 @@ The planning expansion is therefore finite and record-oriented:
 
 ## Generated and authored content
 
+### Refreshed art
+
+Generated replacement art made for the game is ordinary tracked content (`AGENTS.md`). It ships in the
+`daggerfall.art-replacements` content pack, which the bundles select: its payload's `artReplacements` section
+names, for each image, the classic media identity it stands in for, its file under
+`content/worldrpg/media/refreshed/<area>/`, its length and hash, and for a paper-doll layer its rect in doll units.
+Every category substitutes through that one map (`DaggerfallArtReplacements`). A presentation that draws a classic
+identity draws its replacement unless the player chooses **Classic art** in settings, a persisted preference, so
+the classic publication stays the fallback. `authoring/tools/items/promote.py` writes the pack from the finals
+`authoring/ledger/<area>-notes.json` accepts (see `authoring/docs/item-icons.md`).
+
+- **Format and budget.** Images are WebP: colour at quality 90, alpha lossless, cropped to their content, at the
+  generated resolution (about five pixels per doll unit for bodies and worn items). The paper doll's 1,288 images
+  (16 bodies in both layers, 160 heads, eight worn sets) take about 31 MB, against about 250 MB as cropped PNG
+  and 477 MB as the uncropped 1024² finals. Git holds them directly, with no LFS: at this rate the remaining 2D
+  categories fit in the low hundreds of megabytes. Delivery reads each image on demand and sends it as a data URL,
+  so the format also bounds what a projection carries.
+- **What the data container still carries.** Nothing classic is dropped yet. The paper doll's classic bodies,
+  heads and worn items are the fallback, and clothing is always drawn classic: it is drawn in its dye, which the
+  refreshed clothing, painted neutral for a tint, does not carry until dye application is settled.
+
 The game's files, the media extracted from them and the bulk generated payloads are not committed
 and not redistributed; small derived facts (identifiers, names, numbers, short text, record JSON)
 in tests, fixtures and documents are fine (`AGENTS.md`). Git tracks `content/` (descriptors,
-hand-authored payloads, tuning, the authored UI art under `worldrpg/media/ui/authored/` and the held
-definition of the 3D first-person art under `worldrpg/first-person/`, whose models are built into the ignored
-`local/first-person.rpak` by `scripts/fp-arms/build.sh`) and the
+hand-authored payloads, tuning, the authored UI art under `worldrpg/media/ui/authored/`, the refreshed art
+under `worldrpg/media/refreshed/` and the held definition of the 3D first-person art under
+`worldrpg/first-person/`, whose models are built into the ignored `local/first-person.rpak` by
+`scripts/fp-arms/build.sh`) and the
 importer's own inputs under `data/`; an architecture law fails a run that finds an untracked file under
 `content/`. Everything derived from the operator's files is built on each checkout by one cross-platform
 command, the import tool's `import`

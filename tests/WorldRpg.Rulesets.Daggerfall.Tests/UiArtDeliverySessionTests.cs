@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -414,6 +415,49 @@ public sealed class UiArtDeliverySessionTests
             ["display"] = display,
             ["slot"] = mediaId == "screen.pick.02" ? "pick" : null,
         };
+    }
+
+    [Fact]
+    public void The_paper_doll_draws_the_refreshed_art_set_until_the_player_chooses_classic_art()
+    {
+        string root = TestData.RepositoryRoot;
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        PopulateContent(content, inputs);
+        const string payload = "worldrpg/payloads/daggerfall.art-replacements.json";
+        DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(TestContentFiles.Read(Path.Combine(root, "content", payload)), "daggerfall.art-replacements");
+        foreach (DaggerfallArtReplacement replacement in art.All) content.Add(replacement.Path, TestContentFiles.ReadCopy(Path.Combine(root, "content", replacement.Path)));
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context,
+            new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults) { Data = TestSessions.DataOf(content), ArtReplacements = art });
+        session.PublishInitial();
+        Dictionary<string, object?> hud = Assert.IsType<Dictionary<string, object?>>(engine.Published());
+        Dictionary<string, object?>[] Layers(Dictionary<string, object?> snapshot) => [.. Assert.IsType<object?[]>(
+            Assert.IsType<Dictionary<string, object?>>(Assert.IsType<Dictionary<string, object?>>(snapshot["character"])["paperDoll"])["layers"]).Cast<Dictionary<string, object?>>()];
+
+        // The body and head have refreshed images, drawn smoothed at their own rects and delivered as WebP.
+        Dictionary<string, object?> body = Layers(hud).First(layer => Equals(layer["kind"], "body"));
+        string bodyId = Assert.IsType<string>(body["mediaId"]);
+        Assert.StartsWith("refreshed.", bodyId, StringComparison.Ordinal);
+        Assert.Equal(true, body["smooth"]);
+        Assert.Equal(art.All.Single(replacement => replacement.MediaId == bodyId).Doll!.X, Convert.ToDouble(body["x"], CultureInfo.InvariantCulture));
+        Dictionary<string, object?> demanded = Assert.IsType<Dictionary<string, object?>>(hud["uiArtDemanded"]);
+        string delivered = Assert.IsType<string>(Assert.IsType<object?[]>(demanded["images"]).Cast<Dictionary<string, object?>>().Single(image => Equals(image["id"], bodyId))["image"]);
+        Assert.StartsWith("data:image/webp;base64,", delivered, StringComparison.Ordinal);
+        Assert.Equal(false, Assert.IsType<Dictionary<string, object?>>(hud["controls"])["classicArt"]);
+
+        // Choosing classic art draws the classic images again, with their pixels square.
+        session.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.DirectDigital) with
+        {
+            ValueKind = InputValueKind.ProductPayload,
+            PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+            PayloadData = "{\"action\":\"controls-classic-art\",\"enabled\":true}"u8.ToArray(),
+        }]));
+        Dictionary<string, object?> classic = Assert.IsType<Dictionary<string, object?>>(engine.Published());
+        Assert.Equal(true, Assert.IsType<Dictionary<string, object?>>(classic["controls"])["classicArt"]);
+        Assert.All(Layers(classic), layer => Assert.Equal((false, false), (Assert.IsType<string>(layer["mediaId"]).StartsWith("refreshed.", StringComparison.Ordinal), layer["smooth"])));
     }
 
     [Fact]

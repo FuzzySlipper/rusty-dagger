@@ -33,6 +33,8 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
     /// start site, starting gold and opening quests. A bundle selects at most one.
     /// </summary>
     internal static readonly ContentPackRoleId NewGameStartRole = new("daggerfall.new-game-start");
+    /// <summary>The refreshed art set (<see cref="DaggerfallArtReplacements"/>); a bundle selects at most one.</summary>
+    internal static readonly ContentPackRoleId ArtReplacementsRole = new("daggerfall.art-replacements");
 
     /// <summary>Creates the ordinary product ruleset, compiling no rules variants, with its admitted cinematic playback enabled.</summary>
     public DaggerfallRuleset() : this([]) { }
@@ -144,6 +146,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
             DisabledQuestSelection = admitted.DisabledQuestSelection,
             Music = admitted.Music,
             HeldArt = admitted.HeldArt,
+            ArtReplacements = admitted.ArtReplacements,
             Blocks = admitted.Blocks,
             Seams = DaggerfallSeamSelection.From(context.Composition.Variants, _variants),
             Loading = context.Loading,
@@ -162,7 +165,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
             {
                 if (pack.Role != BaseRole && pack.Role != ImportedRole && pack.Role != BlocksRole && pack.Role != SiteRole
                     && pack.Role != QuestCorpusRole && pack.Role != FightersGuildQuestCorpusRole && pack.Role != NamedQuestCorpusRole
-                    && pack.Role != NewGameStartRole)
+                    && pack.Role != NewGameStartRole && pack.Role != ArtReplacementsRole)
                     throw new InvalidOperationException($"Content pack '{pack.Id.Value}' declares role '{pack.Role.Value}', which the Daggerfall ruleset does not interpret.");
             }
             DaggerfallData data = DaggerfallData.For(selected);
@@ -233,8 +236,12 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
             DaggerfallPublishedClassicMedia classicMedia = DaggerfallPublishedClassicMedia.Read(data, inputs.ClassicPresentation);
             DaggerfallMusicBundle? music = DaggerfallMusicBundle.For(selected);
             DaggerfallHeldArt? heldArt = DaggerfallHeldArt.For(selected);
+            ContentPack[] artPacks = [.. roles[ArtReplacementsRole]];
+            if (artPacks.Length > 1)
+                throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' selects {artPacks.Length} '{ArtReplacementsRole.Value}' content packs; a session draws one refreshed art set.");
+            DaggerfallArtReplacements? art = artPacks.Length == 1 ? DaggerfallArtReplacements.Read(artPacks[0].Payload, artPacks[0].Id.Value) : null;
             DaggerfallTuning tuning = DaggerfallTuning.Read(selected.Tuning.Payload.Span);
-            return new DaggerfallAdmittedContent(definitions, blocks, inputs, profiles, questReceipts, disabledQuestSelection, tuning, classicMedia, new DaggerfallSiteAudioBundles(data, profiles), data, music, heldArt);
+            return new DaggerfallAdmittedContent(definitions, blocks, inputs, profiles, questReceipts, disabledQuestSelection, tuning, classicMedia, new DaggerfallSiteAudioBundles(data, profiles), data, music, heldArt, art);
         });
 
     /// <summary>The one pack a bundle must select for a role every session reads exactly once.</summary>
@@ -258,5 +265,6 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
         DaggerfallSiteAudioBundles Audio,
         DaggerfallData Data,
         DaggerfallMusicBundle? Music,
-        DaggerfallHeldArt? HeldArt);
+        DaggerfallHeldArt? HeldArt,
+        DaggerfallArtReplacements? ArtReplacements);
 }

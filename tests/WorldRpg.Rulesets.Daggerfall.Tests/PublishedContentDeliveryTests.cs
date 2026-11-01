@@ -66,14 +66,16 @@ public sealed class PublishedContentDeliveryTests
         }
 
         // Each content group has its own generated index, so the classic index accounts for the classic
-        // group and the character index accounts for the character canvases. An artifact no index names
+        // group and the character index accounts for the character canvases; the refreshed art pack's
+        // payload accounts for its own images. An artifact no index names
         // fails here, which is what makes a hand-written artifact or a dropped entry visible.
         HashSet<string> published = [.. GeneratedContentFiles(content)
             .Where(path => !path.EndsWith("classic-media-inventory.json", StringComparison.Ordinal)
                 && !path.Contains("/character/", StringComparison.Ordinal)
                 && !path.Contains("/cinematics/", StringComparison.Ordinal)
                 && !path.Contains("/music/", StringComparison.Ordinal)
-                && !path.StartsWith("worldrpg/media/sky/", StringComparison.Ordinal))];
+                && !path.StartsWith("worldrpg/media/sky/", StringComparison.Ordinal)
+                && !path.StartsWith("worldrpg/media/refreshed/", StringComparison.Ordinal))];
         Assert.Equal(published.Order(StringComparer.Ordinal), listed.Order(StringComparer.Ordinal));
         // The published group carries every classic descriptor except audio: each site closure publishes
         // the clips it maps and opens them through its own audio bundle, so the group carries neither WAV
@@ -774,6 +776,37 @@ public sealed class PublishedContentDeliveryTests
         Match declared = Regex.Match(source, $@"const {name} = '(?<value>[^']+)'");
         Assert.True(declared.Success, $"'{name}' is used in the table and not declared in the file.");
         return declared.Groups["value"].Value;
+    }
+
+    [Fact]
+    public void Refreshed_art_states_the_bytes_it_ships_and_stands_in_only_for_published_classic_media()
+    {
+        ProductContent content = AdmittedContent();
+        const string payloadPath = "worldrpg/payloads/daggerfall.art-replacements.json";
+        JsonElement[] images = [.. JsonDocument.Parse(content.ReadBytes(payloadPath).ToArray()).RootElement
+            .GetProperty("artReplacements").GetProperty("images").EnumerateArray()];
+        DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(content.ReadBytes(payloadPath), "daggerfall.art-replacements");
+        Assert.Equal(images.Length, art.All.Count());
+
+        // Every replacement stands in for an image the classic publication carries, so classic stays its fallback.
+        HashSet<string> classic = [.. new[] { "worldrpg/media/character/character-media-inventory.json", PaperDollGroup + "paper-doll-inventory.json" }
+            .SelectMany(path => Index(path).Artifacts).Select(artifact => artifact.GetProperty("mediaId").GetString()!)];
+        Assert.All(art.All, replacement => Assert.Contains(replacement.Replaces, classic));
+        Assert.All(art.All, replacement => Assert.Equal($"refreshed.{replacement.Replaces}", replacement.MediaId));
+        // Paper-doll replacements are drawn at their own rect in the doll.
+        Assert.All(art.All, replacement => Assert.NotNull(replacement.Doll));
+
+        // The payload states the bytes of every refreshed file, and names every file the refreshed media carries.
+        foreach (JsonElement image in images)
+        {
+            byte[] bytes = content.ReadBytes(image.GetProperty("path").GetString()!).ToArray();
+            Assert.Equal(image.GetProperty("byteLength").GetInt64(), bytes.Length);
+            Assert.Equal(image.GetProperty("sha256").GetString(), Convert.ToHexStringLower(SHA256.HashData(bytes)));
+        }
+
+        Assert.Equal(
+            [.. GeneratedContentFiles(content).Where(path => path.StartsWith("worldrpg/media/refreshed/", StringComparison.Ordinal)).Order(StringComparer.Ordinal)],
+            [.. images.Select(image => image.GetProperty("path").GetString()!).Order(StringComparer.Ordinal)]);
     }
 
     private static ProductContent AdmittedContent()

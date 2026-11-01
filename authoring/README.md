@@ -15,5 +15,7 @@ authoring/
 ```
 
 Status of each asset moves `df-raw` → `gen-raw` → (reviewed) shipped content, so a path tells you what a file is.
+`tools/items/promote.py --area A` writes an area's ledger-accepted finals into the tracked refreshed-art pack
+(`content/worldrpg/media/refreshed/`, see `docs/coverage/content-scope.md`).
 Start with [docs/item-icons.md](docs/item-icons.md). `authoring/` also holds the sprite workbench's operator
 overlays (`authoring/sprites/`, see the root README), which are separate from the above.

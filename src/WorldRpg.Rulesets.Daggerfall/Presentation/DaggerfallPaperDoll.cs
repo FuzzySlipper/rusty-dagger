@@ -3,20 +3,24 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>
-/// One image the paper doll draws, placed in source pixels from the doll's top-left corner.
+/// One image the paper doll draws, placed in doll units (the classic doll's source pixels) from the doll's top-left
+/// corner. The rect is independent of the image's pixel size: a refreshed image of any resolution is drawn scaled
+/// into it, and may extend past the doll's frame, which clips it.
 /// </summary>
 /// <param name="Kind">What the layer is: <c>background</c>, <c>cloak-interior</c>, <c>body</c>, <c>head</c> or <c>item</c>.</param>
 /// <param name="MediaId">The published image.</param>
 /// <param name="X">The image's left edge in the doll.</param>
 /// <param name="Y">The image's top edge in the doll.</param>
-/// <param name="Width">The image's width.</param>
-/// <param name="Height">The image's height.</param>
-/// <param name="ClipTop">The first image row drawn, when only part of the image is.</param>
-/// <param name="ClipBottom">The row after the last one drawn, when only part of the image is.</param>
-/// <param name="Mask">A mask image the same size and place as this one: where it is opaque, what the doll drew beneath this layer is cleared.</param>
+/// <param name="Width">The image's width in the doll.</param>
+/// <param name="Height">The image's height in the doll.</param>
+/// <param name="ClipTop">The first doll row drawn, from the image's top edge, when only part of the image is.</param>
+/// <param name="ClipBottom">The doll row after the last one drawn, from the image's top edge, when only part of the image is.</param>
+/// <param name="Mask">A mask image placed at <paramref name="MaskRect"/>: where it is opaque, what the doll drew beneath this layer is cleared.</param>
 /// <param name="Slot">The equipment slot of an item layer.</param>
-internal sealed record PaperDollLayerPresentation(string Kind, string MediaId, int X, int Y, int Width, int Height,
-    int? ClipTop = null, int? ClipBottom = null, string? Mask = null, string? Slot = null);
+/// <param name="MaskRect">Where the mask is drawn: the classic image's rect, which a refreshed image's own rect need not be.</param>
+/// <param name="Smooth">Whether the image is refreshed art, drawn smoothed; classic art is drawn with its pixels square.</param>
+internal sealed record PaperDollLayerPresentation(string Kind, string MediaId, double X, double Y, double Width, double Height,
+    double? ClipTop = null, double? ClipBottom = null, string? Mask = null, string? Slot = null, DaggerfallDollRect? MaskRect = null, bool Smooth = false);
 
 /// <summary>
 /// The player's paper doll: its size, the background, then every other layer in the order it is drawn.
@@ -62,6 +66,11 @@ internal sealed record DaggerfallWornItem(string Key, string Slot, DaggerfallIte
 /// magic template is not a regular one - is drawn instead from its own texture, as <c>SetArtifact</c> sets it
 /// with <c>ItemHelper.GetArtifactTextureIndices</c>: the artifact archive for the gender it was made for, at
 /// the record the artifact's place among the artifact templates names, undyed.
+/// <para>
+/// With a refreshed art set, each layer whose classic image has a replacement draws the replacement at its own
+/// doll rect (<see cref="Refreshed"/>). Clothing keeps its classic image: it is drawn in its dye, which the
+/// refreshed clothing, painted neutral for a tint, does not carry yet.
+/// </para>
 /// </remarks>
 internal static class DaggerfallPaperDollPolicy
 {
@@ -83,7 +92,7 @@ internal static class DaggerfallPaperDollPolicy
     private const int FirstBodySlot = 12;
 
     internal static PaperDollPresentation Compose(DaggerfallDefinitions definitions, DaggerfallCharacterIdentity identity,
-        DaggerfallRacialOverrideView? racial, IReadOnlyList<DaggerfallWornItem> worn)
+        DaggerfallRacialOverrideView? racial, IReadOnlyList<DaggerfallWornItem> worn, DaggerfallArtReplacements? art = null)
     {
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(identity);
@@ -115,28 +124,28 @@ internal static class DaggerfallPaperDollPolicy
         if (cloak is not null)
         {
             DaggerfallItemTemplateDefinition template = cloak.Template(definitions)!;
-            if (Item(presentation, Archive(template, cloak, identity), template.PlayerTextureRecord, Dye(template, cloak)) is { } interior)
+            if (Item(presentation, Archive(template, cloak, identity), template.PlayerTextureRecord, Dye(template, cloak), null) is { } interior)
                 layers.Add(interior with { Kind = "cloak-interior", Slot = cloak.Slot });
             else unplaced.Add(cloak.Label());
         }
 
         DaggerfallCharacterLayerDefinition unclothed = race.Body(identity.Gender, clothed: false);
         DaggerfallCharacterLayerDefinition clothed = race.Body(identity.Gender, clothed: true);
-        layers.Add(Placed("body", unclothed.MediaId, unclothed.Placement, unclothed.MediaId));
+        layers.Add(Placed("body", unclothed.MediaId, unclothed.Placement, unclothed.MediaId, art));
         bool upperClothed = drawn.Any(item => item.Slot is "chest-clothes" or "chest-armor");
         bool lowerClothed = drawn.Any(item => item.Slot == "legs-clothes");
         DaggerfallPaperDollPlacement clothedPlacement = clothed.Placement ?? throw Missing(clothed.MediaId);
         if (!upperClothed)
-            layers.Add(Placed("body", clothed.MediaId, clothedPlacement, clothed.MediaId) with { ClipTop = 0, ClipBottom = Math.Min(WaistHeight, clothedPlacement.Height) });
+            layers.Add(Refreshed(Placed("body", clothed.MediaId, clothedPlacement, clothed.MediaId, null) with { ClipTop = 0, ClipBottom = Math.Min(WaistHeight, clothedPlacement.Height) }, art));
         if (!lowerClothed)
-            layers.Add(Placed("body", clothed.MediaId, clothedPlacement, clothed.MediaId) with { ClipTop = Math.Min(WaistHeight, clothedPlacement.Height), ClipBottom = clothedPlacement.Height });
+            layers.Add(Refreshed(Placed("body", clothed.MediaId, clothedPlacement, clothed.MediaId, null) with { ClipTop = Math.Min(WaistHeight, clothedPlacement.Height), ClipBottom = clothedPlacement.Height }, art));
 
         if (form is not null)
-            layers.Add(Placed("head", form.HeadMediaId, form.HeadPlacement, form.HeadMediaId));
+            layers.Add(Placed("head", form.HeadMediaId, form.HeadPlacement, form.HeadMediaId, art));
         else
         {
             DaggerfallCharacterLayerDefinition head = race.Heads(identity.Gender).Single(layer => layer.HeadIndex == identity.FaceIndex);
-            layers.Add(Placed("head", head.MediaId, head.Placement, head.MediaId));
+            layers.Add(Placed("head", head.MediaId, head.Placement, head.MediaId, art));
         }
 
         foreach ((DaggerfallWornItem item, DaggerfallItemTemplateDefinition template) in drawn
@@ -147,8 +156,8 @@ internal static class DaggerfallPaperDollPolicy
             .ThenBy(entry => Array.IndexOf(slotOrder, entry.Item.Slot)))
         {
             PaperDollLayerPresentation? drawnLayer = IsArtifact(definitions, item, out int? artifactRecord)
-                ? artifactRecord is int record ? Item(presentation, ArtifactArchive(item, identity), HandRecord(template, item, record), UnchangedDye) : null
-                : Item(presentation, Archive(template, item, identity), Record(template, item), Dye(template, item));
+                ? artifactRecord is int record ? Item(presentation, ArtifactArchive(item, identity), HandRecord(template, item, record), UnchangedDye, art) : null
+                : Item(presentation, Archive(template, item, identity), Record(template, item), Dye(template, item), IsClothing(template) ? null : art);
             if (drawnLayer is { } layer)
                 layers.Add(layer with { Slot = item.Slot });
             else unplaced.Add(item.Label());
@@ -161,22 +170,45 @@ internal static class DaggerfallPaperDollPolicy
     private static PaperDollLayerPresentation Background(DaggerfallPaperDollFrame frame, string mediaId) =>
         new("background", mediaId, frame.BackgroundX, frame.BackgroundY, frame.BackgroundWidth, frame.BackgroundHeight);
 
-    private static PaperDollLayerPresentation Placed(string kind, string mediaId, DaggerfallPaperDollPlacement? placement, string subject)
+    private static PaperDollLayerPresentation Placed(string kind, string mediaId, DaggerfallPaperDollPlacement? placement, string subject, DaggerfallArtReplacements? art)
     {
         DaggerfallPaperDollPlacement place = placement ?? throw Missing(subject);
-        return new PaperDollLayerPresentation(kind, mediaId, place.X, place.Y, place.Width, place.Height);
+        return Refreshed(new PaperDollLayerPresentation(kind, mediaId, place.X, place.Y, place.Width, place.Height), art);
+    }
+
+    /// <summary>
+    /// The layer as the refreshed art draws it, when its classic image has a replacement placed in the doll: the
+    /// replacement at its own rect, smoothed, a clip moved to the same doll rows (an end of the classic image stays
+    /// the end of the replacement, which may overhang it), and the mask kept at the classic image's rect.
+    /// </summary>
+    private static PaperDollLayerPresentation Refreshed(PaperDollLayerPresentation layer, DaggerfallArtReplacements? art)
+    {
+        if (art?.For(layer.MediaId) is not { Doll: { } rect } replacement) return layer;
+        double? Row(double? row) => row switch
+        {
+            null => null,
+            <= 0 => 0,
+            double end when end >= layer.Height => rect.Height,
+            double value => Math.Clamp(layer.Y + value - rect.Y, 0, rect.Height),
+        };
+        return layer with
+        {
+            MediaId = replacement.MediaId, X = rect.X, Y = rect.Y, Width = rect.Width, Height = rect.Height,
+            ClipTop = Row(layer.ClipTop), ClipBottom = Row(layer.ClipBottom),
+            MaskRect = layer.Mask is null ? null : new(layer.X, layer.Y, layer.Width, layer.Height), Smooth = true,
+        };
     }
 
     private static InvalidOperationException Missing(string mediaId) =>
         new($"Paper-doll layer '{mediaId}' has no published placement.");
 
-    private static PaperDollLayerPresentation? Item(DaggerfallCharacterPresentationSet presentation, int? archive, int record, string dye)
+    private static PaperDollLayerPresentation? Item(DaggerfallCharacterPresentationSet presentation, int? archive, int record, string dye, DaggerfallArtReplacements? art)
     {
         if (archive is not int number || !presentation.PaperDollItems.TryGetValue((number, record), out DaggerfallPaperDollItemImage? image)
             || !image.Dyes.TryGetValue(dye, out string? mediaId))
             return null;
         DaggerfallPaperDollPlacement place = image.Placement;
-        return new PaperDollLayerPresentation("item", mediaId, place.X, place.Y, place.Width, place.Height, Mask: image.MaskMediaId);
+        return Refreshed(new PaperDollLayerPresentation("item", mediaId, place.X, place.Y, place.Width, place.Height, Mask: image.MaskMediaId), art);
     }
 
     /// <summary>Whether the donor draws an item of this template in this slot: clothing, armour and weapons, and jewellery worn on the body.</summary>
@@ -184,9 +216,11 @@ internal static class DaggerfallPaperDollPolicy
         template.Groups.Any(group => group is "MensClothing" or "WomensClothing" or "Armor" or "Weapons")
         || template.Groups.Contains("Jewellery", StringComparer.Ordinal) && slotIndex >= FirstBodySlot;
 
+    private static bool IsClothing(DaggerfallItemTemplateDefinition template) =>
+        template.Groups.Any(group => group is "MensClothing" or "WomensClothing");
+
     private static bool IsCloak(DaggerfallItemTemplateDefinition? template) =>
-        template is not null && template.Groups.Any(group => group is "MensClothing" or "WomensClothing")
-        && template.Name.EndsWith(" Cloak", StringComparison.OrdinalIgnoreCase);
+        template is not null && IsClothing(template) && template.Name.EndsWith(" Cloak", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The texture archive the item is drawn from, or null when its template draws none.</summary>
     private static int? Archive(DaggerfallItemTemplateDefinition template, DaggerfallWornItem item, DaggerfallCharacterIdentity wearer)
@@ -234,7 +268,7 @@ internal static class DaggerfallPaperDollPolicy
 
     /// <summary>The dye an item is drawn in: clothing's own dye, and a weapon's or armour's material.</summary>
     private static string Dye(DaggerfallItemTemplateDefinition template, DaggerfallWornItem item) =>
-        template.Groups.Any(group => group is "MensClothing" or "WomensClothing")
+        IsClothing(template)
             ? item.Metadata?.Dye ?? "blue"
             : item.Metadata?.Material ?? item.Definition.Weapon?.Material ?? item.Definition.Armor?.Material ?? "steel";
 
