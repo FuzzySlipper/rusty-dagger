@@ -14,6 +14,11 @@ The outline check compares the whole silhouette: for each band of the classic bo
 and torso, hips and thighs, shins, feet) the 95th-percentile distance from each outline to the other, in doll
 units. A landmark or band beyond TOLERANCE fails.
 
+Every race of a morph wears one generated body shape (bodies.py), so a body is checked by morph: its body
+landmarks and outline against the classic body of the morph's base race, and its head box against its own
+race's classic head. The classic races of a morph differ by a doll unit or so (the Nord man's shoulders are
+narrower than the Breton's), which one shared shape cannot follow.
+
     landmarks.py standard              # measure the classic sprites, write specs/paper-doll/proportions.json
     landmarks.py check [--paper-doll DIR ...]   # measure generated bodies and heads against it
 """
@@ -24,6 +29,7 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage
 
+from bodies import MORPHS
 from doll_preview import AUTHORING, FINALS, doll_layer, placed
 
 STANDARD = AUTHORING / "specs" / "paper-doll" / "proportions.json"
@@ -154,6 +160,11 @@ def standard():
     print("wrote", STANDARD)
 
 
+def morph_base(number):
+    """The body number whose classic shape the body's morph takes: its base race, of the same gender."""
+    return next(races[0] for races in MORPHS.values() if number % 10 in races) + number - number % 10
+
+
 def deviations(measured, want, tolerance):
     return [f"{key} {measured[key]} ({measured[key] - value:+.1f})" for key, value in want.items()
             if key not in RATIOS and abs(measured[key] - value) > tolerance]
@@ -168,12 +179,15 @@ def check():
         if m is None:
             print(f"{name}: no generated body")
             continue
-        want = spec["bodies"][name]
+        base = f"body{morph_base(number):02d}"
+        head = {key: spec["bodies"][name][key] for key in ("crown", "head bottom", "head left", "head right")}
+        want = spec["bodies"][base] | head
+        want |= ratios(want)
         bad = deviations(m, want, tolerance)
-        for band, d in outline_deviation(outline("bodies", f"{name}i0", 0, "classic"), body, want).items():
+        for band, d in outline_deviation(outline("bodies", f"{base}i0", 0, "classic"), body, want).items():
             if d is not None and d > tolerance:
                 bad.append(f"outline {band} {d}")
-        print(f"{name}: {'ok' if not bad else 'FAIL'}  heads tall {m['heads tall']} ({want['heads tall']}), "
+        print(f"{name}: {'ok' if not bad else 'FAIL'}{'' if base == name else f' (shape of {base})'}  heads tall {m['heads tall']} ({want['heads tall']}), "
               f"crotch {m['crotch fraction']} ({want['crotch fraction']}), shoulders {m['shoulders in heads']} heads "
               f"({want['shoulders in heads']})" + "".join(f"\n    {b}" for b in bad))
         failed |= bool(bad)
