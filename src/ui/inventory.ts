@@ -15,8 +15,8 @@ const load = (source: string): Promise<HTMLImageElement> => new Promise((resolve
 
 /**
  * Neutral clothing in a dye: where the mask is opaque (the cloth the dye recolours) each pixel is brightened and
- * multiplied by the colour, and the rest keeps its own colour. A canvas makes it, as the window's renderer draws
- * no CSS mask; with no canvas to draw on, the neutral image stands (null).
+ * multiplied by the colour, and the rest keeps its own colour. A canvas makes it as one image, cached per dye;
+ * with no canvas to draw on, the neutral image stands (null).
  */
 async function dyed(source: string, mask: string, color: string, brightness: number): Promise<string | null> {
   const [art, cloth] = await Promise.all([load(source), load(mask)]);
