@@ -104,13 +104,15 @@ def key_cast(dressed, isolated, region, key):
     return float(np.median(((isolated.astype(np.float32) - dressed) @ toward)[kept]))
 
 
-def difference_isolation(dressed, beneath):
+def difference_isolation(dressed, beneath, onto=None):
     """An isolation made by keying the dressed figure against the figure beneath (OKLab distance): tried first,
     and the fallback when every Qwen isolation fails. It holds for a piece unlike the skin it covers (pale cloth,
-    steel); a piece the colour of that skin (bronze plate, tan trousers) keys away in holes."""
+    steel); a piece the colour of that skin (bronze plate, tan trousers) keys away in holes. With `onto` (a Qwen
+    isolation), what it keeps is added to that isolation instead of drawn on flat green."""
     lab = lambda a: srgb_to_oklab(a.astype(np.float32) / 255)
     t = ramp(np.sqrt(((lab(dressed) - lab(beneath)) ** 2).sum(2)), DIFFERENCE)[..., None]
-    return (t * dressed + (1 - t) * np.array(ISOLATIONS[0][1], np.float32) + .5).astype(np.uint8)
+    ground = np.array(ISOLATIONS[0][1], np.float32) if onto is None else onto.astype(np.float32)
+    return (t * dressed + (1 - t) * ground + .5).astype(np.uint8)
 
 
 def key_chroma(L):
@@ -297,7 +299,10 @@ def main():
                 qwen(dressed_path, ISOLATE.format(name=name, key=colour, rgb=",".join(map(str, key_rgb))), a.seed + offset,
                      isolated_path, steps=a.steps)
                 isolated = Image.open(isolated_path).convert("RGB").resize(dressed.size)
-                layer = lift(np.array(dressed), np.array(figure), np.array(isolated), region, k, key_rgb)
+                # On the violet key, whatever changed from the figure beneath and is not skin is the piece: Qwen's
+                # isolation sometimes trims parts of it (a strap, a shoulder cap) that the difference keeps.
+                kept_by = difference_isolation(np.array(dressed), np.array(figure), np.array(isolated)) if violet(entry) else np.array(isolated)
+                layer = lift(np.array(dressed), np.array(figure), kept_by, region, k, key_rgb)
                 kept = layer[..., 3].sum() / max(1, classic.sum())
                 cast = key_cast(np.array(dressed), np.array(isolated), region, key_rgb)
                 if 0.15 < kept < 3 and cast < GHOST:
