@@ -1,0 +1,77 @@
+{
+  "seed": 27311,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Highly detailed lurid pulp-fantasy character portrait in the manner of 1970s and 80s paperback cover art (Frank Frazetta, Boris Vallejo): glossy airbrushed oil rendering, strongly modelled features with defined brows, eyes, nose, lips and cheekbones, fine skin detail and sheen, individual strands of hair and beard, warm rim light against deep shadow, sharp specular highlights, rich saturated colour. Crisp, confident, finely detailed forms rather than flat broad shapes; keep the original local colours. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded fantasy RPG character portraits in a restrained palette. Keep the source's expression, head angle, skin tone, hair and features. A head and neck only, cut flat across the neck as in the source. No body, clothing, weapon, text, border, scenery or second figure.",
+  "presentation": "One isolated head on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the head. The whole head visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Faces redo: full hair and frills",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "faces",
+      "model": "qwen-edit",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "conditioning": "reference"
+    }
+  ],
+  "task": "Task: Redraw a very small classic fantasy RPG paper-doll head as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+  "items": [
+    {
+      "id": "face03-9",
+      "directory": "faces/face03i0",
+      "image": "face03i0-record-009-frame-000-source.png",
+      "content": "One male dark elf head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Ash blue-grey skin, pointed ears and glowing red eyes. Thick wavy auburn-brown hair parted in the middle, falling full and wide over both sides of the head past the ears to the jaw, as wide as in the input. The face is clean-shaven: no beard, no moustache, no stubble. Keep the expression exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body, and its outline must match the input's: the hair or frill fills the same width and reaches as low as in the input. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face03-9 (28x28)"
+    },
+    {
+      "id": "face05-3",
+      "directory": "faces/face05i0",
+      "image": "face05i0-record-003-frame-000-source.png",
+      "content": "One male elf head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Light tan skin and pointed ears. Thick full chestnut-brown hair in a heavy rounded bob that falls straight down both sides of the face to below the jaw, as wide as the input on both sides, with a thin green circlet across the brow. Facial hair only where the input shows it; otherwise the face is clean-shaven. Both eyes are open, dark brown and look straight forward at the viewer. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body, and its outline must match the input's: the hair or frill fills the same width and reaches as low as in the input. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face05-3 (34x30)"
+    },
+    {
+      "id": "face13-0",
+      "directory": "faces/face13i0",
+      "image": "face13i0-record-000-frame-000-source.png",
+      "content": "One female dark elf head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Ash blue-grey skin, pointed ears, glowing red eyes and small gold earrings. Full curly auburn-brown hair gathered into two thick bunches, one each side, tied with gold bands and hanging down past the jaw to the bottom of the neck, as in the input. The face is smooth with no beard, no stubble and no moustache. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body, and its outline must match the input's: the hair or frill fills the same width and reaches as low as in the input. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face13-0 (33x37)"
+    },
+    {
+      "id": "face17-9",
+      "directory": "faces/face17i0",
+      "image": "face17i0-record-009-frame-000-source.png",
+      "content": "One female lizard-person head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.8:1. Green scaly skin and red eyes. Wide spiked fins sweep out sideways from both sides of the head, as wide as in the input and wider on the viewer's left, with short teal spikes on top of the head. The face is smooth with no beard, no stubble and no moustache. No body, shoulders, clothing, weapon, text or second head.",
+      "uncertainty": "The head is a layer of a paper doll drawn over a headless body, and its outline must match the input's: the hair or frill fills the same width and reaches as low as in the input. Features are only a few pixels across, so eyes, nose and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+      "invention": "Resolve believable eyes, brows, lips, skin modelling and individual strands of hair or scale detail.",
+      "name": "face17-9 (37x22)"
+    }
+  ]
+}
