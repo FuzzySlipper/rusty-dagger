@@ -284,8 +284,8 @@
   "note": "Patch accepted the conformed bodies and skin-matched heads with the dressed sets on 2026-11-01."
  },
  "faces--face03i0--face03i0-record-009-frame-000": {
-  "status": "accepted",
-  "note": "Patch accepted the conformed bodies and skin-matched heads with the dressed sets on 2026-11-01. landmarks.py still flags its head box by 2-3 doll units."
+  "status": "needs-owner-review",
+  "note": "Redone on 2026-11-01 (paper-doll-redo-width): the earlier head dropped the classic hair or frill width, so landmarks.py flagged its head box. Trimmed and skin-matched; passes landmarks.py. Awaiting Patch."
  },
  "faces--face04i0--face04i0-record-000-frame-000": {
   "status": "accepted",
@@ -340,8 +340,8 @@
   "note": "Patch accepted the conformed bodies and skin-matched heads with the dressed sets on 2026-11-01."
  },
  "faces--face05i0--face05i0-record-003-frame-000": {
-  "status": "accepted",
-  "note": "Patch accepted the conformed bodies and skin-matched heads with the dressed sets on 2026-11-01. landmarks.py still flags its head box by 2-3 doll units."
+  "status": "needs-owner-review",
+  "note": "Redone on 2026-11-01 (paper-doll-redo-width): the earlier head dropped the classic hair or frill width, so landmarks.py flagged its head box. Trimmed and skin-matched; passes landmarks.py. Awaiting Patch."
  },
  "faces--face05i0--face05i0-record-004-frame-000": {
   "status": "accepted",
@@ -568,8 +568,8 @@
   "note": "Patch accepted the conformed bodies and skin-matched heads with the dressed sets on 2026-11-01."
  },
  "faces--face13i0--face13i0-record-000-frame-000": {
-  "status": "accepted",
-  "note": "Patch accepted the conformed bodies and skin-matched heads with the dressed sets on 2026-11-01. landmarks.py still flags its head box by 2-3 doll units."
+  "status": "needs-owner-review",
+  "note": "Redone on 2026-11-01 (paper-doll-redo-width): the earlier head dropped the classic hair or frill width, so landmarks.py flagged its head box. Trimmed and skin-matched; passes landmarks.py. Awaiting Patch."
  },
  "faces--face13i0--face13i0-record-001-frame-000": {
   "status": "accepted",
@@ -764,7 +764,7 @@
   "note": "Patch accepted the conformed bodies and skin-matched heads with the dressed sets on 2026-11-01."
  },
  "faces--face17i0--face17i0-record-009-frame-000": {
-  "status": "accepted",
-  "note": "Patch accepted the conformed bodies and skin-matched heads with the dressed sets on 2026-11-01. landmarks.py still flags its head box by 2-3 doll units."
+  "status": "needs-owner-review",
+  "note": "Redone on 2026-11-01 (paper-doll-redo-width): the earlier head dropped the classic hair or frill width, so landmarks.py flagged its head box. Trimmed and skin-matched; passes landmarks.py. Awaiting Patch."
  }
 }
