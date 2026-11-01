@@ -12,7 +12,7 @@ them from one base body per morph and gender:
     within limits, the spread) of the race's current generated body in OKLab, so the base's shape and detail stay exact (Qwen,
     asked to recolour, pushed Nords to chalk white and High Elves to flat yellow);
   - I1 of every race: its I0 with the classic underwear (the pixels where classic I1 differs from I0) pasted
-    on by whole pixels and repainted by Qwen in a feathered mask around it, the alpha being the I0 silhouette
+    on by whole pixels and repainted by Qwen in a feathered mask a doll unit around it, the alpha being the I0 silhouette
     plus whatever the underwear adds past it (keyed against the flat background).
 
 Finals keep the paper-doll naming and the base's generation canvas, with a sidecar JSON stating the base's
@@ -30,12 +30,14 @@ from PIL import Image
 from scipy import ndimage
 
 from doll_preview import AUTHORING, GROUND, doll_layer, placed
-from dress import REACH, mask_image, qwen
+from dress import mask_image, qwen
 from postprocess import cutout, oklab_to_srgb, srgb_to_oklab
 
 MORPHS = {"human": [0, 1, 2], "elf": [3, 4, 5], "khajiit": [6], "argonian": [7]}
 GENERATED = AUTHORING / "gen-raw" / "paper-doll"
 CLOTH_MIN = 60  # source pixels: smaller differences between classic I1 and I0 are not underwear
+CLOTH_SHADE = 0.03  # OKLab distance between classic I1 and I0 under which a pixel is the same skin redrawn
+CLOTH_REACH = 1  # doll units the underwear's repaint may extend past it: Qwen paints glossy blotches on the skin it reaches
 KEY = (40, 90)  # distance from the flat background over which a repainted pixel fades into the figure
 
 UNDERWEAR = ("The figure wears crude, pixelated, low-resolution simple cloth underwear. Repaint only that underwear as "
@@ -51,6 +53,9 @@ TAIL = {"khajiit": " Image 1's long thin tail hangs from behind the hips and cur
                    "it as a furred tail exactly along that path.",
         "argonian": " Image 1's long thin tail hangs from behind the hips and curls down between the legs to the ground; "
                     "paint it as a scaled tail exactly along that path."}
+# Nor the Khajiit woman's arm held out from her hip: the style reference has none there.
+LIMB = {16: " Image 1's right arm (on the left of the picture) is held out from the body, angled down and away from the "
+            "hip with the hand clear of the thigh; paint the whole arm and hand exactly along that path, in skin."}
 
 
 def on_ground(rgba):
@@ -100,7 +105,7 @@ def conform(out, number, morph, seed):
     init.save(f"{stem}-init.png")
     on_ground(reference).save(f"{stem}-reference.png")
     mask_image(alpha, k).save(f"{stem}-mask.png")
-    qwen([Path(f"{stem}-init.png"), Path(f"{stem}-reference.png")], CONFORM.format(tail=TAIL.get(morph, "")), seed, Path(f"{stem}.png"), Path(f"{stem}-mask.png"))
+    qwen([Path(f"{stem}-init.png"), Path(f"{stem}-reference.png")], CONFORM.format(tail=TAIL.get(morph, "") + LIMB.get(number, "")), seed, Path(f"{stem}.png"), Path(f"{stem}-mask.png"))
     painted = np.array(Image.open(f"{stem}.png").convert("RGB"), np.float32) / 255
     placement = SimpleNamespace(scale=k, x=at[0], y=at[1], w=layer.source.width, h=layer.source.height,
                                 alpha=(np.array(layer.source.getchannel("A")) > 0).astype(np.float32))
@@ -127,8 +132,10 @@ def underwear(out, number, i0, rect, seed):
     bx, by, bw, _ = rect
     k = round(i0.width / bw)
     a, b = np.array(bare.source), np.array(dressed.source)
-    cloth = (np.abs(a.astype(int) - b.astype(int)).sum(2) > 0) & (b[..., 3] > 0)
-    # The classic I1 also differs from I0 in a few stray pixels (chest shading), which Qwen paints as specks.
+    # The classic I1 also differs from I0 in stray pixels: a shade off along outlines and down the legs (the
+    # elves' palette), which joins the underwear and Qwen paints as streaks, and specks of chest shading.
+    shade = np.sqrt(((srgb_to_oklab(a[..., :3] / 255) - srgb_to_oklab(b[..., :3] / 255)) ** 2).sum(-1))
+    cloth = (shade > CLOTH_SHADE) & (b[..., 3] > 0)
     labels, count = ndimage.label(cloth, np.ones((3, 3)))
     cloth = np.isin(labels, np.nonzero(ndimage.sum(cloth, labels, range(1, count + 1)) >= CLOTH_MIN)[0] + 1)
     pixels = Image.fromarray(np.dstack([b[..., :3], cloth * 255]).astype(np.uint8), "RGBA")
@@ -140,7 +147,7 @@ def underwear(out, number, i0, rect, seed):
     alpha.paste(pixels.getchannel("A"), at)
     stem = out / f"body{number:02d}i1"
     init.save(f"{stem}-init.png")
-    mask = mask_image(alpha, REACH * k)
+    mask = mask_image(alpha, CLOTH_REACH * k)
     mask.save(f"{stem}-mask.png")
     qwen(Path(f"{stem}-init.png"), UNDERWEAR, seed, Path(f"{stem}.png"), Path(f"{stem}-mask.png"))
     painted = np.array(Image.open(f"{stem}.png").convert("RGB"))
