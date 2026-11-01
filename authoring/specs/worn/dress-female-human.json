@@ -408,15 +408,18 @@
   },
   {
    "item": "texture-247-record-000-frame-000",
-   "name": "pair of boots with: grey steel shin plates and brown leather, the two boots shown apart as in the input"
+   "name": "pair of boots with: grey steel shin plates and brown leather, the two boots shown apart as in the input",
+   "metal": true
   },
   {
    "item": "texture-247-record-001-frame-000",
-   "name": "pair of grey steel boots with ridged ankle plates"
+   "name": "pair of grey steel boots with ridged ankle plates",
+   "metal": true
   },
   {
    "item": "texture-247-record-002-frame-000",
-   "name": "pair of grey steel boots with gold trim bands"
+   "name": "pair of grey steel boots with gold trim bands",
+   "metal": true
   },
   {
    "item": "texture-247-record-003-frame-000",
@@ -424,19 +427,23 @@
   },
   {
    "item": "texture-247-record-004-frame-000",
-   "name": "grey steel breastplate with a dark underside"
+   "name": "grey steel breastplate with a dark underside",
+   "metal": true
   },
   {
    "item": "texture-247-record-005-frame-000",
-   "name": "steel breastplate with gold trim along its upper edge"
+   "name": "steel breastplate with gold trim along its upper edge",
+   "metal": true
   },
   {
    "item": "texture-247-record-006-frame-000",
-   "name": "banded steel breastplate with gold trim and a chain-mail hem"
+   "name": "banded steel breastplate with gold trim and a chain-mail hem",
+   "metal": true
   },
   {
    "item": "texture-247-record-007-frame-000",
-   "name": "dark chain-mail shirt"
+   "name": "dark chain-mail shirt",
+   "metal": true
   },
   {
    "item": "texture-247-record-008-frame-000",
@@ -444,7 +451,8 @@
   },
   {
    "item": "texture-247-record-009-frame-000",
-   "name": "pair of grey steel gauntlets, the two pieces shown apart as in the input"
+   "name": "pair of grey steel gauntlets, the two pieces shown apart as in the input",
+   "metal": true
   },
   {
    "item": "texture-247-record-010-frame-000",
@@ -452,27 +460,33 @@
   },
   {
    "item": "texture-247-record-011-frame-000",
-   "name": "dark chain-mail skirt with a narrow belt and a small gold buckle, over two brown leather leg guards"
+   "name": "dark chain-mail skirt with a narrow belt and a small gold buckle, over two brown leather leg guards",
+   "metal": true
   },
   {
    "item": "texture-247-record-012-frame-000",
-   "name": "pair of grey steel leg plates"
+   "name": "pair of grey steel leg plates",
+   "metal": true
   },
   {
    "item": "texture-247-record-013-frame-000",
-   "name": "dark chain-mail skirt with a belt and a small gold buckle, over steel leg guards"
+   "name": "dark chain-mail skirt with a belt and a small gold buckle, over steel leg guards",
+   "metal": true
   },
   {
    "item": "texture-247-record-014-frame-000",
-   "name": "segmented grey steel leg armour with gold trim"
+   "name": "segmented grey steel leg armour with gold trim",
+   "metal": true
   },
   {
    "item": "texture-247-record-015-frame-000",
-   "name": "chain-mail skirt with a belt and a small gold buckle, over steel leg plates with gold trim"
+   "name": "chain-mail skirt with a belt and a small gold buckle, over steel leg plates with gold trim",
+   "metal": true
   },
   {
    "item": "texture-247-record-016-frame-000",
-   "name": "chain-mail skirt with a belt and a small gold buckle, over steel leg plates"
+   "name": "chain-mail skirt with a belt and a small gold buckle, over steel leg plates",
+   "metal": true
   },
   {
    "item": "texture-247-record-017-frame-000",
@@ -480,19 +494,23 @@
   },
   {
    "item": "texture-247-record-018-frame-000",
-   "name": "steel arm guard (pauldron and vambrace) of overlapping plates"
+   "name": "steel arm guard (pauldron and vambrace) of overlapping plates",
+   "metal": true
   },
   {
    "item": "texture-247-record-019-frame-000",
-   "name": "steel arm guard of overlapping plates"
+   "name": "steel arm guard of overlapping plates",
+   "metal": true
   },
   {
    "item": "texture-247-record-020-frame-000",
-   "name": "steel arm guard of overlapping plates with gold trim"
+   "name": "steel arm guard of overlapping plates with gold trim",
+   "metal": true
   },
   {
    "item": "texture-247-record-021-frame-000",
-   "name": "steel arm guard with a chain-mail sleeve"
+   "name": "steel arm guard with a chain-mail sleeve",
+   "metal": true
   },
   {
    "item": "texture-247-record-022-frame-000",
@@ -500,65 +518,79 @@
   },
   {
    "item": "texture-247-record-023-frame-000",
-   "name": "thin grey steel arm guard"
+   "name": "thin grey steel arm guard",
+   "metal": true
   },
   {
    "item": "texture-247-record-024-frame-000",
-   "name": "thin grey steel arm guard"
+   "name": "thin grey steel arm guard",
+   "metal": true
   },
   {
    "item": "texture-247-record-025-frame-000",
-   "name": "thin grey steel arm guard with gold trim"
+   "name": "thin grey steel arm guard with gold trim",
+   "metal": true
   },
   {
    "item": "texture-247-record-026-frame-000",
-   "name": "thin dark chain-mail arm guard"
+   "name": "thin dark chain-mail arm guard",
+   "metal": true
   },
   {
    "item": "texture-247-record-027-frame-000",
    "name": "gold-coloured open helmet",
-   "head": true
+   "head": true,
+   "metal": true
   },
   {
    "item": "texture-247-record-028-frame-000",
    "name": "grey steel helmet",
-   "head": true
+   "head": true,
+   "metal": true
   },
   {
    "item": "texture-247-record-029-frame-000",
    "name": "dark steel helmet",
-   "head": true
+   "head": true,
+   "metal": true
   },
   {
    "item": "texture-247-record-030-frame-000",
    "name": "gold helmet with a tall red plume crest",
-   "head": true
+   "head": true,
+   "metal": true
   },
   {
    "item": "texture-247-record-031-frame-000",
    "name": "grey steel helmet with a visor and a blue plume",
-   "head": true
+   "head": true,
+   "metal": true
   },
   {
    "item": "texture-247-record-032-frame-000",
    "name": "grey steel helmet with two curved horns",
-   "head": true
+   "head": true,
+   "metal": true
   },
   {
    "item": "texture-247-record-033-frame-000",
-   "name": "round shield with a brown leather face, a steel rim and gold studs"
+   "name": "round shield with a brown leather face, a steel rim and gold studs",
+   "metal": true
   },
   {
    "item": "texture-247-record-034-frame-000",
-   "name": "wooden disc shield with vertical plank grain, a dark steel rim with short spikes and a steel boss"
+   "name": "wooden disc shield with vertical plank grain, a dark steel rim with short spikes and a steel boss",
+   "metal": true
   },
   {
    "item": "texture-247-record-035-frame-000",
-   "name": "tall kite-shaped shield with a brown leather face and a steel central ridge"
+   "name": "tall kite-shaped shield with a brown leather face and a steel central ridge",
+   "metal": true
   },
   {
    "item": "texture-247-record-036-frame-000",
-   "name": "large tall shield with a pale grey steel face and a black rim with rivets"
+   "name": "large tall shield with a pale grey steel face and a black rim with rivets",
+   "metal": true
   }
  ]
 }
