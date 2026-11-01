@@ -935,15 +935,15 @@
     "replaces": "character.head.female.03.0",
     "mediaId": "refreshed.character.head.female.03.0",
     "path": "worldrpg/media/refreshed/paper-doll/faces--face13i0--face13i0-record-000-frame-000.webp",
-    "byteLength": 102622,
-    "sha256": "974e0ca1459c4b682b48d474905c87ce20850fff15719d83815dceed161f9542",
-    "width": 695,
-    "height": 792,
+    "byteLength": 128844,
+    "sha256": "ff934422b8ed71b9aae687adee2bb6d847b1d2ffe560ce8ab78c98bf032e2501",
+    "width": 663,
+    "height": 830,
     "doll": {
-     "x": 38.25,
+     "x": 39.5,
      "y": 8.75,
-     "width": 34.75,
-     "height": 39.6
+     "width": 33.15,
+     "height": 41.5
     }
    },
    {
@@ -1670,15 +1670,15 @@
     "replaces": "character.head.female.07.9",
     "mediaId": "refreshed.character.head.female.07.9",
     "path": "worldrpg/media/refreshed/paper-doll/faces--face17i0--face17i0-record-009-frame-000.webp",
-    "byteLength": 80248,
-    "sha256": "965f1a18cc63084fe9e36a1e0a819ed7ce46eec6b222c2cfa766506ac4e7df9d",
-    "width": 776,
-    "height": 530,
+    "byteLength": 86600,
+    "sha256": "8748a5bb7d70c01d6ad0bceddaebd66e51aa47aa0b1157609c2ff99a7b912886",
+    "width": 773,
+    "height": 498,
     "doll": {
-     "x": 36.35,
-     "y": 12.75,
-     "width": 38.8,
-     "height": 26.5
+     "x": 37.05,
+     "y": 14.35,
+     "width": 38.65,
+     "height": 24.9
     }
    },
    {
@@ -2270,15 +2270,15 @@
     "replaces": "character.head.male.03.9",
     "mediaId": "refreshed.character.head.male.03.9",
     "path": "worldrpg/media/refreshed/paper-doll/faces--face03i0--face03i0-record-009-frame-000.webp",
-    "byteLength": 125276,
-    "sha256": "05ae853890e602e6eb16a79fa2c650af9c2fea57c99ce9d749bfa52a74e45324",
-    "width": 842,
-    "height": 840,
+    "byteLength": 133238,
+    "sha256": "7a72337482059feaa2f32177f2f7ac106e43c057f423d3484a9b43aeedeef9b8",
+    "width": 775,
+    "height": 855,
     "doll": {
-     "x": 38.1111,
-     "y": 8.6296,
-     "width": 31.1852,
-     "height": 31.1111
+     "x": 40.7037,
+     "y": 7.7407,
+     "width": 28.7037,
+     "height": 31.6667
     }
    },
    {
@@ -2480,15 +2480,15 @@
     "replaces": "character.head.male.05.3",
     "mediaId": "refreshed.character.head.male.05.3",
     "path": "worldrpg/media/refreshed/paper-doll/faces--face05i0--face05i0-record-003-frame-000.webp",
-    "byteLength": 94030,
-    "sha256": "1081596bce914e6788848237c32e29f1ae64858ad940de189fc282eb9e3bc3c4",
-    "width": 794,
-    "height": 760,
+    "byteLength": 106424,
+    "sha256": "5eff274b98995df39cc562b601c350a517c25234003b5b2800bb1d6f96865af7",
+    "width": 709,
+    "height": 750,
     "doll": {
-     "x": 36.5909,
+     "x": 37.5909,
      "y": 6.7273,
-     "width": 36.0909,
-     "height": 34.5455
+     "width": 32.2273,
+     "height": 34.0909
     }
    },
    {
