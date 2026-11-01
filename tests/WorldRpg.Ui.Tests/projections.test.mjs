@@ -780,7 +780,7 @@ test('equipment lays out by published group around the doll, the pack filters by
 test('the paper doll draws the ruleset\'s placed layers in order, clips the censor halves, masks beneath a helm, and takes worn art on demand', () => {
   const f = fixture();
   try {
-    const layer = (kind, mediaId, x, y, width, height, extra = {}) => ({ kind, mediaId, x, y, width, height, clipTop: null, clipBottom: null, mask: null, slot: null, ...extra });
+    const layer = (kind, mediaId, x, y, width, height, extra = {}) => ({ kind, mediaId, x, y, width, height, clipTop: null, clipBottom: null, mask: null, maskRect: null, smooth: false, slot: null, ...extra });
     const png = 'data:image/png;base64,AA==';
     const character = (layers) => ({ name: 'Aubk-i', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [],
       paperDoll: { width: 110, height: 184, unplaced: [], background: layer('background', 'bg', -8, -7, 125, 198), layers } });
@@ -818,8 +818,28 @@ test('the paper doll draws the ruleset\'s placed layers in order, clips the cens
     assert.equal(box().querySelector('[data-media-id="paper-doll.234.12.iron"]').src, png);
     assert.equal(box().querySelector('[data-art-missing]'), null, 'Every demanded image is now held.');
 
+    // Refreshed art is drawn smoothed at its own rect, in fractional doll units, its clip in the same doll rows;
+    // a refreshed helm's classic mask stays where the classic helm was.
+    const webp = 'data:image/webp;base64,AA==';
+    const refreshedBody = layer('body', 'refreshed.body.clothed', 20.5, 30.25, 70, 150, { clipTop: 0, clipBottom: 42.75, smooth: true });
+    const refreshedHelm = layer('item', 'refreshed.paper-doll.251.27', 28.5, 1.5, 54, 41, { mask: 'paper-doll.251.27.mask', maskRect: { x: 30, y: 4, width: 49, height: 37 }, smooth: true, slot: 'head' });
+    f.publish({ uiArtRevision: 'r1', uiArtDemandedRevision: 'r1.7', inventory: { revision: '3', message: '', slots: [], items: [], categories: [] },
+      uiArtDemanded: { revision: 'r1.7', images: [...['body.nude', 'body.clothed', helm.mediaId, helm.mask, sword.mediaId].map(id => ({ id, image: png })),
+        ...[refreshedBody.mediaId, refreshedHelm.mediaId].map(id => ({ id, image: webp }))] },
+      character: character([bare[0], refreshedBody, bare[3], refreshedHelm]) });
+    const body = box().querySelector('[data-media-id="refreshed.body.clothed"]');
+    assert.equal(body.dataset.smooth, 'true', 'Refreshed art is drawn smoothed.');
+    assert.equal(box().querySelector('[data-media-id="body.nude"]').dataset.smooth, undefined, 'Classic art keeps its pixels square.');
+    assert.equal(body.style.left, 'calc(20.5 * var(--doll-pixel))');
+    assert.equal(body.style.width, 'calc(70 * var(--doll-pixel))');
+    assert.equal(body.style.clipPath, 'inset(calc(0 * var(--doll-pixel)) 0 calc(107.25 * var(--doll-pixel)) 0)');
+    assert.equal(body.src, webp);
+    const refreshedMask = box().querySelector('.dagger-inventory-doll-masked').style;
+    assert.equal(refreshedMask.getPropertyValue('mask-position'), 'calc(30 * var(--doll-pixel)) calc(4 * var(--doll-pixel)), 0 0', 'The mask is drawn at the classic helm\'s rect.');
+    assert.equal(refreshedMask.getPropertyValue('mask-size'), 'calc(49 * var(--doll-pixel)) calc(37 * var(--doll-pixel)), 100% 100%');
+
     // A transformed lycanthrope's doll is its background alone.
-    f.publish({ uiArtRevision: 'r1', uiArtDemandedRevision: 'r1.5', inventory: { revision: '3', message: '', slots: [], items: [], categories: [] }, character: character([]) });
+    f.publish({ uiArtRevision: 'r1', uiArtDemandedRevision: 'r1.7', inventory: { revision: '4', message: '', slots: [], items: [], categories: [] }, character: character([]) });
     assert.deepEqual(drawn(), []);
   } finally { art.adopt({ revision: '', images: [] }); f.dispose(); }
 });
@@ -4237,6 +4257,24 @@ test('the interface scale fits the reference layout to the window unless the pla
     assert.deepEqual(f.actions.at(-1), { action: 'controls-ui-scale' });
     f.publish({ controls: { diagnostic: '', bindings: [], uiScale: 3, uiScaleRange: range } });
     assert.equal(group.querySelector('[aria-label="Larger interface"]').disabled, true);
+  } finally { f.dispose(); }
+});
+
+test('settings offer classic art over the refreshed set only when the bundle carries one', () => {
+  const f = fixture();
+  try {
+    f.publish({ controls: { diagnostic: '', bindings: [], classicArt: null } });
+    f.root.querySelector('[data-action="settings"]').click();
+    const label = f.root.querySelector('.dagger-controls-art');
+    assert.equal(label.hidden, true, 'With no refreshed art there is nothing to choose.');
+    f.publish({ controls: { diagnostic: '', bindings: [], classicArt: false } });
+    assert.equal(label.hidden, false);
+    const box = label.querySelector('input');
+    assert.equal(box.checked, false);
+    box.checked = true; box.dispatchEvent(new window.Event('change'));
+    assert.deepEqual(f.actions.at(-1), { action: 'controls-classic-art', enabled: true });
+    f.publish({ controls: { diagnostic: '', bindings: [], classicArt: true } });
+    assert.equal(box.checked, true);
   } finally { f.dispose(); }
 });
 

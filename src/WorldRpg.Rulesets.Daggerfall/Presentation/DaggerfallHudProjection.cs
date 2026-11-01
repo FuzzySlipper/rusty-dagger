@@ -83,6 +83,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
     /// <summary>The authored pad layout, against which the controls screen reads each action's controller buttons.</summary>
     internal IReadOnlyList<WorldRpg.Kit.Controls.ControllerActionBinding> PadActions { get; init; } = [];
 
+    /// <summary>Whether the bundle carries a refreshed art set, so the player can choose classic art over it.</summary>
+    internal bool RefreshedArt { get; init; }
+
     internal void Publish(DaggerfallHudFrame frame)
     {
         ArgumentNullException.ThrowIfNull(frame);
@@ -229,6 +232,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("lookSensitivity", builder.Number(controlSettings.LookSensitivity)),
             ("invertVertical", builder.Boolean(controlSettings.InvertVertical)),
             ("uiScale", controlSettings.UiScale is float uiScale ? builder.Number(uiScale) : builder.Null()),
+            // The art choice is offered only when the bundle carries a refreshed art set to choose over classic.
+            ("classicArt", RefreshedArt ? builder.Boolean(controlSettings.ClassicArt) : builder.Null()),
             ("uiScaleRange", builder.Object(
                 ("minimum", builder.Number(DaggerfallControlSettings.MinimumUiScale)),
                 ("maximum", builder.Number(DaggerfallControlSettings.MaximumUiScale)),
@@ -846,9 +851,12 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         uint Layer(PaperDollLayerPresentation layer) => builder.Object(
             ("kind", builder.String(layer.Kind)), ("mediaId", builder.String(layer.MediaId)),
             ("x", builder.Number(layer.X)), ("y", builder.Number(layer.Y)), ("width", builder.Number(layer.Width)), ("height", builder.Number(layer.Height)),
-            ("clipTop", layer.ClipTop is int top ? builder.Number(top) : builder.Null()),
-            ("clipBottom", layer.ClipBottom is int bottom ? builder.Number(bottom) : builder.Null()),
+            ("clipTop", layer.ClipTop is double top ? builder.Number(top) : builder.Null()),
+            ("clipBottom", layer.ClipBottom is double bottom ? builder.Number(bottom) : builder.Null()),
             ("mask", layer.Mask is null ? builder.Null() : builder.String(layer.Mask)),
+            ("maskRect", layer.MaskRect is not { } mask ? builder.Null() : builder.Object(
+                ("x", builder.Number(mask.X)), ("y", builder.Number(mask.Y)), ("width", builder.Number(mask.Width)), ("height", builder.Number(mask.Height)))),
+            ("smooth", builder.Boolean(layer.Smooth)),
             ("slot", layer.Slot is null ? builder.Null() : builder.String(layer.Slot)));
         return builder.Object(("width", builder.Number(doll.Width)), ("height", builder.Number(doll.Height)),
             ("background", Layer(doll.Background)), ("layers", builder.Array(doll.Layers.Select(Layer).ToArray())),

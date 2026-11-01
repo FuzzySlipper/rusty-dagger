@@ -210,7 +210,7 @@ directory that runs where no .NET, `rusty` or checkout is installed:
 
 ```text
 rusty-dagger[.exe]          the launcher a player starts; the game opens its own window
-product.rpak                the product: UI, tracked content (no Daggerfall data)
+product.rpak                the product: UI, tracked content and refreshed art (no Daggerfall data)
 coreclr/ | native/          the product's code
 bin/, share/, dotnet/       the Engine host, its licences and the .NET runtime
 tools/Daggerfall.Import.Tool/   the import, with the tracked files it reads

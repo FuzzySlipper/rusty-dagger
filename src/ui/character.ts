@@ -152,19 +152,30 @@ export interface CharacterProjection {
   readonly paperDoll?: PaperDoll | null;
 }
 
-/** One image the paper doll draws, in source pixels from the doll's top-left corner. */
-export interface PaperDollLayer {
-  readonly kind: string;
-  readonly mediaId: string;
+/** A rect in doll units: the classic doll's source pixels, from its top-left corner. */
+export interface PaperDollRect {
   readonly x: number;
   readonly y: number;
   readonly width: number;
   readonly height: number;
-  /** The first and after-last image rows drawn, when only part of the image is. */
+}
+
+/**
+ * One image the paper doll draws, placed in doll units whatever its own pixel size: refreshed art is drawn
+ * scaled into its rect, which may overhang the doll's frame.
+ */
+export interface PaperDollLayer extends PaperDollRect {
+  readonly kind: string;
+  readonly mediaId: string;
+  /** The first and after-last doll rows drawn, from the image's top edge, when only part of the image is. */
   readonly clipTop: number | null;
   readonly clipBottom: number | null;
   /** Where this image is opaque, the doll clears what it drew beneath this layer. */
   readonly mask: string | null;
+  /** Where the mask is drawn: the classic image's rect, which a refreshed image's own need not be. */
+  readonly maskRect: PaperDollRect | null;
+  /** Refreshed art, drawn smoothed; classic art keeps its pixels square. */
+  readonly smooth: boolean;
   readonly slot: string | null;
 }
 

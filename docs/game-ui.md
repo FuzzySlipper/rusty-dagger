@@ -178,9 +178,12 @@ follow its shape.
   side, clothing and the hands down the other, the paired accessories in a row
   beneath. The ruleset publishes each slot's `group` and name
   (`DaggerfallInventoryPresentation`), so the screen holds no Daggerfall slot
-  table. The doll draws the race background from the character projection;
-  the figure and worn items draw in its layer box once the ruleset publishes
-  them as placed layers. The pack fills the right: category tabs, a reserved
+  table. The doll draws the race background from the character projection,
+  then the figure and worn items as the ruleset places them, each in doll
+  units (the classic 110×184 grid) whatever its image's pixel size. Refreshed
+  art (`smooth`) is drawn smoothed and may overhang its classic image, which
+  the doll's frame clips; classic art keeps its pixels square. A layer's mask
+  is drawn at its own `maskRect`, the classic image's place. The pack fills the right: category tabs, a reserved
   row for the action bar, then a grid of large slots, with gold and load
   beneath.
 - **Tabs and sort.** The ruleset publishes the tabs (`categories`) and each

@@ -99,7 +99,7 @@ internal sealed class DaggerfallUiArt
                     throw new InvalidOperationException($"Published UI art '{id}' is not described by the admitted content inventories.");
             }
 
-            _demanded.Add(new(id, $"data:image/png;base64,{Convert.ToBase64String(ReadArtifact(_content, id, entry))}"));
+            _demanded.Add(new(id, DataUrl(entry, ReadArtifact(_content, id, entry))));
             _delivered.Add(id);
         }
     }
@@ -122,13 +122,15 @@ internal sealed class DaggerfallUiArt
     /// icon identities the content pack names for its items, <paramref name="characterIcons"/> the
     /// portraits the HUD selects and <paramref name="panelArt"/> the art a panel lays out by identity -
     /// the travel map's world and region canvases; the rest is what this presentation always draws.
+    /// <paramref name="replacements"/>' images are indexed beside the published ones and read on demand.
     /// </summary>
     /// <exception cref="InvalidOperationException">
     /// A needed identity is absent from the inventory, or admitted content does not carry the bytes the
     /// inventory describes; the message names the artifact so the producer/consumer disagreement is
     /// visible rather than a blank image at runtime.
     /// </exception>
-    internal static DaggerfallUiArt Read(DaggerfallData content, IEnumerable<string> itemIcons, IEnumerable<string>? characterIcons = null, IEnumerable<string>? panelArt = null)
+    internal static DaggerfallUiArt Read(DaggerfallData content, IEnumerable<string> itemIcons, IEnumerable<string>? characterIcons = null, IEnumerable<string>? panelArt = null,
+        DaggerfallArtReplacements? replacements = null)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(itemIcons);
@@ -151,10 +153,12 @@ internal sealed class DaggerfallUiArt
                 throw new InvalidOperationException($"Published UI art '{id}' is not described by the admitted content inventory '{InventoryPath}'.");
             }
 
-            byte[] bytes = ReadArtifact(content, id, entry);
-            images.Add(new(id, $"data:image/png;base64,{Convert.ToBase64String(bytes)}", entry.Display));
+            images.Add(new(id, DataUrl(entry, ReadArtifact(content, id, entry)), entry.Display));
         }
 
+        foreach (DaggerfallArtReplacement replacement in replacements?.All ?? [])
+            if (!inventory.TryAdd(replacement.MediaId, new InventoryEntry(replacement.Path, replacement.ByteLength, null, null)))
+                throw new InvalidOperationException($"Refreshed art '{replacement.MediaId}' repeats a published media identity.");
         DaggerfallUiArt art = new(images, pickScreens, content, inventory);
         art._delivered.UnionWith(images.Select(image => image.Id));
         return art;
@@ -245,6 +249,10 @@ internal sealed class DaggerfallUiArt
 
         return bytes;
     }
+
+    /// <summary>The image as a data URL, typed by its file: refreshed art is WebP, the published art PNG.</summary>
+    private static string DataUrl(InventoryEntry entry, byte[] bytes) =>
+        $"data:image/{(entry.Path.EndsWith(".webp", StringComparison.Ordinal) ? "webp" : "png")};base64,{Convert.ToBase64String(bytes)}";
 
     /// <summary>Reads one published file by name.</summary>
     private static byte[] ReadAdmittedFile(DaggerfallData content, string path) => content.ReadBytes(path).ToArray();

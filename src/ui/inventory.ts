@@ -743,7 +743,7 @@ export function mountInventory(
   shell.addEventListener('focusin', onTipOver);
   shell.addEventListener('focusout', onTipOut);
 
-  /** A length in the doll's source pixels; the doll draws each one as a whole number of device pixels at whole UI scales. */
+  /** A length in doll units; the doll draws each as a whole number of device pixels at whole UI scales. */
   const dollPixels = (value: number): string => `calc(${value} * var(--doll-pixel))`;
   const placeLayer = (layer: PaperDollLayer): HTMLImageElement => {
     const art = document.createElement('img');
@@ -752,6 +752,7 @@ export function mountInventory(
     art.dataset.dollLayer = layer.kind;
     art.dataset.mediaId = layer.mediaId;
     if (layer.slot !== null) art.dataset.slot = layer.slot;
+    if (layer.smooth) art.dataset.smooth = 'true';
     const source = image(layer.mediaId);
     if (source === null) art.dataset.artMissing = 'true';
     else art.src = source;
@@ -777,8 +778,8 @@ export function mountInventory(
     for (const layer of value.layers) {
       const mask = layer.mask === null ? null : image(layer.mask);
       if (layer.mask !== null) {
-        // What is drawn so far, less the mask's opaque pixels: the mask placed where the layer is, excluded
-        // from a full cover.
+        // What is drawn so far, less the mask's opaque pixels: the mask placed where the classic layer is,
+        // excluded from a full cover.
         const masked = document.createElement('div');
         masked.className = 'dagger-inventory-doll-masked';
         masked.dataset.mask = layer.mask;
@@ -786,9 +787,10 @@ export function mountInventory(
         if (mask === null) masked.dataset.artMissing = 'true';
         else {
           const style = masked.style;
+          const rect = layer.maskRect ?? layer;
           const images = `url("${mask}"), linear-gradient(#000, #000)`;
-          const position = `${dollPixels(layer.x)} ${dollPixels(layer.y)}, 0 0`;
-          const size = `${dollPixels(layer.width)} ${dollPixels(layer.height)}, 100% 100%`;
+          const position = `${dollPixels(rect.x)} ${dollPixels(rect.y)}, 0 0`;
+          const size = `${dollPixels(rect.width)} ${dollPixels(rect.height)}, 100% 100%`;
           style.setProperty('mask-image', images);
           style.setProperty('mask-position', position);
           style.setProperty('mask-size', size);
@@ -829,7 +831,7 @@ export function mountInventory(
     },
     /**
      * The paper doll the character projection composes: the background, then each layer in draw order, every
-     * one placed in source pixels. A layer with a mask clears what was drawn beneath it, which is drawn as the
+     * one placed in doll units. A layer with a mask clears what was drawn beneath it, which is drawn as the
      * layers so far wrapped in a CSS mask that excludes the mask's opaque pixels.
      */
     updatePaperDoll(value): void {

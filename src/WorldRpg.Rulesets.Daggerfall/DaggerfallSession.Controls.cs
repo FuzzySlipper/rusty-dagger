@@ -70,10 +70,11 @@ internal sealed partial class DaggerfallSession
         {
             DaggerfallControlSettings candidate = action.Kind == DaggerfallUiActionKind.ControlsReset
                 ? new() : DaggerfallControlSettings.Parse(_controlSettings.Serialize());
-            // Resetting the controls keeps the interface scale and the sound levels: they are not bindings.
+            // Resetting the controls keeps the interface scale, the art and the sound levels: they are not bindings.
             if (action.Kind == DaggerfallUiActionKind.ControlsReset)
             {
                 candidate.SetUiScale(_controlSettings.UiScale);
+                candidate.SetClassicArt(_controlSettings.ClassicArt);
                 foreach ((string bus, _) in DaggerfallControlSettings.SoundBuses) candidate.SetVolume(bus, _controlSettings.Volume(bus));
             }
             if (action.Kind == DaggerfallUiActionKind.ControlsLook) candidate.SetLook(action.Sensitivity!.Value, action.Invert!.Value);
@@ -81,6 +82,7 @@ internal sealed partial class DaggerfallSession
             else if (action.Kind == DaggerfallUiActionKind.ControlsRebindButton)
                 candidate.RebindButton(action.Item!, checked((int)action.Amount!.Value), PadActions, action.Confirm);
             else if (action.Kind == DaggerfallUiActionKind.ControlsUiScale) candidate.SetUiScale(action.Scale);
+            else if (action.Kind == DaggerfallUiActionKind.ControlsClassicArt) candidate.SetClassicArt(action.Enabled!.Value);
             else if (action.Kind == DaggerfallUiActionKind.ControlsVolume) candidate.SetVolume(action.Item!, action.Scale!.Value);
             ApplyControlSettings(candidate);
             _preferencesToSave = candidate.Serialize();

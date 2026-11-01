@@ -164,6 +164,7 @@ internal sealed class DaggerfallCharacterPresentation
     private readonly DaggerfallLevelUpState? _levelUps;
     private readonly DaggerfallSocialState? _social;
     private readonly DaggerfallSkillUseReactions? _skills;
+    private Func<DaggerfallArtReplacements?>? _art;
     private DaggerfallGuildMembershipPolicy? _guildMembership;
     private Func<int>? _currentDay;
     private Func<int?>? _currentRegion;
@@ -311,7 +312,14 @@ internal sealed class DaggerfallCharacterPresentation
             return new DaggerfallWornItem(key, assignment.Slot.Value, item, _items?.EquippedMetadata(assignment.Item.EntityId),
                 () => _items?.DescribeItem(key, item.Id.Value, 1, equippedSlots: [assignment.Slot.Value]).Label ?? Label(item.Id.Value));
         })];
-        return DaggerfallPaperDollPolicy.Compose(_definitions, _character.Identity, _character.RacialOverrides?.Current, worn);
+        return DaggerfallPaperDollPolicy.Compose(_definitions, _character.Identity, _character.RacialOverrides?.Current, worn, _art?.Invoke());
+    }
+
+    /// <summary>Draws the paper doll in the art set this returns: the refreshed set, or null for classic art.</summary>
+    internal void UseArt(Func<DaggerfallArtReplacements?> art)
+    {
+        if (_art is not null) throw new InvalidOperationException("Character art is already configured.");
+        _art = art;
     }
 
     /// <summary>Uses the composed inventory projection for equipment naming, identification, and condition.</summary>

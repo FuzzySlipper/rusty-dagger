@@ -102,6 +102,15 @@ Status is derived (`unconverted`, `converted`, or `needs-owner-review` for a fla
 `ledger/<area>-notes.json` sets `accepted`, `redo` or `skipped` with a note. Rows whose extra frames exist are
 shown as separate frames.
 
+## Promotion
+
+`promote.py --area A` (areas `paper-doll` and `worn` so far) writes every final that `ledger/A-notes.json` marks
+`accepted` into the tracked `daggerfall.art-replacements` pack: a WebP per final under
+`content/worldrpg/media/refreshed/A/` and an entry in `content/worldrpg/payloads/daggerfall.art-replacements.json`
+naming the classic media id it stands in for. A paper-doll final keeps the doll-space rect `doll_preview.py`
+draws it at, moved to its cropped content. Rerunning an area replaces that area's files and entries, so a redo
+reaches the game by being accepted and promoted again. Nothing unaccepted or from `studies/` is promoted.
+
 ## Related
 
 - Recipe measurements and rationale: [reference/item-art-studies.md](reference/item-art-studies.md),

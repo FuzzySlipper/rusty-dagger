@@ -668,6 +668,7 @@ internal sealed partial class DaggerfallSession
             _characterUi.UseGuildMembership(State.GuildMembership, () => checked((int)_time.Calendar.DayNumber));
             _characterUi.UseLegalStanding(() => _site.Region, region => State.Crime.BanishedRegions.Contains(region));
             _characterUi.UseItemPresentation(_inventoryUi);
+            _characterUi.UseArt(() => _controlSettings.ClassicArt ? null : composition.ArtReplacements);
             // The DOM's art comes from the derived content by media identity, so a session reads the
             // published closure once and publishes it to the UI that draws it.
             _hud = new DaggerfallHudProjection(
@@ -681,10 +682,11 @@ internal sealed partial class DaggerfallSession
                     .Concat(_definitions.CharacterPresentation.FactionFaces.Select(face => face.MediaId))
                     .Concat(_definitions.CharacterPresentation.ChildFaces.Select(face => face.MediaId))
                     .Concat(_definitions.CharacterPresentation.RacialForms.Values.SelectMany(form => new[] { form.HeadMediaId, form.BodyMediaId })),
-                    DaggerfallTravelMap.MediaIds))
+                    DaggerfallTravelMap.MediaIds, composition.ArtReplacements))
             {
                 // The controls screen shows each action's controller buttons against the authored pad layout.
                 PadActions = tuning.ControllerInput?.Actions ?? [],
+                RefreshedArt = composition.ArtReplacements is not null,
             };
             partiallyConstructed.Add(_hud);
             if (restore is not null)
