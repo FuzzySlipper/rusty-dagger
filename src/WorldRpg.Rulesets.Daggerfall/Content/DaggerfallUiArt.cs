@@ -156,9 +156,9 @@ internal sealed class DaggerfallUiArt
             images.Add(new(id, DataUrl(entry, ReadArtifact(content, id, entry)), entry.Display));
         }
 
-        foreach (DaggerfallArtReplacement replacement in replacements?.All ?? [])
-            if (!inventory.TryAdd(replacement.MediaId, new InventoryEntry(replacement.Path, replacement.ByteLength, null, null)))
-                throw new InvalidOperationException($"Refreshed art '{replacement.MediaId}' repeats a published media identity.");
+        foreach (DaggerfallArtImage image in replacements?.Images ?? [])
+            if (!inventory.TryAdd(image.MediaId, new InventoryEntry(image.Path, image.ByteLength, null, null)))
+                throw new InvalidOperationException($"Refreshed art '{image.MediaId}' repeats a published media identity.");
         DaggerfallUiArt art = new(images, pickScreens, content, inventory);
         art._delivered.UnionWith(images.Select(image => image.Id));
         return art;

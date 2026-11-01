@@ -183,7 +183,11 @@ follow its shape.
   units (the classic 110×184 grid) whatever its image's pixel size. Refreshed
   art (`smooth`) is drawn smoothed and may overhang its classic image, which
   the doll's frame clips; classic art keeps its pixels square. A layer's mask
-  is drawn at its own `maskRect`, the classic image's place. The pack fills the right: category tabs, a reserved
+  is drawn at its own `maskRect`, the classic image's place. Refreshed clothing
+  carries a `tint`: a canvas brightens the image and multiplies it by the dye's
+  colour where the tint's mask is opaque, once per image and dye, since the
+  window's renderer draws no CSS mask (so a helm's `mask` has no effect there
+  yet). The pack fills the right: category tabs, a reserved
   row for the action bar, then a grid of large slots, with gold and load
   beneath.
 - **Tabs and sort.** The ruleset publishes the tabs (`categories`) and each

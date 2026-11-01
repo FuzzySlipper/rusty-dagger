@@ -19,8 +19,16 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// <param name="Slot">The equipment slot of an item layer.</param>
 /// <param name="MaskRect">Where the mask is drawn: the classic image's rect, which a refreshed image's own rect need not be.</param>
 /// <param name="Smooth">Whether the image is refreshed art, drawn smoothed; classic art is drawn with its pixels square.</param>
+/// <param name="Tint">How refreshed clothing, painted neutral, is drawn in its dye.</param>
 internal sealed record PaperDollLayerPresentation(string Kind, string MediaId, double X, double Y, double Width, double Height,
-    double? ClipTop = null, double? ClipBottom = null, string? Mask = null, string? Slot = null, DaggerfallDollRect? MaskRect = null, bool Smooth = false);
+    double? ClipTop = null, double? ClipBottom = null, string? Mask = null, string? Slot = null, DaggerfallDollRect? MaskRect = null, bool Smooth = false,
+    PaperDollTint? Tint = null);
+
+/// <summary>
+/// A dye drawn over a neutral image: the image brightened by <paramref name="Brightness"/>, then the pixels of
+/// <paramref name="Mask"/> (an image the size and place of the layer) multiplied by <paramref name="Color"/>.
+/// </summary>
+internal sealed record PaperDollTint(string Color, double Brightness, string Mask);
 
 /// <summary>
 /// The player's paper doll: its size, the background, then every other layer in the order it is drawn.
@@ -33,7 +41,7 @@ internal sealed record PaperDollLayerPresentation(string Kind, string MediaId, d
 internal sealed record PaperDollPresentation(int Width, int Height, PaperDollLayerPresentation Background, PaperDollLayerPresentation[] Layers, string[] Unplaced)
 {
     /// <summary>Every image the doll draws, which is what the DOM needs delivered.</summary>
-    internal IEnumerable<string> MediaIds => Layers.SelectMany(layer => layer.Mask is null ? [layer.MediaId] : new[] { layer.MediaId, layer.Mask })
+    internal IEnumerable<string> MediaIds => Layers.SelectMany(layer => new[] { layer.MediaId, layer.Mask, layer.Tint?.Mask }.OfType<string>())
         .Prepend(Background.MediaId);
 }
 
@@ -68,8 +76,8 @@ internal sealed record DaggerfallWornItem(string Key, string Slot, DaggerfallIte
 /// the record the artifact's place among the artifact templates names, undyed.
 /// <para>
 /// With a refreshed art set, each layer whose classic image has a replacement draws the replacement at its own
-/// doll rect (<see cref="Refreshed"/>). Clothing keeps its classic image: it is drawn in its dye, which the
-/// refreshed clothing, painted neutral for a tint, does not carry yet.
+/// doll rect (<see cref="Refreshed"/>). Refreshed clothing is painted neutral, one image for every dye: it is drawn
+/// tinted in the worn dye (<see cref="PaperDollTint"/>) in place of the classic image of that dye.
 /// </para>
 /// </remarks>
 internal static class DaggerfallPaperDollPolicy
@@ -124,7 +132,7 @@ internal static class DaggerfallPaperDollPolicy
         if (cloak is not null)
         {
             DaggerfallItemTemplateDefinition template = cloak.Template(definitions)!;
-            if (Item(presentation, Archive(template, cloak, identity), template.PlayerTextureRecord, Dye(template, cloak), null) is { } interior)
+            if (Item(presentation, Archive(template, cloak, identity), template.PlayerTextureRecord, Dye(template, cloak), art, clothing: true) is { } interior)
                 layers.Add(interior with { Kind = "cloak-interior", Slot = cloak.Slot });
             else unplaced.Add(cloak.Label());
         }
@@ -156,8 +164,8 @@ internal static class DaggerfallPaperDollPolicy
             .ThenBy(entry => Array.IndexOf(slotOrder, entry.Item.Slot)))
         {
             PaperDollLayerPresentation? drawnLayer = IsArtifact(definitions, item, out int? artifactRecord)
-                ? artifactRecord is int record ? Item(presentation, ArtifactArchive(item, identity), HandRecord(template, item, record), UnchangedDye, art) : null
-                : Item(presentation, Archive(template, item, identity), Record(template, item), Dye(template, item), IsClothing(template) ? null : art);
+                ? artifactRecord is int record ? Item(presentation, ArtifactArchive(item, identity), HandRecord(template, item, record), UnchangedDye, art, clothing: false) : null
+                : Item(presentation, Archive(template, item, identity), Record(template, item), Dye(template, item), art, IsClothing(template));
             if (drawnLayer is { } layer)
                 layers.Add(layer with { Slot = item.Slot });
             else unplaced.Add(item.Label());
@@ -202,13 +210,20 @@ internal static class DaggerfallPaperDollPolicy
     private static InvalidOperationException Missing(string mediaId) =>
         new($"Paper-doll layer '{mediaId}' has no published placement.");
 
-    private static PaperDollLayerPresentation? Item(DaggerfallCharacterPresentationSet presentation, int? archive, int record, string dye, DaggerfallArtReplacements? art)
+    private static PaperDollLayerPresentation? Item(DaggerfallCharacterPresentationSet presentation, int? archive, int record, string dye,
+        DaggerfallArtReplacements? art, bool clothing)
     {
         if (archive is not int number || !presentation.PaperDollItems.TryGetValue((number, record), out DaggerfallPaperDollItemImage? image)
             || !image.Dyes.TryGetValue(dye, out string? mediaId))
             return null;
         DaggerfallPaperDollPlacement place = image.Placement;
-        return Refreshed(new PaperDollLayerPresentation("item", mediaId, place.X, place.Y, place.Width, place.Height, Mask: image.MaskMediaId), art);
+        PaperDollLayerPresentation classic = new("item", mediaId, place.X, place.Y, place.Width, place.Height, Mask: image.MaskMediaId);
+        if (!clothing) return Refreshed(classic, art);
+        // The refreshed record has one neutral image for every dye, standing in for the record as published undyed.
+        string neutral = $"paper-doll.{number}.{record}";
+        return art?.For(neutral) is { DyeMask: { } mask } && art.Tints.TryGetValue(dye, out DaggerfallDyeTint? tint)
+            ? Refreshed(classic with { MediaId = neutral }, art) with { Tint = new(tint.Multiply, tint.Brightness, mask.MediaId) }
+            : classic;
     }
 
     /// <summary>Whether the donor draws an item of this template in this slot: clothing, armour and weapons, and jewellery worn on the body.</summary>

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -796,17 +797,26 @@ public sealed class PublishedContentDeliveryTests
         // Paper-doll replacements are drawn at their own rect in the doll.
         Assert.All(art.All, replacement => Assert.NotNull(replacement.Doll));
 
+        // Refreshed clothing is one neutral image per record with the mask of the cloth a dye recolours, and the set
+        // states a tint for every classic clothing dye.
+        Assert.All(art.All.Where(replacement => replacement.Replaces is var id && id.StartsWith("paper-doll.", StringComparison.Ordinal)
+                && int.Parse(id.Split('.')[1], CultureInfo.InvariantCulture) is >= 235 and <= 242),
+            replacement => Assert.NotNull(replacement.DyeMask));
+        Assert.Equal(["aquamarine", "blue", "dark-brown", "green", "grey", "light-brown", "purple", "red", "white", "yellow"],
+            art.Tints.Keys.Order(StringComparer.Ordinal));
+
         // The payload states the bytes of every refreshed file, and names every file the refreshed media carries.
-        foreach (JsonElement image in images)
+        JsonElement[] files = [.. images.SelectMany(image => image.TryGetProperty("dyeMask", out JsonElement mask) ? [image, mask] : new[] { image })];
+        foreach (JsonElement file in files)
         {
-            byte[] bytes = content.ReadBytes(image.GetProperty("path").GetString()!).ToArray();
-            Assert.Equal(image.GetProperty("byteLength").GetInt64(), bytes.Length);
-            Assert.Equal(image.GetProperty("sha256").GetString(), Convert.ToHexStringLower(SHA256.HashData(bytes)));
+            byte[] bytes = content.ReadBytes(file.GetProperty("path").GetString()!).ToArray();
+            Assert.Equal(file.GetProperty("byteLength").GetInt64(), bytes.Length);
+            Assert.Equal(file.GetProperty("sha256").GetString(), Convert.ToHexStringLower(SHA256.HashData(bytes)));
         }
 
         Assert.Equal(
             [.. GeneratedContentFiles(content).Where(path => path.StartsWith("worldrpg/media/refreshed/", StringComparison.Ordinal)).Order(StringComparer.Ordinal)],
-            [.. images.Select(image => image.GetProperty("path").GetString()!).Order(StringComparer.Ordinal)]);
+            [.. files.Select(file => file.GetProperty("path").GetString()!).Order(StringComparer.Ordinal)]);
     }
 
     private static ProductContent AdmittedContent()

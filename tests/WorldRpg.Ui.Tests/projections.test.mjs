@@ -751,7 +751,7 @@ test('equipment lays out by published group around the doll, the pack filters by
         identity: { race: 'breton', raceLabel: 'Breton', donorRaceId: 1, portrait: '', gender: 'male', faceIndex: 0, career: 'Mage', media: [],
           selectedMedia: [{ layer: 'background', mediaId: 'character.background.breton' }] },
         paperDoll: { width: 110, height: 184, unplaced: [], layers: [],
-          background: { kind: 'background', mediaId: 'character.background.breton', x: -8, y: -7, width: 125, height: 198, clipTop: null, clipBottom: null, mask: null, slot: null } } },
+          background: { kind: 'background', mediaId: 'character.background.breton', x: -8, y: -7, width: 125, height: 198, clipTop: null, clipBottom: null, mask: null, maskRect: null, smooth: false, tint: null, slot: null } } },
     });
     const slot = id => f.root.querySelector(`[data-inventory-equipment="${id}"]`);
     const columns = f.root.querySelectorAll('.dagger-inventory-slot-column');
@@ -780,7 +780,7 @@ test('equipment lays out by published group around the doll, the pack filters by
 test('the paper doll draws the ruleset\'s placed layers in order, clips the censor halves, masks beneath a helm, and takes worn art on demand', () => {
   const f = fixture();
   try {
-    const layer = (kind, mediaId, x, y, width, height, extra = {}) => ({ kind, mediaId, x, y, width, height, clipTop: null, clipBottom: null, mask: null, maskRect: null, smooth: false, slot: null, ...extra });
+    const layer = (kind, mediaId, x, y, width, height, extra = {}) => ({ kind, mediaId, x, y, width, height, clipTop: null, clipBottom: null, mask: null, maskRect: null, smooth: false, tint: null, slot: null, ...extra });
     const png = 'data:image/png;base64,AA==';
     const character = (layers) => ({ name: 'Aubk-i', attributes: [], skills: [], resources: [], progression: { level: 1, experience: 0 }, equipment: [],
       paperDoll: { width: 110, height: 184, unplaced: [], background: layer('background', 'bg', -8, -7, 125, 198), layers } });
@@ -822,11 +822,13 @@ test('the paper doll draws the ruleset\'s placed layers in order, clips the cens
     // a refreshed helm's classic mask stays where the classic helm was.
     const webp = 'data:image/webp;base64,AA==';
     const refreshedBody = layer('body', 'refreshed.body.clothed', 20.5, 30.25, 70, 150, { clipTop: 0, clipBottom: 42.75, smooth: true });
+    const refreshedShirt = layer('item', 'refreshed.paper-doll.241.50', 25, 40, 60, 50,
+      { smooth: true, slot: 'chest-clothes', tint: { color: '#6aaaff', brightness: 1.276, mask: 'refreshed.paper-doll.241.50.dye' } });
     const refreshedHelm = layer('item', 'refreshed.paper-doll.251.27', 28.5, 1.5, 54, 41, { mask: 'paper-doll.251.27.mask', maskRect: { x: 30, y: 4, width: 49, height: 37 }, smooth: true, slot: 'head' });
     f.publish({ uiArtRevision: 'r1', uiArtDemandedRevision: 'r1.7', inventory: { revision: '3', message: '', slots: [], items: [], categories: [] },
       uiArtDemanded: { revision: 'r1.7', images: [...['body.nude', 'body.clothed', helm.mediaId, helm.mask, sword.mediaId].map(id => ({ id, image: png })),
-        ...[refreshedBody.mediaId, refreshedHelm.mediaId].map(id => ({ id, image: webp }))] },
-      character: character([bare[0], refreshedBody, bare[3], refreshedHelm]) });
+        ...[refreshedBody.mediaId, refreshedHelm.mediaId, refreshedShirt.mediaId, refreshedShirt.tint.mask].map(id => ({ id, image: webp }))] },
+      character: character([bare[0], refreshedBody, bare[3], refreshedShirt, refreshedHelm]) });
     const body = box().querySelector('[data-media-id="refreshed.body.clothed"]');
     assert.equal(body.dataset.smooth, 'true', 'Refreshed art is drawn smoothed.');
     assert.equal(box().querySelector('[data-media-id="body.nude"]').dataset.smooth, undefined, 'Classic art keeps its pixels square.');
@@ -834,6 +836,12 @@ test('the paper doll draws the ruleset\'s placed layers in order, clips the cens
     assert.equal(body.style.width, 'calc(70 * var(--doll-pixel))');
     assert.equal(body.style.clipPath, 'inset(calc(0 * var(--doll-pixel)) 0 calc(107.25 * var(--doll-pixel)) 0)');
     assert.equal(body.src, webp);
+    // Refreshed clothing is drawn in its dye, held hidden until the tinted image is made rather than shown neutral.
+    const shirt = box().querySelector('[data-media-id="refreshed.paper-doll.241.50"]');
+    assert.equal(shirt.dataset.dye, '#6aaaff');
+    assert.equal(shirt.dataset.artMissing, 'true');
+    assert.equal(shirt.getAttribute('src'), null);
+    assert.equal(shirt.style.left, 'calc(25 * var(--doll-pixel))');
     const refreshedMask = box().querySelector('.dagger-inventory-doll-masked').style;
     assert.equal(refreshedMask.getPropertyValue('mask-position'), 'calc(30 * var(--doll-pixel)) calc(4 * var(--doll-pixel)), 0 0', 'The mask is drawn at the classic helm\'s rect.');
     assert.equal(refreshedMask.getPropertyValue('mask-size'), 'calc(49 * var(--doll-pixel)) calc(37 * var(--doll-pixel)), 100% 100%');
