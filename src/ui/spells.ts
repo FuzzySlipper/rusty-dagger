@@ -192,7 +192,7 @@ export function renderSpellInformation(root:HTMLElement,view:SpellbookProjection
 }
 
 export function renderSpellSales(root:HTMLElement,view:SpellbookProjection|null):void {
-  redraw(root, JSON.stringify(view && [view.sale, view.result, view.information, spellSelectorsReady(view.selectors)]), () => drawSpellSales(root, view));
+  redraw(root, JSON.stringify(view && [view.sale, view.result, view.information, view.selectors, spellSelectorsReady(view.selectors)]), () => drawSpellSales(root, view));
 }
 
 function drawSpellSales(root:HTMLElement,view:SpellbookProjection|null):void {
