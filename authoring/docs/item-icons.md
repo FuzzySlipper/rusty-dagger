@@ -123,7 +123,8 @@ paper-doll image, which the `worn` area already replaces and the game tints by d
 shows `item.ARCHIVE.RECORD` (the staged `paperDoll.icons` section). `items` writes each of those from the accepted
 `items` final of its record, and the few icons of items without a template (`inventoryIcons` in the staged classic
 manifest: the potion recipes' bottles and gold) as `inventory.icon.ITEM`. `spells` writes
-each accepted spell icon as `spell.icon.N`, cell N of the classic atlas. Icons are written at a fixed size (256 and
+each accepted spell icon as `spell.icon.N`, cell N of the classic atlas, and each accepted targeting and element tile
+as `spell.target.N` and `spell.element.N`, tile N of the classic `spell.selectors` atlas. Icons are written at a fixed size (256 and
 128 pixels on the longer side) and carry no doll rect; an icon whose record has no accepted final stays classic.
 
 ## Related

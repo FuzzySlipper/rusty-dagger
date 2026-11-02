@@ -3,7 +3,7 @@ import type { CharacterProjection } from './character.js';
 import type { ControlsProjection } from './controls.js';
 import type { InventoryProjection } from './inventory.js';
 import type { QuestJournalProjection } from './journal.js';
-import type { SpellIconAtlas } from './spell-icon.js';
+import type { SpellIconAtlas, SpellSelectors } from './spell-icon.js';
 import type { LodgingProjection } from './lodging.js';
 import type { LootProjection } from './loot.js';
 import type { MapProjection } from './maps.js';
@@ -128,6 +128,8 @@ export interface SpellMakerProjection {
   readonly revision:string;readonly provider:string;readonly draft:SpellMakerDraft;readonly limits:SpellMakerLimits;
   /** The atlas the icon picker cuts each icon from. */
   readonly icons?:SpellIconAtlas;
+  /** The targeting and element tiles the target and element pickers show. */
+  readonly selectors?:SpellSelectors;
   readonly targets:readonly SpellMakerOption[];readonly elements:readonly SpellMakerOption[];
   readonly effects:readonly {readonly key:string;readonly name:string;readonly type:number;readonly subType:number;readonly school:string;
     readonly duration:boolean;readonly chance:boolean;readonly magnitude:boolean;readonly targets:number;readonly elements:number}[];
@@ -159,6 +161,8 @@ export interface SpellbookProjection {
   readonly available: readonly {readonly key:string;readonly name:string;readonly cost:number;readonly canCast?:boolean;readonly icon?:number;readonly school?:string}[];
   readonly ready:string|null;readonly result:string;
   readonly icons?:SpellIconAtlas;
+  /** The targeting and element tiles a spell's details show. */
+  readonly selectors?:SpellSelectors;
   /** The schools in the order the tabs show them. */
   readonly schools?:readonly {readonly id:string;readonly label:string}[];
   readonly sale?: {readonly revision:string;readonly provider:string;readonly offers:readonly {readonly key:string;readonly name:string;readonly castingCost:number;readonly price:number;readonly known:boolean}[]} | null;
@@ -166,7 +170,9 @@ export interface SpellbookProjection {
   readonly potionMaker?:PotionMakerProjection|null;
   readonly itemMaker?:ItemMakerProjection|null;
   readonly summoning?:SummoningProjection|null;
-  readonly information?: {readonly key:string;readonly name:string;readonly element:string;readonly target:string;readonly details:readonly string[]} | null;
+  /** A spell's details; its range type and element name its targeting and element tiles. */
+  readonly information?: {readonly key:string;readonly name:string;readonly element:string;readonly target:string;
+    readonly rangeType:number;readonly elementType:number;readonly details:readonly string[]} | null;
 }
 
 export interface RestProjection {

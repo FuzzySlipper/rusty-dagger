@@ -1,4 +1,4 @@
-import { isSpellIconAtlas, spellIcon, spellIconsReady } from './spell-icon.js';
+import { isSpellIconAtlas, isSpellSelectors, spellIcon, spellIconsReady, spellSelector, spellSelectorsReady } from './spell-icon.js';
 import type { ConfirmQuestion } from './confirm.js';
 import { createStepper, type Stepper } from './stepper.js';
 import type {
@@ -12,7 +12,7 @@ export function isSpellMakerProjection(value:unknown):value is SpellMakerProject
   const options=(list:unknown):boolean=>Array.isArray(list) && list.every(o=>o && typeof o==='object' && Number.isInteger(o.value) && typeof o.label==='string');
   const limits=v.limits;
   return typeof v.revision==='string' && typeof v.provider==='string' && Array.isArray(v.effects) && options(v.targets) && options(v.elements)
-    && (v.icons===undefined || isSpellIconAtlas(v.icons))
+    && (v.icons===undefined || isSpellIconAtlas(v.icons)) && (v.selectors===undefined || isSpellSelectors(v.selectors))
     && !!limits && ['nameLength','icons','effects','duration','chance','magnitude','perLevels'].every(key=>Number.isSafeInteger(limits[key as keyof typeof limits]) && limits[key as keyof typeof limits]>0)
     && v.effects.every(e=>e && typeof e.key==='string' && typeof e.name==='string' && typeof e.school==='string' && Number.isInteger(e.type)
       && Number.isInteger(e.subType) && typeof e.duration==='boolean' && typeof e.chance==='boolean' && typeof e.magnitude==='boolean'
@@ -34,8 +34,8 @@ export function isSpellMakerProjection(value:unknown):value is SpellMakerProject
  * bought through the drawn confirm.
  */
 export function renderSpellMaker(root:HTMLElement,view:SpellMakerProjection|null,claim:(action:UiAction)=>void,ask:(question:ConfirmQuestion)=>void):void {
-  // The icons ride the stamp so the picker redraws once the atlas arrives.
-  const stamp=JSON.stringify([view,spellIconsReady(view?.icons)]);
+  // The icons and tiles ride the stamp so the pickers redraw once their art arrives.
+  const stamp=JSON.stringify([view,spellIconsReady(view?.icons),spellSelectorsReady(view?.selectors)]);
   // Admitted modal updates can publish the same projection while the player types.
   if(root.dataset.spellMaker===stamp) return;
   root.dataset.spellMaker=stamp;root.replaceChildren();if(!view) return;
@@ -45,12 +45,24 @@ export function renderSpellMaker(root:HTMLElement,view:SpellMakerProjection|null
   const field=(label:string,control:HTMLElement):void=>{const wrap=document.createElement('label');wrap.className='dagger-maker-field';
     const text=document.createElement('span');text.textContent=label;wrap.append(text,control);form.append(wrap);};
   const name=document.createElement('input');name.name='name';name.value=view.draft.name;name.maxLength=limits.nameLength;name.required=true;field('Name',name);
-  const select=(label:string,values:readonly SpellMakerOption[],selected:number):HTMLSelectElement=>{
-    const control=document.createElement('select');control.setAttribute('aria-label',label);
-    values.forEach(value=>control.append(new Option(value.label,String(value.value))));control.value=String(selected);field(label,control);return control;
+  // The target and element pickers: one button per choice, its tile beside its name, as the donor's spellmaker draws them.
+  const tiles=(label:string,kind:'targets'|'elements',values:readonly SpellMakerOption[],selected:number):{value:number}=>{
+    const state={value:selected};
+    const group=document.createElement('div');group.className='dagger-spell-choices';group.setAttribute('role','radiogroup');group.setAttribute('aria-label',label);
+    for(const option of values){
+      const choice=document.createElement('button');choice.type='button';choice.className='dagger-spell-choice';choice.dataset.choice=String(option.value);
+      choice.setAttribute('role','radio');choice.setAttribute('aria-checked',String(option.value===selected));
+      const name=document.createElement('span');name.textContent=option.label;
+      choice.append(spellSelector(view.selectors,kind,option.value),name);group.append(choice);
+    }
+    group.addEventListener('click',event=>{const choice=(event.target as HTMLElement).closest<HTMLButtonElement>('[data-choice]');if(!choice) return;
+      state.value=Number(choice.dataset.choice);for(const other of group.querySelectorAll<HTMLElement>('[data-choice]')) other.setAttribute('aria-checked',String(other===choice));
+      form.dispatchEvent(new Event('change',{bubbles:true}));});
+    const wrap=document.createElement('div');wrap.className='dagger-maker-field dagger-maker-choice-field';const text=document.createElement('span');text.textContent=label;wrap.append(text,group);form.append(wrap);
+    return state;
   };
-  const target=select('Target',view.targets,view.draft.rangeType);
-  const element=select('Element',view.elements,view.draft.element);
+  const target=tiles('Target','targets',view.targets,view.draft.rangeType);
+  const element=tiles('Element','elements',view.elements,view.draft.element);
   // The icon picker: one button per published icon, each cut from the ruleset's icon atlas.
   let icon=Math.min(Math.max(0,view.draft.icon),limits.icons-1);
   const icons=document.createElement('div');icons.className='dagger-spell-icons';icons.setAttribute('role','radiogroup');icons.setAttribute('aria-label','Icon');
@@ -98,8 +110,8 @@ export function renderSpellMaker(root:HTMLElement,view:SpellMakerProjection|null
       for(const [key,stepper] of slot.values) values[key]=stepper.value();
       return [values];
     });
-    claim({action:'spellmaker-draft',revision:view.revision,text:JSON.stringify({name:name.value,element:Number(element.value),
-      rangeType:Number(target.value),icon,effects})});
+    claim({action:'spellmaker-draft',revision:view.revision,text:JSON.stringify({name:name.value,element:element.value,
+      rangeType:target.value,icon,effects})});
   });
   const status=document.createElement('p');status.setAttribute('role','status');
   status.textContent=view.quote?.eligible ? `${view.quote.gold} gold · ${view.quote.spellPoints} magicka to cast` : view.quote?.reason ?? 'Update the preview with valid settings.';root.append(status);

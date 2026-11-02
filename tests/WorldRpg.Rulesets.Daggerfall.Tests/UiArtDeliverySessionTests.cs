@@ -60,7 +60,7 @@ public sealed class UiArtDeliverySessionTests
         string[] portraits = [.. heads, .. factionFaces, .. childFaces, .. racialForms, .. backgrounds];
         string[] kit = AuthoredKit(root);
         Assert.Contains("ui.stone.window.v2", kit);
-        Assert.Equal(8 + kit.Length + inputs.ClassicPresentation.InventoryIcons.Count + portraits.Length + DaggerfallTravelMap.MediaIds.Count, images.Count);
+        Assert.Equal(9 + kit.Length + inputs.ClassicPresentation.InventoryIcons.Count + portraits.Length + DaggerfallTravelMap.MediaIds.Count, images.Count);
         Assert.All(images.Values, image => Assert.StartsWith("data:image/png;base64,", Assert.IsType<string>(image), StringComparison.Ordinal));
 
         // The bytes are the published artifacts, read from admitted content by their content name.
@@ -96,8 +96,9 @@ public sealed class UiArtDeliverySessionTests
             "screen.prison",
             "screen.start-menu",
             "screen.title",
-            // The spell icon atlas the spellbook and spellmaker cut every icon from.
+            // The spell icon atlas the spellbook and spellmaker cut every icon from, and the targeting and element tiles.
             "spell.icons",
+            "spell.selectors",
             // The authored kit is published art, not files staged beside the UI bundle.
             .. kit,
             .. inputs.ClassicPresentation.InventoryIcons.Values,
@@ -362,7 +363,7 @@ public sealed class UiArtDeliverySessionTests
         // The supplied screens are served from the published group rather than fabricated: this fixture
         // states a minimal inventory, so every identity the art set carries has to be present here, and
         // reading the real artifacts keeps its entries honest about their bytes and digests.
-        string[] supplied = ["screen-character-generation", "screen-pick-02", "screen-prison", "screen-start-menu", "screen-title", "spell-icons"];
+        string[] supplied = ["screen-character-generation", "screen-pick-02", "screen-prison", "screen-start-menu", "screen-title", "spell-icons", "spell-selectors"];
         Dictionary<string, (string Path, byte[] Bytes)> published = [];
         foreach (string name in supplied)
         {
@@ -386,7 +387,8 @@ public sealed class UiArtDeliverySessionTests
                 Entry("screen.prison", published["screen-prison"].Path, published["screen-prison"].Bytes),
                 Entry("screen.start-menu", published["screen-start-menu"].Path, published["screen-start-menu"].Bytes),
                 Entry("screen.title", published["screen-title"].Path, published["screen-title"].Bytes),
-                Entry("spell.icons", published["spell-icons"].Path, published["spell-icons"].Bytes)),
+                Entry("spell.icons", published["spell-icons"].Path, published["spell-icons"].Bytes),
+                Entry("spell.selectors", published["spell-selectors"].Path, published["spell-selectors"].Bytes)),
         }.ToJsonString()));
 
         DaggerfallUiArt art = DaggerfallUiArt.Read(TestSessions.DataOf(content), []);
@@ -459,9 +461,33 @@ public sealed class UiArtDeliverySessionTests
             Assert.IsType<Dictionary<string, object?>>(snapshot["spells"])["icons"])["images"]);
         Assert.Equal(Enumerable.Range(0, DaggerfallSpellConstruction.IconCount).Select(index => $"refreshed.{DaggerfallSpellConstruction.IconMedia(index)}"),
             SpellImages(hud).Cast<string>());
+        // The targeting and element tiles name their refreshed images, cut from the classic tile atlas where they have none.
+        object?[] Tiles(Dictionary<string, object?> snapshot, string kind) => Assert.IsType<object?[]>(Assert.IsType<Dictionary<string, object?>>(
+            Assert.IsType<Dictionary<string, object?>>(snapshot["spells"])["selectors"])[kind]);
+        Assert.Equal(Enumerable.Range(0, DaggerfallSpellConstruction.SelectorCount).Select(index => $"refreshed.{DaggerfallSpellConstruction.TargetMedia(index)}"),
+            Tiles(hud, "targets").Cast<Dictionary<string, object?>>().Select(tile => tile["image"]));
+        Assert.Equal(Enumerable.Range(0, DaggerfallSpellConstruction.SelectorCount).Select(index => $"refreshed.{DaggerfallSpellConstruction.ElementMedia(index)}"),
+            Tiles(hud, "elements").Cast<Dictionary<string, object?>>().Select(tile => tile["image"]));
+
+        // A weapon or armour in a metal draws the refreshed bare-steel image tinted in its metal through the steel's
+        // mask, both demanded with the pack that shows them; classic art draws the classic metal image untinted.
+        Assert.True(session.Give("dwarven Cuirass", 1).Succeeded);
+        session.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.DirectDigital)]));
+        hud = Assert.IsType<Dictionary<string, object?>>(engine.Published());
+        Dictionary<string, object?> Cuirass(Dictionary<string, object?> snapshot) => Assert.IsType<object?[]>(Assert.IsType<Dictionary<string, object?>>(snapshot["inventory"])["items"])
+            .Cast<Dictionary<string, object?>>().Single(item => Equals(item["label"], "Dwarven Cuirass"));
+        string cuirassIcon = Assert.IsType<string>(Cuirass(hud)["icon"]);
+        DaggerfallArtReplacement steel = art.All.Single(replacement => replacement.MediaId == cuirassIcon);
+        Assert.StartsWith("paper-doll.", steel.Replaces, StringComparison.Ordinal);
+        Dictionary<string, object?> metal = Assert.IsType<Dictionary<string, object?>>(Cuirass(hud)["iconTint"]);
+        Assert.Equal(art.Tints["dwarven"].Multiply, metal["color"]);
+        Assert.Equal(art.Tints["dwarven"].Brightness, Convert.ToDouble(metal["brightness"], CultureInfo.InvariantCulture));
+        Assert.Equal(steel.DyeMask!.MediaId, metal["mask"]);
+        Assert.Subset(Assert.IsType<object?[]>(Assert.IsType<Dictionary<string, object?>>(hud["uiArtDemanded"])["images"]).Cast<Dictionary<string, object?>>()
+            .Select(image => Assert.IsType<string>(image["id"])).ToHashSet(), new HashSet<string> { cuirassIcon, steel.DyeMask.MediaId });
 
         // Choosing classic art draws the classic images again, with their pixels square.
-        session.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.DirectDigital) with
+        session.Update(new ProductUpdate(OuterUpdate(3), [Input(InputEventKind.DirectDigital) with
         {
             ValueKind = InputValueKind.ProductPayload,
             PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
@@ -475,7 +501,10 @@ public sealed class UiArtDeliverySessionTests
         // The DOM redraws the pack only when its revision moves, so the art choice moves it.
         string InventoryRevision(Dictionary<string, object?> snapshot) => Assert.IsType<string>(Assert.IsType<Dictionary<string, object?>>(snapshot["inventory"])["revision"]);
         Assert.NotEqual(InventoryRevision(hud), InventoryRevision(classic));
+        Assert.Equal($"{steel.Replaces}.dwarven", Cuirass(classic)["icon"]);
+        Assert.Null(Cuirass(classic)["iconTint"]);
         Assert.Null(Assert.IsType<Dictionary<string, object?>>(Assert.IsType<Dictionary<string, object?>>(classic["spells"])["icons"])["images"]);
+        Assert.All(Tiles(classic, "targets").Concat(Tiles(classic, "elements")).Cast<Dictionary<string, object?>>(), tile => Assert.Null(tile["image"]));
     }
 
     [Fact]

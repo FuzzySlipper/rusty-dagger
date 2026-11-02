@@ -37,8 +37,7 @@ internal sealed partial class DaggerfallSession
         }).ToArray(),
         Casting.ReadyFor(State.Actors.Player.DurableId) is { Source: DaggerfallCastSource.Spell or DaggerfallCastSource.DungeonAction } ready ? ready.SpellKey : null,
         _spellResult, ReadSpellSale(), ReadSpellInformation(), ReadSpellMaker(), ReadPotionMaker(), ReadItemMaker(), ReadSummoning(),
-        DrawnArt is { } art ? [.. Enumerable.Range(0, DaggerfallSpellConstruction.IconCount)
-            .Select(index => art.For(DaggerfallSpellConstruction.IconMedia(index))?.MediaId)] : null);
+        DrawnArt is { } art ? DaggerfallSpellArt.From(art) : null);
     private void ChangeSpell(WorldRpg.Rulesets.Daggerfall.Presentation.DaggerfallPlayerUiAction action)
     {
         var result=action.Kind switch
@@ -235,7 +234,19 @@ internal sealed partial class DaggerfallSession
 /// <param name="Icon">The spell's index in the classic spell icon atlas.</param>
 /// <param name="School">The school of the spell's first effect, which the spellbook's tabs group by.</param>
 internal sealed record DaggerfallKnownSpellView(string Key, string Name, int Cost, bool CanCast = true, int Icon = 0, string School = "");
-/// <param name="IconImages">With refreshed art drawn, each classic icon atlas cell's replacement image (null where it has none).</param>
+/// <param name="Art">With refreshed art drawn, the replacement images of the spell icons and tiles.</param>
 internal sealed record DaggerfallSpellbookView(DaggerfallKnownSpellView[] Available, string? Ready, string Result,
     DaggerfallSpellSaleView? Sale = null, DaggerfallSpellInformation? Information = null, DaggerfallSpellMakerView? Maker = null, DaggerfallPotionMakerView? PotionMaker = null, DaggerfallItemMakerView? ItemMaker = null, DaggerfallSummoningView? Summoning = null,
-    IReadOnlyList<string?>? IconImages = null);
+    DaggerfallSpellArt? Art = null);
+
+/// <summary>Each classic spell icon atlas cell's, targeting tile's and element tile's replacement image, null where it has none.</summary>
+internal sealed record DaggerfallSpellArt(IReadOnlyList<string?> Icons, IReadOnlyList<string?> Targets, IReadOnlyList<string?> Elements)
+{
+    internal static DaggerfallSpellArt From(DaggerfallArtReplacements art)
+    {
+        string?[] Images(int count, Func<int, string> media) => [.. Enumerable.Range(0, count).Select(index => art.For(media(index))?.MediaId)];
+        return new(Images(DaggerfallSpellConstruction.IconCount, DaggerfallSpellConstruction.IconMedia),
+            Images(DaggerfallSpellConstruction.SelectorCount, DaggerfallSpellConstruction.TargetMedia),
+            Images(DaggerfallSpellConstruction.SelectorCount, DaggerfallSpellConstruction.ElementMedia));
+    }
+}

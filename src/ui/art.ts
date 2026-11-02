@@ -156,14 +156,18 @@ async function dyed(source: string, mask: string, color: string, brightness: num
 }
 
 const tintedImages = new Map<string, Promise<string | null>>();
+/// The latest draw asked of each element, so a tinted image that finishes after the element was redrawn is dropped.
+const latestDraw = new WeakMap<HTMLImageElement, object>();
 
 /**
  * Draws a published image on an element: smoothed when it is refreshed art, and in a dye or metal when it carries a
  * tint. A tinted image is held hidden (`data-art-missing`) until its mask has arrived and the tinted image is made,
- * once per image and tint; one that does not decode leaves the neutral image standing rather than nothing. Returns
- * whether the image is published.
+ * once per image and tint; one that does not decode leaves the neutral image standing rather than nothing, and one that
+ * finishes after the element was drawn again is dropped. Returns whether the image is published.
  */
 export function drawArt(element: HTMLImageElement, id: string | null, tint: ArtTint | null = null): boolean {
+  const request = {};
+  latestDraw.set(element, request);
   const source = image(id);
   smoothIfRefreshed(element, id);
   const mask = tint === null ? null : image(tint.mask);
@@ -179,7 +183,11 @@ export function drawArt(element: HTMLImageElement, id: string | null, tint: ArtT
   element.dataset.artMissing = 'true';
   if (mask === null) return true;
   if (!tintedImages.has(key)) tintedImages.set(key, dyed(source, mask, tint.color, tint.brightness));
-  void tintedImages.get(key)!.catch(() => null).then(result => { element.src = result ?? source; delete element.dataset.artMissing; });
+  void tintedImages.get(key)!.catch(() => null).then(result => {
+    if (latestDraw.get(element) !== request) return;
+    element.src = result ?? source;
+    delete element.dataset.artMissing;
+  });
   return true;
 }
 

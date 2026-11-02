@@ -50,6 +50,7 @@ public sealed record Arena2ClassicMediaInputs(
     byte[] Inve14I0Img,
     byte[] Gild01I0Img,
     byte[] Icon00I0Img,
+    byte[] Mask04I0Img,
     byte[] Texture216,
     byte[] Font0003Fnt,
     // The four font tables outside the original single-font closure, appended here rather than in
@@ -315,6 +316,12 @@ public enum ClassicUiImage
     /// one image holding every classic spell icon in rows.
     /// </summary>
     SpellIcons,
+
+    /// <summary>
+    /// The spell targeting and element tiles (donor <c>SpellIconCollection</c>): five targeting tiles in the left
+    /// column and five element tiles in the right, one image the screens cut each tile from.
+    /// </summary>
+    SpellSelectors,
 
     /// <summary>
     /// The screen the product shows when the player dies: a full-screen image that carries its own
@@ -788,6 +795,7 @@ public sealed record ClassicUiImageManifest(
         ClassicUiImage.GuildMemberPanel => ClassicUiSlot.Guild,
         ClassicUiImage.BankPanel => ClassicUiSlot.Bank,
         ClassicUiImage.SpellIcons => ClassicUiSlot.SpellIcons,
+        ClassicUiImage.SpellSelectors => ClassicUiSlot.SpellIcons,
         ClassicUiImage.RestHoursPastPanel => ClassicUiSlot.Rest,
         ClassicUiImage.RestHoursRemainingPanel => ClassicUiSlot.Rest,
         ClassicUiImage.MerchantBuyButtons => ClassicUiSlot.Merchant,
@@ -1198,6 +1206,8 @@ public sealed record Arena2ClassicMediaPublication(
         new(ClassicUiImage.MerchantIdentifyButtons, "window.merchant.buttons.identify", "INVE14I0.IMG", false),
         new(ClassicUiImage.GuildMemberPanel, "window.guild.member", "GILD01I0.IMG", false),
         new(ClassicUiImage.SpellIcons, "spell.icons", "ICON00I0.IMG", true),
+        // The targeting and element tiles the spellbook and spellmaker show beside a spell (donor SpellIconCollection).
+        new(ClassicUiImage.SpellSelectors, "spell.selectors", "MASK04I0.IMG", true),
     ];
 
     private static readonly InventoryIconSource[] InventoryIconSources =
@@ -2353,6 +2363,7 @@ public sealed record Arena2ClassicMediaPublication(
             Inve14I0Img = inputs.Inve14I0Img;
             Gild01I0Img = inputs.Gild01I0Img;
             Icon00I0Img = inputs.Icon00I0Img;
+            Mask04I0Img = inputs.Mask04I0Img;
             Rest00I0Img = inputs.Rest00I0Img;
             Shop00I0Img = inputs.Shop00I0Img;
             Gild00I0Img = inputs.Gild00I0Img;
@@ -2412,6 +2423,7 @@ public sealed record Arena2ClassicMediaPublication(
         public byte[] Inve14I0Img { get; }
         public byte[] Gild01I0Img { get; }
         public byte[] Icon00I0Img { get; }
+        public byte[] Mask04I0Img { get; }
         public byte[] Rest00I0Img { get; }
         public byte[] Shop00I0Img { get; }
         public byte[] Gild00I0Img { get; }
@@ -2449,7 +2461,7 @@ public sealed record Arena2ClassicMediaPublication(
                 ("MAIN04I0.IMG", inputs.Main04I0Img), ("MAIN05I0.IMG", inputs.Main05I0Img), ("INVE00I0.IMG", inputs.Inve00I0Img), ("DIE_00I0.IMG", inputs.Die00I0Img), ("CHGN00I0.IMG", inputs.Chgn00I0Img), ("PICK02I0.IMG", inputs.Pick02I0Img),
                 ("PICK03I0.IMG", inputs.Pick03I0Img), ("PRIS00I0.IMG", inputs.Pris00I0Img), ("TITL00I0.IMG", inputs.Titl00I0Img),
                 ("BOOK00I0.IMG", inputs.Book00I0Img), ("REST00I0.IMG", inputs.Rest00I0Img), ("SHOP00I0.IMG", inputs.Shop00I0Img),
-                ("REST01I0.IMG", inputs.Rest01I0Img), ("REST02I0.IMG", inputs.Rest02I0Img), ("GILD01I0.IMG", inputs.Gild01I0Img), ("ICON00I0.IMG", inputs.Icon00I0Img),
+                ("REST01I0.IMG", inputs.Rest01I0Img), ("REST02I0.IMG", inputs.Rest02I0Img), ("GILD01I0.IMG", inputs.Gild01I0Img), ("ICON00I0.IMG", inputs.Icon00I0Img), ("MASK04I0.IMG", inputs.Mask04I0Img),
                 ("INVE08I0.IMG", inputs.Inve08I0Img), ("INVE10I0.IMG", inputs.Inve10I0Img), ("INVE11I0.IMG", inputs.Inve11I0Img),
                 ("INVE12I0.IMG", inputs.Inve12I0Img), ("INVE14I0.IMG", inputs.Inve14I0Img),
                 ("GILD00I0.IMG", inputs.Gild00I0Img), ("BANK00I0.IMG", inputs.Bank00I0Img),
@@ -2522,6 +2534,7 @@ public sealed record Arena2ClassicMediaPublication(
             "INVE14I0.IMG" => (ImgDecoder.Decode(Inve14I0Img, "arena2/INVE14I0.IMG"), null),
             "GILD01I0.IMG" => (ImgDecoder.Decode(Gild01I0Img, "arena2/GILD01I0.IMG"), null),
             "ICON00I0.IMG" => (ImgDecoder.DecodeHeaderless(Icon00I0Img, "arena2/ICON00I0.IMG"), null),
+            "MASK04I0.IMG" => (ImgDecoder.DecodeHeaderless(Mask04I0Img, "arena2/MASK04I0.IMG"), null),
             "DIE_00I0.IMG" => Screen(Die00I0Img, "arena2/DIE_00I0.IMG"),
             "CHGN00I0.IMG" => Screen(Chgn00I0Img, "arena2/CHGN00I0.IMG"),
             "PICK02I0.IMG" => Screen(Pick02I0Img, "arena2/PICK02I0.IMG"),

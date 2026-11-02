@@ -28490,6 +28490,51 @@
     }
    },
    {
+    "replaces": "spell.element.0",
+    "mediaId": "refreshed.spell.element.0",
+    "path": "worldrpg/media/refreshed/spells/elements--fire--element-icon.webp",
+    "byteLength": 6976,
+    "sha256": "1d3e39150f44c2b8f59e8769e8eb4db96c56d952a0997b0b19802ba0687064bb",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": "spell.element.1",
+    "mediaId": "refreshed.spell.element.1",
+    "path": "worldrpg/media/refreshed/spells/elements--cold--element-icon.webp",
+    "byteLength": 7752,
+    "sha256": "b2d7e95f4cbf92a6b35bb265e8c07cfbdb9ddb6670697e39e81526239cf52a0c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": "spell.element.2",
+    "mediaId": "refreshed.spell.element.2",
+    "path": "worldrpg/media/refreshed/spells/elements--poison--element-icon.webp",
+    "byteLength": 7760,
+    "sha256": "5cda164aa570355bf68b9a9b7349c1eff7ef4492225d872a2d88276dcbd09c2c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": "spell.element.3",
+    "mediaId": "refreshed.spell.element.3",
+    "path": "worldrpg/media/refreshed/spells/elements--shock--element-icon.webp",
+    "byteLength": 7536,
+    "sha256": "06272608b3a633af34c67be75a9caab93dd43d8647682684185100be9cd290b5",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": "spell.element.4",
+    "mediaId": "refreshed.spell.element.4",
+    "path": "worldrpg/media/refreshed/spells/elements--magic--element-icon.webp",
+    "byteLength": 5886,
+    "sha256": "856564049dae81b986dcadf7e2665ec4646c9d262ec2cac15c94aa78a434e7d9",
+    "width": 128,
+    "height": 128
+   },
+   {
     "replaces": "spell.icon.0",
     "mediaId": "refreshed.spell.icon.0",
     "path": "worldrpg/media/refreshed/spells/icons--icon-000--icon.webp",
@@ -29109,6 +29154,51 @@
     "sha256": "cd31bb4c4f4845bf7c0af7fbdb6fac029ca6b7edb4e97ca71d26006cd528583d",
     "width": 126,
     "height": 128
+   },
+   {
+    "replaces": "spell.target.0",
+    "mediaId": "refreshed.spell.target.0",
+    "path": "worldrpg/media/refreshed/spells/targets--caster-only--target-icon.webp",
+    "byteLength": 4008,
+    "sha256": "817537f061f00dcae2f6353426ec301aedcb1e8414d8439e668b8ef6f97d5ace",
+    "width": 128,
+    "height": 85
+   },
+   {
+    "replaces": "spell.target.1",
+    "mediaId": "refreshed.spell.target.1",
+    "path": "worldrpg/media/refreshed/spells/targets--by-touch--target-icon.webp",
+    "byteLength": 4636,
+    "sha256": "0bc495b2bdcf3fbaded1a4d373556f2e1b6db0d5544f048ce8fab701d2b1849f",
+    "width": 128,
+    "height": 85
+   },
+   {
+    "replaces": "spell.target.2",
+    "mediaId": "refreshed.spell.target.2",
+    "path": "worldrpg/media/refreshed/spells/targets--single-target-at-range--target-icon.webp",
+    "byteLength": 4624,
+    "sha256": "118f591f3361f4d172f522a2bdcac7e948cdfec0081e89dd3d82fc94fad1c03f",
+    "width": 128,
+    "height": 85
+   },
+   {
+    "replaces": "spell.target.3",
+    "mediaId": "refreshed.spell.target.3",
+    "path": "worldrpg/media/refreshed/spells/targets--area-around-caster--target-icon.webp",
+    "byteLength": 5084,
+    "sha256": "9783051fd81b27a8bb88e95c1034ab4c85c1cda4ef17622cfb5f9c7622118b7b",
+    "width": 128,
+    "height": 85
+   },
+   {
+    "replaces": "spell.target.4",
+    "mediaId": "refreshed.spell.target.4",
+    "path": "worldrpg/media/refreshed/spells/targets--area-at-range--target-icon.webp",
+    "byteLength": 4590,
+    "sha256": "7b7a9c7095097aa2cb74f6eeda1d27c017c67b4afbe48f0886caa5c0d78d73f5",
+    "width": 128,
+    "height": 85
    }
   ],
   "dyeTints": {

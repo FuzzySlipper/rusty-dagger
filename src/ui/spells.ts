@@ -4,7 +4,7 @@ import type { Send } from './host.js';
 import type { SpellbookProjection } from './projection.js';
 import { keyLabel, type ControlsProjection } from './controls.js';
 import { redraw } from './redraw.js';
-import { isSpellIconAtlas, spellIcon, spellIconsReady } from './spell-icon.js';
+import { isSpellIconAtlas, isSpellSelectors, spellIcon, spellIconsReady, spellSelector, spellSelectorsReady } from './spell-icon.js';
 
 /**
  * Performs the spell action a clicked control names, for the spellbook and a spell seller alike.
@@ -44,6 +44,7 @@ export function isSpellbookProjection(value:unknown):value is SpellbookProjectio
     && (spell.canCast===undefined || typeof spell.canCast==='boolean')
     && (spell.icon===undefined || Number.isSafeInteger(spell.icon) && spell.icon>=0) && (spell.school===undefined || typeof spell.school==='string'))
     && (v.icons===undefined || isSpellIconAtlas(v.icons))
+    && (v.selectors===undefined || isSpellSelectors(v.selectors))
     && (v.schools===undefined || Array.isArray(v.schools) && v.schools.every(school=>school && typeof school.id==='string' && typeof school.label==='string'))
     && (v.ready===null || typeof v.ready==='string' && v.available.some(spell=>spell.key===v.ready)) && typeof v.result==='string'
     && (v.sale==null || typeof v.sale.revision==='string' && typeof v.sale.provider==='string' && Array.isArray(v.sale.offers)
@@ -55,6 +56,7 @@ export function isSpellbookProjection(value:unknown):value is SpellbookProjectio
     && (v.summoning==null || isSummoningProjection(v.summoning))
     && (v.information==null || typeof v.information.key==='string' && typeof v.information.name==='string'
       && typeof v.information.target==='string' && typeof v.information.element==='string'
+      && Number.isInteger(v.information.rangeType) && Number.isInteger(v.information.elementType)
       && Array.isArray(v.information.details) && v.information.details.every(line=>typeof line==='string'));
 }
 
@@ -108,7 +110,7 @@ function draw(root:HTMLElement,place:SpellbookPlace):void {
   const shown=visible(place);
   // The chosen spell stays chosen while it is listed; otherwise the readied spell, then the first row.
   if(!shown.some(spell=>spell.key===place.selected)) place.selected=(shown.find(spell=>spell.key===view?.ready) ?? shown[0])?.key ?? null;
-  redraw(root, JSON.stringify([view,place.school,place.selected,place.hints,spellIconsReady(view?.icons)]), () => drawSpells(root,place,shown));
+  redraw(root, JSON.stringify([view,place.school,place.selected,place.hints,spellIconsReady(view?.icons),spellSelectorsReady(view?.selectors)]), () => drawSpells(root,place,shown));
 }
 
 function drawSpells(root:HTMLElement,place:SpellbookPlace,shown:SpellbookProjection['available']):void {
@@ -180,12 +182,17 @@ export function renderSpellInformation(root:HTMLElement,view:SpellbookProjection
   if(!view.information) return;
   const section=document.createElement('section');section.className='dagger-spellbook-information';
   if(titled) { const title=document.createElement('h3');title.textContent=view.information.name;section.append(title); }
-  const target=document.createElement('p');target.textContent=`Target: ${view.information.target}; element: ${view.information.element}`;section.append(target);
+  // The targeting and element tiles stand beside their names, as the donor's book shows them.
+  const target=document.createElement('p');target.className='dagger-spell-selectors';
+  const named=(tile:HTMLElement,text:string):HTMLElement=>{const group=document.createElement('span');group.append(tile,text);return group;};
+  target.append(named(spellSelector(view.selectors,'targets',view.information.rangeType),`Target: ${view.information.target}; `),
+    named(spellSelector(view.selectors,'elements',view.information.elementType),`element: ${view.information.element}`));
+  section.append(target);
   for(const line of view.information.details) { const p=document.createElement('p');p.textContent=line;section.append(p); } root.append(section);
 }
 
 export function renderSpellSales(root:HTMLElement,view:SpellbookProjection|null):void {
-  redraw(root, JSON.stringify(view && [view.sale, view.result, view.information]), () => drawSpellSales(root, view));
+  redraw(root, JSON.stringify(view && [view.sale, view.result, view.information, spellSelectorsReady(view.selectors)]), () => drawSpellSales(root, view));
 }
 
 function drawSpellSales(root:HTMLElement,view:SpellbookProjection|null):void {
