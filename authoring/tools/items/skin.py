@@ -67,7 +67,7 @@ def canvas_mask(layer, rect, k, source_mask, size):
 def body_skin(number):
     """The generated body's skin in OKLab, its alpha, doll-space rect and px per unit."""
     body = doll_layer("bodies", f"body{number:02d}i0", 0, "body")
-    final, rect = placed(body, "canvas", 1024, 0.74)
+    final, rect = placed(body, "canvas")
     L, alpha = lab(final)
     return body, L, alpha, rect, final.width / rect[2]
 
@@ -77,7 +77,7 @@ def remap(number, record, body_ramp, body_L):
     head = doll_layer("faces", f"face{number:02d}i0", record, "head")
     if head.final is None:
         return None
-    final, rect = placed(head, "canvas", 1024, 0.74)
+    final, rect = placed(head, "canvas")
     k = final.width / rect[2]
     Lab, alpha = lab(final)
     L, ab = Lab[..., 0], Lab[..., 1:]

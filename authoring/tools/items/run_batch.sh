@@ -28,5 +28,5 @@ python3 $TOOLS/postprocess.py run $R --route qwen-retro --palette "$PAL" --out $
 python3 $TOOLS/postprocess.py cutout $R $B --out $B/cutout
 python3 $TOOLS/postprocess.py compare --study $R --out $ST/$PFX-$N-compare-$D --title "$AREA batch $N: source, retro, BP 0.5" --column "Retro=$B:original" --column "BP 0.5=$B:bp-broad-half"
 if [[ $N == frames-* ]]; then python3 $TOOLS/composite.py $SPEC/$PFX-$N-retro.json $R $B/cutout
-else python3 $TOOLS/finalize.py $SPEC/$PFX-$N-retro.json $B/cutout --area $AREA; fi
+else python3 $TOOLS/finalize.py $SPEC/$PFX-$N-retro.json $B/cutout --area $AREA --study $R; fi
 echo BATCH-$N-DONE

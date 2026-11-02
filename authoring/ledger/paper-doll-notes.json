@@ -24,44 +24,44 @@
   "note": "Patch accepted the conformed bodies and skin-matched heads with the dressed sets on 2026-11-01. landmarks.py flags shoulder width +2.5."
  },
  "bodies--body03i0--body03i0-record-000-frame-000": {
-  "status": "accepted",
-  "note": "Patch accepted the conformed bodies and skin-matched heads with the dressed sets on 2026-11-01."
+  "status": "needs-owner-review",
+  "note": "Redone on 2026-11-02 for the #10522 proportion check: the morph's base re-conformed (seed 5104) so its armpits, waist and knees meet the classic. Passes landmarks.py check; awaits Patch's review."
  },
  "bodies--body03i1--body03i1-record-000-frame-000": {
-  "status": "accepted",
-  "note": "Patch accepted the conformed bodies and skin-matched heads with the dressed sets on 2026-11-01."
+  "status": "needs-owner-review",
+  "note": "Redone on 2026-11-02 for the #10522 proportion check: the clothed body redone with its classic loincloth (Qwen had painted a brief), on the re-conformed body. Passes landmarks.py check; awaits Patch's review."
  },
  "bodies--body04i0--body04i0-record-000-frame-000": {
-  "status": "accepted",
-  "note": "Patch accepted the conformed bodies and skin-matched heads with the dressed sets on 2026-11-01."
+  "status": "needs-owner-review",
+  "note": "Redone on 2026-11-02 for the #10522 proportion check: the morph's base re-conformed (seed 5104) so its armpits, waist and knees meet the classic. Passes landmarks.py check; awaits Patch's review."
  },
  "bodies--body04i1--body04i1-record-000-frame-000": {
-  "status": "accepted",
-  "note": "Patch accepted the conformed bodies and skin-matched heads with the dressed sets on 2026-11-01."
+  "status": "needs-owner-review",
+  "note": "Redone on 2026-11-02 for the #10522 proportion check: the clothed body redone with its classic loincloth (Qwen had painted a brief), on the re-conformed body. Passes landmarks.py check; awaits Patch's review."
  },
  "bodies--body05i0--body05i0-record-000-frame-000": {
-  "status": "accepted",
-  "note": "Patch accepted the conformed bodies and skin-matched heads with the dressed sets on 2026-11-01."
+  "status": "needs-owner-review",
+  "note": "Redone on 2026-11-02 for the #10522 proportion check: the morph's base re-conformed (seed 5104) so its armpits, waist and knees meet the classic. Passes landmarks.py check; awaits Patch's review."
  },
  "bodies--body05i1--body05i1-record-000-frame-000": {
-  "status": "accepted",
-  "note": "Patch accepted the conformed bodies and skin-matched heads with the dressed sets on 2026-11-01."
+  "status": "needs-owner-review",
+  "note": "Redone on 2026-11-02 for the #10522 proportion check: the clothed body redone with its classic loincloth (Qwen had painted a brief), on the re-conformed body. Passes landmarks.py check; awaits Patch's review."
  },
  "bodies--body06i0--body06i0-record-000-frame-000": {
-  "status": "accepted",
-  "note": "Patch accepted the conformed bodies and skin-matched heads with the dressed sets on 2026-11-01."
+  "status": "needs-owner-review",
+  "note": "Redone on 2026-11-02 for the #10522 proportion check: the morph's base re-conformed (seed 5104) so its armpits, waist and knees meet the classic. Passes landmarks.py check; awaits Patch's review."
  },
  "bodies--body06i1--body06i1-record-000-frame-000": {
-  "status": "accepted",
-  "note": "Patch accepted the conformed bodies and skin-matched heads with the dressed sets on 2026-11-01."
+  "status": "needs-owner-review",
+  "note": "Redone on 2026-11-02 for the #10522 proportion check: the clothed body redone with its classic loincloth (Qwen had painted a brief), on the re-conformed body. Passes landmarks.py check; awaits Patch's review."
  },
  "bodies--body07i0--body07i0-record-000-frame-000": {
   "status": "accepted",
   "note": "Patch accepted the conformed bodies and skin-matched heads with the dressed sets on 2026-11-01."
  },
  "bodies--body07i1--body07i1-record-000-frame-000": {
-  "status": "accepted",
-  "note": "Patch accepted the conformed bodies and skin-matched heads with the dressed sets on 2026-11-01."
+  "status": "needs-owner-review",
+  "note": "Redone on 2026-11-02 for the #10522 proportion check: the clothed body redone with its classic loincloth (Qwen had painted a brief). Passes landmarks.py check; awaits Patch's review."
  },
  "bodies--body10i0--body10i0-record-000-frame-000": {
   "status": "accepted",
@@ -112,12 +112,12 @@
   "note": "Patch accepted the conformed bodies and skin-matched heads with the dressed sets on 2026-11-01."
  },
  "bodies--body16i0--body16i0-record-000-frame-000": {
-  "status": "accepted",
-  "note": "Patch accepted the conformed bodies and skin-matched heads with the dressed sets on 2026-11-01."
+  "status": "needs-owner-review",
+  "note": "Redone on 2026-11-02 for the #10522 proportion check: the morph's base re-conformed (seed 5104) so its armpits, waist and knees meet the classic. Passes landmarks.py check; awaits Patch's review."
  },
  "bodies--body16i1--body16i1-record-000-frame-000": {
-  "status": "accepted",
-  "note": "Patch accepted the conformed bodies and skin-matched heads with the dressed sets on 2026-11-01."
+  "status": "needs-owner-review",
+  "note": "Redone on 2026-11-02 for the #10522 proportion check: the clothed body rebuilt on the re-conformed base. Passes landmarks.py check; awaits Patch's review."
  },
  "bodies--body17i0--body17i0-record-000-frame-000": {
   "status": "accepted",

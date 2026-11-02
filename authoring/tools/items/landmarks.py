@@ -39,7 +39,12 @@ FIELD = (-40, -20, 190, 230)  # the doll-space area rasterised: x, y, width, hei
 TOLERANCE = 2.0              # doll units
 SMALL_HOLE = 16              # square doll units
 HEADS = range(10)           # head records per FACE file
+SMOOTH = 3                   # doll units a leg's widths are averaged over
+FOOT = 8                     # doll units above a sole the ankle is looked for
+PARTED = 2                   # doll units below an armpit the arm has fully left the torso
+FLAT = 0.5                   # doll units of width within which rows count as a narrowest place
 RATIOS = ("heads tall", "crotch fraction", "shoulders in heads")
+VARIANTS = {"i0": "bodies", "i1": "clothed bodies"}   # unclothed and clothed body layers, by file suffix
 BANDS = ("neck and shoulders", "arms and torso", "hips and thighs", "shins", "feet")
 
 
@@ -94,6 +99,89 @@ def body_landmarks(a):
             "toe left": feet["left"]["toe"], "toe right": feet["right"]["toe"], "centre": to_doll(centre, 0)}
 
 
+def limb_landmarks(a, m, legs=True):
+    """The arms, waist and legs of the classic pose, every race's: the viewer's left arm hangs with its fist out
+    beside the hip, the right is set akimbo with its hand on the hip.
+
+      armpit left/right: where that arm parts from the torso, the top of the longest run of rows (below the
+        shoulders, above the crotch) with background between them;
+      hand left: the row below the hanging arm's parted run, and the fist's outermost column (hand left out);
+      hand right: the row where the akimbo arm's hand closes that gap at the hip;
+      waist: the torso's narrowest rows from PARTED units below both arms' parting (the lower armpit, and where the
+        akimbo hand closes its gap, so the arm has fully left the torso or settled on the hip) halfway to the
+        crotch, and its width;
+      knee/ankle left/right: each leg's narrowest rows (widths smoothed over SMOOTH units) in its upper part
+        (15-50% of the leg) and its lower part (65% of the leg to FOOT units above the leg's sole).
+
+    A clothed body is its unclothed body with underwear painted on, and a loincloth hides where the legs part, so
+    its knees and ankles are measured on the unclothed body only (legs=False).
+
+    A narrowest place is the middle of the rows within FLAT units of the narrowest width, and its "span" is half
+    their extent: a leg or waist that narrows gradually locates it no closer than that, so the check allows it on
+    top of the tolerance.
+    """
+    centre = int(round((m["centre"] - FIELD[0]) * K))
+    shoulders, crotch = int(round((m["shoulders"] - FIELD[1]) * K)), int(round((m["crotch"] - FIELD[1]) * K))
+    left, right, torso = {}, set(), {}
+    for y in range(shoulders, crotch):
+        row = runs(a[y])
+        body = next(((s, e) for s, e in row if s <= centre < e), None)
+        if body is None:
+            continue
+        torso[y] = body
+        if any(e <= body[0] for s, e in row):
+            left[y] = min(s for s, e in row if e <= body[0])
+        if any(s >= body[1] for s, e in row):
+            right.add(y)
+
+    def longest(rows):
+        blocks, block = [], []
+        for y in sorted(rows):
+            if block and y != block[-1] + 1:
+                blocks.append(block)
+                block = []
+            block.append(y)
+        return max(blocks + [block], key=len) if block else []
+
+    out, parted = {}, []
+    if hang := longest(left):
+        out["armpit left"], out["hand left"] = to_doll(hang[0], 1), to_doll(hang[-1] + 1, 1)
+        out["hand left out"] = to_doll(min(left[y] for y in hang), 0)
+        parted.append(hang[0])
+    if akimbo := longest(right):
+        out["armpit right"], out["hand right"] = to_doll(akimbo[0], 1), to_doll(akimbo[-1] + 1, 1)
+        parted.append(akimbo[-1] + 1)
+    below = max(parted, default=shoulders) + PARTED * K
+    def narrowest(name, widths):
+        rows = [y for y, w in widths.items() if w <= min(widths.values()) + FLAT * K]
+        out[name], out[f"{name} span"] = to_doll(np.mean(rows), 1), round((max(rows) - min(rows)) / 2 / K, 1)
+
+    waist = {y: e - s for y, (s, e) in torso.items() if below <= y < (below + crotch) / 2}
+    if waist:
+        narrowest("waist", waist)
+        out["waist width"] = round(min(waist.values()) / K, 1)
+    if not legs:
+        return out
+    first = runs(a[crotch + K])
+    for side, run in (("left", min(first, key=lambda r: r[1])), ("right", max(first, key=lambda r: r[0]))):
+        # Follow the leg down from the crotch: the run that holds the previous row's leg middle.
+        middle, widths = (run[0] + run[1]) // 2, {}
+        for y in range(crotch + K, a.shape[0]):
+            run = next(((s, e) for s, e in runs(a[y]) if s <= middle < e), None)
+            if run is None:
+                break
+            widths[y], middle = run[1] - run[0], (run[0] + run[1]) // 2
+        sole = max(widths)
+        length = sole - crotch
+        ys = np.array(sorted(widths))
+        smooth = np.convolve([widths[y] for y in ys], np.ones(SMOOTH * K) / (SMOOTH * K), mode="same")
+        for name, lo, hi in (("knee", crotch + 0.15 * length, crotch + 0.5 * length), ("ankle", crotch + 0.65 * length, sole - FOOT * K)):
+            part = {int(y): w for y, w in zip(ys, smooth) if lo <= y < hi}
+            if part:
+                narrowest(f"{name} {side}", part)
+    return out
+
+
 def head_box(a):
     ys, xs = np.nonzero(a)
     return {"crown": to_doll(ys.min(), 1), "head bottom": to_doll(ys.max() + 1, 1),
@@ -114,19 +202,20 @@ def outline(family, name, record, mode):
     layer = doll_layer(family, name, record, name)
     if mode == "canvas" and layer.final is None:
         return None
-    a = silhouette(*placed(layer, mode, 1024, 0.74))
+    a = silhouette(*placed(layer, mode))
     holes, count = ndimage.label(ndimage.binary_fill_holes(a) & ~a)
     small = np.nonzero(ndimage.sum(np.ones_like(a), holes, range(1, count + 1)) < SMALL_HOLE * K * K)[0] + 1
     return a | np.isin(holes, small)
 
 
-def measure(number, mode):
+def measure(number, mode, variant="i0"):
     """The body's landmarks and ratios (with head 0, generated if there is one), and its silhouette."""
-    body = outline("bodies", f"body{number:02d}i0", 0, mode)
+    body = outline("bodies", f"body{number:02d}{variant}", 0, mode)
     if body is None:
         return None, None
     head = outline("faces", f"face{number:02d}i0", 0, mode)
-    m = body_landmarks(body) | head_box(head if head is not None else outline("faces", f"face{number:02d}i0", 0, "classic"))
+    m = body_landmarks(body)
+    m |= limb_landmarks(body, m, legs=variant == "i0") | head_box(head if head is not None else outline("faces", f"face{number:02d}i0", 0, "classic"))
     return m | ratios(m), body
 
 
@@ -152,11 +241,12 @@ def outline_deviation(standard, generated, m):
 
 
 def standard():
-    bodies, heads = {}, {}
+    bodies, heads = {section: {} for section in VARIANTS.values()}, {}
     for number in BODIES:
-        bodies[f"body{number:02d}"], _ = measure(number, "classic")
+        for variant, section in VARIANTS.items():
+            bodies[section][f"body{number:02d}"], _ = measure(number, "classic", variant)
         heads[f"face{number:02d}"] = {str(r): head_box(outline("faces", f"face{number:02d}i0", r, "classic")) for r in HEADS}
-    STANDARD.write_text(json.dumps({"tolerance": TOLERANCE, "bodies": bodies, "heads": heads}, indent=1) + "\n")
+    STANDARD.write_text(json.dumps({"tolerance": TOLERANCE, **bodies, "heads": heads}, indent=1) + "\n")
     print("wrote", STANDARD)
 
 
@@ -166,41 +256,56 @@ def morph_base(number):
 
 
 def deviations(measured, want, tolerance):
-    return [f"{key} {measured[key]} ({measured[key] - value:+.1f})" for key, value in want.items()
-            if key not in RATIOS and abs(measured[key] - value) > tolerance]
+    """Each landmark beyond tolerance (widened by the standard's span for a gradual narrowing), or missing."""
+    return [f"{key} missing" if key not in measured else f"{key} {measured[key]} ({measured[key] - value:+.1f})"
+            for key, value in want.items() if key not in RATIOS and not key.endswith(" span")
+            and (key not in measured or abs(measured[key] - value) > tolerance + want.get(f"{key} span", 0))]
+
+
+def body_report(spec, number, variant):
+    """One generated body against the standard: its report line (each landmark or outline band beyond tolerance on
+    its own line below), and whether any is."""
+    tolerance, section = spec["tolerance"], VARIANTS[variant]
+    name = f"body{number:02d}{variant}"
+    m, body = measure(number, "canvas", variant)
+    if m is None:
+        return f"{name}: no generated body", False
+    base = f"body{morph_base(number):02d}"
+    head = {key: spec[section][name[:6]][key] for key in ("crown", "head bottom", "head left", "head right")}
+    want = spec[section][base] | head
+    want |= ratios(want)
+    bad = deviations(m, want, tolerance)
+    for band, d in outline_deviation(outline("bodies", f"{base}{variant}", 0, "classic"), body, want).items():
+        if d is not None and d > tolerance:
+            bad.append(f"outline {band} {d}")
+    return (f"{name}: {'ok' if not bad else 'FAIL'}{'' if base == name[:6] else f' (shape of {base}{variant})'}  heads tall {m['heads tall']} "
+            f"({want['heads tall']}), crotch {m['crotch fraction']} ({want['crotch fraction']}), shoulders {m['shoulders in heads']} heads "
+            f"({want['shoulders in heads']})" + "".join(f"\n    {b}" for b in bad)), bool(bad)
+
+
+def head_report(spec, number, record):
+    """One generated head against its classic head box: its report line, and whether it is beyond tolerance."""
+    name = f"face{number:02d}"
+    head = outline("faces", f"{name}i0", record, "canvas")
+    if head is None:
+        return f"{name} head {record}: no generated head", False
+    bad = deviations(head_box(head), spec["heads"][name][str(record)], spec["tolerance"])
+    return f"{name} head {record}: " + ("ok" if not bad else "FAIL  " + ", ".join(bad)), bool(bad)
 
 
 def check():
     spec = json.load(open(STANDARD))
     tolerance, failed = spec["tolerance"], False
+    for number, variant in ((n, v) for n in BODIES for v in VARIANTS):
+        line, bad = body_report(spec, number, variant)
+        print(line)
+        failed |= bad
     for number in BODIES:
-        name = f"body{number:02d}"
-        m, body = measure(number, "canvas")
-        if m is None:
-            print(f"{name}: no generated body")
-            continue
-        base = f"body{morph_base(number):02d}"
-        head = {key: spec["bodies"][name][key] for key in ("crown", "head bottom", "head left", "head right")}
-        want = spec["bodies"][base] | head
-        want |= ratios(want)
-        bad = deviations(m, want, tolerance)
-        for band, d in outline_deviation(outline("bodies", f"{base}i0", 0, "classic"), body, want).items():
-            if d is not None and d > tolerance:
-                bad.append(f"outline {band} {d}")
-        print(f"{name}: {'ok' if not bad else 'FAIL'}{'' if base == name else f' (shape of {base})'}  heads tall {m['heads tall']} ({want['heads tall']}), "
-              f"crotch {m['crotch fraction']} ({want['crotch fraction']}), shoulders {m['shoulders in heads']} heads "
-              f"({want['shoulders in heads']})" + "".join(f"\n    {b}" for b in bad))
-        failed |= bool(bad)
-    for number in BODIES:
-        name = f"face{number:02d}"
-        for record, want in spec["heads"][name].items():
-            head = outline("faces", f"{name}i0", int(record), "canvas")
-            if head is None:
-                continue
-            bad = deviations(head_box(head), want, tolerance)
+        for record in HEADS:
+            line, bad = head_report(spec, number, record)
             if bad:
-                print(f"{name} head {record}: FAIL  " + ", ".join(bad))
-            failed |= bool(bad)
+                print(line)
+            failed |= bad
     return failed
 
 
