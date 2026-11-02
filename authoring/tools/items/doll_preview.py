@@ -84,9 +84,11 @@ def worn_sources(role):
 
 
 def worn_layer(key, role):
-    if key not in worn_sources(role):
+    """A worn layer drawn for one body, or shared by every body (a held weapon, an artifact)."""
+    found = worn_sources(role).get(key) or worn_sources(None).get(key)
+    if found is None:
         raise SystemExit(f"No {role} player layer named {key} in {[str(r) for r in WORN_SOURCES]}.")
-    source, entry = worn_sources(role)[key]
+    source, entry = found
     return Layer(key, source, entry, final("worn", f"{key}.png"))
 
 

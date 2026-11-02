@@ -1,0 +1,311 @@
+{
+ "seed": 27321,
+ "size": 1024,
+ "occupancy": 0.74,
+ "background": "#30343b",
+ "styles": {
+  "painted": {
+   "label": "Painted adventure",
+   "prompt": "Restrained hand-painted 1990s fantasy RPG equipment illustration, opaque gouache-like colour modelling, broad painted planes, believable cloth folds and metal planes, sparse dry-brush marks, selective dark accents along occluding contours. Slightly irregular handmade edges, original local colours; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+  },
+  "inked": {
+   "label": "Inked dark fantasy / UI kin",
+   "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+  },
+  "gouache": {
+   "label": "Warm storybook gouache",
+   "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+  },
+  "etched": {
+   "label": "Tinted engraving",
+   "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+  }
+ },
+ "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy RPG equipment art, each piece a storied legendary artifact. Keep the source's silhouette, its orientation, its pose, the arrangement of its parts and its local colours: do not tint every material brown. Draw only the object itself: no hand, arm, body, glove or sleeve. No text, border, scenery, shadow or second figure.",
+ "presentation": "One isolated object on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the object. The whole object visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+ "title": "Worn artifacts / Qwen then retro",
+ "routes": [
+  {
+   "id": "qwen-retro",
+   "label": "Qwen then retro / 0.35",
+   "group": "worn",
+   "model": "krea2-turbo",
+   "host": "den-nimo",
+   "url": "http://192.168.1.23:8188",
+   "unet": "krea2_turbo_fp8_scaled.safetensors",
+   "conditioning": "init",
+   "denoise": 0.35,
+   "loras": [
+    "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+   ],
+   "prompt_prefix": "dark_fantasy_illustration,\n\n",
+   "upstream_route": "qwen-base",
+   "upstream_style": "painted",
+   "steps": 5
+  }
+ ],
+ "task": "Task: Redraw a very small classic fantasy RPG paper-doll layer of a legendary artifact as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+ "items": [
+  {
+   "id": "00-the-masque-of-clavicus-m012",
+   "directory": "artifacts/artifact-00-the-masque-of-clavicus",
+   "image": "player/male/texture-432-record-012-frame-000-source.png",
+   "content": "One The Masque of Clavicus, a grey stone-like face mask with dark eye and mouth holes and faint blue-green glints, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn on its own. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "00-the-masque-of-clavicus male 012 (30x36)"
+  },
+  {
+   "id": "01-the-mehrunes-razor-m014",
+   "directory": "artifacts/artifact-01-the-mehrunes-razor",
+   "image": "player/male-right-hand/texture-432-record-014-frame-000-source.png",
+   "content": "One Mehrunes' Razor, a slim steel dagger with a pale curved crossguard; the hilt is a separate small piece where the hand grips, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "01-the-mehrunes-razor male 014 (43x54)"
+  },
+  {
+   "id": "01-the-mehrunes-razor-m013",
+   "directory": "artifacts/artifact-01-the-mehrunes-razor",
+   "image": "player/male/texture-432-record-013-frame-000-source.png",
+   "content": "One Mehrunes' Razor, a slim steel dagger with a pale curved crossguard; the hilt is a separate small piece where the hand grips, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "01-the-mehrunes-razor male 013 (66x17)"
+  },
+  {
+   "id": "02-the-mace-of-molag-bal-m011",
+   "directory": "artifacts/artifact-02-the-mace-of-molag-bal",
+   "image": "player/male-right-hand/texture-432-record-011-frame-000-source.png",
+   "content": "One the Mace of Molag Bal, a long black-iron spiked mace with a dark grip; the grip end is a separate small piece where the hand grips, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "02-the-mace-of-molag-bal male 011 (58x65)"
+  },
+  {
+   "id": "02-the-mace-of-molag-bal-m010",
+   "directory": "artifacts/artifact-02-the-mace-of-molag-bal",
+   "image": "player/male/texture-432-record-010-frame-000-source.png",
+   "content": "One the Mace of Molag Bal, a long black-iron spiked mace with a dark grip; the grip end is a separate small piece where the hand grips, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "02-the-mace-of-molag-bal male 010 (75x27)"
+  },
+  {
+   "id": "03-the-hircine-ring-m008",
+   "directory": "artifacts/artifact-03-the-hircine-ring",
+   "image": "player/male/texture-432-record-008-frame-000-source.png",
+   "content": "One Hircine's Ring shown as a round bronze-brown shield-like disc with a spiral boss and small rivets, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn on its own. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "03-the-hircine-ring male 008 (36x42)"
+  },
+  {
+   "id": "04-the-sanguine-rose-m019",
+   "directory": "artifacts/artifact-04-the-sanguine-rose",
+   "image": "player/male/texture-432-record-019-frame-000-source.png",
+   "content": "One the Sanguine Rose, a single deep red rose on a green stem with leaves, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn on its own. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "04-the-sanguine-rose male 019 (48x36)"
+  },
+  {
+   "id": "05-oghma-infinium-m016",
+   "directory": "artifacts/artifact-05-oghma-infinium",
+   "image": "player/male/texture-432-record-016-frame-000-source.png",
+   "content": "One the Oghma Infinium, a thick closed book bound in dark teal with gold corner fittings and pale page edges, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn on its own. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "05-oghma-infinium male 016 (48x36)"
+  },
+  {
+   "id": "06-the-wabbajack-m025",
+   "directory": "artifacts/artifact-06-the-wabbajack",
+   "image": "player/male/texture-432-record-025-frame-000-source.png",
+   "content": "One the Wabbajack, a long thin dark staff with a small gold head, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "06-the-wabbajack male 025 (102x141)"
+  },
+  {
+   "id": "07-the-ring-of-namira-m018",
+   "directory": "artifacts/artifact-07-the-ring-of-namira",
+   "image": "player/male/texture-432-record-018-frame-000-source.png",
+   "content": "One the Ring of Namira, a dark ring band set with flame-like red and orange stones, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn on its own. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "07-the-ring-of-namira male 018 (20x20)"
+  },
+  {
+   "id": "08-the-skull-of-corruption-m021",
+   "directory": "artifacts/artifact-08-the-skull-of-corruption",
+   "image": "player/male/texture-432-record-021-frame-000-source.png",
+   "content": "One the Skull of Corruption, a dark grey skull with glowing red eyes and a red-lit mouth, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn on its own. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "08-the-skull-of-corruption male 021 (46x34)"
+  },
+  {
+   "id": "09-azura-s-star-m002",
+   "directory": "artifacts/artifact-09-azura-s-star",
+   "image": "player/male/texture-432-record-002-frame-000-source.png",
+   "content": "One Azura's Star, a small pale blue faceted star gem, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn on its own. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "09-azura-s-star male 002 (15x15)"
+  },
+  {
+   "id": "10-volendrung-f024",
+   "directory": "artifacts/artifact-10-volendrung",
+   "image": "player/female/texture-433-record-024-frame-000-source.png",
+   "content": "One Volendrung, a war hammer with a gold head on a long brown haft, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "10-volendrung female 024 (111x53)"
+  },
+  {
+   "id": "10-volendrung-m024",
+   "directory": "artifacts/artifact-10-volendrung",
+   "image": "player/male/texture-432-record-024-frame-000-source.png",
+   "content": "One Volendrung, a war hammer with a gold head on a long brown haft, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "10-volendrung male 024 (111x53)"
+  },
+  {
+   "id": "11-warlock-s-ring-m026",
+   "directory": "artifacts/artifact-11-warlock-s-ring",
+   "image": "player/male/texture-432-record-026-frame-000-source.png",
+   "content": "One the Warlock's Ring, a gold ring set with a pale green carved stone, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn on its own. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "11-warlock-s-ring male 026 (15x20)"
+  },
+  {
+   "id": "12-auriel-s-bow-m000",
+   "directory": "artifacts/artifact-12-auriel-s-bow",
+   "image": "player/male/texture-432-record-000-frame-000-source.png",
+   "content": "One Auriel's Bow, a long thin brown recurve bow with a faint string, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "12-auriel-s-bow male 000 (102x66)"
+  },
+  {
+   "id": "13-necromancer-s-amulet-m015",
+   "directory": "artifacts/artifact-13-necromancer-s-amulet",
+   "image": "player/male/texture-432-record-015-frame-000-source.png",
+   "content": "One the Necromancer's Amulet, a bronze cross-shaped amulet with a green stone at its centre, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn on its own. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "13-necromancer-s-amulet male 015 (20x20)"
+  },
+  {
+   "id": "14-chrysamere-m003",
+   "directory": "artifacts/artifact-14-chrysamere",
+   "image": "player/male/texture-432-record-003-frame-000-source.png",
+   "content": "One Chrysamere, a long claymore with a teal-blue blade and copper-coloured crossguard and grip, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "14-chrysamere male 003 (81x114)"
+  },
+  {
+   "id": "15-lord-s-mail-f009",
+   "directory": "artifacts/artifact-15-lord-s-mail",
+   "image": "player/female/texture-433-record-009-frame-000-source.png",
+   "content": "One Lord's Mail, a bronze-brown chain and scale cuirass covering the torso, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn on its own. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "15-lord-s-mail female 009 (37x54)"
+  },
+  {
+   "id": "15-lord-s-mail-m009",
+   "directory": "artifacts/artifact-15-lord-s-mail",
+   "image": "player/male/texture-432-record-009-frame-000-source.png",
+   "content": "One Lord's Mail, a bronze-brown chain and scale cuirass covering the torso, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn on its own. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "15-lord-s-mail male 009 (38x50)"
+  },
+  {
+   "id": "16-staff-of-magnus-m023",
+   "directory": "artifacts/artifact-16-staff-of-magnus",
+   "image": "player/male/texture-432-record-023-frame-000-source.png",
+   "content": "One the Staff of Magnus, a long thin dark teal staff with a small copper head, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "16-staff-of-magnus male 023 (100x141)"
+  },
+  {
+   "id": "17-ring-of-khajiit-m017",
+   "directory": "artifacts/artifact-17-ring-of-khajiit",
+   "image": "player/male/texture-432-record-017-frame-000-source.png",
+   "content": "One the Ring of Khajiit, a dark ring band set with red, orange and green stones, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn on its own. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "17-ring-of-khajiit male 017 (20x20)"
+  },
+  {
+   "id": "18-ebony-mail-f007",
+   "directory": "artifacts/artifact-18-ebony-mail",
+   "image": "player/female/texture-433-record-007-frame-000-source.png",
+   "content": "One the Ebony Mail, a glossy black ebony cuirass covering the torso, with raised shoulders, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn on its own. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "18-ebony-mail female 007 (37x54)"
+  },
+  {
+   "id": "18-ebony-mail-m007",
+   "directory": "artifacts/artifact-18-ebony-mail",
+   "image": "player/male/texture-432-record-007-frame-000-source.png",
+   "content": "One the Ebony Mail, a glossy black ebony cuirass covering the torso, with raised shoulders, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn on its own. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "18-ebony-mail male 007 (38x50)"
+  },
+  {
+   "id": "19-auriel-s-shield-m001",
+   "directory": "artifacts/artifact-19-auriel-s-shield",
+   "image": "player/male/texture-432-record-001-frame-000-source.png",
+   "content": "One Auriel's Shield, a round dark shield with a bronze rim and a bronze central boss, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn on its own. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "19-auriel-s-shield male 001 (40x52)"
+  },
+  {
+   "id": "20-spell-breaker-m022",
+   "directory": "artifacts/artifact-20-spell-breaker",
+   "image": "player/male/texture-432-record-022-frame-000-source.png",
+   "content": "One Spell Breaker, a tall kite shield with a gold rim and a mottled green, blue and white face, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn on its own. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "20-spell-breaker male 022 (57x112)"
+  },
+  {
+   "id": "21-skeleton-s-key-m020",
+   "directory": "artifacts/artifact-21-skeleton-s-key",
+   "image": "player/male/texture-432-record-020-frame-000-source.png",
+   "content": "One the Skeleton's Key, a long ornate key with a ring bow and teal-blue metal, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn on its own. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "21-skeleton-s-key male 020 (48x36)"
+  },
+  {
+   "id": "22-ebony-blade-m006",
+   "directory": "artifacts/artifact-22-ebony-blade",
+   "image": "player/male-right-hand/texture-432-record-006-frame-000-source.png",
+   "content": "One the Ebony Blade, a long thin black katana-like blade; the hilt is a separate small piece where the hand grips, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "22-ebony-blade male 006 (37x32)"
+  },
+  {
+   "id": "22-ebony-blade-m005",
+   "directory": "artifacts/artifact-22-ebony-blade",
+   "image": "player/male/texture-432-record-005-frame-000-source.png",
+   "content": "One the Ebony Blade, a long thin black katana-like blade; the hilt is a separate small piece where the hand grips, exactly as drawn in the input. Keep its orientation and the arrangement of its parts: if the input shows separate pieces, keep them separate, in the same positions and relative sizes. Preserve the local colours. No hand, arm, glove, body, text or scenery.",
+   "uncertainty": "This is one paper-doll layer of a legendary artifact, drawn in the hand; the hand and arm are separate layers and are not drawn here. The source is small, so only what the pixels show is reconstructed.",
+   "invention": "Resolve material highlights, edge bevels, engraving, gem facets and wear, staying within the source's shapes.",
+   "name": "22-ebony-blade male 005 (127x10)"
+  }
+ ]
+}
