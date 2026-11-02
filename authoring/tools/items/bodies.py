@@ -13,7 +13,8 @@ them from one base body per morph and gender:
     asked to recolour, pushed Nords to chalk white and High Elves to flat yellow);
   - I1 of every race: its I0 with the classic underwear (the pixels where classic I1 differs from I0) pasted
     on by whole pixels and repainted by Qwen in a feathered mask a doll unit around it, the alpha being the I0 silhouette
-    plus whatever the underwear adds past it (keyed against the flat background).
+    plus whatever the underwear adds past it (keyed against the flat background, and at least the classic's own cloth
+    across a gap the I0 encloses, which Qwen sometimes paints as background).
 
 Finals keep the paper-doll naming and the base's generation canvas, with a sidecar JSON stating the base's
 doll-space rect (every race of the morph is drawn there, not at its own classic offset), so
@@ -158,7 +159,13 @@ def underwear(out, number, i0, rect, seed):
     painted = np.array(Image.open(f"{stem}.png").convert("RGB"))
     d = np.sqrt(((painted.astype(np.float32) - GROUND[:3]) ** 2).sum(2))
     added = np.clip((d - KEY[0]) / (KEY[1] - KEY[0]), 0, 1) * np.array(mask, np.float32) / 255
-    silhouette = np.maximum(np.array(i0.getchannel("A"), np.float32) / 255, added)
+    # Cloth the classic lays across a gap the bare body encloses (a loincloth's band under the hand on the hip) stays,
+    # even where Qwen paints it as background: there it keeps the pasted cloth's colour.
+    bare = np.array(i0.getchannel("A")) > 127
+    past = (np.array(alpha) > 127) & ndimage.binary_fill_holes(bare) & ~bare
+    lost = past & (added < 0.5)
+    painted[lost] = np.array(init)[lost]
+    silhouette = np.maximum(np.maximum(np.array(i0.getchannel("A"), np.float32) / 255, added), past)
     return Image.fromarray(np.dstack([painted, (silhouette * 255 + .5).astype(np.uint8)]), "RGBA")
 
 
