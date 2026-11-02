@@ -21,6 +21,9 @@ internal static class DaggerfallSpellConstruction
     /// <summary>The classic icon atlas (<c>spell.icons</c>) lays its icons out this many to a row (donor SpellIconCollection).</summary>
     internal const int IconAtlasColumns = 20;
     internal const string IconAtlasMedia = "spell.icons";
+
+    /// <summary>The media identity a refreshed icon replaces for cell <paramref name="index"/> of the classic atlas.</summary>
+    internal static string IconMedia(int index) => $"spell.icon.{index}";
     /// <summary>The six schools of magic, in the order the spellbook's tabs show them.</summary>
     internal static readonly (string Id, string Label)[] Schools =
         [("destruction", "Destruction"), ("restoration", "Restoration"), ("illusion", "Illusion"),

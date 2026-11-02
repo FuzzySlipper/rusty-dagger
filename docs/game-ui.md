@@ -231,7 +231,8 @@ The spellbook puts school tabs (the ruleset's `schools`) over the known spells, 
 icon, name and cost; choosing a row describes the spell beside the list, with Set active,
 Cast, Move up and down, and Forget (confirmed). Spell icons are cells of one atlas the
 ruleset names (`icons`: its media, row length and count), drawn by `src/ui/spell-icon.ts`
-for the spellbook and the spellmaker alike, and the recast and abort keys are read from the
+for the spellbook and the spellmaker alike; with refreshed art, `icons.images` names each
+cell's own image, drawn whole and smoothed in place of the cell, and the recast and abort keys are read from the
 bound controls. Magic items list each usable item with its icon, charges (its condition)
 and description. The character sheet groups skills under the ruleset's `skillGroups`, each
 with a bar of its uses toward the next rise; affiliations and legal standing are rows with
@@ -419,7 +420,12 @@ selects and buttons scale too.
 derived from the operator's Arena2 files, never committed, and delivered in
 the HUD projection's `uiArt` by `DaggerfallUiArt`. `src/ui/art.ts` adopts it,
 and `fitPixelArt` draws a classic screen at the largest whole number of device
-pixels per source pixel, unfiltered.
+pixels per source pixel, unfiltered. Refreshed art that stands in for it (paper-doll layers,
+item and spell icons) comes in the same block marked `smooth`, and
+`smoothIfRefreshed` draws such an image filtered rather than with the square
+pixels the classic styles ask for. Item icons name their refreshed image in the
+projection itself (the ruleset swaps the media identity unless classic art is
+chosen), so the screens that draw icons need nothing more.
 
 **Authored art** (frames, panels, buttons, slots, icons, cursors) is original
 art made for this project; see "Authored UI art" below.

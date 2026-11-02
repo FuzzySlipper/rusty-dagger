@@ -57,6 +57,7 @@ internal sealed class DaggerfallInventoryPresentation
     private readonly DaggerfallEquipmentMoves moves;
     private readonly DaggerfallDefinitions definitions;
     private readonly IReadOnlyDictionary<string, string> icons;
+    private Func<DaggerfallArtReplacements?>? art;
     private readonly DaggerfallEncumbrancePolicy? encumbrance;
     private readonly DaggerfallCurrencyService? currency;
     private DaggerfallItemValuation? valuation;
@@ -499,7 +500,10 @@ internal sealed class DaggerfallInventoryPresentation
         definition.Template?.Index == 83 && metadata?.PotionRecipeKey is int recipe ? $"potion.{recipe}" : definition.Id.Value;
 
     /// <summary>The published icon for an <see cref="IconKey"/>, or null when the item has none.</summary>
-    internal string? Icon(string iconKey) => icons.GetValueOrDefault(iconKey);
+    internal string? Icon(string iconKey) => icons.GetValueOrDefault(iconKey) is { } classic ? art?.Invoke()?.Drawn(classic) ?? classic : null;
+
+    /// <summary>Draws icons from the refreshed art set the provider returns, or classic ones when it returns none.</summary>
+    internal void UseArt(Func<DaggerfallArtReplacements?> provider) => art = provider;
 
     internal InventoryItemPresentation DescribeItem(string key, string itemId, ulong quantity, int? gridSlot = null, string[]? equippedSlots = null,
         DaggerfallItemOwner? owner = null)
@@ -532,7 +536,7 @@ internal sealed class DaggerfallInventoryPresentation
             : equippedSlots is { Length: > 0 } ? "Unequip that item before dropping it."
             : metadata is not null ? canDropQuestItem?.Invoke(metadata) : null;
         return new InventoryItemPresentation(key, itemId, display.Label, quantity.ToString(CultureInfo.InvariantCulture),
-            metadata?.WeightClassicUnits is ulong weight ? checked((int)(weight / 100)) : definition.Weight, CurrentValue(definition, metadata), details, icons.GetValueOrDefault(IconKey(definition, metadata)), gridSlot, equippedSlots ?? [],
+            metadata?.WeightClassicUnits is ulong weight ? checked((int)(weight / 100)) : definition.Weight, CurrentValue(definition, metadata), details, Icon(IconKey(definition, metadata)), gridSlot, equippedSlots ?? [],
             definitions.EquipmentSlots.Keys.Select(slot => slot.Value).Where(slot => DaggerfallEquipmentPolicy.IsCompatible(definitions, definition, slot)).ToArray(),
             display.Condition, display.Identified,
             CanUse: carried && metadata is not null && itemUse?.CanUse(itemId, metadata) == true,

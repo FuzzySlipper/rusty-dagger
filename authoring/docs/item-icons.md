@@ -105,7 +105,7 @@ shown as separate frames.
 
 ## Promotion
 
-`promote.py --area A` (areas `paper-doll` and `worn` so far) writes every final that `ledger/A-notes.json` marks
+`promote.py --area A` (areas `paper-doll`, `worn`, `items` and `spells`) writes every final that `ledger/A-notes.json` marks
 `accepted` into the tracked `daggerfall.art-replacements` pack: a WebP per final under
 `content/worldrpg/media/refreshed/A/` and an entry in `content/worldrpg/payloads/daggerfall.art-replacements.json`
 naming the classic media id it stands in for. A paper-doll final keeps the doll-space rect `doll_preview.py`
@@ -117,6 +117,13 @@ whole-number scale and canvas placement, at the spec's canvas size), and `dress.
 write the rect they draw in. A final without one is refused. `tools/items/test_registration.py` checks a final made
 at a non-default canvas size and occupancy lands where its generation put it. Rerunning an area replaces that area's files and entries, so a redo
 reaches the game by being accepted and promoted again. Nothing unaccepted or from `studies/` is promoted.
+
+The `items` and `spells` areas promote icons. `items` writes every inventory icon the import publishes
+(`inventoryIcons` in its staged classic manifest) as `inventory.icon.ITEM`, from the accepted final of the record
+the icon draws: a worn layer for the paper-doll archives, since the classic equipment icons are those images, else
+an `items` final; an icon that is a classic dye or metal variant of its record is tinted to match. `spells` writes
+each accepted spell icon as `spell.icon.N`, cell N of the classic atlas. Icons are written at a fixed size (256 and
+128 pixels on the longer side) and carry no doll rect; an icon whose record has no accepted final stays classic.
 
 ## Related
 

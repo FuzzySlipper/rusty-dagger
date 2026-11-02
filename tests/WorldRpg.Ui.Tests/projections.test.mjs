@@ -3650,6 +3650,36 @@ test('a person screen: the chooser lists the published services, each page draws
   } finally { f.dispose(); }
 });
 
+test('refreshed icons are drawn smoothed and spell icons draw their own refreshed image; classic art keeps its square pixels', async () => {
+  const f = fixture();
+  try {
+    const row = (key, label, icon) => ({ key, definition: 'template-131', label, icon, quantity: '1', maximumQuantity: 1, unitPrice: '7',
+      currentCondition: 10, maximumCondition: 10, identified: true, stolen: false, canBuy: true, canSell: false });
+    const merchant = { revision: 'merchant-1', provider: 'Guild officer', quality: 10, gold: '100', buyAvailable: true, sellAvailable: false,
+      repairAvailable: false, identifyAvailable: false, result: '', largeTradeGold: 500, playerItems: [], repairs: [],
+      stock: [row('stack:refreshed', 'Arrows', 'refreshed.inventory.icon.arrow'), row('stack:classic', 'Gold', 'inventory.icon.gold-piece')] };
+    const png = 'data:image/png;base64,AA==', webp = 'data:image/webp;base64,AA==';
+    f.publish({ uiArtRevision: 'r1', uiArt: { revision: 'r1', images: [
+      { id: 'refreshed.inventory.icon.arrow', image: webp, smooth: true }, { id: 'inventory.icon.gold-piece', image: png },
+      { id: 'spell.icons', image: png }, { id: 'refreshed.spell.icon.0', image: webp, smooth: true }] },
+      activation: { mode: 'talk', dialogue: { ...offering(['trade', 'Buy']), revision: 'merchant-1', targetLabel: 'Guild officer', greeting: 'Welcome.',
+        tone: 'normal', question: null, reply: null, topics: [], diagnostics: [], merchant } } });
+    f.openService('trade');
+    const icon = key => f.root.querySelector(`[data-transfer-side="source"] [data-transfer-item="${key}"] .dagger-transfer-icon img`);
+    assert.equal(icon('stack:refreshed').style.imageRendering, 'auto', 'Refreshed art is drawn smoothed.');
+    assert.equal(icon('stack:classic').style.imageRendering, '', 'Classic art keeps the square pixels its styles ask for.');
+
+    const { spellIcon } = await import(pathToFileURL(join(output, 'spell-icon.js')).href);
+    const atlas = { media: 'spell.icons', columns: 20, count: 69, images: ['refreshed.spell.icon.0', ...Array(68).fill(null)] };
+    const own = spellIcon(atlas, 0);
+    assert.ok(own.style.backgroundImage.includes(webp), 'A cell with a refreshed image draws that image.');
+    assert.equal(own.style.imageRendering, 'auto');
+    const cell = spellIcon(atlas, 1);
+    assert.ok(cell.style.backgroundImage.includes(png), 'A cell without one draws its part of the classic atlas.');
+    assert.equal(cell.style.imageRendering, '');
+  } finally { f.dispose(); }
+});
+
 test('the shop is the transfer layout: line totals, confirms for large trades and theft, and service-only rows', () => {
   const f = fixture();
   try {

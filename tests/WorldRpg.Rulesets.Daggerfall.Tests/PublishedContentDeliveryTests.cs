@@ -789,13 +789,19 @@ public sealed class PublishedContentDeliveryTests
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(content.ReadBytes(payloadPath), "daggerfall.art-replacements");
         Assert.Equal(images.Length, art.All.Count());
 
-        // Every replacement stands in for an image the classic publication carries, so classic stays its fallback.
-        HashSet<string> classic = [.. new[] { "worldrpg/media/character/character-media-inventory.json", PaperDollGroup + "paper-doll-inventory.json" }
+        // Every replacement stands in for an image the classic publication carries, so classic stays its fallback: a
+        // paper-doll layer or character image, an inventory icon, or a cell of the spell icon atlas.
+        HashSet<string> doll = [.. new[] { "worldrpg/media/character/character-media-inventory.json", PaperDollGroup + "paper-doll-inventory.json" }
             .SelectMany(path => Index(path).Artifacts).Select(artifact => artifact.GetProperty("mediaId").GetString()!)];
-        Assert.All(art.All, replacement => Assert.Contains(replacement.Replaces, classic));
+        HashSet<string> classic = [.. doll, .. Index("worldrpg/media/classic-media-inventory.json").Artifacts.Select(artifact => artifact.GetProperty("mediaId").GetString()!)];
+        Assert.Contains(DaggerfallSpellConstruction.IconAtlasMedia, classic);
+        HashSet<string> spellCells = [.. Enumerable.Range(0, DaggerfallSpellConstruction.IconCount).Select(DaggerfallSpellConstruction.IconMedia)];
+        Assert.All(art.All, replacement => Assert.True(classic.Contains(replacement.Replaces) || spellCells.Contains(replacement.Replaces), replacement.Replaces));
         Assert.All(art.All, replacement => Assert.Equal($"refreshed.{replacement.Replaces}", replacement.MediaId));
-        // Paper-doll replacements are drawn at their own rect in the doll.
-        Assert.All(art.All, replacement => Assert.NotNull(replacement.Doll));
+        // Paper-doll replacements are drawn at their own rect in the doll; icons fill their slot.
+        Assert.All(art.All, replacement => Assert.Equal(doll.Contains(replacement.Replaces), replacement.Doll is not null));
+        Assert.Contains(art.All, replacement => replacement.Replaces.StartsWith("inventory.icon.", StringComparison.Ordinal));
+        Assert.Contains(art.All, replacement => spellCells.Contains(replacement.Replaces));
 
         // Refreshed clothing is one neutral image per record with the mask of the cloth a dye recolours, refreshed
         // armour or a weapon the classic draws in other metals one bare-steel image with the mask of the steel a metal

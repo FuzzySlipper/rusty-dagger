@@ -1,4 +1,4 @@
-import { image } from './art.js';
+import { image, smoothIfRefreshed } from './art.js';
 import type { Encumbrance, InventoryItem } from './inventory.js';
 import { redraw } from './redraw.js';
 import { createStepper, type Stepper } from './stepper.js';
@@ -115,6 +115,7 @@ export function mountTransfer(root: HTMLElement, handlers: {
           icon.src = source;
           icon.alt = '';
           icon.draggable = false;
+          smoothIfRefreshed(icon, row.icon);
           picture.append(icon);
         }
         const text = document.createElement('div');

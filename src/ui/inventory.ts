@@ -1,4 +1,4 @@
-import { heldDemandedRevision, heldRevision, image } from './art.js';
+import { heldDemandedRevision, heldRevision, image, smoothIfRefreshed } from './art.js';
 import type { PaperDoll, PaperDollLayer } from './character.js';
 import { mountDrag, type Drag } from './drag.js';
 import type { NavigationSurface } from './navigation.js';
@@ -640,6 +640,7 @@ export function mountInventory(
       const source = image(item.icon);
       picture.hidden = source === null;
       if (source !== null && picture.src !== source) picture.src = source;
+      smoothIfRefreshed(picture, item.icon);
       name.textContent = item.stackable ? `${item.label} × ${item.quantity}` : item.label;
       const equipped = item.equippedSlots.length > 0;
       equip.hidden = equipped;
@@ -1156,6 +1157,7 @@ function renderPlace(button: HTMLButtonElement, item: InventoryItem | undefined,
     icon.src = iconSource;
     icon.alt = '';
     icon.draggable = false;
+    smoothIfRefreshed(icon, item.icon);
     button.append(icon);
   } else {
     const fallback = document.createElement('span');
