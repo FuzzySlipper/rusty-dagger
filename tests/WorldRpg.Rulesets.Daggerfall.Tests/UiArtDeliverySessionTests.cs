@@ -427,7 +427,7 @@ public sealed class UiArtDeliverySessionTests
         PopulateContent(content, inputs);
         const string payload = "worldrpg/payloads/daggerfall.art-replacements.json";
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(TestContentFiles.Read(Path.Combine(root, "content", payload)), "daggerfall.art-replacements");
-        foreach (DaggerfallArtReplacement replacement in art.All) content.Add(replacement.Path, TestContentFiles.ReadCopy(Path.Combine(root, "content", replacement.Path)));
+        foreach (DaggerfallArtImage image in art.Images) content.Add(image.Path, TestContentFiles.ReadCopy(Path.Combine(root, "content", image.Path)));
         EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
 
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context,
