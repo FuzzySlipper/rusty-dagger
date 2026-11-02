@@ -774,5 +774,77 @@
  "creatures--wolf00i0--wolf00i0-record-000-frame-000": {
   "status": "needs-owner-review",
   "note": "C1 pilot on 2026-11-01 (paper-doll-c1-beasts), fitted to the classic picture's rect by pictures.py. Qwen gave the werewolf a loincloth; awaits Patch's review."
+ },
+ "creatures--vamp00i0--vamp00i0-record-000-frame-000": {
+  "status": "needs-owner-review",
+  "note": "Converted on 2026-11-01 (paper-doll-c1-heads), trimmed to the classic silhouette (heads.py --creature); awaits Patch's review."
+ },
+ "creatures--vamp00i0--vamp00i0-record-001-frame-000": {
+  "status": "needs-owner-review",
+  "note": "Converted on 2026-11-01 (paper-doll-c1-heads), trimmed to the classic silhouette (heads.py --creature); awaits Patch's review."
+ },
+ "creatures--vamp00i0--vamp00i0-record-002-frame-000": {
+  "status": "needs-owner-review",
+  "note": "Converted on 2026-11-01 (paper-doll-c1-heads), trimmed to the classic silhouette (heads.py --creature); awaits Patch's review."
+ },
+ "creatures--vamp00i0--vamp00i0-record-003-frame-000": {
+  "status": "needs-owner-review",
+  "note": "Converted on 2026-11-01 (paper-doll-c1-heads), trimmed to the classic silhouette (heads.py --creature); awaits Patch's review."
+ },
+ "creatures--vamp00i0--vamp00i0-record-004-frame-000": {
+  "status": "needs-owner-review",
+  "note": "Converted on 2026-11-01 (paper-doll-c1-heads), trimmed to the classic silhouette (heads.py --creature); awaits Patch's review."
+ },
+ "creatures--vamp00i0--vamp00i0-record-005-frame-000": {
+  "status": "needs-owner-review",
+  "note": "Converted on 2026-11-01 (paper-doll-c1-heads), trimmed to the classic silhouette (heads.py --creature); drifted: the green vine hair came out brown; awaits Patch's review."
+ },
+ "creatures--vamp00i0--vamp00i0-record-006-frame-000": {
+  "status": "needs-owner-review",
+  "note": "Converted on 2026-11-01 (paper-doll-c1-heads), trimmed to the classic silhouette (heads.py --creature); awaits Patch's review."
+ },
+ "creatures--vamp00i0--vamp00i0-record-007-frame-000": {
+  "status": "needs-owner-review",
+  "note": "Converted on 2026-11-01 (paper-doll-c1-heads), trimmed to the classic silhouette (heads.py --creature); awaits Patch's review."
+ },
+ "creatures--vamp00i0--vamp00i0-record-008-frame-000": {
+  "status": "needs-owner-review",
+  "note": "Converted on 2026-11-01 (paper-doll-c1-heads), trimmed to the classic silhouette (heads.py --creature); awaits Patch's review."
+ },
+ "creatures--vamp00i0--vamp00i0-record-009-frame-000": {
+  "status": "needs-owner-review",
+  "note": "Converted on 2026-11-01 (paper-doll-c1-heads), trimmed to the classic silhouette (heads.py --creature); awaits Patch's review."
+ },
+ "creatures--vamp00i0--vamp00i0-record-010-frame-000": {
+  "status": "needs-owner-review",
+  "note": "Converted on 2026-11-01 (paper-doll-c1-heads), trimmed to the classic silhouette (heads.py --creature); awaits Patch's review."
+ },
+ "creatures--vamp00i0--vamp00i0-record-011-frame-000": {
+  "status": "needs-owner-review",
+  "note": "Converted on 2026-11-01 (paper-doll-c1-heads), trimmed to the classic silhouette (heads.py --creature); awaits Patch's review."
+ },
+ "creatures--vamp00i0--vamp00i0-record-012-frame-000": {
+  "status": "needs-owner-review",
+  "note": "Converted on 2026-11-01 (paper-doll-c1-heads), trimmed to the classic silhouette (heads.py --creature); awaits Patch's review."
+ },
+ "creatures--vamp00i0--vamp00i0-record-013-frame-000": {
+  "status": "needs-owner-review",
+  "note": "Converted on 2026-11-01 (paper-doll-c1-heads), trimmed to the classic silhouette (heads.py --creature); drifted: the blue hair and gold headband came out brown with no band; awaits Patch's review."
+ },
+ "creatures--vamp00i0--vamp00i0-record-014-frame-000": {
+  "status": "needs-owner-review",
+  "note": "Converted on 2026-11-01 (paper-doll-c1-heads), trimmed to the classic silhouette (heads.py --creature); awaits Patch's review."
+ },
+ "creatures--vamp00i0--vamp00i0-record-015-frame-000": {
+  "status": "needs-owner-review",
+  "note": "Converted on 2026-11-01 (paper-doll-c1-heads), trimmed to the classic silhouette (heads.py --creature); awaits Patch's review."
+ },
+ "creatures--were00i0--were00i0-record-000-frame-000": {
+  "status": "needs-owner-review",
+  "note": "Converted on 2026-11-01 (paper-doll-c1-heads), trimmed to the classic silhouette (heads.py --creature); the character sheet's beast-form portrait, which draws classic heads until #10503; awaits Patch's review."
+ },
+ "creatures--were01i0--were01i0-record-000-frame-000": {
+  "status": "needs-owner-review",
+  "note": "Converted on 2026-11-01 (paper-doll-c1-heads), trimmed to the classic silhouette (heads.py --creature); the character sheet's beast-form portrait, which draws classic heads until #10503; awaits Patch's review."
  }
 }
