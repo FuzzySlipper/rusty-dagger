@@ -797,12 +797,14 @@ public sealed class PublishedContentDeliveryTests
         // Paper-doll replacements are drawn at their own rect in the doll.
         Assert.All(art.All, replacement => Assert.NotNull(replacement.Doll));
 
-        // Refreshed clothing is one neutral image per record with the mask of the cloth a dye recolours, and the set
-        // states a tint for every classic clothing dye.
+        // Refreshed clothing is one neutral image per record with the mask of the cloth a dye recolours, refreshed
+        // armour or a weapon the classic draws in other metals one bare-steel image with the mask of the steel a metal
+        // recolours, and the set states a tint for every classic clothing dye and metal.
         Assert.All(art.All.Where(replacement => replacement.Replaces is var id && id.StartsWith("paper-doll.", StringComparison.Ordinal)
-                && int.Parse(id.Split('.')[1], CultureInfo.InvariantCulture) is >= 235 and <= 242),
+                && (int.Parse(id.Split('.')[1], CultureInfo.InvariantCulture) is >= 235 and <= 242 || classic.Contains($"{id}.daedric"))),
             replacement => Assert.NotNull(replacement.DyeMask));
-        Assert.Equal(["aquamarine", "blue", "dark-brown", "green", "grey", "light-brown", "purple", "red", "white", "yellow"],
+        Assert.Equal(["adamantium", "aquamarine", "blue", "daedric", "dark-brown", "dwarven", "ebony", "elven", "green", "grey", "iron", "light-brown",
+                "mithril", "orcish", "purple", "red", "silver", "white", "yellow"],
             art.Tints.Keys.Order(StringComparer.Ordinal));
 
         // The payload states the bytes of every refreshed file, and names every file the refreshed media carries.

@@ -46,13 +46,13 @@ Source: `df-raw/paper-doll/` (bodies, faces, creatures) and the `player/` folder
 | 10495-B1 | Remaining bodies | 28 | Same race/gender grid. Must stay mutually consistent, so one host and one seed policy. |
 | 10495-C1 | Creature paper dolls (werewolf, wereboar, wolf) and vampire heads | 20 | Mixed sizes. |
 | 10495-F1…F4 | Faces, 16 files × 10 heads | 160, four batches of 40 | Tiny (about 26×35). Likely needs a different recipe from item icons: pilot 10 first. |
-| 10495-W0 | Identify the worn archives | 0 images | Done: 432 and 433 are the artifact paper-doll art, male and female (26 artifacts each; the donor also uses them as artifact world art). They are already in `df-raw/items/artifacts/*/player` and `world`. 201, 209, 213 (shared layers, 7 frames in all) are still unnamed. |
+| 10495-W0 | Identify the worn archives | 0 images | Done: 432 and 433 are the artifact paper-doll art, male and female (26 artifacts each; the donor also uses them as artifact world art). They are already in `df-raw/items/artifacts/*/player` and `world`. 201, 209 and 213 are not doll art: they are the `player` images of the horse (201, four frames), the book (209) and the cart and ships (213), templates the doll never draws. |
 | 10495-W1 (**P**) | One body morph, clothing | about 100 | Archives 235–242 are clothing per body morph, about 100 garments each. Pilot one morph. |
 | 10495-W2 | Same morph, armor | about 37 | Archives 245–252, about 37 pieces each. |
 | 10495-W3 | Weapons and shields worn on the doll | 28 | Archive 234. |
 | 10495-W4…W10 | Remaining seven morphs | about 137 each | **G2** (decided by the W1/W2 pilot): convert each morph separately, or derive from the pilot morph by body alignment. Per-morph conversion is about 960 frames and does not stay consistent between morphs. |
 
-Not covered: `FACES.CIF` (the importer decoder rejects its compression). Confirm whether anything uses it before spending effort.
+Not covered: `FACES.CIF`, the 64×64 faction faces the character sheet and quest escort HUD show, not the doll; it belongs with the portraits (#10503).
 
 ## 10496 — spell icons, casting hands, missiles and effects
 

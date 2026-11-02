@@ -12,14 +12,15 @@ when the refreshed art set is chosen (classic stays selectable). For each final 
     generation input transform inverted), crops transparent margins and moves the rect to match;
   - writes it as WebP (lossy colour at QUALITY, lossless alpha) to content/worldrpg/media/refreshed/AREA/;
   - records it in the pack payload's `artReplacements` section with its size, bytes and hash;
-  - for clothing (archives 235-242), also writes its dye mask: the neutral cloth the classic dye recolours,
-    where the final's colour is near grey (saturation under NEUTRAL) and not an outline (DARK), less what is
-    coloured of its own (a green vest, a leather belt, a gold buckle). The game multiplies that mask's pixels by the worn dye's tint.
+  - for clothing (archives 235-242), and for armour and weapons the classic draws in other metals, also writes
+    its dye mask: the neutral cloth or bare steel the classic dye or metal recolours, where the final's colour is
+    near grey (saturation under NEUTRAL) and not an outline (DARK), less what is coloured of its own (a green
+    vest, a leather belt, a gold buckle). The game multiplies that mask's pixels by the worn dye's or metal's tint.
 
-The pack also states each clothing dye's tint (`dyeTints`): the colour, and a brightness the multiply cannot
-reach on its own, that turn the neutral cloth into the classic dye, measured as the mean colour of the pixels each
-classic dye recolours against the mean of the neutral cloth (read from the import's published paper-doll images
-under local/import/staging).
+The pack also states each clothing dye's and metal's tint (`dyeTints`): the colour, and a brightness the multiply
+cannot reach on its own, that turn the neutral cloth or steel into the classic dye or metal, measured as the mean
+colour of the pixels each classic dye or metal recolours against the mean of the final's neutral pixels (read from
+the import's published paper-doll images under local/import/staging).
 
 Only finals whose ledger/AREA-notes.json status is `accepted` are promoted. Rerunning an area replaces that
 area's entries and files and keeps every other area's.
@@ -33,7 +34,7 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage
 
-from doll_preview import AUTHORING, doll_layer, placed
+from doll_preview import AUTHORING, doll_layer, placed, worn_layer
 
 REPOSITORY = AUTHORING.parent
 CONTENT = REPOSITORY / "content"
@@ -47,6 +48,7 @@ EDGE = 2             # pixels in from the piece's edge where its dye mask starts
 DARK = (40, 70)      # brightness (max channel) under which a pixel is an outline, not cloth: a dye barely moves it, and
                      # tinting it rims a piece of its own colour (tan trousers) in the dye
 DYES = ["blue", "grey", "red", "dark-brown", "purple", "light-brown", "white", "aquamarine", "yellow", "green"]
+METALS = ["iron", "silver", "elven", "dwarven", "mithril", "adamantium", "ebony", "orcish", "daedric"]
 CLASSIC = REPOSITORY / "local/import/staging/worldrpg/media/character/paper-doll"
 
 WORN = re.compile(r"texture-(\d+)-record-(\d+)-frame-000")
@@ -67,12 +69,14 @@ def replaces(key):
 
 
 def rect_of(area, key, path):
-    """The final's doll-space rect, as doll_preview.py places it."""
+    """The final's doll-space rect, as doll_preview.py places it: a dressed layer's sidecar, else its source's
+    generation transform inverted (a held weapon or artifact, drawn alone)."""
     if area == "worn":
-        return tuple(json.load(open(path.with_suffix(".json")))["rect"])
-    family, name, rest = key.split("--")
-    record = int(re.search(r"record-(\d+)", rest)[1])
-    return placed(doll_layer(family, name, record, key), "canvas", 1024, 0.74)[1]
+        layer = worn_layer(key, None)
+    else:
+        family, name, rest = key.split("--")
+        layer = doll_layer(family, name, int(re.search(r"record-(\d+)", rest)[1]), key)
+    return placed(layer, "canvas", 1024, 0.74)[1]
 
 
 def webp(image, target, lossless=False):
@@ -95,31 +99,37 @@ def dye_mask(image):
     return Image.fromarray(np.dstack([np.full(cloth.shape + (3,), 255, np.uint8), (cloth * 255 + .5).astype(np.uint8)]), "RGBA")
 
 
-def dye_tints(promoted):
-    """Each clothing dye's tint, from the classic images' dyed pixels against the promoted neutral cloth."""
+def dyed(archive, record):
+    """Whether the classic draws the record in other dyes or metals: clothing, and armour or weapons with bare steel."""
+    return archive in CLOTHING or (CLASSIC / f"paper-doll-{archive}-{record}-daedric.png").exists()
+
+
+def dye_tints(promoted, dyes, probe):
+    """Each dye's or metal's tint, from the classic images' recoloured pixels (those the probe dye changes) against
+    the promoted finals' neutral pixels."""
     def read(path):
         return np.asarray(Image.open(path).convert("RGBA"), np.float32)
-    dyed, cloth = {dye: [] for dye in DYES}, []
+    recolours, cloth = {dye: [] for dye in dyes}, []
     for key, path in promoted:
         m = WORN.fullmatch(key)
         archive, record = int(m[1]), int(m[2])
-        base, red = CLASSIC / f"paper-doll-{archive}-{record}.png", CLASSIC / f"paper-doll-{archive}-{record}-red.png"
-        if not red.exists():
+        base, changed = CLASSIC / f"paper-doll-{archive}-{record}.png", CLASSIC / f"paper-doll-{archive}-{record}-{probe}.png"
+        if not changed.exists():
             continue
         classic = read(base)
-        recoloured = (np.abs(classic[..., :3] - read(red)[..., :3]).sum(-1) > 0) & (classic[..., 3] > 200)
-        for dye in DYES:
+        recoloured = (np.abs(classic[..., :3] - read(changed)[..., :3]).sum(-1) > 0) & (classic[..., 3] > 200)
+        for dye in dyes:
             variant = CLASSIC / f"paper-doll-{archive}-{record}-{dye}.png"
-            dyed[dye].append((read(variant) if variant.exists() else classic)[..., :3][recoloured])
+            recolours[dye].append((read(variant) if variant.exists() else classic)[..., :3][recoloured])
         final = read(path)
         neutral = (final[..., 3] > 200) & (final[..., :3].max(-1) - final[..., :3].min(-1) < NEUTRAL[0])
         cloth.append(final[..., :3][neutral])
     if not cloth:
-        raise SystemExit(f"No classic dyed clothing under {CLASSIC}: run the import first.")
+        raise SystemExit(f"No classic {probe} paper-doll images under {CLASSIC}: run the import first.")
     neutral = np.concatenate(cloth).mean(0)
     tints = {}
-    for dye in DYES:
-        ratio = np.concatenate(dyed[dye]).mean(0) / neutral
+    for dye in dyes:
+        ratio = np.concatenate(recolours[dye]).mean(0) / neutral
         brightness = max(1.0, float(ratio.max()))
         tints[dye] = {"multiply": "#%02x%02x%02x" % tuple(round(v * 255) for v in ratio / brightness), "brightness": round(brightness, 3)}
     return tints
@@ -138,7 +148,7 @@ def promote(area, key, path):
              "width": image.width, "height": image.height,
              "doll": {"x": round(x + box[0] / k, 4), "y": round(y + box[1] / k, 4),
                       "width": round(image.width / k, 4), "height": round(image.height / k, 4)}}
-    if (m := WORN.fullmatch(key)) and int(m[1]) in CLOTHING:
+    if (m := WORN.fullmatch(key)) and dyed(int(m[1]), int(m[2])):
         entry["dyeMask"] = {"mediaId": f"refreshed.{classic}.dye", **webp(dye_mask(image), f"{MEDIA}/{area}/{key}-dye.webp", lossless=True)}
     return entry
 
@@ -163,8 +173,10 @@ def main():
                 raise SystemExit(f"{key} is accepted in ledger/{area}-notes.json but {path} does not exist.")
             images.append(promote(area, key, path))
         if area == "worn":
-            payload["artReplacements"]["dyeTints"] = dye_tints(
-                [(key, AUTHORING / "gen-raw" / area / f"{key}.png") for key in accepted if int(WORN.fullmatch(key)[1]) in CLOTHING])
+            finals = [(key, AUTHORING / "gen-raw" / area / f"{key}.png") for key in accepted]
+            clothing = [final for final in finals if int(WORN.fullmatch(final[0])[1]) in CLOTHING]
+            metal = [final for final in finals if int(WORN.fullmatch(final[0])[1]) not in CLOTHING]
+            payload["artReplacements"]["dyeTints"] = dye_tints(clothing, DYES, "red") | dye_tints(metal, METALS, "daedric")
         size = sum(entry["byteLength"] + entry.get("dyeMask", {}).get("byteLength", 0) for entry in images if entry["path"].startswith(f"{MEDIA}/{area}/"))
         print(f"{area}: {len(accepted)} finals, {size / 1e6:.1f} MB", flush=True)
     images.sort(key=lambda entry: entry["replaces"])

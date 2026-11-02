@@ -76,8 +76,9 @@ internal sealed record DaggerfallWornItem(string Key, string Slot, DaggerfallIte
 /// the record the artifact's place among the artifact templates names, undyed.
 /// <para>
 /// With a refreshed art set, each layer whose classic image has a replacement draws the replacement at its own
-/// doll rect (<see cref="Refreshed"/>). Refreshed clothing is painted neutral, one image for every dye: it is drawn
-/// tinted in the worn dye (<see cref="PaperDollTint"/>) in place of the classic image of that dye.
+/// doll rect (<see cref="Refreshed"/>). Refreshed clothing is painted neutral, one image for every dye, and refreshed
+/// armour and weapons in bare steel, one image for every metal: each is drawn tinted in the worn dye or metal
+/// (<see cref="PaperDollTint"/>) in place of the classic image of that dye or metal.
 /// </para>
 /// </remarks>
 internal static class DaggerfallPaperDollPolicy
@@ -218,9 +219,10 @@ internal static class DaggerfallPaperDollPolicy
             return null;
         DaggerfallPaperDollPlacement place = image.Placement;
         PaperDollLayerPresentation classic = new("item", mediaId, place.X, place.Y, place.Width, place.Height, Mask: image.MaskMediaId);
-        if (!clothing) return Refreshed(classic, art);
-        // The refreshed record has one neutral image for every dye, standing in for the record as published undyed.
+        // The refreshed record has one neutral image for every dye or metal, standing in for the record as published
+        // undyed: neutral cloth, or bare steel, which a metal the classic leaves unchanged draws as it is.
         string neutral = $"paper-doll.{number}.{record}";
+        if (!clothing && mediaId == neutral) return Refreshed(classic, art);
         return art?.For(neutral) is { DyeMask: { } mask } && art.Tints.TryGetValue(dye, out DaggerfallDyeTint? tint)
             ? Refreshed(classic with { MediaId = neutral }, art) with { Tint = new(tint.Multiply, tint.Brightness, mask.MediaId) }
             : classic;
