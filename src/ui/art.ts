@@ -15,6 +15,8 @@ export interface UiArtImage {
   readonly id: string;
   readonly image: string;
   readonly display?: UiArtDisplay;
+  /// Refreshed art, drawn smoothed; classic art keeps its pixels square.
+  readonly smooth?: boolean;
 }
 
 export interface UiArt {
@@ -30,6 +32,7 @@ export type ArtRequestAction = {
 
 const images = new Map<string, string>();
 const displays = new Map<string, UiArtDisplay>();
+const smoothed = new Set<string>();
 let revision = '';
 let demandedRevision = '';
 
@@ -55,9 +58,11 @@ export function adopt(value: unknown): string {
   if (typeof block.revision !== 'string' || !Array.isArray(block.images)) return revision;
   const next = new Map<string, string>();
   const nextDisplays = new Map<string, UiArtDisplay>();
+  const nextSmoothed = new Set<string>();
   for (const entry of block.images as readonly UiArtImage[]) {
     if (typeof entry?.id === 'string' && typeof entry?.image === 'string' && entry.image.length > 0) {
       next.set(entry.id, entry.image);
+      if (entry.smooth === true) nextSmoothed.add(entry.id);
       const drawn = readDisplay(entry.display);
       if (drawn !== null) nextDisplays.set(entry.id, drawn);
     }
@@ -65,6 +70,8 @@ export function adopt(value: unknown): string {
 
   images.clear();
   displays.clear();
+  smoothed.clear();
+  for (const id of nextSmoothed) smoothed.add(id);
   for (const [id, image] of next) images.set(id, image);
   for (const [id, drawn] of nextDisplays) displays.set(id, drawn);
   revision = block.revision;
@@ -81,7 +88,10 @@ export function adoptDemanded(value: unknown): string {
   const block = value as { revision?: unknown; images?: unknown };
   if (typeof block.revision !== 'string' || !Array.isArray(block.images)) return demandedRevision;
   for (const entry of block.images as readonly UiArtImage[]) {
-    if (typeof entry?.id === 'string' && typeof entry?.image === 'string' && entry.image.length > 0) images.set(entry.id, entry.image);
+    if (typeof entry?.id === 'string' && typeof entry?.image === 'string' && entry.image.length > 0) {
+      images.set(entry.id, entry.image);
+      if (entry.smooth === true) smoothed.add(entry.id);
+    }
   }
   demandedRevision = block.revision;
   return demandedRevision;
@@ -100,6 +110,11 @@ export function heldRevision(): string {
 /// The data URL for one published media identity, or null when this session has not published it.
 export function image(id: string | null): string | null {
   return id === null ? null : images.get(id) ?? null;
+}
+
+/// Draws an image smoothed when it is refreshed art, overriding the square pixels the classic art's styles ask for.
+export function smoothIfRefreshed(element: HTMLElement, id: string | null): void {
+  element.style.imageRendering = id !== null && smoothed.has(id) ? 'auto' : '';
 }
 
 /// How a published kit image is drawn, or null when the image is not authored kit art or not published.

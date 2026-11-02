@@ -55,12 +55,15 @@ internal sealed class DaggerfallUiArt
     private Dictionary<string, InventoryEntry>? _paperDoll;
     private readonly HashSet<string> _delivered = new(StringComparer.Ordinal);
     private readonly List<DaggerfallUiArtImage> _demanded = [];
+    private readonly HashSet<string> _refreshed = new(StringComparer.Ordinal);
 
-    private DaggerfallUiArt(IReadOnlyList<DaggerfallUiArtImage> images, IReadOnlyList<string> pickScreens, DaggerfallData content, Dictionary<string, InventoryEntry> inventory)
+    private DaggerfallUiArt(IReadOnlyList<DaggerfallUiArtImage> images, IReadOnlyList<string> pickScreens, DaggerfallData content, Dictionary<string, InventoryEntry> inventory,
+        HashSet<string> refreshed)
         : this(images, pickScreens)
     {
         _content = content;
         _inventory = inventory;
+        _refreshed = refreshed;
     }
 
     private DaggerfallUiArt(IReadOnlyList<DaggerfallUiArtImage> images, IReadOnlyList<string> pickScreens)
@@ -99,7 +102,7 @@ internal sealed class DaggerfallUiArt
                     throw new InvalidOperationException($"Published UI art '{id}' is not described by the admitted content inventories.");
             }
 
-            _demanded.Add(new(id, DataUrl(entry, ReadArtifact(_content, id, entry))));
+            _demanded.Add(new(id, DataUrl(entry, ReadArtifact(_content, id, entry))) { Smooth = _refreshed.Contains(id) });
             _delivered.Add(id);
         }
     }
@@ -145,6 +148,14 @@ internal sealed class DaggerfallUiArt
             throw new InvalidOperationException("The published pick slot must supply screen.pick.02.");
         string[] authored = inventory.Where(entry => entry.Value.Path.Contains(AuthoredPathSegment, StringComparison.Ordinal))
             .Select(entry => entry.Key).ToArray();
+        // The refreshed images are indexed first, as the identities read below may name them (refreshed icons).
+        HashSet<string> refreshed = new(StringComparer.Ordinal);
+        foreach (DaggerfallArtImage image in replacements?.Images ?? [])
+        {
+            if (!inventory.TryAdd(image.MediaId, new InventoryEntry(image.Path, image.ByteLength, null, null)))
+                throw new InvalidOperationException($"Refreshed art '{image.MediaId}' repeats a published media identity.");
+            refreshed.Add(image.MediaId);
+        }
         List<DaggerfallUiArtImage> images = [];
         foreach (string id in AlwaysShown.Concat(authored).Concat(pickScreens).Concat(itemIcons).Concat(portraits).Concat(panelArt ?? []).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
         {
@@ -153,13 +164,10 @@ internal sealed class DaggerfallUiArt
                 throw new InvalidOperationException($"Published UI art '{id}' is not described by the admitted content inventory '{InventoryPath}'.");
             }
 
-            images.Add(new(id, DataUrl(entry, ReadArtifact(content, id, entry)), entry.Display));
+            images.Add(new(id, DataUrl(entry, ReadArtifact(content, id, entry)), entry.Display) { Smooth = refreshed.Contains(id) });
         }
 
-        foreach (DaggerfallArtImage image in replacements?.Images ?? [])
-            if (!inventory.TryAdd(image.MediaId, new InventoryEntry(image.Path, image.ByteLength, null, null)))
-                throw new InvalidOperationException($"Refreshed art '{image.MediaId}' repeats a published media identity.");
-        DaggerfallUiArt art = new(images, pickScreens, content, inventory);
+        DaggerfallUiArt art = new(images, pickScreens, content, inventory, refreshed);
         art._delivered.UnionWith(images.Select(image => image.Id));
         return art;
     }
@@ -261,7 +269,11 @@ internal sealed class DaggerfallUiArt
 }
 
 /// <summary>One delivered image: its media identity, its bytes as a data URL, and how an authored image is drawn.</summary>
-internal sealed record DaggerfallUiArtImage(string Id, string Image, DaggerfallUiArtDisplay? Display = null);
+/// <param name="Smooth">Whether the image is refreshed art, drawn smoothed; classic art keeps its pixels square.</param>
+internal sealed record DaggerfallUiArtImage(string Id, string Image, DaggerfallUiArtDisplay? Display = null)
+{
+    internal bool Smooth { get; init; }
+}
 
 /// <summary>
 /// How the DOM draws an authored image, as its author stated it: CSS pixels per image pixel at UI scale 1,

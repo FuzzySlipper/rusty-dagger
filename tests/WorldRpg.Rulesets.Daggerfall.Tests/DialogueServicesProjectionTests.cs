@@ -71,7 +71,7 @@ public sealed class DialogueServicesProjectionTests
     {
         DaggerfallSpellMakerView spell = new("maker-1", "Mage", [], new("Freedom", 4, 0, 0, []), null);
         Dictionary<string, object?> limits = Assert.IsType<Dictionary<string, object?>>(
-            Built(builder => DaggerfallHudProjection.SpellMaker(builder, spell))["limits"]);
+            Built(builder => DaggerfallHudProjection.SpellMaker(builder, spell, null))["limits"]);
         Assert.Equal(DaggerfallSpellConstruction.IconCount, Convert.ToInt32(limits["icons"]));
         Assert.Equal(DaggerfallSpellConstruction.MaximumEffects, Convert.ToInt32(limits["effects"]));
         Assert.Equal(DaggerfallSpellConstruction.MaximumDuration, Convert.ToInt32(limits["duration"]));

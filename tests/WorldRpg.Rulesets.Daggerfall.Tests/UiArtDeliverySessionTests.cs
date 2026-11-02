@@ -447,6 +447,18 @@ public sealed class UiArtDeliverySessionTests
         string delivered = Assert.IsType<string>(Assert.IsType<object?[]>(demanded["images"]).Cast<Dictionary<string, object?>>().Single(image => Equals(image["id"], bodyId))["image"]);
         Assert.StartsWith("data:image/webp;base64,", delivered, StringComparison.Ordinal);
         Assert.Equal(false, Assert.IsType<Dictionary<string, object?>>(hud["controls"])["classicArt"]);
+        // Item icons whose source has refreshed art draw it, delivered up front and marked to draw smoothed; the spell
+        // icons name each atlas cell's refreshed image.
+        string[] Icons(Dictionary<string, object?> snapshot) => [.. Assert.IsType<object?[]>(Assert.IsType<Dictionary<string, object?>>(snapshot["inventory"])["items"])
+            .Cast<Dictionary<string, object?>>().Select(item => item["icon"] as string).OfType<string>()];
+        string refreshedIcon = Icons(hud).First(icon => icon.StartsWith("refreshed.inventory.icon.", StringComparison.Ordinal));
+        Dictionary<string, object?> deliveredIcon = Assert.IsType<object?[]>(Assert.IsType<Dictionary<string, object?>>(hud["uiArt"])["images"])
+            .Cast<Dictionary<string, object?>>().Single(image => Equals(image["id"], refreshedIcon));
+        Assert.Equal(true, deliveredIcon["smooth"]);
+        object?[] SpellImages(Dictionary<string, object?> snapshot) => Assert.IsType<object?[]>(Assert.IsType<Dictionary<string, object?>>(
+            Assert.IsType<Dictionary<string, object?>>(snapshot["spells"])["icons"])["images"]);
+        Assert.Equal(Enumerable.Range(0, DaggerfallSpellConstruction.IconCount).Select(index => $"refreshed.{DaggerfallSpellConstruction.IconMedia(index)}"),
+            SpellImages(hud).Cast<string>());
 
         // Choosing classic art draws the classic images again, with their pixels square.
         session.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.DirectDigital) with
@@ -458,6 +470,9 @@ public sealed class UiArtDeliverySessionTests
         Dictionary<string, object?> classic = Assert.IsType<Dictionary<string, object?>>(engine.Published());
         Assert.Equal(true, Assert.IsType<Dictionary<string, object?>>(classic["controls"])["classicArt"]);
         Assert.All(Layers(classic), layer => Assert.Equal((false, false), (Assert.IsType<string>(layer["mediaId"]).StartsWith("refreshed.", StringComparison.Ordinal), layer["smooth"])));
+        Assert.Contains(refreshedIcon["refreshed.".Length..], Icons(classic));
+        Assert.DoesNotContain(Icons(classic), icon => icon.StartsWith("refreshed.", StringComparison.Ordinal));
+        Assert.Null(Assert.IsType<Dictionary<string, object?>>(Assert.IsType<Dictionary<string, object?>>(classic["spells"])["icons"])["images"]);
     }
 
     [Fact]

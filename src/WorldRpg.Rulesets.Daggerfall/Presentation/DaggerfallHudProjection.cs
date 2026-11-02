@@ -124,7 +124,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("available",builder.Array(frame.Spells.Available.Select(spell=>builder.Object(("key",builder.String(spell.Key)),
                     ("name",builder.String(spell.Name)),("cost",builder.Number(spell.Cost)),("canCast",builder.Boolean(spell.CanCast)),
                     ("icon",builder.Number(spell.Icon)),("school",builder.String(spell.School)))).ToArray())),
-                ("icons",SpellIcons(builder)),
+                ("icons",SpellIcons(builder, frame.Spells.IconImages)),
                 ("schools",builder.Array(DaggerfallSpellConstruction.Schools.Select(school=>builder.Object(
                     ("id",builder.String(school.Id)),("label",builder.String(school.Label)))).ToArray())),
                 ("ready",frame.Spells.Ready is null ? builder.Null() : builder.String(frame.Spells.Ready)),
@@ -145,7 +145,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                         ("key",builder.String(quote.Key)),("name",builder.String(quote.Name)),("quest",builder.String(quote.Quest)),
                         ("gold",builder.Number(checked((long)quote.Gold))),("eligible",builder.Boolean(quote.Eligible)),
                         ("reason",quote.Reason is null ? builder.Null() : builder.String(DaggerfallSession.SummoningOutcomeText(quote.Reason))))))),
-                ("maker", frame.Spells.Maker is not { } spellMaker ? builder.Null() : SpellMaker(builder, spellMaker)),
+                ("maker", frame.Spells.Maker is not { } spellMaker ? builder.Null() : SpellMaker(builder, spellMaker, frame.Spells.IconImages)),
                 ("itemMaker", frame.Spells.ItemMaker is not { } itemMaker ? builder.Null() : ItemMaker(builder, itemMaker)),
                 ("potionMaker", frame.Spells.PotionMaker is not { } potionMaker ? builder.Null() : PotionMaker(builder, potionMaker)),
                 ("information", frame.Spells.Information is not { } information ? builder.Null() : builder.Object(
@@ -311,7 +311,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             if (_demandedPending || uiArt.Demanded.Count != _demandedSent)
             {
                 fields = [.. fields, ("uiArtDemanded", builder.Object(("revision", builder.String(uiArt.DemandedRevision)),
-                    ("images", builder.Array(uiArt.Demanded.Select(image => builder.Object(("id", builder.String(image.Id)), ("image", builder.String(image.Image)))).ToArray()))))];
+                    ("images", builder.Array(uiArt.Demanded.Select(image => ArtImage(builder, image)).ToArray()))))];
                 _demandedSent = uiArt.Demanded.Count;
                 _demandedPending = false;
             }
@@ -502,15 +502,19 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
     private static uint Options(UiValueBuilder builder, IReadOnlyList<string> labels) =>
         builder.Array(labels.Select((label, value) => builder.Object(("value", builder.Number(value)), ("label", builder.String(label)))).ToArray());
 
-    /// <summary>Where the spell icons are drawn from: the classic atlas, its row length and its icon count.</summary>
-    private static uint SpellIcons(UiValueBuilder builder) => builder.Object(
+    /// <summary>
+    /// Where the spell icons are drawn from: the classic atlas, its row length and its icon count, and with refreshed
+    /// art drawn, each cell's own replacement image (null where it has none).
+    /// </summary>
+    private static uint SpellIcons(UiValueBuilder builder, IReadOnlyList<string?>? images) => builder.Object(
         ("media", builder.String(DaggerfallSpellConstruction.IconAtlasMedia)),
         ("columns", builder.Number(DaggerfallSpellConstruction.IconAtlasColumns)),
-        ("count", builder.Number(DaggerfallSpellConstruction.IconCount)));
+        ("count", builder.Number(DaggerfallSpellConstruction.IconCount)),
+        ("images", images is null ? builder.Null() : builder.Array(images.Select(image => image is null ? builder.Null() : builder.String(image)).ToArray())));
 
-    internal static uint SpellMaker(UiValueBuilder builder, DaggerfallSpellMakerView maker) => builder.Object(
+    internal static uint SpellMaker(UiValueBuilder builder, DaggerfallSpellMakerView maker, IReadOnlyList<string?>? iconImages) => builder.Object(
         ("revision", builder.String(maker.Revision)), ("provider", builder.String(maker.Provider)),
-        ("icons", SpellIcons(builder)),
+        ("icons", SpellIcons(builder, iconImages)),
         ("limits", builder.Object(("nameLength", builder.Number(DaggerfallSpellConstruction.MaximumNameLength)),
             ("icons", builder.Number(DaggerfallSpellConstruction.IconCount)), ("effects", builder.Number(DaggerfallSpellConstruction.MaximumEffects)),
             ("duration", builder.Number(DaggerfallSpellConstruction.MaximumDuration)), ("chance", builder.Number(DaggerfallSpellConstruction.MaximumChance)),
@@ -693,16 +697,18 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
     private static uint Art(UiValueBuilder builder, DaggerfallUiArt art)
     {
         uint[] images = art.Images.Select(image => image.Display is not { } display
-            ? builder.Object(("id", builder.String(image.Id)), ("image", builder.String(image.Image)))
-            : builder.Object(
-                ("id", builder.String(image.Id)),
-                ("image", builder.String(image.Image)),
-                ("display", builder.Object(
+            ? ArtImage(builder, image)
+            : ArtImage(builder, image, ("display", builder.Object(
                     ("scale", builder.Number(display.Scale)),
                     ("slice", display.Slice is null ? builder.Null() : builder.Array(display.Slice.Select(inset => builder.Number(inset)).ToArray())),
                     ("hotspot", display.Hotspot is null ? builder.Null() : builder.Array(display.Hotspot.Select(value => builder.Number(value)).ToArray())))))).ToArray();
         return builder.Object(("revision", builder.String(art.Revision)), ("images", builder.Array(images)));
     }
+
+    /// <summary>One delivered image: its identity and data URL, whether it is refreshed art drawn smoothed, and any further fields.</summary>
+    private static uint ArtImage(UiValueBuilder builder, DaggerfallUiArtImage image, params (string, uint)[] fields) =>
+        builder.Object([("id", builder.String(image.Id)), ("image", builder.String(image.Image)),
+            .. image.Smooth ? [("smooth", builder.Boolean(true))] : Array.Empty<(string, uint)>(), .. fields]);
 
     private static uint Inventory(UiValueBuilder builder, InventoryPresentation value)
     {

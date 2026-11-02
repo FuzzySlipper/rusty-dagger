@@ -36,7 +36,9 @@ internal sealed partial class DaggerfallSession
                 Math.Clamp(spell.Icon, 0, DaggerfallSpellConstruction.IconCount - 1), school);
         }).ToArray(),
         Casting.ReadyFor(State.Actors.Player.DurableId) is { Source: DaggerfallCastSource.Spell or DaggerfallCastSource.DungeonAction } ready ? ready.SpellKey : null,
-        _spellResult, ReadSpellSale(), ReadSpellInformation(), ReadSpellMaker(), ReadPotionMaker(), ReadItemMaker(), ReadSummoning());
+        _spellResult, ReadSpellSale(), ReadSpellInformation(), ReadSpellMaker(), ReadPotionMaker(), ReadItemMaker(), ReadSummoning(),
+        DrawnArt is { } art ? [.. Enumerable.Range(0, DaggerfallSpellConstruction.IconCount)
+            .Select(index => art.For(DaggerfallSpellConstruction.IconMedia(index))?.MediaId)] : null);
     private void ChangeSpell(WorldRpg.Rulesets.Daggerfall.Presentation.DaggerfallPlayerUiAction action)
     {
         var result=action.Kind switch
@@ -233,5 +235,7 @@ internal sealed partial class DaggerfallSession
 /// <param name="Icon">The spell's index in the classic spell icon atlas.</param>
 /// <param name="School">The school of the spell's first effect, which the spellbook's tabs group by.</param>
 internal sealed record DaggerfallKnownSpellView(string Key, string Name, int Cost, bool CanCast = true, int Icon = 0, string School = "");
+/// <param name="IconImages">With refreshed art drawn, each classic icon atlas cell's replacement image (null where it has none).</param>
 internal sealed record DaggerfallSpellbookView(DaggerfallKnownSpellView[] Available, string? Ready, string Result,
-    DaggerfallSpellSaleView? Sale = null, DaggerfallSpellInformation? Information = null, DaggerfallSpellMakerView? Maker = null, DaggerfallPotionMakerView? PotionMaker = null, DaggerfallItemMakerView? ItemMaker = null, DaggerfallSummoningView? Summoning = null);
+    DaggerfallSpellSaleView? Sale = null, DaggerfallSpellInformation? Information = null, DaggerfallSpellMakerView? Maker = null, DaggerfallPotionMakerView? PotionMaker = null, DaggerfallItemMakerView? ItemMaker = null, DaggerfallSummoningView? Summoning = null,
+    IReadOnlyList<string?>? IconImages = null);

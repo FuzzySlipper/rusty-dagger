@@ -1,4 +1,4 @@
-import { image } from './art.js';
+import { image, smoothIfRefreshed } from './art.js';
 import { mountCharacter, isCharacterProjection } from './character.js';
 import type { ConfirmQuestion } from './confirm.js';
 import { mountControls } from './controls.js';
@@ -484,7 +484,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
           control.dataset.magicItem = item.key; control.setAttribute('aria-label', `Use ${item.label}`);
           const picture = document.createElement('span'); picture.className = 'dagger-slot dagger-magic-item-icon';
           const source = image(item.icon);
-          if (source !== null) { const icon = document.createElement('img'); icon.src = source; icon.alt = ''; icon.draggable = false; picture.append(icon); }
+          if (source !== null) { const icon = document.createElement('img'); icon.src = source; icon.alt = ''; icon.draggable = false; smoothIfRefreshed(icon, item.icon); picture.append(icon); }
           const text = document.createElement('span'); text.className = 'dagger-magic-item-text';
           const name = document.createElement('strong'); name.textContent = item.label;
           const charges = document.createElement('span'); charges.className = 'dagger-magic-item-charges';

@@ -668,14 +668,19 @@ internal sealed partial class DaggerfallSession
             _characterUi.UseGuildMembership(State.GuildMembership, () => checked((int)_time.Calendar.DayNumber));
             _characterUi.UseLegalStanding(() => _site.Region, region => State.Crime.BanishedRegions.Contains(region));
             _characterUi.UseItemPresentation(_inventoryUi);
-            _characterUi.UseArt(() => _controlSettings.ClassicArt ? null : composition.ArtReplacements);
+            _characterUi.UseArt(() => DrawnArt);
+            _inventoryUi.UseArt(() => DrawnArt);
             // The DOM's art comes from the derived content by media identity, so a session reads the
             // published closure once and publishes it to the UI that draws it.
             _hud = new DaggerfallHudProjection(
                 engine.Ui,
                 definitions.HudResources,
                 composition.Identity,
-                composition.Data is not { } data ? DaggerfallUiArt.None : DaggerfallUiArt.Read(data, composition.StartSite.ClassicPresentation.InventoryIcons.Values,
+                // The refreshed icons go with the classic ones, so choosing either art set needs no further delivery.
+                composition.Data is not { } data ? DaggerfallUiArt.None : DaggerfallUiArt.Read(data, composition.StartSite.ClassicPresentation.InventoryIcons.Values
+                    .Concat(composition.ArtReplacements is { } refreshed ? composition.StartSite.ClassicPresentation.InventoryIcons.Values
+                        .Concat(Enumerable.Range(0, DaggerfallSpellConstruction.IconCount).Select(DaggerfallSpellConstruction.IconMedia))
+                        .Select(refreshed.For).OfType<DaggerfallArtReplacement>().Select(replacement => replacement.MediaId) : []),
                     _definitions.CharacterPresentation.Races.Values.SelectMany(race => race.Layers.Where(layer => layer.Kind == DaggerfallCharacterLayerKind.Head)).Select(layer => layer.MediaId)
                     // The race's background is the inventory's paper-doll backdrop.
                     .Concat(_definitions.CharacterPresentation.Races.Values.Select(race => race.Background.MediaId))

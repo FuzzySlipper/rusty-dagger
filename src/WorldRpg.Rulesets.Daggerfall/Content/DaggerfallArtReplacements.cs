@@ -60,6 +60,9 @@ internal sealed class DaggerfallArtReplacements
     internal DaggerfallArtReplacement? For(string classicMediaId) =>
         _byClassic.TryGetValue(classicMediaId, out DaggerfallArtReplacement? replacement) ? replacement : null;
 
+    /// <summary>The media identity drawn in place of a classic one: its replacement's, or the classic one when the set has none.</summary>
+    internal string Drawn(string classicMediaId) => For(classicMediaId)?.MediaId ?? classicMediaId;
+
     /// <summary>Reads the <c>artReplacements</c> section of the pack payload.</summary>
     /// <exception cref="InvalidOperationException">The section is unreadable, or names one identity twice.</exception>
     internal static DaggerfallArtReplacements Read(ReadOnlyMemory<byte> payload, string packId)

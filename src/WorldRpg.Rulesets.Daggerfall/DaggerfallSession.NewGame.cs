@@ -12,6 +12,9 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed partial class DaggerfallSession
 {
     private readonly DaggerfallSessionComposition _composition;
+
+    /// <summary>The refreshed art set the session draws, or null when the player chose classic art or the bundle carries none.</summary>
+    private DaggerfallArtReplacements? DrawnArt => _controlSettings.ClassicArt ? null : _composition.ArtReplacements;
     private bool _newGameInitialized;
     public bool RequiresCharacterInitialization => !_newGameInitialized;
 
