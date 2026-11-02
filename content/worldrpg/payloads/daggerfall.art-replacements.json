@@ -110,15 +110,15 @@
     "replaces": "character.body-clothed.female.06.0",
     "mediaId": "refreshed.character.body-clothed.female.06.0",
     "path": "worldrpg/media/refreshed/paper-doll/bodies--body16i1--body16i1-record-000-frame-000.webp",
-    "byteLength": 36070,
-    "sha256": "a3e8046c7a61405c60e17119561e932e7d12b7f61b09f33f71d7a50b0d5aabfc",
-    "width": 325,
-    "height": 712,
+    "byteLength": 40878,
+    "sha256": "4b53a2796ebe3f0d87a49ff94d6c09ca12a6da1a8dd96d353996a4688d4c908d",
+    "width": 324,
+    "height": 711,
     "doll": {
-     "x": 23.8,
-     "y": 34.2,
-     "width": 65.0,
-     "height": 142.4
+     "x": 24.0,
+     "y": 34.4,
+     "width": 64.8,
+     "height": 142.2
     }
    },
    {
@@ -185,8 +185,8 @@
     "replaces": "character.body-clothed.male.03.0",
     "mediaId": "refreshed.character.body-clothed.male.03.0",
     "path": "worldrpg/media/refreshed/paper-doll/bodies--body03i1--body03i1-record-000-frame-000.webp",
-    "byteLength": 27030,
-    "sha256": "0001def50782a38f0c7b44cba7c7d050e6bd043d57463c09bac41ce110869893",
+    "byteLength": 28070,
+    "sha256": "1aa841ed24ad1d9b688e4d2b035f758d8432208bd48f0c24080278f57ee41b32",
     "width": 335,
     "height": 726,
     "doll": {
@@ -200,8 +200,8 @@
     "replaces": "character.body-clothed.male.04.0",
     "mediaId": "refreshed.character.body-clothed.male.04.0",
     "path": "worldrpg/media/refreshed/paper-doll/bodies--body04i1--body04i1-record-000-frame-000.webp",
-    "byteLength": 32542,
-    "sha256": "dfff14d8f31db4d5febc92c617d7e0cf1d3632d8d06b2193fdf8a9697562cad3",
+    "byteLength": 32918,
+    "sha256": "f459b83029d37f01eb73930b76671d6fe904cc731bcab57a5d1b7a39356f724f",
     "width": 335,
     "height": 726,
     "doll": {
@@ -215,8 +215,8 @@
     "replaces": "character.body-clothed.male.05.0",
     "mediaId": "refreshed.character.body-clothed.male.05.0",
     "path": "worldrpg/media/refreshed/paper-doll/bodies--body05i1--body05i1-record-000-frame-000.webp",
-    "byteLength": 33706,
-    "sha256": "c38dde305123916e00c4d38723c3ec0aa5e3ca7c050f75c3122cfcb828cb4571",
+    "byteLength": 34302,
+    "sha256": "5fee5241959a4be0b94231aaf282775106b7a08550010b5b2bfe0d5ad5854b5d",
     "width": 335,
     "height": 726,
     "doll": {
@@ -230,14 +230,14 @@
     "replaces": "character.body-clothed.male.06.0",
     "mediaId": "refreshed.character.body-clothed.male.06.0",
     "path": "worldrpg/media/refreshed/paper-doll/bodies--body06i1--body06i1-record-000-frame-000.webp",
-    "byteLength": 43692,
-    "sha256": "7b0fa26d6dd8be8b2bce48e9b44ce3f9baccaa6db1989bf4ea9f7ecc791cd2f6",
-    "width": 344,
+    "byteLength": 49324,
+    "sha256": "fd3012f12934d22eab2200f55651cd02ebb8952f75974708dfde11c1e2fb3f05",
+    "width": 345,
     "height": 725,
     "doll": {
-     "x": 22.4,
+     "x": 22.2,
      "y": 33.8,
-     "width": 68.8,
+     "width": 69.0,
      "height": 145.0
     }
    },
@@ -245,8 +245,8 @@
     "replaces": "character.body-clothed.male.07.0",
     "mediaId": "refreshed.character.body-clothed.male.07.0",
     "path": "worldrpg/media/refreshed/paper-doll/bodies--body07i1--body07i1-record-000-frame-000.webp",
-    "byteLength": 46962,
-    "sha256": "45b8cc6af28713593081c6ba9eb4a84a58b2dbd6815af7bd5b1c3006e730c829",
+    "byteLength": 48168,
+    "sha256": "d8ae5e276f5bc5ecc36ded82abcc121e98c1303ce2124892872df1ce4e2e3527",
     "width": 341,
     "height": 726,
     "doll": {
@@ -350,15 +350,15 @@
     "replaces": "character.body-unclothed.female.06.0",
     "mediaId": "refreshed.character.body-unclothed.female.06.0",
     "path": "worldrpg/media/refreshed/paper-doll/bodies--body16i0--body16i0-record-000-frame-000.webp",
-    "byteLength": 40198,
-    "sha256": "811aea81f2db1192b477c6a277828dbeb41c9c7e322d8b30103d726642ccfeb2",
-    "width": 325,
-    "height": 712,
+    "byteLength": 43702,
+    "sha256": "c7db558b4bdfd1e6386ea27749cae312052130124110366064c7e786a0a266d9",
+    "width": 324,
+    "height": 711,
     "doll": {
-     "x": 23.8,
-     "y": 34.2,
-     "width": 65.0,
-     "height": 142.4
+     "x": 24.0,
+     "y": 34.4,
+     "width": 64.8,
+     "height": 142.2
     }
    },
    {
@@ -425,8 +425,8 @@
     "replaces": "character.body-unclothed.male.03.0",
     "mediaId": "refreshed.character.body-unclothed.male.03.0",
     "path": "worldrpg/media/refreshed/paper-doll/bodies--body03i0--body03i0-record-000-frame-000.webp",
-    "byteLength": 35460,
-    "sha256": "f3c4bfb69e1f1b1d96617fea492abacd428bb82a788996d96856d3da35028cb3",
+    "byteLength": 34078,
+    "sha256": "5dcecfeb8345ea1a5c3084ad0bac8f8a38d2224f8eefd23a83293befece43fac",
     "width": 335,
     "height": 726,
     "doll": {
@@ -440,8 +440,8 @@
     "replaces": "character.body-unclothed.male.04.0",
     "mediaId": "refreshed.character.body-unclothed.male.04.0",
     "path": "worldrpg/media/refreshed/paper-doll/bodies--body04i0--body04i0-record-000-frame-000.webp",
-    "byteLength": 39814,
-    "sha256": "93d3f1f5aa49bcf9d31857e5fa65982100e647e5156aefc86300f1bbe361aa30",
+    "byteLength": 37752,
+    "sha256": "656400c5678c08ba58c6f483e6a5c577df32fe5fa6ae4c23992512645d5a46ce",
     "width": 335,
     "height": 726,
     "doll": {
@@ -455,8 +455,8 @@
     "replaces": "character.body-unclothed.male.05.0",
     "mediaId": "refreshed.character.body-unclothed.male.05.0",
     "path": "worldrpg/media/refreshed/paper-doll/bodies--body05i0--body05i0-record-000-frame-000.webp",
-    "byteLength": 40394,
-    "sha256": "70389d5bf5788e7bb155af6d3283f23be72ea1809fbcb0c151e86b8f80529bdc",
+    "byteLength": 38112,
+    "sha256": "48e4cce3fe857f3599f239733591a827c8ccd9c8a2229a58f96f77b4dce43ce7",
     "width": 335,
     "height": 726,
     "doll": {
@@ -470,14 +470,14 @@
     "replaces": "character.body-unclothed.male.06.0",
     "mediaId": "refreshed.character.body-unclothed.male.06.0",
     "path": "worldrpg/media/refreshed/paper-doll/bodies--body06i0--body06i0-record-000-frame-000.webp",
-    "byteLength": 50646,
-    "sha256": "37627d598db3c11a0ee6bc5ce7922cb809df4fdfe85419a8fe9f8eaf224447d4",
-    "width": 344,
+    "byteLength": 53318,
+    "sha256": "ae7ce769c34f3a7c7a4545cc58c9fce0ca7881755e81c9a69fb1ad8103640484",
+    "width": 345,
     "height": 725,
     "doll": {
-     "x": 22.4,
+     "x": 22.2,
      "y": 33.8,
-     "width": 68.8,
+     "width": 69.0,
      "height": 145.0
     }
    },
