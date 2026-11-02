@@ -1,0 +1,18 @@
+{
+ "texture-380--effect--texture-380-record-007-frame-000": {
+  "status": "skipped",
+  "note": "Skipped: a flat dark grey placeholder block in the classic archive."
+ },
+ "texture-434--effect--texture-434-record-007-frame-000": {
+  "status": "skipped",
+  "note": "Skipped: TEXTURE.380 record 7's placeholder, copied."
+ },
+ "texture-434--effect--texture-434-record-001-frame-000": {
+  "status": "converted",
+  "note": "Takes TEXTURE.380 record 4's final: the same skull and bones, differing only in an outline shade (19 against 15)."
+ },
+ "texture-434--effect--texture-434-record-004-frame-000": {
+  "status": "converted",
+  "note": "Takes TEXTURE.380 record 4's final: the same skull and bones, differing only in an outline shade (19 against 15)."
+ }
+}

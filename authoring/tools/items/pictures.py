@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""Fit a generated framed picture to its classic picture's rect: the beast-form dolls, which are whole paintings.
+"""Fit generated framed pictures to their classic pictures: whole opaque images with a frame of their own, such as
+the beast-form dolls (paintings drawn in place of the doll's background) and the spellmaker's targeting and
+element tiles (pictures in a bevelled gold frame).
 
-A beast form draws one opaque framed painting in place of the doll's background. A cut-out finds no edge to
-keep there (the stone frame is as grey as the generation background), so the picture is taken from the
-batch's back-projected image instead: the rows and columns about as full as the fullest are the picture,
-which is cropped, stretched to the classic picture's aspect and written opaque, with a sidecar stating the
-classic rect, so doll_preview.py and promote.py draw it exactly where the classic picture was.
+A cut-out finds no edge to keep there (a grey stone or gold frame against the grey generation background), so the
+picture is taken from the batch's back-projected image instead: the rows and columns about as full as the
+fullest are the picture, which is cropped, stretched to the classic picture's aspect and written opaque. A
+paper-doll picture also gets a sidecar stating the classic rect, so doll_preview.py and promote.py draw it
+exactly where the classic picture was.
 
-    pictures.py BP_DIR SPEC.json        # e.g. gen-raw/studies/paper-doll-c1-beasts-bp-DATE specs/paper-doll/paper-doll-c1-beasts.json
+    pictures.py BP_DIR SPEC.json [--area paper-doll]   # e.g. gen-raw/studies/paper-doll-c1-beasts-bp-DATE specs/paper-doll/paper-doll-c1-beasts.json
 
-Finals go to gen-raw/paper-doll under their art keys.
+Finals go to gen-raw/AREA under their art keys.
 """
 import argparse, json
 from pathlib import Path
@@ -37,18 +39,23 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("bp", type=Path)
     ap.add_argument("spec", type=Path)
+    ap.add_argument("--area", default="paper-doll")
     a = ap.parse_args()
-    finals = AUTHORING / "gen-raw" / "paper-doll"
+    finals = AUTHORING / "gen-raw" / a.area
     for item in json.load(open(a.spec))["items"]:
-        family, name = item["directory"].split("/")
-        classic = doll_layer(family, name, 0, name)
+        source = Image.open(AUTHORING / "df-raw" / a.area / item["directory"] / item["image"])
         found = picture(Image.open(a.bp / "images" / item["id"] / "bp-broad-half.png"))
-        size = (round(found.height * classic.source.width / classic.source.height), found.height)
-        key = art_key("paper-doll", item["directory"], item["image"])
+        size = (round(found.height * source.width / source.height), found.height)
+        key = art_key(a.area, item["directory"], item["image"])
         found.convert("RGB").resize(size, Image.Resampling.LANCZOS).convert("RGBA").save(finals / f"{key}.png")
-        rect = [classic.x, classic.y, classic.source.width, classic.source.height]
-        json.dump({"rect": rect}, open(finals / f"{key}.json", "w"))
-        print(f"{item['id']}: picture {found.size} -> {size} at {rect}", flush=True)
+        placed = ""
+        if a.area == "paper-doll":
+            family, name = item["directory"].split("/")
+            classic = doll_layer(family, name, 0, name)
+            rect = [classic.x, classic.y, classic.source.width, classic.source.height]
+            json.dump({"rect": rect}, open(finals / f"{key}.json", "w"))
+            placed = f" at {rect}"
+        print(f"{item['id']}: picture {found.size} -> {size}{placed}", flush=True)
 
 
 if __name__ == "__main__":

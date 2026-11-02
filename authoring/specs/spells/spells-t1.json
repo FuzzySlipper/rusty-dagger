@@ -1,0 +1,131 @@
+{
+ "seed": 27351,
+ "size": 1024,
+ "occupancy": 0.78,
+ "background": "#30343b",
+ "styles": {
+  "painted": {
+   "label": "Painted adventure",
+   "prompt": "Hand-painted 1990s fantasy RPG spell effect illustration, luminous opaque gouache-like colour modelling with a hot bright core falling to darker saturated edges, broad painted planes and a few fine glowing flecks. Original local colours. Smoothly drawn high resolution shapes, no square pixel clusters."
+  },
+  "inked": {
+   "label": "Inked dark fantasy / UI kin",
+   "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+  },
+  "gouache": {
+   "label": "Warm storybook gouache",
+   "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+  },
+  "etched": {
+   "label": "Tinted engraving",
+   "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+  }
+ },
+ "collection_rules": "Make this belong to one coherent set of spell selector tiles in a restrained fantasy palette: each a small picture inside a bevelled gold frame. Keep the source's frame, colours and the arrangement of its picture.",
+ "presentation": "One whole tile, centred on a perfectly flat solid dark slate grey background, RGB 48,52,59, outside the tile. The tile fills about three quarters of the canvas width. Preserve the source composition. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+ "title": "Targeting and element tiles T1 pilot",
+ "routes": [
+  {
+   "id": "qwen-base",
+   "label": "Qwen / painted baseline",
+   "group": "icons",
+   "model": "qwen-edit",
+   "host": "den-m5",
+   "url": "http://192.168.1.24:8188",
+   "conditioning": "reference"
+  }
+ ],
+ "task": "Task: Redraw a tiny classic fantasy RPG spellmaker selector tile as newly illustrated high resolution art, frame and picture together. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+ "items": [
+  {
+   "id": "element-cold",
+   "directory": "elements/cold",
+   "image": "element-icon.png",
+   "content": "One small square-cornered spell selector tile, aspect about 1.00:1, filling the whole picture: a narrow bevelled gold frame, bright on the top and left edges and darker on the bottom and right, around a gold ground, and inside it a pale cyan-blue frost lattice: a fine checkered crystalline pattern of ice over deep teal. Keep the frame's width and bevel and the arrangement inside it exactly as in the input. No text, rune or letter.",
+   "uncertainty": "The source is a 16 by 16 pixel selector tile of the classic spellmaker; its picture is only a few pixels across, so it is reconstructed as the simplest reading of the input.",
+   "invention": "Resolve the bevelled gold frame, soft painted light and the few fine forms of the picture, staying within the source's shapes.",
+   "name": "element-cold (16x16)"
+  },
+  {
+   "id": "element-fire",
+   "directory": "elements/fire",
+   "image": "element-icon.png",
+   "content": "One small square-cornered spell selector tile, aspect about 1.00:1, filling the whole picture: a narrow bevelled gold frame, bright on the top and left edges and darker on the bottom and right, around a gold ground, and inside it a bright orange and red flame licking upward from the lower left, with a hot yellow core. Keep the frame's width and bevel and the arrangement inside it exactly as in the input. No text, rune or letter.",
+   "uncertainty": "The source is a 16 by 16 pixel selector tile of the classic spellmaker; its picture is only a few pixels across, so it is reconstructed as the simplest reading of the input.",
+   "invention": "Resolve the bevelled gold frame, soft painted light and the few fine forms of the picture, staying within the source's shapes.",
+   "name": "element-fire (16x16)"
+  },
+  {
+   "id": "element-magic",
+   "directory": "elements/magic",
+   "image": "element-icon.png",
+   "content": "One small square-cornered spell selector tile, aspect about 1.00:1, filling the whole picture: a narrow bevelled gold frame, bright on the top and left edges and darker on the bottom and right, around a gold ground, and inside it a soft golden-yellow radiance with a bright white-yellow star point near the upper centre and scattered sparkles. Keep the frame's width and bevel and the arrangement inside it exactly as in the input. No text, rune or letter.",
+   "uncertainty": "The source is a 16 by 16 pixel selector tile of the classic spellmaker; its picture is only a few pixels across, so it is reconstructed as the simplest reading of the input.",
+   "invention": "Resolve the bevelled gold frame, soft painted light and the few fine forms of the picture, staying within the source's shapes.",
+   "name": "element-magic (16x16)"
+  },
+  {
+   "id": "element-poison",
+   "directory": "elements/poison",
+   "image": "element-icon.png",
+   "content": "One small square-cornered spell selector tile, aspect about 1.00:1, filling the whole picture: a narrow bevelled gold frame, bright on the top and left edges and darker on the bottom and right, around a gold ground, and inside it a pale bone-coloured skull above crossed bones, on the gold ground. Keep the frame's width and bevel and the arrangement inside it exactly as in the input. No text, rune or letter.",
+   "uncertainty": "The source is a 16 by 16 pixel selector tile of the classic spellmaker; its picture is only a few pixels across, so it is reconstructed as the simplest reading of the input.",
+   "invention": "Resolve the bevelled gold frame, soft painted light and the few fine forms of the picture, staying within the source's shapes.",
+   "name": "element-poison (16x16)"
+  },
+  {
+   "id": "element-shock",
+   "directory": "elements/shock",
+   "image": "element-icon.png",
+   "content": "One small square-cornered spell selector tile, aspect about 1.00:1, filling the whole picture: a narrow bevelled gold frame, bright on the top and left edges and darker on the bottom and right, around a gold ground, and inside it jagged pale cyan lightning bolts forking down across a dark grey stormy ground. Keep the frame's width and bevel and the arrangement inside it exactly as in the input. No text, rune or letter.",
+   "uncertainty": "The source is a 16 by 16 pixel selector tile of the classic spellmaker; its picture is only a few pixels across, so it is reconstructed as the simplest reading of the input.",
+   "invention": "Resolve the bevelled gold frame, soft painted light and the few fine forms of the picture, staying within the source's shapes.",
+   "name": "element-shock (16x16)"
+  },
+  {
+   "id": "target-area-around-caster",
+   "directory": "targets/area-around-caster",
+   "image": "target-icon.png",
+   "content": "One small square-cornered spell selector tile, aspect about 1.50:1, filling the whole picture: a narrow bevelled gold frame, bright on the top and left edges and darker on the bottom and right, around a gold ground, and inside it a small dark human silhouette standing in the centre, surrounded on every side by bright golden glints of magic. Keep the frame's width and bevel and the arrangement inside it exactly as in the input. No text, rune or letter.",
+   "uncertainty": "The source is a 24 by 16 pixel selector tile of the classic spellmaker; its picture is only a few pixels across, so it is reconstructed as the simplest reading of the input.",
+   "invention": "Resolve the bevelled gold frame, soft painted light and the few fine forms of the picture, staying within the source's shapes.",
+   "name": "target-area-around-caster (24x16)"
+  },
+  {
+   "id": "target-area-at-range",
+   "directory": "targets/area-at-range",
+   "image": "target-icon.png",
+   "content": "One small square-cornered spell selector tile, aspect about 1.50:1, filling the whole picture: a narrow bevelled gold frame, bright on the top and left edges and darker on the bottom and right, around a gold ground, and inside it a pale grey-white cloud of magical smoke spreading in two billows across the tile. Keep the frame's width and bevel and the arrangement inside it exactly as in the input. No text, rune or letter.",
+   "uncertainty": "The source is a 24 by 16 pixel selector tile of the classic spellmaker; its picture is only a few pixels across, so it is reconstructed as the simplest reading of the input.",
+   "invention": "Resolve the bevelled gold frame, soft painted light and the few fine forms of the picture, staying within the source's shapes.",
+   "name": "target-area-at-range (24x16)"
+  },
+  {
+   "id": "target-by-touch",
+   "directory": "targets/by-touch",
+   "image": "target-icon.png",
+   "content": "One small square-cornered spell selector tile, aspect about 1.50:1, filling the whole picture: a narrow bevelled gold frame, bright on the top and left edges and darker on the bottom and right, around a gold ground, and inside it a bare open human hand, palm toward the viewer, fingers spread, reaching from the lower left. Keep the frame's width and bevel and the arrangement inside it exactly as in the input. No text, rune or letter.",
+   "uncertainty": "The source is a 24 by 16 pixel selector tile of the classic spellmaker; its picture is only a few pixels across, so it is reconstructed as the simplest reading of the input.",
+   "invention": "Resolve the bevelled gold frame, soft painted light and the few fine forms of the picture, staying within the source's shapes.",
+   "name": "target-by-touch (24x16)"
+  },
+  {
+   "id": "target-caster-only",
+   "directory": "targets/caster-only",
+   "image": "target-icon.png",
+   "content": "One small square-cornered spell selector tile, aspect about 1.50:1, filling the whole picture: a narrow bevelled gold frame, bright on the top and left edges and darker on the bottom and right, around a gold ground, and inside it a faint dark human silhouette standing in the centre, arms at its sides, on the plain gold ground. Keep the frame's width and bevel and the arrangement inside it exactly as in the input. No text, rune or letter.",
+   "uncertainty": "The source is a 24 by 16 pixel selector tile of the classic spellmaker; its picture is only a few pixels across, so it is reconstructed as the simplest reading of the input.",
+   "invention": "Resolve the bevelled gold frame, soft painted light and the few fine forms of the picture, staying within the source's shapes.",
+   "name": "target-caster-only (24x16)"
+  },
+  {
+   "id": "target-single-target-at-range",
+   "directory": "targets/single-target-at-range",
+   "image": "target-icon.png",
+   "content": "One small square-cornered spell selector tile, aspect about 1.50:1, filling the whole picture: a narrow bevelled gold frame, bright on the top and left edges and darker on the bottom and right, around a gold ground, and inside it a bare human hand reaching in from the left, pointing at a small dark human silhouette standing on the right. Keep the frame's width and bevel and the arrangement inside it exactly as in the input. No text, rune or letter.",
+   "uncertainty": "The source is a 24 by 16 pixel selector tile of the classic spellmaker; its picture is only a few pixels across, so it is reconstructed as the simplest reading of the input.",
+   "invention": "Resolve the bevelled gold frame, soft painted light and the few fine forms of the picture, staying within the source's shapes.",
+   "name": "target-single-target-at-range (24x16)"
+  }
+ ]
+}
