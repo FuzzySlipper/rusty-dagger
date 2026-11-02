@@ -42,7 +42,11 @@ internal sealed partial class DaggerfallSession
         DaggerfallMerchantProviderContext? context = CurrentMerchantProvider();
         if (context is null || State.Merchants.Read(context, dialogueRevision: _activationPresentation.View.Dialogue?.Revision) is not { } view) return null;
         // Each row draws the icon its item would draw in the pack.
-        DaggerfallMerchantItemView WithIcon(DaggerfallMerchantItemView row) => row with { Icon = _inventoryUi.Icon(row.IconKey) };
+        DaggerfallMerchantItemView WithIcon(DaggerfallMerchantItemView row)
+        {
+            (string? icon, Presentation.PaperDollTint? tint) = _inventoryUi.Icon(_definitions.RequireItem(new DaggerfallItemId(row.Definition)), row.IconMetadata);
+            return row with { Icon = icon, IconTint = tint };
+        }
         return view with
         {
             Stock = [.. view.Stock.Select(WithIcon)], PlayerItems = [.. view.PlayerItems.Select(WithIcon)],

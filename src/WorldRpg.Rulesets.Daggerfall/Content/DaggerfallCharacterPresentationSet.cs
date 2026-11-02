@@ -152,6 +152,12 @@ internal sealed class DaggerfallCharacterPresentationSet(
     internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallPaperDollItemImage> PaperDollItems { get; init; } =
         new Dictionary<(int Archive, int Record), DaggerfallPaperDollItemImage>();
 
+    /// <summary>
+    /// The inventory images of the item templates the doll does not draw, by template index, one per variant; a worn
+    /// item's inventory image is its paper-doll image.
+    /// </summary>
+    internal IReadOnlyDictionary<int, IReadOnlyList<string>> ItemIcons { get; init; } = new Dictionary<int, IReadOnlyList<string>>();
+
     /// <summary>Every career the pack publishes a portrait for, by catalog career identity.</summary>
     internal IReadOnlyDictionary<string, DaggerfallCareerPortraitDefinition> Careers { get; } = careers;
 

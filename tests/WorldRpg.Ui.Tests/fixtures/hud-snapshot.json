@@ -13,7 +13,8 @@
     "icons": {
       "media": "spell.icons",
       "columns": 20,
-      "count": 69
+      "count": 69,
+      "images": null
     },
     "schools": [
       {
@@ -1161,6 +1162,7 @@
         "value": 1,
         "details": "Gold Piece\nCondition: New\nWorth: 25 gold\nWeight: 0 kilograms",
         "icon": "inventory.icon.gold-piece",
+        "iconTint": null,
         "condition": {
           "current": 1,
           "maximum": 1,
@@ -1191,7 +1193,8 @@
         "weightKilograms": 4.5,
         "value": 15,
         "details": "Iron Longsword \n1 - 15 points of damage\nCondition: New\nWeight: 4.50 kilograms",
-        "icon": "inventory.icon.iron-longsword",
+        "icon": "paper-doll.234.12.iron",
+        "iconTint": null,
         "condition": {
           "current": 800,
           "maximum": 800,
@@ -1233,7 +1236,8 @@
         "weightKilograms": 0.5,
         "value": 1,
         "details": "Iron Dagger \n0 - 5 points of damage\nCondition: New\nWeight: 0.50 kilograms",
-        "icon": "inventory.icon.iron-dagger",
+        "icon": "paper-doll.234.5.iron",
+        "iconTint": null,
         "condition": {
           "current": 50,
           "maximum": 50,
@@ -1284,7 +1288,8 @@
         "weightKilograms": 12.5,
         "value": 100,
         "details": "Iron Cuirass \n\u002B7 to armor rating\nCondition: New\nWeight: 12.50 kilograms",
-        "icon": "inventory.icon.iron-cuirass",
+        "icon": "paper-doll.251.3",
+        "iconTint": null,
         "condition": {
           "current": 4096,
           "maximum": 4096,
@@ -2663,9 +2668,9 @@
   "pickScreens": [
     "screen.pick.02"
   ],
-  "uiArtDemandedRevision": "session-art-revision.4",
+  "uiArtDemandedRevision": "session-art-revision.6",
   "uiArtDemanded": {
-    "revision": "session-art-revision.4",
+    "revision": "session-art-revision.6",
     "images": [
       {
         "id": "character.body-unclothed.male.00.0",
@@ -2681,6 +2686,14 @@
       },
       {
         "id": "paper-doll.234.13.iron",
+        "image": "data:image/png;base64,"
+      },
+      {
+        "id": "paper-doll.234.12.iron",
+        "image": "data:image/png;base64,"
+      },
+      {
+        "id": "paper-doll.234.5.iron",
         "image": "data:image/png;base64,"
       }
     ]

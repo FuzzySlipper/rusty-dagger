@@ -423,9 +423,11 @@ and `fitPixelArt` draws a classic screen at the largest whole number of device
 pixels per source pixel, unfiltered. Refreshed art that stands in for it (paper-doll layers,
 item and spell icons) comes in the same block marked `smooth`, and
 `smoothIfRefreshed` draws such an image filtered rather than with the square
-pixels the classic styles ask for. Item icons name their refreshed image in the
-projection itself (the ruleset swaps the media identity unless classic art is
-chosen), so the screens that draw icons need nothing more.
+pixels the classic styles ask for. Every item's icon is its template's inventory
+image (the paper-doll image for equipment, the donor's world or player image
+otherwise), named in the projection with its dye or metal tint (`iconTint`); the
+ruleset swaps the media identity for refreshed art unless classic art is chosen
+and demands the icons the open screens show, and `drawArt` draws them tinted.
 
 **Authored art** (frames, panels, buttons, slots, icons, cursors) is original
 art made for this project; see "Authored UI art" below.

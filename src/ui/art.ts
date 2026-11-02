@@ -117,6 +117,72 @@ export function smoothIfRefreshed(element: HTMLElement, id: string | null): void
   element.style.imageRendering = id !== null && smoothed.has(id) ? 'auto' : '';
 }
 
+/// How refreshed art is drawn in a dye or metal: the colour, a brightness the multiply cannot reach, and the mask of
+/// what it recolours.
+export interface ArtTint { readonly color: string; readonly brightness: number; readonly mask: string; }
+
+const load = (source: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
+  const picture = document.createElement('img');
+  picture.onload = () => resolve(picture);
+  picture.onerror = () => reject(new Error('The image did not decode.'));
+  picture.src = source;
+});
+
+/**
+ * Neutral clothing in a dye, or bare steel in a metal: where the mask is opaque (the cloth or steel the dye or metal
+ * recolours) each pixel is brightened and multiplied by the colour, and the rest keeps its own colour. A canvas makes
+ * it as one image; with no canvas to draw on, the neutral image stands (null).
+ */
+async function dyed(source: string, mask: string, color: string, brightness: number): Promise<string | null> {
+  const [art, cloth] = await Promise.all([load(source), load(mask)]);
+  const canvas = document.createElement('canvas');
+  canvas.width = art.naturalWidth;
+  canvas.height = art.naturalHeight;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (context === null) return null;
+  context.drawImage(cloth, 0, 0, canvas.width, canvas.height);
+  const weights = context.getImageData(0, 0, canvas.width, canvas.height).data;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(art, 0, 0);
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+  const tint = [1, 3, 5].map(at => parseInt(color.slice(at, at + 2), 16) / 255 * brightness);
+  const data = pixels.data;
+  for (let at = 0; at < data.length; at += 4) {
+    const weight = weights[at + 3] / 255;
+    for (let channel = 0; channel < 3; channel++) data[at + channel] = Math.min(255, data[at + channel] * (1 - weight + weight * tint[channel]));
+  }
+  context.putImageData(pixels, 0, 0);
+  return canvas.toDataURL('image/png');
+}
+
+const tintedImages = new Map<string, Promise<string | null>>();
+
+/**
+ * Draws a published image on an element: smoothed when it is refreshed art, and in a dye or metal when it carries a
+ * tint. A tinted image is held hidden (`data-art-missing`) until its mask has arrived and the tinted image is made,
+ * once per image and tint; one that does not decode leaves the neutral image standing rather than nothing. Returns
+ * whether the image is published.
+ */
+export function drawArt(element: HTMLImageElement, id: string | null, tint: ArtTint | null = null): boolean {
+  const source = image(id);
+  smoothIfRefreshed(element, id);
+  const mask = tint === null ? null : image(tint.mask);
+  const key = tint === null ? '' : `${id}|${tint.mask}|${tint.color}|${tint.brightness}`;
+  if (tint !== null) element.dataset.dye = tint.color;
+  if (source === null) { element.removeAttribute('src'); element.dataset.artMissing = 'true'; return false; }
+  if (tint === null) {
+    if (element.src !== source) element.src = source;
+    delete element.dataset.artMissing;
+    return true;
+  }
+  element.removeAttribute('src');
+  element.dataset.artMissing = 'true';
+  if (mask === null) return true;
+  if (!tintedImages.has(key)) tintedImages.set(key, dyed(source, mask, tint.color, tint.brightness));
+  void tintedImages.get(key)!.catch(() => null).then(result => { element.src = result ?? source; delete element.dataset.artMissing; });
+  return true;
+}
+
 /// How a published kit image is drawn, or null when the image is not authored kit art or not published.
 export function display(id: string | null): UiArtDisplay | null {
   return id === null ? null : displays.get(id) ?? null;

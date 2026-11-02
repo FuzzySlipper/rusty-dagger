@@ -228,6 +228,37 @@ internal static class DaggerfallPaperDollPolicy
             : classic;
     }
 
+    /// <summary>
+    /// The image the inventory draws an item with (<c>ItemHelper.GetItemImage</c> without <c>forPaperDoll</c>): a worn
+    /// item's paper-doll image in its dye or metal - a katana's from its right-hand record, as the donor draws it - or
+    /// another template's own image for its variant. With a refreshed art set, its replacement, tinted where the item is
+    /// dyed or in a metal. Null when the item has no template, or its template no image.
+    /// </summary>
+    internal static (string MediaId, PaperDollTint? Tint)? InventoryImage(DaggerfallDefinitions definitions, DaggerfallItemDefinition definition,
+        DaggerfallItemInstanceMetadata? metadata, DaggerfallCharacterIdentity wearer, DaggerfallArtReplacements? art)
+    {
+        ArgumentNullException.ThrowIfNull(definitions);
+        ArgumentNullException.ThrowIfNull(definition);
+        ArgumentNullException.ThrowIfNull(wearer);
+        DaggerfallWornItem item = new(definition.Id.Value, string.Empty, definition, metadata, () => definition.Id.Value);
+        if (item.Template(definitions) is not { } template) return null;
+        DaggerfallCharacterPresentationSet presentation = definitions.CharacterPresentation;
+        if (presentation.ItemIcons.TryGetValue(template.Index, out IReadOnlyList<string>? icons))
+        {
+            string own = icons[Math.Clamp(metadata?.Variant ?? 0, 0, icons.Count - 1)];
+            return (art?.Drawn(own) ?? own, null);
+        }
+
+        PaperDollLayerPresentation? image = IsArtifact(definitions, item, out int? artifactRecord)
+            ? artifactRecord is int record ? Item(presentation, ArtifactArchive(item, wearer), record, UnchangedDye, art, clothing: false) : null
+            : Item(presentation, Archive(template, item, wearer), Record(template, item) + (template.Index == KatanaTemplate ? 1 : 0),
+                Dye(template, item), art, IsClothing(template));
+        return image is null ? null : (image.MediaId, image.Tint);
+    }
+
+    /// <summary>The katana template, which the inventory draws from its right-hand record (<c>ItemHelper.GetItemImage</c>).</summary>
+    private const int KatanaTemplate = 121;
+
     /// <summary>Whether the donor draws an item of this template in this slot: clothing, armour and weapons, and jewellery worn on the body.</summary>
     private static bool IsDrawn(DaggerfallItemTemplateDefinition template, int slotIndex) =>
         template.Groups.Any(group => group is "MensClothing" or "WomensClothing" or "Armor" or "Weapons")

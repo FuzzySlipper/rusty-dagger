@@ -23,11 +23,32 @@ public sealed record PaperDollItemTemplate(int Index, string Group, int Archive,
 /// <param name="MaskMediaId">The record's mask, which erases what the doll drew beneath it, or null when it has none.</param>
 public sealed record PaperDollItemImage(int Archive, int Record, IReadOnlyDictionary<string, string> Dyes, DaggerfallPaperDollPlacement Placement, string? MaskMediaId);
 
+/// <summary>
+/// The inventory image of one item template the paper doll does not draw: a texture archive and its records, one
+/// per variant.
+/// </summary>
+/// <param name="Index">The template index.</param>
+/// <param name="Archive">The texture archive the inventory draws it from.</param>
+/// <param name="Records">The record each variant draws, in variant order.</param>
+public sealed record ItemIconTemplate(int Index, int Archive, IReadOnlyList<int> Records);
+
+/// <summary>One template's published inventory images, one per variant.</summary>
+/// <param name="Template">The template index.</param>
+/// <param name="MediaIds">The media identity each variant draws, in variant order.</param>
+public sealed record ItemIcon(int Template, IReadOnlyList<string> MediaIds);
+
 /// <summary>One emitted PNG.</summary>
 public sealed record PaperDollArtifact(string MediaId, string RelativePath, byte[] Bytes, int Width, int Height);
 
-/// <summary>The paper doll's worn-item section and the artifacts it names.</summary>
-public sealed record PaperDollItemPass(IReadOnlyList<PaperDollItemImage> Images, IReadOnlyList<PaperDollArtifact> Artifacts, IReadOnlyList<string> Sources);
+/// <summary>The paper doll's worn-item section, the other templates' inventory images, and the artifacts they name.</summary>
+public sealed record PaperDollItemPass(IReadOnlyList<PaperDollItemImage> Images, IReadOnlyList<PaperDollArtifact> Artifacts, IReadOnlyList<string> Sources)
+{
+    /// <summary>The inventory images of the templates the paper doll does not draw.</summary>
+    public IReadOnlyList<ItemIcon> Icons { get; init; } = [];
+
+    /// <summary>The templates whose inventory image names a record its archive does not carry, which have no image, as in the donor.</summary>
+    public IReadOnlyList<string> Unpublished { get; init; } = [];
+}
 
 /// <summary>
 /// Publishes the image the paper doll draws for every worn item an item template can reach, in every dye,
@@ -59,6 +80,14 @@ public sealed record PaperDollItemPass(IReadOnlyList<PaperDollItemImage> Images,
 /// each artifact names, with the next record for a one-handed artifact weapon in the right hand. Those
 /// records between them cover both archives, so both are published whole, undyed - an artifact keeps its
 /// colours - under the <see cref="UnchangedDye"/> name.
+/// </para>
+/// <para>
+/// The inventory draws a worn item from these same images (<c>ItemHelper.GetItemImage</c> without
+/// <c>forPaperDoll</c>), so they are its icons too. Every other template is drawn from a texture of its own
+/// (<c>DaggerfallUnityItem.GetInventoryTextureArchive</c>): its world texture when <c>UseWorldTexture</c> holds
+/// (useless items, ingredients, arrows, religious and miscellaneous items) or it has no player texture, else
+/// its player texture record plus its variant (books, transportation). Those records are published too, as
+/// <c>item.ARCHIVE.RECORD</c>, and the <c>icons</c> section names each template's images by variant.
 /// </para>
 /// </remarks>
 public static class PaperDollItemPublication
@@ -108,6 +137,49 @@ public static class PaperDollItemPublication
         ("leather", null),
         ("chain", null),
     ];
+
+    /// <summary>The item groups whose inventory image is the world texture (<c>DaggerfallUnityItem.UseWorldTexture</c>).</summary>
+    private static readonly string[] WorldTextureGroups =
+    [
+        "UselessItems1", "ReligiousItems", "MiscItems", "PlantIngredients1", "PlantIngredients2", "CreatureIngredients1",
+        "CreatureIngredients2", "CreatureIngredients3", "MiscellaneousIngredients1", "MiscellaneousIngredients2", "MetalIngredients",
+    ];
+
+    /// <summary>
+    /// The inventory image of every template the paper doll does not draw. A template with neither a player nor a
+    /// world texture has no image.
+    /// </summary>
+    public static IReadOnlyList<ItemIconTemplate> ReadIconTemplates(JsonNode itemTemplates)
+    {
+        ArgumentNullException.ThrowIfNull(itemTemplates);
+        List<ItemIconTemplate> icons = [];
+        foreach (JsonNode? node in itemTemplates["templates"]?.AsArray() ?? throw new InvalidOperationException("The item template section carries no templates."))
+        {
+            JsonObject template = node!.AsObject();
+            string[] groups = [.. template["groups"]!.AsArray().Select(value => value!.GetValue<string>())];
+            int playerArchive = template["playerTextureArchive"]!.GetValue<int>();
+            if (playerArchive != 0 && groups.Any(group => group is "Armor" or "Weapons" or "MensClothing" or "WomensClothing")) continue;
+            int index = template["index"]!.GetValue<int>();
+            if (playerArchive == 0 || groups.Any(group => WorldTextureGroups.Contains(group, StringComparer.Ordinal)))
+            {
+                int worldArchive = template["worldTextureArchive"]!.GetValue<int>(), worldRecord = template["worldTextureRecord"]!.GetValue<int>();
+                if (worldArchive != 0 || worldRecord != 0) icons.Add(new ItemIconTemplate(index, worldArchive, [worldRecord]));
+                continue;
+            }
+
+            int record = template["playerTextureRecord"]!.GetValue<int>();
+            icons.Add(new ItemIconTemplate(index, playerArchive, [.. Enumerable.Range(record, Math.Max(1, template["variants"]!.GetValue<int>()))]));
+        }
+
+        return icons;
+    }
+
+    /// <summary>The texture archives a publication reads: the worn items' and the other templates' icons'.</summary>
+    public static IReadOnlyList<int> ArchivesFor(IEnumerable<ItemIconTemplate> icons) =>
+        [.. Archives.Concat(icons.Select(icon => icon.Archive)).Distinct().Order()];
+
+    /// <summary>The media identity of a template's own inventory image.</summary>
+    public static string IconMediaId(int archive, int record) => $"item.{archive}.{record}";
 
     /// <summary>The worn-item templates of the published item template section.</summary>
     public static IReadOnlyList<PaperDollItemTemplate> ReadTemplates(JsonNode itemTemplates)
@@ -165,10 +237,13 @@ public static class PaperDollItemPublication
     /// <param name="archives">The supplied texture archives by number.</param>
     /// <param name="palette">The palette the records are painted in (<c>ART_PAL.COL</c>).</param>
     /// <param name="templates">The worn-item templates, which decide the records that are reachable.</param>
-    public static PaperDollItemPass Publish(IReadOnlyDictionary<int, ReadOnlyMemory<byte>> archives, Arena2Palette palette, IReadOnlyList<PaperDollItemTemplate> templates)
+    /// <param name="icons">The other templates' inventory images.</param>
+    public static PaperDollItemPass Publish(IReadOnlyDictionary<int, ReadOnlyMemory<byte>> archives, Arena2Palette palette, IReadOnlyList<PaperDollItemTemplate> templates,
+        IReadOnlyList<ItemIconTemplate> icons)
     {
         ArgumentNullException.ThrowIfNull(archives);
         ArgumentNullException.ThrowIfNull(palette);
+        ArgumentNullException.ThrowIfNull(icons);
         IReadOnlyDictionary<int, IReadOnlySet<int>> reach = ReachableRecords(templates);
         List<PaperDollItemImage> images = [];
         List<PaperDollArtifact> artifacts = [];
@@ -233,7 +308,50 @@ public static class PaperDollItemPublication
             }
         }
 
-        return new PaperDollItemPass(images, artifacts, sources);
+        List<string> unpublished = [];
+        return new PaperDollItemPass(images, artifacts, sources) { Icons = PublishIcons(archives, palette, icons, artifacts, sources, unpublished), Unpublished = unpublished };
+    }
+
+    /// <summary>
+    /// Publishes each icon record once, as stored (frame 0, the mask colour transparent), and names them per template.
+    /// A record past the end of its archive (the classic Flowers name one) has no image, as the donor finds none.
+    /// </summary>
+    private static ItemIcon[] PublishIcons(IReadOnlyDictionary<int, ReadOnlyMemory<byte>> archives, Arena2Palette palette, IReadOnlyList<ItemIconTemplate> icons,
+        List<PaperDollArtifact> artifacts, List<string> sources, List<string> unpublished)
+    {
+        Dictionary<int, TextureArchive> parsed = [];
+        HashSet<string> emitted = [.. artifacts.Select(artifact => artifact.MediaId)];
+        List<ItemIcon> result = [];
+        foreach (ItemIconTemplate icon in icons.OrderBy(icon => icon.Index))
+        {
+            string source = $"arena2/TEXTURE.{icon.Archive:000}";
+            if (!parsed.TryGetValue(icon.Archive, out TextureArchive? archive))
+            {
+                if (!archives.TryGetValue(icon.Archive, out ReadOnlyMemory<byte> bytes))
+                    throw new InvalidOperationException($"Template {icon.Index}'s inventory image is drawn from {source}, which the supplied corpus does not carry.");
+                parsed[icon.Archive] = archive = TextureArchive.Parse(bytes.Span, source);
+                if (!sources.Contains(source)) sources.Add(source);
+            }
+
+            int[] records = [.. icon.Records.Where(record => record < archive.RecordCount)];
+            if (records.Length < icon.Records.Count)
+                unpublished.Add($"template {icon.Index} names record {icon.Records.Max()} of {source}, which carries {archive.RecordCount}");
+            if (records.Length == 0) continue;
+            foreach (int record in records)
+            {
+                string id = IconMediaId(icon.Archive, record);
+                if (!emitted.Add(id)) continue;
+                IndexedTextureFrame frame = archive.DecodeFrame(record, 0);
+                byte[] pixels = frame.Pixels.ToArray();
+                for (int index = 0; index < pixels.Length; index++)
+                    if (pixels[index] == MaskIndex) pixels[index] = 0;
+                artifacts.Add(Emit(id, frame.Width, frame.Height, pixels, palette));
+            }
+
+            result.Add(new ItemIcon(icon.Index, [.. records.Select(record => IconMediaId(icon.Archive, record))]));
+        }
+
+        return [.. result];
     }
 
     /// <summary>
@@ -301,6 +419,10 @@ public static class PaperDollItemPublication
             });
         }
 
-        return new JsonObject { ["sources"] = new JsonArray([.. pass.Sources.Select(source => (JsonNode)source)]), ["items"] = images };
+        JsonArray icons = [.. pass.Icons.Select(icon => (JsonNode)new JsonObject
+        {
+            ["template"] = icon.Template, ["mediaIds"] = new JsonArray([.. icon.MediaIds.Select(id => (JsonNode)id)]),
+        })];
+        return new JsonObject { ["sources"] = new JsonArray([.. pass.Sources.Select(source => (JsonNode)source)]), ["items"] = images, ["icons"] = icons };
     }
 }

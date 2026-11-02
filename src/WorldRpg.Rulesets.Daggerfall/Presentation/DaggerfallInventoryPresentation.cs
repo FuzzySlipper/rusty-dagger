@@ -14,6 +14,9 @@ internal sealed record InventoryItemPresentation(string Key, string Definition, 
     string Category = DaggerfallInventoryPresentation.OtherCategory, bool Stackable = false, string? DropRefusal = null,
     ItemStatPresentation[]? Stats = null, ItemComparisonPresentation? Comparison = null)
 {
+    /// <summary>The tint a refreshed dyed or metal icon is drawn in, or null.</summary>
+    internal PaperDollTint? IconTint { get; init; }
+
     /// <summary>The weight in kilograms; <see cref="Weight"/> is in the template's quarter-kilogram units.</summary>
     internal double WeightKilograms => Weight * (double)DaggerfallEncumbrancePolicy.TemplateWeightToClassicUnits / DaggerfallEncumbrance.ClassicUnitsPerKilogram;
 }
@@ -58,6 +61,7 @@ internal sealed class DaggerfallInventoryPresentation
     private readonly DaggerfallDefinitions definitions;
     private readonly IReadOnlyDictionary<string, string> icons;
     private Func<DaggerfallArtReplacements?>? art;
+    private Func<DaggerfallCharacterIdentity>? wearer;
     private readonly DaggerfallEncumbrancePolicy? encumbrance;
     private readonly DaggerfallCurrencyService? currency;
     private DaggerfallItemValuation? valuation;
@@ -495,15 +499,30 @@ internal sealed class DaggerfallInventoryPresentation
         }
     }
 
-    /// <summary>Which published icon an item draws: a potion its recipe's, everything else its definition's.</summary>
-    internal static string IconKey(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata? metadata) =>
-        definition.Template?.Index == 83 && metadata?.PotionRecipeKey is int recipe ? $"potion.{recipe}" : definition.Id.Value;
+    /// <summary>
+    /// The icon an item draws, and the tint a refreshed dyed or metal one is drawn in. A potion of a recipe draws its
+    /// recipe's bottle from the published icons; every other item the image its template draws in the inventory, for
+    /// the wearer's body (<see cref="DaggerfallPaperDollPolicy.InventoryImage"/>); an item without a template its own
+    /// published icon, if any.
+    /// </summary>
+    internal (string? MediaId, PaperDollTint? Tint) Icon(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata? metadata)
+    {
+        DaggerfallArtReplacements? set = art?.Invoke();
+        bool recipe = definition.Template?.Index == PotionTemplate && metadata?.PotionRecipeKey is not null;
+        if (!recipe && wearer?.Invoke() is { } who && DaggerfallPaperDollPolicy.InventoryImage(definitions, definition, metadata, who, set) is { } image)
+            return image;
+        string? classic = icons.GetValueOrDefault(recipe ? $"potion.{metadata!.PotionRecipeKey}" : definition.Id.Value);
+        return (classic is null ? null : set?.Drawn(classic) ?? classic, null);
+    }
 
-    /// <summary>The published icon for an <see cref="IconKey"/>, or null when the item has none.</summary>
-    internal string? Icon(string iconKey) => icons.GetValueOrDefault(iconKey) is { } classic ? art?.Invoke()?.Drawn(classic) ?? classic : null;
+    /// <summary>The potion template, whose items draw their recipe's bottle.</summary>
+    private const int PotionTemplate = 83;
 
     /// <summary>Draws icons from the refreshed art set the provider returns, or classic ones when it returns none.</summary>
     internal void UseArt(Func<DaggerfallArtReplacements?> provider) => art = provider;
+
+    /// <summary>Draws icons for the body the provider returns: armour and clothing are drawn for the wearer's morphology.</summary>
+    internal void UseWearer(Func<DaggerfallCharacterIdentity> provider) => wearer = provider;
 
     internal InventoryItemPresentation DescribeItem(string key, string itemId, ulong quantity, int? gridSlot = null, string[]? equippedSlots = null,
         DaggerfallItemOwner? owner = null)
@@ -535,8 +554,9 @@ internal sealed class DaggerfallInventoryPresentation
         string? dropRefusal = !carried ? null
             : equippedSlots is { Length: > 0 } ? "Unequip that item before dropping it."
             : metadata is not null ? canDropQuestItem?.Invoke(metadata) : null;
+        (string? icon, PaperDollTint? iconTint) = Icon(definition, metadata);
         return new InventoryItemPresentation(key, itemId, display.Label, quantity.ToString(CultureInfo.InvariantCulture),
-            metadata?.WeightClassicUnits is ulong weight ? checked((int)(weight / 100)) : definition.Weight, CurrentValue(definition, metadata), details, Icon(IconKey(definition, metadata)), gridSlot, equippedSlots ?? [],
+            metadata?.WeightClassicUnits is ulong weight ? checked((int)(weight / 100)) : definition.Weight, CurrentValue(definition, metadata), details, icon, gridSlot, equippedSlots ?? [],
             definitions.EquipmentSlots.Keys.Select(slot => slot.Value).Where(slot => DaggerfallEquipmentPolicy.IsCompatible(definitions, definition, slot)).ToArray(),
             display.Condition, display.Identified,
             CanUse: carried && metadata is not null && itemUse?.CanUse(itemId, metadata) == true,
@@ -544,7 +564,7 @@ internal sealed class DaggerfallInventoryPresentation
             CanUseMagic: carried && metadata is not null && (metadata.HasEnchantment || metadata.PotionRecipeKey is not null)
                 && itemUse?.CanUse(itemId, metadata) == true,
             Category: Category(definition, metadata), Stackable: key.StartsWith("stack:", StringComparison.Ordinal), DropRefusal: dropRefusal,
-            Stats: Stats(definition, metadata));
+            Stats: Stats(definition, metadata)) { IconTint = iconTint };
     }
 
     /// <summary>The durable meaning of one equipped item, or null before item meaning is composed.</summary>

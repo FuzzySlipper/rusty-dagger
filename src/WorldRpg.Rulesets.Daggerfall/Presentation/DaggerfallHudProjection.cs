@@ -307,6 +307,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             // is read when first drawn and travels as its own small block, again only when it grew or the
             // DOM asked for it by the revision it lacks.
             if (character?.PaperDoll is { } doll) uiArt.Demand(doll.MediaIds);
+            // So are the item icons: a worn item's is its paper-doll image, another template's its own.
+            uiArt.Demand(IconArt([.. inventory?.Items ?? [], .. loot?.Items ?? []],
+                activation?.Dialogue?.Merchant is { } merchant ? [.. merchant.Stock, .. merchant.PlayerItems] : []));
             fields = [.. fields, ("uiArtDemandedRevision", builder.String(uiArt.DemandedRevision))];
             if (_demandedPending || uiArt.Demanded.Count != _demandedSent)
             {
@@ -595,7 +598,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("key", builder.String(item.Key)),
         ("definition", builder.String(item.Definition)),
         ("label", builder.String(item.Label)),
-        ("icon", item.Icon is null ? builder.Null() : builder.String(item.Icon)),
+        ("icon", item.Icon is null ? builder.Null() : builder.String(item.Icon)), ("iconTint", Tint(builder, item.IconTint)),
         ("quantity", builder.String(item.Quantity.ToString(CultureInfo.InvariantCulture))),
         ("maximumQuantity", builder.Number(item.Key.StartsWith("stack:", StringComparison.Ordinal) ? checked((long)item.Quantity) : 1)),
         ("unitPrice", builder.String(item.UnitPrice.ToString(CultureInfo.InvariantCulture))),
@@ -755,7 +758,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("key", builder.String(item.Key)), ("definition", builder.String(item.Definition)),
         ("label", builder.String(item.Label)), ("quantity", builder.String(item.Quantity)),
         ("weight", builder.Number(item.Weight)), ("weightKilograms", builder.Number(item.WeightKilograms)), ("value", builder.Number(item.Value)),
-        ("details", builder.String(item.Details)), ("icon", item.Icon is null ? builder.Null() : builder.String(item.Icon)),
+        ("details", builder.String(item.Details)), ("icon", item.Icon is null ? builder.Null() : builder.String(item.Icon)), ("iconTint", Tint(builder, item.IconTint)),
         ("condition", item.Condition is { } condition ? builder.Object(("current", builder.Number(condition.Current)),
             ("maximum", builder.Number(condition.Maximum)), ("percentage", builder.Number(condition.Percentage)),
             ("broken", builder.Boolean(condition.Broken)), ("low", builder.Boolean(condition.Low))) : builder.Null()),
@@ -774,6 +777,15 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
 
     private static uint Stat(UiValueBuilder builder, ItemStatPresentation stat) => builder.Object(
         ("label", builder.String(stat.Label)), ("text", builder.String(stat.Text)), ("score", builder.Number(stat.Score)));
+
+    /// <summary>The images the shown item rows draw: each icon and the mask a tinted one applies through.</summary>
+    private static IEnumerable<string> IconArt(IEnumerable<InventoryItemPresentation> items, IEnumerable<DaggerfallMerchantItemView> rows) =>
+        items.Select(item => (item.Icon, item.IconTint)).Concat(rows.Select(row => (row.Icon, row.IconTint)))
+            .SelectMany(icon => new[] { icon.Icon, icon.IconTint?.Mask }).OfType<string>().Distinct(StringComparer.Ordinal);
+
+    /// <summary>How refreshed art is drawn in a dye or metal: the colour, brightness and the mask it applies through.</summary>
+    private static uint Tint(UiValueBuilder builder, PaperDollTint? tint) => tint is null ? builder.Null() : builder.Object(
+        ("color", builder.String(tint.Color)), ("brightness", builder.Number(tint.Brightness)), ("mask", builder.String(tint.Mask)));
 
     private static uint Loot(UiValueBuilder builder, LootPresentation value) => builder.Object(
         ("container", builder.String(value.Container)), ("revision", builder.String(value.Revision)),
@@ -863,8 +875,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("maskRect", layer.MaskRect is not { } mask ? builder.Null() : builder.Object(
                 ("x", builder.Number(mask.X)), ("y", builder.Number(mask.Y)), ("width", builder.Number(mask.Width)), ("height", builder.Number(mask.Height)))),
             ("smooth", builder.Boolean(layer.Smooth)),
-            ("tint", layer.Tint is not { } tint ? builder.Null() : builder.Object(
-                ("color", builder.String(tint.Color)), ("brightness", builder.Number(tint.Brightness)), ("mask", builder.String(tint.Mask)))),
+            ("tint", Tint(builder, layer.Tint)),
             ("slot", layer.Slot is null ? builder.Null() : builder.String(layer.Slot)));
         return builder.Object(("width", builder.Number(doll.Width)), ("height", builder.Number(doll.Height)),
             ("background", Layer(doll.Background)), ("layers", builder.Array(doll.Layers.Select(Layer).ToArray())),
