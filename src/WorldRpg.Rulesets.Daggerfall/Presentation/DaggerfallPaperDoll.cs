@@ -116,7 +116,7 @@ internal static class DaggerfallPaperDollPolicy
             { IsVampire: true } => presentation.RacialForms[$"vampire.{identity.RaceId}.{gender}"],
             _ => null,
         };
-        PaperDollLayerPresentation background = Background(frame, form?.BodyMediaId ?? race.Background.MediaId);
+        PaperDollLayerPresentation background = Refreshed(Background(frame, form?.BodyMediaId ?? race.Background.MediaId), art);
         if (racial?.State.BeastForm == true)
             return new PaperDollPresentation(frame.Width, frame.Height, background, [], []);
 

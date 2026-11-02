@@ -766,5 +766,13 @@
  "faces--face17i0--face17i0-record-009-frame-000": {
   "status": "accepted",
   "note": "Redone on 2026-11-01 (paper-doll-redo-width) with the classic hair or frill width; trimmed, skin-matched and passing landmarks.py. Patch accepted it on 2026-11-01."
+ },
+ "creatures--boar00i0--boar00i0-record-000-frame-000": {
+  "status": "needs-owner-review",
+  "note": "C1 pilot on 2026-11-01 (paper-doll-c1-beasts), fitted to the classic picture's rect by pictures.py. Qwen gave the wereboar a loincloth and a crouch where the classic one strides; awaits Patch's review."
+ },
+ "creatures--wolf00i0--wolf00i0-record-000-frame-000": {
+  "status": "needs-owner-review",
+  "note": "C1 pilot on 2026-11-01 (paper-doll-c1-beasts), fitted to the classic picture's rect by pictures.py. Qwen gave the werewolf a loincloth; awaits Patch's review."
  }
 }

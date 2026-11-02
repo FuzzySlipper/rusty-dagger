@@ -1,0 +1,203 @@
+{
+ "seed": 27331,
+ "size": 1024,
+ "occupancy": 0.74,
+ "background": "#30343b",
+ "styles": {
+  "painted": {
+   "label": "Painted adventure",
+   "prompt": "Highly detailed lurid pulp-fantasy character portrait in the manner of 1970s and 80s paperback cover art (Frank Frazetta, Boris Vallejo): glossy airbrushed oil rendering, strongly modelled features with defined brows, eyes, nose, lips and cheekbones, fine skin detail and sheen, individual strands of hair and beard, warm rim light against deep shadow, sharp specular highlights, rich saturated colour. Crisp, confident, finely detailed forms rather than flat broad shapes; keep the original local colours. Smoothly drawn high resolution shapes, no square pixel clusters."
+  },
+  "inked": {
+   "label": "Inked dark fantasy / UI kin",
+   "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+  },
+  "gouache": {
+   "label": "Warm storybook gouache",
+   "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+  },
+  "etched": {
+   "label": "Tinted engraving",
+   "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+  }
+ },
+ "collection_rules": "Make this belong to one coherent set of grounded fantasy RPG character portraits in a restrained palette. Keep the source's expression, head angle, skin tone, hair and features. A head and neck only, cut flat across the neck as in the source. No body, clothing, weapon, text, border, scenery or second figure.",
+ "presentation": "One isolated head on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no background texture and no cast shadow outside the head. The whole head visible with breathing room, centred. Longest extent roughly three quarters of a square canvas. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+ "title": "Paper doll vampire and beast heads C1",
+ "routes": [
+  {
+   "id": "qwen-base",
+   "label": "Qwen / painted baseline",
+   "group": "faces",
+   "model": "qwen-edit",
+   "host": "den-m5",
+   "url": "http://192.168.1.24:8188",
+   "conditioning": "reference"
+  }
+ ],
+ "task": "Task: Redraw a very small classic fantasy RPG paper-doll head as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+ "items": [
+  {
+   "id": "vamp-00",
+   "directory": "creatures/vamp00i0",
+   "image": "vamp00i0-record-000-frame-000-source.png",
+   "content": "One female human vampire head and neck seen from the front, cut flat across the neck as in the source, aspect about 1.15:1. Warm tan skin. A vampire: glowing red eyes, a snarling open mouth with bared white fangs, and blood on the lips and chin exactly where the input shows it. Preserve the hair or crest, hair colour, headgear, jewellery, markings and skin colour exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+   "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose, fangs and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+   "invention": "Resolve believable eyes, brows, fangs, lips, skin modelling and individual strands of hair or scale detail.",
+   "name": "vamp-00 (30x26)"
+  },
+  {
+   "id": "vamp-01",
+   "directory": "creatures/vamp00i0",
+   "image": "vamp00i0-record-001-frame-000-source.png",
+   "content": "One female human vampire head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.67:1. Deep dark-brown skin. A vampire: glowing red eyes, a snarling open mouth with bared white fangs, and blood on the lips and chin exactly where the input shows it. Preserve the hair or crest, hair colour, headgear, jewellery, markings and skin colour exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+   "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose, fangs and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+   "invention": "Resolve believable eyes, brows, fangs, lips, skin modelling and individual strands of hair or scale detail.",
+   "name": "vamp-01 (24x36)"
+  },
+  {
+   "id": "vamp-02",
+   "directory": "creatures/vamp00i0",
+   "image": "vamp00i0-record-002-frame-000-source.png",
+   "content": "One female human vampire head and neck seen from the front, cut flat across the neck as in the source, aspect about 1.03:1. Pale skin. A vampire: glowing red eyes, a snarling open mouth with bared white fangs, and blood on the lips and chin exactly where the input shows it. Preserve the hair or crest, hair colour, headgear, jewellery, markings and skin colour exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+   "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose, fangs and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+   "invention": "Resolve believable eyes, brows, fangs, lips, skin modelling and individual strands of hair or scale detail.",
+   "name": "vamp-02 (31x30)"
+  },
+  {
+   "id": "vamp-03",
+   "directory": "creatures/vamp00i0",
+   "image": "vamp00i0-record-003-frame-000-source.png",
+   "content": "One female dark elf vampire head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.87:1. Ash blue-grey skin, pointed ears and glowing red eyes. A vampire: glowing red eyes, a snarling open mouth with bared white fangs, and blood on the lips and chin exactly where the input shows it. Preserve the hair or crest, hair colour, headgear, jewellery, markings and skin colour exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+   "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose, fangs and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+   "invention": "Resolve believable eyes, brows, fangs, lips, skin modelling and individual strands of hair or scale detail.",
+   "name": "vamp-03 (33x38)"
+  },
+  {
+   "id": "vamp-04",
+   "directory": "creatures/vamp00i0",
+   "image": "vamp00i0-record-004-frame-000-source.png",
+   "content": "One female elf vampire head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.71:1. Golden-brown skin and pointed ears. A vampire: glowing red eyes, a snarling open mouth with bared white fangs, and blood on the lips and chin exactly where the input shows it. Preserve the hair or crest, hair colour, headgear, jewellery, markings and skin colour exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+   "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose, fangs and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+   "invention": "Resolve believable eyes, brows, fangs, lips, skin modelling and individual strands of hair or scale detail.",
+   "name": "vamp-04 (25x35)"
+  },
+  {
+   "id": "vamp-05",
+   "directory": "creatures/vamp00i0",
+   "image": "vamp00i0-record-005-frame-000-source.png",
+   "content": "One female elf vampire head and neck seen from the front, cut flat across the neck as in the source, aspect about 1.09:1. Light tan skin and pointed ears. A vampire: glowing red eyes, a snarling open mouth with bared white fangs, and blood on the lips and chin exactly where the input shows it. Preserve the hair or crest, hair colour, headgear, jewellery, markings and skin colour exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+   "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose, fangs and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+   "invention": "Resolve believable eyes, brows, fangs, lips, skin modelling and individual strands of hair or scale detail.",
+   "name": "vamp-05 (35x32)"
+  },
+  {
+   "id": "vamp-06",
+   "directory": "creatures/vamp00i0",
+   "image": "vamp00i0-record-006-frame-000-source.png",
+   "content": "One female cat-person with facial paint vampire head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.81:1. Tan skin marked with painted stripes. A vampire: glowing red eyes, a snarling open mouth with bared white fangs, and blood on the lips and chin exactly where the input shows it. Preserve the hair or crest, hair colour, headgear, jewellery, markings and skin colour exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+   "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose, fangs and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+   "invention": "Resolve believable eyes, brows, fangs, lips, skin modelling and individual strands of hair or scale detail.",
+   "name": "vamp-06 (30x37)"
+  },
+  {
+   "id": "vamp-07",
+   "directory": "creatures/vamp00i0",
+   "image": "vamp00i0-record-007-frame-000-source.png",
+   "content": "One female lizard-person vampire head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.97:1. Green scaly skin, red eyes and a ridged, spiked head. A vampire: glowing red eyes, a snarling open mouth with bared white fangs, and blood on the lips and chin exactly where the input shows it. Preserve the hair or crest, hair colour, headgear, jewellery, markings and skin colour exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+   "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose, fangs and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+   "invention": "Resolve believable eyes, brows, fangs, lips, skin modelling and individual strands of hair or scale detail.",
+   "name": "vamp-07 (37x38)"
+  },
+  {
+   "id": "vamp-08",
+   "directory": "creatures/vamp00i0",
+   "image": "vamp00i0-record-008-frame-000-source.png",
+   "content": "One male human vampire head and neck seen from the front, cut flat across the neck as in the source, aspect about 1.11:1. Warm tan skin. A vampire: glowing red eyes, a snarling open mouth with bared white fangs, and blood on the lips and chin exactly where the input shows it. Preserve the hair or crest, hair colour, headgear, jewellery, markings and skin colour exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+   "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose, fangs and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+   "invention": "Resolve believable eyes, brows, fangs, lips, skin modelling and individual strands of hair or scale detail.",
+   "name": "vamp-08 (31x28)"
+  },
+  {
+   "id": "vamp-09",
+   "directory": "creatures/vamp00i0",
+   "image": "vamp00i0-record-009-frame-000-source.png",
+   "content": "One male human vampire head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.90:1. Deep dark-brown skin. A vampire: glowing red eyes, a snarling open mouth with bared white fangs, and blood on the lips and chin exactly where the input shows it. Preserve the hair or crest, hair colour, headgear, jewellery, markings and skin colour exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+   "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose, fangs and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+   "invention": "Resolve believable eyes, brows, fangs, lips, skin modelling and individual strands of hair or scale detail.",
+   "name": "vamp-09 (27x30)"
+  },
+  {
+   "id": "vamp-10",
+   "directory": "creatures/vamp00i0",
+   "image": "vamp00i0-record-010-frame-000-source.png",
+   "content": "One male human vampire head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.90:1. Pale sandy skin. A vampire: glowing red eyes, a snarling open mouth with bared white fangs, and blood on the lips and chin exactly where the input shows it. Preserve the hair or crest, hair colour, headgear, jewellery, markings and skin colour exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+   "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose, fangs and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+   "invention": "Resolve believable eyes, brows, fangs, lips, skin modelling and individual strands of hair or scale detail.",
+   "name": "vamp-10 (28x31)"
+  },
+  {
+   "id": "vamp-11",
+   "directory": "creatures/vamp00i0",
+   "image": "vamp00i0-record-011-frame-000-source.png",
+   "content": "One male dark elf vampire head and neck seen from the front, cut flat across the neck as in the source, aspect about 1.00:1. Ash blue-grey skin, pointed ears and glowing red eyes. A vampire: glowing red eyes, a snarling open mouth with bared white fangs, and blood on the lips and chin exactly where the input shows it. Preserve the hair or crest, hair colour, headgear, jewellery, markings and skin colour exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+   "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose, fangs and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+   "invention": "Resolve believable eyes, brows, fangs, lips, skin modelling and individual strands of hair or scale detail.",
+   "name": "vamp-11 (30x30)"
+  },
+  {
+   "id": "vamp-12",
+   "directory": "creatures/vamp00i0",
+   "image": "vamp00i0-record-012-frame-000-source.png",
+   "content": "One male elf vampire head and neck seen from the front, cut flat across the neck as in the source, aspect about 1.16:1. Golden-brown skin and pointed ears. A vampire: glowing red eyes, a snarling open mouth with bared white fangs, and blood on the lips and chin exactly where the input shows it. Preserve the hair or crest, hair colour, headgear, jewellery, markings and skin colour exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+   "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose, fangs and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+   "invention": "Resolve believable eyes, brows, fangs, lips, skin modelling and individual strands of hair or scale detail.",
+   "name": "vamp-12 (36x31)"
+  },
+  {
+   "id": "vamp-13",
+   "directory": "creatures/vamp00i0",
+   "image": "vamp00i0-record-013-frame-000-source.png",
+   "content": "One male elf vampire head and neck seen from the front, cut flat across the neck as in the source, aspect about 1.32:1. Light tan skin and pointed ears. A vampire: glowing red eyes, a snarling open mouth with bared white fangs, and blood on the lips and chin exactly where the input shows it. Preserve the hair or crest, hair colour, headgear, jewellery, markings and skin colour exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+   "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose, fangs and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+   "invention": "Resolve believable eyes, brows, fangs, lips, skin modelling and individual strands of hair or scale detail.",
+   "name": "vamp-13 (37x28)"
+  },
+  {
+   "id": "vamp-14",
+   "directory": "creatures/vamp00i0",
+   "image": "vamp00i0-record-014-frame-000-source.png",
+   "content": "One male cat-person with facial paint vampire head and neck seen from the front, cut flat across the neck as in the source, aspect about 1.15:1. Tan skin marked with painted stripes. A vampire: glowing red eyes, a snarling open mouth with bared white fangs, and blood on the lips and chin exactly where the input shows it. Preserve the hair or crest, hair colour, headgear, jewellery, markings and skin colour exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+   "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose, fangs and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+   "invention": "Resolve believable eyes, brows, fangs, lips, skin modelling and individual strands of hair or scale detail.",
+   "name": "vamp-14 (31x27)"
+  },
+  {
+   "id": "vamp-15",
+   "directory": "creatures/vamp00i0",
+   "image": "vamp00i0-record-015-frame-000-source.png",
+   "content": "One male lizard-person vampire head and neck seen from the front, cut flat across the neck as in the source, aspect about 0.79:1. Green scaly skin, red eyes and a ridged brow. A vampire: glowing red eyes, a snarling open mouth with bared white fangs, and blood on the lips and chin exactly where the input shows it. Preserve the hair or crest, hair colour, headgear, jewellery, markings and skin colour exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+   "uncertainty": "The head is a layer of a paper doll drawn over a headless body. Features are only a few pixels across, so eyes, nose, fangs and mouth are reconstructed as the simplest reading of the input; the hairstyle, hair colour, headgear, gender and skin colour must not change.",
+   "invention": "Resolve believable eyes, brows, fangs, lips, skin modelling and individual strands of hair or scale detail.",
+   "name": "vamp-15 (27x34)"
+  },
+  {
+   "id": "wereboar",
+   "directory": "creatures/were00i0",
+   "image": "were00i0-record-000-frame-000-source.png",
+   "content": "One head and neck of a wereboar: a brown boar's head with a long snout, upturned tusks, small red eye and bristling dark mane, seen in profile facing the viewer's right, cut flat across the neck as in the source, aspect about 0.81:1. Keep its angle, colours and shape exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+   "uncertainty": "The head is a beast form's paper-doll head. The source is only a few pixels across, so the features are reconstructed as the simplest reading of the input; its angle, outline and colour must not change.",
+   "invention": "Resolve believable fur, bristles, teeth, tusks, eye and skin modelling.",
+   "name": "wereboar (25x31)"
+  },
+  {
+   "id": "werewolf",
+   "directory": "creatures/were01i0",
+   "image": "were01i0-record-000-frame-000-source.png",
+   "content": "One head and neck of a werewolf: a brown wolf's head with a long snout, pointed ears, bared teeth and a shaggy ruff, seen in three-quarter view facing the viewer's right, cut flat across the neck as in the source, aspect about 0.97:1. Keep its angle, colours and shape exactly as in the input. No body, shoulders, clothing, weapon, text or second head.",
+   "uncertainty": "The head is a beast form's paper-doll head. The source is only a few pixels across, so the features are reconstructed as the simplest reading of the input; its angle, outline and colour must not change.",
+   "invention": "Resolve believable fur, bristles, teeth, tusks, eye and skin modelling.",
+   "name": "werewolf (34x35)"
+  }
+ ]
+}

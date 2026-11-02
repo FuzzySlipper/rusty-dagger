@@ -6,8 +6,9 @@ when the refreshed art set is chosen (classic stays selectable). For each final 
 
   - finds the classic media id it replaces, from its art key: a worn layer `texture-A-record-R-frame-000` is
     the paper doll's `paper-doll.A.R`, a body `bodies--bodyGNi{0,1}--...` is
-    `character.body-{unclothed,clothed}.{gender}.0N.0`, and a head `faces--faceGNi0--...-record-RRR-...` is
-    `character.head.{gender}.0N.R`;
+    `character.body-{unclothed,clothed}.{gender}.0N.0`, a head `faces--faceGNi0--...-record-RRR-...` is
+    `character.head.{gender}.0N.R`, and a vampire head, beast head or beast doll `creatures--NAMEi0--...-record-RRR-...`
+    is `character.FAMILY.NAMEi0.R`, FAMILY being the name's first four letters (vamp, were, wolf, boar);
   - for a paper-doll layer, takes its doll-space rect as doll_preview.py draws it (a sidecar's rect, else the
     generation input transform inverted), crops transparent margins and moves the rect to match;
   - writes it as WebP (lossy colour at QUALITY, lossless alpha) to content/worldrpg/media/refreshed/AREA/;
@@ -54,6 +55,7 @@ CLASSIC = REPOSITORY / "local/import/staging/worldrpg/media/character/paper-doll
 WORN = re.compile(r"texture-(\d+)-record-(\d+)-frame-000")
 BODY = re.compile(r"bodies--body(\d)(\d)(i[01])--.*")
 FACE = re.compile(r"faces--face(\d)(\d)i0--.*-record-(\d+)-frame-000")
+CREATURE = re.compile(r"creatures--((\w{4})\d\di0)--.*-record-(\d+)-frame-000")
 GENDER = {"0": "male", "1": "female"}
 
 
@@ -65,6 +67,8 @@ def replaces(key):
         return f"character.body-{'unclothed' if m[3] == 'i0' else 'clothed'}.{GENDER[m[1]]}.0{m[2]}.0"
     if m := FACE.fullmatch(key):
         return f"character.head.{GENDER[m[1]]}.0{m[2]}.{int(m[3])}"
+    if m := CREATURE.fullmatch(key):
+        return f"character.{m[2]}.{m[1]}.{int(m[3])}"
     raise SystemExit(f"No classic media id for art key {key}.")
 
 
