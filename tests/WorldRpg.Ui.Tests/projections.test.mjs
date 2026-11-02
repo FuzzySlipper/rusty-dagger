@@ -3432,6 +3432,32 @@ test('committed character summary stays at the entry screen and sends launch res
   } finally { f.dispose(); }
 });
 
+test('the spell seller and spellbook redraw their tiles when only the art choice changes', () => {
+  const f=fixture();
+  try {
+    art.adopt({revision:'tiles',images:[{id:'spell.selectors',image:'data:image/png;base64,AA=='},{id:'refreshed.spell.target.0',image:'data:image/webp;base64,AA==',smooth:true}]});
+    const tile=(x,y,width,image=null)=>({x,y,width,height:16,image});
+    // Both art sets are delivered together, so choosing one changes only which image a tile names.
+    const selectors=refreshed=>({media:'spell.selectors',width:40,height:80,
+      targets:[0,1,2,3,4].map(index=>tile(0,index*16,24,refreshed && index===0 ? 'refreshed.spell.target.0' : null)),elements:[0,1,2,3,4].map(index=>tile(24,index*16,16))});
+    const publish=refreshed=>f.publish({spells:{available:[{key:'spell.023',name:'Heal',cost:15}],ready:'spell.023',result:'',selectors:selectors(refreshed),
+      sale:{revision:'seller-1',provider:'Mage',offers:[{key:'spell.023',name:'Heal',castingCost:15,price:60,known:true}]},
+      information:{key:'spell.023',name:'Heal',target:'Self',element:'Magic',rangeType:0,elementType:4,details:[]}},
+      activation:{mode:'talk',message:'',applied:true,dialogue:{...offering(['spells','Buy spells']),revision:'seller-1',targetLabel:'Mage',greeting:'Welcome',tone:'normal',question:null,reply:null,topics:[],diagnostics:[]}}});
+    const target=root=>root.querySelector('.dagger-spell-selectors .dagger-spell-tile-target').style.backgroundImage;
+    publish(true);f.openService('spells');
+    const sales=f.root.querySelector('.dagger-dialogue-spells');
+    assert.match(target(sales),/image\/webp/);
+    publish(false);assert.match(target(sales),/image\/png/,'Choosing classic art redraws the seller\'s tile from the atlas.');
+    publish(true);assert.match(target(sales),/image\/webp/,'Choosing refreshed art again redraws it refreshed.');
+    f.root.querySelector('[data-action="spells"]').click();
+    const book=f.root.querySelector('.dagger-spells-root');
+    assert.match(target(book),/image\/webp/);
+    publish(false);assert.match(target(book),/image\/png/,'The spellbook\'s tile follows the art choice too.');
+    publish(true);assert.match(target(book),/image\/webp/);
+  } finally {art.adopt({revision:'',images:[]});f.dispose();}
+});
+
 test('spell seller and spellbook use confirmed semantic changes and source settings', () => {
   const f=fixture();
   try {
