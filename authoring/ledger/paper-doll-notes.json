@@ -48,12 +48,12 @@
   "note": "Redone on 2026-11-02 for the #10522 proportion check: the clothed body redone with its classic loincloth (Qwen had painted a brief), on the re-conformed body. Passes landmarks.py check; Patch accepted it on 2026-11-02."
  },
  "bodies--body06i0--body06i0-record-000-frame-000": {
-  "status": "accepted",
-  "note": "Redone on 2026-11-02 for the #10522 proportion check: the morph's base re-conformed (seed 5104) so its armpits, waist and knees meet the classic. Passes landmarks.py check; Patch accepted it on 2026-11-02."
+  "status": "needs-owner-review",
+  "note": "Redone on 2026-11-02 for #10522 review round 2: re-conformed from seed 5103: the seed-5104 crotch sat 2.2 units low, measured exactly (crop-invariant). Passes landmarks.py check; awaits Patch's review."
  },
  "bodies--body06i1--body06i1-record-000-frame-000": {
-  "status": "accepted",
-  "note": "Redone on 2026-11-02 for the #10522 proportion check: the clothed body redone with its classic loincloth (Qwen had painted a brief), on the re-conformed body. Passes landmarks.py check; Patch accepted it on 2026-11-02."
+  "status": "needs-owner-review",
+  "note": "Redone on 2026-11-02 for #10522 review round 2: rebuilt on that base, with the loincloth band kept across the gap under the hand on the hip, as the classic has it. Passes landmarks.py check; awaits Patch's review."
  },
  "bodies--body07i0--body07i0-record-000-frame-000": {
   "status": "accepted",

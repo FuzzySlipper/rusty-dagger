@@ -5,7 +5,7 @@ Every doll layer - body, head, each worn item per body morph - is drawn to the c
 the classic sprites are the standard. Landmarks are measured on silhouettes in doll space (the 110x184 grid,
 see doll_preview.py), the same way for a classic source and a generated final:
 
-  body: top (first row), shoulders (the widest row above the armpits, and its width), crotch (where the legs
+  body: top (first row), shoulders (the widest rows above the armpits, with a span, and the width), crotch (where the legs
         part), each sole and each foot's outer toe tip, height in heads (crown to lowest sole over the head's
         height) and the crotch's fraction of that height;
   head: crown, bottom and sides of the head layer (hair and the neck it carries included).
@@ -21,6 +21,7 @@ narrower than the Breton's), which one shared shape cannot follow.
 
     landmarks.py standard              # measure the classic sprites, write specs/paper-doll/proportions.json
     landmarks.py check [--paper-doll DIR ...]   # measure generated bodies and heads against it
+    landmarks.py check --promoted               # the same for the promoted images, at their payload rects
 """
 import argparse, json, sys
 from pathlib import Path
@@ -29,8 +30,11 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage
 
+from functools import lru_cache
+
 from bodies import MORPHS
 from doll_preview import AUTHORING, FINALS, doll_layer, placed
+from promote import CONTENT, PAYLOAD, replaces
 
 STANDARD = AUTHORING / "specs" / "paper-doll" / "proportions.json"
 BODIES = [race + offset for offset in (0, 10) for race in range(8)]
@@ -49,12 +53,19 @@ BANDS = ("neck and shoulders", "arms and torso", "hips and thighs", "shins", "fe
 
 
 def silhouette(image, rect):
-    """The layer's alpha > 0.5 on the doll-space field, K pixels per unit."""
+    """The layer's alpha > 0.5 on the doll-space field, K pixels per unit.
+
+    Each field pixel samples the image's alpha at the exact doll-space point of its centre, so a layer measures the
+    same whatever its pixel size and however its transparent margins are cropped (promotion crops them and moves
+    the rect to match). An image coarser than the field (a classic sprite) is sampled by whole pixels, keeping its
+    square edges; a finer one (a generated final) bilinearly."""
     x, y, w, h = rect
-    field = Image.new("L", (FIELD[2] * K, FIELD[3] * K))
-    alpha = image.getchannel("A").resize((max(1, round(w * K)), max(1, round(h * K))), Image.Resampling.BILINEAR)
-    field.paste(alpha, (round((x - FIELD[0]) * K), round((y - FIELD[1]) * K)))
-    return np.array(field) > 127
+    alpha = np.asarray(image.getchannel("A"), np.float32)
+    rows = ((np.arange(FIELD[3] * K) + 0.5) / K + FIELD[1] - y) * alpha.shape[0] / h - 0.5
+    columns = ((np.arange(FIELD[2] * K) + 0.5) / K + FIELD[0] - x) * alpha.shape[1] / w - 0.5
+    grid = np.meshgrid(rows, columns, indexing="ij")
+    coarse = alpha.shape[1] / w < K
+    return ndimage.map_coordinates(alpha, grid, order=0 if coarse else 1, mode="grid-constant", cval=0) > 127
 
 
 def to_doll(px, axis):
@@ -90,11 +101,13 @@ def body_landmarks(a):
         foot = ys > sole - 10 * K
         feet[side] = {"sole": to_doll(sole + 1, 1),
                       "toe": to_doll(xs[foot].min() if side == "left" else xs[foot].max() + 1, 0)}
-    # Shoulders: the widest row between the top and a third of the way down to the crotch.
-    upper = range(top, top + (crotch - top) // 3)
-    widths = [(max(e - s for s, e in runs(a[y])), y) for y in upper]
-    width, shoulder = max(widths)
-    return {"top": to_doll(top, 1), "shoulders": to_doll(shoulder, 1), "shoulder width": round(width / K, 1),
+    # Shoulders: the widest rows between the top and a third of the way down to the crotch, a gradual widening like
+    # the waist's narrowing, so located with a span (see limb_landmarks).
+    widths = {y: max(e - s for s, e in runs(a[y])) for y in range(top, top + (crotch - top) // 3)}
+    width = max(widths.values())
+    rows = [y for y, w in widths.items() if w >= width - FLAT * K]
+    return {"top": to_doll(top, 1), "shoulders": to_doll(np.mean(rows), 1), "shoulders span": round((max(rows) - min(rows)) / 2 / K, 1),
+            "shoulder width": round(width / K, 1),
             "crotch": to_doll(crotch, 1), "sole left": feet["left"]["sole"], "sole right": feet["right"]["sole"],
             "toe left": feet["left"]["toe"], "toe right": feet["right"]["toe"], "centre": to_doll(centre, 0)}
 
@@ -195,14 +208,35 @@ def ratios(m):
             "shoulders in heads": round(m["shoulder width"] / head, 2)}
 
 
+def promoted(family, name, record):
+    """The promoted image standing in for a layer and its doll rect, as the game draws it, or None."""
+    entry = PROMOTED().get(replaces(f"{family}--{name}--{name}-record-{record:03d}-frame-000"))
+    if entry is None:
+        return None
+    doll = entry["doll"]
+    return Image.open(CONTENT / entry["path"]).convert("RGBA"), (doll["x"], doll["y"], doll["width"], doll["height"])
+
+
+@lru_cache
+def PROMOTED():
+    return {entry["replaces"]: entry for entry in json.load(open(PAYLOAD))["artReplacements"]["images"]}
+
+
 def outline(family, name, record, mode):
-    """A layer's silhouette, classic or generated (None when it has no generated final), small holes filled.
+    """A layer's silhouette, small holes filled: classic, generated ("canvas", the gen-raw final) or "promoted" (the
+    image the game draws, at its payload rect); None when there is no generated or promoted image.
 
     A large hole stays open: an Argonian's tail encloses the gap between its legs."""
     layer = doll_layer(family, name, record, name)
-    if mode == "canvas" and layer.final is None:
+    if mode == "promoted":
+        found = promoted(family, name, record)
+        if found is None:
+            return None
+        a = silhouette(*found)
+    elif mode == "canvas" and layer.final is None:
         return None
-    a = silhouette(*placed(layer, mode))
+    else:
+        a = silhouette(*placed(layer, mode))
     holes, count = ndimage.label(ndimage.binary_fill_holes(a) & ~a)
     small = np.nonzero(ndimage.sum(np.ones_like(a), holes, range(1, count + 1)) < SMALL_HOLE * K * K)[0] + 1
     return a | np.isin(holes, small)
@@ -262,14 +296,14 @@ def deviations(measured, want, tolerance):
             and (key not in measured or abs(measured[key] - value) > tolerance + want.get(f"{key} span", 0))]
 
 
-def body_report(spec, number, variant):
+def body_report(spec, number, variant, mode="canvas"):
     """One generated body against the standard: its report line (each landmark or outline band beyond tolerance on
     its own line below), and whether any is."""
     tolerance, section = spec["tolerance"], VARIANTS[variant]
     name = f"body{number:02d}{variant}"
-    m, body = measure(number, "canvas", variant)
+    m, body = measure(number, mode, variant)
     if m is None:
-        return f"{name}: no generated body", False
+        return f"{name}: no {'promoted' if mode == 'promoted' else 'generated'} body", False
     base = f"body{morph_base(number):02d}"
     head = {key: spec[section][name[:6]][key] for key in ("crown", "head bottom", "head left", "head right")}
     want = spec[section][base] | head
@@ -283,26 +317,26 @@ def body_report(spec, number, variant):
             f"({want['shoulders in heads']})" + "".join(f"\n    {b}" for b in bad)), bool(bad)
 
 
-def head_report(spec, number, record):
+def head_report(spec, number, record, mode="canvas"):
     """One generated head against its classic head box: its report line, and whether it is beyond tolerance."""
     name = f"face{number:02d}"
-    head = outline("faces", f"{name}i0", record, "canvas")
+    head = outline("faces", f"{name}i0", record, mode)
     if head is None:
-        return f"{name} head {record}: no generated head", False
+        return f"{name} head {record}: no {'promoted' if mode == 'promoted' else 'generated'} head", False
     bad = deviations(head_box(head), spec["heads"][name][str(record)], spec["tolerance"])
     return f"{name} head {record}: " + ("ok" if not bad else "FAIL  " + ", ".join(bad)), bool(bad)
 
 
-def check():
+def check(mode="canvas"):
     spec = json.load(open(STANDARD))
     tolerance, failed = spec["tolerance"], False
     for number, variant in ((n, v) for n in BODIES for v in VARIANTS):
-        line, bad = body_report(spec, number, variant)
+        line, bad = body_report(spec, number, variant, mode)
         print(line)
         failed |= bad
     for number in BODIES:
         for record in HEADS:
-            line, bad = head_report(spec, number, record)
+            line, bad = head_report(spec, number, record, mode)
             if bad:
                 print(line)
             failed |= bad
@@ -312,6 +346,7 @@ def check():
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("command", choices=("standard", "check"))
+    ap.add_argument("--promoted", action="store_true", help="check the promoted images, as the game draws them, not gen-raw")
     ap.add_argument("--paper-doll", type=Path, action="append", default=[],
                     help="body or head finals directory to look in first; repeat, first wins")
     a = ap.parse_args()
@@ -319,7 +354,7 @@ def main():
     if a.command == "standard":
         standard()
     else:
-        sys.exit(1 if check() else 0)
+        sys.exit(1 if check("promoted" if a.promoted else "canvas") else 0)
 
 
 if __name__ == "__main__":
