@@ -1,1 +1,758 @@
-{}
+{
+ "elements--cold--element-icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--cold--world-effects--impact--texture-376-record-001-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--cold--world-effects--impact--texture-376-record-001-frame-001": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--cold--world-effects--impact--texture-376-record-001-frame-002": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--cold--world-effects--impact--texture-376-record-001-frame-003": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--cold--world-effects--impact--texture-376-record-001-frame-004": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--cold--world-effects--impact--texture-376-record-001-frame-005": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--cold--world-effects--impact--texture-376-record-001-frame-006": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--cold--world-effects--impact--texture-376-record-001-frame-007": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--cold--world-effects--projectile--texture-376-record-000-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--cold--world-effects--projectile--texture-376-record-000-frame-001": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--cold--world-effects--projectile--texture-376-record-000-frame-002": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--cold--world-effects--projectile--texture-376-record-000-frame-003": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--cold--world-effects--projectile--texture-376-record-000-frame-004": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--cold--world-effects--projectile--texture-376-record-000-frame-005": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--cold--world-effects--projectile--texture-376-record-000-frame-006": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--cold--world-effects--projectile--texture-376-record-000-frame-007": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--cold--world-effects--projectile--texture-376-record-000-frame-008": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--cold--world-effects--projectile--texture-376-record-000-frame-009": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--fire--element-icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--fire--world-effects--impact--texture-375-record-001-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--fire--world-effects--impact--texture-375-record-001-frame-001": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--fire--world-effects--impact--texture-375-record-001-frame-002": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--fire--world-effects--impact--texture-375-record-001-frame-003": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--fire--world-effects--impact--texture-375-record-001-frame-004": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--fire--world-effects--impact--texture-375-record-001-frame-005": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--fire--world-effects--impact--texture-375-record-001-frame-006": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--fire--world-effects--impact--texture-375-record-001-frame-007": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--fire--world-effects--impact--texture-375-record-001-frame-008": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--fire--world-effects--projectile--texture-375-record-000-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--fire--world-effects--projectile--texture-375-record-000-frame-001": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--fire--world-effects--projectile--texture-375-record-000-frame-002": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--fire--world-effects--projectile--texture-375-record-000-frame-003": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--fire--world-effects--projectile--texture-375-record-000-frame-004": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--fire--world-effects--projectile--texture-375-record-000-frame-005": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--fire--world-effects--projectile--texture-375-record-000-frame-006": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--fire--world-effects--projectile--texture-375-record-000-frame-007": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--fire--world-effects--projectile--texture-375-record-000-frame-008": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--fire--world-effects--projectile--texture-375-record-000-frame-009": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--magic--element-icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--magic--world-effects--impact--texture-379-record-001-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--magic--world-effects--impact--texture-379-record-001-frame-001": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--magic--world-effects--impact--texture-379-record-001-frame-002": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--magic--world-effects--impact--texture-379-record-001-frame-003": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--magic--world-effects--impact--texture-379-record-001-frame-004": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--magic--world-effects--impact--texture-379-record-001-frame-005": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--magic--world-effects--impact--texture-379-record-001-frame-006": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--magic--world-effects--impact--texture-379-record-001-frame-007": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--magic--world-effects--impact--texture-379-record-001-frame-008": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--magic--world-effects--impact--texture-379-record-001-frame-009": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--magic--world-effects--projectile--texture-379-record-000-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--magic--world-effects--projectile--texture-379-record-000-frame-001": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--magic--world-effects--projectile--texture-379-record-000-frame-002": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--magic--world-effects--projectile--texture-379-record-000-frame-003": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--magic--world-effects--projectile--texture-379-record-000-frame-004": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--magic--world-effects--projectile--texture-379-record-000-frame-005": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--magic--world-effects--projectile--texture-379-record-000-frame-006": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--magic--world-effects--projectile--texture-379-record-000-frame-007": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--magic--world-effects--projectile--texture-379-record-000-frame-008": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--magic--world-effects--projectile--texture-379-record-000-frame-009": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--poison--element-icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--poison--world-effects--impact--texture-377-record-001-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--poison--world-effects--impact--texture-377-record-001-frame-001": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--poison--world-effects--impact--texture-377-record-001-frame-002": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--poison--world-effects--impact--texture-377-record-001-frame-003": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--poison--world-effects--impact--texture-377-record-001-frame-004": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--poison--world-effects--impact--texture-377-record-001-frame-005": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--poison--world-effects--impact--texture-377-record-001-frame-006": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--poison--world-effects--impact--texture-377-record-001-frame-007": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--poison--world-effects--projectile--texture-377-record-000-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--poison--world-effects--projectile--texture-377-record-000-frame-001": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--poison--world-effects--projectile--texture-377-record-000-frame-002": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--poison--world-effects--projectile--texture-377-record-000-frame-003": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--poison--world-effects--projectile--texture-377-record-000-frame-004": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--poison--world-effects--projectile--texture-377-record-000-frame-005": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--poison--world-effects--projectile--texture-377-record-000-frame-006": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--poison--world-effects--projectile--texture-377-record-000-frame-007": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--poison--world-effects--projectile--texture-377-record-000-frame-008": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--poison--world-effects--projectile--texture-377-record-000-frame-009": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--shock--element-icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--shock--world-effects--impact--texture-378-record-001-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--shock--world-effects--impact--texture-378-record-001-frame-001": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--shock--world-effects--impact--texture-378-record-001-frame-002": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--shock--world-effects--impact--texture-378-record-001-frame-003": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--shock--world-effects--impact--texture-378-record-001-frame-004": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--shock--world-effects--impact--texture-378-record-001-frame-005": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--shock--world-effects--impact--texture-378-record-001-frame-006": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--shock--world-effects--impact--texture-378-record-001-frame-007": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--shock--world-effects--projectile--texture-378-record-000-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--shock--world-effects--projectile--texture-378-record-000-frame-001": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--shock--world-effects--projectile--texture-378-record-000-frame-002": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--shock--world-effects--projectile--texture-378-record-000-frame-003": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--shock--world-effects--projectile--texture-378-record-000-frame-004": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--shock--world-effects--projectile--texture-378-record-000-frame-005": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "elements--shock--world-effects--projectile--texture-378-record-000-frame-006": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-000--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-001--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-002--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-003--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-004--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-005--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-006--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-007--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-008--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-009--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-010--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-011--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-012--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-013--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-014--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-015--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-016--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-017--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-018--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-019--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-020--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-021--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-022--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-023--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-024--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-025--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-026--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-027--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-028--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-029--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-030--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-031--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-032--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-033--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-034--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-035--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-036--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-037--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-038--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-039--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-040--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-041--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-042--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-043--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-044--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-045--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-046--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-047--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-048--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-049--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-050--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-051--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-052--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-053--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-054--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-055--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-056--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-057--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-058--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-059--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-060--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-061--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-062--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-063--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-064--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-065--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-066--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-067--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "icons--icon-068--icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "shared-effects--magic-sparkle--world-effect--texture-380-record-003-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "shared-effects--magic-sparkle--world-effect--texture-380-record-003-frame-001": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "shared-effects--magic-sparkle--world-effect--texture-380-record-003-frame-002": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "shared-effects--magic-sparkle--world-effect--texture-380-record-003-frame-003": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "shared-effects--magic-sparkle--world-effect--texture-380-record-003-frame-004": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "shared-effects--magic-sparkle--world-effect--texture-380-record-003-frame-005": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "shared-effects--magic-sparkle--world-effect--texture-380-record-003-frame-006": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "shared-effects--magic-sparkle--world-effect--texture-380-record-003-frame-007": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "shared-effects--magic-sparkle--world-effect--texture-380-record-003-frame-008": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "shared-effects--magic-sparkle--world-effect--texture-380-record-003-frame-009": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "shared-effects--magic-sparkle--world-effect--texture-380-record-003-frame-010": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "shared-effects--magic-sparkle--world-effect--texture-380-record-003-frame-011": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "shared-effects--magic-sparkle--world-effect--texture-380-record-003-frame-012": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "shared-effects--magic-sparkle--world-effect--texture-380-record-003-frame-013": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "shared-effects--magic-sparkle--world-effect--texture-380-record-003-frame-014": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "shared-effects--magic-sparkle--world-effect--texture-380-record-003-frame-015": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "shared-effects--magic-sparkle--world-effect--texture-380-record-003-frame-016": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "shared-effects--magic-sparkle--world-effect--texture-380-record-003-frame-017": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "shared-effects--magic-sparkle--world-effect--texture-380-record-003-frame-018": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "shared-effects--magic-sparkle--world-effect--texture-380-record-003-frame-019": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "targets--area-around-caster--target-icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "targets--area-at-range--target-icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "targets--by-touch--target-icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "targets--caster-only--target-icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "targets--single-target-at-range--target-icon": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ }
+}

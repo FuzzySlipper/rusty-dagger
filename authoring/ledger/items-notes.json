@@ -96,8 +96,8 @@
   "status": "accepted"
  },
  "texture-254-record-001-frame-000": {
-  "note": "Redone with seed 27302 after owner review of batch A (emerald drifted or had a stray pixel); awaiting re-review.",
-  "status": "converted"
+  "note": "Redone with seed 27302 after owner review of batch A (emerald drifted or had a stray pixel); awaiting re-review. Patch accepted the full review sheet on 2026-11-02.",
+  "status": "accepted"
  },
  "texture-254-record-003-frame-000": {
   "note": "Owner reviewed and accepted the first ten and batch A sheets.",
@@ -172,8 +172,8 @@
   "status": "accepted"
  },
  "texture-254-record-064-frame-000": {
-  "note": "Redone with seed 27302 after owner review of batch A (tin drifted or had a stray pixel); awaiting re-review.",
-  "status": "converted"
+  "note": "Redone with seed 27302 after owner review of batch A (tin drifted or had a stray pixel); awaiting re-review. Patch accepted the full review sheet on 2026-11-02.",
+  "status": "accepted"
  },
  "texture-254-record-065-frame-000": {
   "note": "Owner reviewed and accepted the first ten and batch A sheets.",
@@ -374,5 +374,401 @@
  "texture-433-record-002-frame-000": {
   "status": "accepted",
   "note": "The artifact's world art is its paper-doll layer: the worn final Patch accepted on 2026-11-01 (#10527)."
+ },
+ "texture-200-record-010-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-200-record-011-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-202-record-000-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-202-record-005-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-204-record-001-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-205-record-011-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-205-record-021-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-206-record-010-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-206-record-033-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-206-record-034-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-207-record-002-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-207-record-003-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-207-record-004-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-207-record-005-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-207-record-006-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-207-record-007-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-207-record-008-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-207-record-009-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-207-record-011-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-207-record-012-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-207-record-013-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-207-record-015-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-207-record-016-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-208-record-000-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-208-record-003-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-208-record-004-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-209-record-000-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-209-record-002-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-209-record-007-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-210-record-003-frame-001": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-210-record-003-frame-002": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-210-record-003-frame-003": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-210-record-003-frame-004": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-210-record-004-frame-001": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-210-record-004-frame-002": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-210-record-004-frame-003": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-210-record-004-frame-004": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-210-record-005-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-210-record-005-frame-001": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-210-record-005-frame-002": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-210-record-005-frame-003": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-210-record-005-frame-004": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-210-record-006-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-210-record-006-frame-001": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-210-record-006-frame-002": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-210-record-006-frame-003": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-211-record-000-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-211-record-047-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-211-record-050-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-211-record-051-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-211-record-052-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-211-record-053-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-211-record-055-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-211-record-056-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-212-record-002-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-213-record-015-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-214-record-003-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-216-record-001-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-218-record-000-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-002-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-009-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-010-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-011-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-012-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-013-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-014-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-015-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-016-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-017-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-018-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-019-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-021-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-022-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-023-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-024-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-026-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-027-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-028-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-029-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-030-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-031-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-032-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-033-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-037-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-038-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-039-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-040-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-041-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-042-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-043-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-045-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-046-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-048-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-050-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-051-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-052-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-053-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-254-record-055-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
+ },
+ "texture-380-record-001-frame-000": {
+  "status": "accepted",
+  "note": "Patch accepted the full review sheet on 2026-11-02."
  }
 }
