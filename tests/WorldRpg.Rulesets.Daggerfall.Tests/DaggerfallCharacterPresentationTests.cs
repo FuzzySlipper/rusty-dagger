@@ -364,7 +364,7 @@ public sealed class DaggerfallCharacterPresentationTests
     }
 
     [Fact]
-    public void Paper_doll_draws_a_vampire_head_and_background_and_only_the_beast_background_while_transformed()
+    public void Paper_doll_draws_a_vampire_head_and_background_and_only_the_beast_background_while_transformed_in_refreshed_art_too()
     {
         using Fixture f = new();
         DaggerfallCharacterState character = new(f.Definitions, f.Player.Stats, f.PlayerDefinition);
@@ -384,6 +384,28 @@ public sealed class DaggerfallCharacterPresentationTests
         Assert.Equal(f.Definitions.CharacterPresentation.RacialForms["werewolf"].BodyMediaId, beast.Background.MediaId);
         Assert.Equal((-8, -7), (beast.Background.X, beast.Background.Y));
         Assert.Empty(beast.Layers);
+
+        // With refreshed art, the vampire head and the beast form's whole picture draw their replacements at their own rects.
+        string beastBody = f.Definitions.CharacterPresentation.RacialForms["werewolf"].BodyMediaId;
+        System.Text.Json.Nodes.JsonObject Entry(string replaces, double x, double y, double width, double height) => new()
+        {
+            ["replaces"] = replaces, ["mediaId"] = $"refreshed.{replaces}", ["path"] = $"worldrpg/media/refreshed/paper-doll/{replaces}.webp", ["byteLength"] = 1,
+            ["doll"] = new System.Text.Json.Nodes.JsonObject { ["x"] = x, ["y"] = y, ["width"] = width, ["height"] = height },
+        };
+        System.Text.Json.Nodes.JsonObject payload = new()
+        {
+            ["artReplacements"] = new System.Text.Json.Nodes.JsonObject
+            {
+                ["images"] = new System.Text.Json.Nodes.JsonArray(Entry(vampire.HeadMediaId, 41.5, 1, 31, 33), Entry(beastBody, -8.5, -7.25, 126, 199)),
+            },
+        };
+        DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()), "test.art");
+        PaperDollLayerPresentation refreshedHead = DaggerfallPaperDollPolicy.Compose(f.Definitions, identity,
+            new("vampirism", new DaggerfallRacialOverrideState(DaggerfallRacialKind.Vampire, false, 0, 0, Vampire: new(150, 0))), worn, art).Layers.Single(layer => layer.Kind == "head");
+        Assert.Equal(new PaperDollLayerPresentation("head", $"refreshed.{vampire.HeadMediaId}", 41.5, 1, 31, 33, Smooth: true), refreshedHead);
+        PaperDollPresentation refreshedBeast = DaggerfallPaperDollPolicy.Compose(f.Definitions, identity,
+            new("lycanthropy", new DaggerfallRacialOverrideState(DaggerfallRacialKind.Werewolf, true, 0, 0)), worn, art);
+        Assert.Equal(new PaperDollLayerPresentation("background", $"refreshed.{beastBody}", -8.5, -7.25, 126, 199, Smooth: true), refreshedBeast.Background);
     }
 
     private static (long Current, long Maximum) Resource(CharacterSheetPresentation sheet, string id)

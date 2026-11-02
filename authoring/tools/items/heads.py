@@ -11,9 +11,11 @@ own canvas, so the trimmed final keeps its registration and needs no sidecar.
 
     heads.py OUT [--face 00 --face 10]     # every generated head of those FACE files (default all)
     heads.py OUT --worn texture-234-record-013-frame-000 ...   # those held items instead
+    heads.py OUT --creature vamp00i0 --creature wolf00i0        # every record of those creature files instead
 
 Trimmed heads go to OUT/finals with the paper-doll naming, for doll_preview.py --paper-doll OUT/finals and
-landmarks.py check --paper-doll OUT/finals before they replace gen-raw/paper-doll; trimmed held items go to
+landmarks.py check --paper-doll OUT/finals before they replace gen-raw/paper-doll (a creature's too: a vampire
+head, or a beast doll, whose classic picture is a solid frame, losing only stray specks); trimmed held items go to
 OUT/worn, for doll_preview.py --worn OUT/worn before they replace gen-raw/worn.
 """
 import argparse
@@ -22,7 +24,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageFilter
 
-from doll_preview import doll_layer, placed, worn_layer
+from doll_preview import DF_DOLL, doll_layer, placed, worn_layer
 from landmarks import BODIES, HEADS
 
 GROW = 1.0     # doll units the head may reach past its classic silhouette
@@ -47,6 +49,7 @@ def main():
     ap.add_argument("out", type=Path)
     ap.add_argument("--face", action="append", type=int, choices=BODIES, help="FACE file number, e.g. 10")
     ap.add_argument("--worn", action="append", help="a held item's art key, e.g. texture-234-record-013-frame-000")
+    ap.add_argument("--creature", action="append", help="a creature file, e.g. vamp00i0")
     a = ap.parse_args()
     if a.worn:
         (a.out / "worn").mkdir(parents=True, exist_ok=True)
@@ -55,6 +58,14 @@ def main():
         print(f"trimmed {len(a.worn)} held items", flush=True)
         return
     (a.out / "finals").mkdir(parents=True, exist_ok=True)
+    if a.creature:
+        for name in a.creature:
+            for record in range(len(list((DF_DOLL / "creatures" / name).glob("*-source.png")))):
+                layer = doll_layer("creatures", name, record, name)
+                if layer.final is not None:
+                    trim(layer).save(a.out / "finals" / layer.final.name)
+            print(f"{name}: trimmed", flush=True)
+        return
     for number in a.face or BODIES:
         for record in HEADS:
             layer = doll_layer("faces", f"face{number:02d}i0", record, "head")

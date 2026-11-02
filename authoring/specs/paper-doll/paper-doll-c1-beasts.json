@@ -1,0 +1,59 @@
+{
+ "seed": 27341,
+ "size": 1024,
+ "occupancy": 0.74,
+ "background": "#30343b",
+ "styles": {
+  "painted": {
+   "label": "Painted adventure",
+   "prompt": "Highly detailed lurid pulp-fantasy character portrait in the manner of 1970s and 80s paperback cover art (Frank Frazetta, Boris Vallejo): glossy airbrushed oil rendering, strongly modelled features with defined brows, eyes, nose, lips and cheekbones, fine skin detail and sheen, individual strands of hair and beard, warm rim light against deep shadow, sharp specular highlights, rich saturated colour. Crisp, confident, finely detailed forms rather than flat broad shapes; keep the original local colours. Smoothly drawn high resolution shapes, no square pixel clusters."
+  },
+  "inked": {
+   "label": "Inked dark fantasy / UI kin",
+   "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+  },
+  "gouache": {
+   "label": "Warm storybook gouache",
+   "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+  },
+  "etched": {
+   "label": "Tinted engraving",
+   "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+  }
+ },
+ "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn dark-fantasy RPG paintings. Keep the source's composition, figure pose, colours and frame. No text, border beyond the source's own frame, or second figure.",
+ "presentation": "One whole framed picture, centred on a perfectly flat solid dark slate grey background, RGB 48,52,59, outside the frame. The picture fills about three quarters of the canvas height. Preserve the source composition. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+ "title": "Paper doll beast-form dolls C1 pilot",
+ "routes": [
+  {
+   "id": "qwen-base",
+   "label": "Qwen / painted baseline",
+   "group": "faces",
+   "model": "qwen-edit",
+   "host": "den-nimo",
+   "url": "http://192.168.1.23:8188",
+   "conditioning": "reference"
+  }
+ ],
+ "task": "Task: Redraw a very small classic fantasy RPG character-screen painting as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+ "items": [
+  {
+   "id": "wereboar-doll",
+   "directory": "creatures/boar00i0",
+   "image": "boar00i0-record-000-frame-000-source.png",
+   "content": "One tall framed night scene, aspect about 0.63:1, exactly as composed in the input: a hulking wereboar, a man-beast with a boar's tusked head, brown hide and a dark bristling mane, standing upright on two legs on a rocky brown hilltop, with a full orange moon in the upper left, a starry dark blue sky, black pine trees behind and drifting grey mist, all inside a narrow bevelled grey stone frame that runs around the whole picture. Keep the figure's pose, size and place in the picture, the moon, the trees and the frame exactly where the input has them. No text and no second figure.",
+   "uncertainty": "This is the whole character-screen picture of a transformed lycanthrope, a small classic painting; the figure is only a few dozen pixels tall, so its anatomy is reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable fur, muscle, claws, rock, bark, mist and stone-frame detail.",
+   "name": "wereboar doll (125x198)"
+  },
+  {
+   "id": "werewolf-doll",
+   "directory": "creatures/wolf00i0",
+   "image": "wolf00i0-record-000-frame-000-source.png",
+   "content": "One tall framed night scene, aspect about 0.63:1, exactly as composed in the input: a lean werewolf, a man-beast with a wolf's head, brown fur and clawed hands, crouching upright on two legs on a rocky brown hilltop, with a full orange moon in the upper left, a starry dark blue sky, black pine trees behind and drifting grey mist, all inside a narrow bevelled grey stone frame that runs around the whole picture. Keep the figure's pose, size and place in the picture, the moon, the trees and the frame exactly where the input has them. No text and no second figure.",
+   "uncertainty": "This is the whole character-screen picture of a transformed lycanthrope, a small classic painting; the figure is only a few dozen pixels tall, so its anatomy is reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable fur, muscle, claws, rock, bark, mist and stone-frame detail.",
+   "name": "werewolf doll (125x198)"
+  }
+ ]
+}
