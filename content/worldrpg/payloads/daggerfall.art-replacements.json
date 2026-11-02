@@ -3443,6 +3443,42 @@
     "height": 256
    },
    {
+    "replaces": "inventory.icon.potion.111516185",
+    "mediaId": "refreshed.inventory.icon.potion.111516185",
+    "path": "worldrpg/media/refreshed/items/potion.111516185.webp",
+    "byteLength": 11466,
+    "sha256": "e5e92ce0d0b6331b0b525e9a520d42eb7562d4c5626786c08dc4147eafe90199",
+    "width": 256,
+    "height": 250
+   },
+   {
+    "replaces": "inventory.icon.potion.112080144",
+    "mediaId": "refreshed.inventory.icon.potion.112080144",
+    "path": "worldrpg/media/refreshed/items/potion.112080144.webp",
+    "byteLength": 12216,
+    "sha256": "2a72db3bdb19241cacdf4e0d3a68fb8445742ce907c26943b399e1daa9e2f1e7",
+    "width": 103,
+    "height": 256
+   },
+   {
+    "replaces": "inventory.icon.potion.2031019196",
+    "mediaId": "refreshed.inventory.icon.potion.2031019196",
+    "path": "worldrpg/media/refreshed/items/potion.2031019196.webp",
+    "byteLength": 12068,
+    "sha256": "0a32045157fbbdd0ec74a887bf6feed6c8d67e584ffa87fb47028c9f59d207a1",
+    "width": 114,
+    "height": 256
+   },
+   {
+    "replaces": "inventory.icon.potion.216843",
+    "mediaId": "refreshed.inventory.icon.potion.216843",
+    "path": "worldrpg/media/refreshed/items/potion.216843.webp",
+    "byteLength": 11466,
+    "sha256": "e5e92ce0d0b6331b0b525e9a520d42eb7562d4c5626786c08dc4147eafe90199",
+    "width": 256,
+    "height": 250
+   },
+   {
     "replaces": "inventory.icon.potion.220192",
     "mediaId": "refreshed.inventory.icon.potion.220192",
     "path": "worldrpg/media/refreshed/items/potion.220192.webp",
@@ -3450,6 +3486,15 @@
     "sha256": "efb88f6896c595e6b17d9644e11b8c748462e6f028fcf73fc1753223b7761b8b",
     "width": 256,
     "height": 227
+   },
+   {
+    "replaces": "inventory.icon.potion.221117",
+    "mediaId": "refreshed.inventory.icon.potion.221117",
+    "path": "worldrpg/media/refreshed/items/potion.221117.webp",
+    "byteLength": 10760,
+    "sha256": "90ecd3e99414f6c6241cef94361529c46352feac3cfc3fb2b8f0ad4e84bcf334",
+    "width": 174,
+    "height": 256
    },
    {
     "replaces": "inventory.icon.potion.221871",
@@ -3461,6 +3506,15 @@
     "height": 227
    },
    {
+    "replaces": "inventory.icon.potion.224588",
+    "mediaId": "refreshed.inventory.icon.potion.224588",
+    "path": "worldrpg/media/refreshed/items/potion.224588.webp",
+    "byteLength": 12068,
+    "sha256": "0a32045157fbbdd0ec74a887bf6feed6c8d67e584ffa87fb47028c9f59d207a1",
+    "width": 114,
+    "height": 256
+   },
+   {
     "replaces": "inventory.icon.potion.228890",
     "mediaId": "refreshed.inventory.icon.potion.228890",
     "path": "worldrpg/media/refreshed/items/potion.228890.webp",
@@ -3468,6 +3522,105 @@
     "sha256": "efb88f6896c595e6b17d9644e11b8c748462e6f028fcf73fc1753223b7761b8b",
     "width": 256,
     "height": 227
+   },
+   {
+    "replaces": "inventory.icon.potion.239524",
+    "mediaId": "refreshed.inventory.icon.potion.239524",
+    "path": "worldrpg/media/refreshed/items/potion.239524.webp",
+    "byteLength": 10552,
+    "sha256": "326ec3ed3dce843f953a918014dc1a57970f3d80ac269a963b408aa765086c75",
+    "width": 98,
+    "height": 256
+   },
+   {
+    "replaces": "inventory.icon.potion.240081",
+    "mediaId": "refreshed.inventory.icon.potion.240081",
+    "path": "worldrpg/media/refreshed/items/potion.240081.webp",
+    "byteLength": 11860,
+    "sha256": "4adddbbbeb2eefadba729e39715737b2be018b5e966304d3a77e9ea0f4fe1683",
+    "width": 87,
+    "height": 256
+   },
+   {
+    "replaces": "inventory.icon.potion.4815872",
+    "mediaId": "refreshed.inventory.icon.potion.4815872",
+    "path": "worldrpg/media/refreshed/items/potion.4815872.webp",
+    "byteLength": 12216,
+    "sha256": "2a72db3bdb19241cacdf4e0d3a68fb8445742ce907c26943b399e1daa9e2f1e7",
+    "width": 103,
+    "height": 256
+   },
+   {
+    "replaces": "inventory.icon.potion.4826108",
+    "mediaId": "refreshed.inventory.icon.potion.4826108",
+    "path": "worldrpg/media/refreshed/items/potion.4826108.webp",
+    "byteLength": 11466,
+    "sha256": "e5e92ce0d0b6331b0b525e9a520d42eb7562d4c5626786c08dc4147eafe90199",
+    "width": 256,
+    "height": 250
+   },
+   {
+    "replaces": "inventory.icon.potion.4842851",
+    "mediaId": "refreshed.inventory.icon.potion.4842851",
+    "path": "worldrpg/media/refreshed/items/potion.4842851.webp",
+    "byteLength": 12216,
+    "sha256": "2a72db3bdb19241cacdf4e0d3a68fb8445742ce907c26943b399e1daa9e2f1e7",
+    "width": 103,
+    "height": 256
+   },
+   {
+    "replaces": "inventory.icon.potion.4870452",
+    "mediaId": "refreshed.inventory.icon.potion.4870452",
+    "path": "worldrpg/media/refreshed/items/potion.4870452.webp",
+    "byteLength": 10760,
+    "sha256": "90ecd3e99414f6c6241cef94361529c46352feac3cfc3fb2b8f0ad4e84bcf334",
+    "width": 174,
+    "height": 256
+   },
+   {
+    "replaces": "inventory.icon.potion.4937012",
+    "mediaId": "refreshed.inventory.icon.potion.4937012",
+    "path": "worldrpg/media/refreshed/items/potion.4937012.webp",
+    "byteLength": 11212,
+    "sha256": "9208f6722560c2d128d5df292cdea1bc4503a894b7f6b9abee984abed9a7f4bf",
+    "width": 185,
+    "height": 256
+   },
+   {
+    "replaces": "inventory.icon.potion.4975678",
+    "mediaId": "refreshed.inventory.icon.potion.4975678",
+    "path": "worldrpg/media/refreshed/items/potion.4975678.webp",
+    "byteLength": 10944,
+    "sha256": "cb5db738bb4a1347e8e48aa0d59f0585547a0405ec2e9ea56c249d18d06dc003",
+    "width": 219,
+    "height": 256
+   },
+   {
+    "replaces": "inventory.icon.potion.5017404",
+    "mediaId": "refreshed.inventory.icon.potion.5017404",
+    "path": "worldrpg/media/refreshed/items/potion.5017404.webp",
+    "byteLength": 11860,
+    "sha256": "4adddbbbeb2eefadba729e39715737b2be018b5e966304d3a77e9ea0f4fe1683",
+    "width": 87,
+    "height": 256
+   },
+   {
+    "replaces": "inventory.icon.potion.5188896",
+    "mediaId": "refreshed.inventory.icon.potion.5188896",
+    "path": "worldrpg/media/refreshed/items/potion.5188896.webp",
+    "byteLength": 10390,
+    "sha256": "b923ab24693b8ff413234a598b079f917828614a3bfef8d5adf0de34890cf613",
+    "width": 189,
+    "height": 256
+   },
+   {
+    "replaces": "inventory.icon.potion.5361377",
+    "mediaId": "refreshed.inventory.icon.potion.5361377",
+    "path": "worldrpg/media/refreshed/items/potion.5361377.webp",
+    "byteLength": 12068,
+    "sha256": "0a32045157fbbdd0ec74a887bf6feed6c8d67e584ffa87fb47028c9f59d207a1",
+    "width": 114,
+    "height": 256
    },
    {
     "replaces": "inventory.icon.round-shield",
