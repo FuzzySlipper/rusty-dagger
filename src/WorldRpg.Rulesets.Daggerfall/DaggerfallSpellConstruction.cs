@@ -24,6 +24,25 @@ internal static class DaggerfallSpellConstruction
 
     /// <summary>The media identity a refreshed icon replaces for cell <paramref name="index"/> of the classic atlas.</summary>
     internal static string IconMedia(int index) => $"spell.icon.{index}";
+
+    /// <summary>
+    /// The classic targeting and element tiles (<c>spell.selectors</c>, donor SpellIconCollection): a 24×16 targeting
+    /// tile per range type down its left column and a 16×16 element tile per element down its right, each in index order.
+    /// </summary>
+    internal const string SelectorAtlasMedia = "spell.selectors";
+    internal const int SelectorCount = 5;
+    internal const int SelectorHeight = 16;
+    internal const int TargetTileWidth = 24;
+    internal const int ElementTileWidth = 16;
+
+    /// <summary>The media identity a refreshed tile replaces for the targeting tile of range type <paramref name="rangeType"/>.</summary>
+    internal static string TargetMedia(int rangeType) => $"spell.target.{rangeType}";
+    /// <summary>The media identity a refreshed tile replaces for the tile of element <paramref name="element"/>.</summary>
+    internal static string ElementMedia(int element) => $"spell.element.{element}";
+
+    /// <summary>Every cell a refreshed image can stand in for: the spell icons, then the targeting and element tiles.</summary>
+    internal static IEnumerable<string> RefreshableMedia() => Enumerable.Range(0, IconCount).Select(IconMedia)
+        .Concat(Enumerable.Range(0, SelectorCount).Select(TargetMedia)).Concat(Enumerable.Range(0, SelectorCount).Select(ElementMedia));
     /// <summary>The six schools of magic, in the order the spellbook's tabs show them.</summary>
     internal static readonly (string Id, string Label)[] Schools =
         [("destruction", "Destruction"), ("restoration", "Restoration"), ("illusion", "Illusion"),

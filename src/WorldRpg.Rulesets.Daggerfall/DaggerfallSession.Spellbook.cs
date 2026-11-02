@@ -4,8 +4,10 @@ using WorldRpg.Rulesets.Daggerfall.Presentation;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 internal sealed record DaggerfallSpellSaleView(string Revision, string Provider, DaggerfallSpellOffer[] Offers);
+/// <param name="RangeType">The spell's range type, which names its targeting tile.</param>
+/// <param name="ElementType">The spell's element, which names its element tile.</param>
 internal sealed record DaggerfallSpellInformation(string Key, string Name, string Element, string Target,
-    string[] Details);
+    string[] Details, int RangeType, int ElementType);
 
 internal sealed partial class DaggerfallSession
 {
@@ -35,7 +37,8 @@ internal sealed partial class DaggerfallSession
     {
         if (_spellInfo is not { } key || !_definitions.Magic.Spells.TryGetValue(key, out var spell)) return null;
         return new(key, State.Character.IsGrantedSpell(key) ? spell.Name.TrimStart('!') : spell.Name, Policies.DaggerfallMagicCostPolicy.ElementLabel(spell.Element), Policies.DaggerfallMagicCostPolicy.TargetLabel(spell.RangeType),
-            spell.Effects.Select(effect => $"{_definitions.Magic.RequireEffectCost(effect).School}: duration {effect.DurationBase} + {effect.DurationMod} per {effect.DurationPerLevel} levels; chance {effect.ChanceBase}% + {effect.ChanceMod}% per {effect.ChancePerLevel} levels; magnitude {effect.MagnitudeBaseLow}–{effect.MagnitudeBaseHigh} + {effect.MagnitudeLevelBase}–{effect.MagnitudeLevelHigh} per {effect.MagnitudePerLevel} levels.").ToArray());
+            spell.Effects.Select(effect => $"{_definitions.Magic.RequireEffectCost(effect).School}: duration {effect.DurationBase} + {effect.DurationMod} per {effect.DurationPerLevel} levels; chance {effect.ChanceBase}% + {effect.ChanceMod}% per {effect.ChancePerLevel} levels; magnitude {effect.MagnitudeBaseLow}–{effect.MagnitudeBaseHigh} + {effect.MagnitudeLevelBase}–{effect.MagnitudeLevelHigh} per {effect.MagnitudePerLevel} levels.").ToArray(),
+            spell.RangeType, spell.Element);
     }
 
     internal void ChangeSpellbook(DaggerfallPlayerUiAction action)

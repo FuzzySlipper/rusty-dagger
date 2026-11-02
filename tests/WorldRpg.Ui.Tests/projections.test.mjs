@@ -852,6 +852,45 @@ test('the paper doll draws the ruleset\'s placed layers in order, clips the cens
   } finally { art.adopt({ revision: '', images: [] }); f.dispose(); }
 });
 
+test('a tinted image that finishes after its picture was redrawn leaves the newer drawing standing', async () => {
+  const f = fixture();
+  // JSDOM decodes no images: the test holds every image the tint waits for and finishes them when it says so.
+  const decoding = [];
+  const make = document.createElement.bind(document);
+  document.createElement = (name, ...rest) => { const element = make(name, ...rest); if (name === 'img') decoding.push(element); return element; };
+  window.HTMLCanvasElement.prototype.getContext = () => null;
+  const finish = async () => { for (const image of decoding.splice(0)) image.onload?.(); for (let turn = 0; turn < 4; turn++) await new Promise(resolve => setTimeout(resolve, 0)); };
+  try {
+    const metal = 'data:image/webp;base64,AQ==', book = 'data:image/webp;base64,Ag==';
+    art.adopt({ revision: 'stale-tint', images: [{ id: 'metal', image: metal, smooth: true }, { id: 'metal.mask', image: 'data:image/webp;base64,Aw==' }, { id: 'book', image: book, smooth: true }] });
+    const tint = color => ({ color, brightness: 1, mask: 'metal.mask' });
+    const picture = () => { const element = make('img'); return element; };
+
+    // Undisturbed, the tint finishes on the picture it was asked for (with no canvas, as the neutral image).
+    const alone = picture();
+    art.drawArt(alone, 'metal', tint('#111111'));
+    assert.equal(alone.dataset.artMissing, 'true');
+    await finish();
+    assert.equal(alone.src, metal);
+    assert.equal(alone.dataset.artMissing, undefined);
+
+    // Redrawn with another item before the tint finished, the picture keeps the newer item.
+    const reused = picture();
+    art.drawArt(reused, 'metal', tint('#222222'));
+    art.drawArt(reused, 'book');
+    await finish();
+    assert.equal(reused.src, book, 'The earlier tint does not overwrite the item now shown.');
+
+    // Redrawn with an image that is not published, it stays empty rather than showing the earlier item.
+    const emptied = picture();
+    art.drawArt(emptied, 'metal', tint('#333333'));
+    art.drawArt(emptied, 'unpublished');
+    await finish();
+    assert.equal(emptied.getAttribute('src'), null);
+    assert.equal(emptied.dataset.artMissing, 'true');
+  } finally { art.adopt({ revision: '', images: [] }); f.dispose(); }
+});
+
 test('the bank is its own tab, and each operation keeps to the amounts and eligibility the ruleset publishes', () => {
   const f = fixture();
   try {
@@ -3400,7 +3439,7 @@ test('spell seller and spellbook use confirmed semantic changes and source setti
       ready:'spell.023',result:'',sale:{revision:'seller-1',provider:'Mage',offers:[
         {key:'spell.002',name:'Cure',castingCost:12,price:48,known:false},
         {key:'spell.023',name:'Heal',castingCost:15,price:60,known:true}]},
-      information:{key:'spell.023',name:'Heal',target:'Self',element:'Magic',details:['restoration: magnitude 1–10.']}};
+      information:{key:'spell.023',name:'Heal',target:'Self',element:'Magic',rangeType:0,elementType:4,details:['restoration: magnitude 1–10.']}};
     f.publish({spells,activation:{mode:'talk',message:'',applied:true,dialogue:{...offering(['spells','Buy spells']),revision:'seller-1',targetLabel:'Mage',greeting:'Welcome',tone:'normal',question:null,reply:null,topics:[],diagnostics:[]}}});
     f.openService('spells');
     const sales=f.root.querySelector('.dagger-dialogue-spells');
@@ -3415,6 +3454,8 @@ test('spell seller and spellbook use confirmed semantic changes and source setti
     // The readied spell is chosen first, with its description beside it.
     assert.match(book.textContent,/magnitude 1–10/);
     assert.match(book.textContent,/Target: Self; element: Magic/);
+    assert.deepEqual([...book.querySelectorAll('.dagger-spell-selectors .dagger-spell-tile')].map(tile=>tile.className),
+      ['dagger-spell-tile dagger-spell-tile-target','dagger-spell-tile dagger-spell-tile-element'],'The targeting and element tiles stand beside their names.');
     book.querySelector('[data-action="spell-delete"]').click();f.answer(true);assert.deepEqual(f.actions.at(-1),{action:'spell-delete',key:'spell.023',confirm:true});
     book.querySelector('[data-action="spell-delete"]').click();f.answer(false);
     assert.equal(f.actions.filter(action=>action.action==='spell-delete').length,1);
@@ -3791,7 +3832,12 @@ test('spellmaker draws its fields from the published limits, picks an icon, keep
     const targets=['Self','Touch','Single target at range','Area around self','Area at range'].map((label,value)=>({value,label}));
     const elements=['Fire','Cold','Poison','Shock','Magic'].map((label,value)=>({value,label}));
     const limits={nameLength:31,icons:69,effects:3,duration:60,chance:100,magnitude:100,perLevels:20};
-    const maker={revision:'maker-1',provider:'Mage',targets,elements,limits,effects:[{key:'free-action',name:'Free action',type:26,subType:-1,school:'restoration',duration:true,chance:false,magnitude:false,targets:31,elements:16}],
+    // The tiles: one atlas, a refreshed image for the first targeting tile and the atlas for the rest.
+    const tile=(x,y,width,image=null)=>({x,y,width,height:16,image});
+    const selectors={media:'spell.selectors',width:40,height:80,
+      targets:[0,1,2,3,4].map(index=>tile(0,index*16,24,index===0 ? 'refreshed.spell.target.0' : null)),elements:[0,1,2,3,4].map(index=>tile(24,index*16,16))};
+    art.adopt({revision:'tiles',images:[{id:'spell.selectors',image:'data:image/png;base64,AA=='},{id:'refreshed.spell.target.0',image:'data:image/webp;base64,AA==',smooth:true}]});
+    const maker={revision:'maker-1',provider:'Mage',targets,elements,selectors,limits,effects:[{key:'free-action',name:'Free action',type:26,subType:-1,school:'restoration',duration:true,chance:false,magnitude:false,targets:31,elements:16}],
       draft:{name:'Freedom',element:4,rangeType:0,icon:68,effects:[settings]},quote:{key:'draft-2',gold:300,spellPoints:15,eligible:true,reason:null}};
     const publish=()=>f.publish({spells:{available:[],ready:null,result:'',maker},activation:{mode:'talk',message:'',applied:true,
       dialogue:{...offering(['spell-maker','Make spells']),revision:'maker-1',targetLabel:'Mage',greeting:'Welcome',tone:'normal',question:null,reply:null,topics:[],diagnostics:[]}}});
@@ -3814,14 +3860,28 @@ test('spellmaker draws its fields from the published limits, picks an icon, keep
     assert.equal(root.querySelector('[aria-label="Effect 1: Chance base"]'),null);
     root.querySelector('[data-spell-icon="4"]').click();
     assert.equal(root.querySelector('[data-spell-icon="4"]').getAttribute('aria-checked'),'true');
+    // The target and element are picked by their tiles, each named beside it; the draft's choices start checked.
+    const choice=(group,value)=>root.querySelector(`[aria-label="${group}"] [data-choice="${value}"]`);
+    assert.equal(choice('Element',0).textContent,'Fire');
+    assert.equal(choice('Element',4).getAttribute('aria-checked'),'true');
+    assert.equal(choice('Target',0).getAttribute('aria-checked'),'true');
+    // A tile with refreshed art draws it smoothed; the others are cut from the classic atlas at their rect.
+    const refreshedTile=choice('Target',0).querySelector('.dagger-spell-tile');
+    assert.match(refreshedTile.style.backgroundImage,/image\/webp/);
+    assert.equal(refreshedTile.style.imageRendering,'auto');
+    const atlasTile=choice('Element',2).querySelector('.dagger-spell-tile');
+    assert.match(atlasTile.style.backgroundImage,/image\/png/);
+    assert.equal(atlasTile.style.backgroundSize,'250% 500%');
+    assert.equal(atlasTile.style.backgroundPosition,'100% 50%');
+    choice('Target',2).click();
+    assert.equal(choice('Target',2).getAttribute('aria-checked'),'true');
+    assert.equal(choice('Target',0).getAttribute('aria-checked'),'false');
     form.dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true}));
     const action=f.actions.at(-1);assert.equal(action.action,'spellmaker-draft');assert.equal(action.revision,'maker-1');
-    assert.deepEqual(JSON.parse(action.text),{name:'New name',element:4,rangeType:0,icon:4,effects:[settings]});
-    assert.equal(root.querySelector('[aria-label="Element"] option[value="0"]').textContent,'Fire');
-    assert.equal(root.querySelector('[aria-label="Element"]').selectedOptions[0].textContent,'Magic');
+    assert.deepEqual(JSON.parse(action.text),{name:'New name',element:4,rangeType:2,icon:4,effects:[settings]});
     assert.ok([...root.querySelectorAll('option')].some(option=>option.textContent==='restoration: Free action'));
     f.publish({spells:{available:[],ready:null,result:'',maker:null}});assert.equal(root.childElementCount,0);
-  } finally {f.dispose();}
+  } finally {art.adopt({revision:'',images:[]});f.dispose();}
 });
 
 test('quest escort portraits use published art and remove only ended quest overlays', () => {

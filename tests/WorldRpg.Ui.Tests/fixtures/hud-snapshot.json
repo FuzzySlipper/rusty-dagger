@@ -16,6 +16,85 @@
       "count": 69,
       "images": null
     },
+    "selectors": {
+      "media": "spell.selectors",
+      "width": 40,
+      "height": 80,
+      "targets": [
+        {
+          "x": 0,
+          "y": 0,
+          "width": 24,
+          "height": 16,
+          "image": null
+        },
+        {
+          "x": 0,
+          "y": 16,
+          "width": 24,
+          "height": 16,
+          "image": null
+        },
+        {
+          "x": 0,
+          "y": 32,
+          "width": 24,
+          "height": 16,
+          "image": null
+        },
+        {
+          "x": 0,
+          "y": 48,
+          "width": 24,
+          "height": 16,
+          "image": null
+        },
+        {
+          "x": 0,
+          "y": 64,
+          "width": 24,
+          "height": 16,
+          "image": null
+        }
+      ],
+      "elements": [
+        {
+          "x": 24,
+          "y": 0,
+          "width": 16,
+          "height": 16,
+          "image": null
+        },
+        {
+          "x": 24,
+          "y": 16,
+          "width": 16,
+          "height": 16,
+          "image": null
+        },
+        {
+          "x": 24,
+          "y": 32,
+          "width": 16,
+          "height": 16,
+          "image": null
+        },
+        {
+          "x": 24,
+          "y": 48,
+          "width": 16,
+          "height": 16,
+          "image": null
+        },
+        {
+          "x": 24,
+          "y": 64,
+          "width": 16,
+          "height": 16,
+          "image": null
+        }
+      ]
+    },
     "schools": [
       {
         "id": "destruction",

@@ -83,9 +83,9 @@ public sealed class PublishedContentDeliveryTests
         // bodies nor a catalog of them. Product-wide sky resources have their own manifest and group below.
         Assert.DoesNotContain(GeneratedContentFiles(content), path => path.StartsWith("worldrpg/media/audio/", StringComparison.Ordinal));
         // Includes one TEXTURE.205 inventory icon for each of the 20 classic potion recipes, the gold piece's
-        // icon, the 60 images of the authored UI kit, and the spell icon atlas. Every other item's icon is its
+        // icon, the 60 images of the authored UI kit, the spell icon atlas and the targeting and element tiles. Every other item's icon is its
         // template's image in the paper-doll publication.
-        Assert.Equal(195, listed.Count);
+        Assert.Equal(196, listed.Count);
 
         // The character canvases are admitted content in the same tree: they have their own generated
         // index beside them, and both indexes state the bytes they describe rather than trusting them.
@@ -466,7 +466,7 @@ public sealed class PublishedContentDeliveryTests
         // sky group is validated above and does not belong in this count. The 20 classic potion recipes
         // each publish their TEXTURE.205 inventory icon, and the gold piece its TEXTURE.216 one.
         Assert.DoesNotContain(identified.Keys, id => id.StartsWith("audio.", StringComparison.Ordinal));
-        Assert.Equal(195, identified.Count);
+        Assert.Equal(196, identified.Count);
 
         // The identities the group states are the identities the pack publishes for the same images,
         // so a consumer that asks by media name cannot be answered with a different artifact.
@@ -517,7 +517,7 @@ public sealed class PublishedContentDeliveryTests
         DaggerfallPublishedClassicMedia media = DaggerfallPublishedClassicMedia.Read(TestSessions.Data(content), inputs.ClassicPresentation);
         DaggerfallPublishedClassicMedia castleMedia = DaggerfallPublishedClassicMedia.Read(TestSessions.Data(content), castle.ClassicPresentation);
 
-        Assert.Equal(195, media.Paths.Count);
+        Assert.Equal(196, media.Paths.Count);
         JsonElement inventory = JsonDocument.Parse(content.ReadBytes(DaggerfallUiArt.InventoryPath).ToArray()).RootElement;
         Dictionary<string, string> published = inventory.GetProperty("artifacts").EnumerateArray()
             .Where(artifact => artifact.TryGetProperty("mediaId", out _))
@@ -791,20 +791,26 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal(images.Length, art.All.Count());
 
         // Every replacement stands in for an image the classic publication carries, so classic stays its fallback: a
-        // paper-doll layer or character image, an inventory icon, or a cell of the spell icon atlas. The paper-doll
+        // paper-doll layer or character image, an inventory icon, or a cell of the spell icon or tile atlas. The paper-doll
         // publication also carries the inventory images of the templates the doll does not draw (`item.A.R`).
         HashSet<string> dollPublication = [.. new[] { "worldrpg/media/character/character-media-inventory.json", PaperDollGroup + "paper-doll-inventory.json" }
             .SelectMany(path => Index(path).Artifacts).Select(artifact => artifact.GetProperty("mediaId").GetString()!)];
         HashSet<string> doll = [.. dollPublication.Where(id => !id.StartsWith("item.", StringComparison.Ordinal))];
         HashSet<string> classic = [.. dollPublication, .. Index("worldrpg/media/classic-media-inventory.json").Artifacts.Select(artifact => artifact.GetProperty("mediaId").GetString()!)];
         Assert.Contains(DaggerfallSpellConstruction.IconAtlasMedia, classic);
-        HashSet<string> spellCells = [.. Enumerable.Range(0, DaggerfallSpellConstruction.IconCount).Select(DaggerfallSpellConstruction.IconMedia)];
+        Assert.Contains(DaggerfallSpellConstruction.SelectorAtlasMedia, classic);
+        HashSet<string> spellCells = [.. DaggerfallSpellConstruction.RefreshableMedia()];
         Assert.All(art.All, replacement => Assert.True(classic.Contains(replacement.Replaces) || spellCells.Contains(replacement.Replaces), replacement.Replaces));
         Assert.All(art.All, replacement => Assert.Equal($"refreshed.{replacement.Replaces}", replacement.MediaId));
         // Paper-doll replacements are drawn at their own rect in the doll; icons fill their slot.
         Assert.All(art.All, replacement => Assert.Equal(doll.Contains(replacement.Replaces), replacement.Doll is not null));
         Assert.Contains(art.All, replacement => replacement.Replaces.StartsWith("inventory.icon.", StringComparison.Ordinal));
         Assert.Contains(art.All, replacement => spellCells.Contains(replacement.Replaces));
+        Assert.All(Enumerable.Range(0, DaggerfallSpellConstruction.SelectorCount), index =>
+        {
+            Assert.NotNull(art.For(DaggerfallSpellConstruction.TargetMedia(index)));
+            Assert.NotNull(art.For(DaggerfallSpellConstruction.ElementMedia(index)));
+        });
 
         // Refreshed clothing is one neutral image per record with the mask of the cloth a dye recolours, refreshed
         // armour or a weapon the classic draws in other metals one bare-steel image with the mask of the steel a metal

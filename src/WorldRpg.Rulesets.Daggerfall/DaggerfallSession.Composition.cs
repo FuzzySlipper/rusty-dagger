@@ -680,7 +680,7 @@ internal sealed partial class DaggerfallSession
                 // The refreshed icons go with the classic ones, so choosing either art set needs no further delivery.
                 composition.Data is not { } data ? DaggerfallUiArt.None : DaggerfallUiArt.Read(data, composition.StartSite.ClassicPresentation.InventoryIcons.Values
                     .Concat(composition.ArtReplacements is { } refreshed ? composition.StartSite.ClassicPresentation.InventoryIcons.Values
-                        .Concat(Enumerable.Range(0, DaggerfallSpellConstruction.IconCount).Select(DaggerfallSpellConstruction.IconMedia))
+                        .Concat(DaggerfallSpellConstruction.RefreshableMedia())
                         .Select(refreshed.For).OfType<DaggerfallArtReplacement>().Select(replacement => replacement.MediaId) : []),
                     _definitions.CharacterPresentation.Races.Values.SelectMany(race => race.Layers.Where(layer => layer.Kind == DaggerfallCharacterLayerKind.Head)).Select(layer => layer.MediaId)
                     // The race's background is the inventory's paper-doll backdrop.

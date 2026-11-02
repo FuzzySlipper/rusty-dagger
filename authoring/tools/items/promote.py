@@ -31,8 +31,8 @@ Two areas promote icons rather than their own finals, each standing in for a cla
     recipes' bottles and gold) from the accepted final of the record it draws. A worn item's icon is its paper-doll
     image, which the `worn` area already replaces. An icon whose record has no accepted final stays classic.
   - `spells`: each accepted spell icon `icons--icon-NNN--icon` as `spell.icon.N`, cell N of the classic
-    `spell.icons` atlas. The `spells` area's other finals (missiles, impacts, tiles) wait for the screens that
-    draw them.
+    `spell.icons` atlas, and each accepted targeting and element tile as `spell.target.N` and `spell.element.N`, tile N
+    of the classic `spell.selectors` atlas. The missile and impact finals wait for the effects that draw them.
 
 Icons are written at their area's ICON pixels on the longer side and carry no doll rect.
 
@@ -62,6 +62,10 @@ IMPORTED = REPOSITORY / "local/import/staging/worldrpg/payloads/daggerfall.impor
 ITEM_IMAGE = re.compile(r"item\.(\d+)\.(\d+)")
 STAGED = REPOSITORY / "local/import/staging"
 SPELL_ICON = re.compile(r"icons--icon-(\d+)--icon")
+# The classic targeting tiles in range-type order and element tiles in element order (donor SpellIconCollection).
+SPELL_TILES = {**{f"targets--{name}--target-icon": f"spell.target.{index}" for index, name in enumerate(
+    ("caster-only", "by-touch", "single-target-at-range", "area-around-caster", "area-at-range"))},
+    **{f"elements--{name}--element-icon": f"spell.element.{index}" for index, name in enumerate(("fire", "cold", "poison", "shock", "magic"))}}
 CLOTHING = range(235, 243)
 NEUTRAL = (14, 32)   # saturation (max less min channel, 0-255) over which a pixel fades from dyed cloth to its own colour
 EDGE = 2             # pixels in from the piece's edge where its dye mask starts
@@ -214,8 +218,9 @@ def inventory_icons():
 
 def spell_icons():
     notes = ledger("spells")
-    return [icon_entry(f"spell.icon.{int(m[1])}", icon(final, "spells"), f"spells/{key}") for key in sorted(notes)
-            if (m := SPELL_ICON.fullmatch(key)) and (final := accepted_final("spells", notes, key))]
+    replaced = {key: f"spell.icon.{int(m[1])}" for key in notes if (m := SPELL_ICON.fullmatch(key))} | {key: media for key, media in SPELL_TILES.items() if key in notes}
+    return [icon_entry(media, icon(final, "spells"), f"spells/{key}") for key, media in sorted(replaced.items())
+            if (final := accepted_final("spells", notes, key))]
 
 
 def icon_entry(replaces, image, name):

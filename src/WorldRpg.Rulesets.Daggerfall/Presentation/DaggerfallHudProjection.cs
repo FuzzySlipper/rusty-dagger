@@ -124,7 +124,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("available",builder.Array(frame.Spells.Available.Select(spell=>builder.Object(("key",builder.String(spell.Key)),
                     ("name",builder.String(spell.Name)),("cost",builder.Number(spell.Cost)),("canCast",builder.Boolean(spell.CanCast)),
                     ("icon",builder.Number(spell.Icon)),("school",builder.String(spell.School)))).ToArray())),
-                ("icons",SpellIcons(builder, frame.Spells.IconImages)),
+                ("icons",SpellIcons(builder, frame.Spells.Art?.Icons)),
+                ("selectors",SpellSelectors(builder, frame.Spells.Art)),
                 ("schools",builder.Array(DaggerfallSpellConstruction.Schools.Select(school=>builder.Object(
                     ("id",builder.String(school.Id)),("label",builder.String(school.Label)))).ToArray())),
                 ("ready",frame.Spells.Ready is null ? builder.Null() : builder.String(frame.Spells.Ready)),
@@ -145,12 +146,13 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                         ("key",builder.String(quote.Key)),("name",builder.String(quote.Name)),("quest",builder.String(quote.Quest)),
                         ("gold",builder.Number(checked((long)quote.Gold))),("eligible",builder.Boolean(quote.Eligible)),
                         ("reason",quote.Reason is null ? builder.Null() : builder.String(DaggerfallSession.SummoningOutcomeText(quote.Reason))))))),
-                ("maker", frame.Spells.Maker is not { } spellMaker ? builder.Null() : SpellMaker(builder, spellMaker, frame.Spells.IconImages)),
+                ("maker", frame.Spells.Maker is not { } spellMaker ? builder.Null() : SpellMaker(builder, spellMaker, frame.Spells.Art)),
                 ("itemMaker", frame.Spells.ItemMaker is not { } itemMaker ? builder.Null() : ItemMaker(builder, itemMaker)),
                 ("potionMaker", frame.Spells.PotionMaker is not { } potionMaker ? builder.Null() : PotionMaker(builder, potionMaker)),
                 ("information", frame.Spells.Information is not { } information ? builder.Null() : builder.Object(
                     ("key", builder.String(information.Key)), ("name", builder.String(information.Name)),
                     ("element", builder.String(information.Element)), ("target", builder.String(information.Target)),
+                    ("rangeType", builder.Number(information.RangeType)), ("elementType", builder.Number(information.ElementType)),
                     ("details", builder.Array(information.Details.Select(builder.String).ToArray())))))),
             ("resources", builder.Array(rows)),
             ("lastOutcome", builder.String(presentation.LastOutcome)),
@@ -515,9 +517,27 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("count", builder.Number(DaggerfallSpellConstruction.IconCount)),
         ("images", images is null ? builder.Null() : builder.Array(images.Select(image => image is null ? builder.Null() : builder.String(image)).ToArray())));
 
-    internal static uint SpellMaker(UiValueBuilder builder, DaggerfallSpellMakerView maker, IReadOnlyList<string?>? iconImages) => builder.Object(
+    /// <summary>
+    /// Where the targeting and element tiles are drawn from: the classic atlas, its size, each tile's rect in it by
+    /// range type and by element, and with refreshed art drawn, each tile's own replacement image.
+    /// </summary>
+    private static uint SpellSelectors(UiValueBuilder builder, DaggerfallSpellArt? art)
+    {
+        uint Tiles(int x, int width, IReadOnlyList<string?>? images) => builder.Array([.. Enumerable.Range(0, DaggerfallSpellConstruction.SelectorCount)
+            .Select(index => builder.Object(("x", builder.Number(x)), ("y", builder.Number(index * DaggerfallSpellConstruction.SelectorHeight)),
+                ("width", builder.Number(width)), ("height", builder.Number(DaggerfallSpellConstruction.SelectorHeight)),
+                ("image", images?[index] is { } image ? builder.String(image) : builder.Null())))]);
+        return builder.Object(("media", builder.String(DaggerfallSpellConstruction.SelectorAtlasMedia)),
+            ("width", builder.Number(DaggerfallSpellConstruction.TargetTileWidth + DaggerfallSpellConstruction.ElementTileWidth)),
+            ("height", builder.Number(DaggerfallSpellConstruction.SelectorCount * DaggerfallSpellConstruction.SelectorHeight)),
+            ("targets", Tiles(0, DaggerfallSpellConstruction.TargetTileWidth, art?.Targets)),
+            ("elements", Tiles(DaggerfallSpellConstruction.TargetTileWidth, DaggerfallSpellConstruction.ElementTileWidth, art?.Elements)));
+    }
+
+    internal static uint SpellMaker(UiValueBuilder builder, DaggerfallSpellMakerView maker, DaggerfallSpellArt? art) => builder.Object(
         ("revision", builder.String(maker.Revision)), ("provider", builder.String(maker.Provider)),
-        ("icons", SpellIcons(builder, iconImages)),
+        ("icons", SpellIcons(builder, art?.Icons)),
+        ("selectors", SpellSelectors(builder, art)),
         ("limits", builder.Object(("nameLength", builder.Number(DaggerfallSpellConstruction.MaximumNameLength)),
             ("icons", builder.Number(DaggerfallSpellConstruction.IconCount)), ("effects", builder.Number(DaggerfallSpellConstruction.MaximumEffects)),
             ("duration", builder.Number(DaggerfallSpellConstruction.MaximumDuration)), ("chance", builder.Number(DaggerfallSpellConstruction.MaximumChance)),
