@@ -14,8 +14,8 @@ const load = (source: string): Promise<HTMLImageElement> => new Promise((resolve
 });
 
 /**
- * Neutral clothing in a dye: where the mask is opaque (the cloth the dye recolours) each pixel is brightened and
- * multiplied by the colour, and the rest keeps its own colour. A canvas makes it as one image, cached per dye;
+ * Neutral clothing in a dye, or bare steel in a metal: where the mask is opaque (the cloth or steel the dye or metal
+ * recolours) each pixel is brightened and multiplied by the colour, and the rest keeps its own colour. A canvas makes it as one image, cached per dye;
  * with no canvas to draw on, the neutral image stands (null).
  */
 async function dyed(source: string, mask: string, color: string, brightness: number): Promise<string | null> {
@@ -801,7 +801,7 @@ export function mountInventory(
       art.dataset.clip = `${layer.clipTop}-${layer.clipBottom}`;
     }
     if (layer.tint === null) return [art];
-    // Refreshed clothing is drawn in its dye once the tinted image is made; until then it is held hidden.
+    // Refreshed clothing or armour is drawn in its dye or metal once the tinted image is made; until then it is held hidden.
     const { tint } = layer;
     art.dataset.dye = tint.color;
     const mask = image(tint.mask);

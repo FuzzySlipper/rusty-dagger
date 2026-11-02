@@ -14,7 +14,8 @@ internal sealed record DaggerfallDollRect(double X, double Y, double Width, doub
 /// <param name="Path">Its content-root path.</param>
 /// <param name="ByteLength">Its length, as promotion recorded it.</param>
 /// <param name="Doll">Where the paper doll draws it, for a paper-doll layer.</param>
-/// <param name="DyeMask">For clothing, the image of the neutral cloth a dye recolours, the same size as this one.</param>
+/// <param name="DyeMask">For clothing, the image of the neutral cloth a dye recolours, and for armour or a weapon, of the
+/// bare steel a metal recolours; the same size as this one.</param>
 internal sealed record DaggerfallArtReplacement(string Replaces, string MediaId, string Path, long ByteLength, DaggerfallDollRect? Doll,
     DaggerfallArtImage? DyeMask = null);
 
@@ -22,9 +23,9 @@ internal sealed record DaggerfallArtReplacement(string Replaces, string MediaId,
 internal sealed record DaggerfallArtImage(string MediaId, string Path, long ByteLength);
 
 /// <summary>
-/// How refreshed clothing, painted neutral, is drawn in one classic dye: its dye mask multiplied by
-/// <paramref name="Multiply"/> (a CSS colour), the image first brightened by <paramref name="Brightness"/> where the
-/// dye is lighter than a multiply can reach.
+/// How refreshed clothing, painted neutral, is drawn in one classic dye, or refreshed armour or a weapon, in bare
+/// steel, in one classic metal: its dye mask multiplied by <paramref name="Multiply"/> (a CSS colour), the image first
+/// brightened by <paramref name="Brightness"/> where the dye or metal is lighter than a multiply can reach.
 /// </summary>
 internal sealed record DaggerfallDyeTint(string Multiply, double Brightness);
 
@@ -52,7 +53,7 @@ internal sealed class DaggerfallArtReplacements
         replacement.DyeMask is { } mask ? [new(replacement.MediaId, replacement.Path, replacement.ByteLength), mask]
             : new[] { new DaggerfallArtImage(replacement.MediaId, replacement.Path, replacement.ByteLength) });
 
-    /// <summary>Each classic clothing dye's tint, by dye name.</summary>
+    /// <summary>Each classic clothing dye's and metal's tint, by dye or metal name.</summary>
     internal IReadOnlyDictionary<string, DaggerfallDyeTint> Tints { get; }
 
     /// <summary>The replacement for a classic media identity, if the set has one.</summary>

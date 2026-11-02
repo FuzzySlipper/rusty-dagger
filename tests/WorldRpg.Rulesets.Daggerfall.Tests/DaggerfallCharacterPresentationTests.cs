@@ -242,7 +242,7 @@ public sealed class DaggerfallCharacterPresentationTests
     }
 
     [Fact]
-    public void Paper_doll_draws_refreshed_art_at_its_own_doll_rect_with_classic_clips_and_masks_and_clothing_in_its_dye()
+    public void Paper_doll_draws_refreshed_art_at_its_own_doll_rect_with_classic_clips_and_masks_and_clothing_and_armour_in_their_dye_or_metal()
     {
         using Fixture f = new();
         DaggerfallCharacterIdentity identity = new DaggerfallCharacterState(f.Definitions, f.Player.Stats, f.PlayerDefinition).Identity with { Gender = DaggerfallCharacterGender.Male };
@@ -252,14 +252,18 @@ public sealed class DaggerfallCharacterPresentationTests
         DaggerfallItemDefinition Template(Func<DaggerfallItemTemplateDefinition, bool> match) => f.Definitions.TemplateItems.Values.First(item => item.Template is { } template && match(template));
         DaggerfallItemDefinition helmet = Template(template => template.Index == 107);
         DaggerfallItemDefinition shirt = Template(template => template.Groups.Contains("MensClothing") && template.Name.Contains("Shirt", StringComparison.Ordinal));
-        DaggerfallWornItem Worn(string slot, DaggerfallItemDefinition item, string material, string? dye = null) =>
+        DaggerfallItemDefinition cuirass = Template(template => template.Index == 102);
+        DaggerfallWornItem Worn(string slot, DaggerfallItemDefinition item, string material, string? dye = null, int variant = 0) =>
             new($"{slot}.{item.Id.Value}", slot, item,
-                new DaggerfallItemInstanceMetadata(item.Id.Value, material, 0, 1, 1, true, false, null, null, null, DaggerfallItemOwner.Player, Dye: dye), () => $"{slot} item");
+                new DaggerfallItemInstanceMetadata(item.Id.Value, material, variant, 1, 1, true, false, null, null, null, DaggerfallItemOwner.Player, Dye: dye), () => $"{slot} item");
         DaggerfallWornItem[] worn = [Worn("head", helmet, "steel"), Worn("chest-clothes", shirt, "cloth", dye: "red")];
         PaperDollPresentation classic = DaggerfallPaperDollPolicy.Compose(f.Definitions, identity, null, worn);
         PaperDollLayerPresentation classicHelm = classic.Layers.Single(layer => layer.Slot == "head");
         PaperDollLayerPresentation classicShirt = classic.Layers.Single(layer => layer.Slot == "chest-clothes");
         Assert.NotNull(classicHelm.Mask);
+        PaperDollLayerPresentation Cuirass(string material, DaggerfallArtReplacements? set) =>
+            DaggerfallPaperDollPolicy.Compose(f.Definitions, identity, null, [Worn("chest-armor", cuirass, material, variant: 1)], set).Layers.Single(layer => layer.Slot == "chest-armor");
+        PaperDollLayerPresentation classicCuirass = Cuirass("steel", null);
 
         // Every classic image the doll draws has a replacement with a rect of its own, as promotion writes them.
         System.Text.Json.Nodes.JsonObject Entry(string replaces, double x, double y, double width, double height) => new()
@@ -271,13 +275,20 @@ public sealed class DaggerfallCharacterPresentationTests
         string neutralShirt = classicShirt.MediaId[..classicShirt.MediaId.LastIndexOf('.')];
         System.Text.Json.Nodes.JsonObject shirtEntry = Entry(neutralShirt, 25, 40, 60, 50);
         shirtEntry["dyeMask"] = new System.Text.Json.Nodes.JsonObject { ["mediaId"] = $"refreshed.{neutralShirt}.dye", ["path"] = "worldrpg/media/refreshed/shirt-dye.webp", ["byteLength"] = 1 };
+        // The steel plate cuirass's refreshed record likewise stands in for every metal, its bare steel masked for the tint.
+        System.Text.Json.Nodes.JsonObject cuirassEntry = Entry(classicCuirass.MediaId, 30, 35, 50, 60);
+        cuirassEntry["dyeMask"] = new System.Text.Json.Nodes.JsonObject { ["mediaId"] = $"refreshed.{classicCuirass.MediaId}.dye", ["path"] = "worldrpg/media/refreshed/cuirass-dye.webp", ["byteLength"] = 1 };
         System.Text.Json.Nodes.JsonObject payload = new()
         {
             ["artReplacements"] = new System.Text.Json.Nodes.JsonObject
             {
                 ["images"] = new System.Text.Json.Nodes.JsonArray(Entry(nude.MediaId, 20.5, 30.25, 70, 150), Entry(clothed.MediaId, 20.5, 30.25, 70, 150),
-                    Entry(classicHelm.MediaId, 40, 0, 30, 32), shirtEntry),
-                ["dyeTints"] = new System.Text.Json.Nodes.JsonObject { ["red"] = new System.Text.Json.Nodes.JsonObject { ["multiply"] = "#fe4f1a", ["brightness"] = 1.0 } },
+                    Entry(classicHelm.MediaId, 40, 0, 30, 32), shirtEntry, cuirassEntry),
+                ["dyeTints"] = new System.Text.Json.Nodes.JsonObject
+                {
+                    ["red"] = new System.Text.Json.Nodes.JsonObject { ["multiply"] = "#fe4f1a", ["brightness"] = 1.0 },
+                    ["dwarven"] = new System.Text.Json.Nodes.JsonObject { ["multiply"] = "#ffd27a", ["brightness"] = 1.1 },
+                },
             },
         };
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()), "test.art");
@@ -303,6 +314,15 @@ public sealed class DaggerfallCharacterPresentationTests
         PaperDollPresentation purple = DaggerfallPaperDollPolicy.Compose(f.Definitions, identity, null, [Worn("chest-clothes", shirt, "cloth", dye: "purple")], art);
         Assert.Equal(DaggerfallPaperDollPolicy.Compose(f.Definitions, identity, null, [Worn("chest-clothes", shirt, "cloth", dye: "purple")]).Layers.Single(layer => layer.Slot == "chest-clothes"),
             purple.Layers.Single(layer => layer.Slot == "chest-clothes"));
+        // Steel, which the classic leaves as it is, draws the refreshed cuirass untinted. Another metal draws the
+        // refreshed steel tinted in that metal, in place of the classic palette swap; a metal the set states no tint
+        // for keeps its classic image.
+        Assert.Equal(($"refreshed.{classicCuirass.MediaId}", 30d, (PaperDollTint?)null), (Cuirass("steel", art).MediaId, Cuirass("steel", art).X, Cuirass("steel", art).Tint));
+        Assert.NotEqual(classicCuirass.MediaId, Cuirass("dwarven", null).MediaId);
+        PaperDollLayerPresentation dwarven = Cuirass("dwarven", art);
+        Assert.Equal(($"refreshed.{classicCuirass.MediaId}", 30d, true, new PaperDollTint("#ffd27a", 1.1, $"refreshed.{classicCuirass.MediaId}.dye")),
+            (dwarven.MediaId, dwarven.X, dwarven.Smooth, dwarven.Tint));
+        Assert.Equal(Cuirass("ebony", null), Cuirass("ebony", art));
     }
 
     [Fact]

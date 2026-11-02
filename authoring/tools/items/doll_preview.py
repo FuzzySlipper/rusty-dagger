@@ -73,11 +73,11 @@ def doll_layer(family, name, record, label):
 
 @lru_cache
 def worn_sources(role):
-    """Every player-layer source for one body (e.g. female-human), by art key."""
+    """Every player-layer source for one body (e.g. female-human), or for any body with no role, by art key."""
     found = {}
     for path in [p for root in WORN_SOURCES for p in sorted(glob.glob(str(root / "*" / "*" / "manifest.json")))]:
         for e in json.load(open(path))["images"]:
-            if e["file"].endswith("-source.png") and e["role"].split("/")[1:2] == [role]:
+            if e["file"].endswith("-source.png") and (role is None or e["role"].split("/")[1:2] == [role]):
                 key = Path(e["file"]).name.removesuffix("-source.png")
                 found.setdefault(key, (Path(path).parent / e["file"], e))
     return found
