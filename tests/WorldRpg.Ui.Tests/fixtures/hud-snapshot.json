@@ -1135,7 +1135,7 @@
     "quote": null
   },
   "inventory": {
-    "revision": "832:1:558:0:",
+    "revision": "832:1:558:0::classic",
     "message": "Drag items between the grid and compatible equipment slots.",
     "encumbrance": {
       "currentClassicUnits": 7025,

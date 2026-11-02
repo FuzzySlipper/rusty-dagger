@@ -472,6 +472,9 @@ public sealed class UiArtDeliverySessionTests
         Assert.All(Layers(classic), layer => Assert.Equal((false, false), (Assert.IsType<string>(layer["mediaId"]).StartsWith("refreshed.", StringComparison.Ordinal), layer["smooth"])));
         Assert.Contains(refreshedIcon["refreshed.".Length..], Icons(classic));
         Assert.DoesNotContain(Icons(classic), icon => icon.StartsWith("refreshed.", StringComparison.Ordinal));
+        // The DOM redraws the pack only when its revision moves, so the art choice moves it.
+        string InventoryRevision(Dictionary<string, object?> snapshot) => Assert.IsType<string>(Assert.IsType<Dictionary<string, object?>>(snapshot["inventory"])["revision"]);
+        Assert.NotEqual(InventoryRevision(hud), InventoryRevision(classic));
         Assert.Null(Assert.IsType<Dictionary<string, object?>>(Assert.IsType<Dictionary<string, object?>>(classic["spells"])["icons"])["images"]);
     }
 

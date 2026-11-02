@@ -194,7 +194,9 @@ internal sealed class DaggerfallInventoryPresentation
         int? region = bank is not null && currentRegion is not null ? currentRegion() : null;
         InventoryItemPresentation[] rows = Compare([.. items.Select(item =>
             DescribeItem(item.Key, item.Definition, item.Quantity, item.Slots.Length == 0 ? moves.GridPosition(item.Key) : null, item.Slots))]);
-        return new InventoryPresentation($"{current.StoreRevision}:{moves.LayoutRevision}:{MetadataRevision}:{bank?.Revision}:{region}", rows,
+        // The art the icons are drawn in is part of what the rows show, so choosing classic or refreshed art redraws them.
+        string drawn = art?.Invoke() is null ? "classic" : "refreshed";
+        return new InventoryPresentation($"{current.StoreRevision}:{moves.LayoutRevision}:{MetadataRevision}:{bank?.Revision}:{region}:{drawn}", rows,
             definitions.EquipmentSlots.Values.OrderBy(slot => SlotOrder(slot.Id.Value)).Select(slot => SlotPresentation(slot.Id.Value,
                 equipped.TryGet(new EquipmentSlotId(slot.Id.Value), out UniqueInventoryItem item) ? UniqueKey(item.EntityId) : null)).ToArray(), Message,
             LastEquipmentChange is { } change ? new(change.Cue.ToString().ToLowerInvariant(), change.Timing.RightHandMilliseconds, change.Timing.LeftHandMilliseconds) : null,
