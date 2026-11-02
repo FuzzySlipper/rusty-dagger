@@ -9,8 +9,8 @@ when the refreshed art set is chosen (classic stays selectable). For each final 
     `character.body-{unclothed,clothed}.{gender}.0N.0`, a head `faces--faceGNi0--...-record-RRR-...` is
     `character.head.{gender}.0N.R`, and a vampire head, beast head or beast doll `creatures--NAMEi0--...-record-RRR-...`
     is `character.FAMILY.NAMEi0.R`, FAMILY being the name's first four letters (vamp, were, wolf, boar);
-  - for a paper-doll layer, takes its doll-space rect as doll_preview.py draws it (a sidecar's rect, else the
-    generation input transform inverted), crops transparent margins and moves the rect to match;
+  - takes its doll-space rect from its sidecar, as doll_preview.py draws it, crops transparent margins and moves
+    the rect to match;
   - writes it as WebP (lossy colour at QUALITY, lossless alpha) to content/worldrpg/media/refreshed/AREA/;
   - records it in the pack payload's `artReplacements` section with its size, bytes and hash;
   - for clothing (archives 235-242), and for armour and weapons the classic draws in other metals, also writes
@@ -73,14 +73,13 @@ def replaces(key):
 
 
 def rect_of(area, key, path):
-    """The final's doll-space rect, as doll_preview.py places it: a dressed layer's sidecar, else its source's
-    generation transform inverted (a held weapon or artifact, drawn alone)."""
+    """The final's doll-space rect, from its sidecar as doll_preview.py places it."""
     if area == "worn":
         layer = worn_layer(key, None)
     else:
         family, name, rest = key.split("--")
         layer = doll_layer(family, name, int(re.search(r"record-(\d+)", rest)[1]), key)
-    return placed(layer, "canvas", 1024, 0.74)[1]
+    return placed(layer, "canvas")[1]
 
 
 def webp(image, target, lossless=False):

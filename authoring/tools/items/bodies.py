@@ -53,6 +53,11 @@ TAIL = {"khajiit": " Image 1's long thin tail hangs from behind the hips and cur
                    "it as a furred tail exactly along that path.",
         "argonian": " Image 1's long thin tail hangs from behind the hips and curls down between the legs to the ground; "
                     "paint it as a scaled tail exactly along that path."}
+# Qwen paints a loincloth as a brief unless its flap is named: the classic elf, Khajiit and Argonian men wear one.
+LOINCLOTH = (" The underwear is a loincloth: a band of cloth round the hips, knotted at the front, with a broad flap of "
+             "the same cloth hanging straight down in front over the groin to mid-thigh. Keep the hanging flap exactly as "
+             "long and as wide as the pixelated cloth shows it; it is not a brief.")
+CLOTHS = {3: LOINCLOTH, 4: LOINCLOTH, 5: LOINCLOTH, 6: LOINCLOTH, 7: LOINCLOTH}
 # Nor the Khajiit woman's arm held out from her hip: the style reference has none there.
 LIMB = {16: " Image 1's right arm (on the left of the picture) is held out from the body, angled down and away from the "
             "hip with the hand clear of the thigh; paint the whole arm and hand exactly along that path, in skin."}
@@ -92,7 +97,7 @@ def conform(out, number, morph, seed):
     silhouette grown by one doll unit, so the figure cannot grow past it; the background is cut out as the
     item finals' is. Returns the RGBA body and its doll-space rect."""
     layer = doll_layer("bodies", f"body{number:02d}i0", 0, "base")
-    reference, rect = placed(layer, "canvas", 1024, 0.74)
+    reference, rect = placed(layer, "canvas")
     bx, by, bw, _ = rect
     k = round(reference.width / bw)
     source = layer.source.resize((layer.source.width * k, layer.source.height * k), Image.Resampling.NEAREST)
@@ -149,7 +154,7 @@ def underwear(out, number, i0, rect, seed):
     init.save(f"{stem}-init.png")
     mask = mask_image(alpha, CLOTH_REACH * k)
     mask.save(f"{stem}-mask.png")
-    qwen(Path(f"{stem}-init.png"), UNDERWEAR, seed, Path(f"{stem}.png"), Path(f"{stem}-mask.png"))
+    qwen(Path(f"{stem}-init.png"), UNDERWEAR + CLOTHS.get(number, ""), seed, Path(f"{stem}.png"), Path(f"{stem}-mask.png"))
     painted = np.array(Image.open(f"{stem}.png").convert("RGB"))
     d = np.sqrt(((painted.astype(np.float32) - GROUND[:3]) ** 2).sum(2))
     added = np.clip((d - KEY[0]) / (KEY[1] - KEY[0]), 0, 1) * np.array(mask, np.float32) / 255

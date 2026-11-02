@@ -171,7 +171,7 @@ def lift(dressed, beneath, isolated, region, k, key=ISOLATIONS[0][1]):
 
 def on_canvas(layer, rect, k, size):
     """A generated layer (a head) drawn on the body canvas, whose doll-space rect is `rect`, at k px per unit."""
-    image, (x, y, w, h) = placed(layer, "canvas", 1024, 0.74)
+    image, (x, y, w, h) = placed(layer, "canvas")
     drawn = image.resize((round(w * k), round(h * k)), Image.Resampling.LANCZOS)
     canvas = Image.new("RGBA", size)
     canvas.paste(drawn, (round((x - rect[0]) * k), round((y - rect[1]) * k)))
@@ -223,7 +223,7 @@ def main():
     body = doll_layer("bodies", f"body{number:02d}{a.body_layer}", 0, "body")
     if body.final is None:
         raise SystemExit(f"No generated body final for body{number:02d}{a.body_layer}.")
-    natural, rect = placed(body, "canvas", 1024, 0.74)
+    natural, rect = placed(body, "canvas")
     bx, by, bw, bh = rect
     k = natural.width / bw  # canvas pixels per doll unit
     if abs(k - round(k)) > 1e-6:
