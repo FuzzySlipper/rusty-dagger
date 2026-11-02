@@ -562,7 +562,7 @@ internal static partial class DaggerfallBaseContent
             diagnostics.Add("Character presentation publishes no paperDoll frame.");
 
         return new DaggerfallCharacterPresentationSet(races, [.. faces.OrderBy(face => face.Index)], careers, careersWithout, without, files)
-        { ChildFaces = childFaces, RacialForms = racialForms, PaperDoll = frame, PaperDollItems = ReadPaperDollItems(root, diagnostics) };
+        { ChildFaces = childFaces, RacialForms = racialForms, PaperDoll = frame, PaperDollItems = ReadPaperDollItems(root, diagnostics), ItemIcons = ReadItemIcons(root, diagnostics) };
     }
 
     /// <summary>
@@ -596,6 +596,22 @@ internal static partial class DaggerfallBaseContent
         }
 
         return items;
+    }
+
+    /// <summary>The inventory images of the templates the doll does not draw, by template index and variant.</summary>
+    private static IReadOnlyDictionary<int, IReadOnlyList<string>> ReadItemIcons(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    {
+        Dictionary<int, IReadOnlyList<string>> icons = [];
+        if (!root.TryGetProperty("paperDoll", out JsonElement section) || section.ValueKind != JsonValueKind.Object) return icons;
+        foreach (JsonElement icon in Array(section, "icons", diagnostics))
+        {
+            int template = Integer(icon, "template", diagnostics);
+            string[] ids = [.. Array(icon, "mediaIds", diagnostics).Select(id => id.GetString()).OfType<string>().Where(id => id.StartsWith("item.", StringComparison.Ordinal))];
+            if (ids.Length == 0) diagnostics.Add($"Inventory image of template {template} names no item image.");
+            else if (!icons.TryAdd(template, ids)) diagnostics.Add($"Inventory image of template {template} is published twice.");
+        }
+
+        return icons;
     }
 
     /// <summary>An optional paper-doll placement; a present one must carry its position and a positive size.</summary>

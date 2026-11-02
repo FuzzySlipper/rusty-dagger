@@ -49,7 +49,7 @@ public sealed class Arena2SiteSources
         "FMAP_PAL.COL",
         "MAP.PAL",
         .. MapMediaNames,
-        "TEXTURE.380", "TEXTURE.205", "TEXTURE.207", "TEXTURE.216", "TEXTURE.234", "TEXTURE.245",
+        "TEXTURE.380", "TEXTURE.205", "TEXTURE.216",
         "PAL.PAL",
     ];
 
@@ -191,7 +191,7 @@ public sealed class Arena2SiteSources
         Require("BANK00I0.IMG"), Require("REST01I0.IMG"), Require("REST02I0.IMG"), Require("INVE08I0.IMG"),
         Require("INVE10I0.IMG"), Require("INVE11I0.IMG"), Require("INVE12I0.IMG"), Require("INVE14I0.IMG"),
         Require("GILD01I0.IMG"), Require("ICON00I0.IMG"),
-        Require("TEXTURE.207"), Require("TEXTURE.216"), Require("TEXTURE.234"), Require("TEXTURE.245"),
+        Require("TEXTURE.216"),
         Require("FONT0003.FNT"),
         Require("WEAPON00.CIF"), Require("WEAPON03.CIF"), Require("WEAPON11.CIF"),
         Require("FONT0000.FNT"), Require("FONT0001.FNT"), Require("FONT0002.FNT"), Require("FONT0004.FNT"),

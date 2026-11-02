@@ -1,44 +1,10 @@
-import { heldDemandedRevision, heldRevision, image, smoothIfRefreshed } from './art.js';
+import { drawArt, heldDemandedRevision, heldRevision, image, type ArtTint } from './art.js';
 import type { PaperDoll, PaperDollLayer } from './character.js';
 import { mountDrag, type Drag } from './drag.js';
 import type { NavigationSurface } from './navigation.js';
 import { redraw } from './redraw.js';
 import { createStepper, type Stepper } from './stepper.js';
 import { inventoryTransferRow, mountTransfer } from './transfer.js';
-
-const load = (source: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
-  const picture = document.createElement('img');
-  picture.onload = () => resolve(picture);
-  picture.onerror = () => reject(new Error('The image did not decode.'));
-  picture.src = source;
-});
-
-/**
- * Neutral clothing in a dye, or bare steel in a metal: where the mask is opaque (the cloth or steel the dye or metal
- * recolours) each pixel is brightened and multiplied by the colour, and the rest keeps its own colour. A canvas makes it as one image, cached per dye;
- * with no canvas to draw on, the neutral image stands (null).
- */
-async function dyed(source: string, mask: string, color: string, brightness: number): Promise<string | null> {
-  const [art, cloth] = await Promise.all([load(source), load(mask)]);
-  const canvas = document.createElement('canvas');
-  canvas.width = art.naturalWidth;
-  canvas.height = art.naturalHeight;
-  const context = canvas.getContext('2d', { willReadFrequently: true });
-  if (context === null) return null;
-  context.drawImage(cloth, 0, 0, canvas.width, canvas.height);
-  const weights = context.getImageData(0, 0, canvas.width, canvas.height).data;
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(art, 0, 0);
-  const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
-  const tint = [1, 3, 5].map(at => parseInt(color.slice(at, at + 2), 16) / 255 * brightness);
-  const data = pixels.data;
-  for (let at = 0; at < data.length; at += 4) {
-    const weight = weights[at + 3] / 255;
-    for (let channel = 0; channel < 3; channel++) data[at + channel] = Math.min(255, data[at + channel] * (1 - weight + weight * tint[channel]));
-  }
-  context.putImageData(pixels, 0, 0);
-  return canvas.toDataURL('image/png');
-}
 
 export interface InventoryProjection {
   readonly revision: string;
@@ -125,6 +91,8 @@ export interface InventoryItem {
   readonly value: number;
   readonly details: string;
   readonly icon: string | null;
+  /** The dye or metal a refreshed icon is drawn in, or null. */
+  readonly iconTint?: ArtTint | null;
   readonly condition: ItemCondition | null;
   readonly identified: boolean;
   readonly gridSlot: number | null;
@@ -637,10 +605,7 @@ export function mountInventory(
     const draw = (): boolean => {
       const item = itemFor(key ?? undefined);
       if (item === undefined) return false;
-      const source = image(item.icon);
-      picture.hidden = source === null;
-      if (source !== null && picture.src !== source) picture.src = source;
-      smoothIfRefreshed(picture, item.icon);
+      picture.hidden = !drawArt(picture, item.icon, item.iconTint ?? null);
       name.textContent = item.stackable ? `${item.label} × ${item.quantity}` : item.label;
       const equipped = item.equippedSlots.length > 0;
       equip.hidden = equipped;
@@ -779,7 +744,6 @@ export function mountInventory(
   shell.addEventListener('focusout', onTipOut);
 
   /** Each refreshed clothing image in each dye, made once: the doll redraws far more often than a dye changes. */
-  const tinted = new Map<string, Promise<string | null>>();
   /** A length in doll units; the doll draws each as a whole number of device pixels at whole UI scales. */
   const dollPixels = (value: number): string => `calc(${value} * var(--doll-pixel))`;
   const placeLayer = (layer: PaperDollLayer): HTMLElement[] => {
@@ -790,9 +754,8 @@ export function mountInventory(
     art.dataset.mediaId = layer.mediaId;
     if (layer.slot !== null) art.dataset.slot = layer.slot;
     if (layer.smooth) art.dataset.smooth = 'true';
-    const source = image(layer.mediaId);
-    if (source === null) art.dataset.artMissing = 'true';
-    else art.src = source;
+    // Refreshed clothing or armour is drawn in its dye or metal once the tinted image is made; until then it is held hidden.
+    drawArt(art, layer.mediaId, layer.tint);
     art.style.left = dollPixels(layer.x);
     art.style.top = dollPixels(layer.y);
     art.style.width = dollPixels(layer.width);
@@ -801,18 +764,6 @@ export function mountInventory(
       art.style.clipPath = `inset(${dollPixels(layer.clipTop)} 0 ${dollPixels(layer.height - layer.clipBottom)} 0)`;
       art.dataset.clip = `${layer.clipTop}-${layer.clipBottom}`;
     }
-    if (layer.tint === null) return [art];
-    // Refreshed clothing or armour is drawn in its dye or metal once the tinted image is made; until then it is held hidden.
-    const { tint } = layer;
-    art.dataset.dye = tint.color;
-    const mask = image(tint.mask);
-    art.removeAttribute('src');
-    art.dataset.artMissing = 'true';
-    if (source === null || mask === null) return [art];
-    const key = `${layer.mediaId}|${tint.mask}|${tint.color}|${tint.brightness}`;
-    if (!tinted.has(key)) tinted.set(key, dyed(source, mask, tint.color, tint.brightness));
-    // An image that does not decode leaves the neutral image standing rather than nothing.
-    void tinted.get(key)!.catch(() => null).then(result => { art.src = result ?? source; delete art.dataset.artMissing; });
     return [art];
   };
   const drawDoll = (value: PaperDoll | null): void => {
@@ -1150,14 +1101,12 @@ function renderPlace(button: HTMLButtonElement, item: InventoryItem | undefined,
   button.dataset.inventoryItem = item.key;
   if (item.category) button.dataset.category = item.category;
   button.setAttribute('aria-label', `${placeLabel}, ${item.label}${item.stackable ? `, ${item.quantity}` : ''}`);
-  const iconSource = image(item.icon);
-  if (iconSource !== null) {
+  if (image(item.icon) !== null) {
     // The icon is a published media identity; its bytes came from admitted content with the snapshot.
     const icon = document.createElement('img');
-    icon.src = iconSource;
     icon.alt = '';
     icon.draggable = false;
-    smoothIfRefreshed(icon, item.icon);
+    drawArt(icon, item.icon, item.iconTint ?? null);
     button.append(icon);
   } else {
     const fallback = document.createElement('span');

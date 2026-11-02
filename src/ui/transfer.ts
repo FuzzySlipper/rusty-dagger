@@ -1,4 +1,4 @@
-import { image, smoothIfRefreshed } from './art.js';
+import { drawArt, image, type ArtTint } from './art.js';
 import type { Encumbrance, InventoryItem } from './inventory.js';
 import { redraw } from './redraw.js';
 import { createStepper, type Stepper } from './stepper.js';
@@ -23,6 +23,8 @@ export interface TransferRow {
   readonly key: string;
   readonly label: string;
   readonly icon: string | null;
+  /** The dye or metal a refreshed icon is drawn in, or null. */
+  readonly iconTint?: ArtTint | null;
   /** Shown after the name for a stack; a row of one shows no count. */
   readonly quantity: string | null;
   /** The most of this row one command moves; above one, the row has a quantity stepper. */
@@ -59,7 +61,7 @@ export type TransferSideName = 'source' | 'pack';
 export function inventoryTransferRow(item: InventoryItem, command: string | null, refusal?: string | null): TransferRow {
   const count = Number(item.quantity);
   return {
-    key: item.key, label: item.label, icon: item.icon,
+    key: item.key, label: item.label, icon: item.icon, iconTint: item.iconTint ?? null,
     quantity: item.stackable ? item.quantity : null,
     maximumQuantity: item.stackable === true && Number.isSafeInteger(count) ? count : 1,
     facts: itemFacts(item), refusal: refusal ?? null,
@@ -112,10 +114,9 @@ export function mountTransfer(root: HTMLElement, handlers: {
         const source = image(row.icon);
         if (source !== null) {
           const icon = document.createElement('img');
-          icon.src = source;
           icon.alt = '';
           icon.draggable = false;
-          smoothIfRefreshed(icon, row.icon);
+          drawArt(icon, row.icon, row.iconTint ?? null);
           picture.append(icon);
         }
         const text = document.createElement('div');

@@ -180,7 +180,7 @@ export interface PaperDollLayer extends PaperDollRect {
    * Refreshed clothing, painted neutral, in its dye: where the mask is opaque (the neutral cloth) the image is
    * brightened and multiplied by the colour.
    */
-  readonly tint: { readonly color: string; readonly brightness: number; readonly mask: string } | null;
+  readonly tint: ArtTint | null;
   readonly slot: string | null;
 }
 
@@ -193,7 +193,7 @@ export interface PaperDoll {
   readonly unplaced: readonly string[];
 }
 
-import { heldRevision, image } from './art.js';
+import { heldRevision, image, type ArtTint } from './art.js';
 import { createCycler, type Cycler, type CyclerOption } from './cycler.js';
 import { letterPickerButton } from './letter-picker.js';
 import { invalidate, redraw } from './redraw.js';

@@ -1,4 +1,4 @@
-import type { UiArt } from './art.js';
+import type { ArtTint, UiArt } from './art.js';
 import type { CharacterProjection } from './character.js';
 import type { ControlsProjection } from './controls.js';
 import type { InventoryProjection } from './inventory.js';
@@ -243,6 +243,8 @@ export interface MerchantItemProjection {
   readonly label: string;
   /** The item's published icon, as the pack draws it; null when it has none. */
   readonly icon?: string | null;
+  /** The dye or metal a refreshed icon is drawn in, or null. */
+  readonly iconTint?: ArtTint | null;
   readonly quantity: string | number;
   /** The most of this row one trade moves: a stack's count, or one. */
   readonly maximumQuantity: number;

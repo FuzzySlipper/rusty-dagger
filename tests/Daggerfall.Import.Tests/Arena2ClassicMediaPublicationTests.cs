@@ -20,11 +20,11 @@ public sealed class Arena2ClassicMediaPublicationTests
 
         // Five service screens and their donor companions are thirteen more artifacts and resources, and
         // the spell icon atlas one more: naming an image admits it.
-        Assert.Equal(98 + first.Audio.Count, first.Artifacts.Count);
+        Assert.Equal(68 + first.Audio.Count, first.Artifacts.Count);
         Assert.Equal(first.Artifacts.Count, first.MediaManifest.Resources.Count);
         Assert.Empty(first.MapMedia);
         // Fourteen more admitted source files, because those images are read as well as named.
-        Assert.Equal(54, first.Sources.Count);
+        Assert.Equal(51, first.Sources.Count);
         Assert.Equal(first.Artifacts.Select(artifact => artifact.RelativePath).OrderBy(path => path, StringComparer.Ordinal), first.Artifacts.Select(artifact => artifact.RelativePath));
         Assert.Equal(first.Artifacts.Select(artifact => artifact.RelativePath), second.Artifacts.Select(artifact => artifact.RelativePath));
         Assert.All(first.Artifacts.Zip(second.Artifacts), pair => Assert.Equal(pair.First.Bytes.ToArray(), pair.Second.Bytes.ToArray()));
@@ -103,7 +103,8 @@ public sealed class Arena2ClassicMediaPublicationTests
 // Six windows, one mode screen, and the service panels the donor windows read, each part of a
         // screen the donor composes from several images published under its own media identity.
         Assert.Equal(26, first.UiImages.Count);
-        Assert.Equal(51, first.InventoryIcons.Count);
+        // The potion recipes' bottles and gold: every item with a template draws its template's image instead.
+        Assert.Equal(21, first.InventoryIcons.Count);
         Assert.Equal(15, first.InventoryIcons.Single(icon => icon.ItemId == "potion.4975678").SourceRecordOrdinal);
         Assert.Equal(240, first.Font.Glyphs.Count);
         // All five font tables publish with the donor's consumer for each; the default face stays
@@ -127,8 +128,8 @@ public sealed class Arena2ClassicMediaPublicationTests
         AssertPng(font, 256, 240);
         Assert.NotNull(first.MediaManifest.Resources.Single(resource => resource.Id == "weapon.dagger.steel").Frames);
         Assert.Equal(31, first.MediaManifest.Resources.Single(resource => resource.Id == "weapon.dagger.steel").Frames.Count);
-        Assert.Contains(first.Artifacts, artifact => artifact.RelativePath == "media/ui/inventory-icons/inventory-icon-iron-dagger.png");
-        Assert.Contains(first.Artifacts, artifact => artifact.RelativePath == "media/ui/inventory-icons/inventory-icon-arrow.png");
+        Assert.Contains(first.Artifacts, artifact => artifact.RelativePath == "media/ui/inventory-icons/inventory-icon-gold-piece.png");
+        Assert.DoesNotContain(first.Artifacts, artifact => artifact.RelativePath == "media/ui/inventory-icons/inventory-icon-iron-dagger.png");
 
         byte[] wave = Artifact(first, "media/audio/clips/audio-melee-dagger-swing.wav");
         AssertWave(wave);
@@ -313,7 +314,7 @@ public sealed class Arena2ClassicMediaPublicationTests
         Arena2ClassicMediaInputs malformed = CreateInputs() with { Weapon02Cif = [1] };
         Assert.Throws<Arena2FormatException>(() => Arena2ClassicMediaPublication.Create(malformed));
 
-        Arena2ClassicMediaInputs missingInventoryRecord = CreateInputs() with { Texture245 = CreateTextureArchive(1) };
+        Arena2ClassicMediaInputs missingInventoryRecord = CreateInputs() with { Texture216 = CreateTextureArchive(1) };
         Assert.Throws<ArgumentOutOfRangeException>(() => Arena2ClassicMediaPublication.Create(missingInventoryRecord));
     }
 
@@ -429,7 +430,7 @@ public sealed class Arena2ClassicMediaPublicationTests
             InventoryIcons: baseline.InventoryIcons
                 .Select(icon => new ClassicInventoryIconPresentation(
                     icon.ItemId,
-                    icon.ItemId == "iron-dagger" ? "inventory.icon.profiled-dagger" : icon.MediaId,
+                    icon.ItemId == "gold-piece" ? "inventory.icon.profiled-gold" : icon.MediaId,
                     icon.TextureArchive,
                     icon.SourceRecordOrdinal))
                 .ToArray(),
@@ -446,7 +447,7 @@ public sealed class Arena2ClassicMediaPublicationTests
         Assert.Equal(ClassicWeaponScreenAlignment.Left, idle.Alignment);
         Assert.Equal(12F, idle.Timing.FramesPerSecond);
         Assert.Equal("MAIN03I0.IMG", publication.UiImages.Single(image => image.Image == ClassicUiImage.HudChromeMain).SourceFile);
-        Assert.Equal("inventory.icon.profiled-dagger", publication.InventoryIcons.Single(icon => icon.ItemId == "iron-dagger").MediaId);
+        Assert.Equal("inventory.icon.profiled-gold", publication.InventoryIcons.Single(icon => icon.ItemId == "gold-piece").MediaId);
 
         // The death screen is named and published, and it is the one UI image drawn with its own
         // palette rather than the publication's.
@@ -460,7 +461,7 @@ public sealed class Arena2ClassicMediaPublicationTests
         Assert.False(effect.Loop!.Value);
         Assert.Equal("Profiled blood", effect.DisplayName);
         Assert.Contains(publication.Artifacts, artifact => artifact.RelativePath == "media/combat/weapon-dagger-profiled-atlas.png");
-        Assert.Contains(publication.Artifacts, artifact => artifact.RelativePath == "media/ui/inventory-icons/inventory-icon-iron-dagger.png");
+        Assert.Contains(publication.Artifacts, artifact => artifact.RelativePath == "media/ui/inventory-icons/inventory-icon-gold-piece.png");
     }
 
     [Fact]
@@ -528,11 +529,11 @@ public sealed class Arena2ClassicMediaPublicationTests
             Read(arena2, "BOOK00I0.IMG"), Read(arena2, "REST00I0.IMG"), Read(arena2, "SHOP00I0.IMG"), Read(arena2, "GILD00I0.IMG"), Read(arena2, "BANK00I0.IMG"),
             Read(arena2, "REST01I0.IMG"), Read(arena2, "REST02I0.IMG"), Read(arena2, "INVE08I0.IMG"), Read(arena2, "INVE10I0.IMG"), Read(arena2, "INVE11I0.IMG"),
             Read(arena2, "INVE12I0.IMG"), Read(arena2, "INVE14I0.IMG"), Read(arena2, "GILD01I0.IMG"), Read(arena2, "ICON00I0.IMG"),
-            Read(arena2, "TEXTURE.207"), Read(arena2, "TEXTURE.216"), Read(arena2, "TEXTURE.234"), Read(arena2, "TEXTURE.245"), Read(arena2, "FONT0003.FNT"), Read(arena2, "WEAPON00.CIF"), Read(arena2, "WEAPON03.CIF"), Read(arena2, "WEAPON11.CIF"), Read(arena2, "FONT0000.FNT"), Read(arena2, "FONT0001.FNT"), Read(arena2, "FONT0002.FNT"), Read(arena2, "FONT0004.FNT"), ReadCorpusMapMedia(arena2), Read(arena2, "FMAP_PAL.COL"), Read(arena2, "MAP.PAL"), [], Read(arena2, "TEXTURE.205")));
+            Read(arena2, "TEXTURE.216"), Read(arena2, "FONT0003.FNT"), Read(arena2, "WEAPON00.CIF"), Read(arena2, "WEAPON03.CIF"), Read(arena2, "WEAPON11.CIF"), Read(arena2, "FONT0000.FNT"), Read(arena2, "FONT0001.FNT"), Read(arena2, "FONT0002.FNT"), Read(arena2, "FONT0004.FNT"), ReadCorpusMapMedia(arena2), Read(arena2, "FMAP_PAL.COL"), Read(arena2, "MAP.PAL"), [], Read(arena2, "TEXTURE.205")));
 
         Assert.Equal(31, WeaponActions(publication, "weapon.dagger.steel").Sum(action => action.FrameCount));
-        Assert.Equal(97 + 68 + publication.Audio.Count, publication.Artifacts.Count);
-        Assert.Equal(52 + 70 + 2, publication.Sources.Count);
+        Assert.Equal(67 + 68 + publication.Audio.Count, publication.Artifacts.Count);
+        Assert.Equal(49 + 70 + 2, publication.Sources.Count);
         AssertPng(Artifact(publication, "media/combat/weapon-dagger-steel-atlas.png"), 3840, 600);
         Assert.All(publication.Audio, clip => Assert.Equal(11_025U, clip.SampleRate));
         // All twelve archives decode: the two spares and the werecreature form carry the same
@@ -667,10 +668,7 @@ public sealed class Arena2ClassicMediaPublicationTests
         CreateHeaderedImage(16),
         // The spell icon atlas: a headerless 320x64 canvas of 16-pixel icons.
         new byte[320 * 64],
-        CreateTextureArchive(17),
         CreateTextureArchive(2),
-        CreateTextureArchive(27),
-        CreateTextureArchive(37),
         CreateFont(),
         // The three archives outside the original nine-input closure: two longblade-shaped
         // spares and the werecreature form, all wield image plus six five-frame records.

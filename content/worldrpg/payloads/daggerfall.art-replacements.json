@@ -3182,264 +3182,12 @@
     }
    },
    {
-    "replaces": "inventory.icon.arrow",
-    "mediaId": "refreshed.inventory.icon.arrow",
-    "path": "worldrpg/media/refreshed/items/arrow.webp",
-    "byteLength": 5352,
-    "sha256": "3bc5b5b1a9c9158ba9d0c5c8e1a5e3a60d08ab8a9e694c335faa2fef7ff4f4f2",
-    "width": 256,
-    "height": 210
-   },
-   {
-    "replaces": "inventory.icon.buckler",
-    "mediaId": "refreshed.inventory.icon.buckler",
-    "path": "worldrpg/media/refreshed/items/buckler.webp",
-    "byteLength": 9854,
-    "sha256": "7cb0b5d3f2d7edaf4368c941e66454c1c7cd8d3ab3296af330cfef7e06c0d20e",
-    "width": 185,
-    "height": 225
-   },
-   {
     "replaces": "inventory.icon.gold-piece",
     "mediaId": "refreshed.inventory.icon.gold-piece",
     "path": "worldrpg/media/refreshed/items/gold-piece.webp",
     "byteLength": 9904,
     "sha256": "1ca0b51cd78dd110e0331064c2b8c59390ad94865cb3e96e649270b3bbf79854",
     "width": 229,
-    "height": 256
-   },
-   {
-    "replaces": "inventory.icon.iron-battle-axe",
-    "mediaId": "refreshed.inventory.icon.iron-battle-axe",
-    "path": "worldrpg/media/refreshed/items/iron-battle-axe.webp",
-    "byteLength": 11888,
-    "sha256": "f51ef07e355ab623cc291058431d69bced99359dc7ea8f46e96b0ac18a279fd1",
-    "width": 256,
-    "height": 236
-   },
-   {
-    "replaces": "inventory.icon.iron-boots",
-    "mediaId": "refreshed.inventory.icon.iron-boots",
-    "path": "worldrpg/media/refreshed/items/iron-boots.webp",
-    "byteLength": 13164,
-    "sha256": "9384c058bf9bb41d14d6bf47fca2ddd211c818d09bd69c84a0ece75674e6255c",
-    "width": 256,
-    "height": 193
-   },
-   {
-    "replaces": "inventory.icon.iron-broadsword",
-    "mediaId": "refreshed.inventory.icon.iron-broadsword",
-    "path": "worldrpg/media/refreshed/items/iron-broadsword.webp",
-    "byteLength": 7738,
-    "sha256": "3abfeddc85bfdc83e5b11809fd7a52bf40afd1c3cb5db4f03df092d2da301b0d",
-    "width": 256,
-    "height": 95
-   },
-   {
-    "replaces": "inventory.icon.iron-claymore",
-    "mediaId": "refreshed.inventory.icon.iron-claymore",
-    "path": "worldrpg/media/refreshed/items/iron-claymore.webp",
-    "byteLength": 9366,
-    "sha256": "411db5262a51d8f0d90de510e83cd47ac6cdb50bcb08e032f1ebb9c968776f52",
-    "width": 181,
-    "height": 256
-   },
-   {
-    "replaces": "inventory.icon.iron-cuirass",
-    "mediaId": "refreshed.inventory.icon.iron-cuirass",
-    "path": "worldrpg/media/refreshed/items/iron-cuirass.webp",
-    "byteLength": 10226,
-    "sha256": "61e67db0c525f0261c0850d20e708885d516caa6ea86e157638ffc6b0d55dada",
-    "width": 166,
-    "height": 256
-   },
-   {
-    "replaces": "inventory.icon.iron-dagger",
-    "mediaId": "refreshed.inventory.icon.iron-dagger",
-    "path": "worldrpg/media/refreshed/items/iron-dagger.webp",
-    "byteLength": 7876,
-    "sha256": "9f109b1ed2ede9f1870d04bdcf1055b61d04613e77777cb774fd7226363c5de5",
-    "width": 256,
-    "height": 83
-   },
-   {
-    "replaces": "inventory.icon.iron-dai-katana",
-    "mediaId": "refreshed.inventory.icon.iron-dai-katana",
-    "path": "worldrpg/media/refreshed/items/iron-dai-katana.webp",
-    "byteLength": 7262,
-    "sha256": "588669fce487f6a4f5dde01358c2d76c31c582729843ed7791518a4a68d2e463",
-    "width": 191,
-    "height": 256
-   },
-   {
-    "replaces": "inventory.icon.iron-flail",
-    "mediaId": "refreshed.inventory.icon.iron-flail",
-    "path": "worldrpg/media/refreshed/items/iron-flail.webp",
-    "byteLength": 10026,
-    "sha256": "585eca8b602c87859fe273d7c04888ecaa8b5db154ef88c16753742e4d9e15e4",
-    "width": 256,
-    "height": 230
-   },
-   {
-    "replaces": "inventory.icon.iron-gauntlets",
-    "mediaId": "refreshed.inventory.icon.iron-gauntlets",
-    "path": "worldrpg/media/refreshed/items/iron-gauntlets.webp",
-    "byteLength": 7348,
-    "sha256": "281b87632d789b48c789ae59e9d070d87c736900bb087958180667eca5881a38",
-    "width": 256,
-    "height": 121
-   },
-   {
-    "replaces": "inventory.icon.iron-greaves",
-    "mediaId": "refreshed.inventory.icon.iron-greaves",
-    "path": "worldrpg/media/refreshed/items/iron-greaves.webp",
-    "byteLength": 7892,
-    "sha256": "01a200d960b755227a5b66eda8436897324ed5eee1316d2b056a43108ec49932",
-    "width": 194,
-    "height": 221
-   },
-   {
-    "replaces": "inventory.icon.iron-helm",
-    "mediaId": "refreshed.inventory.icon.iron-helm",
-    "path": "worldrpg/media/refreshed/items/iron-helm.webp",
-    "byteLength": 5928,
-    "sha256": "847a23784998811f6fda91b345e3d230318675c297ce2023db461c9ac2e4e906",
-    "width": 143,
-    "height": 128
-   },
-   {
-    "replaces": "inventory.icon.iron-katana",
-    "mediaId": "refreshed.inventory.icon.iron-katana",
-    "path": "worldrpg/media/refreshed/items/iron-katana.webp",
-    "byteLength": 8654,
-    "sha256": "e61e43711de4452214bc732c30c17ccd3a87a33c9f4eb762f9c0b44b7b1571f6",
-    "width": 256,
-    "height": 202
-   },
-   {
-    "replaces": "inventory.icon.iron-left-pauldron",
-    "mediaId": "refreshed.inventory.icon.iron-left-pauldron",
-    "path": "worldrpg/media/refreshed/items/iron-left-pauldron.webp",
-    "byteLength": 8578,
-    "sha256": "4d36c63276f3ef9ab23a395e3a6904a87f178a7f40f71694e0a421b519f5211b",
-    "width": 143,
-    "height": 256
-   },
-   {
-    "replaces": "inventory.icon.iron-long-bow",
-    "mediaId": "refreshed.inventory.icon.iron-long-bow",
-    "path": "worldrpg/media/refreshed/items/iron-long-bow.webp",
-    "byteLength": 9064,
-    "sha256": "d42f96cd705c0edee81ecf481e060fb3ead337ca557e0739ce35b19f24bed224",
-    "width": 256,
-    "height": 163
-   },
-   {
-    "replaces": "inventory.icon.iron-longsword",
-    "mediaId": "refreshed.inventory.icon.iron-longsword",
-    "path": "worldrpg/media/refreshed/items/iron-longsword.webp",
-    "byteLength": 7142,
-    "sha256": "7d3cb877b9e4a8e86fad0ab94d0574b9db884967e4ed14d6c33fdc0d1014f55a",
-    "width": 256,
-    "height": 82
-   },
-   {
-    "replaces": "inventory.icon.iron-mace",
-    "mediaId": "refreshed.inventory.icon.iron-mace",
-    "path": "worldrpg/media/refreshed/items/iron-mace.webp",
-    "byteLength": 7284,
-    "sha256": "387754e19fd0716fa340bdf7131b920c0b2b580169c0a8d194945f27aaed9116",
-    "width": 256,
-    "height": 92
-   },
-   {
-    "replaces": "inventory.icon.iron-right-pauldron",
-    "mediaId": "refreshed.inventory.icon.iron-right-pauldron",
-    "path": "worldrpg/media/refreshed/items/iron-right-pauldron.webp",
-    "byteLength": 2936,
-    "sha256": "75aa29940ee23d532339acf219ac2bdc79f3af66c4edf63ffa11bfd003b5c9f8",
-    "width": 95,
-    "height": 108
-   },
-   {
-    "replaces": "inventory.icon.iron-saber",
-    "mediaId": "refreshed.inventory.icon.iron-saber",
-    "path": "worldrpg/media/refreshed/items/iron-saber.webp",
-    "byteLength": 7344,
-    "sha256": "c47d3b9d7cbbb1c2a718493c9e52b9a63a8e477628cc2451d469c7bfa4a35ba1",
-    "width": 256,
-    "height": 73
-   },
-   {
-    "replaces": "inventory.icon.iron-short-bow",
-    "mediaId": "refreshed.inventory.icon.iron-short-bow",
-    "path": "worldrpg/media/refreshed/items/iron-short-bow.webp",
-    "byteLength": 10192,
-    "sha256": "c42042eacc9e5f79a0d0f7c5b061d6cb2a9e7b26117fbae4952e6292ee851596",
-    "width": 256,
-    "height": 139
-   },
-   {
-    "replaces": "inventory.icon.iron-shortsword",
-    "mediaId": "refreshed.inventory.icon.iron-shortsword",
-    "path": "worldrpg/media/refreshed/items/iron-shortsword.webp",
-    "byteLength": 7170,
-    "sha256": "6bad068951b274280ae4c5d582faa80426262c2175cbc41dd99a0c0ef790dc17",
-    "width": 256,
-    "height": 68
-   },
-   {
-    "replaces": "inventory.icon.iron-staff",
-    "mediaId": "refreshed.inventory.icon.iron-staff",
-    "path": "worldrpg/media/refreshed/items/iron-staff.webp",
-    "byteLength": 5958,
-    "sha256": "daf33e193ec218801dd97d0d71abcdcad35388b1c57d7a8a9ea986e57d1c71ee",
-    "width": 183,
-    "height": 256
-   },
-   {
-    "replaces": "inventory.icon.iron-tanto",
-    "mediaId": "refreshed.inventory.icon.iron-tanto",
-    "path": "worldrpg/media/refreshed/items/iron-tanto.webp",
-    "byteLength": 7498,
-    "sha256": "d99323926db1c08e002463944362c5a18e91393965ba85c4dc9bfc2f38d6b6be",
-    "width": 256,
-    "height": 87
-   },
-   {
-    "replaces": "inventory.icon.iron-wakazashi",
-    "mediaId": "refreshed.inventory.icon.iron-wakazashi",
-    "path": "worldrpg/media/refreshed/items/iron-wakazashi.webp",
-    "byteLength": 6626,
-    "sha256": "0dba2970e516fc552b0a9f56cf1200ea5ff6b20987ad8825468f360e5f3a8b45",
-    "width": 256,
-    "height": 70
-   },
-   {
-    "replaces": "inventory.icon.iron-war-axe",
-    "mediaId": "refreshed.inventory.icon.iron-war-axe",
-    "path": "worldrpg/media/refreshed/items/iron-war-axe.webp",
-    "byteLength": 8078,
-    "sha256": "1b7ab0d1f2deac51f3b48d92c75866063315887c8e26e3831191e32e3f7032cc",
-    "width": 256,
-    "height": 97
-   },
-   {
-    "replaces": "inventory.icon.iron-warhammer",
-    "mediaId": "refreshed.inventory.icon.iron-warhammer",
-    "path": "worldrpg/media/refreshed/items/iron-warhammer.webp",
-    "byteLength": 6848,
-    "sha256": "d05a7348d2edfdb1ac61a4ff38c1eb8da60fa4bd9b3866e53faebd0ccc863c0f",
-    "width": 256,
-    "height": 94
-   },
-   {
-    "replaces": "inventory.icon.kite-shield",
-    "mediaId": "refreshed.inventory.icon.kite-shield",
-    "path": "worldrpg/media/refreshed/items/kite-shield.webp",
-    "byteLength": 12746,
-    "sha256": "516fca4487202b7e08695cfa0b93b41423e60c3f800e9b583cfd327b07587b85",
-    "width": 179,
     "height": 256
    },
    {
@@ -3623,21 +3371,1074 @@
     "height": 256
    },
    {
-    "replaces": "inventory.icon.round-shield",
-    "mediaId": "refreshed.inventory.icon.round-shield",
-    "path": "worldrpg/media/refreshed/items/round-shield.webp",
-    "byteLength": 13552,
-    "sha256": "a8d68358bfa52391e6aff731be93b0c90815a8becb23aaee7cc665468e692776",
-    "width": 201,
+    "replaces": "item.200.10",
+    "mediaId": "refreshed.item.200.10",
+    "path": "worldrpg/media/refreshed/items/item.200.10.webp",
+    "byteLength": 8068,
+    "sha256": "05c72d25c60473afa12f78648d0fcb40445094ea3d3cf4afd81225ffd0ebac1b",
+    "width": 230,
     "height": 256
    },
    {
-    "replaces": "inventory.icon.tower-shield",
-    "mediaId": "refreshed.inventory.icon.tower-shield",
-    "path": "worldrpg/media/refreshed/items/tower-shield.webp",
-    "byteLength": 7580,
-    "sha256": "8454e4f6818edb745510a28a0bc06cf780e7ace32b77121d9192cef2a4162160",
-    "width": 131,
+    "replaces": "item.200.11",
+    "mediaId": "refreshed.item.200.11",
+    "path": "worldrpg/media/refreshed/items/item.200.11.webp",
+    "byteLength": 7140,
+    "sha256": "c6285332b84306e7a0ac42646dce7397b82ffafc07d744349253b3385cc924e3",
+    "width": 248,
+    "height": 256
+   },
+   {
+    "replaces": "item.202.0",
+    "mediaId": "refreshed.item.202.0",
+    "path": "worldrpg/media/refreshed/items/item.202.0.webp",
+    "byteLength": 7188,
+    "sha256": "0bee3fef9aa93c7a4df67ad640d835e86c623a45249287a65b2db0ab0d862cbe",
+    "width": 108,
+    "height": 256
+   },
+   {
+    "replaces": "item.202.5",
+    "mediaId": "refreshed.item.202.5",
+    "path": "worldrpg/media/refreshed/items/item.202.5.webp",
+    "byteLength": 11352,
+    "sha256": "332d11c8fd53396b4750ada284412265394790cd0cebf03256b2f799eb3e4115",
+    "width": 152,
+    "height": 256
+   },
+   {
+    "replaces": "item.204.9",
+    "mediaId": "refreshed.item.204.9",
+    "path": "worldrpg/media/refreshed/items/item.204.9.webp",
+    "byteLength": 6622,
+    "sha256": "6616597da5ed064c4966965e542d9cea0aec9474e32b052d8888c70c0a6bbe6b",
+    "width": 236,
+    "height": 256
+   },
+   {
+    "replaces": "item.205.1",
+    "mediaId": "refreshed.item.205.1",
+    "path": "worldrpg/media/refreshed/items/item.205.1.webp",
+    "byteLength": 13162,
+    "sha256": "4b9915a71e912c0f3955263015cec6996720a0db0397932d1e56b51a58ebf6c8",
+    "width": 234,
+    "height": 256
+   },
+   {
+    "replaces": "item.205.11",
+    "mediaId": "refreshed.item.205.11",
+    "path": "worldrpg/media/refreshed/items/item.205.11.webp",
+    "byteLength": 7782,
+    "sha256": "efb88f6896c595e6b17d9644e11b8c748462e6f028fcf73fc1753223b7761b8b",
+    "width": 256,
+    "height": 227
+   },
+   {
+    "replaces": "item.205.17",
+    "mediaId": "refreshed.item.205.17",
+    "path": "worldrpg/media/refreshed/items/item.205.17.webp",
+    "byteLength": 11694,
+    "sha256": "b489b013beffd7236197b72b12abf60546254e1993488cf87eafdc215c5bc512",
+    "width": 256,
+    "height": 252
+   },
+   {
+    "replaces": "item.205.18",
+    "mediaId": "refreshed.item.205.18",
+    "path": "worldrpg/media/refreshed/items/item.205.18.webp",
+    "byteLength": 10266,
+    "sha256": "6818a827a575bc4770bbeed63742793f52324941eec9514b5ebdfb3ee7be99b0",
+    "width": 256,
+    "height": 177
+   },
+   {
+    "replaces": "item.205.21",
+    "mediaId": "refreshed.item.205.21",
+    "path": "worldrpg/media/refreshed/items/item.205.21.webp",
+    "byteLength": 13502,
+    "sha256": "c1cf6d014d50636bab7435e910b0cb60ec5cffa434e25432ebfa5a13c408bc1d",
+    "width": 256,
+    "height": 231
+   },
+   {
+    "replaces": "item.205.24",
+    "mediaId": "refreshed.item.205.24",
+    "path": "worldrpg/media/refreshed/items/item.205.24.webp",
+    "byteLength": 14594,
+    "sha256": "94b94d940c9887862498fe634803630ade9bbcde2ec9e7a97635cf9d0bb88c7b",
+    "width": 256,
+    "height": 211
+   },
+   {
+    "replaces": "item.205.3",
+    "mediaId": "refreshed.item.205.3",
+    "path": "worldrpg/media/refreshed/items/item.205.3.webp",
+    "byteLength": 11792,
+    "sha256": "14d834eafb76d8144507dc05ce9a907d10afada082a7227616f3f76f0828d086",
+    "width": 247,
+    "height": 256
+   },
+   {
+    "replaces": "item.205.42",
+    "mediaId": "refreshed.item.205.42",
+    "path": "worldrpg/media/refreshed/items/item.205.42.webp",
+    "byteLength": 8990,
+    "sha256": "8548c2eabe500beb3318b5ce3fc7675c857f2eb3277c80b74b0175d69b0a6e79",
+    "width": 256,
+    "height": 225
+   },
+   {
+    "replaces": "item.205.43",
+    "mediaId": "refreshed.item.205.43",
+    "path": "worldrpg/media/refreshed/items/item.205.43.webp",
+    "byteLength": 8560,
+    "sha256": "6da5bb37359da8e03bceddf1dfe01e05b3d76b31d2ce4151cf26923a0eda02ba",
+    "width": 244,
+    "height": 256
+   },
+   {
+    "replaces": "item.205.44",
+    "mediaId": "refreshed.item.205.44",
+    "path": "worldrpg/media/refreshed/items/item.205.44.webp",
+    "byteLength": 5850,
+    "sha256": "f8db925723366876c53a3d477cc498c50c9d448b21a3e5a774680c55e3525e05",
+    "width": 256,
+    "height": 229
+   },
+   {
+    "replaces": "item.206.10",
+    "mediaId": "refreshed.item.206.10",
+    "path": "worldrpg/media/refreshed/items/item.206.10.webp",
+    "byteLength": 10160,
+    "sha256": "f4a4889de490f2a665049c4aab9d8a0ce22eb16c490a2ade6d175217664a9242",
+    "width": 256,
+    "height": 255
+   },
+   {
+    "replaces": "item.206.33",
+    "mediaId": "refreshed.item.206.33",
+    "path": "worldrpg/media/refreshed/items/item.206.33.webp",
+    "byteLength": 6600,
+    "sha256": "cc8c7b28119158f7ffd4de17fe044794ef3616999b67d2073801fda00b004959",
+    "width": 243,
+    "height": 256
+   },
+   {
+    "replaces": "item.206.34",
+    "mediaId": "refreshed.item.206.34",
+    "path": "worldrpg/media/refreshed/items/item.206.34.webp",
+    "byteLength": 9424,
+    "sha256": "bec71af0d0ed6aa5113861da923fb3658e43643be71bbcd9ec056758612db3c7",
+    "width": 256,
+    "height": 150
+   },
+   {
+    "replaces": "item.207.13",
+    "mediaId": "refreshed.item.207.13",
+    "path": "worldrpg/media/refreshed/items/item.207.13.webp",
+    "byteLength": 7608,
+    "sha256": "e315fc099eb2cef93119b1ffbc920ac2b7b4626650ba4c4f0d7c78e7cfd2f79b",
+    "width": 253,
+    "height": 256
+   },
+   {
+    "replaces": "item.207.16",
+    "mediaId": "refreshed.item.207.16",
+    "path": "worldrpg/media/refreshed/items/item.207.16.webp",
+    "byteLength": 5352,
+    "sha256": "3bc5b5b1a9c9158ba9d0c5c8e1a5e3a60d08ab8a9e694c335faa2fef7ff4f4f2",
+    "width": 256,
+    "height": 210
+   },
+   {
+    "replaces": "item.207.5",
+    "mediaId": "refreshed.item.207.5",
+    "path": "worldrpg/media/refreshed/items/item.207.5.webp",
+    "byteLength": 6218,
+    "sha256": "9420dc3bd8c9690f0e116e07680701b1e3b4dc030170182084ad40a6e1d3598d",
+    "width": 256,
+    "height": 166
+   },
+   {
+    "replaces": "item.207.7",
+    "mediaId": "refreshed.item.207.7",
+    "path": "worldrpg/media/refreshed/items/item.207.7.webp",
+    "byteLength": 3284,
+    "sha256": "2a8c88cbe5ca82c05f0ef1c247a5c23466189baf201c8803abaa9ad84edd6b30",
+    "width": 234,
+    "height": 256
+   },
+   {
+    "replaces": "item.208.0",
+    "mediaId": "refreshed.item.208.0",
+    "path": "worldrpg/media/refreshed/items/item.208.0.webp",
+    "byteLength": 13384,
+    "sha256": "bf37393fc7a50c66c3314d60d0147cb61a8707080db78ab9587e5d1565bad9d3",
+    "width": 256,
+    "height": 232
+   },
+   {
+    "replaces": "item.208.3",
+    "mediaId": "refreshed.item.208.3",
+    "path": "worldrpg/media/refreshed/items/item.208.3.webp",
+    "byteLength": 21940,
+    "sha256": "43d40721581c3863e7908c7e9637d9a80b2cded946c2c9107ebbc43b255a4495",
+    "width": 256,
+    "height": 250
+   },
+   {
+    "replaces": "item.208.4",
+    "mediaId": "refreshed.item.208.4",
+    "path": "worldrpg/media/refreshed/items/item.208.4.webp",
+    "byteLength": 9782,
+    "sha256": "3507593031a17210708ee2b4ea38dc1c33902d6b5f907e1bcd2b0b15a1c7eb6d",
+    "width": 255,
+    "height": 256
+   },
+   {
+    "replaces": "item.209.0",
+    "mediaId": "refreshed.item.209.0",
+    "path": "worldrpg/media/refreshed/items/item.209.0.webp",
+    "byteLength": 9956,
+    "sha256": "17e3fa89f6db1ad6bf19339e7de32441c7e872e259c4d34f5b5743550fbeb979",
+    "width": 256,
+    "height": 238
+   },
+   {
+    "replaces": "item.209.2",
+    "mediaId": "refreshed.item.209.2",
+    "path": "worldrpg/media/refreshed/items/item.209.2.webp",
+    "byteLength": 8364,
+    "sha256": "0bafe824b6db6ae0205f956ec84aff35a00ad33718afdec926a98b3ee60afeb1",
+    "width": 245,
+    "height": 256
+   },
+   {
+    "replaces": "item.209.4",
+    "mediaId": "refreshed.item.209.4",
+    "path": "worldrpg/media/refreshed/items/item.209.4.webp",
+    "byteLength": 7742,
+    "sha256": "57495cd89a02feaf374532e5f6da9f466166752cd59554c3fb31ffee7e05cf9c",
+    "width": 256,
+    "height": 253
+   },
+   {
+    "replaces": "item.209.7",
+    "mediaId": "refreshed.item.209.7",
+    "path": "worldrpg/media/refreshed/items/item.209.7.webp",
+    "byteLength": 6886,
+    "sha256": "120faed9ece804fa322ba402c8c79748b1f940ee8ed38f1062025b0718d20efb",
+    "width": 256,
+    "height": 251
+   },
+   {
+    "replaces": "item.209.8",
+    "mediaId": "refreshed.item.209.8",
+    "path": "worldrpg/media/refreshed/items/item.209.8.webp",
+    "byteLength": 6498,
+    "sha256": "a91a6c34ed97658fe1f628adb6dcb6e9b0f7832ae75a8416909124585f1ca4f0",
+    "width": 256,
+    "height": 181
+   },
+   {
+    "replaces": "item.209.9",
+    "mediaId": "refreshed.item.209.9",
+    "path": "worldrpg/media/refreshed/items/item.209.9.webp",
+    "byteLength": 7190,
+    "sha256": "b055e8307ab3a6c6de7efb0af863ea5291bf68d6e671bcb4c8cf56c2a9aa9f6c",
+    "width": 256,
+    "height": 220
+   },
+   {
+    "replaces": "item.210.3",
+    "mediaId": "refreshed.item.210.3",
+    "path": "worldrpg/media/refreshed/items/item.210.3.webp",
+    "byteLength": 7720,
+    "sha256": "7d9ccd13a37b34118f24731131c3d6b672fe957c8c8b0caf9f4bca383767fc1d",
+    "width": 240,
+    "height": 256
+   },
+   {
+    "replaces": "item.210.4",
+    "mediaId": "refreshed.item.210.4",
+    "path": "worldrpg/media/refreshed/items/item.210.4.webp",
+    "byteLength": 9374,
+    "sha256": "1286a6ca62c040b2df489e5215a92035589ff1a189f2d91225d2882f6a5d29c8",
+    "width": 256,
+    "height": 238
+   },
+   {
+    "replaces": "item.210.5",
+    "mediaId": "refreshed.item.210.5",
+    "path": "worldrpg/media/refreshed/items/item.210.5.webp",
+    "byteLength": 14866,
+    "sha256": "f6c399e4e03efbd79ae39f5c40f87439555a2e75ec2bb4d3aae8d6d29b185de7",
+    "width": 134,
+    "height": 256
+   },
+   {
+    "replaces": "item.210.6",
+    "mediaId": "refreshed.item.210.6",
+    "path": "worldrpg/media/refreshed/items/item.210.6.webp",
+    "byteLength": 5028,
+    "sha256": "32e5a733e9d846c6bb0048906a6781047a7f957ef8723d5cdd3a883d49637221",
+    "width": 35,
+    "height": 256
+   },
+   {
+    "replaces": "item.211.0",
+    "mediaId": "refreshed.item.211.0",
+    "path": "worldrpg/media/refreshed/items/item.211.0.webp",
+    "byteLength": 9158,
+    "sha256": "c283daf7856151a390941a5112453051354c2f2f6e5d4c1c4ec744d9c764d934",
+    "width": 256,
+    "height": 245
+   },
+   {
+    "replaces": "item.211.47",
+    "mediaId": "refreshed.item.211.47",
+    "path": "worldrpg/media/refreshed/items/item.211.47.webp",
+    "byteLength": 8518,
+    "sha256": "1052d3d3a338918d2450ced86bca558156b685def058a88b929473ef50f7cf66",
+    "width": 230,
+    "height": 256
+   },
+   {
+    "replaces": "item.211.48",
+    "mediaId": "refreshed.item.211.48",
+    "path": "worldrpg/media/refreshed/items/item.211.48.webp",
+    "byteLength": 10134,
+    "sha256": "74133e0ba11037e7e1e06895eb2c1ff2bbd7c5b1022d45f4a6cba3901a28f094",
+    "width": 256,
+    "height": 252
+   },
+   {
+    "replaces": "item.211.49",
+    "mediaId": "refreshed.item.211.49",
+    "path": "worldrpg/media/refreshed/items/item.211.49.webp",
+    "byteLength": 13642,
+    "sha256": "0c35372154e436a84e2e76909ccfadabd8a603cc76a5a701e352f1cfd3932324",
+    "width": 256,
+    "height": 216
+   },
+   {
+    "replaces": "item.211.50",
+    "mediaId": "refreshed.item.211.50",
+    "path": "worldrpg/media/refreshed/items/item.211.50.webp",
+    "byteLength": 16646,
+    "sha256": "a44de57fe87bd3afaa2390bb630f396e128ed3d7e3c34efaa40d6942a421ee00",
+    "width": 250,
+    "height": 256
+   },
+   {
+    "replaces": "item.211.51",
+    "mediaId": "refreshed.item.211.51",
+    "path": "worldrpg/media/refreshed/items/item.211.51.webp",
+    "byteLength": 13042,
+    "sha256": "fb102c41c94ada4973f376ad64d219b4ebe7dec8657e10afeb8484e8d5953962",
+    "width": 256,
+    "height": 235
+   },
+   {
+    "replaces": "item.211.52",
+    "mediaId": "refreshed.item.211.52",
+    "path": "worldrpg/media/refreshed/items/item.211.52.webp",
+    "byteLength": 9756,
+    "sha256": "e88bd28ddb5a8d6b806d931549dd285c1f868577b2ca5c08519ee8d73f6cdefc",
+    "width": 256,
+    "height": 245
+   },
+   {
+    "replaces": "item.211.53",
+    "mediaId": "refreshed.item.211.53",
+    "path": "worldrpg/media/refreshed/items/item.211.53.webp",
+    "byteLength": 10404,
+    "sha256": "8d92f7118a3944a7891c1d4378b86cbfe001dc90c56a540cfa0eb9b819729fc6",
+    "width": 256,
+    "height": 252
+   },
+   {
+    "replaces": "item.211.54",
+    "mediaId": "refreshed.item.211.54",
+    "path": "worldrpg/media/refreshed/items/item.211.54.webp",
+    "byteLength": 8192,
+    "sha256": "ea9f0e4f22c15bd99239bd4dbfdf906c9f7d6310b66b1d09073879d445e4b8c1",
+    "width": 256,
+    "height": 238
+   },
+   {
+    "replaces": "item.211.55",
+    "mediaId": "refreshed.item.211.55",
+    "path": "worldrpg/media/refreshed/items/item.211.55.webp",
+    "byteLength": 14714,
+    "sha256": "841573251abfa50d052d9357621d84f45b51bfee12d506a1b02f58f4b6e0e7f9",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "item.211.56",
+    "mediaId": "refreshed.item.211.56",
+    "path": "worldrpg/media/refreshed/items/item.211.56.webp",
+    "byteLength": 10184,
+    "sha256": "8fefd07fb9ee21adfa3cc5f40002b608fcec2f308a61883dc07349808bd28736",
+    "width": 256,
+    "height": 244
+   },
+   {
+    "replaces": "item.211.57",
+    "mediaId": "refreshed.item.211.57",
+    "path": "worldrpg/media/refreshed/items/item.211.57.webp",
+    "byteLength": 19820,
+    "sha256": "97b0d0bcaf0f3f7fc2185e8aa5361a181e877e8a776312e485c7f3540237e097",
+    "width": 256,
+    "height": 185
+   },
+   {
+    "replaces": "item.212.2",
+    "mediaId": "refreshed.item.212.2",
+    "path": "worldrpg/media/refreshed/items/item.212.2.webp",
+    "byteLength": 11692,
+    "sha256": "72655e5b10ca83c63e0dc50a49af59ee8214ae90cc1af377674bc1b8f138fa7e",
+    "width": 239,
+    "height": 256
+   },
+   {
+    "replaces": "item.213.1",
+    "mediaId": "refreshed.item.213.1",
+    "path": "worldrpg/media/refreshed/items/item.213.1.webp",
+    "byteLength": 12332,
+    "sha256": "b85db43f2a213a165d30ea5c7b24b5bbf0118836dce2784f193eea33898d8e61",
+    "width": 256,
+    "height": 253
+   },
+   {
+    "replaces": "item.213.15",
+    "mediaId": "refreshed.item.213.15",
+    "path": "worldrpg/media/refreshed/items/item.213.15.webp",
+    "byteLength": 14688,
+    "sha256": "815f5179dad8d915f93dc71861befcf4ea00a5a2a6bc63a795df64a7bfeb94f4",
+    "width": 256,
+    "height": 241
+   },
+   {
+    "replaces": "item.216.1",
+    "mediaId": "refreshed.item.216.1",
+    "path": "worldrpg/media/refreshed/items/item.216.1.webp",
+    "byteLength": 9904,
+    "sha256": "1ca0b51cd78dd110e0331064c2b8c59390ad94865cb3e96e649270b3bbf79854",
+    "width": 229,
+    "height": 256
+   },
+   {
+    "replaces": "item.216.21",
+    "mediaId": "refreshed.item.216.21",
+    "path": "worldrpg/media/refreshed/items/item.216.21.webp",
+    "byteLength": 17496,
+    "sha256": "cb1819018f572046d909c8885945e59acc9b0b0a84cc9f3aacb05afa9d7e38ed",
+    "width": 256,
+    "height": 205
+   },
+   {
+    "replaces": "item.216.4",
+    "mediaId": "refreshed.item.216.4",
+    "path": "worldrpg/media/refreshed/items/item.216.4.webp",
+    "byteLength": 7430,
+    "sha256": "2be06dad347b74b64ace1dc7b388cf375bb1ec113c5b1118357f1d54056a4dcb",
+    "width": 256,
+    "height": 212
+   },
+   {
+    "replaces": "item.218.0",
+    "mediaId": "refreshed.item.218.0",
+    "path": "worldrpg/media/refreshed/items/item.218.0.webp",
+    "byteLength": 14780,
+    "sha256": "cf4c0170a415bc1851789debbc76e061abc5d3f1a5bbf5bafb02a386eadacc37",
+    "width": 255,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.0",
+    "mediaId": "refreshed.item.254.0",
+    "path": "worldrpg/media/refreshed/items/item.254.0.webp",
+    "byteLength": 11414,
+    "sha256": "4939045fe737005e96b8890b14a718826ffbe1cff6621cc2d8e1c9677d1a5397",
+    "width": 256,
+    "height": 246
+   },
+   {
+    "replaces": "item.254.1",
+    "mediaId": "refreshed.item.254.1",
+    "path": "worldrpg/media/refreshed/items/item.254.1.webp",
+    "byteLength": 10728,
+    "sha256": "28852efc2abf640e3e15b42569855aecab8b187cf55eca938898e78593b722e4",
+    "width": 256,
+    "height": 250
+   },
+   {
+    "replaces": "item.254.10",
+    "mediaId": "refreshed.item.254.10",
+    "path": "worldrpg/media/refreshed/items/item.254.10.webp",
+    "byteLength": 12400,
+    "sha256": "e264736d692451081ded9bc82a1661811c2b1a595af05dd5b48316211af7dd9e",
+    "width": 256,
+    "height": 205
+   },
+   {
+    "replaces": "item.254.11",
+    "mediaId": "refreshed.item.254.11",
+    "path": "worldrpg/media/refreshed/items/item.254.11.webp",
+    "byteLength": 15422,
+    "sha256": "64e2aaf2d9c7e7cdddac538f4b38b92a54ad87d268b9ca02a144c45e5b9057fb",
+    "width": 255,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.12",
+    "mediaId": "refreshed.item.254.12",
+    "path": "worldrpg/media/refreshed/items/item.254.12.webp",
+    "byteLength": 18222,
+    "sha256": "c8497adc8931a61d594bf50119a31b40bcecfc0359cc43e72c4b8fda01a20fef",
+    "width": 256,
+    "height": 254
+   },
+   {
+    "replaces": "item.254.13",
+    "mediaId": "refreshed.item.254.13",
+    "path": "worldrpg/media/refreshed/items/item.254.13.webp",
+    "byteLength": 10886,
+    "sha256": "0477ae57abd7f9034e2633ace1fcdfff55397ccb83a0557ef86a911f7e77b7ce",
+    "width": 256,
+    "height": 206
+   },
+   {
+    "replaces": "item.254.14",
+    "mediaId": "refreshed.item.254.14",
+    "path": "worldrpg/media/refreshed/items/item.254.14.webp",
+    "byteLength": 7032,
+    "sha256": "cdd5c1c901cb5d20d11def1f826d9c60f8696ea476d5cc576abd2818f7e4089c",
+    "width": 217,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.15",
+    "mediaId": "refreshed.item.254.15",
+    "path": "worldrpg/media/refreshed/items/item.254.15.webp",
+    "byteLength": 21416,
+    "sha256": "61ef9d0c45e4f59125ac42d2cdf47a68ea78ab03d7d4299c18c90c80efac8c94",
+    "width": 256,
+    "height": 165
+   },
+   {
+    "replaces": "item.254.16",
+    "mediaId": "refreshed.item.254.16",
+    "path": "worldrpg/media/refreshed/items/item.254.16.webp",
+    "byteLength": 17050,
+    "sha256": "dae34ce70cca92c00ff08b34e0b408c0b6246a2cc5ec0679aa61a0e06db01f24",
+    "width": 256,
+    "height": 237
+   },
+   {
+    "replaces": "item.254.17",
+    "mediaId": "refreshed.item.254.17",
+    "path": "worldrpg/media/refreshed/items/item.254.17.webp",
+    "byteLength": 17328,
+    "sha256": "0a986bfb3d30823989fbabff4b91631f3fe0ec9103dae4a7d5d86691b1ba1840",
+    "width": 241,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.18",
+    "mediaId": "refreshed.item.254.18",
+    "path": "worldrpg/media/refreshed/items/item.254.18.webp",
+    "byteLength": 19768,
+    "sha256": "cb2b5aae435ab4549bcb7f4cb1e00da8004a93231068b4318d26fd5d1c4a747a",
+    "width": 254,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.19",
+    "mediaId": "refreshed.item.254.19",
+    "path": "worldrpg/media/refreshed/items/item.254.19.webp",
+    "byteLength": 15418,
+    "sha256": "9af8316140a91e3670781e0716e02ec81fc9d36d2bbbce9cdab61096331507eb",
+    "width": 256,
+    "height": 238
+   },
+   {
+    "replaces": "item.254.2",
+    "mediaId": "refreshed.item.254.2",
+    "path": "worldrpg/media/refreshed/items/item.254.2.webp",
+    "byteLength": 10388,
+    "sha256": "7e7d149de8cb23f9a495b83f0256fa0cb88be2209b87224f9f261df9d084110a",
+    "width": 256,
+    "height": 243
+   },
+   {
+    "replaces": "item.254.20",
+    "mediaId": "refreshed.item.254.20",
+    "path": "worldrpg/media/refreshed/items/item.254.20.webp",
+    "byteLength": 16240,
+    "sha256": "179547c82394f56cb47fb08f3a1486a151076cbdf33ed0315e0c619b80f9b55b",
+    "width": 244,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.21",
+    "mediaId": "refreshed.item.254.21",
+    "path": "worldrpg/media/refreshed/items/item.254.21.webp",
+    "byteLength": 23172,
+    "sha256": "ac1f55aff69824fe9176bdc29dcbe45795da6f9da7d7433592dbb2ba8de950b1",
+    "width": 256,
+    "height": 238
+   },
+   {
+    "replaces": "item.254.22",
+    "mediaId": "refreshed.item.254.22",
+    "path": "worldrpg/media/refreshed/items/item.254.22.webp",
+    "byteLength": 24998,
+    "sha256": "6fd3d906bd8dcad48478a82537324fa48b58044b8f505a4484c192384c4527fb",
+    "width": 235,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.23",
+    "mediaId": "refreshed.item.254.23",
+    "path": "worldrpg/media/refreshed/items/item.254.23.webp",
+    "byteLength": 17974,
+    "sha256": "34c2451bfca0ea91cd0a112ec5e797f7f3231bb6e9c4d7c88b92f13b8c686ee2",
+    "width": 253,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.24",
+    "mediaId": "refreshed.item.254.24",
+    "path": "worldrpg/media/refreshed/items/item.254.24.webp",
+    "byteLength": 16346,
+    "sha256": "c5d975f4a49263bdd335f52413de0d27bb9c80b3e974c36dee4043e5b102a1ca",
+    "width": 256,
+    "height": 227
+   },
+   {
+    "replaces": "item.254.25",
+    "mediaId": "refreshed.item.254.25",
+    "path": "worldrpg/media/refreshed/items/item.254.25.webp",
+    "byteLength": 15900,
+    "sha256": "66df56d94fc8ceab6a7aa4fbf0b99731df273526703c8dc6c2097a33bd6d961b",
+    "width": 256,
+    "height": 251
+   },
+   {
+    "replaces": "item.254.26",
+    "mediaId": "refreshed.item.254.26",
+    "path": "worldrpg/media/refreshed/items/item.254.26.webp",
+    "byteLength": 16792,
+    "sha256": "4116f2928ae81b75c3b2ea34fcc0412c8d19543445d28e933b85aa24a641d899",
+    "width": 256,
+    "height": 255
+   },
+   {
+    "replaces": "item.254.27",
+    "mediaId": "refreshed.item.254.27",
+    "path": "worldrpg/media/refreshed/items/item.254.27.webp",
+    "byteLength": 16434,
+    "sha256": "679ec903b9443e17d918750762f99bc84a1de58abcb3d25ae21e0b4129f20805",
+    "width": 256,
+    "height": 254
+   },
+   {
+    "replaces": "item.254.28",
+    "mediaId": "refreshed.item.254.28",
+    "path": "worldrpg/media/refreshed/items/item.254.28.webp",
+    "byteLength": 16848,
+    "sha256": "b64097896301c6a7738fa21242fe276b5c88cea44e8018c41f395762cd83ccd6",
+    "width": 256,
+    "height": 244
+   },
+   {
+    "replaces": "item.254.29",
+    "mediaId": "refreshed.item.254.29",
+    "path": "worldrpg/media/refreshed/items/item.254.29.webp",
+    "byteLength": 15856,
+    "sha256": "e4fc5b1841070292ad0ab10e444daaa56e770b40c550ff82b03e8b9d6a83cf06",
+    "width": 256,
+    "height": 219
+   },
+   {
+    "replaces": "item.254.3",
+    "mediaId": "refreshed.item.254.3",
+    "path": "worldrpg/media/refreshed/items/item.254.3.webp",
+    "byteLength": 12688,
+    "sha256": "024d99456e95c575315d78123f4bd93d0b6dc832666cb0327435fe8ac68167f4",
+    "width": 256,
+    "height": 255
+   },
+   {
+    "replaces": "item.254.30",
+    "mediaId": "refreshed.item.254.30",
+    "path": "worldrpg/media/refreshed/items/item.254.30.webp",
+    "byteLength": 15540,
+    "sha256": "c24e17300c4ebed40a189e1fe3ce76e1fa3e27a831c93500485c337a425fdbf4",
+    "width": 256,
+    "height": 251
+   },
+   {
+    "replaces": "item.254.31",
+    "mediaId": "refreshed.item.254.31",
+    "path": "worldrpg/media/refreshed/items/item.254.31.webp",
+    "byteLength": 15334,
+    "sha256": "5a3b1a9a28ee49f200475fb3fb7d49dfdfaa60f7dab43677fcdc4fff619688d9",
+    "width": 256,
+    "height": 234
+   },
+   {
+    "replaces": "item.254.32",
+    "mediaId": "refreshed.item.254.32",
+    "path": "worldrpg/media/refreshed/items/item.254.32.webp",
+    "byteLength": 16758,
+    "sha256": "393bae8f51ecbe1fe865c0eae9a9e6dbeb52c2ea85e2ecd516155488303c1c7d",
+    "width": 256,
+    "height": 231
+   },
+   {
+    "replaces": "item.254.33",
+    "mediaId": "refreshed.item.254.33",
+    "path": "worldrpg/media/refreshed/items/item.254.33.webp",
+    "byteLength": 20092,
+    "sha256": "31b254349144969e6b90a2cca65a390cbe3dd280c8f6b91ba7599699ff184743",
+    "width": 256,
+    "height": 232
+   },
+   {
+    "replaces": "item.254.37",
+    "mediaId": "refreshed.item.254.37",
+    "path": "worldrpg/media/refreshed/items/item.254.37.webp",
+    "byteLength": 11192,
+    "sha256": "75d42575e77bd7825ca57afcedc4d34b54499e96fcff560fcb3bf29c4266bf15",
+    "width": 228,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.38",
+    "mediaId": "refreshed.item.254.38",
+    "path": "worldrpg/media/refreshed/items/item.254.38.webp",
+    "byteLength": 11946,
+    "sha256": "709174c7d10a862aaff0370565779a9afbd74c6b52c4bf86ebe8339a7ef04465",
+    "width": 240,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.39",
+    "mediaId": "refreshed.item.254.39",
+    "path": "worldrpg/media/refreshed/items/item.254.39.webp",
+    "byteLength": 10682,
+    "sha256": "61257c1628b5d8f70b6d3019f5755bbd5ea304a553d3332594996d1288f9f2bc",
+    "width": 256,
+    "height": 223
+   },
+   {
+    "replaces": "item.254.4",
+    "mediaId": "refreshed.item.254.4",
+    "path": "worldrpg/media/refreshed/items/item.254.4.webp",
+    "byteLength": 10576,
+    "sha256": "f9f326b6e8e61f53fffa9914fc5b3b76b31d47b6f81eae53dcd500a2a4eb29cb",
+    "width": 256,
+    "height": 247
+   },
+   {
+    "replaces": "item.254.40",
+    "mediaId": "refreshed.item.254.40",
+    "path": "worldrpg/media/refreshed/items/item.254.40.webp",
+    "byteLength": 14254,
+    "sha256": "a02000af99651dc898b1fe30ecd6ec138280c230721c63adf29587c9bf5a856a",
+    "width": 256,
+    "height": 225
+   },
+   {
+    "replaces": "item.254.41",
+    "mediaId": "refreshed.item.254.41",
+    "path": "worldrpg/media/refreshed/items/item.254.41.webp",
+    "byteLength": 14032,
+    "sha256": "ef864db224847715cd3acbddfbd56b111aabcd607c716b7f5fa4c86587cdd915",
+    "width": 218,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.42",
+    "mediaId": "refreshed.item.254.42",
+    "path": "worldrpg/media/refreshed/items/item.254.42.webp",
+    "byteLength": 11708,
+    "sha256": "85ab4a609b313d3d3f1681f407d342770cb790a68acae37c2ba64bdfabcf1c40",
+    "width": 252,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.43",
+    "mediaId": "refreshed.item.254.43",
+    "path": "worldrpg/media/refreshed/items/item.254.43.webp",
+    "byteLength": 14238,
+    "sha256": "f588c67d378b7c1f4439eaaf2127403c7cf0ca956e31897659a440b84d4f38b7",
+    "width": 255,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.44",
+    "mediaId": "refreshed.item.254.44",
+    "path": "worldrpg/media/refreshed/items/item.254.44.webp",
+    "byteLength": 15148,
+    "sha256": "c24f234d62566463a729e87f9a08a0334f96e213dcfadf56f6a364d6b248730a",
+    "width": 251,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.45",
+    "mediaId": "refreshed.item.254.45",
+    "path": "worldrpg/media/refreshed/items/item.254.45.webp",
+    "byteLength": 9316,
+    "sha256": "4e2e0741041077559419e52365233e36ca7230d2102a4b3aa5437402d4861a89",
+    "width": 256,
+    "height": 249
+   },
+   {
+    "replaces": "item.254.46",
+    "mediaId": "refreshed.item.254.46",
+    "path": "worldrpg/media/refreshed/items/item.254.46.webp",
+    "byteLength": 7700,
+    "sha256": "3d177849798367fb21d50c88d5192dee3fcc937e2ee2e0fe1b2e9894675a9b2a",
+    "width": 252,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.47",
+    "mediaId": "refreshed.item.254.47",
+    "path": "worldrpg/media/refreshed/items/item.254.47.webp",
+    "byteLength": 7708,
+    "sha256": "03bac171046b97faeffedece1e8f6a6606a4fa27516c9b6cb1e9a632e5a5fc82",
+    "width": 256,
+    "height": 236
+   },
+   {
+    "replaces": "item.254.48",
+    "mediaId": "refreshed.item.254.48",
+    "path": "worldrpg/media/refreshed/items/item.254.48.webp",
+    "byteLength": 13952,
+    "sha256": "06f85d8abf1a051c80f7e168cb5bc2aa1a78555e92655132edfd17c1bbb5049c",
+    "width": 256,
+    "height": 226
+   },
+   {
+    "replaces": "item.254.5",
+    "mediaId": "refreshed.item.254.5",
+    "path": "worldrpg/media/refreshed/items/item.254.5.webp",
+    "byteLength": 8436,
+    "sha256": "254599d3e159910b63ff37a950c3b982ed9ac5736a01a7a21e45d07374b4deb5",
+    "width": 256,
+    "height": 227
+   },
+   {
+    "replaces": "item.254.50",
+    "mediaId": "refreshed.item.254.50",
+    "path": "worldrpg/media/refreshed/items/item.254.50.webp",
+    "byteLength": 16678,
+    "sha256": "d51d2923dc2018be3a20a9e163c774408d2e2938e0c355399d09c8f5d0a750c5",
+    "width": 256,
+    "height": 233
+   },
+   {
+    "replaces": "item.254.51",
+    "mediaId": "refreshed.item.254.51",
+    "path": "worldrpg/media/refreshed/items/item.254.51.webp",
+    "byteLength": 11844,
+    "sha256": "ea994bac4c84351d5b58247fe6cb051c9708ccbd6e4a044e78b4fbd0392f966c",
+    "width": 248,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.52",
+    "mediaId": "refreshed.item.254.52",
+    "path": "worldrpg/media/refreshed/items/item.254.52.webp",
+    "byteLength": 8378,
+    "sha256": "ece0f642b1ce7b6b87f43104558aa51a1cbbe73678ee851bc987d55d8b0e696c",
+    "width": 230,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.53",
+    "mediaId": "refreshed.item.254.53",
+    "path": "worldrpg/media/refreshed/items/item.254.53.webp",
+    "byteLength": 16016,
+    "sha256": "83888d78e4d109c5cb399aa1fe6644a688173bad05dfe75eeb07119286f4a330",
+    "width": 248,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.54",
+    "mediaId": "refreshed.item.254.54",
+    "path": "worldrpg/media/refreshed/items/item.254.54.webp",
+    "byteLength": 13146,
+    "sha256": "5b16773824a03a8d4245094be66b3aba558c768cd2af2af697728b01c9f894db",
+    "width": 256,
+    "height": 219
+   },
+   {
+    "replaces": "item.254.55",
+    "mediaId": "refreshed.item.254.55",
+    "path": "worldrpg/media/refreshed/items/item.254.55.webp",
+    "byteLength": 11000,
+    "sha256": "85c3e85074624ed030fc4c81e7afc23f8161a24a2235e4a215c88c26a7e9f652",
+    "width": 249,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.56",
+    "mediaId": "refreshed.item.254.56",
+    "path": "worldrpg/media/refreshed/items/item.254.56.webp",
+    "byteLength": 16806,
+    "sha256": "7ca34228934867069d94c4c31a7a070200fe5cd2c58ccd3766da5cf303bbcf01",
+    "width": 256,
+    "height": 247
+   },
+   {
+    "replaces": "item.254.57",
+    "mediaId": "refreshed.item.254.57",
+    "path": "worldrpg/media/refreshed/items/item.254.57.webp",
+    "byteLength": 8204,
+    "sha256": "e26241fc98358d27ad84a9045f3eecd9899f210bbc57cc717ec6d1ee5e553f2d",
+    "width": 184,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.58",
+    "mediaId": "refreshed.item.254.58",
+    "path": "worldrpg/media/refreshed/items/item.254.58.webp",
+    "byteLength": 8972,
+    "sha256": "676ea305a167eae0495961efb26a68c1eab2188b7c9a46165f9e3f694f827c9e",
+    "width": 82,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.59",
+    "mediaId": "refreshed.item.254.59",
+    "path": "worldrpg/media/refreshed/items/item.254.59.webp",
+    "byteLength": 9430,
+    "sha256": "de311ac3291e5d084a25210cea4de5dd8a2999af32801316fc0bb4502f132296",
+    "width": 84,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.6",
+    "mediaId": "refreshed.item.254.6",
+    "path": "worldrpg/media/refreshed/items/item.254.6.webp",
+    "byteLength": 11772,
+    "sha256": "80fd1aa3b7153093d9e300e0fe1f4ead964795477fff88452ae0abbeef624090",
+    "width": 239,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.61",
+    "mediaId": "refreshed.item.254.61",
+    "path": "worldrpg/media/refreshed/items/item.254.61.webp",
+    "byteLength": 7174,
+    "sha256": "e16e45518d71fa5d38aa90ed7f8850c101bc8915701dfb6cdbe881eea62ac74a",
+    "width": 246,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.62",
+    "mediaId": "refreshed.item.254.62",
+    "path": "worldrpg/media/refreshed/items/item.254.62.webp",
+    "byteLength": 9372,
+    "sha256": "92a7db153c257f5cfb69a95df75f83d494778d1b1e67fc27e1ff5efcfa73851b",
+    "width": 248,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.63",
+    "mediaId": "refreshed.item.254.63",
+    "path": "worldrpg/media/refreshed/items/item.254.63.webp",
+    "byteLength": 4964,
+    "sha256": "bedfe03d7629d2bef9d4309945114e5e97acf3c303da08a145208fbd00bff66b",
+    "width": 256,
+    "height": 236
+   },
+   {
+    "replaces": "item.254.64",
+    "mediaId": "refreshed.item.254.64",
+    "path": "worldrpg/media/refreshed/items/item.254.64.webp",
+    "byteLength": 10592,
+    "sha256": "fb72650906ff0c5407f8c96631c9f5b69a3fa5d1d33b35a2ddc2c80f28f11749",
+    "width": 256,
+    "height": 133
+   },
+   {
+    "replaces": "item.254.65",
+    "mediaId": "refreshed.item.254.65",
+    "path": "worldrpg/media/refreshed/items/item.254.65.webp",
+    "byteLength": 8240,
+    "sha256": "9b8730776bde125b4395fb1c4eee5cdcb1bb8dc70638f71c952ea49a7077ab97",
+    "width": 231,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.66",
+    "mediaId": "refreshed.item.254.66",
+    "path": "worldrpg/media/refreshed/items/item.254.66.webp",
+    "byteLength": 13232,
+    "sha256": "877fb305ce684c61b37725e004a3be86ca6d4ef4688484bdb7ef211a386881e8",
+    "width": 256,
+    "height": 143
+   },
+   {
+    "replaces": "item.254.67",
+    "mediaId": "refreshed.item.254.67",
+    "path": "worldrpg/media/refreshed/items/item.254.67.webp",
+    "byteLength": 8202,
+    "sha256": "84cf714494f0789ec97b03e6afee8953681fd11af563d2ad7ffcd3ee68cda87f",
+    "width": 252,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.7",
+    "mediaId": "refreshed.item.254.7",
+    "path": "worldrpg/media/refreshed/items/item.254.7.webp",
+    "byteLength": 8114,
+    "sha256": "c550b56b35b316dda1d757b0ad016dc49062cfc2d0086685c003bfbefed26fc4",
+    "width": 256,
+    "height": 241
+   },
+   {
+    "replaces": "item.254.70",
+    "mediaId": "refreshed.item.254.70",
+    "path": "worldrpg/media/refreshed/items/item.254.70.webp",
+    "byteLength": 7288,
+    "sha256": "dcd12d33e46333270ac21181531b72f912bf53a07a5c68f548842698d646a191",
+    "width": 241,
+    "height": 256
+   },
+   {
+    "replaces": "item.254.8",
+    "mediaId": "refreshed.item.254.8",
+    "path": "worldrpg/media/refreshed/items/item.254.8.webp",
+    "byteLength": 13822,
+    "sha256": "a800d7d79d725153e2f98d339e4206b87551e3255a7d5da5a9c3a1c5cf3b12c5",
+    "width": 256,
+    "height": 162
+   },
+   {
+    "replaces": "item.254.9",
+    "mediaId": "refreshed.item.254.9",
+    "path": "worldrpg/media/refreshed/items/item.254.9.webp",
+    "byteLength": 12154,
+    "sha256": "eff896bfeab70dc3e7db47816ce477500ad14fed809425cc15b8fd05af6cc532",
+    "width": 256,
+    "height": 204
+   },
+   {
+    "replaces": "item.380.1",
+    "mediaId": "refreshed.item.380.1",
+    "path": "worldrpg/media/refreshed/items/item.380.1.webp",
+    "byteLength": 9626,
+    "sha256": "13d4f67ff2bb5fef9afc688d1eefc572aad435f456b036cb2fbad92633636e82",
+    "width": 249,
     "height": 256
    },
    {

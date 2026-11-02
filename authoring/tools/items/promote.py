@@ -25,11 +25,11 @@ the import's published paper-doll images under local/import/staging).
 
 Two areas promote icons rather than their own finals, each standing in for a classic UI image:
 
-  - `items`: every inventory icon the import publishes (`inventoryIcons` in its staged classic manifest) as
-    `inventory.icon.ITEM`, from the accepted final of the record it draws: a worn layer for the paper-doll
-    archives (equipment icons are those images), else the `items` final. An icon that is a classic dye or metal
-    variant of its record (found by comparing it with the published variants) is the final tinted in that dye or
-    metal through its dye mask. An icon whose record has no accepted final stays classic.
+  - `items`: the inventory images of the templates the paper doll does not draw (`item.ARCHIVE.RECORD`, named in
+    the staged `paperDoll.icons` section), each from the accepted `items` final of its record, and every icon the
+    classic media publishes for an item without a template (`inventoryIcons`, `inventory.icon.ITEM`: the potion
+    recipes' bottles and gold) from the accepted final of the record it draws. A worn item's icon is its paper-doll
+    image, which the `worn` area already replaces. An icon whose record has no accepted final stays classic.
   - `spells`: each accepted spell icon `icons--icon-NNN--icon` as `spell.icon.N`, cell N of the classic
     `spell.icons` atlas. The `spells` area's other finals (missiles, impacts, tiles) wait for the screens that
     draw them.
@@ -58,6 +58,8 @@ QUALITY = 90
 AREAS = ("paper-doll", "worn", "items", "spells")
 ICON = {"items": 256, "spells": 128}   # pixels on an icon's longer side: an item slot, a spell glyph of about 3rem
 CLASSIC_MANIFEST = REPOSITORY / "local/import/staging/worldrpg/imports/shared/media/classic/manifest.json"
+IMPORTED = REPOSITORY / "local/import/staging/worldrpg/payloads/daggerfall.imported.json"
+ITEM_IMAGE = re.compile(r"item\.(\d+)\.(\d+)")
 STAGED = REPOSITORY / "local/import/staging"
 SPELL_ICON = re.compile(r"icons--icon-(\d+)--icon")
 CLOTHING = range(235, 243)
@@ -190,42 +192,21 @@ def icon(final, area):
     return image
 
 
-def tinted(image, tint):
-    """The image with its dye mask multiplied by a dye's or metal's tint, as the game draws a tinted layer."""
-    rgba = np.asarray(image, np.float32)
-    weight = np.asarray(dye_mask(image), np.float32)[..., 3:] / 255
-    colour = np.array([int(tint["multiply"][at:at + 2], 16) / 255 * tint["brightness"] for at in (1, 3, 5)], np.float32)
-    rgba[..., :3] = np.minimum(255, rgba[..., :3] * (1 - weight + weight * colour))
-    return Image.fromarray((rgba + .5).astype(np.uint8), "RGBA")
-
-
-def classic_dye(archive, record, icon_path):
-    """The dye or metal a classic icon is drawn in, when it is a published variant of its paper-doll record."""
-    pixels = np.asarray(Image.open(icon_path).convert("RGBA"))
-    for variant in sorted(CLASSIC.glob(f"paper-doll-{archive}-{record}-*.png")):
-        dye = variant.stem.removeprefix(f"paper-doll-{archive}-{record}-")
-        other = np.asarray(Image.open(variant).convert("RGBA"))
-        if dye != "mask" and other.shape == pixels.shape and (other == pixels).all():
-            return dye
-    return None
-
-
-def inventory_icons(tints):
-    """An entry for every published inventory icon whose record has an accepted final."""
-    paths = {entry["mediaId"]: STAGED / entry["path"] for entry in json.load(open(STAGED / "worldrpg/media/classic-media-inventory.json"))["artifacts"]}
-    notes = {area: ledger(area) for area in ("items", "worn")}
-    entries, classic = [], []
-    for published in json.load(open(CLASSIC_MANIFEST))["inventoryIcons"]:
-        archive, record = published["textureArchive"], published["sourceRecordOrdinal"]
-        area = "worn" if archive == 234 or 235 <= archive <= 252 or archive in (432, 433) else "items"
-        final = accepted_final(area, notes[area], f"texture-{archive}-record-{record:03d}-frame-000")
+def inventory_icons():
+    """An entry for every published inventory image of the `items` area whose record has an accepted final."""
+    notes = ledger("items")
+    classic, entries = [], []
+    images = [(published["mediaId"], published["textureArchive"], published["sourceRecordOrdinal"], f"items/{published['itemId']}")
+              for published in json.load(open(CLASSIC_MANIFEST))["inventoryIcons"]]
+    for media in sorted({media for icon in json.load(open(IMPORTED))["paperDoll"]["icons"] for media in icon["mediaIds"]}):
+        archive, record = map(int, ITEM_IMAGE.fullmatch(media).groups())
+        images.append((media, archive, record, f"items/{media}"))
+    for media, archive, record, name in images:
+        final = accepted_final("items", notes, f"texture-{archive}-record-{record:03d}-frame-000")
         if final is None:
-            classic.append(published["itemId"])
+            classic.append(media)
             continue
-        image = icon(final, "items")
-        if dye := classic_dye(archive, record, paths[published["mediaId"]]):
-            image = tinted(image, tints[dye])
-        entries.append(icon_entry(published["mediaId"], image, f"items/{published['itemId']}"))
+        entries.append(icon_entry(media, icon(final, "items"), name))
     if classic:
         print(f"items: {len(classic)} icons stay classic, their records have no accepted final: {', '.join(classic)}")
     return entries
@@ -257,7 +238,7 @@ def main():
             old.unlink()
         images[:] = [entry for entry in images if not entry["path"].startswith(f"{MEDIA}/{area}/")]
         if area in ("items", "spells"):
-            promoted = inventory_icons(payload["artReplacements"].get("dyeTints", {})) if area == "items" else spell_icons()
+            promoted = inventory_icons() if area == "items" else spell_icons()
             images.extend(promoted)
             print(f"{area}: {len(promoted)} icons, {sum(entry['byteLength'] for entry in promoted) / 1e6:.1f} MB", flush=True)
             continue

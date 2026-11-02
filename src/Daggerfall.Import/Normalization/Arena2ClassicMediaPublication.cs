@@ -50,10 +50,7 @@ public sealed record Arena2ClassicMediaInputs(
     byte[] Inve14I0Img,
     byte[] Gild01I0Img,
     byte[] Icon00I0Img,
-    byte[] Texture207,
     byte[] Texture216,
-    byte[] Texture234,
-    byte[] Texture245,
     byte[] Font0003Fnt,
     // The four font tables outside the original single-font closure, appended here rather than in
     // numeric order so the existing positions above stay stable: every parameter is a byte array,
@@ -1205,17 +1202,10 @@ public sealed record Arena2ClassicMediaPublication(
 
     private static readonly InventoryIconSource[] InventoryIconSources =
     [
+        // A potion of a recipe draws its recipe's bottle, and gold its coins; every item with a template draws the
+        // image its template draws (the paper-doll publication's), so the authored weapons, armour and arrows do too.
         .. Arena2PotionRecipes.Build().Select(row => new InventoryIconSource($"potion.{row!["key"]!.GetValue<int>()}", 205, row["textureRecord"]!.GetValue<int>())),
-        new("iron-dagger", 234, 5), new("iron-tanto", 234, 22), new("iron-wakazashi", 234, 26),
-        new("iron-shortsword", 234, 19), new("iron-broadsword", 234, 2), new("iron-saber", 234, 17),
-        new("iron-katana", 234, 10), new("iron-longsword", 234, 12), new("iron-mace", 234, 14),
-        new("iron-battle-axe", 234, 0), new("iron-claymore", 234, 4), new("iron-dai-katana", 234, 7),
-        new("iron-staff", 234, 21), new("iron-flail", 234, 8), new("iron-warhammer", 234, 25),
-        new("iron-war-axe", 234, 24), new("iron-short-bow", 234, 16), new("iron-long-bow", 234, 11),
-        new("iron-helm", 245, 27), new("iron-cuirass", 245, 3), new("iron-right-pauldron", 245, 22),
-        new("iron-left-pauldron", 245, 17), new("iron-gauntlets", 245, 8), new("iron-greaves", 245, 10),
-        new("iron-boots", 245, 0), new("buckler", 245, 33), new("round-shield", 245, 34),
-        new("kite-shield", 245, 35), new("tower-shield", 245, 36), new("gold-piece", 216, 1), new("arrow", 207, 16),
+        new("gold-piece", 216, 1),
     ];
 
     /// <summary>
@@ -1655,10 +1645,7 @@ public sealed record Arena2ClassicMediaPublication(
         Dictionary<int, TextureArchive> archives = new()
         {
             [205] = TextureArchive.Parse(sources.Texture205, "arena2/TEXTURE.205"),
-            [207] = TextureArchive.Parse(sources.Texture207, "arena2/TEXTURE.207"),
             [216] = TextureArchive.Parse(sources.Texture216, "arena2/TEXTURE.216"),
-            [234] = TextureArchive.Parse(sources.Texture234, "arena2/TEXTURE.234"),
-            [245] = TextureArchive.Parse(sources.Texture245, "arena2/TEXTURE.245"),
         };
         List<GeneratedMediaArtifact> result = [];
         List<ClassicInventoryIconManifest> semantic = [];
@@ -2063,7 +2050,7 @@ public sealed record Arena2ClassicMediaPublication(
         foreach (ClassicInventoryIconPresentation icon in inventoryMap.Values)
         {
             NormalizedImportDocument.RequireLogicalId(icon.MediaId, nameof(icon.MediaId));
-            if (icon.SourceRecordOrdinal < 0 || icon.TextureArchive is not 205 and not 207 and not 216 and not 234 and not 245)
+            if (icon.SourceRecordOrdinal < 0 || icon.TextureArchive is not 205 and not 216)
             {
                 throw new ArgumentOutOfRangeException(nameof(profile), "Classic inventory mappings must stay within the admitted texture archive closure.");
             }
@@ -2378,10 +2365,7 @@ public sealed record Arena2ClassicMediaPublication(
             Titl00I0Img = inputs.Titl00I0Img;
             Info00I0Img = inputs.Info00I0Img;
             Texture205 = inputs.Texture205;
-            Texture207 = inputs.Texture207;
             Texture216 = inputs.Texture216;
-            Texture234 = inputs.Texture234;
-            Texture245 = inputs.Texture245;
             Font0003Fnt = inputs.Font0003Fnt;
             Font0000Fnt = inputs.Font0000Fnt;
             Font0001Fnt = inputs.Font0001Fnt;
@@ -2441,10 +2425,7 @@ public sealed record Arena2ClassicMediaPublication(
         public byte[] Titl00I0Img { get; }
         public byte[] Info00I0Img { get; }
         public byte[] Texture205 { get; }
-        public byte[] Texture207 { get; }
         public byte[] Texture216 { get; }
-        public byte[] Texture234 { get; }
-        public byte[] Texture245 { get; }
         public byte[] Font0003Fnt { get; }
         public byte[] Font0000Fnt { get; }
         public byte[] Font0001Fnt { get; }
@@ -2472,8 +2453,8 @@ public sealed record Arena2ClassicMediaPublication(
                 ("INVE08I0.IMG", inputs.Inve08I0Img), ("INVE10I0.IMG", inputs.Inve10I0Img), ("INVE11I0.IMG", inputs.Inve11I0Img),
                 ("INVE12I0.IMG", inputs.Inve12I0Img), ("INVE14I0.IMG", inputs.Inve14I0Img),
                 ("GILD00I0.IMG", inputs.Gild00I0Img), ("BANK00I0.IMG", inputs.Bank00I0Img),
-                ("INFO00I0.IMG", inputs.Info00I0Img), ("TEXTURE.205", inputs.Texture205), ("TEXTURE.207", inputs.Texture207), ("TEXTURE.216", inputs.Texture216),
-                ("TEXTURE.234", inputs.Texture234), ("TEXTURE.245", inputs.Texture245), ("FONT0003.FNT", inputs.Font0003Fnt),
+                ("INFO00I0.IMG", inputs.Info00I0Img), ("TEXTURE.205", inputs.Texture205), ("TEXTURE.216", inputs.Texture216),
+                ("FONT0003.FNT", inputs.Font0003Fnt),
                 ("FONT0000.FNT", inputs.Font0000Fnt), ("FONT0001.FNT", inputs.Font0001Fnt), ("FONT0002.FNT", inputs.Font0002Fnt), ("FONT0004.FNT", inputs.Font0004Fnt),
                 ("FMAP_PAL.COL", inputs.FmapPalCol), ("MAP.PAL", inputs.MapPalCol),
                 ..inputs.MapMedia.Select(file => (file.FileName, file.Bytes)),

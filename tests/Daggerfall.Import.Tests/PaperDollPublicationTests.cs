@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
@@ -62,7 +63,7 @@ public sealed class PaperDollPublicationTests
             new(107, "Armor", 245, 27, 6, false, false),
             new(120, "Weapons", 234, 12, 0, true, false),
             new(202, "WomensClothing", 235, 50, 5, false, false),
-        ]);
+        ], []);
 
         PaperDollItemImage Image(int archive, int record) => pass.Images.Single(image => image.Archive == archive && image.Record == record);
 
@@ -97,6 +98,59 @@ public sealed class PaperDollPublicationTests
         }
         // The donor's artifact table names records up to 26.
         Assert.True(TextureArchive.Parse(archives[432].Span, "arena2/TEXTURE.432").RecordCount > 26);
+    }
+
+    [Fact]
+    public void Every_template_the_doll_does_not_draw_takes_the_inventory_image_the_donor_draws()
+    {
+        static JsonObject Template(int index, string group, int player, int playerRecord, int world, int worldRecord, int variants = 0) => new()
+        {
+            ["index"] = index, ["name"] = $"template {index}", ["groups"] = new JsonArray(group), ["variants"] = variants, ["isOneHanded"] = false,
+            ["playerTextureArchive"] = player, ["playerTextureRecord"] = playerRecord, ["worldTextureArchive"] = world, ["worldTextureRecord"] = worldRecord,
+        };
+        JsonObject section = new()
+        {
+            ["templates"] = new JsonArray(
+                Template(102, "Armor", 245, 3, 0, 0),               // drawn on the doll: its paper-doll image is its icon
+                Template(131, "Weapons", 0, 0, 207, 16),            // an arrow: no player texture, so the world texture
+                Template(17, "PlantIngredients1", 999, 1, 254, 17), // an ingredient takes its world texture whatever else it has
+                Template(277, "Books", 209, 2, 209, 8, 3),          // a book: its player record plus each variant
+                Template(1, "Gems", 0, 0, 254, 1),                  // no player texture: the world texture
+                Template(287, "Maps", 0, 0, 0, 0)),                 // no texture at all: no image
+        };
+
+        Assert.Equal(
+        [
+            new ItemIconTemplate(131, 207, [16]), new ItemIconTemplate(17, 254, [17]), new ItemIconTemplate(277, 209, [2, 3, 4]), new ItemIconTemplate(1, 254, [1]),
+        ], PaperDollItemPublication.ReadIconTemplates(section), new IconComparer());
+    }
+
+    [CorpusFact("ART_PAL.COL", "TEXTURE.207", "TEXTURE.209", "TEXTURE.234", "TEXTURE.432", "TEXTURE.433")]
+    public void Publishes_the_other_templates_inventory_images_once_each_and_names_them_by_variant()
+    {
+        Dictionary<int, ReadOnlyMemory<byte>> archives = new[] { 207, 209, 234, 432, 433 }.ToDictionary(number => number, number => Read($"TEXTURE.{number:000}"));
+        Arena2Palette palette = PaletteDecoder.Decode(Read("ART_PAL.COL").Span, "arena2/ART_PAL.COL");
+        PaperDollItemPass pass = PaperDollItemPublication.Publish(archives, palette, [new(120, "Weapons", 234, 12, 0, true, false)],
+            [new(131, 207, [16]), new(277, 209, [2, 3, 4]), new(278, 209, [2]), new(251, 209, [9999])]);
+
+        Assert.Equal(new[] { "item.209.2", "item.209.3", "item.209.4" }, pass.Icons.Single(icon => icon.Template == 277).MediaIds);
+        // Two templates drawing one record share its image.
+        Assert.Single(pass.Artifacts, artifact => artifact.MediaId == "item.209.2");
+        IndexedTextureFrame arrow = TextureArchive.Parse(archives[207].Span, "arena2/TEXTURE.207").DecodeFrame(16, 0);
+        PaperDollArtifact published = pass.Artifacts.Single(artifact => artifact.MediaId == "item.207.16");
+        Assert.Equal((arrow.Width, arrow.Height), (published.Width, published.Height));
+        Assert.Contains("arena2/TEXTURE.209", pass.Sources);
+        // A record past the end of its archive has no image, as the donor finds none: reported, not published.
+        Assert.DoesNotContain(pass.Icons, icon => icon.Template == 251);
+        Assert.Contains(pass.Unpublished, gap => gap.StartsWith("template 251 ", StringComparison.Ordinal));
+        JsonArray icons = PaperDollItemPublication.Section(pass)["icons"]!.AsArray();
+        Assert.Equal("item.207.16", icons.Single(icon => icon!["template"]!.GetValue<int>() == 131)!["mediaIds"]![0]!.GetValue<string>());
+    }
+
+    private sealed class IconComparer : IEqualityComparer<ItemIconTemplate>
+    {
+        public bool Equals(ItemIconTemplate? x, ItemIconTemplate? y) => x is not null && y is not null && (x.Index, x.Archive) == (y.Index, y.Archive) && x.Records.SequenceEqual(y.Records);
+        public int GetHashCode(ItemIconTemplate icon) => HashCode.Combine(icon.Index, icon.Archive);
     }
 
     private static ReadOnlyMemory<byte> Read(string file) => File.ReadAllBytes(TestData.Corpus(file));

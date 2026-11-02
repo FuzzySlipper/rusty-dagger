@@ -128,12 +128,12 @@ public sealed class UiArtDeliverySessionTests
         // identity cannot pass on a prefix check.
         using JsonDocument inventory = JsonDocument.Parse(TestContentFiles.Read(Path.Combine(root, "content", DaggerfallUiArt.InventoryPath)));
         string iconPath = inventory.RootElement.GetProperty("artifacts").EnumerateArray()
-            .Where(artifact => artifact.TryGetProperty("mediaId", out JsonElement mediaId) && mediaId.GetString() == "inventory.icon.iron-dagger")
+            .Where(artifact => artifact.TryGetProperty("mediaId", out JsonElement mediaId) && mediaId.GetString() == "inventory.icon.gold-piece")
             .Single()
             .GetProperty("path").GetString()!;
         Assert.Equal(
             $"data:image/png;base64,{Convert.ToBase64String(TestContentFiles.Read(Path.Combine(root, "content", iconPath)))}",
-            images["inventory.icon.iron-dagger"]);
+            images["inventory.icon.gold-piece"]);
 
         // Every escort portrait arrives from its character inventory artifact, with the same bytes
         // as the published canvas rather than a name or a data-URL prefix alone.

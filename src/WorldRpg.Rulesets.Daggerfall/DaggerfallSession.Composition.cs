@@ -670,6 +670,7 @@ internal sealed partial class DaggerfallSession
             _characterUi.UseItemPresentation(_inventoryUi);
             _characterUi.UseArt(() => DrawnArt);
             _inventoryUi.UseArt(() => DrawnArt);
+            _inventoryUi.UseWearer(() => State.Character.Identity);
             // The DOM's art comes from the derived content by media identity, so a session reads the
             // published closure once and publishes it to the UI that draws it.
             _hud = new DaggerfallHudProjection(
