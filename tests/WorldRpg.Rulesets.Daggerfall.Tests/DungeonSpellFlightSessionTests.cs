@@ -336,7 +336,7 @@ public sealed class DungeonSpellFlightSessionTests
             source.Portals,
             source.Anchors.Values.ToArray(),
             source.Lights,
-            source.GroundContainerSprite,
+            source.GroundContainerSprites,
             source.DungeonMap,
             [.. source.DungeonActions, action],
             source.DungeonActionModels,

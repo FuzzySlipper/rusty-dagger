@@ -110,7 +110,7 @@ public sealed class SiteAppearanceLifecycleTests
         DaggerfallWorldProfileKey profile = new DaggerfallWorldProfileKey(new DaggerfallSiteId(1, 2), DaggerfallWorldProfileKind.Dungeon, "hold").Validate();
         DaggerfallGroundContainer pile = new(profile, 100, new EntityId(2), new WorldPoint(4F, 1F, 8F));
         using ActorsState actors = EmptyActors();
-        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(groundContainerSprite: sprite));
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(groundContainerSprites: [sprite]));
 
         presentation.Publish(actors, new Dictionary<long, DaggerfallGroundContainer> { [pile.Id] = pile });
         AppearanceFact fact = Assert.Single(appearance.Snapshots.Last(), value => value.ObjectId == (ulong)pile.Id);
@@ -135,6 +135,57 @@ public sealed class SiteAppearanceLifecycleTests
         presentation.Publish(actors, new Dictionary<long, DaggerfallGroundContainer> { [pile.Id] = pile });
         Assert.Equal(requestsBeforeRestore + 1, appearance.SpriteRequests.Count);
         Assert.Contains(appearance.Snapshots.Last(), value => value.ObjectId == (ulong)pile.Id);
+    }
+
+    /// <summary>
+    /// A ground pile stands as one of the treasure piles, which one fixed by its identity so it keeps it across saves,
+    /// until it holds one kind of item that has a refreshed look; it then stands as that item, and goes back to its pile
+    /// when the look goes.
+    /// </summary>
+    [Fact]
+    public void A_ground_pile_stands_as_the_treasure_pile_its_identity_picks_or_as_its_one_item()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        content.Add("refreshed/item.png", Hash);
+        content.Add("refreshed/item-dye.png", Hash);
+        AppearanceFake appearance = new(releases);
+        NormalizedBillboardSprite small = new("sprite/treasure.png", Hash, 39, 26,
+            [new NormalizedAtlasFrame(0, 0, 0, 39, 26)], 0, new Vector2(.5F, .5F), new Vector2(.975F, .65F));
+        NormalizedBillboardSprite large = small with { Size = new Vector2(1.5F, 1F) };
+        DaggerfallWorldProfileKey profile = new DaggerfallWorldProfileKey(new DaggerfallSiteId(1, 2), DaggerfallWorldProfileKind.Dungeon, "hold").Validate();
+        DaggerfallGroundContainer even = new(profile, 100, new EntityId(2), new WorldPoint(4F, 1F, 8F));
+        DaggerfallGroundContainer odd = new(profile, 101, new EntityId(3), new WorldPoint(5F, 1F, 8F));
+        Dictionary<long, DaggerfallGroundContainer> piles = new() { [even.Id] = even, [odd.Id] = odd };
+        using ActorsState actors = EmptyActors();
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(groundContainerSprites: [small, large]));
+
+        presentation.Publish(actors, piles);
+        Assert.Equal([small.Size, large.Size], appearance.SpriteRequests.TakeLast(2).Select(request => request.Size));
+        int created = appearance.SpriteRequests.Count;
+        presentation.Publish(actors, piles);
+        Assert.Equal(created, appearance.SpriteRequests.Count);
+
+        // The item stands on the floor (its pivot at its foot, unlifted), 40 classic pixels tall at the first pile's
+        // .65 m for 26 pixels, as wide as its image's proportions, in its colour through its mask.
+        DaggerfallGroundItemLook look = new(new(new("refreshed/item.png", Hash), 64, 128, (20, 40)),
+            new(new("refreshed/item-dye.png", Hash), 64, 128, null), "#ff8000", 1, 40, Doll: false);
+        presentation.Publish(actors, piles, groundLook: id => id == odd.Id ? look : null);
+        SpriteFromAtlasRequest item = appearance.SpriteRequests.Last();
+        Assert.Equal(created + 1, appearance.SpriteRequests.Count);
+        Assert.Equal(.5F, item.Size.X, 4);
+        Assert.Equal(1F, item.Size.Y, 4);
+        Assert.Equal(new Vector2(.5F, 0F), item.Pivot);
+        Assert.Equal(new Color(1F, (float)Math.Pow(128 / 255d, 2.2), 0F, 1F), item.Tint);
+        Assert.NotEqual(default, item.Material.TintMask);
+        Assert.Equal(odd.Position.ToVector(), Assert.Single(appearance.Snapshots.Last(), fact => fact.ObjectId == (ulong)odd.Id).Transform.Translation);
+
+        // A worn item's image is sized in doll units, at a body's scale: 65 units are .65 m.
+        presentation.Publish(actors, piles, groundLook: id => id == odd.Id ? look with { ClassicHeight = 65, Doll = true } : null);
+        Assert.Equal(.65F, appearance.SpriteRequests.Last().Size.Y, 4);
+
+        presentation.Publish(actors, piles);
+        Assert.Equal(large.Size, appearance.SpriteRequests.Last().Size);
     }
 
     /// <summary>

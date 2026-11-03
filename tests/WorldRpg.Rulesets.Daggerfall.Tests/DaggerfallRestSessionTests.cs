@@ -419,7 +419,7 @@ public sealed class DaggerfallRestSessionTests
         source.Portals,
         source.Anchors.Values.ToArray(),
         source.Lights,
-        source.GroundContainerSprite,
+        source.GroundContainerSprites,
         null,
         [],
         [],

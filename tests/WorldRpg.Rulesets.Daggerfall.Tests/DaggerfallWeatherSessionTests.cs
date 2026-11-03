@@ -68,7 +68,7 @@ public sealed class DaggerfallWeatherSessionTests
         new(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook,
             source.Materials, source.ActorSprites, source.MobileSprites, source.Audio, source.ClassicPresentation,
             source.Site, source.Doors, source.ProfileKind, source.ProfileKey.LogicalId, source.Portals,
-            source.Anchors.Values.ToArray(), source.Lights, source.GroundContainerSprite, source.DungeonMap,
+            source.Anchors.Values.ToArray(), source.Lights, source.GroundContainerSprites, source.DungeonMap,
             source.DungeonActions, source.DungeonActionModels, source.InteriorBuilding,
             source.QuestMarkers, source.BillboardSprites) {AmbientZones = zones};
 

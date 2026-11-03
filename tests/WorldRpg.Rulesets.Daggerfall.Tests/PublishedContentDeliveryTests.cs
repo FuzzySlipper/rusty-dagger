@@ -831,8 +831,22 @@ public sealed class PublishedContentDeliveryTests
         // The bone pile stands in for the corpse every human class shares and for the bone pile flat.
         Assert.Equal([(380, 1), (380, 4)], art.Meshes.Keys.Order());
 
+        // Every item image a dropped item can stand as has a world PNG, sized from its classic image: a worn item's
+        // from its doll rect, an icon's from its stated classic size; a worn item's dye mask has one the same size.
+        DaggerfallArtReplacement[] items = [.. art.All.Where(replacement => replacement.Replaces.StartsWith("item.", StringComparison.Ordinal)
+            || replacement.Replaces.StartsWith("inventory.icon.", StringComparison.Ordinal) || replacement.Replaces.StartsWith("paper-doll.", StringComparison.Ordinal))];
+        Assert.All(items, replacement => Assert.True(replacement.World is { } world && (world.Classic is not null || replacement.Doll is not null)
+            && Math.Max(world.Width, world.Height) <= 128, replacement.MediaId));
+        Assert.All(items.Where(replacement => replacement.DyeMask is not null), replacement =>
+            Assert.Equal((replacement.World!.Width, replacement.World.Height), (replacement.DyeMask!.World!.Width, replacement.DyeMask.World.Height)));
+        Assert.All(art.All.Except(items), replacement => Assert.Null(replacement.World));
+        // The renderer admits only 8-bit RGBA PNGs: IHDR's bit depth 8, colour type 6, no interlace.
+        Assert.All(items.SelectMany(replacement => new[] { replacement.World, replacement.DyeMask?.World }).OfType<DaggerfallArtWorldImage>(), world =>
+            Assert.Equal([8, 6, 0, 0, 0], content.ReadBytes(world.File.Path).Span[24..29].ToArray()));
+
         // The payload states the bytes of every refreshed file, and names every file the refreshed media carries.
-        JsonElement[] files = [.. images.SelectMany(image => image.TryGetProperty("dyeMask", out JsonElement mask) ? [image, mask] : new[] { image }),
+        JsonElement[] owners = [.. images.SelectMany(image => image.TryGetProperty("dyeMask", out JsonElement mask) ? [image, mask] : new[] { image })];
+        JsonElement[] files = [.. owners, .. owners.Where(owner => owner.TryGetProperty("world", out _)).Select(owner => owner.GetProperty("world")),
             .. section.GetProperty("effects").EnumerateArray(), section.GetProperty("effectGlow"),
             .. section.GetProperty("meshes").EnumerateArray().DistinctBy(mesh => mesh.GetProperty("path").GetString())];
         foreach (JsonElement file in files)

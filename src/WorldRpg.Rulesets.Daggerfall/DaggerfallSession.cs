@@ -934,7 +934,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _appearance.Publish(State.Actors, _groundContainers.All.Where(pair => pair.Value.PropertyPlacement is null).ToDictionary(),
             _latestUpdateGeneration is ulong generation && _latestSimulationStep is ulong simulationStep
                 ? _combat.ReadRangedFlights(generation, simulationStep) : [],
-            _tuning.Camera.EyeHeight, State.Effects.PerceptionFor, ReadNpcViews(), spellFlights, State.Npcs.IsGameplayActive);
+            _tuning.Camera.EyeHeight, State.Effects.PerceptionFor, ReadNpcViews(), spellFlights, State.Npcs.IsGameplayActive,
+            id => _groundContainers.Read(id) is { } contents ? _inventoryUi.GroundLook(id, contents) : null);
         PublishDebugOverlays();
     }
 

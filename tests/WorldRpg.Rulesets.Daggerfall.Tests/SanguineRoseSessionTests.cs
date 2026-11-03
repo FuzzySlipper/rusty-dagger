@@ -270,7 +270,7 @@ public sealed class SanguineRoseSessionTests
                 inputs.WorldAppearance, inputs.InitialLook, inputs.Materials, inputs.ActorSprites,
                 inputs.MobileSprites.Where(entry => entry.Key != 27).ToDictionary(), inputs.Audio, inputs.ClassicPresentation,
                 inputs.Site, inputs.Doors, inputs.ProfileKind, inputs.ProfileKey.LogicalId, inputs.Portals, inputs.Anchors.Values.ToArray(),
-                inputs.Lights, inputs.GroundContainerSprite, inputs.DungeonMap, inputs.DungeonActions, inputs.DungeonActionModels,
+                inputs.Lights, inputs.GroundContainerSprites, inputs.DungeonMap, inputs.DungeonActions, inputs.DungeonActionModels,
                 inputs.InteriorBuilding, inputs.QuestMarkers, inputs.BillboardSprites);
             Castle = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)),
                 TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), TestPayload.Definitions);

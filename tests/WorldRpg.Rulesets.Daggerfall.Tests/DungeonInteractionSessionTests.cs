@@ -451,7 +451,7 @@ public sealed class DungeonInteractionSessionTests
             source.InitialLook, source.Materials, source.ActorSprites, source.MobileSprites, source.Audio, source.ClassicPresentation,
             source.Site, source.Doors.Select(door => door with { LockSurface = DaggerfallLockInteractionSurface.Exterior }).ToArray(),
             DaggerfallWorldProfileKind.Exterior, "test/exterior", source.Portals, source.Anchors.Values.ToArray(), source.Lights,
-            source.GroundContainerSprite, dungeonMap: null, dungeonActions: [], dungeonActionModels: [], source.InteriorBuilding,
+            source.GroundContainerSprites, dungeonMap: null, dungeonActions: [], dungeonActionModels: [], source.InteriorBuilding,
             source.QuestMarkers, source.BillboardSprites, source.StaticNpcs,
             source.WaterVolumes, source.TerrainTextures, source.Population);
         List<string> releases = [];

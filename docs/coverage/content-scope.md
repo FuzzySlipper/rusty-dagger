@@ -349,6 +349,13 @@ the classic publication stays the fallback. `authoring/tools/items/promote.py` w
   art draws them as a skull-free bone pile mesh instead, lying along the enemy's heading, and draws the same mesh for
   a placed record 4 bone pile (`meshes`: a GLB resting on the floor, with its footprint, so it is drawn at the width of
   the sprite it replaces). A creature with a corpse of its own keeps its sprite.
+- **Ground piles.** Dropped items and treasure lie as one of the classic treasure piles (the TEXTURE.216 records
+  the donor picks from at random), which one fixed by the container's identity so it survives a save. With
+  refreshed art, a pile of one item or one stack lies as that item instead: promotion writes each worn image and
+  item icon also as a small PNG (`world`, at most 128 pixels, with its dye mask's beside it, and for an icon its
+  classic size in pixels), which stands on the floor at the classic image's height (an icon at the treasure piles'
+  scale, a worn item's image at the paper doll's body scale) and is tinted in its metal or dye through the Engine
+  sprite's tint mask. A mixed pile keeps its treasure pile.
 - **What the data container still carries.** Nothing classic is dropped yet: the paper doll's classic bodies, heads
   and worn items are the Classic art fallback, and armour in a dyed material (iron, ebony and the rest) is drawn
   classic, since the refreshed armour is steel, leather and chain.

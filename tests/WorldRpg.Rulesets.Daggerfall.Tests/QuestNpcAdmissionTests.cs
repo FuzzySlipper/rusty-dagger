@@ -150,7 +150,7 @@ public sealed class QuestNpcAdmissionTests
         var castle = new DaggerfallSiteProfile(source.Project, source.Geometry, source.WorldAppearance,
             source.InitialLook, source.Materials, source.ActorSprites, source.MobileSprites, source.Audio, source.ClassicPresentation,
             source.Site, source.Doors, source.ProfileKind, source.ProfileKey.LogicalId, source.Portals, source.Anchors.Values.ToArray(),
-            source.Lights, source.GroundContainerSprite, source.DungeonMap, source.DungeonActions, source.DungeonActionModels,
+            source.Lights, source.GroundContainerSprites, source.DungeonMap, source.DungeonActions, source.DungeonActionModels,
             source.InteriorBuilding, source.QuestMarkers, fixture.Inputs.BillboardSprites);
         Assert.NotEmpty(castle.QuestMarkers);
         var target = definitions.Locations.Records.Single(value => value.Id == castle.Site);

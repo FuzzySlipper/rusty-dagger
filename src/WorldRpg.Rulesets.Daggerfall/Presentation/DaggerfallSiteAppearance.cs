@@ -84,7 +84,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private readonly Dictionary<string, RenderResourceInfo> classicTextures = new(StringComparer.Ordinal);
     private readonly DaggerfallDefinitions? mobileDefinitions;
     private readonly Dictionary<long, ActorVisual> actors = [];
-    private readonly Dictionary<long, BillboardVisual> groundVisuals = [];
+    private readonly Dictionary<long, GroundVisual> groundVisuals = [];
     private readonly Dictionary<long, BillboardVisual> npcVisuals = [];
     private readonly Dictionary<RangedShotIdentity, ulong> arrowVisualEntityIds = [];
     private readonly List<EffectVisual> effects = [];
@@ -143,8 +143,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private readonly HashSet<(string Instance, DaggerfallEffectOutcomeKind Kind, ulong Generation, ulong Step)> effectFeedback = [];
     private readonly List<AttackImpactNotice> attackImpacts = [];
     private readonly List<SpriteAtlas> atlases = [];
-    private SpriteAtlas? groundContainerAtlas;
-    private readonly NormalizedBillboardSprite? groundContainerSprite;
+    private readonly List<SpriteAtlas> groundContainerAtlases = [];
+    private readonly IReadOnlyList<NormalizedBillboardSprite> groundContainerSprites = [];
     private readonly List<Material> materials = [];
     private readonly List<(Material Material, MaterialRequest Summer, MaterialRequest Winter, MaterialRequest Rain)> seasonalMaterials = [];
     private bool winterMaterials;
@@ -258,15 +258,16 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 ActorVisual visual = CreateActorVisual(content, entityId, placed);
                 actors.Add(entityId, visual);
             }
-            groundContainerSprite = inputs.GroundContainerSprite;
-            if (groundContainerSprite is { } groundSprite)
+            groundContainerSprites = inputs.GroundContainerSprites ?? [];
+            foreach (NormalizedBillboardSprite groundSprite in groundContainerSprites)
             {
                 RenderResourceInfo texture = appearance.OpenTexture(content, groundSprite.TexturePath, groundSprite.TextureSha256);
                 ownedResources.Add(texture.Handle);
                 SpriteAtlasFrame[] frames = SpriteAtlasAdapter.ToAtlasFrames(groundSprite.AtlasWidth, groundSprite.AtlasHeight,
                     groundSprite.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height)).ToArray());
-                groundContainerAtlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
-                atlases.Add(groundContainerAtlas);
+                SpriteAtlas atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
+                atlases.Add(atlas);
+                groundContainerAtlases.Add(atlas);
             }
             AdmitClassicTextures();
             foreach (NormalizedAudioClip clip in inputs.Audio)
@@ -368,13 +369,15 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         => Publish(actors, new Dictionary<long, DaggerfallGroundContainer>());
 
     /// <summary>Publishes the active ground-container projection through the same Engine snapshot as actors.</summary>
+    /// <param name="groundLook">How a ground pile of one kind of item stands as that item, or null for the treasure pile.</param>
     internal void Publish(ActorsState actors, IReadOnlyDictionary<long, DaggerfallGroundContainer> groundContainers,
         IReadOnlyList<DaggerfallRangedFlightView>? rangedFlights = null, float arrowHeight = 0f,
         Func<long, DaggerfallPerceptionEffectState>? perception = null, IReadOnlyList<DaggerfallNpcView>? npcs = null,
-        IReadOnlyList<DaggerfallDungeonSpellFlightView>? dungeonSpellFlights = null, Func<long, bool>? actorActive = null)
+        IReadOnlyList<DaggerfallDungeonSpellFlightView>? dungeonSpellFlights = null, Func<long, bool>? actorActive = null,
+        Func<long, DaggerfallGroundItemLook?>? groundLook = null)
     {
         if (disposed || drawnByActiveSnapshot) return;
-        ReconcileGroundVisuals(groundContainers);
+        ReconcileGroundVisuals(groundContainers, groundLook);
         List<AppearanceFact> facts = [];
         if (candleAppearance is { } candle && candlePosition is Vector3 candleAt)
             facts.Add(new(candleVisualId, false, 0, new Transform(candleAt, Quaternion.Identity, Vector3.One), candle, true, RenderLayer.Scene));
@@ -382,9 +385,9 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         AppendActorFacts(facts, actors, DaggerfallPresentationObjectIds.ActiveLocationSlot, perception, actorActive);
         foreach (DaggerfallGroundContainer container in groundContainers.Values.OrderBy(container => container.Id))
         {
-            if (groundVisuals.TryGetValue(container.Id, out BillboardVisual? visual))
+            if (groundVisuals.TryGetValue(container.Id, out GroundVisual? visual))
                 facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.Gameplay(container.Id, "Ground container"), false, 0,
-                    new Transform(container.Position.ToVector() + Vector3.UnitY * GroundContainerLift, Quaternion.Identity, Vector3.One), visual.Appearance, true, RenderLayer.Scene));
+                    new Transform(container.Position.ToVector() + Vector3.UnitY * visual.Lift, Quaternion.Identity, Vector3.One), visual.Billboard.Appearance, true, RenderLayer.Scene));
         }
         foreach (var npc in npcs ?? [])
             if (npcVisuals.TryGetValue(npc.Id, out var visual))
@@ -815,7 +818,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         }
         foreach (ActorVisual visual in actors.Values.Reverse()) DisposeActorVisual(visual, ref failures);
         if (candleAppearance is { } candle) Dispose(candle, ref failures); candleAppearance = null;
-        foreach (BillboardVisual visual in groundVisuals.Values.Reverse()) visual.Dispose(ref failures);
+        foreach (GroundVisual visual in groundVisuals.Values.Reverse()) visual.Billboard.Dispose(ref failures);
         foreach (BillboardVisual visual in npcVisuals.Values.Reverse()) visual.Dispose(ref failures);
         foreach (EffectVisual effect in effects.AsEnumerable().Reverse()) effect.Dispose(ref failures);
         effects.Clear();
@@ -842,7 +845,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         // deterministic atlas -> material -> resource lifetime.
         foreach (SpriteAtlas atlas in atlases.AsEnumerable().Reverse()) Dispose(atlas, ref failures);
         atlases.Clear();
-        groundContainerAtlas = null;
+        groundContainerAtlases.Clear();
+        groundItemAtlases.Clear();
         ReleaseLocationResources(ref failures);
         foreach (Material material in materials.AsEnumerable().Reverse()) Dispose(material, ref failures);
         materials.Clear();
@@ -1052,35 +1056,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     internal void RetireNpc(long id)
     {
         if (npcVisuals.Remove(id, out var visual)) Retire(visual);
-    }
-
-    /// <summary>
-    /// A ground pile's position is the floor it rests on; its billboard is lifted by its pivot's share of its
-    /// height so the sprite stands on that floor whatever pivot the source publishes, as the donor lifts dropped
-    /// containers by half their height.
-    /// </summary>
-    private float GroundContainerLift => groundContainerSprite is { } sprite ? sprite.Pivot.Y * sprite.Size.Y : 0F;
-
-    private void ReconcileGroundVisuals(IReadOnlyDictionary<long, DaggerfallGroundContainer> containers)
-    {
-        foreach (long id in groundVisuals.Keys.Where(id => !containers.ContainsKey(id)).ToArray())
-        {
-            BillboardVisual visual = groundVisuals[id];
-            groundVisuals.Remove(id);
-            Retire(visual);
-        }
-        if (containers.Count == 0) return;
-        if (groundContainerSprite is null || groundContainerAtlas is null)
-            throw new InvalidOperationException("Ground containers require the normalized treasure billboard visual.");
-        foreach (DaggerfallGroundContainer container in containers.Values.OrderBy(container => container.Id))
-        {
-            if (groundVisuals.ContainsKey(container.Id)) continue;
-            Appearance visual = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(groundContainerAtlas,
-                groundContainerSprite.InitialFrameId, groundContainerSprite.Pivot, groundContainerSprite.Size,
-                BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default,
-                new Color(1F, 1F, 1F, 1F)));
-            groundVisuals.Add(container.Id, new BillboardVisual(container.Id, visual));
-        }
     }
 
     private ActorVisual CreateActorVisual(IContentService content, long entityId, NormalizedActorSprite sprite, int? mobileId = null)
