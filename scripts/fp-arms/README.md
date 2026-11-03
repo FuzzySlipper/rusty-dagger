@@ -95,8 +95,17 @@ marks.
 
 - The other arm sets (female leather, male and female cloth, male chainmail) are not built: a set chosen by the
   player's gender and armour needs its own bake where its skeleton's rest differs.
-- No family has a weapon model yet. A look model is placed by the family's grip and hold, measured
-  where the clips held the pack's own weapon.
+- Only the dagger family draws a weapon model. A family has one look, and `weapon.longblade` is the classic visual
+  of every sword, so the other weapons wait for looks chosen per weapon item (#10580).
+
+## Weapon models
+
+`content/worldrpg/first-person/weapons/*.glb` are the game's own weapon models, committed beside the definition and
+packed by `build.sh` at `first-person/weapons/`. They are made in `authoring/tools/weapons` from the refreshed
+paper-doll icons (`authoring/docs/weapons.md`), so they carry no Asset Store art and are ordinary committed content.
+Each is in the Engine's held-look frame (origin at the grip's centre, length along -Z, +Y one edge), so a family's
+`look.grip` and `look.hold` seat it where the clips' `weapon_r` bone held the pack's weapon without retuning. Its
+steel parts are their own `metal` material, for the game to tint per metal; the other parts are `trim`.
 
 ## Reused from rusty-riders
 

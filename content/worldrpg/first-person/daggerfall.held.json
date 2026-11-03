@@ -141,7 +141,7 @@
         "weapon.dagger.steel"
       ],
       "look": {
-        "model": null,
+        "model": "first-person/weapons/dagger.glb",
         "grip": [0.0, 0.0, 0.0],
         "hold": [-7.22, 92.26, 25.91]
       },
