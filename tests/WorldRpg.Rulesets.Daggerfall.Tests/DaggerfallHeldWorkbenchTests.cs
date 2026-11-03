@@ -100,8 +100,8 @@ public sealed class DaggerfallHeldWorkbenchTests
 
         Control("clip.dagger.strikeDown.strike").Set(.2F);
         Control("clip.dagger.strikeDown.fade").Set(.25F);
-        Control("look.hold.y").Set(-80);
-        Control("idle.seconds").Set(3);
+        Control("look.dagger.hold.y").Set(-80);
+        Control("look.dagger.idle").Set(3);
         Control("arms.shoulder.x").Set(.2F);
 
         Assert.Equal(.2F, dagger.Strikes["strikeDown"].Marks.Strike);
@@ -136,6 +136,33 @@ public sealed class DaggerfallHeldWorkbenchTests
         JsonNode saved = source.Saved();
         Assert.Equal(.15F, Resolve(saved, "/families/dagger/strikes/strikeDown/marks/strike")!.GetValue<float>(), 4);
         Assert.Equal(.5F, Resolve(saved, "/families/dagger/strikes/strikeLeft/marks/recover")!.GetValue<float>(), 4);
+    }
+
+    [Fact]
+    public void A_look_and_idle_set_on_one_family_are_still_saved_after_the_viewer_moves_to_another()
+    {
+        JsonObject authored = DaggerfallHeldArtTests.Document();
+        DaggerfallHeldArt art = DaggerfallHeldArtTests.Read(authored);
+        PhaseTiming timing = DaggerfallHeldViewmodel.Timing(.1F, 2, 5);
+        HashSet<string> edited = [];
+        string family = "dagger";
+        TunablesPage Page() => new(DaggerfallHeldWorkbench.Title, DaggerfallHeldTunables.For(art.Document, family, "strikeDown", timing, edited, () => { }));
+        Source source = new(authored.ToJsonString());
+        TunablesDebugModule module = new(source, Page, (_, _) => null);
+
+        Assert.True(module.Set("look.dagger.idle", 3).Succeeded);
+        Assert.True(module.Set("look.dagger.grip.x", .05F).Succeeded);
+        family = "longsword";
+        Assert.True(module.Set("look.longsword.hold.y", -80).Succeeded);
+        family = "halberd";
+
+        string diff = module.Diff().Message;
+        string sha = JsonNode.Parse(diff)!["files"]![0]!["sha256"]!.GetValue<string>();
+        Assert.True(module.Save(DaggerfallHeldArt.DocumentPath, sha).Succeeded);
+        JsonNode saved = source.Saved();
+        Assert.Equal(3, Resolve(saved, "/families/dagger/idle/seconds")!.GetValue<float>(), 4);
+        Assert.Equal(.05F, Resolve(saved, "/families/dagger/look/grip/0")!.GetValue<float>(), 4);
+        Assert.Equal(-80, Resolve(saved, "/families/longsword/look/hold/1")!.GetValue<float>(), 2);
     }
 
     // The developer content source over one held definition: reads it and applies the RFC 6902 replacements Save sends.
