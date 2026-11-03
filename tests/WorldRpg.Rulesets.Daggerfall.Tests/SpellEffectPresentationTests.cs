@@ -29,11 +29,13 @@ public sealed class SpellEffectPresentationTests
              "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}, {"x": 32, "y": 0, "width": 32, "height": 32}],
              "classic": {"x": 0.25, "y": 0.25, "width": 0.5, "height": 0.5}}],
           "effectGlow": {"path": "refreshed/glow.png", "byteLength": 1, "sha256": "HASH"},
-          "corpseMesh": {"replaces": {"archive": 380, "record": 1}, "path": "refreshed/corpse-bones.glb", "byteLength": 1, "sha256": "HASH"}}}
+          "meshes": [
+            {"replaces": {"archive": 380, "record": 1}, "path": "refreshed/corpse-bones.glb", "byteLength": 1, "sha256": "HASH", "footprint": 2.15},
+            {"replaces": {"archive": 380, "record": 4}, "path": "refreshed/corpse-bones.glb", "byteLength": 1, "sha256": "HASH", "footprint": 2.15}]}}
         """)), "test.art");
 
     private static (DaggerfallSiteAppearance Presentation, AppearanceFake Graphics, PresentationRecorder Particles) Compose(Func<bool> refreshed,
-        NormalizedActorSprite? corpse = null, AnimationRecorder? animation = null)
+        NormalizedActorSprite? corpse = null, AnimationRecorder? animation = null, IReadOnlyList<DaggerfallSiteDecoration>? decorations = null)
     {
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
@@ -43,7 +45,7 @@ public sealed class SpellEffectPresentationTests
         content.Add("refreshed/corpse-bones.glb", Hash);
         content.Add("sprite/corpse.png", Hash);
         AppearanceFake graphics = new(releases);
-        DaggerfallSiteAppearance presentation = new(content, graphics, MediaInputs(classic: ClassicEffects(fireSpell: true), corpse: corpse));
+        DaggerfallSiteAppearance presentation = new(content, graphics, MediaInputs(classic: ClassicEffects(fireSpell: true), corpse: corpse, decorations: decorations));
         PresentationRecorder particles = PresentationRecorder.Create();
         presentation.UseEffectArt(particles.Service, (animation ?? AnimationRecorder.Create()).Service, Art(), refreshed);
         return (presentation, graphics, particles);
@@ -160,6 +162,31 @@ public sealed class SpellEffectPresentationTests
         presentation.RetireActor(11);
         presentation.BeginAdmittedUpdate(); presentation.CompleteAdmittedUpdate(); presentation.BeginAdmittedUpdate();
         Assert.Equal(1, animation.ReleasedAppearances);
+    }
+
+    [Fact]
+    public void A_placed_bone_pile_draws_as_the_mesh_at_its_sprite_width_on_its_floor_in_refreshed_art()
+    {
+        bool refreshed = true;
+        AnimationRecorder animation = AnimationRecorder.Create();
+        NormalizedBillboardSprite bones = new("sprite/corpse.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, .5F), new Vector2(1.075F, .725F));
+        DaggerfallSiteDecoration pile = new("flat-1", new WorldPoint(4, .5F, 6), false, bones, bones, (380, 4));
+        var (presentation, graphics, _) = Compose(() => refreshed, animation: animation, decorations: [pile]);
+        using DaggerfallSiteAppearance owned = presentation;
+        using ActorsState actors = ActorsWithNpc(11, HealthyMechanics(), new(2, 0, 3));
+        // One model serves both records it replaces; this site gives the one placed pile its appearance.
+        Assert.Equal(["refreshed/corpse-bones.glb"], animation.OpenedPaths);
+        Appearance mesh = Assert.Single(animation.Created);
+
+        Publish(presentation, actors);
+        AppearanceFact lying = Assert.Single(graphics.Snapshots[^1], fact => fact.Appearance == mesh);
+        // The sprite stands centred on its position, so the mesh rests half its height lower, at half the footprint's width.
+        Assert.Equal(new Vector3(4, .5F - .3625F, 6), lying.Transform.Translation);
+        Assert.Equal(new Vector3(.5F), lying.Transform.Scale);
+
+        refreshed = false;
+        Publish(presentation, actors);
+        Assert.DoesNotContain(graphics.Snapshots[^1], fact => fact.Appearance == mesh);
     }
 
     [Fact]

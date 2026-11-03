@@ -342,10 +342,11 @@ the classic publication stays the fallback. `authoring/tools/items/promote.py` w
   frame sits in it (`classic`) so the game keeps the classic world size and anchor. Refreshed fire, shock, magic
   and the sparkle draw additively; a flying spell also trails particles of the soft white glow promotion writes
   (`effectGlow`), tinted per element, that burst where it lands. Classic art draws the classic sprites alone.
-- **Shared corpse.** The nineteen human enemy classes (Mage through Knight, and the city watch), men and women
-  alike, fall as the one corpse TEXTURE.380 record 1 draws; refreshed, that is one particular man. Refreshed art draws them as a skull-free bone pile mesh instead (`corpseMesh`,
-  a GLB scaled to the classic corpse's 2.15 m footprint and resting on the floor), lying along the creature's
-  heading. A creature with a corpse of its own keeps its sprite.
+- **Shared corpse and bone pile.** The nineteen human enemy classes (Mage through Knight, and the city watch), men
+  and women alike, fall as the one corpse TEXTURE.380 record 1 draws; refreshed, that is one particular man. Refreshed
+  art draws them as a skull-free bone pile mesh instead, lying along the enemy's heading, and draws the same mesh for
+  a placed record 4 bone pile (`meshes`: a GLB resting on the floor, with its footprint, so it is drawn at the width of
+  the sprite it replaces). A creature with a corpse of its own keeps its sprite.
 - **What the data container still carries.** Nothing classic is dropped yet: the paper doll's classic bodies, heads
   and worn items are the Classic art fallback, and armour in a dyed material (iron, ebony and the rest) is drawn
   classic, since the refreshed armour is steel, leather and chain.

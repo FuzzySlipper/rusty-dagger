@@ -30236,14 +30236,27 @@
    "byteLength": 1461,
    "sha256": "8bdba62f3468bfc716faf281a2386ef363c550871d48013dfe414733a943df03"
   },
-  "corpseMesh": {
-   "replaces": {
-    "archive": 380,
-    "record": 1
+  "meshes": [
+   {
+    "replaces": {
+     "archive": 380,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/effects/corpse-bones.glb",
+    "byteLength": 855396,
+    "sha256": "b68046217c9e27fc273f3c22d44fee84f18c2465d07e0268b90eaf8c6fca5411",
+    "footprint": 2.15
    },
-   "path": "worldrpg/media/refreshed/effects/corpse-bones.glb",
-   "byteLength": 855396,
-   "sha256": "b68046217c9e27fc273f3c22d44fee84f18c2465d07e0268b90eaf8c6fca5411"
-  }
+   {
+    "replaces": {
+     "archive": 380,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/effects/corpse-bones.glb",
+    "byteLength": 855396,
+    "sha256": "b68046217c9e27fc273f3c22d44fee84f18c2465d07e0268b90eaf8c6fca5411",
+    "footprint": 2.15
+   }
+  ]
  }
 }

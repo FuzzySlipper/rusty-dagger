@@ -10,9 +10,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// World effects drawn in refreshed art, and the spells in flight. A spell flies as its element's missile and lands
 /// as its impact, both classic animated sprites. With refreshed art each effect draws its refreshed atlas at the
 /// classic world size and anchor, the bright elements (fire, shock, magic) and the sparkle added to the scene rather
-/// than laid over it, and a flying spell trails glowing particles that burst where it lands. A human enemy whose corpse is
-/// the sprite every human class shares lies as the refreshed bone pile mesh instead, which is no one in particular. Classic art draws the classic
-/// sprites alone.
+/// than laid over it, and a flying spell trails glowing particles that burst where it lands. A human enemy whose corpse
+/// is the sprite every human class shares lies as the refreshed bone pile mesh instead, which is no one in particular,
+/// and a bone pile placed in a dungeon draws as the same mesh. Classic art draws the classic sprites alone.
 /// </summary>
 internal sealed partial class DaggerfallSiteAppearance
 {
@@ -22,7 +22,7 @@ internal sealed partial class DaggerfallSiteAppearance
     private IPresentationService? particles;
     private RenderResource? particleGlow;
     private IAnimationService? meshes;
-    private (RenderResource Model, int Archive, int Record)? corpseMesh;
+    private readonly Dictionary<(int Archive, int Record), (RenderResource Model, double Footprint)> worldMeshes = [];
 
     /// <summary>
     /// Admits the refreshed set's world effects and particle glow, drawn whenever <paramref name="refreshed"/> answers
@@ -50,22 +50,41 @@ internal sealed partial class DaggerfallSiteAppearance
             ownedResources.Add(texture.Handle);
             particleGlow = texture.Handle;
         }
-        if (art.CorpseMesh is { } mesh)
+        Dictionary<string, RenderResource> models = new(StringComparer.Ordinal);
+        foreach (var ((archive, record), mesh) in art.Meshes)
         {
-            using ContentReference reference = content.ResolveReference(new ContentResolveRequest(mesh.File.Path, mesh.File.Sha256));
-            RenderResource model = animation.OpenAnimatedMeshFromContent(new(reference));
-            ownedResources.Add(model);
-            corpseMesh = (model, mesh.Archive, mesh.Record);
-            foreach (ActorVisual visual in actors.Values) AttachCorpseMesh(visual);
+            if (!models.TryGetValue(mesh.File.Path, out RenderResource? model))
+            {
+                using ContentReference reference = content.ResolveReference(new ContentResolveRequest(mesh.File.Path, mesh.File.Sha256));
+                model = animation.OpenAnimatedMeshFromContent(new(reference));
+                ownedResources.Add(model);
+                models.Add(mesh.File.Path, model);
+            }
+            worldMeshes.Add((archive, record), (model, mesh.Footprint));
         }
+        foreach (ActorVisual visual in actors.Values) AttachCorpseMesh(visual);
+        foreach (DecorationVisual flat in decorations) AttachDecorationMesh(flat);
     }
 
-    /// <summary>Gives an actor whose corpse is the shared sprite its own appearance of the refreshed corpse mesh.</summary>
+    /// <summary>
+    /// A refreshed mesh standing in for a classic sprite cut from <paramref name="source"/>, and the scale that draws it
+    /// at <paramref name="width"/>, the sprite's world width; null when the refreshed set has no mesh for it.
+    /// </summary>
+    private (Appearance Appearance, float Scale)? WorldMesh((int Archive, int Record)? source, float width) =>
+        source is { } key && meshes is not null && worldMeshes.TryGetValue(key, out var mesh)
+            ? (meshes.CreateAnimatedMeshAppearance(new(mesh.Model)), (float)(width / mesh.Footprint)) : null;
+
+    /// <summary>Gives an actor whose corpse sprite has a refreshed mesh its own appearance of that mesh.</summary>
     private void AttachCorpseMesh(ActorVisual visual)
     {
-        if (corpseMesh is not { } mesh || meshes is null || visual.CorpseMesh is not null
-            || visual.Sprite.Corpse?.SourceTexture != (mesh.Archive, mesh.Record)) return;
-        visual.CorpseMesh = meshes.CreateAnimatedMeshAppearance(new(mesh.Model));
+        if (visual.CorpseMesh is not null || visual.Sprite.Corpse is not { } corpse) return;
+        if (WorldMesh(corpse.SourceTexture, corpse.Size.X) is { } mesh) (visual.CorpseMesh, visual.CorpseMeshScale) = mesh;
+    }
+
+    /// <summary>Gives a placed decoration whose sprite has a refreshed mesh its own appearance of that mesh.</summary>
+    private void AttachDecorationMesh(DecorationVisual flat)
+    {
+        if (flat.Mesh is null && WorldMesh(flat.Definition.Source, flat.Definition.Summer.Size.X) is { } mesh) (flat.Mesh, flat.MeshScale) = mesh;
     }
 
     /// <summary>The corpse a defeated actor shows: the refreshed mesh while refreshed art is drawn, else its sprite.</summary>

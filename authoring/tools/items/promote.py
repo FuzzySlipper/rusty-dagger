@@ -41,9 +41,10 @@ holds every frame's art and the classic frame's place on the generation canvas, 
 size and position. The entry states where the classic frame sits in that box (`classic`, fractions of the frame,
 top-down), from which the game sizes and anchors it as the classic. An effect missing an accepted frame stays
 classic. The area also writes the soft white glow (`effectGlow`) the game's spell trails and impact bursts tint
-in each element's colour, and the corpse mesh (`corpseMesh`, the `effects` final `corpse-bones.glb`): a skull-free
-bone pile standing in for the TEXTURE.380 record 1 corpse every human enemy class shares, men and women alike, so
-it is no one in particular. The final is already scaled to the classic corpse's footprint and rests on the floor.
+in each element's colour, and the world meshes (`meshes`): the `effects` final `corpse-bones.glb`, a skull-free bone
+pile resting on the floor, stands in for TEXTURE.380 record 1 (the corpse every human enemy class shares, men and
+women alike, so it is no one in particular) and record 4 (the bone pile placed in dungeons). Each entry states the
+mesh's footprint, its longest side in metres, so the game draws it at the width of the classic sprite it replaces.
 
 Icons are written at their area's ICON pixels on the longer side and carry no doll rect.
 
@@ -312,16 +313,24 @@ def effect_glow():
     return {"path": target, "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest()}
 
 
-def corpse_mesh():
-    """Copies the corpse mesh final into the pack, if there is one."""
-    final = AUTHORING / "gen-raw" / "effects" / "corpse-bones.glb"
-    if not final.exists():
-        print("effects: no corpse mesh final; the shared corpse stays a sprite")
-        return None
-    data = final.read_bytes()
-    target = f"{MEDIA}/effects/corpse-bones.glb"
-    (CONTENT / target).write_bytes(data)
-    return {"replaces": {"archive": 380, "record": 1}, "path": target, "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+# The world meshes: each final, the classic TEXTURE records it stands in for, and its footprint (longest side, metres).
+WORLD_MESHES = [("corpse-bones.glb", [(380, 1), (380, 4)], 2.15)]
+
+
+def world_meshes():
+    """Copies each world mesh final into the pack, with an entry for every classic record it replaces."""
+    entries = []
+    for name, records, footprint in WORLD_MESHES:
+        final = AUTHORING / "gen-raw" / "effects" / name
+        if not final.exists():
+            print(f"effects: no {name} final; {', '.join(f'{a}/{r}' for a, r in records)} stay sprites")
+            continue
+        data = final.read_bytes()
+        target = f"{MEDIA}/effects/{name}"
+        (CONTENT / target).write_bytes(data)
+        entries += [{"replaces": {"archive": archive, "record": record}, "path": target, "byteLength": len(data),
+                     "sha256": hashlib.sha256(data).hexdigest(), "footprint": footprint} for archive, record in records]
+    return entries
 
 
 def icon_entry(replaces, image, name):
@@ -343,10 +352,8 @@ def main():
                 old.unlink()
             effects = payload["artReplacements"]["effects"] = world_effects()
             payload["artReplacements"]["effectGlow"] = effect_glow()
-            if mesh := corpse_mesh():
-                payload["artReplacements"]["corpseMesh"] = mesh
-            else:
-                payload["artReplacements"].pop("corpseMesh", None)
+            payload["artReplacements"].pop("corpseMesh", None)
+            payload["artReplacements"]["meshes"] = world_meshes()
             print(f"effects: {len(effects)} effects, {sum(entry['byteLength'] for entry in effects) / 1e6:.1f} MB", flush=True)
             continue
         notes = ledger(area)
