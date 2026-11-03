@@ -37,6 +37,48 @@ public sealed class ActorSpritePresentationTests
         Assert.Contains("winter.png", graphics.OpenedResourcePaths);
     }
 
+    /// <summary>
+    /// A wall material whose texture record the refreshed art set has a surface for draws it while refreshed art is drawn,
+    /// season by season: a season whose record the set has no surface for draws its classic texture. Season and art
+    /// changes update the material only when its texture changes.
+    /// </summary>
+    [Fact]
+    public void Refreshed_surfaces_replace_each_season_texture_they_cover_and_follow_the_art_choice()
+    {
+        List<string> releases = []; var graphics = new AppearanceFake(releases); var source = MediaInputs();
+        var profile = new DaggerfallSiteProfile(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook,
+            [new NormalizedMaterial(0, "materials/texture-312-1.png", Hash) { WinterTexture = new("materials/texture-313-1.png", Hash) }], source.ActorSprites);
+        ContentFake content = MediaContent(releases);
+        foreach (string path in new[] { "materials/texture-312-1.png", "materials/texture-313-1.png", "refreshed/surfaces/texture-312-1.png" })
+            content.Add(path, Hash);
+        DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(System.Text.Encoding.UTF8.GetBytes("""
+            {"artReplacements": {"images": [], "surfaces": [{"replaces": {"archive": 312, "record": 1},
+              "path": "refreshed/surfaces/texture-312-1.png", "byteLength": 1, "sha256": "0000000000000001000000000000000200000000000000030000000000000004",
+              "width": 128, "height": 256}]}}
+            """), "test.art");
+        bool refreshed = false;
+        using var presentation = new DaggerfallSiteAppearance(content, graphics, profile);
+        presentation.UseEffectArt(PresentationRecorder.Create().Service, AnimationRecorder.Create().Service, art, () => refreshed);
+        Assert.Contains("refreshed/surfaces/texture-312-1.png", graphics.OpenedResourcePaths);
+        Assert.Empty(graphics.MaterialUpdates);
+        using ActorsState actors = EmptyActors();
+
+        refreshed = true;
+        presentation.Publish(actors);
+        var summer = Assert.Single(graphics.MaterialUpdates);
+        presentation.Publish(actors);
+        Assert.Single(graphics.MaterialUpdates);
+        // Winter has no refreshed surface, so it draws the classic winter texture in either art set.
+        presentation.SetExteriorSeason(World.DaggerfallExteriorSeason.Winter);
+        Assert.Equal(2, graphics.MaterialUpdates.Count);
+        refreshed = false;
+        presentation.Publish(actors);
+        Assert.Equal(2, graphics.MaterialUpdates.Count);
+        presentation.SetExteriorSeason(World.DaggerfallExteriorSeason.Summer);
+        Assert.Equal(3, graphics.MaterialUpdates.Count);
+        Assert.NotEqual(summer.Replacement, graphics.MaterialUpdates[2].Replacement);
+    }
+
     [Fact]
     public void Normalized_actor_states_preserve_all_directional_sectors_and_select_an_explicit_sector()
     {

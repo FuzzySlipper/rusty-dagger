@@ -646,6 +646,7 @@ internal sealed partial class DaggerfallSession
                 projection, actionTriggers, profiles, activeProfile, saved?.Site.ReturnProfile?.Require(),
                 composition.StartSite.ClassicPresentation);
             _grounding.FloorPending = () => _sites.CollisionPending;
+            if (composition.ArtReplacements is { } groundArt) _sites.UseGroundArt(groundArt, () => DrawnArt is not null);
             State.LevelUps.Began += () => _appearance.PlayGameplaySound(96, "level-up");
             _equipmentMoves.Changed += change =>
             {

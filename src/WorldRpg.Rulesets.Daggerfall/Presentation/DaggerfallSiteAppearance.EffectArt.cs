@@ -64,6 +64,7 @@ internal sealed partial class DaggerfallSiteAppearance
         }
         foreach (ActorVisual visual in actors.Values) AttachCorpseMesh(visual);
         foreach (DecorationVisual flat in decorations) AttachDecorationMesh(flat);
+        UseSurfaceArt(art);
     }
 
     /// <summary>
