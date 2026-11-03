@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Text;
 using Rusty.Engine;
+using Rusty.Engine.Entities;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -27,20 +28,24 @@ public sealed class SpellEffectPresentationTests
             {"replaces": "effect.impact.fire", "path": "refreshed/fire-impact.png", "byteLength": 1, "sha256": "HASH", "width": 64, "height": 32,
              "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}, {"x": 32, "y": 0, "width": 32, "height": 32}],
              "classic": {"x": 0.25, "y": 0.25, "width": 0.5, "height": 0.5}}],
-          "effectGlow": {"path": "refreshed/glow.png", "byteLength": 1, "sha256": "HASH"}}}
+          "effectGlow": {"path": "refreshed/glow.png", "byteLength": 1, "sha256": "HASH"},
+          "corpseMesh": {"replaces": {"archive": 380, "record": 1}, "path": "refreshed/corpse-bones.glb", "byteLength": 1, "sha256": "HASH"}}}
         """)), "test.art");
 
-    private static (DaggerfallSiteAppearance Presentation, AppearanceFake Graphics, PresentationRecorder Particles) Compose(Func<bool> refreshed)
+    private static (DaggerfallSiteAppearance Presentation, AppearanceFake Graphics, PresentationRecorder Particles) Compose(Func<bool> refreshed,
+        NormalizedActorSprite? corpse = null, AnimationRecorder? animation = null)
     {
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
         content.Add("refreshed/fire-missile.png", Hash);
         content.Add("refreshed/fire-impact.png", Hash);
         content.Add("refreshed/glow.png", Hash);
+        content.Add("refreshed/corpse-bones.glb", Hash);
+        content.Add("sprite/corpse.png", Hash);
         AppearanceFake graphics = new(releases);
-        DaggerfallSiteAppearance presentation = new(content, graphics, MediaInputs(classic: ClassicEffects(fireSpell: true)));
+        DaggerfallSiteAppearance presentation = new(content, graphics, MediaInputs(classic: ClassicEffects(fireSpell: true), corpse: corpse));
         PresentationRecorder particles = PresentationRecorder.Create();
-        presentation.UseEffectArt(particles.Service, Art(), refreshed);
+        presentation.UseEffectArt(particles.Service, (animation ?? AnimationRecorder.Create()).Service, Art(), refreshed);
         return (presentation, graphics, particles);
     }
 
@@ -113,7 +118,57 @@ public sealed class SpellEffectPresentationTests
               {"replaces": "effect.missile.fire", "path": "refreshed/fire-missile.png", "byteLength": 1, "sha256": "HASH", "width": 32, "height": 32,
                "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}], "classic": {"x": 0, "y": 0, "width": 1, "height": 1}}]}}
             """)), "test.art");
-        Assert.Throws<InvalidOperationException>(() => presentation.UseEffectArt(PresentationRecorder.Create().Service, art, () => true));
+        Assert.Throws<InvalidOperationException>(() => presentation.UseEffectArt(PresentationRecorder.Create().Service, AnimationRecorder.Create().Service, art, () => true));
+    }
+
+    private static NormalizedActorSprite Corpse((int, int) source) =>
+        new("sprite/corpse.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, 0F), new Vector2(2.15F, .9F)) { SourceTexture = source };
+
+    private static ActorsState DefeatedActor()
+    {
+        Rusty.Engine.Mechanics.Stat maximum = new(100);
+        Rusty.Engine.Mechanics.StatsComponent stats = new();
+        stats.AddStat(Rusty.Engine.Mechanics.StatId.Parse("health-maximum"), maximum);
+        stats.AddTrack(Rusty.Engine.Mechanics.TrackId.Parse("health"), new Rusty.Engine.Mechanics.Track(maximum, 0));
+        ActorsState actors = new();
+        actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), new Rusty.Engine.Mechanics.StatsComponent(), "health", DaggerActorFactory.PlayerCapabilities);
+        actors.CreateActor(11, new EntityTypeId("test"), stats, new ActorPose(new WorldPoint(2, 0, 3), MathF.PI / 2), "health", DaggerActorFactory.NonPlayerCapabilities);
+        return actors;
+    }
+
+    [Fact]
+    public void A_creature_whose_corpse_is_the_shared_sprite_lies_as_the_bone_pile_mesh_in_refreshed_art()
+    {
+        bool refreshed = true;
+        AnimationRecorder animation = AnimationRecorder.Create();
+        var (presentation, graphics, _) = Compose(() => refreshed, Corpse((380, 1)), animation);
+        using DaggerfallSiteAppearance owned = presentation;
+        using ActorsState actors = DefeatedActor();
+        Assert.Equal(["refreshed/corpse-bones.glb"], animation.OpenedPaths);
+        Appearance mesh = Assert.Single(animation.Created);
+
+        Publish(presentation, actors);
+        AppearanceFact lying = Assert.Single(graphics.Snapshots[^1], fact => fact.Appearance == mesh);
+        // The mesh lies along the creature's heading, where it fell.
+        Assert.Equal(new Vector3(2, 0, 3), lying.Transform.Translation);
+        Assert.Equal(Quaternion.CreateFromAxisAngle(Vector3.UnitY, -MathF.PI / 2), lying.Transform.Rotation);
+
+        refreshed = false;
+        Publish(presentation, actors);
+        Assert.DoesNotContain(graphics.Snapshots[^1], fact => fact.Appearance == mesh);
+
+        presentation.RetireActor(11);
+        presentation.BeginAdmittedUpdate(); presentation.CompleteAdmittedUpdate(); presentation.BeginAdmittedUpdate();
+        Assert.Equal(1, animation.ReleasedAppearances);
+    }
+
+    [Fact]
+    public void A_creature_with_its_own_corpse_keeps_its_sprite_in_refreshed_art()
+    {
+        AnimationRecorder animation = AnimationRecorder.Create();
+        var (presentation, _, _) = Compose(() => true, Corpse((96, 2)), animation);
+        using DaggerfallSiteAppearance owned = presentation;
+        Assert.Empty(animation.Created);
     }
 
     private static List<DaggerfallSiteAppearance.EffectVisual> EffectsOf(DaggerfallSiteAppearance presentation) =>

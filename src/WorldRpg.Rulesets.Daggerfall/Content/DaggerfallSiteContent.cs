@@ -1896,7 +1896,11 @@ internal static partial class DaggerfallSiteContent
         Vector2 pivot = GeneratedVector2(DaggerfallBaseContent.Property(value, "pivot", diagnostics), "actor.corpse.pivot", diagnostics);
         Vector2 size = GeneratedVector2(DaggerfallBaseContent.Property(value, "worldSize", diagnostics), "actor.corpse.worldSize", diagnostics);
         if (size.X <= 0 || size.Y <= 0) diagnostics.Add($"Generated actor mobile '{mobileId}' has a non-positive corpse world size.");
-        return new NormalizedActorSprite(resource.Path, resource.Hash, resource.AtlasWidth, resource.AtlasHeight, resource.Frames, resource.Frames[0].Id, pivot, size);
+        // The texture record it was cut from names the corpse every human enemy class shares (TEXTURE.380 record 1).
+        (int, int)? source = value.TryGetProperty("textureArchive", out JsonElement archive) && value.TryGetProperty("textureRecord", out JsonElement record)
+            && archive.TryGetInt32(out int archiveValue) && record.TryGetInt32(out int recordValue) ? (archiveValue, recordValue) : null;
+        return new NormalizedActorSprite(resource.Path, resource.Hash, resource.AtlasWidth, resource.AtlasHeight, resource.Frames, resource.Frames[0].Id, pivot, size)
+            { SourceTexture = source };
     }
 
     private sealed record MediaResource(string Path, ContentSha256 Hash, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames);
@@ -2701,6 +2705,8 @@ internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 T
     /// </summary>
     internal NormalizedAttackSequence? RangedAttackSequence { get; init; }
     internal NormalizedActorSprite? Corpse { get; init; }
+    /// <summary>The classic texture archive and record this sprite was cut from, when the publication states it.</summary>
+    internal (int Archive, int Record)? SourceTexture { get; init; }
     internal NormalizedActorSprite? Female { get; init; }
 
     internal NormalizedActorSprite ForGender(string gender) => gender == "female" && Female is { } female

@@ -34,7 +34,7 @@ internal sealed partial class DaggerfallSession
         if (_tuning.Viewmodel.Style != DaggerfallViewmodelStyle.Classic && _composition.HeldArt is { } art)
             appearance.UseHeldArt(_engine, art, _tuning.Viewmodel.Style);
         if (_composition.ArtReplacements is { } refreshed)
-            appearance.UseEffectArt(_engine.Presentation, refreshed, () => DrawnArt is not null);
+            appearance.UseEffectArt(_engine.Presentation, _engine.Animation, refreshed, () => DrawnArt is not null);
     }
 
     /// <summary>
