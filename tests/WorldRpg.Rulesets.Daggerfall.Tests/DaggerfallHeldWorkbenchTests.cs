@@ -10,8 +10,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// <summary>
 /// The developer first-person workbench's answers: why nothing can be viewed without the art or under the classic
 /// style, the refusals that name what can be shown, and the page's values, each bound to the authored held definition
-/// where Save writes it and applied to the loaded art. Drawing the viewed weapon needs the Engine's animation and tween
-/// services and the container's models, which window runs cover.
+/// where Save writes it and applied to the loaded art. Drawing the viewed arms needs the Engine's animation services
+/// and the container's models, which window runs and scripts/fp-arms/sheet.sh cover.
 /// </summary>
 public sealed class DaggerfallHeldWorkbenchTests
 {
@@ -20,7 +20,7 @@ public sealed class DaggerfallHeldWorkbenchTests
     {
         DaggerfallHeldWorkbench workbench = new(null, DaggerfallViewmodelStyle.Held, Unreached, () => { });
 
-        foreach (DebugCommandResult result in new[] { workbench.Show("weapon.dagger.steel", "strikeDown"), workbench.Key(0), workbench.Step(1), workbench.Play(1), workbench.At(0) })
+        foreach (DebugCommandResult result in new[] { workbench.Show("weapon.dagger.steel", "strikeDown"), workbench.Key(0), workbench.Step(1), workbench.Play(1), workbench.At(0), workbench.Read() })
         {
             Assert.False(result.Succeeded);
             Assert.Contains("first-person.rpak is not installed", result.Message, StringComparison.Ordinal);
@@ -41,20 +41,22 @@ public sealed class DaggerfallHeldWorkbenchTests
     }
 
     [Fact]
-    public void Refusals_name_the_looks_strikes_and_hands_that_can_be_shown_before_anything_is_drawn()
+    public void Refusals_name_the_looks_and_strikes_that_can_be_shown_before_anything_is_drawn()
     {
-        DaggerfallHeldWorkbench workbench = new(DaggerfallHeldArtTests.Read(DaggerfallHeldArtTests.Document()), DaggerfallViewmodelStyle.HeldRetro, Unreached, () => { });
+        JsonObject authored = DaggerfallHeldArtTests.Document();
+        authored["families"]!["dagger"]!["strikes"]!.AsObject().Remove("strikeLeft");
+        DaggerfallHeldWorkbench workbench = new(DaggerfallHeldArtTests.Read(authored), DaggerfallViewmodelStyle.HeldRetro, Unreached, () => { });
 
-        Assert.Equal(["strikeDown"], workbench.Strikes);
-        Assert.Contains("Looks: weapon.dagger.steel", workbench.Show("weapon.sword.steel", "strikeDown").Message, StringComparison.Ordinal);
-        DebugCommandResult noMotion = workbench.Show("weapon.dagger.steel", "strikeLeft");
-        Assert.False(noMotion.Succeeded);
-        Assert.Contains("Strikes with motion: strikeDown", noMotion.Message, StringComparison.Ordinal);
-        Assert.Equal("The hand is main or off.", workbench.Show("weapon.dagger.steel", "strikeDown", "left").Message);
-        foreach (DebugCommandResult unshown in new[] { workbench.Key(0), workbench.Step(-1), workbench.Play(.25F), workbench.At(.1F), workbench.Hand("off") })
+        Assert.Equal(["weapon.dagger.steel", "weapon.longblade", "weapon.axe", "weapon.mace", "weapon.flail", "weapon.warhammer", "weapon.staff"], workbench.Looks);
+        Assert.DoesNotContain("strikeLeft", workbench.Strikes);
+        Assert.Contains("Looks: weapon.dagger.steel, weapon.longblade, weapon.axe", workbench.Show("weapon.bow", "strikeDown").Message, StringComparison.Ordinal);
+        DebugCommandResult noClip = workbench.Show("weapon.dagger.steel", "strikeLeft");
+        Assert.False(noClip.Succeeded);
+        Assert.Contains("Strikes with clips: strikeDown, strikeDownLeft, strikeRight", noClip.Message, StringComparison.Ordinal);
+        foreach (DebugCommandResult unshown in new[] { workbench.Key(0), workbench.Step(-1), workbench.Play(.25F), workbench.At(.1F) })
             Assert.Equal("Choose a look first: held.motion <look> <strike>.", unshown.Message);
         Assert.Equal("Choose a look first.", workbench.Choose("strike", "strikeDown"));
-        Assert.Equal((null, null, false, -1), workbench.Viewing);
+        Assert.Equal((null, null, -1), workbench.Viewing);
     }
 
     [Fact]
@@ -75,21 +77,16 @@ public sealed class DaggerfallHeldWorkbenchTests
         JsonObject authored = DaggerfallHeldArtTests.Document();
         DaggerfallHeldArt art = DaggerfallHeldArtTests.Read(authored);
         PhaseTiming timing = DaggerfallHeldViewmodel.Timing(.1F, 2, 5);
-        MotionKey[] keys = art.Document.Motion.Tracks["strikeDown"];
 
-        for (int key = -1; key < keys.Length; key++)
-        {
-            List<TunableGroup> groups = DaggerfallHeldTunables.For(art.Document, "strikeDown", timing, key, new HashSet<string>(), () => { });
-            Assert.Equal(key >= 0, groups.Any(group => group.Id.StartsWith("pose.", StringComparison.Ordinal)));
-            foreach (TunableControl control in groups.SelectMany(group => group.Tunables).Select(tunable => tunable.Control))
+        foreach (var (family, strike) in new[] { ("dagger", "strikeDown"), ("longsword", "strikeUp"), ("halberd", "strikeLeft") })
+            foreach (TunableControl control in DaggerfallHeldTunables.For(art.Document, family, strike, timing, new HashSet<string>(), () => { })
+                .SelectMany(group => group.Tunables).Select(tunable => tunable.Control))
             {
                 TunableSource source = Assert.IsType<TunableSource>(control.Source);
                 Assert.Equal(DaggerfallHeldArt.DocumentPath, source.Path);
                 JsonNode saved = Assert.IsAssignableFrom<JsonNode>(Resolve(authored, source.Pointer));
-                float value = control.Options is { } options ? options.ToList().IndexOf(saved.GetValue<string>()) : saved.GetValue<float>();
-                Assert.True(Math.Abs(control.Value - value) <= control.Step / 2, $"{control.Id} ({source.Pointer}) is {control.Value} loaded but {saved} authored.");
+                Assert.True(Math.Abs(control.Value - saved.GetValue<float>()) <= control.Step / 2, $"{control.Id} ({source.Pointer}) is {control.Value} loaded but {saved} authored.");
             }
-        }
     }
 
     [Fact]
@@ -97,49 +94,48 @@ public sealed class DaggerfallHeldWorkbenchTests
     {
         DaggerfallHeldArt art = DaggerfallHeldArtTests.Read(DaggerfallHeldArtTests.Document());
         int redraws = 0;
-        List<TunableGroup> groups = DaggerfallHeldTunables.For(art.Document, "strikeDown", DaggerfallHeldViewmodel.Timing(.1F, 2, 5), 0, new HashSet<string>(), () => redraws++);
+        List<TunableGroup> groups = DaggerfallHeldTunables.For(art.Document, "dagger", "strikeDown", DaggerfallHeldViewmodel.Timing(.1F, 2, 5), new HashSet<string>(), () => redraws++);
         Tunable Control(string id) => groups.SelectMany(group => group.Tunables).Single(tunable => tunable.Control.Id == id);
-        MotionKey first = art.Document.Motion.Tracks["strikeDown"][0];
+        DaggerfallHeldFamily dagger = art.Document.Families["dagger"];
 
-        Control("stance.grip.x").Set(.2F);
+        Control("clip.dagger.strikeDown.strike").Set(.2F);
+        Control("clip.dagger.strikeDown.fade").Set(.25F);
         Control("look.hold.y").Set(-80);
-        Control("keys.strikeDown.0.phase").Set(Array.IndexOf(Enum.GetValues<MotionPhase>(), MotionPhase.Commit));
-        Control($"pose.{first.Pose}.position.y").Set(.05F);
+        Control("idle.seconds").Set(3);
+        Control("arms.shoulder.x").Set(.2F);
 
-        Assert.Equal(.2F, art.Stance.Grip.X);
-        Assert.Equal(-80, art.Document.Look.Hold.Y);
-        Assert.Equal(MotionPhase.Commit, art.Document.Motion.Tracks["strikeDown"][0].Phase);
-        Assert.Equal(.05F, art.Document.Motion.Poses[first.Pose].Position.Y);
-        Assert.Equal(4, redraws);
+        Assert.Equal(.2F, dagger.Strikes["strikeDown"].Marks.Strike);
+        Assert.Equal(.25F, dagger.Strikes["strikeDown"].Fade);
+        Assert.Equal(-80, dagger.Look.Hold.Y);
+        Assert.Equal(3, dagger.Idle.Seconds);
+        Assert.Equal(.2F, art.Document.Arms.Shoulder.X);
+        Assert.Equal(5, redraws);
     }
 
     [Fact]
-    public void Poses_set_at_two_keys_are_still_saved_after_the_viewer_plays_or_scrubs_the_strike()
+    public void Marks_set_on_two_strikes_are_still_saved_after_the_viewer_moves_to_another()
     {
         JsonObject authored = DaggerfallHeldArtTests.Document();
         DaggerfallHeldArt art = DaggerfallHeldArtTests.Read(authored);
         PhaseTiming timing = DaggerfallHeldViewmodel.Timing(.1F, 2, 5);
-        MotionKey[] keys = art.Document.Motion.Tracks["strikeDown"];
-        string firstPose = keys[0].Pose, lastPose = keys[^1].Pose;
-        Assert.NotEqual(firstPose, lastPose);
-        // The workbench's page as it holds a key; playing or scrubbing holds none (-1).
+        // The workbench's page as it shows one strike, then another; the first one's marks stay bound once edited.
         HashSet<string> edited = [];
-        int held = 0;
-        TunablesPage Page() => new(DaggerfallHeldWorkbench.Title, DaggerfallHeldTunables.For(art.Document, "strikeDown", timing, held, edited, () => { }));
+        string strike = "strikeDown";
+        TunablesPage Page() => new(DaggerfallHeldWorkbench.Title, DaggerfallHeldTunables.For(art.Document, "dagger", strike, timing, edited, () => { }));
         Source source = new(authored.ToJsonString());
         TunablesDebugModule module = new(source, Page, (_, _) => null);
 
-        Assert.True(module.Set($"pose.{firstPose}.position.y", .0421F).Succeeded);
-        held = keys.Length - 1;
-        Assert.True(module.Set($"pose.{lastPose}.rotation.x", 12.5F).Succeeded);
-        held = -1;
+        Assert.True(module.Set("clip.dagger.strikeDown.strike", .15F).Succeeded);
+        strike = "strikeLeft";
+        Assert.True(module.Set("clip.dagger.strikeLeft.recover", .5F).Succeeded);
+        strike = "strikeUp";
 
         string diff = module.Diff().Message;
         string sha = JsonNode.Parse(diff)!["files"]![0]!["sha256"]!.GetValue<string>();
         Assert.True(module.Save(DaggerfallHeldArt.DocumentPath, sha).Succeeded);
         JsonNode saved = source.Saved();
-        Assert.Equal(.0421F, Resolve(saved, $"/motion/poses/{firstPose}/position/1")!.GetValue<float>(), 4);
-        Assert.Equal(12.5F, Resolve(saved, $"/motion/poses/{lastPose}/rotation/0")!.GetValue<float>(), 2);
+        Assert.Equal(.15F, Resolve(saved, "/families/dagger/strikes/strikeDown/marks/strike")!.GetValue<float>(), 4);
+        Assert.Equal(.5F, Resolve(saved, "/families/dagger/strikes/strikeLeft/marks/recover")!.GetValue<float>(), 4);
     }
 
     // The developer content source over one held definition: reads it and applies the RFC 6902 replacements Save sends.

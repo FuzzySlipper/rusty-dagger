@@ -1,75 +1,108 @@
 # First-person arms
 
-3D first-person arms for the held viewmodel, the capture config that asset-pipeline's `tools/fp-capture` reads to
-recover the dagger's motion from H3 clips of the classic WEAPON02 animations, and the build of the container the game
-reads the arms from. The dagger has no model in the game yet (#10511): the arms hold and swing the steel dagger's
-place empty.
+3D first-person arms for the held viewmodel (`viewmodel.style` `held` or `heldRetro`): Ironbelly's MedievalFPArms
+(the AAA First Person Arm Pack's male leather armour arms) playing the FPP melee clips that came with the old Rift
+Riders Unity game, both on the UE4 mannequin skeleton. The arms are clip-led: each weapon family loops its idle clip at
+rest and plays a clip for every classic strike, fitted to the strike's classic timing so the hit lands on the clip's
+strike mark. The classic sprite style (`classic`) is untouched.
+
+## Licence: never commit the art
+
+The meshes and clips are Unity Asset Store purchases. They may ship inside the game but the raw assets, and any GLB
+converted from them, must never be committed: this repository is public. They live in the ignored `local/fp-melee/`
+(sources) and `local/first-person.rpak` (the built container), and stay out of tracked content packs. The held
+definition and the measured values in it (marks, holds, the shoulder) are the game's own data and are committed.
 
 ## The held definition and the container
 
-The game draws the art from two parts:
+The game draws the arms from two parts:
 
-- **The held definition**, `content/worldrpg/first-person/daggerfall.held.json`: tracked, authored content. It names
-  the classic weapon visuals the look replaces (`weapon.dagger.steel`), the arms rig (joints, forearm twist shares,
-  turn, scale, palm and grip calibration), the arms (shoulder, elbow pole, hold,
-  hand closures), the look (its model, `null` while it has none, the stance that seats it at rest, the hand's grip
-  and hold on it) and the held motion, its tracks keyed by the classic strike ids such as `strikeDown`. Its models are
-  container paths. The rest stance is the arms' idle: the gloved fist low and right of centre, seen from its thumb
-  side, after the classic unarmed idle (tuned in the workbench).
-- **The container**, `local/first-person.rpak` (ignored): the adopted arms `first-person/arms.glb` and
-  `first-person/arms-provenance.json`. `scripts/fp-arms/build.sh` builds it.
+- **The held definition**, `content/worldrpg/first-person/daggerfall.held.json`: tracked, authored content.
+  - `rig`: the arms model (`first-person/arms.glb`), the clip it is first measured on, the joints (forearm twist
+    `lowerarm_twist_01_*`, share 0.5), the palm (where the dagger clips' weapon bone sits in the hand) and the grip
+    calibration of the digits.
+  - `retroModel`: the same arms with the retro look (`first-person/arms-retro.glb`), which `heldRetro` draws.
+  - `arms`: the shoulder, where the clips' right upper arm sits from their camera bone at the start of the rig's clip,
+    so the clips' eye is the game's; the elbow pole and the default hand closures.
+  - `families`: each weapon family, by the clip set it plays. Its `weapons` are the classic weapon visuals it draws,
+    `look` the held weapon (no model yet, so the hand plays its clips holding nothing) with the point the hand holds
+    and its hold, measured where the clips' `weapon_r` bone sits, `idle` the loop at rest and its length, `strikes` an
+    Engine `ArmClip` per classic strike id with its `marks` (start, strike, recover, end as fractions of the clip) and
+    `fade`. `twoHanded` lets the off hand play every clip (it otherwise rests out of view); `leftHand` lists strikes
+    whose clips move it.
+- **The container**, `local/first-person.rpak` (ignored): both arms GLBs, each carrying every clip the definition names
+  (not clip packs: the Engine shares an opened model's packs between everything that opens it, so a second set of
+  arms, a weapon swapped or another site's viewmodel, could not associate them again), and `provenance.json`.
 
-`DaggerfallHeldArt` reads the definition when the container is installed beside the product. Set `viewmodel.style` in
-the tuning payload to `held` to draw the 3D arms for the weapons the definition names, or `heldRetro` to
-play the same motion sampled once per classic frame and held. The sprite playback still times every swing, so the hit
-lands as it does with the sprites; a strike with no motion shows its sprite.
+`DaggerfallHeldArt` reads the definition when the container is installed beside the product. A strike's sprite still
+plays hidden and stays the swing's clock: its windup spans the classic frames before the hit frame, its commit the
+frames from the hit to the last and its recovery the last frame, and the clip plays through its marks over those
+phases on the world time the sprite reads. A strike a family has no clip for shows its sprite.
 
-## Tuning and new motion: the workbench
+### Families
 
-Motion is designed in the game. In `rusty dev --output window --live-debug` with `held` or `heldRetro`, the developer
-tools' **Workbench** tab (the **`** key) and the `held.motion*` commands (`docs/playtesting.md`, "Developer
-commands") show the dagger look (its place, while it has no model) in either hand with a chosen strike, hold each key, scrub to any moment and play at
-any speed, and tune the stance, the hand's grip and hold, each key's phase, moment and curve, the held key's pose, the
-arms' reach and the rig's palm. Each change shows at once; **Save** writes it into the held definition, keeping its
-formatting, and the change is committed like any content. Keys and poses set on the page stay on it, marked edited,
-after the viewer moves to another key or strike, so Save still writes them. A new strike's track and poses are added to the definition
-by hand (a track for a strike that is not a classic strike id is refused) and then tuned in the workbench.
+| Family | Weapons | Clips | Hands |
+|---|---|---|---|
+| `dagger` | `weapon.dagger.steel` | `FPP_Dagger`: strikeDown AttackD, strikeDownLeft AttackL, strikeLeft AttackR, strikeRight AttackLSlash, strikeDownRight AttackDHook, strikeUp AttackF; idle `FPP_Dag_Idle` | one |
+| `longsword` | `weapon.longblade`, `weapon.axe`, `weapon.mace`, `weapon.flail`, `weapon.warhammer` | `FPP_Longsword`: Attack_D, _RD, _R, _L, _LD, _F; idle Longs_Idle | both |
+| `halberd` | `weapon.staff` | `FPP_Halberd`: Attack_D, _RDfast, _R, AttackHeavy_L, Attack_LD, _F; idle Halb_Idle | both |
 
-## Seeding from a capture
+A strike's clip was chosen by which way its blade moves where it is fastest: a classic `strikeLeft` swings toward the
+left, so it plays the clip that cuts from the right. The bow, hand-to-hand and the werecreature have no fitting clip and
+keep their sprites (the pack's unarmed punch may serve the fist later).
 
-The definition's stance, the hand's grip and hold and the `strikeDown` track were seeded from capture `r01`
-(`local/fp-capture/r01`: one `bake-<action>.json` per captured strike). To seed again from a capture, measure the hand's
-hold on the current arms and write the capture into the definition:
+## Building it
 
-```sh
-blender -b --factory-startup --python ../asset-pipeline/tools/fp-capture/describe.py -- scripts/fp-arms/capture.json local/fp-arms/model.json
-python3 scripts/fp-arms/seed.py local/fp-arms/model.json local/fp-capture/r01/bake-*.json
-```
-
-`seed.py` replaces the look's stance (the first bake's), hold (the capture's) and grip (the point that puts the wrist
-where the capture had it, with the definition's palm) and each baked strike's track and poses, so it overwrites what
-the workbench tuned there; every other value is kept. Review the diff before committing.
-
-## The models
-
-The arms are reproducible and land in the ignored `local/fp-arms/`; the procedural dagger is built only for seeding
-a capture (`capture.json` names it), not into the container:
+The sources are copied once from the old game into `local/fp-melee/`; nothing reads the old game's folder after that:
 
 ```sh
-blender -b --factory-startup --python ../asset-pipeline/tools/fps-arms/adopt.py -- --params ../asset-pipeline/tools/fps-arms/sets/psx-dagger.json --out local/fp-arms/arms.glb
-blender -b --factory-startup --python scripts/fp-arms/build-dagger.py -- local/fp-arms/dagger.glb
+scripts/fp-arms/copy-sources.sh ../rusty-riders/old-game/Assets/MoreArt/FpMelee
+scripts/fp-arms/build.sh
 ```
 
-- The arms are Drillimpact's [PSX First Person Arms](https://drillimpact.itch.io/psx-first-person-arms-free) 1.1.0
-  (CC0 1.0), kept in asset-pipeline (`tools/fps-arms/packs/psx-drillimpact/`) and adopted by its `tools/fps-arms/adopt.py`
-  in the Daggerfall look (`sets/psx-dagger.json`): the pack's low-poly mesh, skeleton and clips with forearm twist
-  joints added, the glove's edge cut into the mesh at the wrist, and a hand-painted texture after the classic unarmed
-  WEAPON10 frames (`sets/psx-dagger-paint.png`: a brown leather glove with drawn seams and creases and a grey sleeve
-  with drawn folds, 256², drawn nearest). The rig holds with the pack's own `knife_idle` clip, so its grip
-  calibration is zero, and its palm offset is where that clip holds its knife. `arms-provenance.json` records the
-  asset-pipeline commit the build used (and any uncommitted changes under its arms and capture tools) and the GLB's
-  sha256. Change the look in asset-pipeline, not here.
-- `build-dagger.py` builds the placeholder dagger procedurally in the Engine's held-look frame (origin at the grip,
-  length along -Z, up +Y), proportioned from the WEAPON02 frames. It is not drawn; #10511 replaces it.
-- `capture.json` names the arms rig, the dagger's keypoints and the classic camera: the 320x200 canvas shown at 4:3
-  with a 65 degree vertical field of view, checked by fitting and overlaying the idle and strike-down frames.
+`build.sh` runs `build.py` under Blender 5 for every clip the held definition names, checks each GLB with
+`rusty asset check` and packs `local/first-person.rpak`. A clip is named by its FBX file stem; add one to the definition
+and build again. `build.py`:
+
+- imports the male leather arms (LOD0) with their medium colour and normal maps at 1024 px; the retro arms carry the
+  colour map alone at 256 px, drawn nearest, as Daggerfall draws its world;
+- bakes each clip as its own camera bone sees it: every frame the whole body is moved so the camera bone sits at the
+  origin looking down the view, so the arms are placed with their origin at the game's eye and the clip carries only
+  what moves in view. The clips' skeleton (root, camera and weapon bones) differs from the arms' (no root,
+  `camera_mount`, `weapon_mount`) but shares its rest joints, so each bone takes the clip's motion from its own rest;
+- writes `local/fp-arms/measure.json`: the shoulder, the palm, each family's look grip and hold, its idle length, and
+  per strike the blade's speed per frame and suggested marks. The strike mark is the frame of the swing's fastest burst
+  whose blade (30 cm along the weapon bone's +Z, the pack's blade axis) lies nearest the centre of the view; the end is
+  where the clip has come back to rest; the recovery lies two thirds of the way between, so the clip plays at one pace
+  after the hit. Copy what the definition should take from it, then tune in the game.
+
+The clips were animated for a 90° horizontal field of view (about 59° vertical at 16:9); Dagger's 65° vertical shows
+them a little smaller than authored.
+
+## Tuning: the workbench and contact sheets
+
+In `rusty dev --output window --live-debug` with `held` or `heldRetro`, the developer tools' **Workbench** tab and the
+`held.motion*` commands (`docs/playtesting.md`, "Developer commands") show a family with a chosen strike, hold each mark,
+scrub to any moment and play at any speed, and tune the marks and fade, the idle loop, the look's grip and hold, the
+shoulder and the palm. **Save** writes them into the held definition. `held.clip` reads what the arms play now, in play
+or in the viewer.
+
+`scripts/fp-arms/sheet.sh ORIGIN LOOK OUT_DIR [STEP] [STRIKE...]` drives the viewer over a running host and writes a
+contact sheet per strike, every STEP seconds of the strike as play times it, its hit outlined: the quickest way to place
+marks.
+
+## Not yet
+
+- The other arm sets (female leather, male and female cloth, male chainmail) are not built: a set chosen by the
+  player's gender and armour needs its own bake where its skeleton's rest differs.
+- No family has a weapon model yet. A look model is placed by the family's grip and hold, measured
+  where the clips held the pack's own weapon.
+
+## Reused from rusty-riders
+
+Riders was a one-time donor of its clip-led arms: its `ArmClipCatalog`/
+`MotionClips`/`ArmsLead` became the families here, keyed by classic strike ids and timed by the classic sprite rather
+than Riders' action phases; its `HeldView` lead (the look riding the main hand, the empty off hand resting out of view
+unless `leftHand` or held in both hands) became `DaggerfallHeldViewmodel`; its `leather` rig profile became `rig`; its
+`riders.dev.held.blade` readout became `held.clip`; and its `scripts/arm-clips/in-game.sh` became `sheet.sh`. Riders'
+retargeting (`retarget.py`) is not needed: these clips are first person already.

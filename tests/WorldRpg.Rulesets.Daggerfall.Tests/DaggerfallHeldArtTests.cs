@@ -2,69 +2,104 @@ using System.Text.Json.Nodes;
 using Rusty.Engine;
 using Rusty.Engine.FirstPerson;
 using WorldRpg.Kit;
+using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
-/// Checks the 3D first-person art is read from the authored held definition (content/worldrpg/first-person), whose
-/// strike-down was seeded from a capture of the classic animation, drawn with the container's models.
+/// Checks the 3D first-person art is read from the authored held definition (content/worldrpg/first-person): weapon
+/// families whose clip-led arms play a clip per classic strike, each fitted so the clip's strike mark lands on the
+/// classic hit, drawn with the container's models.
 /// </summary>
 public sealed class DaggerfallHeldArtTests
 {
     [Fact]
-    public void The_captured_strike_loads_through_the_engine_records_and_lands_its_hit_on_the_commit()
+    public void Every_family_plays_a_clip_for_every_classic_strike_with_its_strike_mark_on_the_hit()
     {
         DaggerfallHeldArt art = Read(Document());
 
-        Assert.True(art.Draws("weapon.dagger.steel"));
-        Assert.False(art.Draws("weapon.00"));
-        HeldMotion motion = art.Document.Motion;
-        Assert.Empty(motion.Problems());
+        Assert.Equal("dagger", art.Family("weapon.dagger.steel"));
+        Assert.Equal("longsword", art.Family("weapon.longblade"));
+        Assert.Equal("longsword", art.Family("weapon.warhammer"));
+        Assert.Equal("halberd", art.Family("weapon.staff"));
+        Assert.Null(art.Family("weapon.bow"));
         Assert.Empty(art.Document.Rig.Problems());
-        Assert.Empty(art.Stance.Problems());
         // The viewmodel times a strike to the classic playback: five frames, the hit on frame 2.
-        const float frame = .1F;
-        PhaseTiming timing = new(2 * frame, 2 * frame, frame);
-        Assert.Null(motion.OrderProblem("strikeDown", timing));
-        MotionKey[] keys = motion.Tracks["strikeDown"];
-        // The strike itself (the commit's start) is the hit frame: the capture keys the drawn hit pose there.
-        Assert.Contains(keys, key => key.Phase == MotionPhase.Windup && key.At == 1F);
-        Assert.Contains(keys, key => key.Phase == MotionPhase.Commit);
-        Assert.Equal(2 * frame, keys.Where(key => key.Phase == MotionPhase.Windup).Max(key => key.Time(timing)), 4);
+        PhaseTiming timing = DaggerfallHeldViewmodel.Timing(.1F, 2, 5);
+        foreach (var (name, family) in art.Document.Families)
+        {
+            Assert.Equal(NormalizedClassicWeapon.StrikeActions.Order(), family.Strikes.Keys.Order());
+            foreach (var (action, clip) in family.Strikes)
+            {
+                Assert.Empty(clip.Problems());
+                ArmClipFrame hit = clip.At(timing, timing.Windup);
+                Assert.Equal(MotionPhase.Commit, hit.Phase);
+                Assert.Equal(clip.Marks.Strike, hit.Time, 4);
+                Assert.True(clip.Marks.Strike > clip.Marks.Start, $"{name} {action} winds up before its hit.");
+            }
+        }
     }
 
     [Fact]
-    public void A_track_for_an_action_the_weapon_has_not_is_refused_by_field()
+    public void Only_a_family_held_in_both_hands_or_a_strike_it_lists_moves_the_off_hand()
+    {
+        DaggerfallHeldArt art = Read(Document());
+        DaggerfallHeldFamily dagger = art.Document.Families["dagger"], sword = art.Document.Families["longsword"];
+
+        Assert.False(dagger.MovesLeft(null));
+        Assert.False(dagger.MovesLeft("strikeDown"));
+        Assert.True(sword.MovesLeft(null));
+        Assert.True(sword.MovesLeft("strikeDown"));
+        Assert.True((dagger with { LeftHand = ["strikeDown"] }).MovesLeft("strikeDown"));
+    }
+
+    [Theory]
+    [InlineData("strikes", "families.dagger.strikes.thrust")]
+    [InlineData("marks", "families.dagger.strikes.strikeDown.marks")]
+    [InlineData("weapons", "families.longsword.weapons: 'weapon.dagger.steel' is drawn by another family too")]
+    [InlineData("leftHand", "families.dagger.leftHand: 'strikeUp' has no strike clip here")]
+    [InlineData("idle", "families.dagger.idle.seconds")]
+    public void What_cannot_be_drawn_is_refused_by_field(string broken, string field)
     {
         JsonObject document = Document();
-        JsonObject tracks = document["motion"]!["tracks"]!.AsObject();
-        tracks["thrust"] = tracks["strikeDown"]!.DeepClone();
+        JsonObject dagger = document["families"]!["dagger"]!.AsObject();
+        JsonObject strikes = dagger["strikes"]!.AsObject();
+        switch (broken)
+        {
+            case "strikes": strikes["thrust"] = strikes["strikeDown"]!.DeepClone(); break;
+            case "marks": strikes["strikeDown"]!["marks"]!["strike"] = 0.99; break;
+            case "weapons": document["families"]!["longsword"]!["weapons"]!.AsArray().Add("weapon.dagger.steel"); break;
+            case "leftHand": strikes.Remove("strikeUp"); dagger["leftHand"] = new JsonArray("strikeUp"); break;
+            case "idle": dagger["idle"]!["seconds"] = 0; break;
+        }
 
         InvalidDataException refusal = Assert.Throws<InvalidDataException>(() => Read(document));
 
-        Assert.Contains("motion.tracks.thrust", refusal.Message, StringComparison.Ordinal);
+        Assert.Contains(field, refusal.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void An_unknown_member_is_refused_rather_than_ignored()
+    {
+        JsonObject document = Document();
+        document["families"]!["dagger"]!["motion"] = new JsonObject();
+
+        InvalidDataException refusal = Assert.Throws<InvalidDataException>(() => Read(document));
+
+        Assert.Contains("motion", refusal.Message, StringComparison.Ordinal);
     }
 
     [Fact]
     public void A_model_the_container_does_not_carry_is_refused_by_name()
     {
-        InvalidDataException refusal = Assert.Throws<InvalidDataException>(() => Read(Document(), models: []));
-
-        Assert.Contains("'first-person/arms.glb' is not in first-person.rpak", refusal.Message, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void A_look_with_no_model_is_read_without_one_in_the_container()
-    {
         JsonObject document = Document();
-        document["look"]!["model"] = null;
+        document["families"]!["dagger"]!["look"]!["model"] = "first-person/dagger.glb";
 
-        DaggerfallHeldArt art = Read(document, models: ["first-person/arms.glb"]);
-
-        Assert.Null(art.Document.Look.Model);
-        Assert.Empty(art.Stance.Problems());
+        Assert.Contains("'first-person/arms.glb' is not in first-person.rpak", Assert.Throws<InvalidDataException>(() => Read(Document(), models: [])).Message, StringComparison.Ordinal);
+        Assert.Contains("'first-person/dagger.glb' is not in first-person.rpak", Assert.Throws<InvalidDataException>(() => Read(document)).Message, StringComparison.Ordinal);
+        Assert.Equal("first-person/dagger.glb", Read(document, models: ["first-person/arms.glb", "first-person/arms-retro.glb", "first-person/dagger.glb"]).Document.Families["dagger"].Look.Model);
     }
 
     [Fact]
@@ -99,12 +134,12 @@ public sealed class DaggerfallHeldArtTests
     internal static JsonObject Document() =>
         JsonNode.Parse(File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content", DaggerfallHeldArt.DocumentPath)))!.AsObject();
 
-    // The definition read over a container that carries the given models (by default the arms and a dagger).
+    // The definition read over a container that carries the given models (by default both arms).
     internal static DaggerfallHeldArt Read(JsonObject document, string[]? models = null)
     {
         BundleContentFake service = new();
         service.Container(DaggerfallHeldArt.ContainerName);
-        foreach (string model in models ?? ["first-person/arms.glb", "first-person/dagger.glb"])
+        foreach (string model in models ?? ["first-person/arms.glb", "first-person/arms-retro.glb"])
             service.Add(DaggerfallHeldArt.ContainerName, model, [7]);
         ProductContentBundle container = new ProductContent(Array.Empty<ProductContentFile>(), service).OpenContainer(DaggerfallHeldArt.ContainerName);
         return DaggerfallHeldArt.Read(container, System.Text.Encoding.UTF8.GetBytes(document.ToJsonString()));

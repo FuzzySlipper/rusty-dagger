@@ -7,7 +7,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>
 /// The developer first-person workbench (<see cref="IDeveloperHeldSession"/>) over the 3D first-person art, drawn by
 /// the current site's held viewmodel (<see cref="DaggerfallHeldWorkbench"/>). Its looks are the classic weapon visuals
-/// the art draws and its actions their classic strikes.
+/// the art draws, its actions their classic strikes and its keys the marks of the clip a strike plays.
 /// </summary>
 internal sealed partial class DaggerfallSession : IDeveloperHeldSession
 {
@@ -20,8 +20,6 @@ internal sealed partial class DaggerfallSession : IDeveloperHeldSession
 
     public DebugCommandResult ShowHeld(string look, string action) => Workbench.Show(look, action);
 
-    public DebugCommandResult ShowHeldIn(string hand) => Workbench.Hand(hand);
-
     public DebugCommandResult HoldHeldKey(int key) => Workbench.Key(key);
 
     public DebugCommandResult StepHeldKey(int step) => Workbench.Step(step);
@@ -29,6 +27,8 @@ internal sealed partial class DaggerfallSession : IDeveloperHeldSession
     public DebugCommandResult PlayHeld(float speed) => Workbench.Play(speed);
 
     public DebugCommandResult ShowHeldAt(float seconds) => Workbench.At(seconds);
+
+    public DebugCommandResult ReadHeld() => Workbench.Read();
 
     public DebugCommandResult EndHeldView() => Workbench.Off();
 
