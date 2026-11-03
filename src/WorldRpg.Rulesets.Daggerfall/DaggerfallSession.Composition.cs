@@ -670,6 +670,11 @@ internal sealed partial class DaggerfallSession
             _characterUi.UseItemPresentation(_inventoryUi);
             _characterUi.UseArt(() => DrawnArt);
             _inventoryUi.UseArt(() => DrawnArt);
+            NormalizedClassicPresentation classicPresentation = composition.StartSite.ClassicPresentation;
+            if (classicPresentation.TryEffect("magicGlint", out NormalizedClassicEffect? magicGlint) && classicPresentation.TryEffect("coinGlint", out NormalizedClassicEffect? coinGlint))
+                _inventoryUi.UseGlints(magicGlint!, coinGlint!);
+            // The item lists draw both glints in either art set, so both are delivered up front.
+            string[] glintMedia = [.. classicPresentation.Effects.Where(effect => effect.Name is "magicGlint" or "coinGlint").Select(effect => effect.MediaId)];
             _inventoryUi.UseWearer(() => State.Character.Identity);
             // The DOM's art comes from the derived content by media identity, so a session reads the
             // published closure once and publishes it to the UI that draws it.
@@ -688,7 +693,9 @@ internal sealed partial class DaggerfallSession
                     .Concat(_definitions.CharacterPresentation.FactionFaces.Select(face => face.MediaId))
                     .Concat(_definitions.CharacterPresentation.ChildFaces.Select(face => face.MediaId))
                     .Concat(_definitions.CharacterPresentation.RacialForms.Values.SelectMany(form => new[] { form.HeadMediaId, form.BodyMediaId })),
-                    DaggerfallTravelMap.MediaIds, composition.ArtReplacements))
+                    DaggerfallTravelMap.MediaIds.Concat(glintMedia).Concat(composition.ArtReplacements is { } art
+                        ? glintMedia.Where(art.Effects.ContainsKey).Select(DaggerfallArtReplacements.EffectMediaId) : []),
+                    composition.ArtReplacements))
             {
                 // The controls screen shows each action's controller buttons against the authored pad layout.
                 PadActions = tuning.ControllerInput?.Actions ?? [],

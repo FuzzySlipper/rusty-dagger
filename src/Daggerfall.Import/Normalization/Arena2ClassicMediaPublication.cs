@@ -80,7 +80,9 @@ public sealed record Arena2ClassicMediaInputs(
     byte[] Texture376,
     byte[] Texture377,
     byte[] Texture378,
-    byte[] Texture379)
+    byte[] Texture379,
+    // The inventory window's glints: the magic shimmer (record 5) and the coin glint (record 6).
+    byte[] Texture434)
 { }
 
 /// <summary>Quotas for bounded, deterministic classic-media regeneration.</summary>
@@ -242,7 +244,10 @@ public enum ClassicWeaponScreenAlignment
     Right,
 }
 
-/// <summary>The fixed semantic effect entries: blood and the sparkle from TEXTURE.380, and each spell element's missile and impact from TEXTURE.375–379.</summary>
+/// <summary>
+/// The fixed semantic effect entries: blood and the sparkle from TEXTURE.380, each spell element's missile and impact
+/// from TEXTURE.375–379, and the inventory window's magic and coin glints from TEXTURE.434.
+/// </summary>
 public enum ClassicEffect
 {
     Blood0,
@@ -259,6 +264,8 @@ public enum ClassicEffect
     ShockImpact,
     MagicMissile,
     MagicImpact,
+    MagicGlint,
+    CoinGlint,
 }
 
 /// <summary>The fixed presentation sounds selected from DAGGER.SND.</summary>
@@ -1129,6 +1136,9 @@ public sealed record Arena2ClassicMediaPublication(
     private static readonly ClassicSpriteTiming MissileTiming = new(5F, true);
     private static readonly ClassicSpriteTiming ImpactTiming = new(15F, false);
     private static readonly ClassicSpriteTiming FeedbackTiming = new(10F, false);
+    // The inventory window turns the magic glint every 0.15 s and the coin glint every 0.08 s (DaggerfallInventoryWindow).
+    private static readonly ClassicSpriteTiming MagicGlintTiming = new(1F / .15F, true);
+    private static readonly ClassicSpriteTiming CoinGlintTiming = new(1F / .08F, true);
 
     private static readonly EffectSource[] EffectSources =
     [
@@ -1146,6 +1156,8 @@ public sealed record Arena2ClassicMediaPublication(
         new(ClassicEffect.ShockImpact, "effect.impact.shock", 378, 1, ImpactTiming),
         new(ClassicEffect.MagicMissile, "effect.missile.magic", 379, 0, MissileTiming),
         new(ClassicEffect.MagicImpact, "effect.impact.magic", 379, 1, ImpactTiming),
+        new(ClassicEffect.MagicGlint, "effect.glint.magic", 434, 5, MagicGlintTiming),
+        new(ClassicEffect.CoinGlint, "effect.glint.coins", 434, 6, CoinGlintTiming),
     ];
 
     /// <summary>Returns the fixed record of its archive retained by an effect's canonical source identity.</summary>
@@ -1518,6 +1530,7 @@ public sealed record Arena2ClassicMediaPublication(
             [378] = TextureArchive.Parse(sources.Texture378, "arena2/TEXTURE.378"),
             [379] = TextureArchive.Parse(sources.Texture379, "arena2/TEXTURE.379"),
             [380] = TextureArchive.Parse(sources.Texture380, "arena2/TEXTURE.380"),
+            [434] = TextureArchive.Parse(sources.Texture434, "arena2/TEXTURE.434"),
         };
         List<GeneratedMediaArtifact> result = [];
         List<ClassicEffectManifest> semantic = [];
@@ -2392,6 +2405,7 @@ public sealed record Arena2ClassicMediaPublication(
             Texture377 = inputs.Texture377;
             Texture378 = inputs.Texture378;
             Texture379 = inputs.Texture379;
+            Texture434 = inputs.Texture434;
             Palette = inputs.Palette;
             DaggerSound = inputs.DaggerSound;
             Main00I0Img = inputs.Main00I0Img;
@@ -2457,6 +2471,7 @@ public sealed record Arena2ClassicMediaPublication(
         public byte[] Texture377 { get; }
         public byte[] Texture378 { get; }
         public byte[] Texture379 { get; }
+        public byte[] Texture434 { get; }
         public byte[] Palette { get; }
         public byte[] DaggerSound { get; }
         public byte[] Main00I0Img { get; }
@@ -2508,7 +2523,7 @@ public sealed record Arena2ClassicMediaPublication(
                 ("WEAPON05.CIF", inputs.Weapon05Cif), ("WEAPON06.CIF", inputs.Weapon06Cif), ("WEAPON07.CIF", inputs.Weapon07Cif),
                 ("WEAPON08.CIF", inputs.Weapon08Cif), ("WEAPON09.CIF", inputs.Weapon09Cif), ("WEAPON10.CIF", inputs.Weapon10Cif), ("WEAPON11.CIF", inputs.Weapon11Cif),
                 ("ART_PAL.COL", inputs.ArtPalette), ("TEXTURE.380", inputs.Texture380), ("PAL.PAL", inputs.Palette),
-                ("TEXTURE.375", inputs.Texture375), ("TEXTURE.376", inputs.Texture376), ("TEXTURE.377", inputs.Texture377), ("TEXTURE.378", inputs.Texture378), ("TEXTURE.379", inputs.Texture379),
+                ("TEXTURE.375", inputs.Texture375), ("TEXTURE.376", inputs.Texture376), ("TEXTURE.377", inputs.Texture377), ("TEXTURE.378", inputs.Texture378), ("TEXTURE.379", inputs.Texture379), ("TEXTURE.434", inputs.Texture434),
                 ("DAGGER.SND", inputs.DaggerSound), ("MAIN00I0.IMG", inputs.Main00I0Img), ("MAIN03I0.IMG", inputs.Main03I0Img),
                 ("MAIN04I0.IMG", inputs.Main04I0Img), ("MAIN05I0.IMG", inputs.Main05I0Img), ("INVE00I0.IMG", inputs.Inve00I0Img), ("DIE_00I0.IMG", inputs.Die00I0Img), ("CHGN00I0.IMG", inputs.Chgn00I0Img), ("PICK02I0.IMG", inputs.Pick02I0Img),
                 ("PICK03I0.IMG", inputs.Pick03I0Img), ("PRIS00I0.IMG", inputs.Pris00I0Img), ("TITL00I0.IMG", inputs.Titl00I0Img),

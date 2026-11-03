@@ -432,6 +432,14 @@ otherwise), named in the projection with its dye or metal tint (`iconTint`); the
 ruleset swaps the media identity for refreshed art unless classic art is chosen
 and demands the icons the open screens show, and `drawArt` draws them tinted.
 
+**Glints** are the inventory window's looping effects (TEXTURE.434 records 5 and 6), published as classic effects
+and named on the inventory projection (`glints`: atlas, frame rects, rate, and where the classic frame sits in a
+refreshed one). An enchanted item (`enchanted` on pack, loot and shop rows) shimmers with the magic glint over its
+icon, in the pack and equipment slots as in the lists; shop stock the player may steal (a row with Steal) has the
+coin glint turning behind it. `glint.ts` steps each glint on one timer and draws every element of a kind from
+shared CSS variables, so a pack of enchanted items turns as one; both art sets are delivered up front and follow
+the art choice.
+
 **Authored art** (frames, panels, buttons, slots, icons, cursors) is original
 art made for this project; see "Authored UI art" below.
 

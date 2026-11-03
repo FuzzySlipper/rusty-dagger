@@ -17,6 +17,9 @@ internal sealed record InventoryItemPresentation(string Key, string Definition, 
     /// <summary>The tint a refreshed dyed or metal icon is drawn in, or null.</summary>
     internal PaperDollTint? IconTint { get; init; }
 
+    /// <summary>Whether the item is enchanted, so it shimmers with the magic glint wherever it is shown.</summary>
+    internal bool Enchanted { get; init; }
+
     /// <summary>The weight in kilograms; <see cref="Weight"/> is in the template's quarter-kilogram units.</summary>
     internal double WeightKilograms => Weight * (double)DaggerfallEncumbrancePolicy.TemplateWeightToClassicUnits / DaggerfallEncumbrance.ClassicUnitsPerKilogram;
 }
@@ -52,7 +55,25 @@ internal sealed record DaggerfallBankPresentation(int CurrentRegion, string Curr
     DaggerfallBankActionPresentation[]? Actions = null);
 internal sealed record InventoryPresentation(string Revision, InventoryItemPresentation[] Items, EquipmentSlotPresentation[] Slots, string Message,
     EquipmentChangePresentation? EquipmentChange = null, DaggerfallEncumbrance? Encumbrance = null, DaggerfallCurrencyTotals? Currency = null,
-    DaggerfallBankPresentation? Bank = null, InventoryCategoryPresentation[]? Categories = null);
+    DaggerfallBankPresentation? Bank = null, InventoryCategoryPresentation[]? Categories = null)
+{
+    /// <summary>The item glints in the art drawn, when the publication has them.</summary>
+    internal InventoryGlintsPresentation? Glints { get; init; }
+}
+
+/// <summary>
+/// One of the inventory window's looping glints: its atlas image, the atlas size, each frame's rect in it, how many
+/// frames it turns a second, and where the classic frame sits in a frame (fractions, top-down), which the item's slot
+/// fills: the whole frame for classic art, a part of it for refreshed art painted past the classic edges.
+/// </summary>
+internal sealed record InventoryGlintPresentation(string Media, int Width, int Height, IReadOnlyList<(int X, int Y, int Width, int Height)> Frames,
+    double FramesPerSecond, DaggerfallArtRect Slot);
+
+/// <summary>
+/// The glints item lists draw (DaggerfallInventoryWindow): the magic shimmer over every enchanted item, and the coin glint
+/// behind stock the player may steal.
+/// </summary>
+internal sealed record InventoryGlintsPresentation(InventoryGlintPresentation Magic, InventoryGlintPresentation Coins);
 
 /// <summary>Daggerfall inventory projection and UI-action translation; quantities and equipment remain Engine facts.</summary>
 internal sealed class DaggerfallInventoryPresentation
@@ -200,7 +221,27 @@ internal sealed class DaggerfallInventoryPresentation
             definitions.EquipmentSlots.Values.OrderBy(slot => SlotOrder(slot.Id.Value)).Select(slot => SlotPresentation(slot.Id.Value,
                 equipped.TryGet(new EquipmentSlotId(slot.Id.Value), out UniqueInventoryItem item) ? UniqueKey(item.EntityId) : null)).ToArray(), Message,
             LastEquipmentChange is { } change ? new(change.Cue.ToString().ToLowerInvariant(), change.Timing.RightHandMilliseconds, change.Timing.LeftHandMilliseconds) : null,
-            encumbrance?.Read(), currency?.Read(), ReadBank(), PackCategories);
+            encumbrance?.Read(), currency?.Read(), ReadBank(), PackCategories) { Glints = ReadGlints() };
+    }
+
+    private (NormalizedClassicEffect Magic, NormalizedClassicEffect Coins)? glints;
+
+    /// <summary>Draws the glints from these classic effects, or their refreshed atlases while refreshed art is drawn.</summary>
+    internal void UseGlints(NormalizedClassicEffect magic, NormalizedClassicEffect coins) => glints = (magic, coins);
+
+    private InventoryGlintsPresentation? ReadGlints()
+    {
+        if (glints is not var (magic, coins)) return null;
+        DaggerfallArtReplacements? set = art?.Invoke();
+        return new(Glint(magic, set), Glint(coins, set));
+
+        static InventoryGlintPresentation Glint(NormalizedClassicEffect effect, DaggerfallArtReplacements? set) =>
+            set?.Effects.GetValueOrDefault(effect.MediaId) is { } refreshed
+                ? new(DaggerfallArtReplacements.EffectMediaId(effect.MediaId), refreshed.Width, refreshed.Height,
+                    [.. refreshed.Frames.Select(frame => ((int)frame.X, (int)frame.Y, (int)frame.Width, (int)frame.Height))], effect.FramesPerSecond, refreshed.Classic)
+                : new(effect.MediaId, effect.AtlasWidth, effect.AtlasHeight,
+                    [.. effect.Sequence.Select(index => effect.Frames.Single(frame => frame.Id == index)).Select(frame => (frame.X, frame.Y, frame.Width, frame.Height))],
+                    effect.FramesPerSecond, new(0, 0, 1, 1));
     }
 
     /// <summary>
@@ -566,7 +607,7 @@ internal sealed class DaggerfallInventoryPresentation
             CanUseMagic: carried && metadata is not null && (metadata.HasEnchantment || metadata.PotionRecipeKey is not null)
                 && itemUse?.CanUse(itemId, metadata) == true,
             Category: Category(definition, metadata), Stackable: key.StartsWith("stack:", StringComparison.Ordinal), DropRefusal: dropRefusal,
-            Stats: Stats(definition, metadata)) { IconTint = iconTint };
+            Stats: Stats(definition, metadata)) { IconTint = iconTint, Enchanted = metadata?.HasEnchantment == true };
     }
 
     /// <summary>The durable meaning of one equipped item, or null before item meaning is composed.</summary>

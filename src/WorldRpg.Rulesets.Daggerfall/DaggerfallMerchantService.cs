@@ -41,6 +41,9 @@ internal sealed record DaggerfallMerchantItemView(
 
     /// <summary>The tint a refreshed dyed or metal icon is drawn in, or null.</summary>
     internal Presentation.PaperDollTint? IconTint { get; init; }
+
+    /// <summary>Whether the item is enchanted, so it shimmers with the magic glint.</summary>
+    internal bool Enchanted => IconMetadata?.HasEnchantment == true;
 }
 
 internal sealed record DaggerfallRepairView(

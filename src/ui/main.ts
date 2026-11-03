@@ -7,6 +7,7 @@ import { DEVELOPER_KEY, mountDeveloperTools } from './developer.js';
 import { mountDialogue } from './dialogue.js';
 import { mountDungeonText } from './dungeon-text.js';
 import { mountEntry } from './entry.js';
+import { isGlints, useGlints } from './glint.js';
 import { sender } from './host.js';
 import { mountHud } from './hud.js';
 import { EDIT_TEXT_EVENT, mountLetterPicker } from './letter-picker.js';
@@ -210,6 +211,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     death.update(dead, value.death, saveSlots);
     entry.update(value);
     hud.update(value);
+    useGlints(isGlints(value.inventory?.glints) ? value.inventory.glints : null);
     renderQuestMessages(quests, value.quests, send);
     dialogue.update(value, dead, spellbook);
 

@@ -259,6 +259,7 @@ export interface MerchantItemProjection {
   readonly maximumCondition: number;
   readonly identified: boolean;
   readonly stolen: boolean;
+  readonly enchanted?: boolean;
   readonly canBuy: boolean;
   readonly canSell: boolean;
   readonly canRepair?: boolean;

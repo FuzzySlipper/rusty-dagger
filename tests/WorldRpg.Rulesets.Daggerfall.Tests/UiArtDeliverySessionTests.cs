@@ -60,7 +60,8 @@ public sealed class UiArtDeliverySessionTests
         string[] portraits = [.. heads, .. factionFaces, .. childFaces, .. racialForms, .. backgrounds];
         string[] kit = AuthoredKit(root);
         Assert.Contains("ui.stone.window.v2", kit);
-        Assert.Equal(9 + kit.Length + inputs.ClassicPresentation.InventoryIcons.Count + portraits.Length + DaggerfallTravelMap.MediaIds.Count, images.Count);
+        // The nine screens and atlases, and the item lists' magic and coin glints, are delivered up front with the rest.
+        Assert.Equal(9 + 2 + kit.Length + inputs.ClassicPresentation.InventoryIcons.Count + portraits.Length + DaggerfallTravelMap.MediaIds.Count, images.Count);
         Assert.All(images.Values, image => Assert.StartsWith("data:image/png;base64,", Assert.IsType<string>(image), StringComparison.Ordinal));
 
         // The bytes are the published artifacts, read from admitted content by their content name.
@@ -105,6 +106,9 @@ public sealed class UiArtDeliverySessionTests
             .. portraits,
             // The travel map's world canvas and every region sheet it lays out.
             .. DaggerfallTravelMap.MediaIds,
+            // The item lists' magic and coin glints.
+            "effect.glint.magic",
+            "effect.glint.coins",
         ];
         Assert.Equal([.. expected.Order(StringComparer.Ordinal)], [.. images.Keys.Order(StringComparer.Ordinal)]);
 
@@ -436,6 +440,8 @@ public sealed class UiArtDeliverySessionTests
             new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults) { Data = TestSessions.DataOf(content), ArtReplacements = art });
         session.PublishInitial();
         Dictionary<string, object?> hud = Assert.IsType<Dictionary<string, object?>>(engine.Published());
+        // The first snapshot carries the art delivered up front.
+        Dictionary<string, object?> initial = hud;
         Dictionary<string, object?>[] Layers(Dictionary<string, object?> snapshot) => [.. Assert.IsType<object?[]>(
             Assert.IsType<Dictionary<string, object?>>(Assert.IsType<Dictionary<string, object?>>(snapshot["character"])["paperDoll"])["layers"]).Cast<Dictionary<string, object?>>()];
 
@@ -486,6 +492,20 @@ public sealed class UiArtDeliverySessionTests
         Assert.Subset(Assert.IsType<object?[]>(Assert.IsType<Dictionary<string, object?>>(hud["uiArtDemanded"])["images"]).Cast<Dictionary<string, object?>>()
             .Select(image => Assert.IsType<string>(image["id"])).ToHashSet(), new HashSet<string> { cuirassIcon, steel.DyeMask.MediaId });
 
+        // The item lists' glints draw from their refreshed atlases, delivered with the session, at the donor's rates, the
+        // slot holding the classic part of a refreshed frame.
+        Dictionary<string, object?> Glint(Dictionary<string, object?> snapshot, string kind) => Assert.IsType<Dictionary<string, object?>>(
+            Assert.IsType<Dictionary<string, object?>>(Assert.IsType<Dictionary<string, object?>>(snapshot["inventory"])["glints"])[kind]);
+        Assert.Equal("refreshed.effect.glint.magic", Glint(hud, "magic")["media"]);
+        Assert.Equal("refreshed.effect.glint.coins", Glint(hud, "coins")["media"]);
+        Assert.Equal(1 / .15, Convert.ToDouble(Glint(hud, "magic")["framesPerSecond"], CultureInfo.InvariantCulture), 3);
+        Assert.Equal(1 / .08, Convert.ToDouble(Glint(hud, "coins")["framesPerSecond"], CultureInfo.InvariantCulture), 3);
+        Assert.True(Convert.ToDouble(Assert.IsType<Dictionary<string, object?>>(Glint(hud, "magic")["slot"])["width"], CultureInfo.InvariantCulture) < 1);
+        Assert.Equal(9, Assert.IsType<object?[]>(Glint(hud, "magic")["frames"]).Length);
+        Assert.Subset(Assert.IsType<object?[]>(Assert.IsType<Dictionary<string, object?>>(initial["uiArt"])["images"]).Cast<Dictionary<string, object?>>()
+                .Select(image => Assert.IsType<string>(image["id"])).ToHashSet(),
+            new HashSet<string> { "effect.glint.magic", "effect.glint.coins", "refreshed.effect.glint.magic", "refreshed.effect.glint.coins" });
+
         // Choosing classic art draws the classic images again, with their pixels square.
         session.Update(new ProductUpdate(OuterUpdate(3), [Input(InputEventKind.DirectDigital) with
         {
@@ -505,6 +525,10 @@ public sealed class UiArtDeliverySessionTests
         Assert.Null(Cuirass(classic)["iconTint"]);
         Assert.Null(Assert.IsType<Dictionary<string, object?>>(Assert.IsType<Dictionary<string, object?>>(classic["spells"])["icons"])["images"]);
         Assert.All(Tiles(classic, "targets").Concat(Tiles(classic, "elements")).Cast<Dictionary<string, object?>>(), tile => Assert.Null(tile["image"]));
+        // The glints follow the art choice: the classic atlas, its whole frame in the slot.
+        Assert.Equal("effect.glint.magic", Glint(classic, "magic")["media"]);
+        Assert.Equal("effect.glint.coins", Glint(classic, "coins")["media"]);
+        Assert.Equal(1d, Convert.ToDouble(Assert.IsType<Dictionary<string, object?>>(Glint(classic, "magic")["slot"])["width"], CultureInfo.InvariantCulture));
     }
 
     [Fact]

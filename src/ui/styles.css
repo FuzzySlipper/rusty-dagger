@@ -555,3 +555,21 @@
 .dagger-developer-fly { display: grid; gap: .25rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: .375rem; }
 .dagger-developer-overlays { display: grid; gap: .125rem; }
 .dagger-developer-status { color: #a8c4d0; display: block; min-height: 1.4em; white-space: pre-wrap; }
+
+/* The inventory window's glints (glint.ts): one shared frame per kind, set as CSS variables on the document. The slot
+   holds the classic frame; a refreshed frame painted past its edges spills over the slot by as much. */
+.dagger-hud .has-glint { position: relative; overflow: visible; }
+.dagger-hud .dagger-glint { position: absolute; pointer-events: none; background-repeat: no-repeat; }
+.dagger-hud .dagger-glint-magic {
+  z-index: 2;
+  left: var(--glint-magic-left); top: var(--glint-magic-top); width: var(--glint-magic-width); height: var(--glint-magic-height);
+  background-image: var(--glint-magic-image, none); background-size: var(--glint-magic-size); background-position: var(--glint-magic-position);
+  image-rendering: var(--glint-magic-rendering, pixelated);
+}
+.dagger-hud .dagger-glint-coins {
+  z-index: 0;
+  left: var(--glint-coins-left); top: var(--glint-coins-top); width: var(--glint-coins-width); height: var(--glint-coins-height);
+  background-image: var(--glint-coins-image, none); background-size: var(--glint-coins-size); background-position: var(--glint-coins-position);
+  image-rendering: var(--glint-coins-rendering, pixelated);
+}
+.dagger-hud .has-glint > img { position: relative; z-index: 1; }

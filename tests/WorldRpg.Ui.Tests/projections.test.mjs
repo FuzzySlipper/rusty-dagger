@@ -3747,6 +3747,58 @@ test('refreshed icons are drawn smoothed and spell icons draw their own refreshe
   } finally { f.dispose(); }
 });
 
+test('enchanted items shimmer in the pack and the shop, stealable stock glints, and both follow the art choice', async () => {
+  const f = fixture();
+  // The glints turn on timers, which would keep the test process alive once it ends.
+  const { useGlints } = await import(pathToFileURL(join(output, 'glint.js')).href);
+  try {
+    const png = 'data:image/png;base64,AA==', webp = 'data:image/webp;base64,AA==';
+    const glint = (media, frames, fps, slot) => ({ media, width: frames * 10, height: 10,
+      frames: Array.from({ length: frames }, (_, index) => ({ x: index * 10, y: 0, width: 10, height: 10 })), framesPerSecond: fps, slot });
+    const whole = { x: 0, y: 0, width: 1, height: 1 };
+    const classic = { magic: glint('effect.glint.magic', 9, 1 / .15, whole), coins: glint('effect.glint.coins', 8, 1 / .08, whole) };
+    const refreshed = { magic: glint('refreshed.effect.glint.magic', 9, 1 / .15, { x: .25, y: .25, width: .5, height: .5 }),
+      coins: glint('refreshed.effect.glint.coins', 8, 1 / .08, whole) };
+    const item = (key, enchanted) => ({ key, definition: 'template-113', label: key, quantity: '1', weight: 4, weightKilograms: 1, value: 10, details: '',
+      icon: 'item.sword', condition: { current: 10, maximum: 10, percentage: 100, broken: false }, identified: true,
+      gridSlot: key === 'unique:1' ? 0 : 1, equippedSlots: [], compatibleSlots: [], enchanted });
+    const stock = (key, enchanted) => ({ key, definition: 'template-113', label: key, icon: 'item.sword', quantity: '1', maximumQuantity: 1, unitPrice: '7',
+      currentCondition: 10, maximumCondition: 10, identified: true, stolen: false, canBuy: true, canSell: false, enchanted });
+    const merchant = { revision: 'merchant-1', provider: 'Smith', quality: 10, gold: '100', buyAvailable: true, sellAvailable: false,
+      repairAvailable: false, identifyAvailable: false, result: '', largeTradeGold: 500, playerItems: [], repairs: [], shopliftAvailable: true,
+      stock: [stock('stack:plain', false), stock('unique:9', true)] };
+    const publish = glints => f.publish({ uiArtRevision: 'g1', uiArt: { revision: 'g1', images: [{ id: 'item.sword', image: png },
+        { id: 'effect.glint.magic', image: png }, { id: 'effect.glint.coins', image: png },
+        { id: 'refreshed.effect.glint.magic', image: webp, smooth: true }, { id: 'refreshed.effect.glint.coins', image: webp, smooth: true }] },
+      inventory: { revision: '1', message: '', equipmentChange: null, slots: [], items: [item('unique:1', true), item('unique:2', false)], glints },
+      activation: { mode: 'talk', dialogue: { ...offering(['trade', 'Buy']), revision: 'merchant-1', targetLabel: 'Smith', greeting: 'Welcome.',
+        tone: 'normal', question: null, reply: null, topics: [], diagnostics: [], merchant } } });
+    publish(classic);
+    const cell = key => f.root.querySelector(`.dagger-inventory-grid [data-inventory-item="${key}"]`);
+    assert.ok(cell('unique:1').querySelector('.dagger-glint-magic'), 'An enchanted item in the pack shimmers.');
+    assert.equal(cell('unique:2').querySelector('.dagger-glint'), null, 'A plain item does not.');
+    f.openService('trade');
+    const picture = key => f.root.querySelector(`[data-transfer-side="source"] [data-transfer-item="${key}"] .dagger-transfer-icon`);
+    assert.ok(picture('stack:plain').querySelector('.dagger-glint-coins'), 'Stock the player may steal glints with coins behind it.');
+    assert.equal(picture('stack:plain').firstElementChild.className, 'dagger-glint dagger-glint-coins', 'The coins lie behind the icon.');
+    assert.ok(picture('unique:9').querySelector('.dagger-glint-magic'), 'Enchanted stock shimmers too.');
+    const root = window.document.documentElement.style;
+    assert.match(root.getPropertyValue('--glint-magic-image'), /image\/png/);
+    assert.equal(root.getPropertyValue('--glint-magic-size'), '900% 100%');
+    assert.equal(root.getPropertyValue('--glint-magic-rendering'), 'pixelated');
+    assert.equal(root.getPropertyValue('--glint-magic-width'), '100%');
+    publish(refreshed);
+    assert.match(root.getPropertyValue('--glint-magic-image'), /image\/webp/, 'Choosing refreshed art draws the refreshed glint.');
+    assert.equal(root.getPropertyValue('--glint-magic-rendering'), 'auto');
+    // The slot holds the classic frame: a refreshed frame twice its size spills half a slot past each edge.
+    assert.equal(root.getPropertyValue('--glint-magic-width'), '200%');
+    assert.equal(root.getPropertyValue('--glint-magic-left'), '-50%');
+    merchant.shopliftAvailable = false; merchant.revision = 'merchant-2';
+    publish(refreshed);
+    assert.equal(picture('stack:plain').querySelector('.dagger-glint-coins'), null, 'Stock that cannot be stolen does not glint.');
+  } finally { f.dispose(); useGlints(null); }
+});
+
 test('the shop is the transfer layout: line totals, confirms for large trades and theft, and service-only rows', () => {
   const f = fixture();
   try {

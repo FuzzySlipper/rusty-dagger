@@ -137,7 +137,7 @@ public sealed class NormalizedDaggerfallSiteContentTests
         Assert.All(inputs.ActorSprites.Values, sprite => Assert.InRange(sprite.Frames.Count, 1, 4096));
         Assert.Equal("weapon.dagger.steel", Assert.IsType<NormalizedClassicWeapon>(inputs.ClassicPresentation.Weapons["weapon.dagger.steel"]).ResourceId);
         Assert.Equal("weapon.dagger.steel", inputs.ClassicPresentation.CompatibleItemVisuals["iron-dagger"]);
-        Assert.Equal(["blood0", "blood1", "blood2", "coldImpact", "coldMissile", "fireImpact", "fireMissile", "magicImpact", "magicMissile", "magicSparkle",
+        Assert.Equal(["blood0", "blood1", "blood2", "coinGlint", "coldImpact", "coldMissile", "fireImpact", "fireMissile", "magicGlint", "magicImpact", "magicMissile", "magicSparkle",
             "poisonImpact", "poisonMissile", "shockImpact", "shockMissile"], inputs.ClassicPresentation.Effects.Select(effect => effect.Name));
         // The human enemy classes fall as the one corpse TEXTURE.380 record 1 draws, and the content says so.
         Assert.Contains(inputs.ActorSprites.Values.Concat(inputs.MobileSprites.Values), sprite => sprite.Corpse?.SourceTexture == (380, 1));

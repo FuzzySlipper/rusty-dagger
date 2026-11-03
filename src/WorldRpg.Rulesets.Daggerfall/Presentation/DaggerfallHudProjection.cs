@@ -626,6 +626,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("maximumCondition", builder.Number(item.MaximumCondition)),
         ("identified", builder.Boolean(item.Identified)),
         ("stolen", builder.Boolean(item.Stolen)),
+        ("enchanted", builder.Boolean(item.Enchanted)),
         ("canBuy", builder.Boolean(item.CanBuy)),
         ("canSell", builder.Boolean(item.CanSell)),
         ("canRepair", builder.Boolean(canRepair)),
@@ -770,6 +771,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("cue", builder.String(change.Cue)), ("rightHandDelayMilliseconds", builder.Number(change.RightHandDelayMilliseconds)),
                 ("leftHandDelayMilliseconds", builder.Number(change.LeftHandDelayMilliseconds))) : builder.Null()),
             ("items", builder.Array(items)), ("slots", builder.Array(slots)),
+            ("glints", value.Glints is { } glints ? builder.Object(("magic", Glint(builder, glints.Magic)), ("coins", Glint(builder, glints.Coins))) : builder.Null()),
             ("categories", builder.Array((value.Categories ?? []).Select(category => builder.Object(
                 ("id", builder.String(category.Id)), ("label", builder.String(category.Label)))).ToArray())));
     }
@@ -782,7 +784,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("condition", item.Condition is { } condition ? builder.Object(("current", builder.Number(condition.Current)),
             ("maximum", builder.Number(condition.Maximum)), ("percentage", builder.Number(condition.Percentage)),
             ("broken", builder.Boolean(condition.Broken)), ("low", builder.Boolean(condition.Low))) : builder.Null()),
-        ("identified", builder.Boolean(item.Identified)),
+        ("identified", builder.Boolean(item.Identified)), ("enchanted", builder.Boolean(item.Enchanted)),
         ("gridSlot", item.GridSlot is int slot ? builder.Number(slot) : builder.Null()),
         ("equippedSlots", builder.Array(item.EquippedSlots.Select(builder.String).ToArray())),
         ("compatibleSlots", builder.Array(item.CompatibleSlots.Select(builder.String).ToArray())),
@@ -794,6 +796,14 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("comparison", item.Comparison is not { } comparison ? builder.Null() : builder.Object(
             ("item", builder.String(comparison.Item)), ("label", builder.String(comparison.Label)), ("slot", builder.String(comparison.Slot)),
             ("stats", builder.Array(comparison.Stats.Select(stat => Stat(builder, stat)).ToArray())))));
+
+    private static uint Glint(UiValueBuilder builder, InventoryGlintPresentation glint) => builder.Object(
+        ("media", builder.String(glint.Media)), ("width", builder.Number(glint.Width)), ("height", builder.Number(glint.Height)),
+        ("frames", builder.Array(glint.Frames.Select(frame => builder.Object(("x", builder.Number(frame.X)), ("y", builder.Number(frame.Y)),
+            ("width", builder.Number(frame.Width)), ("height", builder.Number(frame.Height)))).ToArray())),
+        ("framesPerSecond", builder.Number(glint.FramesPerSecond)),
+        ("slot", builder.Object(("x", builder.Number(glint.Slot.X)), ("y", builder.Number(glint.Slot.Y)),
+            ("width", builder.Number(glint.Slot.Width)), ("height", builder.Number(glint.Slot.Height)))));
 
     private static uint Stat(UiValueBuilder builder, ItemStatPresentation stat) => builder.Object(
         ("label", builder.String(stat.Label)), ("text", builder.String(stat.Text)), ("score", builder.Number(stat.Score)));
