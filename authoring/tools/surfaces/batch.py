@@ -12,7 +12,8 @@ For each record, in order, each step skipped when its output exists:
      denoise 0.55 where it tiles and 0.5 where it does not (a door, a painting).
   4. reduce   reduce.crunch: twice the classic's size, its colours, a strong unsharp mask, an ART_PAL subset.
 A winter record (a set's snow archive, one above its summer) is its refreshed summer under the classic winter's own
-snow (reduce.winter); its summer is converted first even when only the winter is used.
+snow (reduce.winter); its summer is converted first even when only the winter is used. A winter record the classic
+redrew as another picture (not reduce.snowed) is converted like a summer one.
 
     batch.py --host den-m5 --family exterior-city-a --family exterior-roofs
     batch.py --host den-nimo --families-from list.txt
@@ -158,14 +159,16 @@ def main():
             continue
         final.parent.mkdir(parents=True, exist_ok=True)
         started = time.time()
-        if row["set"].endswith("-snow"):
-            summer_row = by_key[(archive - 1, record)]
+        summer_row = by_key.get((archive - 1, record)) if row["set"].endswith("-snow") else None
+        if summer_row and reduce.snowed(classic(summer_row), classic(row)):
             summer_final = OUT / summer_row["set"] / f"texture-{archive - 1:03d}-{record}.png"
             reduce.winter(Image.open(summer_final), classic(summer_row), classic(row)).save(final)
             print(f"{key} winter", flush=True)
             continue
         image, mode = prepare(row)
         text = caption(comfy, image, cache, key)
+        # Another host's run writes the same file: keep its captions too.
+        cache = (json.loads(captions_path.read_text()) if captions_path.exists() else {}) | cache
         captions_path.write_text(json.dumps(cache, indent=1) + "\n")
         size = size_for(image)
         raw = OUT / "raw" / f"{key}.png"
