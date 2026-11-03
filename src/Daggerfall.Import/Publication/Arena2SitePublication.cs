@@ -30,8 +30,13 @@ public sealed record Arena2SiteMedia(
 /// </summary>
 public static class Arena2SitePublication
 {
-    /// <summary>The ground-container billboard every site publishes for dropped loot.</summary>
-    public const string GroundContainerBillboard = "sprite/texture-216-0";
+    /// <summary>
+    /// The ground-container billboards every site publishes for dropped loot and treasure: the TEXTURE.216 records the
+    /// classic picks a pile's image from at random (DFU <c>DaggerfallLootDataTables.randomTreasureIconIndices</c>).
+    /// </summary>
+    public static readonly IReadOnlyList<string> GroundContainerBillboards = [.. new[]
+        { 0, 1, 3, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 36, 37, 38, 39, 40, 43, 44, 45, 46, 47 }
+        .Select(record => $"sprite/texture-216-{record}")];
 
     /// <summary>
     /// The actor media every site publishes: one sprite per mobile the imported mobile catalog says the
@@ -214,7 +219,7 @@ public static class Arena2SitePublication
                 RuntimeMaterialResources = runtimeMaterials ?? [],
                 RuntimeBillboardResources = [.. media.RuntimeNpcResources
                     .Concat(media.RuntimeNatureResources)
-                    .Concat([GroundContainerBillboard, "sprite/texture-210-3"])
+                    .Concat(GroundContainerBillboards).Concat(["sprite/texture-210-3"])
                     .Concat((document?.World.StaticNpcs ?? []).Select(npc => $"sprite/texture-{npc.BillboardArchive}-{npc.BillboardRecord}"))
                     .Concat((document?.World.Population ?? []).Select(person => $"sprite/texture-{person.BillboardArchive}-{person.BillboardRecord}"))
                     .Concat(runtimeBillboards ?? [])

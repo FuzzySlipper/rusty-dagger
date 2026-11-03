@@ -390,7 +390,7 @@ internal static class TestSessions
             yield return (decoration.Summer.TexturePath, decoration.Summer.TextureSha256);
             yield return (decoration.Winter.TexturePath, decoration.Winter.TextureSha256);
         }
-        if (inputs.GroundContainerSprite is { } ground) yield return (ground.TexturePath, ground.TextureSha256);
+        foreach (NormalizedBillboardSprite ground in inputs.GroundContainerSprites ?? []) yield return (ground.TexturePath, ground.TextureSha256);
         foreach (NormalizedTerrainTexture texture in inputs.TerrainTextures.Values) yield return (texture.TexturePath, texture.TextureSha256);
     }
 
@@ -418,9 +418,11 @@ internal static class TestSessions
                 yield return (path, TestContentFiles.ReadCopy(Path.Combine(root, "content", path)));
             }
         }
-        // A site appearance admits the refreshed world effects and their particle glow with its own textures.
+        // A site appearance admits the refreshed world effects and their particle glow, and the items dropped piles
+        // stand as, with its own textures.
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(TestContentFiles.Read(Path.Combine(root, "content", "worldrpg/payloads/daggerfall.art-replacements.json")), "daggerfall.art-replacements");
-        foreach (string path in art.Effects.Values.Select(effect => effect.Path).Append(art.EffectGlow!.Path).Concat(art.Meshes.Values.Select(mesh => mesh.File.Path)).Distinct())
+        IEnumerable<string> world = art.All.SelectMany(replacement => new[] { replacement.World?.File.Path, replacement.DyeMask?.World?.File.Path }).OfType<string>();
+        foreach (string path in art.Effects.Values.Select(effect => effect.Path).Append(art.EffectGlow!.Path).Concat(art.Meshes.Values.Select(mesh => mesh.File.Path)).Concat(world).Distinct())
             yield return (path, TestContentFiles.ReadCopy(Path.Combine(root, "content", path)));
     }
 
@@ -455,7 +457,7 @@ internal static class TestSessions
         return content;
     }
 
-    internal static DaggerfallSiteProfile MediaInputs(int primaryChance = 50, IReadOnlyList<int>? primaryFrames = null, bool includeAlternate = true, bool directional = false, IReadOnlyList<NormalizedAudioClip>? audio = null, string? preferredRestState = null, NormalizedClassicPresentation? classic = null, IReadOnlyList<NormalizedAtlasFrame>? actorFrames = null, IReadOnlyList<int>? rangedFrames = null, bool shortAttackDirection = false, NormalizedBillboardSprite? groundContainerSprite = null, DaggerfallActorFeedback? feedback = null, long spriteActorId = 11, NormalizedActorSprite? corpse = null, IReadOnlyList<DaggerfallSiteDecoration>? decorations = null)
+    internal static DaggerfallSiteProfile MediaInputs(int primaryChance = 50, IReadOnlyList<int>? primaryFrames = null, bool includeAlternate = true, bool directional = false, IReadOnlyList<NormalizedAudioClip>? audio = null, string? preferredRestState = null, NormalizedClassicPresentation? classic = null, IReadOnlyList<NormalizedAtlasFrame>? actorFrames = null, IReadOnlyList<int>? rangedFrames = null, bool shortAttackDirection = false, IReadOnlyList<NormalizedBillboardSprite>? groundContainerSprites = null, DaggerfallActorFeedback? feedback = null, long spriteActorId = 11, NormalizedActorSprite? corpse = null, IReadOnlyList<DaggerfallSiteDecoration>? decorations = null)
     {
         NormalizedSpriteState idle = new("idle", [0], 10F, true)
         {
@@ -511,7 +513,7 @@ internal static class TestSessions
                 new NormalizedAudioClip("hit5", "audio/hit5.wav", Hash),
             ],
             classic,
-            groundContainerSprite: groundContainerSprite) { Decorations = decorations ?? [] };
+            groundContainerSprites: groundContainerSprites) { Decorations = decorations ?? [] };
     }
 
     /// <param name="fireSpell">Also publish the fire missile (looping) and impact, on two frames each, at <c>effect/fire-missile.png</c> and <c>effect/fire-impact.png</c>.</param>
@@ -728,7 +730,7 @@ internal static class TestSessions
         source.Portals,
         source.Anchors.Values.ToArray(),
         source.Lights,
-        source.GroundContainerSprite,
+        source.GroundContainerSprites,
         kind == DaggerfallWorldProfileKind.Dungeon ? source.DungeonMap : null,
         kind == DaggerfallWorldProfileKind.Dungeon ? source.DungeonActions : [],
         kind == DaggerfallWorldProfileKind.Dungeon ? source.DungeonActionModels : []);

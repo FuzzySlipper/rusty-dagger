@@ -121,7 +121,7 @@ public sealed class DaggerfallHeldEnchantmentSessionTests
         source.Portals,
         source.Anchors.Values.ToArray(),
         source.Lights,
-        source.GroundContainerSprite,
+        source.GroundContainerSprites,
         null,
         [],
         [],

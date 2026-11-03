@@ -24,7 +24,7 @@ public sealed class DungeonTeleportSessionTests
         var profile = new DaggerfallSiteProfile(source.Project, source.Geometry, source.WorldAppearance,
             source.InitialLook, source.Materials, source.ActorSprites, source.MobileSprites, source.Audio, source.ClassicPresentation,
             source.Site, source.Doors, source.ProfileKind, source.ProfileKey.LogicalId, source.Portals, source.Anchors.Values.ToArray(), source.Lights,
-            source.GroundContainerSprite, source.DungeonMap, [.. source.DungeonActions, teleport, target], source.DungeonActionModels,
+            source.GroundContainerSprites, source.DungeonMap, [.. source.DungeonActions, teleport, target], source.DungeonActionModels,
             source.InteriorBuilding, source.QuestMarkers, source.BillboardSprites, source.StaticNpcs,
             source.WaterVolumes, source.TerrainTextures, source.Population);
         List<string> releases = [];

@@ -129,7 +129,7 @@ internal static partial class DaggerfallSiteContent
         Dictionary<long, AuthoredActor> actors = ReadNormalizedPlacements(root, definitions, diagnostics, fixedActors, profileId);
         foreach (var actor in fixedActors)
             if (!actors.TryAdd(actor.Key, actor.Value)) diagnostics.Add($"Fixed actor identity {actor.Key} collides in '{profileId}'.");
-        (IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<int, NormalizedActorSprite> sprites, NormalizedBillboardSprite? groundContainerSprite, IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> billboardSprites, IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture> terrainTextures) = ReadDungeonMedia(
+        (IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<int, NormalizedActorSprite> sprites, IReadOnlyList<NormalizedBillboardSprite>? groundContainerSprites, IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> billboardSprites, IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture> terrainTextures) = ReadDungeonMedia(
             files.GetExactlyOne(mediaPath),
             artifacts,
             product,
@@ -227,7 +227,7 @@ internal static partial class DaggerfallSiteContent
             portals,
             anchors,
             lights,
-            groundContainerSprite,
+            groundContainerSprites,
             dungeonMap,
             dungeonActions,
             actionModels,
@@ -289,7 +289,7 @@ internal static partial class DaggerfallSiteContent
                 ["actors"] = new System.Text.Json.Nodes.JsonArray([.. product.ActorIds.Order(StringComparer.Ordinal).Select(id => (System.Text.Json.Nodes.JsonNode?)id)]),
             },
         };
-        (_, IReadOnlyDictionary<int, NormalizedActorSprite> sprites, NormalizedBillboardSprite? groundContainer,
+        (_, IReadOnlyDictionary<int, NormalizedActorSprite> sprites, IReadOnlyList<NormalizedBillboardSprite>? groundContainer,
             IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> billboards,
             IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture> terrain) =
             ReadDungeonMedia(System.Text.Encoding.UTF8.GetBytes(selection.ToJsonString()), artifacts, product, definitions, diagnostics);
@@ -1548,7 +1548,10 @@ internal static partial class DaggerfallSiteContent
         catch (FormatException) { diagnostics.Add("Generated content digest must be a 64-character hexadecimal SHA-256."); return default; }
     }
 
-    private static (IReadOnlyList<NormalizedMaterial> Materials, IReadOnlyDictionary<int, NormalizedActorSprite> Sprites, NormalizedBillboardSprite? GroundContainerSprite, IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> BillboardSprites, IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture> TerrainTextures) ReadDungeonMedia(
+    /// <summary>The texture archive of the treasure piles a ground container stands as.</summary>
+    private const int TreasureArchive = 216;
+
+    private static (IReadOnlyList<NormalizedMaterial> Materials, IReadOnlyDictionary<int, NormalizedActorSprite> Sprites, IReadOnlyList<NormalizedBillboardSprite>? GroundContainerSprites, IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> BillboardSprites, IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture> TerrainTextures) ReadDungeonMedia(
         ReadOnlyMemory<byte>? bytes,
         DaggerfallClosureArtifacts artifacts,
         DaggerfallWorldMedia product,
@@ -1654,9 +1657,11 @@ internal static partial class DaggerfallSiteContent
                 if (!terrainTextures.TryAdd((archive, record), new NormalizedTerrainTexture(resource.Path, resource.Hash)))
                     diagnostics.Add($"Generated terrain texture address {archive}/{record} repeats.");
             }
-            billboards.TryGetValue((216, 0), out var groundContainerSprite);
-            if (groundContainerSprite is null) diagnostics.Add("Generated dungeon media has no ground-container billboard 'sprite/texture-216-0'.");
-            return (Array.AsReadOnly(materials.OrderBy(material => material.Slot).ToArray()), new ReadOnlyDictionary<int, NormalizedActorSprite>(sprites.ToDictionary()), groundContainerSprite, billboards, new ReadOnlyDictionary<(int, int), NormalizedTerrainTexture>(terrainTextures));
+            // Every published treasure-archive billboard is a pile a ground container may stand as.
+            NormalizedBillboardSprite[] groundContainerSprites = [.. billboards.Where(pair => pair.Key.Archive == TreasureArchive)
+                .OrderBy(pair => pair.Key.Record).Select(pair => pair.Value)];
+            if (groundContainerSprites.Length == 0) diagnostics.Add($"Generated dungeon media has no ground-container billboard 'sprite/texture-{TreasureArchive}-N'.");
+            return (Array.AsReadOnly(materials.OrderBy(material => material.Slot).ToArray()), new ReadOnlyDictionary<int, NormalizedActorSprite>(sprites.ToDictionary()), groundContainerSprites, billboards, new ReadOnlyDictionary<(int, int), NormalizedTerrainTexture>(terrainTextures));
         }
         catch (JsonException exception)
         {
@@ -2583,7 +2588,7 @@ internal sealed record DaggerfallSitePayloadHeader(DaggerfallWorldProfileKey Key
 /// <summary>The product-wide world media every assembled location draws from.</summary>
 internal sealed record DaggerfallProductMedia(
     IReadOnlyDictionary<int, NormalizedActorSprite> MobileSprites,
-    NormalizedBillboardSprite? GroundContainerSprite,
+    IReadOnlyList<NormalizedBillboardSprite>? GroundContainerSprites,
     IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> BillboardSprites,
     IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture> TerrainTextures,
     IReadOnlyList<NormalizedAudioClip> Audio,
@@ -2714,7 +2719,7 @@ internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 T
     internal NormalizedActorSprite ForGender(string gender) => gender == "female" && Female is { } female
         ? female with { Corpse = female.Corpse ?? Corpse } : this;
 }
-internal sealed class DaggerfallSiteProfile(ProjectFacts project, DaggerfallSiteGeometry geometry, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyDictionary<int, NormalizedActorSprite>? mobileSprites = null, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null, IReadOnlyList<DaggerfallRdbDoorDefinition>? doors = null, DaggerfallWorldProfileKind profileKind = DaggerfallWorldProfileKind.Dungeon, string? logicalProfileId = null, IReadOnlyList<DaggerfallSitePortal>? portals = null, IReadOnlyList<DaggerfallSiteAnchor>? anchors = null, IReadOnlyList<DaggerfallSiteLight>? lights = null, NormalizedBillboardSprite? groundContainerSprite = null, DaggerfallDungeonMapContent? dungeonMap = null, IReadOnlyList<DaggerfallDungeonActionDefinition>? dungeonActions = null, IReadOnlyList<DaggerfallDungeonActionModelDefinition>? dungeonActionModels = null, DaggerfallInteriorBuilding? interiorBuilding = null, IReadOnlyList<DaggerfallSiteMarker>? questMarkers = null, IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite>? billboardSprites = null, IReadOnlyList<DaggerfallStaticNpcPlacement>? staticNpcs = null, IReadOnlyList<CharacterWaterVolume>? waterVolumes = null, IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture>? terrainTextures = null, IReadOnlyList<DaggerfallPopulationPlacement>? population = null)
+internal sealed class DaggerfallSiteProfile(ProjectFacts project, DaggerfallSiteGeometry geometry, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyDictionary<int, NormalizedActorSprite>? mobileSprites = null, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null, IReadOnlyList<DaggerfallRdbDoorDefinition>? doors = null, DaggerfallWorldProfileKind profileKind = DaggerfallWorldProfileKind.Dungeon, string? logicalProfileId = null, IReadOnlyList<DaggerfallSitePortal>? portals = null, IReadOnlyList<DaggerfallSiteAnchor>? anchors = null, IReadOnlyList<DaggerfallSiteLight>? lights = null, IReadOnlyList<NormalizedBillboardSprite>? groundContainerSprites = null, DaggerfallDungeonMapContent? dungeonMap = null, IReadOnlyList<DaggerfallDungeonActionDefinition>? dungeonActions = null, IReadOnlyList<DaggerfallDungeonActionModelDefinition>? dungeonActionModels = null, DaggerfallInteriorBuilding? interiorBuilding = null, IReadOnlyList<DaggerfallSiteMarker>? questMarkers = null, IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite>? billboardSprites = null, IReadOnlyList<DaggerfallStaticNpcPlacement>? staticNpcs = null, IReadOnlyList<CharacterWaterVolume>? waterVolumes = null, IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture>? terrainTextures = null, IReadOnlyList<DaggerfallPopulationPlacement>? population = null)
 {
     internal string? VariantName { get; init; }
     internal string? VariantBaseLogicalId { get; init; }
@@ -2760,7 +2765,7 @@ internal sealed class DaggerfallSiteProfile(ProjectFacts project, DaggerfallSite
         .Select(light => light.Validate())
         .OrderBy(light => light.Id, StringComparer.Ordinal)
         .ToArray());
-    internal NormalizedBillboardSprite? GroundContainerSprite { get; } = groundContainerSprite;
+    internal IReadOnlyList<NormalizedBillboardSprite>? GroundContainerSprites { get; } = groundContainerSprites;
     internal IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> BillboardSprites { get; } =
         new ReadOnlyDictionary<(int, int), NormalizedBillboardSprite>((billboardSprites ?? new Dictionary<(int, int), NormalizedBillboardSprite>()).ToDictionary());
     /// <summary>World-normalized water volumes supplied to the one admitted character step.</summary>

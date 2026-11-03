@@ -288,15 +288,17 @@ public sealed class NormalizedDaggerfallSiteContentTests
     }
 
     [Fact]
-    public void Reads_the_donor_treasure_billboard_for_ground_container_projection()
+    public void Reads_the_donor_treasure_billboards_for_ground_container_projection()
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(TestSessions.Data(GeneratedContent(root)),
             TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
 
-        Assert.NotNull(inputs.GroundContainerSprite);
-        NormalizedBillboardSprite visual = inputs.GroundContainerSprite!;
+        // The donor's random treasure icons, in record order.
+        Assert.Equal([0, 1, 3, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 36, 37, 38, 39, 40, 43, 44, 45, 46, 47],
+            inputs.GroundContainerSprites!.Select(sprite => int.Parse(Path.GetFileNameWithoutExtension(sprite.TexturePath)["texture-216-".Length..])));
+        NormalizedBillboardSprite visual = inputs.GroundContainerSprites![0];
         Assert.Equal("worldrpg/imports/shared/media/dungeon/billboards/texture-216-0.png", visual.TexturePath);
         Assert.Equal(new Vector2(.5F, .5F), visual.Pivot);
         Assert.Equal(new Vector2(.975F, .65F), visual.Size);

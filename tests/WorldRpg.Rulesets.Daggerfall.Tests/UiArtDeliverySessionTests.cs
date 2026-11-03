@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -434,7 +435,10 @@ public sealed class UiArtDeliverySessionTests
         const string payload = "worldrpg/payloads/daggerfall.art-replacements.json";
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(TestContentFiles.Read(Path.Combine(root, "content", payload)), "daggerfall.art-replacements");
         foreach (DaggerfallArtImage image in art.Images) content.Add(image.Path, TestContentFiles.ReadCopy(Path.Combine(root, "content", image.Path)));
-        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+        foreach (string path in art.All.SelectMany(replacement => new[] { replacement.World?.File.Path, replacement.DyeMask?.World?.File.Path }).OfType<string>())
+            content.Add(path, TestContentFiles.ReadCopy(Path.Combine(root, "content", path)));
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, appearance);
 
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context,
             new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults) { Data = TestSessions.DataOf(content), ArtReplacements = art });
@@ -529,6 +533,30 @@ public sealed class UiArtDeliverySessionTests
         Assert.Equal("effect.glint.magic", Glint(classic, "magic")["media"]);
         Assert.Equal("effect.glint.coins", Glint(classic, "coins")["media"]);
         Assert.Equal(1d, Convert.ToDouble(Assert.IsType<Dictionary<string, object?>>(Glint(classic, "magic")["slot"])["width"], CultureInfo.InvariantCulture));
+
+        // Dropped in classic art, the cuirass lies as one of the classic treasure piles.
+        void Act(ulong step, string json) => session.Update(new ProductUpdate(OuterUpdate(step), [Input(InputEventKind.DirectDigital) with
+        {
+            ValueKind = InputValueKind.ProductPayload,
+            PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+            PayloadData = System.Text.Encoding.UTF8.GetBytes(json),
+        }]));
+        Act(4, System.Text.Json.JsonSerializer.Serialize(new { action = "inventory-drop", revision = InventoryRevision(classic), item = Cuirass(classic)["key"], amount = 1 }));
+        SpriteFromAtlasRequest pile = appearance.SpriteRequests.Last();
+        Assert.Contains(pile.Size, inputs.GroundContainerSprites!.Select(sprite => sprite.Size));
+        Assert.Equal(default, pile.Material.TintMask);
+
+        // With refreshed art it lies as itself: its world image standing on the floor, as tall as it is on the paper
+        // doll's body (a hundredth of a metre per doll unit), in its metal through the bare steel's mask.
+        Act(5, "{\"action\":\"controls-classic-art\",\"enabled\":false}");
+        SpriteFromAtlasRequest item = appearance.SpriteRequests.Last();
+        float height = (float)steel.Doll!.Height * .01F;
+        Assert.Equal(height, item.Size.Y, 4);
+        Assert.Equal(height * steel.World!.Width / steel.World.Height, item.Size.X, 4);
+        Assert.Equal(new Vector2(.5F, 0F), item.Pivot);
+        Assert.NotEqual(default, item.Material.TintMask);
+        string dwarven = art.Tints["dwarven"].Multiply;
+        Assert.Equal((float)Math.Pow(Convert.ToInt32(dwarven[1..3], 16) / 255d * art.Tints["dwarven"].Brightness, 2.2), item.Tint.R, 4);
     }
 
     [Fact]

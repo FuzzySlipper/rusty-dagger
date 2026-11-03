@@ -327,7 +327,7 @@ public sealed class DaggerfallPopulationSessionTests
             Array.Empty<DaggerfallSitePortal>(),
             exterior.Anchors.Values.ToArray(),
             exterior.Lights,
-            exterior.GroundContainerSprite,
+            exterior.GroundContainerSprites,
             exterior.DungeonMap,
             exterior.DungeonActions,
             exterior.DungeonActionModels,

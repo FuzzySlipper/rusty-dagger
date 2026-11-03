@@ -158,7 +158,7 @@ public sealed class QuestWorldActionTests
 
     internal static DaggerfallSiteProfile Variant(DaggerfallSiteProfile source, IReadOnlyList<DaggerfallSiteMarker>? markers = null) => new(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook, source.Materials, source.ActorSprites, source.MobileSprites,
         source.Audio, source.ClassicPresentation, source.Site, source.Doors, source.ProfileKind, source.ProfileKey.LogicalId,
-        source.Portals, source.Anchors.Values.ToArray(), [new("variant-light", new(1, 2, 3), 8, 17, Vector3.One)], source.GroundContainerSprite, source.DungeonMap,
+        source.Portals, source.Anchors.Values.ToArray(), [new("variant-light", new(1, 2, 3), 8, 17, Vector3.One)], source.GroundContainerSprites, source.DungeonMap,
         source.DungeonActions, source.DungeonActionModels, source.InteriorBuilding, markers ?? source.QuestMarkers, source.BillboardSprites,
         source.StaticNpcs, source.WaterVolumes, source.TerrainTextures, source.Population)
         { VariantName = "lit", VariantBaseLogicalId = source.ProfileKey.LogicalId, AmbientZones = source.AmbientZones, PropertyContainers = source.PropertyContainers };

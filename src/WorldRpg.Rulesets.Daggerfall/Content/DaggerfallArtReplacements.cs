@@ -17,11 +17,19 @@ internal sealed record DaggerfallDollRect(double X, double Y, double Width, doub
 /// <param name="Doll">Where the paper doll draws it, for a paper-doll layer.</param>
 /// <param name="DyeMask">For clothing, the image of the neutral cloth a dye recolours, and for armour or a weapon, of the
 /// bare steel a metal recolours; the same size as this one.</param>
+/// <param name="World">For an item's image, the PNG a dropped item stands as on the ground.</param>
 internal sealed record DaggerfallArtReplacement(string Replaces, string MediaId, string Path, long ByteLength, DaggerfallDollRect? Doll,
-    DaggerfallArtImage? DyeMask = null);
+    DaggerfallArtImage? DyeMask = null, DaggerfallArtWorldImage? World = null);
 
 /// <summary>One published image of the refreshed art set beside its replacement: its identity, path and length.</summary>
-internal sealed record DaggerfallArtImage(string MediaId, string Path, long ByteLength);
+/// <param name="World">For a worn item's dye mask, its PNG the same size as the item's <see cref="DaggerfallArtReplacement.World"/>.</param>
+internal sealed record DaggerfallArtImage(string MediaId, string Path, long ByteLength, DaggerfallArtWorldImage? World = null);
+
+/// <summary>
+/// A PNG of an item's image for the world, which reads PNG: its file and pixel size, and for an item icon, the size
+/// of its classic image in classic pixels (a worn item's is its doll rect).
+/// </summary>
+internal sealed record DaggerfallArtWorldImage(DaggerfallArtFile File, int Width, int Height, (double Width, double Height)? Classic);
 
 /// <summary>A rect of an image in pixels, or, for <see cref="DaggerfallEffectArt.Classic"/>, in fractions of a frame.</summary>
 internal sealed record DaggerfallArtRect(double X, double Y, double Width, double Height);
@@ -59,12 +67,14 @@ internal sealed record DaggerfallDyeTint(string Multiply, double Brightness);
 internal sealed class DaggerfallArtReplacements
 {
     private readonly Dictionary<string, DaggerfallArtReplacement> _byClassic;
+    private readonly Dictionary<string, DaggerfallArtReplacement> _byMediaId;
 
     private DaggerfallArtReplacements(Dictionary<string, DaggerfallArtReplacement> byClassic, IReadOnlyDictionary<string, DaggerfallDyeTint> tints,
         IReadOnlyDictionary<string, DaggerfallEffectArt> effects, DaggerfallArtFile? effectGlow, IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtMesh> meshes)
     {
         Meshes = meshes;
         _byClassic = byClassic;
+        _byMediaId = byClassic.Values.ToDictionary(replacement => replacement.MediaId, StringComparer.Ordinal);
         Tints = tints;
         Effects = effects;
         EffectGlow = effectGlow;
@@ -96,6 +106,10 @@ internal sealed class DaggerfallArtReplacements
     /// <summary>The replacement for a classic media identity, if the set has one.</summary>
     internal DaggerfallArtReplacement? For(string classicMediaId) =>
         _byClassic.TryGetValue(classicMediaId, out DaggerfallArtReplacement? replacement) ? replacement : null;
+
+    /// <summary>The replacement whose own media identity this is, if the set has one.</summary>
+    internal DaggerfallArtReplacement? ByMediaId(string mediaId) =>
+        _byMediaId.TryGetValue(mediaId, out DaggerfallArtReplacement? replacement) ? replacement : null;
 
     /// <summary>The media identity the page knows a refreshed effect atlas by, as the UI draws the inventory glints.</summary>
     internal static string EffectMediaId(string classicMediaId) => $"refreshed.{classicMediaId}";
@@ -130,9 +144,14 @@ internal sealed class DaggerfallArtReplacements
                 if (doll is { Width: <= 0 } or { Height: <= 0 })
                     throw new InvalidOperationException($"Content pack '{packId}' places replacement '{mediaId}' in an empty doll rect.");
                 DaggerfallArtImage? dyeMask = image.TryGetProperty("dyeMask", out JsonElement mask)
-                    ? new(mask.GetProperty("mediaId").GetString()!, mask.GetProperty("path").GetString()!, mask.GetProperty("byteLength").GetInt64())
+                    ? new(mask.GetProperty("mediaId").GetString()!, mask.GetProperty("path").GetString()!, mask.GetProperty("byteLength").GetInt64(), World(mask, mediaId))
                     : null;
-                if (!ids.Add(mediaId) || dyeMask is not null && !ids.Add(dyeMask.MediaId) || !byClassic.TryAdd(replaces, new(replaces, mediaId, path, byteLength, doll, dyeMask)))
+                DaggerfallArtWorldImage? world = World(image, mediaId);
+                if (world is { Classic: null } && doll is null)
+                    throw new InvalidOperationException($"Content pack '{packId}' states no classic size for the world image of '{mediaId}'.");
+                if (dyeMask?.World is { } maskWorld && (world is null || maskWorld.Width != world.Width || maskWorld.Height != world.Height))
+                    throw new InvalidOperationException($"Content pack '{packId}' states a world dye mask for '{mediaId}' that is not the size of its world image.");
+                if (!ids.Add(mediaId) || dyeMask is not null && !ids.Add(dyeMask.MediaId) || !byClassic.TryAdd(replaces, new(replaces, mediaId, path, byteLength, doll, dyeMask, world)))
                     throw new InvalidOperationException($"Content pack '{packId}' names replacement '{mediaId}' for '{replaces}' twice.");
             }
 
@@ -182,6 +201,18 @@ internal sealed class DaggerfallArtReplacements
         }
 
         return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes);
+
+        DaggerfallArtWorldImage? World(JsonElement owner, string mediaId)
+        {
+            if (!owner.TryGetProperty("world", out JsonElement world)) return null;
+            int width = world.GetProperty("width").GetInt32(), height = world.GetProperty("height").GetInt32();
+            (double, double)? classic = world.TryGetProperty("classic", out JsonElement size)
+                ? (size.GetProperty("width").GetDouble(), size.GetProperty("height").GetDouble()) : null;
+            if (width <= 0 || height <= 0 || classic is (var w, var h) && (w <= 0 || h <= 0))
+                throw new InvalidOperationException($"Content pack '{packId}' states an empty world image for '{mediaId}'.");
+            return new(new(world.GetProperty("path").GetString()!, DaggerfallContentHash.Parse(world.GetProperty("sha256").GetString()!, $"The world image of '{mediaId}'")),
+                width, height, classic);
+        }
 
         static DaggerfallArtRect Rect(JsonElement rect) => new(rect.GetProperty("x").GetDouble(), rect.GetProperty("y").GetDouble(),
             rect.GetProperty("width").GetDouble(), rect.GetProperty("height").GetDouble());

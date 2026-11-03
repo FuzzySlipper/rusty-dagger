@@ -521,7 +521,7 @@ internal sealed partial class DaggerfallLocationAssembly
                 _portals,
                 [.. _anchors.Values],
                 DaggerfallSiteContent.ReadNormalizedLights(normalized, diagnostics),
-                _media.GroundContainerSprite,
+                _media.GroundContainerSprites,
                 map,
                 actions,
                 actionModels,

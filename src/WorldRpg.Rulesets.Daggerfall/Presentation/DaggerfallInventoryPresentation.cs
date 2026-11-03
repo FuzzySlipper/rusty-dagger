@@ -558,6 +558,26 @@ internal sealed class DaggerfallInventoryPresentation
         return (classic is null ? null : set?.Drawn(classic) ?? classic, null);
     }
 
+    /// <summary>
+    /// How a ground pile stands with refreshed art: a pile of one item or one stack as that item's own image, in its
+    /// metal or dye, as the inventory draws it. Null for classic art, a pile of mixed or no items, or an item whose
+    /// image the set has no world picture of; such a pile stands as the classic treasure pile.
+    /// </summary>
+    internal DaggerfallGroundItemLook? GroundLook(long groundId, Rusty.Engine.Mechanics.InventoryView contents)
+    {
+        if (art?.Invoke() is not { } set || contents.Stacks.Count + contents.UniqueItems.Count != 1) return null;
+        (string key, string id) = contents.Stacks.Count == 1
+            ? (StackKey(contents.Stacks.First().Id), contents.Stacks.First().Definition.Value)
+            : (UniqueKey(contents.UniqueItems.First().Entity.Value), contents.UniqueItems.First().Definition.Value);
+        (string? media, PaperDollTint? tint) = Icon(definitions.RequireItem(new DaggerfallItemId(id)), Metadata(key, DaggerfallItemOwner.Ground(groundId)));
+        if (media is null || set.ByMediaId(media) is not { World: { } world } replacement) return null;
+        // An icon is sized in classic pixels, a worn item's image in doll units.
+        (double height, bool doll) = world.Classic is { } classic ? (classic.Height, false) : (replacement.Doll!.Height, true);
+        if (tint is null) return new(world, null, null, 1, height, doll);
+        // A tinted image without a world mask would stand in bare steel or undyed cloth, which is not the item.
+        return replacement.DyeMask?.World is { } mask ? new(world, mask, tint.Color, tint.Brightness, height, doll) : null;
+    }
+
     /// <summary>The potion template, whose items draw their recipe's bottle.</summary>
     private const int PotionTemplate = 83;
 
@@ -710,3 +730,12 @@ internal sealed class DaggerfallInventoryPresentation
         ? $"Damage {weapon.MinimumDamage}–{weapon.MaximumDamage}; {Label(weapon.Material)}; {Label(weapon.Skill)}"
         : item.Armor is { } armor ? $"Armor: {Label(armor.Material)}" : item.Shield is not null ? "Shield" : item.IsFungible ? "Stackable item" : "Equipment";
 }
+
+/// <summary>
+/// A ground pile of one kind of item standing as that item with refreshed art: its world image, and where it is in
+/// a metal or dye, the mask of what <paramref name="Color"/> (a CSS colour) brightened by <paramref name="Brightness"/>
+/// recolours. It is sized from its classic image, <paramref name="ClassicHeight"/> tall: in classic pixels for an icon,
+/// or for a worn item's image (<paramref name="Doll"/>), in paper-doll units, which are at a body's scale.
+/// </summary>
+internal sealed record DaggerfallGroundItemLook(DaggerfallArtWorldImage Image, DaggerfallArtWorldImage? Mask, string? Color, double Brightness,
+    double ClassicHeight, bool Doll);

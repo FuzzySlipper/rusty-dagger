@@ -49,6 +49,11 @@ mesh's footprint, its longest side in metres, so the game draws it at the width 
 
 Icons are written at their area's ICON pixels on the longer side and carry no doll rect.
 
+A worn image and an item icon is also what a dropped item stands as on the ground, and the renderer reads PNG, so
+each also has a `world` PNG of at most WORLD_ICON pixels on its longer side, and a worn image's dye mask a `world`
+PNG the same size as the image's. An item icon's `world` also states its classic image's size in classic pixels (its
+opaque box in the import's published image), from which the game sizes it on the ground as a worn image is sized from its doll rect.
+
 Only finals whose ledger/AREA-notes.json status is `accepted` are promoted. Rerunning an area replaces that
 area's entries and files and keeps every other area's.
 
@@ -93,6 +98,7 @@ WORLD_EFFECTS = {
        for kind, folder, record in (("missile", "projectile", 0), ("impact", "impact", 1))},
 }
 CANVAS, OCCUPANCY = 1024, 0.74   # the generation canvas and the share of it the classic frame filled (run.py)
+WORLD_ICON = 128                 # pixels on a dropped item's longer side: a small pile on the floor
 EFFECT_FRAME = 256               # pixels on an effect frame's longer side
 GLOW = 64                        # pixels on the particle glow's side
 CLOTHING = range(235, 243)
@@ -141,6 +147,22 @@ def webp(image, target, lossless=False):
     data = buffer.getvalue()
     (CONTENT / target).write_bytes(data)
     return {"path": target, "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+
+
+def world_png(image, target):
+    """Writes the image as a PNG at a content path, as the renderer reads it (8-bit RGBA, which it requires, so not a
+    palette), and states its path, length, hash and size."""
+    buffer = io.BytesIO()
+    image.convert("RGBA").save(buffer, "PNG", optimize=True)
+    data = buffer.getvalue()
+    (CONTENT / target).write_bytes(data)
+    return {"path": target, "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest(), "width": image.width, "height": image.height}
+
+
+def world_size(image):
+    """The size of an image's world PNG: at most WORLD_ICON pixels on its longer side."""
+    k = min(1, WORLD_ICON / max(image.size))
+    return max(1, round(image.width * k)), max(1, round(image.height * k))
 
 
 def dye_mask(image):
@@ -203,8 +225,14 @@ def promote(area, key, path):
              "width": image.width, "height": image.height,
              "doll": {"x": round(x + box[0] / k, 4), "y": round(y + box[1] / k, 4),
                       "width": round(image.width / k, 4), "height": round(image.height / k, 4)}}
+    world = world_size(image)
+    if area == "worn":
+        entry["world"] = world_png(image.resize(world, Image.Resampling.LANCZOS), f"{MEDIA}/{area}/{key}.png")
     if (m := WORN.fullmatch(key)) and dyed(int(m[1]), int(m[2])):
-        entry["dyeMask"] = {"mediaId": f"refreshed.{classic}.dye", **webp(dye_mask(image), f"{MEDIA}/{area}/{key}-dye.webp", lossless=True)}
+        mask = dye_mask(image)
+        entry["dyeMask"] = {"mediaId": f"refreshed.{classic}.dye", **webp(mask, f"{MEDIA}/{area}/{key}-dye.webp", lossless=True)}
+        if area == "worn":
+            entry["dyeMask"]["world"] = world_png(mask.resize(world, Image.Resampling.LANCZOS), f"{MEDIA}/{area}/{key}-dye.png")
     return entry
 
 
@@ -239,7 +267,7 @@ def inventory_icons():
         if final is None:
             classic.append(media)
             continue
-        entries.append(icon_entry(media, icon(final, "items"), name))
+        entries.append(icon_entry(media, icon(final, "items"), name, world=classic_size(media)))
     if classic:
         print(f"items: {len(classic)} icons stay classic, their records have no accepted final: {', '.join(classic)}")
     return entries
@@ -337,9 +365,25 @@ def world_meshes():
     return entries
 
 
-def icon_entry(replaces, image, name):
-    return {"replaces": replaces, "mediaId": f"refreshed.{replaces}", **webp(image, f"{MEDIA}/{name}.webp"),
-            "width": image.width, "height": image.height}
+def classic_size(media):
+    """The opaque box of the classic image the game draws for an icon, in classic pixels, read from the import's
+    published media: a template's image under the paper doll's, an icon of the classic media by its inventory."""
+    if m := ITEM_IMAGE.fullmatch(media):
+        path = CLASSIC / f"item-{m[1]}-{m[2]}.png"
+    else:
+        published = {artifact["mediaId"]: artifact["path"] for artifact in json.load(open(STAGED / "worldrpg/media/classic-media-inventory.json"))["artifacts"]}
+        path = STAGED / published[media]
+    left, top, right, bottom = Image.open(path).convert("RGBA").getchannel("A").getbbox()
+    return {"width": right - left, "height": bottom - top}
+
+
+def icon_entry(replaces, image, name, world=None):
+    """An icon's entry; with its classic size, also its world PNG."""
+    entry = {"replaces": replaces, "mediaId": f"refreshed.{replaces}", **webp(image, f"{MEDIA}/{name}.webp"),
+             "width": image.width, "height": image.height}
+    if world is not None:
+        entry["world"] = world_png(image.resize(world_size(image), Image.Resampling.LANCZOS), f"{MEDIA}/{name}.png") | {"classic": world}
+    return entry
 
 
 def main():
@@ -364,7 +408,7 @@ def main():
         accepted = sorted(key for key, note in notes.items() if note.get("status") == "accepted")
         directory = CONTENT / MEDIA / area
         directory.mkdir(parents=True, exist_ok=True)
-        for old in directory.glob("*.webp"):
+        for old in [*directory.glob("*.webp"), *directory.glob("*.png")]:
             old.unlink()
         images[:] = [entry for entry in images if not entry["path"].startswith(f"{MEDIA}/{area}/")]
         if area in ("items", "spells"):
