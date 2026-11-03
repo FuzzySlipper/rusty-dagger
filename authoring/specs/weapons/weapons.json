@@ -1,0 +1,132 @@
+{
+ "about": "3D weapon models (#10511). Each weapon's identity is its accepted refreshed paper-doll layer (authoring/gen-raw/worn/texture-234-record-NNN, `icon`); classic first-person frames add construction detail only where firstPerson.use says so. Lengths are overall, in metres. subject and invent are the H3 turnaround request (authoring/tools/weapons/h3.py); grip and parts are how build.py builds the model from the icon.",
+ "style": "Keep the reference's painted dark-fantasy look: its own colours, broad painted colour areas and plain fittings, now as one solid three-dimensional object with real thickness, bevels and edges. The set is one kit: steel blades and heads, antique-brass fittings, red-brown leather wrapped grips, oiled brown wood. No photorealism, glossy modern redesign or microtexture; no added gems, runes, engraving, inscriptions, faces, chains, tassels or ornament the reference does not show.",
+ "pose": "One complete standalone weapon standing upright, point or head at the top and pommel or butt at the bottom, centred with generous margin and frozen in shape. Its broad face is toward the camera at the start. Keep the tip, guard, grip and pommel fully inside the image. No hand, arm, person, scabbard, sheath, stand, hanger or other object. Neutral grey background.",
+ "orbit": "One uninterrupted smooth 360-degree CAMERA orbit over five seconds around the upright weapon. Begin square FRONT immediately, pass a true SIDE (edge-on) around 1.25 seconds, square BACK around 2.5 seconds, the independently generated opposite SIDE around 3.75 seconds, and return square FRONT before the final frame. The final camera direction and pose match the start. Fixed height and distance, distant long telephoto near-orthographic view, constant scale and even lighting. Only camera azimuth changes. No cuts, zooms, camera push-in, reframing or pose transitions. Both sides are generated independently, never made by mirroring an image. Centre the complete weapon with generous margin; no cropped tip, guard, grip, pommel or butt.",
+ "weapons": [
+  {
+   "item": 113, "name": "dagger", "family": "short-blade", "hands": 1, "length": 0.38,
+   "records": [5, 6], "icon": 6, "pilot": true,
+   "firstPerson": {"cif": "WEAPON02", "use": "none", "why": "its spiked guard crown was rejected (#10479); the icon's crescent guard replaces it"},
+   "subject": "A short straight double-edged steel dagger: a leaf-shaped blade tapering to a sharp point with a raised central ridge, a broad antique-brass crossguard whose two arms curve up toward the point in a crescent, a short grip bound in red-brown leather straps, and a round fluted brass pommel.",
+   "invent": "The guard is a solid brass bar, thicker at the centre where it meets the blade, its arms rounded in section. The blade is a flattened diamond in section; seen edge-on it is thin with a visible central ridge. The grip is round in section, as long as the visible grip pieces plus the joined middle.",
+   "grip": {"part": "grip"},
+   "parts": [
+    {"name": "blade", "class": "steel", "shape": "flat", "profile": "ridge", "half": 0.0035, "ramp": 0.012, "faces": 800},
+    {"name": "guard", "class": "brass", "pick": "top", "shape": "flat", "profile": "round", "half": 0.007, "ramp": 0.004, "faces": 600},
+    {"name": "grip", "class": "leather", "shape": "lathe", "segments": 10, "smooth": 5},
+    {"name": "pommel", "class": "brass", "pick": "bottom", "shape": "lathe", "segments": 12, "smooth": 3}
+   ]
+  },
+  {
+   "item": 114, "name": "tanto", "family": "curved-blade", "hands": 1, "length": 0.40,
+   "records": [22, 23], "icon": 23,
+   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"}
+  },
+  {
+   "item": 115, "name": "staff", "family": "blunt", "hands": 2, "length": 1.80,
+   "records": [21], "icon": 21,
+   "firstPerson": {"cif": "WEAPON01", "use": "construction", "why": "iron end caps"}
+  },
+  {
+   "item": 116, "name": "shortsword", "family": "straight-sword", "hands": 1, "length": 0.70,
+   "records": [19, 20], "icon": 20,
+   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"}
+  },
+  {
+   "item": 117, "name": "wakizashi", "family": "curved-blade", "hands": 1, "length": 0.65,
+   "records": [26, 27], "icon": 27,
+   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"}
+  },
+  {
+   "item": 118, "name": "broadsword", "family": "straight-sword", "hands": 1, "length": 0.95,
+   "records": [2, 3], "icon": 3,
+   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"}
+  },
+  {
+   "item": 119, "name": "saber", "family": "curved-blade", "hands": 1, "length": 0.95,
+   "records": [17, 18], "icon": 18,
+   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"}
+  },
+  {
+   "item": 120, "name": "longsword", "family": "straight-sword", "hands": 1, "length": 1.10,
+   "records": [12, 13], "icon": 13, "pilot": true,
+   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"},
+   "subject": "A long straight double-edged steel sword: a long narrow blade with parallel edges tapering only near its sharp point, a slim antique-brass crossguard whose straight arms widen slightly into flat ends, a grip bound in red-brown leather, and a small round brass pommel.",
+   "invent": "The crossguard is a narrow brass bar, rectangular in section, with a small central block where it meets the blade. The blade is a flattened diamond in section with a shallow central ridge; seen edge-on it is thin and straight. The grip is round in section and long enough for one hand, joined continuously from guard to pommel.",
+   "grip": {"part": "grip"},
+   "parts": [
+    {"name": "blade", "class": "steel", "shape": "flat", "profile": "ridge", "half": 0.003, "ramp": 0.012, "faces": 900},
+    {"name": "guard", "class": "brass", "pick": "top", "shape": "flat", "profile": "round", "half": 0.006, "ramp": 0.004, "faces": 500},
+    {"name": "grip", "class": "leather", "shape": "lathe", "segments": 10, "smooth": 5},
+    {"name": "pommel", "class": "brass", "pick": "bottom", "shape": "lathe", "segments": 12, "smooth": 3}
+   ]
+  },
+  {
+   "item": 121, "name": "katana", "family": "curved-blade", "hands": 1, "length": 1.00,
+   "records": [9, 10], "icon": 10,
+   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"}
+  },
+  {
+   "item": 122, "name": "claymore", "family": "straight-sword", "hands": 2, "length": 1.40,
+   "records": [4], "icon": 4,
+   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"}
+  },
+  {
+   "item": 123, "name": "dai-katana", "family": "curved-blade", "hands": 2, "length": 1.30,
+   "records": [7], "icon": 7,
+   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"}
+  },
+  {
+   "item": 124, "name": "mace", "family": "blunt", "hands": 1, "length": 0.70,
+   "records": [14, 15], "icon": 15, "pilot": true,
+   "firstPerson": {"cif": "WEAPON05", "use": "none", "why": "its flanged head conflicts with the icon's spiked ball; the icon wins (confirm at review)"},
+   "subject": "A one-handed mace: a round iron ball head studded all over with short conical spikes, set in a short iron collar on top of a straight oiled brown wooden haft; the lower haft is bound in red-brown leather straps for the grip and ends in a flat iron butt cap.",
+   "invent": "The ball is a sphere with about a dozen evenly spaced short spikes, the same on every side. The haft is round in section. The leather grip binding is continuous from where the wood ends to the butt cap.",
+   "grip": {"part": "grip"},
+   "parts": [
+    {"name": "head", "class": "steel", "pick": "top", "shape": "lathe", "segments": 14, "smooth": 7, "ball": true, "light": 0.5, "spikes": {"count": 18, "length": 0.03, "base": 0.014}},
+    {"name": "haft", "class": "leather", "pick": "top", "shape": "lathe", "segments": 10, "smooth": 3},
+    {"name": "ring", "class": "steel", "pick": 1, "shape": "lathe", "segments": 10, "smooth": 1},
+    {"name": "grip", "class": "leather", "pick": 1, "shape": "lathe", "segments": 10, "smooth": 3},
+    {"name": "band", "class": "leather", "pick": 2, "shape": "lathe", "segments": 12, "smooth": 1},
+    {"name": "butt", "class": "steel", "pick": "bottom", "shape": "lathe", "segments": 12, "smooth": 3}
+   ]
+  },
+  {
+   "item": 125, "name": "flail", "family": "blunt", "hands": 2, "length": 0.95,
+   "records": [8], "icon": 8,
+   "firstPerson": {"cif": "WEAPON06", "use": "construction", "why": "chain links and socket"}
+  },
+  {
+   "item": 126, "name": "warhammer", "family": "blunt", "hands": 2, "length": 1.10,
+   "records": [25], "icon": 25,
+   "firstPerson": {"cif": "WEAPON07", "use": "construction", "why": "head block and shaft rings"}
+  },
+  {
+   "item": 127, "name": "battle-axe", "family": "axe", "hands": 1, "length": 0.80,
+   "records": [0, 1], "icon": 1,
+   "firstPerson": {"cif": "WEAPON08", "use": "construction", "why": "head side profile, socket and shaft rings"}
+  },
+  {
+   "item": 128, "name": "war-axe", "family": "axe", "hands": 2, "length": 1.20,
+   "records": [24], "icon": 24,
+   "firstPerson": {"cif": "WEAPON08", "use": "construction", "why": "head side profile, socket and shaft rings"}
+  },
+  {
+   "item": 129, "name": "short-bow", "family": "bow", "hands": 2, "length": 1.10,
+   "records": [16], "icon": 16,
+   "firstPerson": {"cif": "WEAPON09", "use": "construction", "why": "grip wrap and rings"}
+  },
+  {
+   "item": 130, "name": "long-bow", "family": "bow", "hands": 2, "length": 1.70,
+   "records": [11], "icon": 11,
+   "firstPerson": {"cif": "WEAPON09", "use": "construction", "why": "grip wrap and rings"}
+  },
+  {
+   "item": 131, "name": "arrow", "family": "bow", "hands": 0, "length": 0.75,
+   "records": [], "icon": null,
+   "firstPerson": {"cif": "WEAPON09", "use": "construction", "why": "the nocked arrow; there is no paper-doll layer"}
+  }
+ ]
+}
