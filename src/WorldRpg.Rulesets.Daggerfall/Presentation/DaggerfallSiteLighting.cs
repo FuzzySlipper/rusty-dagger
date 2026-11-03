@@ -17,6 +17,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     private static long s_lastInstance;
     private readonly List<Light> _lights = [];
     private readonly Dictionary<long, Light> _mobileLights = [];
+    private readonly Dictionary<long, Light> _spellLights = [];
     private readonly long _instance;
     private readonly string _profileId;
     private readonly List<(Light Light, LightRequest Request)> _points = [];
@@ -156,6 +157,39 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         }
     }
 
+    /// <summary>
+    /// Each flying spell carries a point light in its element's colour, as the donor's missile prefabs do
+    /// (fire, cold, poison, shock, magic), retired when its flight ends.
+    /// </summary>
+    internal void UpdateSpellLights(IReadOnlyList<DaggerfallDungeonSpellFlightView> flights)
+    {
+        if (_disposed || _suspended) return;
+        HashSet<long> live = [];
+        foreach (DaggerfallDungeonSpellFlightView flight in flights)
+        {
+            live.Add(flight.Sequence);
+            var request = new LightRequest(LogicalLightId(_profileId, _instance, $"spell:{flight.Sequence}"), false, 0,
+                new LightDescriptor(LightKind.Point, SpellLightColor(flight.Element), _tuning.SpellLightIntensity, true, flight.Position.ToVector(),
+                    Vector3.Zero, true, _tuning.SpellLightRange, 2f, 0f, 0f, LightShadowIntent.Disabled));
+            if (_spellLights.TryGetValue(flight.Sequence, out var light)) _graphics.UpdateLight(new(light, request));
+            else { light = _graphics.CreateLight(request); _spellLights.Add(flight.Sequence, light); _lights.Add(light); }
+        }
+        foreach (long retired in _spellLights.Keys.Where(id => !live.Contains(id)).ToArray())
+        {
+            Light light = _spellLights[retired];
+            _spellLights.Remove(retired); _lights.Remove(light); light.Dispose();
+        }
+    }
+
+    private static Vector3 SpellLightColor(int element) => element switch
+    {
+        0 => new(.604f, .094f, .031f),
+        1 => new(.620f, .792f, .792f),
+        2 => new(.396f, .627f, .235f),
+        3 => new(.267f, .486f, .753f),
+        _ => new(.396f, .537f, .471f),
+    };
+
     internal void Rebase(Vector3 delta)
     {
         if (_suspended)
@@ -235,6 +269,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         _suspendedPoints.AddRange(_points.Select(value => value.Request));
         foreach (Light light in _lights.AsEnumerable().Reverse()) light.Dispose();
         _mobileLights.Clear();
+        _spellLights.Clear();
         _points.Clear();
         _lights.Clear();
         _ambient = null;
@@ -274,6 +309,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         {
             foreach (Light light in created.AsEnumerable().Reverse()) light.Dispose();
             _mobileLights.Clear();
+            _spellLights.Clear();
         _points.Clear();
             _lights.Clear();
             _ambient = null;
@@ -329,6 +365,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
             catch (Exception exception) { (failures ??= []).Add(exception); }
         }
         _mobileLights.Clear();
+        _spellLights.Clear();
         _points.Clear();
         _lights.Clear();
         _suspendedPoints.Clear();

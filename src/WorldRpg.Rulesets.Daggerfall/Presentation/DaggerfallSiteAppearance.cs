@@ -87,7 +87,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private readonly Dictionary<long, BillboardVisual> groundVisuals = [];
     private readonly Dictionary<long, BillboardVisual> npcVisuals = [];
     private readonly Dictionary<RangedShotIdentity, ulong> arrowVisualEntityIds = [];
-    private readonly Dictionary<long, ulong> dungeonSpellVisualEntityIds = [];
     private readonly List<EffectVisual> effects = [];
     private ViewmodelVisual? viewmodel;
     // The next swing may select any authored strike. Report a bounded observation window
@@ -391,6 +390,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             if (npcVisuals.TryGetValue(npc.Id, out var visual))
                 facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.Gameplay(npc.Id, "NPC"), false, 0,
                     new Transform(npc.Position.ToVector(), Quaternion.Identity, Vector3.One), visual.Appearance, true, RenderLayer.Scene));
+        ReconcileSpellFlights(dungeonSpellFlights ?? []);
         foreach (EffectVisual effect in effects)
             facts.Add(new AppearanceFact(effect.EntityId, false, 0, new Transform(effect.Position.ToVector(), Quaternion.Identity, Vector3.One), effect.Appearance, true, RenderLayer.Scene));
         if (arrowAppearance is { } arrowVisual)
@@ -410,24 +410,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 Quaternion rotation = Quaternion.CreateFromRotationMatrix(
                     Matrix4x4.CreateWorld(Vector3.Zero, direction, up));
                 facts.Add(new AppearanceFact(visualId, false, 0,
-                    new Transform(flight.Position.ToVector() + Vector3.UnitY * arrowHeight,
-                        rotation, Vector3.One), arrowVisual, true, RenderLayer.Scene));
-            }
-            IReadOnlyList<DaggerfallDungeonSpellFlightView> spellFlights = dungeonSpellFlights ?? [];
-            HashSet<long> activeSpells = [.. spellFlights.Select(flight => flight.Sequence)];
-            foreach (long retired in dungeonSpellVisualEntityIds.Keys.Where(id => !activeSpells.Contains(id)).ToArray())
-                dungeonSpellVisualEntityIds.Remove(retired);
-            foreach (DaggerfallDungeonSpellFlightView flight in spellFlights)
-            {
-                if (!dungeonSpellVisualEntityIds.TryGetValue(flight.Sequence, out ulong spellVisualId))
-                    dungeonSpellVisualEntityIds.Add(flight.Sequence, spellVisualId = NextVisualEntityId());
-                Vector3 direction = flight.Direction.LengthSquared() > .000001f
-                    ? flight.Direction : Vector3.UnitZ;
-                Vector3 up = MathF.Abs(Vector3.Dot(direction, Vector3.UnitY)) > .99f
-                    ? Vector3.UnitX : Vector3.UnitY;
-                Quaternion rotation = Quaternion.CreateFromRotationMatrix(
-                    Matrix4x4.CreateWorld(Vector3.Zero, direction, up));
-                facts.Add(new AppearanceFact(spellVisualId, false, 0,
                     new Transform(flight.Position.ToVector() + Vector3.UnitY * arrowHeight,
                         rotation, Vector3.One), arrowVisual, true, RenderLayer.Scene));
             }
@@ -844,7 +826,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         npcVisuals.Clear();
         if (arrowAppearance is { } arrowVisual) { arrowAppearance = null; Dispose(arrowVisual, ref failures); }
         arrowVisualEntityIds.Clear();
-        dungeonSpellVisualEntityIds.Clear();
+        foreach (var (_, _, trail, _) in spellFlightVisuals.Values) if (trail is not null) Dispose(trail, ref failures);
+        spellFlightVisuals.Clear();
         foreach (Appearance visual in doorVisuals.Values.Reverse()) Dispose(visual, ref failures);
         doorVisuals.Clear();
         doorVisualOrdinals.Clear();
@@ -1262,7 +1245,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         WorldPoint? position = caster == DaggerfallActorIdentity.PlayerEntityId ? player
             : actors.TryGet(caster, out ActorState source) ? source.Position : null;
         if (position is null) return;
-        string clip = cast.Element switch { 0 => "fireCast", 1 => "coldCast", 2 => "poisonCast", 3 => "shockCast", 4 => "magicCast", _ => "" };
+        string clip = DaggerfallSpellElements.Name(cast.Element) is { } element ? $"{element}Cast" : "";
         Emit(clip, identity, 0, position);
     }
 
@@ -1281,36 +1264,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         {
             effects.Remove(effect);
             Retire(effect);
-        }
-    }
-
-    private void SpawnEffect(string name, WorldPoint position, PresentationEventIdentity identity,
-        string? activeInstance = null, long? target = null, long? source = null, ulong? item = null)
-    {
-        if (!classicEffects.TryGetValue(name, out NormalizedClassicEffect? effect)) return;
-        SpriteAtlas? atlas = null;
-        Appearance? visual = null;
-        SpritePlayback? playback = null;
-        try
-        {
-            RenderResourceInfo texture = classicTextures[effect.TexturePath];
-            SpriteAtlasFrame[] frames = SpriteAtlasAdapter.ToAtlasFrames(effect.AtlasWidth, effect.AtlasHeight,
-                effect.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height)).ToArray());
-            atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
-            uint initialFrame = effect.Sequence.Select(index => effect.Frames.Single(frame => frame.Id == index).Id).First();
-            visual = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, initialFrame, effect.Pivot, effect.DisplaySize, BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F)));
-            SpritePlaybackFrame[] playbackFrames = SpriteAtlasAdapter.ToPlaybackFrames(effect.Sequence.Select(index => effect.Frames.Single(frame => frame.Id == index).Id).ToArray(), effect.FramesPerSecond);
-            playback = appearance.CreateSpritePlayback(new SpritePlaybackCreateRequest(visual, atlas, playbackFrames, Array.Empty<SpritePlaybackMarker>(), effect.Loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1d));
-            appearance.ControlSpritePlayback(new SpritePlaybackControlRequest(playback, SpritePlaybackControl.Start));
-            effects.Add(new EffectVisual(NextVisualEntityId(), position, atlas, visual, playback)
-            { ActiveInstance = activeInstance, TargetActor = target, SourceActor = source, SourceItem = item });
-        }
-        catch
-        {
-            playback?.Dispose();
-            visual?.Dispose();
-            atlas?.Dispose();
-            throw;
         }
     }
 
@@ -1733,6 +1686,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         internal long? TargetActor { get; init; }
         internal long? SourceActor { get; init; }
         internal ulong? SourceItem { get; init; }
+        /// <summary>Whether it draws in refreshed art.</summary>
+        internal bool Refreshed { get; init; }
         internal WorldPoint Position { get; set; } = position;
         internal SpriteAtlas Atlas { get; } = atlas;
         internal Appearance Appearance { get; } = appearance;

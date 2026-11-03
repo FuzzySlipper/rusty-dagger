@@ -224,7 +224,9 @@ transient across saves and discarded when its generation or combatants expire.
 The current delivery still prerolls hit/damage and never collides with an
 intervening actor's body. Admitted static geometry on the release line stops a
 shot through the Engine's spatial query. The published classic arrow mesh follows
-the transient flight through the ordinary appearance snapshot.
+the transient flight through the ordinary appearance snapshot. A flying spell draws
+as its element's missile sprite (TEXTURE.375–379 record 0) with a point light in the
+element's colour, and lands as its impact (record 1) where it struck.
 
 ## Inventory and equipment
 

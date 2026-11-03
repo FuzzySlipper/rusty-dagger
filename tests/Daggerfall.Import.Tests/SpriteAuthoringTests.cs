@@ -477,7 +477,7 @@ public sealed class SpriteAuthoringTests
         ClassicMediaManifestSidecar classic = new(
             new([weapon, effect, font, map, .. cues]),
             [new ClassicWeaponMediaManifest(weapon.Id, Enum.GetValues<ClassicDaggerWeaponAction>().Select((action, index) => new ClassicWeaponActionManifest(action, index, index, 1, ClassicWeaponScreenAlignment.Right, 0F, new(10F, true), 0, 0)).ToArray())],
-            Enum.GetValues<ClassicEffect>().Select((value, index) => new ClassicEffectManifest(value, effect.Id, index, new(10F, false))).ToArray(),
+            Enum.GetValues<ClassicEffect>().Select(value => new ClassicEffectManifest(value, effect.Id, Arena2ClassicMediaPublication.ExpectedEffectSourceRecordOrdinal(value), new(10F, false))).ToArray(),
             cues.Select((cue, index) => new ClassicAudioManifest(cue.Id["audio.".Length..], cue.Id, index, (uint)index, SoundArchive.SampleRate)).ToArray(),
             [], [], new(font.Id, "default", 1, 1, Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, checked((ushort)index))).ToArray()),
             [new(font.Id, "default", 1, 1, Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, checked((ushort)index))).ToArray())],

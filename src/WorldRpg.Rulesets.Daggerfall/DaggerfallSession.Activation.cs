@@ -33,6 +33,8 @@ internal sealed partial class DaggerfallSession
         appearance.UsePlayerBeastForm(() => State.RacialOverrides.Current is { State.BeastForm: true } form ? form.State.Kind : null);
         if (_tuning.Viewmodel.Style != DaggerfallViewmodelStyle.Classic && _composition.HeldArt is { } art)
             appearance.UseHeldArt(_engine, art, _tuning.Viewmodel.Style);
+        if (_composition.ArtReplacements is { } refreshed)
+            appearance.UseEffectArt(_engine.Presentation, refreshed, () => DrawnArt is not null);
     }
 
     /// <summary>

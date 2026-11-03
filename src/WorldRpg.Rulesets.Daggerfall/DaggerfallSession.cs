@@ -926,13 +926,15 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
                 _spatial.CurrentController.Shape.StandingHeight * _tuning.NormalLight.HeightFraction,
                 facing.Z * _tuning.NormalLight.Distance) : null;
         _sites.Projection.Lighting.UpdateMobileLights(State.Actors.All, _roster.Definitions, _definitions.Mobiles);
+        IReadOnlyList<DaggerfallDungeonSpellFlightView> spellFlights = ReadDungeonSpellFlights();
+        _sites.Projection.Lighting.UpdateSpellLights(spellFlights);
         _sites.Projection.Lighting.UpdateMagicCandle(candlePosition, _tuning.NormalLight);
         _appearance.UpdateMagicCandle(candlePosition);
         foreach (var appearance in _sites.Appearances) appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors, _groundContainers.All.Where(pair => pair.Value.PropertyPlacement is null).ToDictionary(),
             _latestUpdateGeneration is ulong generation && _latestSimulationStep is ulong simulationStep
                 ? _combat.ReadRangedFlights(generation, simulationStep) : [],
-            _tuning.Camera.EyeHeight, State.Effects.PerceptionFor, ReadNpcViews(), ReadDungeonSpellFlights(), State.Npcs.IsGameplayActive);
+            _tuning.Camera.EyeHeight, State.Effects.PerceptionFor, ReadNpcViews(), spellFlights, State.Npcs.IsGameplayActive);
         PublishDebugOverlays();
     }
 

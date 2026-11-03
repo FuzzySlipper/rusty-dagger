@@ -53,6 +53,7 @@ internal sealed partial class DaggerfallSiteAppearance
         if (!deliveredEvents.Add(Event(0, 0, checked((ulong)sequence), 0, "spell-impact"))) return;
         PlayGameplaySound(element switch { 0 => 89, 1 => 90, 2 => 87, 3 => 88, _ => 86 },
             "spell-impact", WorldPoint.From(position));
+        SpawnSpellImpact(sequence, element, position);
     }
 
     internal void ResetFootsteps() { footstepDistance = 0; observedFootstepState = false; }

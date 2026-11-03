@@ -103,11 +103,11 @@ internal sealed partial class DaggerfallSession
                     ? source.Origin + Vector3.UnitY * DaggerfallDungeonSpellPolicy.MissileOriginHeightMetres
                     : Vector3.Zero);
             return DaggerfallDungeonSpellPolicy.TryNormalizeDirection(bundle.ReleaseDirection ?? default, out Vector3 direction)
-                ? new DaggerfallDungeonSpellFlightView(bundle.Sequence, WorldPoint.From(origin), direction)
+                ? new DaggerfallDungeonSpellFlightView(bundle.Sequence, WorldPoint.From(origin), direction, bundle.Spell.Element)
                 : (DaggerfallDungeonSpellFlightView?)null;
         }).Where(view => view is not null).Select(view => view!.Value)];
     }
 }
 
-/// <summary>A transient dungeon action missile rendered from the same admitted arrow appearance.</summary>
-internal readonly record struct DaggerfallDungeonSpellFlightView(long Sequence, WorldPoint Position, Vector3 Direction);
+/// <summary>A flying spell: where it is, which way it flies, and its element (fire, cold, poison, shock, magic), which draws it.</summary>
+internal readonly record struct DaggerfallDungeonSpellFlightView(long Sequence, WorldPoint Position, Vector3 Direction, int Element);

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Rusty.Engine;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
@@ -22,6 +23,20 @@ internal sealed record DaggerfallArtReplacement(string Replaces, string MediaId,
 /// <summary>One published image of the refreshed art set beside its replacement: its identity, path and length.</summary>
 internal sealed record DaggerfallArtImage(string MediaId, string Path, long ByteLength);
 
+/// <summary>A rect of an image in pixels, or, for <see cref="DaggerfallEffectArt.Classic"/>, in fractions of a frame.</summary>
+internal sealed record DaggerfallArtRect(double X, double Y, double Width, double Height);
+
+/// <summary>
+/// One refreshed world effect: a PNG atlas of the classic effect's frames in classic order, each frame the same
+/// box, and where the classic frame sits in that box (fractions of the frame, top-down), which sizes and anchors it
+/// as the classic.
+/// </summary>
+internal sealed record DaggerfallEffectArt(string Replaces, string Path, ContentSha256 Sha256, int Width, int Height,
+    IReadOnlyList<DaggerfallArtRect> Frames, DaggerfallArtRect Classic);
+
+/// <summary>A published texture of the refreshed set: its path and digest.</summary>
+internal sealed record DaggerfallArtTexture(string Path, ContentSha256 Sha256);
+
 /// <summary>
 /// How refreshed clothing, painted neutral, is drawn in one classic dye, or refreshed armour or a weapon, in bare
 /// steel, in one classic metal: its dye mask multiplied by <paramref name="Multiply"/> (a CSS colour), the image first
@@ -39,11 +54,20 @@ internal sealed class DaggerfallArtReplacements
 {
     private readonly Dictionary<string, DaggerfallArtReplacement> _byClassic;
 
-    private DaggerfallArtReplacements(Dictionary<string, DaggerfallArtReplacement> byClassic, IReadOnlyDictionary<string, DaggerfallDyeTint> tints)
+    private DaggerfallArtReplacements(Dictionary<string, DaggerfallArtReplacement> byClassic, IReadOnlyDictionary<string, DaggerfallDyeTint> tints,
+        IReadOnlyDictionary<string, DaggerfallEffectArt> effects, DaggerfallArtTexture? effectGlow)
     {
         _byClassic = byClassic;
         Tints = tints;
+        Effects = effects;
+        EffectGlow = effectGlow;
     }
+
+    /// <summary>The refreshed world effects, by the classic effect media identity each stands in for.</summary>
+    internal IReadOnlyDictionary<string, DaggerfallEffectArt> Effects { get; }
+
+    /// <summary>The soft white glow the refreshed spell trails and impact bursts tint, when the set has effects.</summary>
+    internal DaggerfallArtTexture? EffectGlow { get; }
 
     /// <summary>Every replacement.</summary>
     internal IEnumerable<DaggerfallArtReplacement> All => _byClassic.Values;
@@ -70,6 +94,8 @@ internal sealed class DaggerfallArtReplacements
         Dictionary<string, DaggerfallArtReplacement> byClassic = new(StringComparer.Ordinal);
         HashSet<string> ids = new(StringComparer.Ordinal);
         Dictionary<string, DaggerfallDyeTint> tints = new(StringComparer.Ordinal);
+        Dictionary<string, DaggerfallEffectArt> effects = new(StringComparer.Ordinal);
+        DaggerfallArtTexture? glow = null;
         try
         {
             using JsonDocument document = JsonDocument.Parse(payload);
@@ -102,12 +128,33 @@ internal sealed class DaggerfallArtReplacements
                         throw new InvalidOperationException($"Content pack '{packId}' states an unusable tint for dye '{dye.Name}'.");
                     tints[dye.Name] = new(multiply, brightness);
                 }
+
+            JsonElement section = document.RootElement.GetProperty("artReplacements");
+            if (section.TryGetProperty("effects", out JsonElement effectArt))
+                foreach (JsonElement effect in effectArt.EnumerateArray())
+                {
+                    string replaces = effect.GetProperty("replaces").GetString()!;
+                    int width = effect.GetProperty("width").GetInt32(), height = effect.GetProperty("height").GetInt32();
+                    DaggerfallArtRect[] frames = [.. effect.GetProperty("frames").EnumerateArray().Select(Rect)];
+                    DaggerfallArtRect classic = Rect(effect.GetProperty("classic"));
+                    if (frames.Length == 0 || frames.Any(frame => frame.X < 0 || frame.Y < 0 || frame.Width <= 0 || frame.Height <= 0 || frame.X + frame.Width > width || frame.Y + frame.Height > height)
+                        || classic.Width <= 0 || classic.Height <= 0)
+                        throw new InvalidOperationException($"Content pack '{packId}' places refreshed effect '{replaces}' outside its atlas.");
+                    if (!effects.TryAdd(replaces, new(replaces, effect.GetProperty("path").GetString()!,
+                            DaggerfallContentHash.Parse(effect.GetProperty("sha256").GetString()!, $"Refreshed effect '{replaces}'"), width, height, frames, classic)))
+                        throw new InvalidOperationException($"Content pack '{packId}' names refreshed effect '{replaces}' twice.");
+                }
+            if (section.TryGetProperty("effectGlow", out JsonElement glowValue))
+                glow = new(glowValue.GetProperty("path").GetString()!, DaggerfallContentHash.Parse(glowValue.GetProperty("sha256").GetString()!, "The refreshed effect glow"));
         }
         catch (Exception exception) when (exception is JsonException or KeyNotFoundException or FormatException)
         {
             throw new InvalidOperationException($"Content pack '{packId}' carries an unreadable artReplacements section: {exception.Message}", exception);
         }
 
-        return new DaggerfallArtReplacements(byClassic, tints);
+        return new DaggerfallArtReplacements(byClassic, tints, effects, glow);
+
+        static DaggerfallArtRect Rect(JsonElement rect) => new(rect.GetProperty("x").GetDouble(), rect.GetProperty("y").GetDouble(),
+            rect.GetProperty("width").GetDouble(), rect.GetProperty("height").GetDouble());
     }
 }
