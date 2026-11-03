@@ -146,18 +146,15 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private readonly List<SpriteAtlas> groundContainerAtlases = [];
     private readonly IReadOnlyList<NormalizedBillboardSprite> groundContainerSprites = [];
     private readonly List<Material> materials = [];
-    private readonly List<(Material Material, MaterialRequest Summer, MaterialRequest Winter, MaterialRequest Rain)> seasonalMaterials = [];
     private bool winterMaterials;
     private DaggerfallExteriorSeason materialSeason;
 
     internal void SetExteriorSeason(DaggerfallExteriorSeason season)
     {
-        bool winter = season == DaggerfallExteriorSeason.Winter;
         if (materialSeason == season) return;
-        foreach (var material in seasonalMaterials)
-            appearance.UpdateMaterial(new MaterialUpdateRequest(material.Material, season == DaggerfallExteriorSeason.Rain ? material.Rain : winter ? material.Winter : material.Summer));
-        winterMaterials = winter;
+        winterMaterials = season == DaggerfallExteriorSeason.Winter;
         materialSeason = season;
+        ApplySurfaces();
     }
     private readonly Dictionary<uint, Material> materialsBySlot = [];
     private readonly Dictionary<DaggerfallRdbDoorId, Appearance> doorVisuals = [];
@@ -377,6 +374,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         Func<long, DaggerfallGroundItemLook?>? groundLook = null)
     {
         if (disposed || drawnByActiveSnapshot) return;
+        if (surfacesRefreshed != drawRefreshedEffects()) ApplySurfaces();
         ReconcileGroundVisuals(groundContainers, groundLook);
         List<AppearanceFact> facts = [];
         if (candleAppearance is { } candle && candlePosition is Vector3 candleAt)
@@ -851,7 +849,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         ReleaseLocationResources(ref failures);
         foreach (Material material in materials.AsEnumerable().Reverse()) Dispose(material, ref failures);
         materials.Clear();
-        seasonalMaterials.Clear(); winterMaterials = false;
+        surfaceMaterials.Clear(); winterMaterials = false;
         foreach (RenderResource resource in ownedResources.AsEnumerable().Reverse()) Dispose(resource, ref failures);
         ownedResources.Clear();
         foreach (AudioSignalHandle signal in oneShotSignals)
@@ -881,19 +879,17 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             locationMaterials.Add(created);
             materials.Add(created);
             materialsBySlot.Add(material.Slot, created);
-            if (material.WinterTexture is not null || material.RainTexture is not null)
+            RenderResource Variant(ContentArtifact? variant)
             {
-                RenderResource Variant(ContentArtifact? variant)
-                {
-                    if (variant is null) return texture.Handle;
-                    var resource = appearance.OpenTexture(content, variant.Path, variant.Sha256, TextureFilter.Nearest, TextureWrap.Repeat);
-                    locationResources.Add(resource.Handle);
-                    return resource.Handle;
-                }
-                MaterialRequest Descriptor(RenderResource resource) => new(new Color(1F, 1F, 1F, 1F), resource, 1F,
-                    new Color(1F, 1F, 1F, 1F), Vector3.Zero, 0F, false);
-                seasonalMaterials.Add((created, Descriptor(texture.Handle), Descriptor(Variant(material.WinterTexture)), Descriptor(Variant(material.RainTexture))));
+                if (variant is null) return texture.Handle;
+                var resource = appearance.OpenTexture(content, variant.Path, variant.Sha256, TextureFilter.Nearest, TextureWrap.Repeat);
+                locationResources.Add(resource.Handle);
+                return resource.Handle;
             }
+            SurfaceMaterial surface = new(created, [material.TexturePath, material.WinterTexture?.Path ?? material.TexturePath, material.RainTexture?.Path ?? material.TexturePath],
+                [texture.Handle, Variant(material.WinterTexture), Variant(material.RainTexture)], texture.Handle);
+            AttachRefreshedSurface(surface);
+            surfaceMaterials.Add(surface);
         }
         for (int index = 0; index < inputs.Geometry.Meshes.Count; index++)
         {
@@ -951,6 +947,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 throw;
             }
         }
+        // A reloaded location starts in its admitted season and the current art set.
+        ApplySurfaces();
     }
 
     /// <summary>A static mesh appearance drawing a visual with the location's materials at its slots.</summary>
@@ -997,7 +995,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         retired.AddRange(locationMaterials.AsEnumerable().Reverse());
         foreach (Material material in locationMaterials) materials.Remove(material);
         locationMaterials.Clear();
-        seasonalMaterials.Clear();
+        surfaceMaterials.Clear();
         materialSeason = DaggerfallExteriorSeason.Summer;
         winterMaterials = false;
         materialsBySlot.Clear();

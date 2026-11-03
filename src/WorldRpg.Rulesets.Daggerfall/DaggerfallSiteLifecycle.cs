@@ -87,6 +87,7 @@ internal sealed class DaggerfallSiteLifecycle
     private readonly Dictionary<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta> _deltas = [];
     private DaggerfallExteriorCellResidency? _exteriorResidency;
     private DaggerfallExteriorTerrainAppearance? _exteriorTerrainAppearance;
+    private (DaggerfallArtReplacements Art, Func<bool> Refreshed)? _groundArt;
     private DaggerfallExteriorEnvironment? _exteriorEnvironment;
     private Func<DaggerfallExteriorCellId, DaggerfallTerrainSurface>? _exteriorSurfaceFactory;
     private Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior>? _exteriorLocations;
@@ -1995,6 +1996,20 @@ internal sealed class DaggerfallSiteLifecycle
             DeferredCollision());
     }
 
+    /// <summary>Draws the exterior ground in the refreshed art set's surfaces while <paramref name="refreshed"/> answers it is drawn.</summary>
+    internal void UseGroundArt(DaggerfallArtReplacements art, Func<bool> refreshed)
+    {
+        _groundArt = (art, refreshed);
+        _exteriorTerrainAppearance?.UseArt(art, refreshed);
+    }
+
+    private DaggerfallExteriorTerrainAppearance NewTerrainAppearance()
+    {
+        DaggerfallExteriorTerrainAppearance appearance = new(_engine.Content, _engine.Graphics, Projection.Inputs);
+        if (_groundArt is var (art, refreshed)) appearance.UseArt(art, refreshed);
+        return appearance;
+    }
+
     private void ReconcileExteriorTerrainAppearance(DaggerfallExteriorCellResidency residency)
     {
         if (!residency.IsInitialized) return;
@@ -2004,7 +2019,7 @@ internal sealed class DaggerfallSiteLifecycle
         DaggerfallExteriorEnvironment environment = _exteriorEnvironment ??= new(_random);
         environment.Reconcile(residency.ResidentCells, ActiveOrigin(residency), surfaceFactory, exteriors, _definitions.Grids);
         DaggerfallExteriorTerrainAppearance appearance =
-            _exteriorTerrainAppearance ??= new DaggerfallExteriorTerrainAppearance(_engine.Content, _engine.Graphics, Projection.Inputs);
+            _exteriorTerrainAppearance ??= NewTerrainAppearance();
         appearance.ConfigureProfile(Projection.Inputs);
         Projection.Appearance.SetSnapshotSupplement(AppendExteriorFacts, CompleteExteriorSnapshot);
         appearance.Reconcile(residency.ResidentCells, ActiveOrigin(residency), surfaceFactory, environment);

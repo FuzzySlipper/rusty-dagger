@@ -356,6 +356,11 @@ the classic publication stays the fallback. `authoring/tools/items/promote.py` w
   classic size in pixels), which stands on the floor at the classic image's height (an icon at the treasure piles'
   scale, a worn item's image at the paper doll's body scale) and is tinted in its metal or dye through the Engine
   sprite's tint mask. A mixed pile keeps its treasure pile.
+- **Surfaces.** The payload's `surfaces` replace classic texture records (archive and record) that walls,
+  floors, ceilings and the exterior ground draw: an RGBA PNG each, repeated over the same faces or ground tiles
+  as the record. A model material keeps its classic texture for each season the climate swap gives it (summer,
+  winter, rain) and draws a season's refreshed surface where the set has one; a ground tile does the same for its
+  record. Changing the season or the art choice updates only the materials whose texture changes.
 - **What the data container still carries.** Nothing classic is dropped yet: the paper doll's classic bodies, heads
   and worn items are the Classic art fallback, and armour in a dyed material (iron, ebony and the rest) is drawn
   classic, since the refreshed armour is steel, leather and chain.

@@ -171,6 +171,57 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
     }
 
     /// <summary>
+    /// A ground tile whose record the refreshed art set has a surface for opens that surface beside its classic texture
+    /// and draws it while refreshed art is drawn; the art choice swaps the material's texture, and an unchanged choice
+    /// leaves it alone.
+    /// </summary>
+    [Fact]
+    public void Refreshed_ground_surfaces_follow_the_art_choice()
+    {
+        DaggerfallExteriorCellId cell = new(1, 0);
+        DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(cell);
+        GraphicsDouble graphics = new();
+        DaggerfallSiteProfile source = TestSessions.MediaInputs();
+        DaggerfallSiteProfile profile = new(source.Project, source.Geometry,
+            source.WorldAppearance, source.InitialLook, [], new Dictionary<long, NormalizedActorSprite>(),
+            terrainTextures: new Dictionary<(int Archive, int Record), NormalizedTerrainTexture>
+            {
+                [(302, 0)] = new("terrain/texture-302-0.png", TestSessions.Hash),
+            });
+        graphics.Content.Add("refreshed/surfaces/texture-302-0.png", TestSessions.Hash);
+        DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(System.Text.Encoding.UTF8.GetBytes("""
+            {"artReplacements": {"images": [], "surfaces": [{"replaces": {"archive": 302, "record": 0},
+              "path": "refreshed/surfaces/texture-302-0.png", "byteLength": 1, "sha256": "0000000000000001000000000000000200000000000000030000000000000004",
+              "width": 128, "height": 128}]}}
+            """), "test.art");
+        bool refreshed = true;
+        using DaggerfallExteriorTerrainAppearance appearance = new(graphics.Content, graphics, graphics.Admit(profile));
+        appearance.UseArt(art, () => refreshed);
+        DaggerfallTerrainSurface surface = new(cell.X, cell.Y,
+            Enumerable.Range(0, 129 * 129).Select(index => new Vector3(index % 129, 0F, index / 129)).ToArray(),
+            [new Triangle(0, 130, 1)], new float[129 * 129]);
+        DaggerfallClimateGridDefinition climate = new(3, 1, [0, 0, 231], [new(231, "Woodlands", DaggerfallClimateDisposition.Named)]);
+        DaggerfallSiteExterior location = new(1, 0, 1, 1, 0, 0, false, 2, 0, 1, 0, 1)
+        {
+            GroundTiles = DaggerfallGroundTileGrid.FromBytes(new byte[128 * 128], "test"),
+        };
+        DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
+        environment.Reconcile([cell], origin, _ => surface, new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> { [cell] = location },
+            new DaggerfallWorldGridsSet(climate, new(3, 1, [64, 64, 64], [])));
+        appearance.Reconcile([cell], origin, _ => surface, environment);
+
+        Assert.Equal(["terrain/texture-302-0.png", "refreshed/surfaces/texture-302-0.png"], graphics.OpenedPaths);
+        appearance.AppendFacts([]);
+        Assert.Single(graphics.MaterialUpdates);
+        appearance.AppendFacts([]);
+        Assert.Single(graphics.MaterialUpdates);
+        refreshed = false;
+        appearance.AppendFacts([]);
+        Assert.Equal(2, graphics.MaterialUpdates.Count);
+        Assert.NotEqual(graphics.MaterialUpdates[0].Replacement, graphics.MaterialUpdates[1].Replacement);
+    }
+
+    /// <summary>
     /// A cell's nature is drawn as one sprite batch per sprite record, each holding every placement of that record at
     /// its cell-local position, placed by the cell's translation. Reconciling unchanged facts keeps the batches; a
     /// season's archive replaces them, and the replaced batches are released once a snapshot without them is accepted.
@@ -335,7 +386,10 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
             return new Material(new MaterialHandle(_nextHandle++), () => Releases.Add("material"));
         }
 
-        public void UpdateMaterial(MaterialUpdateRequest request) => throw new NotSupportedException();
+        internal List<MaterialUpdateRequest> MaterialUpdates { get; } = [];
+        public void UpdateMaterial(MaterialUpdateRequest request) => MaterialUpdates.Add(request);
+        /// <summary>The content path of every texture opened, in order.</summary>
+        internal IEnumerable<string> OpenedPaths => _resources.OrderBy(entry => entry.Key).Select(entry => entry.Value);
         public Material ReplaceMaterial(MaterialUpdateRequest request) => throw new NotSupportedException();
         public Appearance CreatePrimitive(PrimitiveAppearanceRequest request) => CreateAppearance();
         public Appearance ReplacePrimitive(PrimitiveAppearanceReplaceRequest request) => throw new NotSupportedException();

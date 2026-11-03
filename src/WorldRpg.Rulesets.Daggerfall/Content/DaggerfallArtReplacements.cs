@@ -52,6 +52,12 @@ internal sealed record DaggerfallArtFile(string Path, ContentSha256 Sha256);
 internal sealed record DaggerfallArtMesh(DaggerfallArtFile File, double Footprint);
 
 /// <summary>
+/// A refreshed surface texture standing in for one classic texture record that walls, floors and ceilings draw: an RGBA
+/// PNG the renderer repeats over the same faces the classic record covers.
+/// </summary>
+internal sealed record DaggerfallArtSurface(DaggerfallArtFile File, int Width, int Height);
+
+/// <summary>
 /// How refreshed clothing, painted neutral, is drawn in one classic dye, or refreshed armour or a weapon, in bare
 /// steel, in one classic metal: its dye mask multiplied by <paramref name="Multiply"/> (a CSS colour), the image first
 /// brightened by <paramref name="Brightness"/> where the dye or metal is lighter than a multiply can reach.
@@ -70,9 +76,11 @@ internal sealed class DaggerfallArtReplacements
     private readonly Dictionary<string, DaggerfallArtReplacement> _byMediaId;
 
     private DaggerfallArtReplacements(Dictionary<string, DaggerfallArtReplacement> byClassic, IReadOnlyDictionary<string, DaggerfallDyeTint> tints,
-        IReadOnlyDictionary<string, DaggerfallEffectArt> effects, DaggerfallArtFile? effectGlow, IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtMesh> meshes)
+        IReadOnlyDictionary<string, DaggerfallEffectArt> effects, DaggerfallArtFile? effectGlow, IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtMesh> meshes,
+        IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtSurface> surfaces)
     {
         Meshes = meshes;
+        Surfaces = surfaces;
         _byClassic = byClassic;
         _byMediaId = byClassic.Values.ToDictionary(replacement => replacement.MediaId, StringComparer.Ordinal);
         Tints = tints;
@@ -91,6 +99,18 @@ internal sealed class DaggerfallArtReplacements
     /// for the corpse every human enemy class shares (so it is no one in particular) and for the bone piles placed in dungeons.
     /// </summary>
     internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtMesh> Meshes { get; }
+
+    /// <summary>The refreshed surface textures, by the classic texture archive and record each replaces.</summary>
+    internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtSurface> Surfaces { get; }
+
+    /// <summary>
+    /// The refreshed surface for a classic texture record the importer published at <paramref name="texturePath"/>
+    /// (<c>…/texture-ARCHIVE-RECORD.png</c>), if the set has one.
+    /// </summary>
+    internal DaggerfallArtSurface? Surface(string texturePath) =>
+        System.Text.RegularExpressions.Regex.Match(texturePath, @"/texture-(\d+)-(\d+)\.png$") is { Success: true } match
+        && Surfaces.TryGetValue((int.Parse(match.Groups[1].Value), int.Parse(match.Groups[2].Value)), out DaggerfallArtSurface? surface)
+            ? surface : null;
 
     /// <summary>Every replacement.</summary>
     internal IEnumerable<DaggerfallArtReplacement> All => _byClassic.Values;
@@ -127,6 +147,7 @@ internal sealed class DaggerfallArtReplacements
         Dictionary<string, DaggerfallEffectArt> effects = new(StringComparer.Ordinal);
         DaggerfallArtFile? glow = null;
         Dictionary<(int Archive, int Record), DaggerfallArtMesh> meshes = [];
+        Dictionary<(int Archive, int Record), DaggerfallArtSurface> surfaces = [];
         try
         {
             using JsonDocument document = JsonDocument.Parse(payload);
@@ -194,13 +215,24 @@ internal sealed class DaggerfallArtReplacements
                             DaggerfallContentHash.Parse(mesh.GetProperty("sha256").GetString()!, $"The refreshed mesh for {replaces.Item1}/{replaces.Item2}")), footprint)))
                         throw new InvalidOperationException($"Content pack '{packId}' names two meshes for {replaces.Item1}/{replaces.Item2}.");
                 }
+            if (section.TryGetProperty("surfaces", out JsonElement surfaceArt))
+                foreach (JsonElement surface in surfaceArt.EnumerateArray())
+                {
+                    (int, int) replaces = (surface.GetProperty("replaces").GetProperty("archive").GetInt32(), surface.GetProperty("replaces").GetProperty("record").GetInt32());
+                    int width = surface.GetProperty("width").GetInt32(), height = surface.GetProperty("height").GetInt32();
+                    if (width <= 0 || height <= 0)
+                        throw new InvalidOperationException($"Content pack '{packId}' states an empty surface for {replaces.Item1}/{replaces.Item2}.");
+                    if (!surfaces.TryAdd(replaces, new(new(surface.GetProperty("path").GetString()!,
+                            DaggerfallContentHash.Parse(surface.GetProperty("sha256").GetString()!, $"The refreshed surface for {replaces.Item1}/{replaces.Item2}")), width, height)))
+                        throw new InvalidOperationException($"Content pack '{packId}' names two surfaces for {replaces.Item1}/{replaces.Item2}.");
+                }
         }
         catch (Exception exception) when (exception is JsonException or KeyNotFoundException or FormatException)
         {
             throw new InvalidOperationException($"Content pack '{packId}' carries an unreadable artReplacements section: {exception.Message}", exception);
         }
 
-        return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes);
+        return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces);
 
         DaggerfallArtWorldImage? World(JsonElement owner, string mediaId)
         {

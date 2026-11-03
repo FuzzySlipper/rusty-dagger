@@ -24,6 +24,9 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     private readonly Dictionary<DaggerfallExteriorCellId, NatureCell> _natureCells = [];
     private readonly List<NatureBatch> _retiredNature = [];
     private DaggerfallSiteProfile? _profile;
+    private DaggerfallArtReplacements? _art;
+    private Func<bool> _drawRefreshed = () => false;
+    private bool _refreshedDrawn;
     private DaggerfallExteriorWorldOrigin _origin;
     private bool _hasOrigin;
     private bool _disposed;
@@ -45,6 +48,16 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
             Vector3.Zero,
             0F,
             false));
+    }
+
+    /// <summary>
+    /// Draws each ground tile in its refreshed surface from <paramref name="art"/> (where the set has one) whenever
+    /// <paramref name="refreshed"/> answers that the player has not chosen classic art, and in its classic tile otherwise.
+    /// </summary>
+    internal void UseArt(DaggerfallArtReplacements art, Func<bool> refreshed)
+    {
+        _art = art;
+        _drawRefreshed = refreshed;
     }
 
     internal int ActiveCellCount => _visuals.Count;
@@ -74,6 +87,12 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentNullException.ThrowIfNull(baseFacts);
+        if (_refreshedDrawn != _drawRefreshed())
+        {
+            _refreshedDrawn = !_refreshedDrawn;
+            foreach (TerrainMaterial material in _terrainMaterials.Values.Where(material => material.Refreshed is not null))
+                _graphics.UpdateMaterial(new MaterialUpdateRequest(material.Material, Ground(_refreshedDrawn ? material.Refreshed! : material.Resource)));
+        }
         HashSet<ulong> ids = [];
         foreach (AppearanceFact fact in baseFacts)
         {
@@ -471,24 +490,29 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         }
 
         RenderResource? resource = null;
+        RenderResource? refreshed = null;
         Material? material = null;
         try
         {
             resource = _graphics.OpenTexture(_content, texture.TexturePath, texture.TextureSha256, TextureFilter.Nearest, TextureWrap.Repeat).Handle;
-            material = _graphics.CreateMaterial(new MaterialRequest(
-                new Color(1F, 1F, 1F, 1F), resource, 1F,
-                new Color(1F, 1F, 1F, 1F), Vector3.Zero, 0F, false));
-            TerrainMaterial created = new(key, resource, material);
+            if (_art?.Surface(texture.TexturePath) is { } surface)
+                refreshed = _graphics.OpenTexture(_content, surface.File.Path, surface.File.Sha256, TextureFilter.Nearest, TextureWrap.Repeat).Handle;
+            material = _graphics.CreateMaterial(Ground(_refreshedDrawn && refreshed is not null ? refreshed : resource));
+            TerrainMaterial created = new(key, resource, material, refreshed);
             _terrainMaterials.Add(key, created);
             return created;
         }
         catch
         {
             material?.Dispose();
+            refreshed?.Dispose();
             resource?.Dispose();
             throw;
         }
     }
+
+    private static MaterialRequest Ground(RenderResource texture) =>
+        new(new Color(1F, 1F, 1F, 1F), texture, 1F, new Color(1F, 1F, 1F, 1F), Vector3.Zero, 0F, false);
 
     private bool TryResolveNatureSprite(
         DaggerfallExteriorNaturePlacement placement,
@@ -695,11 +719,14 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         catch (Exception exception) { (failures ??= []).Add(exception); }
         try { material.Resource.Dispose(); }
         catch (Exception exception) { (failures ??= []).Add(exception); }
+        try { material.Refreshed?.Dispose(); }
+        catch (Exception exception) { (failures ??= []).Add(exception); }
     }
 
     private readonly record struct TerrainTextureKey(int Archive, int Record, string Path);
     private readonly record struct NatureSpriteKey(int Archive, int Record, string Path);
-    private sealed record TerrainMaterial(TerrainTextureKey Key, RenderResource Resource, Material Material);
+    /// <summary>A ground tile's material: its classic texture, and its refreshed surface where the art set has one.</summary>
+    private sealed record TerrainMaterial(TerrainTextureKey Key, RenderResource Resource, Material Material, RenderResource? Refreshed);
     private sealed record NatureSprite(NatureSpriteKey Key, RenderResource Resource, SpriteAtlas Atlas);
     private sealed record NatureBatch(ulong ObjectId, NatureSpriteKey Key, Appearance Appearance, int Instances);
     /// <summary>One cell's nature batches and the environment placements and media profile they were made from.</summary>
