@@ -55,7 +55,8 @@ def records():
 
 
 def used(row):
-    return int(row["exterior_blocks"]) + int(row["interior_blocks"]) + int(row["dungeon_blocks"]) > 0
+    """Whether a block can draw the record and it has an image (TEXTURE.000 record 0 is the classic's no-texture sentinel)."""
+    return int(row["frames"]) > 0 and int(row["exterior_blocks"]) + int(row["interior_blocks"]) + int(row["dungeon_blocks"]) > 0
 
 
 def classic(row):
