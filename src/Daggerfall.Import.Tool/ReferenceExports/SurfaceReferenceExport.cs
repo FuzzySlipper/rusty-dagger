@@ -8,7 +8,9 @@ namespace Daggerfall.Import.Tool.ReferenceExports;
 /// The surface textures walls, floors, ceilings, roofs and doors draw (TEXTURE.000-199 and 300-499; the 200s are item
 /// and paper-doll art and the 500s nature billboards), grouped by their classic texture set across climates, with each
 /// record's size and how many blocks can draw it: town exteriors and interiors (RMB) after the climate and season swap,
-/// and dungeons (RDB) after the classic dungeon texture tables. Usage is what a record's refresh is worth.
+/// and dungeons (RDB) after the classic dungeon texture tables. Usage is what a record's refresh is worth. How the
+/// models lay a record says how it must tile: the planes it covers (floors and ceilings lie flat, walls stand) and how
+/// far their texture coordinates run past the record on each axis, which is where it repeats.
 /// </summary>
 internal static class SurfaceReferenceExport
 {
@@ -42,6 +44,23 @@ internal static class SurfaceReferenceExport
 
     private sealed record Usage(HashSet<string> Exterior, HashSet<string> Interior, HashSet<string> Dungeon);
 
+    /// <summary>How the models lay one texture record: flat and standing planes, and the widest texture-coordinate span on each axis.</summary>
+    private sealed class Layout
+    {
+        internal int Flat;
+        internal int Standing;
+        internal int SpanU;
+        internal int SpanV;
+    }
+
+    private static Layout Layouts(Dictionary<int, Layout> layouts, int key)
+    {
+        if (!layouts.TryGetValue(key, out Layout? layout)) layouts.Add(key, layout = new());
+        return layout;
+    }
+
+    private static System.Numerics.Vector3 Point(Arch3dPoint point) => new(point.X, point.Y, point.Z);
+
     public static void Run(string arena2, string output)
     {
         ReferenceExport export = new(arena2, output);
@@ -49,6 +68,25 @@ internal static class SurfaceReferenceExport
         foreach (Arch3dMeshRecord mesh in Arch3dInventoryReader.Read(export.Read(Arch3dInventoryReader.FileName), "arena2/ARCH3D.BSA").Records)
             if (mesh.DuplicateOf is null && mesh.Facts is { } facts)
                 models.TryAdd(mesh.RecordId.ToString(CultureInfo.InvariantCulture), facts.Textures);
+        Dictionary<int, Layout> layouts = [];
+        BsaArchive meshes = BsaArchive.Parse(export.Read(Arch3dInventoryReader.FileName), "arena2/ARCH3D.BSA");
+        foreach (BsaRecord record in meshes.Records)
+        {
+            Arch3dMesh mesh;
+            try { mesh = Arch3dDecoder.Decode(meshes.GetPayload(record).Span, "arena2/ARCH3D.BSA", record.NumericId!.Value); }
+            catch (Arena2FormatException) { continue; }
+            foreach (Arch3dPlane plane in mesh.Planes.Where(plane => plane.Points.Count >= 3))
+            {
+                Layout layout = Layouts(layouts, plane.TextureArchive * 1000 + plane.TextureRecord);
+                System.Numerics.Vector3 a = Point(plane.Points[0]), b = Point(plane.Points[1]), c = Point(plane.Points[2]);
+                System.Numerics.Vector3 normal = System.Numerics.Vector3.Cross(b - a, c - a);
+                if (normal.LengthSquared() == 0) continue;
+                if (Math.Abs(System.Numerics.Vector3.Normalize(normal).Y) > 0.7F) layout.Flat++;
+                else layout.Standing++;
+                layout.SpanU = Math.Max(layout.SpanU, plane.Points.Max(p => p.U) - plane.Points.Min(p => p.U));
+                layout.SpanV = Math.Max(layout.SpanV, plane.Points.Max(p => p.V) - plane.Points.Min(p => p.V));
+            }
+        }
 
         Dictionary<(int Archive, int Record), Usage> usage = [];
         void Count(IEnumerable<string> modelIds, string block, Func<Usage, HashSet<string>> side, Func<int, int, IEnumerable<int>> reach)
@@ -88,7 +126,25 @@ internal static class SurfaceReferenceExport
                 Count(rdb.ModelIds, block.SourceKey, u => u.Dungeon, Tabled);
         }
 
-        StringBuilder csv = new("archive,record,set,climate,width,height,frames,exterior_blocks,interior_blocks,dungeon_blocks\n");
+        // A swapped or tabled variant is laid as its source record is.
+        Dictionary<int, Layout> reached = [];
+        void Inherit(int from, IEnumerable<int> to)
+        {
+            if (!layouts.TryGetValue(from, out Layout? source)) return;
+            foreach (int key in to)
+            {
+                Layout target = Layouts(reached, key);
+                target.Flat += source.Flat; target.Standing += source.Standing;
+                target.SpanU = Math.Max(target.SpanU, source.SpanU); target.SpanV = Math.Max(target.SpanV, source.SpanV);
+            }
+        }
+        foreach (int key in layouts.Keys.ToArray())
+        {
+            int archive = key / 1000, record = key % 1000;
+            Inherit(key, Swapped(archive, record, seasons: true).Concat(Tabled(archive, record)).Append(archive).Distinct().Select(a => a * 1000 + record));
+        }
+
+        StringBuilder csv = new("archive,record,set,climate,width,height,frames,exterior_blocks,interior_blocks,dungeon_blocks,flat_planes,standing_planes,span_u,span_v\n");
         int archives = 0, records = 0, used = 0;
         List<string> sources = [];
         foreach (string name in export.FileNames.Where(file => file.StartsWith("TEXTURE.", StringComparison.OrdinalIgnoreCase)))
@@ -106,10 +162,12 @@ internal static class SurfaceReferenceExport
                 List<ReferenceImage> frames = export.TextureImages(directory, "surface", archive, record);
                 images.AddRange(frames);
                 Usage counted = usage.GetValueOrDefault((archive, record)) ?? new([], [], []);
+                Layout laid = reached.GetValueOrDefault(archive * 1000 + record) ?? new();
                 int width = frames.FirstOrDefault()?.Width ?? 0, height = frames.FirstOrDefault()?.Height ?? 0;
                 rows.Add(new { record, width, height, frames = frames.Count, exteriorBlocks = counted.Exterior.Count,
-                    interiorBlocks = counted.Interior.Count, dungeonBlocks = counted.Dungeon.Count });
-                csv.Append(CultureInfo.InvariantCulture, $"{archive},{record},{set},{climate},{width},{height},{frames.Count},{counted.Exterior.Count},{counted.Interior.Count},{counted.Dungeon.Count}\n");
+                    interiorBlocks = counted.Interior.Count, dungeonBlocks = counted.Dungeon.Count,
+                    flatPlanes = laid.Flat, standingPlanes = laid.Standing, spanU = laid.SpanU, spanV = laid.SpanV });
+                csv.Append(CultureInfo.InvariantCulture, $"{archive},{record},{set},{climate},{width},{height},{frames.Count},{counted.Exterior.Count},{counted.Interior.Count},{counted.Dungeon.Count},{laid.Flat},{laid.Standing},{laid.SpanU},{laid.SpanV}\n");
                 records++;
                 if (counted.Exterior.Count + counted.Interior.Count + counted.Dungeon.Count > 0) used++;
             }
