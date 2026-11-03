@@ -711,6 +711,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     {
         if (disposed) return;
         AdvanceDecorations();
+        StepHeld(update);
         AppearanceOuterUpdate identity = new(update.Generation, update.ControlRevision, update.SimulationStep, update.AdmittedStepCount);
         foreach (ActorVisual visual in actors.Values)
         {

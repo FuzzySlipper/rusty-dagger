@@ -131,20 +131,24 @@ For example, to reach the Temple of Kynareth's trainer from anywhere:
 The motion viewer draws the 3D first-person art (`viewmodel.style` `held` or
 `heldRetro`, with `local/first-person.rpak` installed; `scripts/fp-arms/README.md`)
 through the game's own held viewmodel, without the click attack's random strike. A
-look is a classic weapon visual the art draws (`weapon.dagger.steel`) and an action
-one of its classic strikes with motion (`strikeDown`). It shows the look whatever
-the hands wield; swings still land on their hidden sprites. A strike is timed as
-play times it at the visual's authored frame rate, with the hit on the melee hit frame.
+look is a classic weapon visual the art draws (`weapon.dagger.steel`), shown by the
+family that draws it, and an action one of its classic strikes with a clip
+(`strikeDown`). It shows the family's arms whatever the hands wield; swings still land
+on their hidden sprites. A strike is timed as play times it at the visual's authored
+frame rate, with the hit on the melee hit frame, where the clip's strike mark plays.
+The keys are the clip's four marks: 0 start, 1 strike, 2 recover, 3 end.
 
 | Command | What it does |
 |---|---|
-| `held.motion LOOK ACTION` | Shows the look at rest in the viewer's hand (main at first) with the strike, and lists its keys: phase, moment, time, curve and pose. |
-| `held.motion.hand HAND` | Shows it in the `main` or `off` hand (mirrored). |
-| `held.motion.key N` | Holds key N's pose exactly (-1 is rest). |
-| `held.motion.next` / `held.motion.prev` | Holds the next or previous key, through rest. |
+| `held.motion LOOK ACTION` | Shows the look's family at rest with the strike, and lists its clip, timing and marks. |
+| `held.motion.key N` | Holds the strike at mark N (-1 is rest). |
+| `held.motion.next` / `held.motion.prev` | Holds the next or previous mark, through rest. |
 | `held.motion.play SPEED` | Plays the strike from rest at SPEED (1 as in play, 0.25 a quarter; 0.01 to 4). |
-| `held.motion.at SECONDS` | Shows the strike paused SECONDS after its start, as the Engine plays it (`heldRetro` holds each classic frame's sample). |
+| `held.motion.at SECONDS` | Shows the strike paused SECONDS after its start, with the clip time it plays there (`heldRetro` holds each classic frame's sample). |
+| `held.clip` | What the drawn arms play now, in play or in the viewer: the clip, its time and phase, what fades out under it. |
 | `held.motion.off` | Gives the hands back what they wield. Closing the developer tools does this too. |
+
+`scripts/fp-arms/sheet.sh` drives these over a running host and writes a contact sheet per strike, its hit outlined.
 
 Without the container, or under `classic`, each command answers why and how to fix it.
 
@@ -170,11 +174,10 @@ when closed. Its tabs:
     (`world.overlay-on` / `world.overlay-off`) and drawn by
     `engine.inspect.overlay show set NAME`.
 - **Workbench:** the first-person workbench, the Engine's tunables panel over the
-  motion viewer. Its choosers pick the look, strike and hand; its timeline holds a
-  key, scrubs to a moment and plays at 0.1× to 2×; its values are the look's stance
-  and the hand's grip and hold on it, each key's phase, moment and curve, the held
-  key's pose, and the arms' shoulder and elbow pole and the rig's turn, scale and
-  palm. A value shows at once on the loaded art. **Save** writes the changed values
+  motion viewer. Its choosers pick the look and strike; its timeline holds a mark,
+  scrubs to a moment and plays at 0.1× to 2×; its values are the strike's marks and
+  fade, the family's idle loop and the hand's grip and hold on its look, and the arms'
+  shoulder and the rig's palm. A value shows at once on the loaded art. **Save** writes the changed values
   into the authored held definition, `content/worldrpg/first-person/daggerfall.held.json`,
   keeping the file's other bytes; **Reset** sets them back to the file's. The
   console takes the same as `tunables.describe`, `tunables.set ID VALUE`,
