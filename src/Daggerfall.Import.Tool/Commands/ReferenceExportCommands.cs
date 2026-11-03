@@ -36,6 +36,13 @@ internal static class ReferenceExportCommands
         return 0;
     });
 
+    public static ToolCommand Surfaces { get; } = new("export-surfaces", [Arena2, Output], args =>
+    {
+        SurfaceReferenceExport.Run(args.Optional("--arena2") ?? "local/arena2",
+            args.Optional("--output") ?? "authoring/df-raw/surfaces");
+        return 0;
+    });
+
     public static ToolCommand Effects { get; } = new("export-effects", [Arena2, Output], args =>
     {
         MediaReferenceExport.RunEffects(args.Optional("--arena2") ?? "local/arena2",
