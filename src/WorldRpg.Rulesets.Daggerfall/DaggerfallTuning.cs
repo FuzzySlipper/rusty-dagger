@@ -250,6 +250,8 @@ internal sealed record DaggerfallTuning(
             {
                 MobileGlowRange = siteLighting.GetProperty("mobileGlowRange").GetSingle(),
                 MobileGlowIntensity = siteLighting.GetProperty("mobileGlowIntensity").GetSingle(),
+                SpellLightRange = siteLighting.GetProperty("spellLightRange").GetSingle(),
+                SpellLightIntensity = siteLighting.GetProperty("spellLightIntensity").GetSingle(),
             },
             new DaggerfallClimbingTuning(
                 climbing.GetProperty("startCheckSeconds").GetSingle(),
@@ -591,6 +593,9 @@ internal sealed record DaggerfallSiteLightingTuning(
 {
     internal float MobileGlowRange { get; init; } = 4f;
     internal float MobileGlowIntensity { get; init; } = .1f;
+    /// <summary>The light a flying spell carries in its element's colour (the donor's missile light).</summary>
+    internal float SpellLightRange { get; init; } = 6f;
+    internal float SpellLightIntensity { get; init; } = 1f;
     internal static DaggerfallSiteLightingTuning Classic { get; } = new(
         160F / 255F, 100F / 255F, 75F / 255F, 150F / 255F, 50F / 255F);
 
@@ -598,6 +603,8 @@ internal sealed record DaggerfallSiteLightingTuning(
     {
         if (!float.IsFinite(MobileGlowRange) || MobileGlowRange <= 0 || !float.IsFinite(MobileGlowIntensity) || MobileGlowIntensity < 0)
             throw new ArgumentOutOfRangeException(nameof(DaggerfallSiteLightingTuning), "Mobile glow requires a positive finite range and nonnegative finite intensity.");
+        if (!float.IsFinite(SpellLightRange) || SpellLightRange <= 0 || !float.IsFinite(SpellLightIntensity) || SpellLightIntensity < 0)
+            throw new ArgumentOutOfRangeException(nameof(DaggerfallSiteLightingTuning), "Spell light requires a positive finite range and nonnegative finite intensity.");
         foreach (float value in new[] { InteriorDay, InteriorNight, Dungeon, ExteriorNoon, ExteriorNight })
             if (!float.IsFinite(value) || value is < 0F or > 1F)
                 throw new ArgumentOutOfRangeException(nameof(DaggerfallSiteLightingTuning), "Site ambient values must be finite normalized RGB levels.");

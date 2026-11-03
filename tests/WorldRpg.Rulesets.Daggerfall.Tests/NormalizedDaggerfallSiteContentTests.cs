@@ -137,7 +137,8 @@ public sealed class NormalizedDaggerfallSiteContentTests
         Assert.All(inputs.ActorSprites.Values, sprite => Assert.InRange(sprite.Frames.Count, 1, 4096));
         Assert.Equal("weapon.dagger.steel", Assert.IsType<NormalizedClassicWeapon>(inputs.ClassicPresentation.Weapons["weapon.dagger.steel"]).ResourceId);
         Assert.Equal("weapon.dagger.steel", inputs.ClassicPresentation.CompatibleItemVisuals["iron-dagger"]);
-        Assert.Equal(["blood0", "blood1", "blood2", "magicSparkle"], inputs.ClassicPresentation.Effects.Select(effect => effect.Name));
+        Assert.Equal(["blood0", "blood1", "blood2", "coldImpact", "coldMissile", "fireImpact", "fireMissile", "magicImpact", "magicMissile", "magicSparkle",
+            "poisonImpact", "poisonMissile", "shockImpact", "shockMissile"], inputs.ClassicPresentation.Effects.Select(effect => effect.Name));
     }
 
     [Fact]

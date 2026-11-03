@@ -2231,11 +2231,13 @@ internal static partial class DaggerfallSiteContent
                 diagnostics.Add($"Classic effect '{name}' refers to invalid effectSprite media or timing.");
                 continue;
             }
-            if (!effects.TryAdd(name, new NormalizedClassicEffect(name, sourceRecordOrdinal, resource.Path, resource.Hash, resource.AtlasWidth, resource.AtlasHeight, resource.Frames, resource.Pivot, resource.DisplaySize, resource.Sequence, fps, loops))) diagnostics.Add($"Classic effects repeat '{name}'.");
+            if (!effects.TryAdd(name, new NormalizedClassicEffect(name, mediaId, sourceRecordOrdinal, resource.Path, resource.Hash, resource.AtlasWidth, resource.AtlasHeight, resource.Frames, resource.Pivot, resource.DisplaySize, resource.Sequence, fps, loops))) diagnostics.Add($"Classic effects repeat '{name}'.");
         }
-        string[] expected = ["blood0", "blood1", "blood2", "magicSparkle"];
-        if (effects.Count != expected.Length || expected.Any(name => !effects.ContainsKey(name))) diagnostics.Add("Classic effects must provide blood0..blood2 and magicSparkle exactly once.");
-        foreach ((int ordinal, string expectedName) in expected.Select((value, index) => (index, value)))
+        // Blood and the sparkle are TEXTURE.380 records 0-3; each element's missile and impact are records 0 and 1 of its own archive.
+        (string Name, int Ordinal)[] expected = [("blood0", 0), ("blood1", 1), ("blood2", 2), ("magicSparkle", 3),
+            .. DaggerfallSpellElements.Names.SelectMany(element => new[] { ($"{element}Missile", 0), ($"{element}Impact", 1) })];
+        if (effects.Count != expected.Length || expected.Any(value => !effects.ContainsKey(value.Name))) diagnostics.Add("Classic effects must provide blood0..blood2, magicSparkle and each element's missile and impact exactly once.");
+        foreach ((string expectedName, int ordinal) in expected)
             if (effects.TryGetValue(expectedName, out NormalizedClassicEffect? effect) && effect.SourceRecordOrdinal != ordinal) diagnostics.Add($"Classic effect '{expectedName}' must retain source record ordinal {ordinal}.");
         return Array.AsReadOnly(effects.Values.OrderBy(effect => effect.Name, StringComparer.Ordinal).ToArray());
     }
@@ -2645,7 +2647,7 @@ internal sealed record NormalizedClassicWeapon(string ResourceId, string Texture
         _ => throw new ArgumentOutOfRangeException(nameof(swing), swing, "A swing without a direction names no strike action."),
     };
 }
-internal sealed record NormalizedClassicEffect(string Name, int SourceRecordOrdinal, string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, Vector2 Pivot, Vector2 DisplaySize, IReadOnlyList<int> Sequence, float FramesPerSecond, bool Loops);
+internal sealed record NormalizedClassicEffect(string Name, string MediaId, int SourceRecordOrdinal, string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, Vector2 Pivot, Vector2 DisplaySize, IReadOnlyList<int> Sequence, float FramesPerSecond, bool Loops);
 internal sealed record NormalizedClassicPresentation(IReadOnlyDictionary<string, NormalizedClassicWeapon> Weapons, IReadOnlyList<NormalizedClassicEffect> Effects)
 {
     internal static NormalizedClassicPresentation Empty { get; } = new(new Dictionary<string, NormalizedClassicWeapon>(), Array.Empty<NormalizedClassicEffect>());

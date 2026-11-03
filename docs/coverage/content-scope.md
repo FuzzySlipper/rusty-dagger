@@ -336,6 +336,12 @@ the classic publication stays the fallback. `authoring/tools/items/promote.py` w
   dye mask (the neutral cloth the classic dye recolours, less what is coloured of its own) and states a tint per
   classic dye (`dyeTints`: a multiply colour and a brightness), measured from the classic dyed images. The DOM
   brightens the masked cloth and multiplies it by the dye's colour on a canvas.
+- **World effects.** Blood, the magic sparkle and each spell element's missile and impact are animated world
+  sprites, and the renderer reads PNG, so promotion writes each as one PNG atlas of its frames in classic order
+  under `refreshed/effects/` (the payload's `effects`), every frame cropped to one box, with where the classic
+  frame sits in it (`classic`) so the game keeps the classic world size and anchor. Refreshed fire, shock, magic
+  and the sparkle draw additively; a flying spell also trails particles of the soft white glow promotion writes
+  (`effectGlow`), tinted per element, that burst where it lands. Classic art draws the classic sprites alone.
 - **What the data container still carries.** Nothing classic is dropped yet: the paper doll's classic bodies, heads
   and worn items are the Classic art fallback, and armour in a dyed material (iron, ebony and the rest) is drawn
   classic, since the refreshed armour is steel, leather and chain.

@@ -22,10 +22,7 @@ public sealed class Arena2MediaBundlePublicationTests
         ImportPublicationManifestArtifact classicSidecar = first.Plan.Manifest.Artifacts.Single(artifact => artifact.RelativePath == Arena2MediaBundlePublication.ClassicMediaManifestRelativePath);
         Assert.Equal(
             [
-                "media/classic/effect-0.png",
-                "media/classic/effect-1.png",
-                "media/classic/effect-2.png",
-                "media/classic/effect-3.png",
+                .. Enum.GetValues<ClassicEffect>().Select((_, index) => $"media/classic/effect.minimal.{index}.png").Order(StringComparer.Ordinal),
                 "media/classic/font.bin",
                 "media/classic/minimal.bin",
                 "media/classic/weapon.png",
@@ -470,7 +467,7 @@ public sealed class Arena2MediaBundlePublicationTests
                 0))
             .ToArray();
         ClassicEffectManifest[] effects = Enum.GetValues<ClassicEffect>()
-            .Select((effect, record) => new ClassicEffectManifest(effect, $"effect.minimal.{record}", record, new ClassicSpriteTiming(10F, false)))
+            .Select((effect, index) => new ClassicEffectManifest(effect, $"effect.minimal.{index}", Arena2ClassicMediaPublication.ExpectedEffectSourceRecordOrdinal(effect), new ClassicSpriteTiming(10F, false)))
             .ToArray();
         List<GeneratedMediaArtifact> generated =
         [
@@ -487,7 +484,7 @@ public sealed class Arena2MediaBundlePublicationTests
         foreach (ClassicEffectManifest effect in effects)
         {
             NormalizedSpriteAtlas effectAtlas = CreateOneFrameAtlas(effect.MediaId);
-            string path = $"media/classic/effect-{effect.SourceRecordOrdinal}.png";
+            string path = $"media/classic/{effect.MediaId}.png";
             generated.Add(GeneratedMediaArtifact.FromAtlas(effect.MediaId, NormalizedMediaKind.EffectSprite, path, effectAtlas));
             artifacts.Add(new ImportPublicationArtifact(path, effectAtlas.PngBytes));
         }

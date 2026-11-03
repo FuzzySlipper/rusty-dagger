@@ -418,6 +418,10 @@ internal static class TestSessions
                 yield return (path, TestContentFiles.ReadCopy(Path.Combine(root, "content", path)));
             }
         }
+        // A site appearance admits the refreshed world effects and their particle glow with its own textures.
+        DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(TestContentFiles.Read(Path.Combine(root, "content", "worldrpg/payloads/daggerfall.art-replacements.json")), "daggerfall.art-replacements");
+        foreach (string path in art.Effects.Values.Select(effect => effect.Path).Append(art.EffectGlow!.Path))
+            yield return (path, TestContentFiles.ReadCopy(Path.Combine(root, "content", path)));
     }
 
     internal static ContentSha256 Digest(ReadOnlySpan<byte> bytes)
@@ -445,6 +449,8 @@ internal static class TestSessions
         content.Add("effect/blood1.png", Hash);
         content.Add("effect/blood2.png", Hash);
         content.Add("effect/sparkle.png", Hash);
+        content.Add("effect/fire-missile.png", Hash);
+        content.Add("effect/fire-impact.png", Hash);
         content.Add("sprite/treasure.png", Hash);
         return content;
     }
@@ -507,12 +513,16 @@ internal static class TestSessions
             groundContainerSprite: groundContainerSprite);
     }
 
-    internal static NormalizedClassicPresentation ClassicEffects(IReadOnlyList<Vector2>? bloodDisplaySizes = null)
+    /// <param name="fireSpell">Also publish the fire missile (looping) and impact, on two frames each, at <c>effect/fire-missile.png</c> and <c>effect/fire-impact.png</c>.</param>
+    internal static NormalizedClassicPresentation ClassicEffects(IReadOnlyList<Vector2>? bloodDisplaySizes = null, bool fireSpell = false)
     {
         IReadOnlyList<NormalizedAtlasFrame> frames = [new NormalizedAtlasFrame(0, 0, 0, 8, 8)];
+        IReadOnlyList<NormalizedAtlasFrame> spellFrames = [new NormalizedAtlasFrame(0, 0, 0, 8, 8), new NormalizedAtlasFrame(1, 8, 0, 8, 8)];
         Vector2 Size(int sourceRecordOrdinal) => sourceRecordOrdinal < 3 && bloodDisplaySizes is { Count: 3 } ? bloodDisplaySizes[sourceRecordOrdinal] : Vector2.One;
-        NormalizedClassicEffect Effect(string name, int sourceRecordOrdinal, string path) => new(name, sourceRecordOrdinal, path, Hash, 8, 8, frames, new Vector2(.5F, .5F), Size(sourceRecordOrdinal), [0], 10F, false);
-        return new NormalizedClassicPresentation(new Dictionary<string, NormalizedClassicWeapon>(), [Effect("blood0", 0, "effect/blood0.png"), Effect("blood1", 1, "effect/blood1.png"), Effect("blood2", 2, "effect/blood2.png"), Effect("magicSparkle", 3, "effect/sparkle.png")]);
+        NormalizedClassicEffect Effect(string name, string mediaId, int sourceRecordOrdinal, string path) => new(name, mediaId, sourceRecordOrdinal, path, Hash, 8, 8, frames, new Vector2(.5F, .5F), Size(sourceRecordOrdinal), [0], 10F, false);
+        NormalizedClassicEffect Spell(string name, string mediaId, int sourceRecordOrdinal, string path, bool loops) => new(name, mediaId, sourceRecordOrdinal, path, Hash, 16, 8, spellFrames, new Vector2(.5F, .5F), new Vector2(.4F, .4F), [0, 1], loops ? 5F : 15F, loops);
+        return new NormalizedClassicPresentation(new Dictionary<string, NormalizedClassicWeapon>(), [Effect("blood0", "effect.blood.0", 0, "effect/blood0.png"), Effect("blood1", "effect.blood.1", 1, "effect/blood1.png"), Effect("blood2", "effect.blood.2", 2, "effect/blood2.png"), Effect("magicSparkle", "effect.sparkle.magic", 3, "effect/sparkle.png"),
+            .. fireSpell ? new[] { Spell("fireMissile", "effect.missile.fire", 0, "effect/fire-missile.png", true), Spell("fireImpact", "effect.impact.fire", 1, "effect/fire-impact.png", false) } : []]);
     }
 
     internal static NormalizedClassicPresentation ClassicWeapon()

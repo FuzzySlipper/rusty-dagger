@@ -73,7 +73,14 @@ public sealed record Arena2ClassicMediaInputs(
     // The texture leaves a world visual's own mesh selects. They arrive as a list because which leaves
     // are needed is a fact about the published visual set rather than a fixed part of the closure.
     IReadOnlyList<ClassicMissileTextureLeaf> MissileTextureLeaves,
-    byte[] Texture205)
+    byte[] Texture205,
+    // The five spell element archives, fire, cold, poison, shock and magic: each a flying missile (record 0) and
+    // its impact (record 1).
+    byte[] Texture375,
+    byte[] Texture376,
+    byte[] Texture377,
+    byte[] Texture378,
+    byte[] Texture379)
 { }
 
 /// <summary>Quotas for bounded, deterministic classic-media regeneration.</summary>
@@ -235,13 +242,23 @@ public enum ClassicWeaponScreenAlignment
     Right,
 }
 
-/// <summary>The fixed semantic effect entries selected from TEXTURE.380.</summary>
+/// <summary>The fixed semantic effect entries: blood and the sparkle from TEXTURE.380, and each spell element's missile and impact from TEXTURE.375–379.</summary>
 public enum ClassicEffect
 {
     Blood0,
     Blood1,
     Blood2,
     MagicSparkle,
+    FireMissile,
+    FireImpact,
+    ColdMissile,
+    ColdImpact,
+    PoisonMissile,
+    PoisonImpact,
+    ShockMissile,
+    ShockImpact,
+    MagicMissile,
+    MagicImpact,
 }
 
 /// <summary>The fixed presentation sounds selected from DAGGER.SND.</summary>
@@ -430,7 +447,7 @@ public sealed record ClassicWeaponActionManifest(
 /// <summary>One generated first-person weapon resource and its source-normalized actions.</summary>
 public sealed record ClassicWeaponMediaManifest(string ResourceId, IReadOnlyList<ClassicWeaponActionManifest> Actions);
 
-/// <summary>Typed source interpretation for a selected TEXTURE.380 effect atlas.</summary>
+/// <summary>Typed source interpretation for a selected effect atlas.</summary>
 public sealed record ClassicEffectManifest(ClassicEffect Effect, string MediaId, int SourceRecordOrdinal, ClassicSpriteTiming Timing)
 {
     internal void Validate()
@@ -1108,16 +1125,31 @@ public sealed record Arena2ClassicMediaPublication(
             && sequence.SequenceEqual(relativeExpected.Select(frame => checked(frameStart + frame)));
     }
 
+    // The donor flies a missile at 5 frames a second, looping, and plays its impact once at 15 (DaggerfallMissile).
+    private static readonly ClassicSpriteTiming MissileTiming = new(5F, true);
+    private static readonly ClassicSpriteTiming ImpactTiming = new(15F, false);
+    private static readonly ClassicSpriteTiming FeedbackTiming = new(10F, false);
+
     private static readonly EffectSource[] EffectSources =
     [
-        new(ClassicEffect.Blood0, "effect.blood.0", 0),
-        new(ClassicEffect.Blood1, "effect.blood.1", 1),
-        new(ClassicEffect.Blood2, "effect.blood.2", 2),
-        new(ClassicEffect.MagicSparkle, "effect.sparkle.magic", 3),
+        new(ClassicEffect.Blood0, "effect.blood.0", 380, 0, FeedbackTiming),
+        new(ClassicEffect.Blood1, "effect.blood.1", 380, 1, FeedbackTiming),
+        new(ClassicEffect.Blood2, "effect.blood.2", 380, 2, FeedbackTiming),
+        new(ClassicEffect.MagicSparkle, "effect.sparkle.magic", 380, 3, FeedbackTiming),
+        new(ClassicEffect.FireMissile, "effect.missile.fire", 375, 0, MissileTiming),
+        new(ClassicEffect.FireImpact, "effect.impact.fire", 375, 1, ImpactTiming),
+        new(ClassicEffect.ColdMissile, "effect.missile.cold", 376, 0, MissileTiming),
+        new(ClassicEffect.ColdImpact, "effect.impact.cold", 376, 1, ImpactTiming),
+        new(ClassicEffect.PoisonMissile, "effect.missile.poison", 377, 0, MissileTiming),
+        new(ClassicEffect.PoisonImpact, "effect.impact.poison", 377, 1, ImpactTiming),
+        new(ClassicEffect.ShockMissile, "effect.missile.shock", 378, 0, MissileTiming),
+        new(ClassicEffect.ShockImpact, "effect.impact.shock", 378, 1, ImpactTiming),
+        new(ClassicEffect.MagicMissile, "effect.missile.magic", 379, 0, MissileTiming),
+        new(ClassicEffect.MagicImpact, "effect.impact.magic", 379, 1, ImpactTiming),
     ];
 
-    /// <summary>Returns the fixed TEXTURE.380 record retained by an effect's canonical source identity.</summary>
-    internal static int ExpectedEffectSourceRecordOrdinal(ClassicEffect effect) => EffectSources
+    /// <summary>Returns the fixed record of its archive retained by an effect's canonical source identity.</summary>
+    public static int ExpectedEffectSourceRecordOrdinal(ClassicEffect effect) => EffectSources
         .SingleOrDefault(source => source.Effect == effect)?.SourceRecordOrdinal
         ?? throw new ArgumentOutOfRangeException(nameof(effect), "The effect is not part of the fixed classic source closure.");
 
@@ -1286,7 +1318,7 @@ public sealed record Arena2ClassicMediaPublication(
             generated.Add(weapon);
             weaponMedia.Add(new(resourceId, actions));
         }
-        generated.AddRange(BuildEffects(source.Texture380, palette, resolved, effectiveOptions, out ClassicEffectManifest[] effects));
+        generated.AddRange(BuildEffects(source, palette, resolved, effectiveOptions, out ClassicEffectManifest[] effects));
         generated.AddRange(BuildAudio(source.DaggerSound, effectiveOptions, out ClassicAudioManifest[] audio));
         generated.AddRange(BuildUi(source, artPalette, resolved, effectiveOptions, out ClassicUiImageManifest[] uiImages));
         generated.AddRange(BuildInventoryIcons(source, artPalette, resolved, effectiveOptions, out ClassicInventoryIconManifest[] inventoryIcons));
@@ -1472,18 +1504,27 @@ public sealed record Arena2ClassicMediaPublication(
     }
 
     private static IEnumerable<GeneratedMediaArtifact> BuildEffects(
-        ReadOnlySpan<byte> textureBytes,
+        SourceBytes sources,
         Arena2Palette palette,
         ResolvedProfile profile,
         Arena2ClassicMediaPublicationOptions options,
         out ClassicEffectManifest[] manifests)
     {
-        TextureArchive texture = TextureArchive.Parse(textureBytes, "arena2/TEXTURE.380");
+        Dictionary<int, TextureArchive> archives = new()
+        {
+            [375] = TextureArchive.Parse(sources.Texture375, "arena2/TEXTURE.375"),
+            [376] = TextureArchive.Parse(sources.Texture376, "arena2/TEXTURE.376"),
+            [377] = TextureArchive.Parse(sources.Texture377, "arena2/TEXTURE.377"),
+            [378] = TextureArchive.Parse(sources.Texture378, "arena2/TEXTURE.378"),
+            [379] = TextureArchive.Parse(sources.Texture379, "arena2/TEXTURE.379"),
+            [380] = TextureArchive.Parse(sources.Texture380, "arena2/TEXTURE.380"),
+        };
         List<GeneratedMediaArtifact> result = [];
         List<ClassicEffectManifest> semantic = [];
         foreach (EffectSource source in EffectSources)
         {
             ClassicEffectPresentation mapping = profile.Effects[source.Effect];
+            TextureArchive texture = archives[source.TextureArchive];
             TextureRecordInfo info = texture.GetRecordInfo(source.SourceRecordOrdinal);
             List<DecodedSpriteFrame> frames = [];
             for (int frame = 0; frame < info.FrameCount; frame++)
@@ -1999,7 +2040,7 @@ public sealed record Arena2ClassicMediaPublication(
             .Select(source => new ClassicWeaponActionPresentation(source.Action, source.Alignment, source.ScreenOffset, new ClassicSpriteTiming(10F, source.Loop)))
             .ToArray();
         IReadOnlyList<ClassicEffectPresentation> effects = profile.Effects ?? EffectSources
-            .Select(source => new ClassicEffectPresentation(source.Effect, source.MediaId, new ClassicSpriteTiming(10F, false)))
+            .Select(source => new ClassicEffectPresentation(source.Effect, source.MediaId, source.Timing))
             .ToArray();
         IReadOnlyList<ClassicUiImagePresentation> uiImages = profile.UiImages ?? UiImageSources
             .Select(source => new ClassicUiImagePresentation(source.Image, source.MediaId, source.FileName))
@@ -2320,7 +2361,7 @@ public sealed record Arena2ClassicMediaPublication(
     private static readonly HashSet<string> CutoutMapFiles = new(
         ["AMAP00I0.IMG", "AMAP01I0.IMG", "TMAP00I0.IMG", "TOWN00I0.IMG", "TRAV0I04.IMG"],
         StringComparer.Ordinal);
-    private sealed record EffectSource(ClassicEffect Effect, string MediaId, int SourceRecordOrdinal);
+    private sealed record EffectSource(ClassicEffect Effect, string MediaId, int TextureArchive, int SourceRecordOrdinal, ClassicSpriteTiming Timing);
     private sealed record AudioSource(string Clip, string MediaId, int SourceRecordOrdinal, uint? ExpectedNumericId = null)
     {
         public AudioSource(ClassicDaggerAudioClip clip, string mediaId, int sourceRecordOrdinal, uint? expectedNumericId = null)
@@ -2346,6 +2387,11 @@ public sealed record Arena2ClassicMediaPublication(
             Weapon10Cif = inputs.Weapon10Cif;
             ArtPalette = inputs.ArtPalette;
             Texture380 = inputs.Texture380;
+            Texture375 = inputs.Texture375;
+            Texture376 = inputs.Texture376;
+            Texture377 = inputs.Texture377;
+            Texture378 = inputs.Texture378;
+            Texture379 = inputs.Texture379;
             Palette = inputs.Palette;
             DaggerSound = inputs.DaggerSound;
             Main00I0Img = inputs.Main00I0Img;
@@ -2406,6 +2452,11 @@ public sealed record Arena2ClassicMediaPublication(
         public byte[] Weapon11Cif { get; }
         public byte[] ArtPalette { get; }
         public byte[] Texture380 { get; }
+        public byte[] Texture375 { get; }
+        public byte[] Texture376 { get; }
+        public byte[] Texture377 { get; }
+        public byte[] Texture378 { get; }
+        public byte[] Texture379 { get; }
         public byte[] Palette { get; }
         public byte[] DaggerSound { get; }
         public byte[] Main00I0Img { get; }
@@ -2457,6 +2508,7 @@ public sealed record Arena2ClassicMediaPublication(
                 ("WEAPON05.CIF", inputs.Weapon05Cif), ("WEAPON06.CIF", inputs.Weapon06Cif), ("WEAPON07.CIF", inputs.Weapon07Cif),
                 ("WEAPON08.CIF", inputs.Weapon08Cif), ("WEAPON09.CIF", inputs.Weapon09Cif), ("WEAPON10.CIF", inputs.Weapon10Cif), ("WEAPON11.CIF", inputs.Weapon11Cif),
                 ("ART_PAL.COL", inputs.ArtPalette), ("TEXTURE.380", inputs.Texture380), ("PAL.PAL", inputs.Palette),
+                ("TEXTURE.375", inputs.Texture375), ("TEXTURE.376", inputs.Texture376), ("TEXTURE.377", inputs.Texture377), ("TEXTURE.378", inputs.Texture378), ("TEXTURE.379", inputs.Texture379),
                 ("DAGGER.SND", inputs.DaggerSound), ("MAIN00I0.IMG", inputs.Main00I0Img), ("MAIN03I0.IMG", inputs.Main03I0Img),
                 ("MAIN04I0.IMG", inputs.Main04I0Img), ("MAIN05I0.IMG", inputs.Main05I0Img), ("INVE00I0.IMG", inputs.Inve00I0Img), ("DIE_00I0.IMG", inputs.Die00I0Img), ("CHGN00I0.IMG", inputs.Chgn00I0Img), ("PICK02I0.IMG", inputs.Pick02I0Img),
                 ("PICK03I0.IMG", inputs.Pick03I0Img), ("PRIS00I0.IMG", inputs.Pris00I0Img), ("TITL00I0.IMG", inputs.Titl00I0Img),

@@ -32,14 +32,23 @@ Two areas promote icons rather than their own finals, each standing in for a cla
     image, which the `worn` area already replaces. An icon whose record has no accepted final stays classic.
   - `spells`: each accepted spell icon `icons--icon-NNN--icon` as `spell.icon.N`, cell N of the classic
     `spell.icons` atlas, and each accepted targeting and element tile as `spell.target.N` and `spell.element.N`, tile N
-    of the classic `spell.selectors` atlas. The missile and impact finals wait for the effects that draw them.
+    of the classic `spell.selectors` atlas.
+
+The `effects` area promotes the world effects the game animates: blood and the magic sparkle (TEXTURE.380, from the
+`effects` finals) and each spell element's missile and impact (TEXTURE.375-379, from the `spells` finals). Each
+effect becomes one PNG atlas (the renderer reads PNG) of its frames in classic order, all cropped to one box that
+holds every frame's art and the classic frame's place on the generation canvas, so the frames keep their relative
+size and position. The entry states where the classic frame sits in that box (`classic`, fractions of the frame,
+top-down), from which the game sizes and anchors it as the classic. An effect missing an accepted frame stays
+classic. The area also writes the soft white glow (`effectGlow`) the game's spell trails and impact bursts tint
+in each element's colour.
 
 Icons are written at their area's ICON pixels on the longer side and carry no doll rect.
 
 Only finals whose ledger/AREA-notes.json status is `accepted` are promoted. Rerunning an area replaces that
 area's entries and files and keeps every other area's.
 
-    promote.py --area paper-doll --area worn --area items --area spells
+    promote.py --area paper-doll --area worn --area items --area spells --area effects
 """
 import argparse, hashlib, io, json, re
 from pathlib import Path
@@ -55,7 +64,7 @@ CONTENT = REPOSITORY / "content"
 MEDIA = "worldrpg/media/refreshed"
 PAYLOAD = CONTENT / "worldrpg/payloads/daggerfall.art-replacements.json"
 QUALITY = 90
-AREAS = ("paper-doll", "worn", "items", "spells")
+AREAS = ("paper-doll", "worn", "items", "spells", "effects")
 ICON = {"items": 256, "spells": 128}   # pixels on an icon's longer side: an item slot, a spell glyph of about 3rem
 CLASSIC_MANIFEST = REPOSITORY / "local/import/staging/worldrpg/imports/shared/media/classic/manifest.json"
 IMPORTED = REPOSITORY / "local/import/staging/worldrpg/payloads/daggerfall.imported.json"
@@ -66,6 +75,19 @@ SPELL_ICON = re.compile(r"icons--icon-(\d+)--icon")
 SPELL_TILES = {**{f"targets--{name}--target-icon": f"spell.target.{index}" for index, name in enumerate(
     ("caster-only", "by-touch", "single-target-at-range", "area-around-caster", "area-at-range"))},
     **{f"elements--{name}--element-icon": f"spell.element.{index}" for index, name in enumerate(("fire", "cold", "poison", "shock", "magic"))}}
+# Each world effect's classic media id, and the area and art key of its finals (KEY-frame-NNN) and classic frames.
+WORLD_EFFECTS = {
+    **{f"effect.blood.{record}": ("effects", f"texture-380--effect--texture-380-record-{record:03d}", f"effects/texture-380/effect/texture-380-record-{record:03d}")
+       for record in range(3)},
+    "effect.sparkle.magic": ("effects", "texture-380--effect--texture-380-record-003", "effects/texture-380/effect/texture-380-record-003"),
+    **{f"effect.{kind}.{element}": ("spells", f"elements--{element}--world-effects--{folder}--texture-{archive}-record-{record:03d}",
+                                     f"spells/elements/{element}/world-effects/{folder}/texture-{archive}-record-{record:03d}")
+       for archive, element in zip(range(375, 380), ("fire", "cold", "poison", "shock", "magic"))
+       for kind, folder, record in (("missile", "projectile", 0), ("impact", "impact", 1))},
+}
+CANVAS, OCCUPANCY = 1024, 0.74   # the generation canvas and the share of it the classic frame filled (run.py)
+EFFECT_FRAME = 256               # pixels on an effect frame's longer side
+GLOW = 64                        # pixels on the particle glow's side
 CLOTHING = range(235, 243)
 NEUTRAL = (14, 32)   # saturation (max less min channel, 0-255) over which a pixel fades from dyed cloth to its own colour
 EDGE = 2             # pixels in from the piece's edge where its dye mask starts
@@ -223,6 +245,71 @@ def spell_icons():
             if (final := accepted_final("spells", notes, key))]
 
 
+def classic_box(source):
+    """Where run.py placed a classic frame on the generation canvas: an integer nearest-neighbour scale, centred."""
+    w, h = Image.open(source).size
+    scale = max(1, int(CANVAS * OCCUPANCY / max(w, h)))
+    x, y = (CANVAS - w * scale) // 2, (CANVAS - h * scale) // 2
+    return x, y, x + w * scale, y + h * scale
+
+
+def world_effects():
+    """An atlas entry for every world effect whose every frame has an accepted final."""
+    entries, classic = [], []
+    for media, (area, key, raw) in sorted(WORLD_EFFECTS.items()):
+        notes = ledger(area)
+        sources = sorted((AUTHORING / "df-raw").glob(f"{raw}-frame-*.png"))
+        finals = [accepted_final(area, notes, f"{key}-frame-{frame:03d}") for frame in range(len(sources))]
+        if not sources or None in finals:
+            classic.append(media)
+            continue
+        boxes = {classic_box(source) for source in sources}
+        if len(boxes) != 1:
+            raise SystemExit(f"{media}: the classic frames differ in size, so no one box places them.")
+        region = boxes.pop()
+        frames = [Image.open(final).convert("RGBA") for final in finals]
+        box = region
+        for frame in frames:
+            if (art := frame.getchannel("A").getbbox()) is not None:
+                box = (min(box[0], art[0]), min(box[1], art[1]), max(box[2], art[2]), max(box[3], art[3]))
+        width, height = box[2] - box[0], box[3] - box[1]
+        k = min(1, EFFECT_FRAME / max(width, height))
+        size = (max(1, round(width * k)), max(1, round(height * k)))
+        columns = int(np.ceil(np.sqrt(len(frames))))
+        atlas = Image.new("RGBA", (columns * size[0], int(np.ceil(len(frames) / columns)) * size[1]))
+        rects = []
+        for index, frame in enumerate(frames):
+            x, y = index % columns * size[0], index // columns * size[1]
+            atlas.paste(frame.crop(box).resize(size, Image.Resampling.LANCZOS), (x, y))
+            rects.append({"x": x, "y": y, "width": size[0], "height": size[1]})
+        buffer = io.BytesIO()
+        atlas.save(buffer, "PNG", optimize=True)
+        data = buffer.getvalue()
+        target = f"{MEDIA}/effects/{media.replace('.', '-')}.png"
+        (CONTENT / target).write_bytes(data)
+        entries.append({"replaces": media, "path": target, "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest(),
+                        "width": atlas.width, "height": atlas.height, "frames": rects,
+                        "classic": {"x": round((region[0] - box[0]) / width, 4), "y": round((region[1] - box[1]) / height, 4),
+                                    "width": round((region[2] - region[0]) / width, 4), "height": round((region[3] - region[1]) / height, 4)}})
+    if classic:
+        print(f"effects: {len(classic)} effects stay classic, a frame has no accepted final: {', '.join(classic)}")
+    return entries
+
+
+def effect_glow():
+    """A soft round white glow, opaque at its centre and fading to nothing at its edge."""
+    y, x = np.mgrid[:GLOW, :GLOW]
+    r = np.hypot(x - (GLOW - 1) / 2, y - (GLOW - 1) / 2) / (GLOW / 2)
+    alpha = (np.clip(1 - r, 0, 1) ** 2 * 255).round().astype(np.uint8)
+    image = Image.merge("RGBA", (*[Image.new("L", (GLOW, GLOW), 255)] * 3, Image.fromarray(alpha)))
+    buffer = io.BytesIO()
+    image.save(buffer, "PNG", optimize=True)
+    data = buffer.getvalue()
+    target = f"{MEDIA}/effects/glow.png"
+    (CONTENT / target).write_bytes(data)
+    return {"path": target, "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+
+
 def icon_entry(replaces, image, name):
     return {"replaces": replaces, "mediaId": f"refreshed.{replaces}", **webp(image, f"{MEDIA}/{name}.webp"),
             "width": image.width, "height": image.height}
@@ -235,6 +322,15 @@ def main():
     payload = json.loads(PAYLOAD.read_text()) if PAYLOAD.exists() else {"artReplacements": {"images": []}}
     images = payload["artReplacements"]["images"]
     for area in a.area:
+        if area == "effects":
+            directory = CONTENT / MEDIA / "effects"
+            directory.mkdir(parents=True, exist_ok=True)
+            for old in directory.glob("*.png"):
+                old.unlink()
+            effects = payload["artReplacements"]["effects"] = world_effects()
+            payload["artReplacements"]["effectGlow"] = effect_glow()
+            print(f"effects: {len(effects)} effects, {sum(entry['byteLength'] for entry in effects) / 1e6:.1f} MB", flush=True)
+            continue
         notes = ledger(area)
         accepted = sorted(key for key, note in notes.items() if note.get("status") == "accepted")
         directory = CONTENT / MEDIA / area

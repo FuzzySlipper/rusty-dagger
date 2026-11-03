@@ -50,6 +50,7 @@ public sealed class Arena2SiteSources
         "MAP.PAL",
         .. MapMediaNames,
         "TEXTURE.380", "TEXTURE.205", "TEXTURE.216",
+        "TEXTURE.375", "TEXTURE.376", "TEXTURE.377", "TEXTURE.378", "TEXTURE.379",
         "PAL.PAL",
     ];
 
@@ -198,7 +199,8 @@ public sealed class Arena2SiteSources
         [.. MapMediaNames.Order(StringComparer.Ordinal).Select(name => new MapMediaInput(name, Require(name)))],
         Require("FMAP_PAL.COL"),
         Require("MAP.PAL"),
-        [.. worldVisualTextureLeaves.Select(leaf => new ClassicMissileTextureLeaf(leaf.Key, leaf.Value))], Require("TEXTURE.205"));
+        [.. worldVisualTextureLeaves.Select(leaf => new ClassicMissileTextureLeaf(leaf.Key, leaf.Value))], Require("TEXTURE.205"),
+        Require("TEXTURE.375"), Require("TEXTURE.376"), Require("TEXTURE.377"), Require("TEXTURE.378"), Require("TEXTURE.379"));
 
     /// <summary>
     /// Builds a publication, loading the dungeon source or texture leaves a normalizer reports missing and

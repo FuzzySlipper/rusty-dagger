@@ -1373,7 +1373,7 @@ public sealed record Arena2MediaBundlePublication(
 
             if (effect.SourceRecordOrdinal != Arena2ClassicMediaPublication.ExpectedEffectSourceRecordOrdinal(effect.Effect))
             {
-                throw new InvalidOperationException("Classic effect metadata must retain its fixed TEXTURE.380 source record.");
+                throw new InvalidOperationException("Classic effect metadata must retain its fixed source record.");
             }
 
             if (!media.TryGetValue(effect.MediaId, out NormalizedMediaDescriptor? descriptor)
