@@ -34,8 +34,11 @@ internal sealed record DaggerfallArtRect(double X, double Y, double Width, doubl
 internal sealed record DaggerfallEffectArt(string Replaces, string Path, ContentSha256 Sha256, int Width, int Height,
     IReadOnlyList<DaggerfallArtRect> Frames, DaggerfallArtRect Classic);
 
-/// <summary>A published texture of the refreshed set: its path and digest.</summary>
-internal sealed record DaggerfallArtTexture(string Path, ContentSha256 Sha256);
+/// <summary>A published file of the refreshed set: its path and digest.</summary>
+internal sealed record DaggerfallArtFile(string Path, ContentSha256 Sha256);
+
+/// <summary>A refreshed mesh standing in for a classic sprite cut from one texture record: the GLB, scaled to the sprite's world size and resting on the floor.</summary>
+internal sealed record DaggerfallArtMesh(int Archive, int Record, DaggerfallArtFile File);
 
 /// <summary>
 /// How refreshed clothing, painted neutral, is drawn in one classic dye, or refreshed armour or a weapon, in bare
@@ -55,8 +58,9 @@ internal sealed class DaggerfallArtReplacements
     private readonly Dictionary<string, DaggerfallArtReplacement> _byClassic;
 
     private DaggerfallArtReplacements(Dictionary<string, DaggerfallArtReplacement> byClassic, IReadOnlyDictionary<string, DaggerfallDyeTint> tints,
-        IReadOnlyDictionary<string, DaggerfallEffectArt> effects, DaggerfallArtTexture? effectGlow)
+        IReadOnlyDictionary<string, DaggerfallEffectArt> effects, DaggerfallArtFile? effectGlow, DaggerfallArtMesh? corpseMesh)
     {
+        CorpseMesh = corpseMesh;
         _byClassic = byClassic;
         Tints = tints;
         Effects = effects;
@@ -67,7 +71,10 @@ internal sealed class DaggerfallArtReplacements
     internal IReadOnlyDictionary<string, DaggerfallEffectArt> Effects { get; }
 
     /// <summary>The soft white glow the refreshed spell trails and impact bursts tint, when the set has effects.</summary>
-    internal DaggerfallArtTexture? EffectGlow { get; }
+    internal DaggerfallArtFile? EffectGlow { get; }
+
+    /// <summary>The mesh drawn in place of the corpse every human enemy class shares, so it is no one in particular.</summary>
+    internal DaggerfallArtMesh? CorpseMesh { get; }
 
     /// <summary>Every replacement.</summary>
     internal IEnumerable<DaggerfallArtReplacement> All => _byClassic.Values;
@@ -95,7 +102,8 @@ internal sealed class DaggerfallArtReplacements
         HashSet<string> ids = new(StringComparer.Ordinal);
         Dictionary<string, DaggerfallDyeTint> tints = new(StringComparer.Ordinal);
         Dictionary<string, DaggerfallEffectArt> effects = new(StringComparer.Ordinal);
-        DaggerfallArtTexture? glow = null;
+        DaggerfallArtFile? glow = null;
+        DaggerfallArtMesh? corpseMesh = null;
         try
         {
             using JsonDocument document = JsonDocument.Parse(payload);
@@ -146,13 +154,16 @@ internal sealed class DaggerfallArtReplacements
                 }
             if (section.TryGetProperty("effectGlow", out JsonElement glowValue))
                 glow = new(glowValue.GetProperty("path").GetString()!, DaggerfallContentHash.Parse(glowValue.GetProperty("sha256").GetString()!, "The refreshed effect glow"));
+            if (section.TryGetProperty("corpseMesh", out JsonElement mesh))
+                corpseMesh = new(mesh.GetProperty("replaces").GetProperty("archive").GetInt32(), mesh.GetProperty("replaces").GetProperty("record").GetInt32(),
+                    new(mesh.GetProperty("path").GetString()!, DaggerfallContentHash.Parse(mesh.GetProperty("sha256").GetString()!, "The refreshed corpse mesh")));
         }
         catch (Exception exception) when (exception is JsonException or KeyNotFoundException or FormatException)
         {
             throw new InvalidOperationException($"Content pack '{packId}' carries an unreadable artReplacements section: {exception.Message}", exception);
         }
 
-        return new DaggerfallArtReplacements(byClassic, tints, effects, glow);
+        return new DaggerfallArtReplacements(byClassic, tints, effects, glow, corpseMesh);
 
         static DaggerfallArtRect Rect(JsonElement rect) => new(rect.GetProperty("x").GetDouble(), rect.GetProperty("y").GetDouble(),
             rect.GetProperty("width").GetDouble(), rect.GetProperty("height").GetDouble());

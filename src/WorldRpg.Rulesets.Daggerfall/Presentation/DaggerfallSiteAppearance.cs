@@ -429,12 +429,15 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         foreach (ActorVisual visual in actors.Values)
         {
             if (!state.TryGet(visual.EntityId, out ActorState? actor)) continue;
-            Appearance? chosen = actor.IsDefeated ? visual.Corpse : visual.Live;
+            Appearance? chosen = actor.IsDefeated ? DrawnCorpse(visual) : visual.Live;
             if (chosen is null) continue;
+            // A corpse mesh lies along its creature's heading; a billboard turns to the camera on its own.
+            Quaternion rotation = actor.IsDefeated && chosen == visual.CorpseMesh
+                ? Quaternion.CreateFromAxisAngle(Vector3.UnitY, -actor.HeadingYawRadians) : Quaternion.Identity;
             ulong id = slot == DaggerfallPresentationObjectIds.ActiveLocationSlot
                 ? DaggerfallPresentationObjectIds.Gameplay(actor.DurableId, "Actor")
                 : DaggerfallPresentationObjectIds.LocationVisual(slot, visual.LocationOrdinal);
-            facts.Add(new AppearanceFact(id, false, 0, new Transform(actor.Position.ToVector(), Quaternion.Identity, Vector3.One), chosen,
+            facts.Add(new AppearanceFact(id, false, 0, new Transform(actor.Position.ToVector(), rotation, Vector3.One), chosen,
                 actorActive?.Invoke(actor.DurableId) != false && (actor.IsDefeated || perception?.Invoke(actor.DurableId).Invisible != true), RenderLayer.Scene));
         }
     }
@@ -1097,6 +1100,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             (corpseAtlas, corpse) = CreateSprite(content, authoredCorpse);
         }
         ActorVisual visual = new(entityId, sprite, atlas, live, corpseAtlas, corpse) { LocationOrdinal = NextLocationVisualOrdinal() };
+        AttachCorpseMesh(visual);
         StartState(entityId, PreferredRestState(sprite), visual);
         return visual;
         }
@@ -1648,6 +1652,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         internal Appearance? Live { get; set; } = live;
         internal SpriteAtlas? CorpseAtlas { get; } = corpseAtlas;
         internal Appearance? Corpse { get; } = corpse;
+        /// <summary>The refreshed mesh drawn in place of a shared corpse sprite, when the refreshed set has one.</summary>
+        internal Appearance? CorpseMesh { get; set; }
         internal SpritePlayback? Playback { get; set; }
         internal string State { get; set; } = string.Empty;
         internal bool Defeated { get; set; }
@@ -1668,6 +1674,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             if (Live is { } live) DaggerfallSiteAppearance.Dispose(live, ref failures);
             Live = null;
             if (Corpse is { } corpse) DaggerfallSiteAppearance.Dispose(corpse, ref failures);
+            if (CorpseMesh is { } mesh) DaggerfallSiteAppearance.Dispose(mesh, ref failures);
+            CorpseMesh = null;
         }
     }
 

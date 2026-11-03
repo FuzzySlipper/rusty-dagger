@@ -10,8 +10,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// World effects drawn in refreshed art, and the spells in flight. A spell flies as its element's missile and lands
 /// as its impact, both classic animated sprites. With refreshed art each effect draws its refreshed atlas at the
 /// classic world size and anchor, the bright elements (fire, shock, magic) and the sparkle added to the scene rather
-/// than laid over it, and a flying spell trails glowing particles that burst where it lands. Classic art draws the
-/// classic sprites alone.
+/// than laid over it, and a flying spell trails glowing particles that burst where it lands. A human enemy whose corpse is
+/// the sprite every human class shares lies as the refreshed bone pile mesh instead, which is no one in particular. Classic art draws the classic
+/// sprites alone.
 /// </summary>
 internal sealed partial class DaggerfallSiteAppearance
 {
@@ -20,6 +21,8 @@ internal sealed partial class DaggerfallSiteAppearance
     private Func<bool> drawRefreshedEffects = () => false;
     private IPresentationService? particles;
     private RenderResource? particleGlow;
+    private IAnimationService? meshes;
+    private (RenderResource Model, int Archive, int Record)? corpseMesh;
 
     /// <summary>
     /// Admits the refreshed set's world effects and particle glow, drawn whenever <paramref name="refreshed"/> answers
@@ -27,9 +30,10 @@ internal sealed partial class DaggerfallSiteAppearance
     /// </summary>
     /// <exception cref="InvalidOperationException">A refreshed effect does not have its classic effect's frame count,
     /// so its classic sequence would play the wrong frames.</exception>
-    internal void UseEffectArt(IPresentationService presentation, DaggerfallArtReplacements art, Func<bool> refreshed)
+    internal void UseEffectArt(IPresentationService presentation, IAnimationService animation, DaggerfallArtReplacements art, Func<bool> refreshed)
     {
         particles = presentation;
+        meshes = animation;
         drawRefreshedEffects = refreshed;
         foreach (NormalizedClassicEffect effect in classicEffects.Values.OrderBy(effect => effect.Name, StringComparer.Ordinal))
         {
@@ -46,7 +50,26 @@ internal sealed partial class DaggerfallSiteAppearance
             ownedResources.Add(texture.Handle);
             particleGlow = texture.Handle;
         }
+        if (art.CorpseMesh is { } mesh)
+        {
+            using ContentReference reference = content.ResolveReference(new ContentResolveRequest(mesh.File.Path, mesh.File.Sha256));
+            RenderResource model = animation.OpenAnimatedMeshFromContent(new(reference));
+            ownedResources.Add(model);
+            corpseMesh = (model, mesh.Archive, mesh.Record);
+            foreach (ActorVisual visual in actors.Values) AttachCorpseMesh(visual);
+        }
     }
+
+    /// <summary>Gives an actor whose corpse is the shared sprite its own appearance of the refreshed corpse mesh.</summary>
+    private void AttachCorpseMesh(ActorVisual visual)
+    {
+        if (corpseMesh is not { } mesh || meshes is null || visual.CorpseMesh is not null
+            || visual.Sprite.Corpse?.SourceTexture != (mesh.Archive, mesh.Record)) return;
+        visual.CorpseMesh = meshes.CreateAnimatedMeshAppearance(new(mesh.Model));
+    }
+
+    /// <summary>The corpse a defeated actor shows: the refreshed mesh while refreshed art is drawn, else its sprite.</summary>
+    private Appearance? DrawnCorpse(ActorVisual visual) => drawRefreshedEffects() && visual.CorpseMesh is { } mesh ? mesh : visual.Corpse;
 
     private static bool Additive(string effect) => effect == "magicSparkle"
         || effect.StartsWith("fire", StringComparison.Ordinal) || effect.StartsWith("shock", StringComparison.Ordinal) || effect.StartsWith("magic", StringComparison.Ordinal);
