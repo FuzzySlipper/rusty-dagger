@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """Paints a built weapon in its icon's own colours on a grid of world cells: the crunch treatment.
 
-  python3 authoring/tools/weapons/paint.py BUILD_DIR ICON.png OUT_DIR --cell 0.003 [--steps 5] [--dither 0.2]
-      [--light 0.15] [--size 256]
+  python3 authoring/tools/weapons/paint.py BUILD_DIR ICON.png OUT_DIR [--cell 0.002] [--steps 6] [--dither 0.2]
+      [--light 0.15] [--size 512]
 
 BUILD_DIR is build.py's output. Each part is a palette_cells.py region (asset-pipeline tools/texture-edit),
 constrained to its own object and harvesting a ramp of `--steps` colours from its own icon pixels, so a cell
 --cell metres across takes one flat colour from that ramp by the icon's brightness there, a soft light and an
-ordered dither. A part's `light` in the spec
-overrides --light: a round part the flat icon says little about (a mace's ball) takes more of the soft light. Writes OUT_DIR/model.glb (build.py's model with the painted `metal` and `trim` textures, sampled
-nearest, matte) and palette_cells' report.
+ordered dither. The defaults are the set's `crunch` in authoring/specs/weapons/weapons.json (Patch chose 2 mm
+cells); the options exist to compare treatments. A part's `light` in the spec overrides --light: a round part the
+flat icon says little about (a mace's ball) takes more of the soft light. Writes OUT_DIR/model.glb (build.py's
+model with the painted `metal` and `trim` textures, sampled nearest, matte) and palette_cells' report.
 """
 import argparse
 import json
@@ -21,15 +22,16 @@ PIPELINE = Path(os.environ.get('ASSET_PIPELINE', Path(__file__).resolve().parent
 
 
 def main():
+    crunch = json.loads((Path(__file__).resolve().parents[2] / 'specs/weapons/weapons.json').read_text())['crunch']
     parser = argparse.ArgumentParser()
     parser.add_argument('build', type=Path)
     parser.add_argument('icon', type=Path)
     parser.add_argument('out', type=Path)
-    parser.add_argument('--cell', type=float, required=True)
-    parser.add_argument('--steps', type=int, default=5)
-    parser.add_argument('--dither', type=float, default=0.2)
-    parser.add_argument('--light', type=float, default=0.15, help='weight of the soft light against the icon brightness')
-    parser.add_argument('--size', type=int, default=256)
+    parser.add_argument('--cell', type=float, default=crunch['cell'])
+    parser.add_argument('--steps', type=int, default=crunch['steps'])
+    parser.add_argument('--dither', type=float, default=crunch['dither'])
+    parser.add_argument('--light', type=float, default=crunch['light'], help='weight of the soft light against the icon brightness')
+    parser.add_argument('--size', type=int, default=crunch['size'])
     args = parser.parse_args()
     build, out = args.build.resolve(), args.out.resolve()
     out.mkdir(parents=True, exist_ok=True)

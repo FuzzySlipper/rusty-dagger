@@ -134,12 +134,15 @@ public sealed class DaggerfallHeldArtTests
     internal static JsonObject Document() =>
         JsonNode.Parse(File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content", DaggerfallHeldArt.DocumentPath)))!.AsObject();
 
-    // The definition read over a container that carries the given models (by default both arms).
+    // The definition read over a container that carries the given models (by default what scripts/fp-arms/build.sh
+    // packs: both arms and the committed weapon models).
     internal static DaggerfallHeldArt Read(JsonObject document, string[]? models = null)
     {
         BundleContentFake service = new();
         service.Container(DaggerfallHeldArt.ContainerName);
-        foreach (string model in models ?? ["first-person/arms.glb", "first-person/arms-retro.glb"])
+        string[] weapons = Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/first-person/weapons"), "*.glb")
+            .Select(path => $"first-person/weapons/{Path.GetFileName(path)}").ToArray();
+        foreach (string model in models ?? ["first-person/arms.glb", "first-person/arms-retro.glb", .. weapons])
             service.Add(DaggerfallHeldArt.ContainerName, model, [7]);
         ProductContentBundle container = new ProductContent(Array.Empty<ProductContentFile>(), service).OpenContainer(DaggerfallHeldArt.ContainerName);
         return DaggerfallHeldArt.Read(container, System.Text.Encoding.UTF8.GetBytes(document.ToJsonString()));
