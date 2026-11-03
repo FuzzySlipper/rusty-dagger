@@ -15,8 +15,10 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// </summary>
 internal sealed partial class DaggerfallSiteAppearance
 {
-    // A refreshed item image's atlas and tint mask, by its world PNG's path, opened once per location.
-    private readonly Dictionary<string, (SpriteAtlas Atlas, RenderResource? Mask)> groundItemAtlases = new(StringComparer.Ordinal);
+    // A refreshed item image's atlas, and a tint mask's texture, each by its world PNG's path, opened once per location.
+    // They are apart because items in different metals or dyes, and the untinted one, share one image.
+    private readonly Dictionary<string, SpriteAtlas> groundItemAtlases = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, RenderResource> groundItemMasks = new(StringComparer.Ordinal);
 
     /// <summary>A ground pile's billboard, what it stands as (a treasure pile's index or an item's look), and how far it is lifted to stand on the floor.</summary>
     internal sealed record GroundVisual(BillboardVisual Billboard, object Look, float Lift);
@@ -78,7 +80,8 @@ internal sealed partial class DaggerfallSiteAppearance
         float metresPerPixel = pile.Size.Y / pile.Frames.Single(frame => frame.Id == pile.InitialFrameId).Height;
         float height = (float)look.ClassicHeight * (look.Doll ? MetresPerDollUnit : metresPerPixel);
         Vector2 size = new(height * look.Image.Width / look.Image.Height, height);
-        (SpriteAtlas atlas, RenderResource? mask) = GroundItemAtlas(look);
+        SpriteAtlas atlas = GroundItemAtlas(look.Image);
+        RenderResource? mask = look.Mask is { } image ? GroundItemMask(image) : null;
         Color tint = look.Color is { } color ? Linear(color, look.Brightness) : new Color(1F, 1F, 1F, 1F);
         SpriteFromAtlasRequest request = new(atlas, 0, new Vector2(.5F, 0F), size, BillboardMode.Cylindrical, SpriteSizeMode.World, 0,
             SpriteDepthPolicy.Default, tint);
@@ -88,23 +91,25 @@ internal sealed partial class DaggerfallSiteAppearance
         return (appearance.CreateSpriteFromAtlas(request), 0F);
     }
 
-    private (SpriteAtlas Atlas, RenderResource? Mask) GroundItemAtlas(DaggerfallGroundItemLook look)
+    private SpriteAtlas GroundItemAtlas(DaggerfallArtWorldImage image)
     {
-        if (groundItemAtlases.TryGetValue(look.Image.File.Path, out var opened)) return opened;
-        RenderResourceInfo texture = appearance.OpenTexture(content, look.Image.File.Path, look.Image.File.Sha256, TextureFilter.Linear);
+        if (groundItemAtlases.TryGetValue(image.File.Path, out SpriteAtlas? opened)) return opened;
+        RenderResourceInfo texture = appearance.OpenTexture(content, image.File.Path, image.File.Sha256, TextureFilter.Linear);
         ownedResources.Add(texture.Handle);
         SpriteAtlas atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle,
-            SpriteAtlasAdapter.ToAtlasFrames(look.Image.Width, look.Image.Height, [new NormalizedSpriteFrame(0, 0, 0, look.Image.Width, look.Image.Height)])));
+            SpriteAtlasAdapter.ToAtlasFrames(image.Width, image.Height, [new NormalizedSpriteFrame(0, 0, 0, image.Width, image.Height)])));
         atlases.Add(atlas);
-        RenderResource? mask = null;
-        if (look.Mask is { } image)
-        {
-            RenderResourceInfo maskTexture = appearance.OpenTexture(content, image.File.Path, image.File.Sha256, TextureFilter.Linear);
-            ownedResources.Add(maskTexture.Handle);
-            mask = maskTexture.Handle;
-        }
-        groundItemAtlases.Add(look.Image.File.Path, (atlas, mask));
-        return (atlas, mask);
+        groundItemAtlases.Add(image.File.Path, atlas);
+        return atlas;
+    }
+
+    private RenderResource GroundItemMask(DaggerfallArtWorldImage mask)
+    {
+        if (groundItemMasks.TryGetValue(mask.File.Path, out RenderResource? opened)) return opened;
+        RenderResourceInfo texture = appearance.OpenTexture(content, mask.File.Path, mask.File.Sha256, TextureFilter.Linear);
+        ownedResources.Add(texture.Handle);
+        groundItemMasks.Add(mask.File.Path, texture.Handle);
+        return texture.Handle;
     }
 
     /// <summary>

@@ -149,6 +149,8 @@ public sealed class SiteAppearanceLifecycleTests
         ContentFake content = MediaContent(releases);
         content.Add("refreshed/item.png", Hash);
         content.Add("refreshed/item-dye.png", Hash);
+        content.Add("refreshed/shared.png", Hash);
+        content.Add("refreshed/shared-dye.png", Hash);
         AppearanceFake appearance = new(releases);
         NormalizedBillboardSprite small = new("sprite/treasure.png", Hash, 39, 26,
             [new NormalizedAtlasFrame(0, 0, 0, 39, 26)], 0, new Vector2(.5F, .5F), new Vector2(.975F, .65F));
@@ -179,6 +181,15 @@ public sealed class SiteAppearanceLifecycleTests
         Assert.Equal(new Color(1F, (float)Math.Pow(128 / 255d, 2.2), 0F, 1F), item.Tint);
         Assert.NotEqual(default, item.Material.TintMask);
         Assert.Equal(odd.Position.ToVector(), Assert.Single(appearance.Snapshots.Last(), fact => fact.ObjectId == (ulong)odd.Id).Transform.Translation);
+
+        // The same image untinted (bare steel) and then in a metal: the metal still draws through its mask, whichever
+        // opened the shared image first.
+        DaggerfallGroundItemLook metal = look with { Image = new(new("refreshed/shared.png", Hash), 64, 128, null),
+            Mask = new(new("refreshed/shared-dye.png", Hash), 64, 128, null) };
+        presentation.Publish(actors, piles, groundLook: id => id == odd.Id ? metal with { Mask = null, Color = null } : null);
+        Assert.Equal(default, appearance.SpriteRequests.Last().Material.TintMask);
+        presentation.Publish(actors, piles, groundLook: id => id == odd.Id ? metal : null);
+        Assert.NotEqual(default, appearance.SpriteRequests.Last().Material.TintMask);
 
         // A worn item's image is sized in doll units, at a body's scale: 65 units are .65 m.
         presentation.Publish(actors, piles, groundLook: id => id == odd.Id ? look with { ClassicHeight = 65, Doll = true } : null);

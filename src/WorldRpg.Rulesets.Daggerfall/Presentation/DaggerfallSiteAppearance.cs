@@ -847,6 +847,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         atlases.Clear();
         groundContainerAtlases.Clear();
         groundItemAtlases.Clear();
+        groundItemMasks.Clear();
         ReleaseLocationResources(ref failures);
         foreach (Material material in materials.AsEnumerable().Reverse()) Dispose(material, ref failures);
         materials.Clear();
