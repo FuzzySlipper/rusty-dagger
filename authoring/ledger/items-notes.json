@@ -806,5 +806,13 @@
  "texture-205-record-035-frame-000": {
   "status": "accepted",
   "note": "Recipe potion bottle, converted on 2026-11-02 (items-icons-potion-bottles) from the import's published classic icon, which the items export does not carry; Patch accepted it on 2026-11-02."
+ },
+ "texture-201-record-000-frame-000": {
+  "status": "accepted",
+  "note": "Horse (template 94) inventory icon, from the export's player role, outside the 147 world frames; converted on 2026-11-03 (items-icons-player-icons, den-nimo) and accepted by Patch on 2026-11-03."
+ },
+ "texture-209-record-003-frame-000": {
+  "status": "accepted",
+  "note": "Book (template 277) variant 1 inventory icon, the green cover, from the export's player role, outside the 147 world frames; converted on 2026-11-03 (items-icons-player-icons, den-nimo) and accepted by Patch on 2026-11-03."
  }
 }
