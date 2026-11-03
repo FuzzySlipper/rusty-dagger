@@ -5,7 +5,8 @@
             palette (ART_PAL.COL) chosen for this image, without dithering: crisp up-res pixel art in a PC-era palette.
   winter    a winter record as its refreshed summer with the classic winter's own snow and ice laid over, pixels doubled
             square, wherever the classic winter is brighter in every channel than the classic summer. No generation, so
-            winter is the summer surface unchanged under the classic's snow.
+            winter is the summer surface unchanged under the classic's snow. Only where the classic winter is its summer
+            under snow (snowed); some winter records are another picture (a different shelf, a plain wall for a door).
   wraps     whether a classic record repeats across each axis: its opposite edges differ no more than its neighbouring
             pixels do (WRAP times), which says how it was meant to tile.
 """
@@ -20,6 +21,7 @@ COLOURS = 32
 SCALE = 2
 WRAP = 1.6
 SNOW = 24
+SNOWED = 0.6
 
 _srgb, _lab = ImageCms.createProfile("sRGB"), ImageCms.createProfile("LAB")
 _to_lab = ImageCms.buildTransformFromOpenProfiles(_srgb, _lab, "RGB", "LAB")
@@ -82,6 +84,17 @@ def winter(summer_refreshed, summer_classic, winter_classic):
     out = np.asarray(summer_refreshed.convert("RGB"), np.uint8).copy()
     out[mask] = overlay[mask]
     return Image.fromarray(out)
+
+
+def snowed(summer_classic, winter_classic):
+    """Whether a classic winter is its summer under snow: the same size, and at least SNOWED of the pixels it does not
+    snow over within SNOW of the summer's (snow variants measure 0.6 and up, redrawn records 0.58 and below)."""
+    if summer_classic.size != winter_classic.size:
+        return False
+    s = np.asarray(summer_classic.convert("RGB"), np.int16)
+    w = np.asarray(winter_classic.convert("RGB"), np.int16)
+    bare = (w.min(-1) - s.min(-1)) <= SNOW
+    return not bare.any() or (np.abs(w - s).max(-1)[bare] <= SNOW).mean() >= SNOWED
 
 
 def wraps(classic):
