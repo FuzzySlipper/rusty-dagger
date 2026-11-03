@@ -3642,6 +3642,26 @@
     }
    },
    {
+    "replaces": "item.201.0",
+    "mediaId": "refreshed.item.201.0",
+    "path": "worldrpg/media/refreshed/items/item.201.0.webp",
+    "byteLength": 12384,
+    "sha256": "03c15b22d8907928fa81df916da97d09271d5fb708c8c2fabc20ce7a4ff92f86",
+    "width": 256,
+    "height": 233,
+    "world": {
+     "path": "worldrpg/media/refreshed/items/item.201.0.png",
+     "byteLength": 11647,
+     "sha256": "382bf50a51cb47fa42c2b733abba7e9a49b15afa54864aa396ff9989678d1254",
+     "width": 128,
+     "height": 116,
+     "classic": {
+      "width": 85,
+      "height": 88
+     }
+    }
+   },
+   {
     "replaces": "item.202.0",
     "mediaId": "refreshed.item.202.0",
     "path": "worldrpg/media/refreshed/items/item.202.0.webp",
@@ -4137,6 +4157,26 @@
      "height": 128,
      "classic": {
       "width": 39,
+      "height": 15
+     }
+    }
+   },
+   {
+    "replaces": "item.209.3",
+    "mediaId": "refreshed.item.209.3",
+    "path": "worldrpg/media/refreshed/items/item.209.3.webp",
+    "byteLength": 6914,
+    "sha256": "48d659347f19089815a84e4cfe3a7322714be7d1e46667ae3a2c56a951352dd5",
+    "width": 256,
+    "height": 200,
+    "world": {
+     "path": "worldrpg/media/refreshed/items/item.209.3.png",
+     "byteLength": 8068,
+     "sha256": "f24657a7c248820a29949c381daa603ea25678d9c909fe71212722bfa084518f",
+     "width": 128,
+     "height": 100,
+     "classic": {
+      "width": 38,
       "height": 15
      }
     }
