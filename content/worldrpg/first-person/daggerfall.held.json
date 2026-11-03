@@ -216,8 +216,6 @@
       "weapons": [
         "weapon.longblade",
         "weapon.axe",
-        "weapon.mace",
-        "weapon.flail",
         "weapon.warhammer"
       ],
       "look": {
@@ -288,6 +286,83 @@
             "strike": 0.165,
             "recover": 0.596,
             "end": 0.812
+          },
+          "fade": 0.1
+        }
+      }
+    },
+    "sns": {
+      "weapons": [
+        "weapon.mace",
+        "weapon.flail"
+      ],
+      "look": {
+        "model": null,
+        "grip": [0.0029, 0.0012, 0.0011],
+        "hold": [6.98, -87.91, 35.78]
+      },
+      "idle": {
+        "clip": "FPP_sns_Idle",
+        "seconds": 4.6333
+      },
+      "strikes": {
+        "strikeDown": {
+          "clip": "FPP_sns_AttackHeavyU",
+          "marks": {
+            "start": 0,
+            "strike": 0.474,
+            "recover": 0.815,
+            "end": 0.985
+          },
+          "fade": 0.1
+        },
+        "strikeDownLeft": {
+          "clip": "FPP_sns_Attack_RD",
+          "marks": {
+            "start": 0,
+            "strike": 0.167,
+            "recover": 0.633,
+            "end": 0.867
+          },
+          "fade": 0.1
+        },
+        "strikeLeft": {
+          "clip": "FPP_sns_Attack_RU",
+          "marks": {
+            "start": 0,
+            "strike": 0.244,
+            "recover": 0.674,
+            "end": 0.889
+          },
+          "fade": 0.1
+        },
+        "strikeRight": {
+          "clip": "FPP_sns_Attack_LU",
+          "marks": {
+            "start": 0,
+            "strike": 0.233,
+            "recover": 0.715,
+            "end": 0.956
+          },
+          "fade": 0.1
+        },
+        "strikeDownRight": {
+          "clip": "FPP_sns_AttackHeavyL",
+          "marks": {
+            "start": 0,
+            "strike": 0.425,
+            "recover": 0.78,
+            "end": 0.958
+          },
+          "fade": 0.1
+        },
+        "strikeUp": {
+          "clip": "FPP_sns_Attack_F",
+          "marks": {
+            "start": 0,
+            "strike": 0.187,
+            "recover": 0.622,
+            "end": 0.84
           },
           "fade": 0.1
         }

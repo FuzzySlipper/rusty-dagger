@@ -23,6 +23,8 @@ public sealed class DaggerfallHeldArtTests
         Assert.Equal("dagger", art.Family("weapon.dagger.steel"));
         Assert.Equal("longsword", art.Family("weapon.longblade"));
         Assert.Equal("longsword", art.Family("weapon.warhammer"));
+        Assert.Equal("sns", art.Family("weapon.mace"));
+        Assert.Equal("sns", art.Family("weapon.flail"));
         Assert.Equal("halberd", art.Family("weapon.staff"));
         Assert.Null(art.Family("weapon.bow"));
         Assert.Empty(art.Document.Rig.Problems());
@@ -46,12 +48,13 @@ public sealed class DaggerfallHeldArtTests
     public void Only_a_family_held_in_both_hands_or_a_strike_it_lists_moves_the_off_hand()
     {
         DaggerfallHeldArt art = Read(Document());
-        DaggerfallHeldFamily dagger = art.Document.Families["dagger"], sword = art.Document.Families["longsword"];
+        DaggerfallHeldFamily dagger = art.Document.Families["dagger"], sword = art.Document.Families["longsword"], mace = art.Document.Families["sns"];
 
         Assert.False(dagger.MovesLeft(null));
         Assert.False(dagger.MovesLeft("strikeDown"));
         Assert.True(sword.MovesLeft(null));
         Assert.True(sword.MovesLeft("strikeDown"));
+        Assert.False(mace.MovesLeft("strikeDown"));
         Assert.True((dagger with { LeftHand = ["strikeDown"] }).MovesLeft("strikeDown"));
     }
 

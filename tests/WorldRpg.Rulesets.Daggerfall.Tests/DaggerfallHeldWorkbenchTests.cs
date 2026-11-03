@@ -47,7 +47,7 @@ public sealed class DaggerfallHeldWorkbenchTests
         authored["families"]!["dagger"]!["strikes"]!.AsObject().Remove("strikeLeft");
         DaggerfallHeldWorkbench workbench = new(DaggerfallHeldArtTests.Read(authored), DaggerfallViewmodelStyle.HeldRetro, Unreached, () => { });
 
-        Assert.Equal(["weapon.dagger.steel", "weapon.longblade", "weapon.axe", "weapon.mace", "weapon.flail", "weapon.warhammer", "weapon.staff"], workbench.Looks);
+        Assert.Equal(["weapon.dagger.steel", "weapon.longblade", "weapon.axe", "weapon.warhammer", "weapon.mace", "weapon.flail", "weapon.staff"], workbench.Looks);
         Assert.DoesNotContain("strikeLeft", workbench.Strikes);
         Assert.Contains("Looks: weapon.dagger.steel, weapon.longblade, weapon.axe", workbench.Show("weapon.bow", "strikeDown").Message, StringComparison.Ordinal);
         DebugCommandResult noClip = workbench.Show("weapon.dagger.steel", "strikeLeft");
@@ -78,7 +78,7 @@ public sealed class DaggerfallHeldWorkbenchTests
         DaggerfallHeldArt art = DaggerfallHeldArtTests.Read(authored);
         PhaseTiming timing = DaggerfallHeldViewmodel.Timing(.1F, 2, 5);
 
-        foreach (var (family, strike) in new[] { ("dagger", "strikeDown"), ("longsword", "strikeUp"), ("halberd", "strikeLeft") })
+        foreach (var (family, strike) in new[] { ("dagger", "strikeDown"), ("longsword", "strikeUp"), ("sns", "strikeRight"), ("halberd", "strikeLeft") })
             foreach (TunableControl control in DaggerfallHeldTunables.For(art.Document, family, strike, timing, new HashSet<string>(), () => { })
                 .SelectMany(group => group.Tunables).Select(tunable => tunable.Control))
             {
