@@ -37,8 +37,11 @@ internal sealed record DaggerfallEffectArt(string Replaces, string Path, Content
 /// <summary>A published file of the refreshed set: its path and digest.</summary>
 internal sealed record DaggerfallArtFile(string Path, ContentSha256 Sha256);
 
-/// <summary>A refreshed mesh standing in for a classic sprite cut from one texture record: the GLB, scaled to the sprite's world size and resting on the floor.</summary>
-internal sealed record DaggerfallArtMesh(int Archive, int Record, DaggerfallArtFile File);
+/// <summary>
+/// A refreshed mesh standing in for the classic sprite cut from one texture record: a GLB resting on the floor, and its
+/// footprint (its longest side in metres), from which it is drawn at the width of the sprite it replaces.
+/// </summary>
+internal sealed record DaggerfallArtMesh(DaggerfallArtFile File, double Footprint);
 
 /// <summary>
 /// How refreshed clothing, painted neutral, is drawn in one classic dye, or refreshed armour or a weapon, in bare
@@ -58,9 +61,9 @@ internal sealed class DaggerfallArtReplacements
     private readonly Dictionary<string, DaggerfallArtReplacement> _byClassic;
 
     private DaggerfallArtReplacements(Dictionary<string, DaggerfallArtReplacement> byClassic, IReadOnlyDictionary<string, DaggerfallDyeTint> tints,
-        IReadOnlyDictionary<string, DaggerfallEffectArt> effects, DaggerfallArtFile? effectGlow, DaggerfallArtMesh? corpseMesh)
+        IReadOnlyDictionary<string, DaggerfallEffectArt> effects, DaggerfallArtFile? effectGlow, IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtMesh> meshes)
     {
-        CorpseMesh = corpseMesh;
+        Meshes = meshes;
         _byClassic = byClassic;
         Tints = tints;
         Effects = effects;
@@ -73,8 +76,11 @@ internal sealed class DaggerfallArtReplacements
     /// <summary>The soft white glow the refreshed spell trails and impact bursts tint, when the set has effects.</summary>
     internal DaggerfallArtFile? EffectGlow { get; }
 
-    /// <summary>The mesh drawn in place of the corpse every human enemy class shares, so it is no one in particular.</summary>
-    internal DaggerfallArtMesh? CorpseMesh { get; }
+    /// <summary>
+    /// The meshes drawn in place of classic world sprites, by the texture archive and record each replaces: the bone pile
+    /// for the corpse every human enemy class shares (so it is no one in particular) and for the bone piles placed in dungeons.
+    /// </summary>
+    internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtMesh> Meshes { get; }
 
     /// <summary>Every replacement.</summary>
     internal IEnumerable<DaggerfallArtReplacement> All => _byClassic.Values;
@@ -103,7 +109,7 @@ internal sealed class DaggerfallArtReplacements
         Dictionary<string, DaggerfallDyeTint> tints = new(StringComparer.Ordinal);
         Dictionary<string, DaggerfallEffectArt> effects = new(StringComparer.Ordinal);
         DaggerfallArtFile? glow = null;
-        DaggerfallArtMesh? corpseMesh = null;
+        Dictionary<(int Archive, int Record), DaggerfallArtMesh> meshes = [];
         try
         {
             using JsonDocument document = JsonDocument.Parse(payload);
@@ -154,16 +160,24 @@ internal sealed class DaggerfallArtReplacements
                 }
             if (section.TryGetProperty("effectGlow", out JsonElement glowValue))
                 glow = new(glowValue.GetProperty("path").GetString()!, DaggerfallContentHash.Parse(glowValue.GetProperty("sha256").GetString()!, "The refreshed effect glow"));
-            if (section.TryGetProperty("corpseMesh", out JsonElement mesh))
-                corpseMesh = new(mesh.GetProperty("replaces").GetProperty("archive").GetInt32(), mesh.GetProperty("replaces").GetProperty("record").GetInt32(),
-                    new(mesh.GetProperty("path").GetString()!, DaggerfallContentHash.Parse(mesh.GetProperty("sha256").GetString()!, "The refreshed corpse mesh")));
+            if (section.TryGetProperty("meshes", out JsonElement meshArt))
+                foreach (JsonElement mesh in meshArt.EnumerateArray())
+                {
+                    (int, int) replaces = (mesh.GetProperty("replaces").GetProperty("archive").GetInt32(), mesh.GetProperty("replaces").GetProperty("record").GetInt32());
+                    double footprint = mesh.GetProperty("footprint").GetDouble();
+                    if (!double.IsFinite(footprint) || footprint <= 0)
+                        throw new InvalidOperationException($"Content pack '{packId}' states no usable footprint for the mesh replacing {replaces.Item1}/{replaces.Item2}.");
+                    if (!meshes.TryAdd(replaces, new(new(mesh.GetProperty("path").GetString()!,
+                            DaggerfallContentHash.Parse(mesh.GetProperty("sha256").GetString()!, $"The refreshed mesh for {replaces.Item1}/{replaces.Item2}")), footprint)))
+                        throw new InvalidOperationException($"Content pack '{packId}' names two meshes for {replaces.Item1}/{replaces.Item2}.");
+                }
         }
         catch (Exception exception) when (exception is JsonException or KeyNotFoundException or FormatException)
         {
             throw new InvalidOperationException($"Content pack '{packId}' carries an unreadable artReplacements section: {exception.Message}", exception);
         }
 
-        return new DaggerfallArtReplacements(byClassic, tints, effects, glow, corpseMesh);
+        return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes);
 
         static DaggerfallArtRect Rect(JsonElement rect) => new(rect.GetProperty("x").GetDouble(), rect.GetProperty("y").GetDouble(),
             rect.GetProperty("width").GetDouble(), rect.GetProperty("height").GetDouble());

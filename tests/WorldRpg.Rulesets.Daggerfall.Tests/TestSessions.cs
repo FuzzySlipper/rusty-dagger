@@ -420,7 +420,7 @@ internal static class TestSessions
         }
         // A site appearance admits the refreshed world effects and their particle glow with its own textures.
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(TestContentFiles.Read(Path.Combine(root, "content", "worldrpg/payloads/daggerfall.art-replacements.json")), "daggerfall.art-replacements");
-        foreach (string path in art.Effects.Values.Select(effect => effect.Path).Append(art.EffectGlow!.Path).Append(art.CorpseMesh!.File.Path))
+        foreach (string path in art.Effects.Values.Select(effect => effect.Path).Append(art.EffectGlow!.Path).Concat(art.Meshes.Values.Select(mesh => mesh.File.Path)).Distinct())
             yield return (path, TestContentFiles.ReadCopy(Path.Combine(root, "content", path)));
     }
 
@@ -455,7 +455,7 @@ internal static class TestSessions
         return content;
     }
 
-    internal static DaggerfallSiteProfile MediaInputs(int primaryChance = 50, IReadOnlyList<int>? primaryFrames = null, bool includeAlternate = true, bool directional = false, IReadOnlyList<NormalizedAudioClip>? audio = null, string? preferredRestState = null, NormalizedClassicPresentation? classic = null, IReadOnlyList<NormalizedAtlasFrame>? actorFrames = null, IReadOnlyList<int>? rangedFrames = null, bool shortAttackDirection = false, NormalizedBillboardSprite? groundContainerSprite = null, DaggerfallActorFeedback? feedback = null, long spriteActorId = 11, NormalizedActorSprite? corpse = null)
+    internal static DaggerfallSiteProfile MediaInputs(int primaryChance = 50, IReadOnlyList<int>? primaryFrames = null, bool includeAlternate = true, bool directional = false, IReadOnlyList<NormalizedAudioClip>? audio = null, string? preferredRestState = null, NormalizedClassicPresentation? classic = null, IReadOnlyList<NormalizedAtlasFrame>? actorFrames = null, IReadOnlyList<int>? rangedFrames = null, bool shortAttackDirection = false, NormalizedBillboardSprite? groundContainerSprite = null, DaggerfallActorFeedback? feedback = null, long spriteActorId = 11, NormalizedActorSprite? corpse = null, IReadOnlyList<DaggerfallSiteDecoration>? decorations = null)
     {
         NormalizedSpriteState idle = new("idle", [0], 10F, true)
         {
@@ -511,7 +511,7 @@ internal static class TestSessions
                 new NormalizedAudioClip("hit5", "audio/hit5.wav", Hash),
             ],
             classic,
-            groundContainerSprite: groundContainerSprite);
+            groundContainerSprite: groundContainerSprite) { Decorations = decorations ?? [] };
     }
 
     /// <param name="fireSpell">Also publish the fire missile (looping) and impact, on two frames each, at <c>effect/fire-missile.png</c> and <c>effect/fire-impact.png</c>.</param>

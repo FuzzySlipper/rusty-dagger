@@ -828,11 +828,13 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal(14, art.Effects.Count);
         Assert.All(art.Effects.Keys, id => Assert.Contains(id, classic));
         Assert.NotNull(art.EffectGlow);
-        Assert.Equal((380, 1), (art.CorpseMesh!.Archive, art.CorpseMesh.Record));
+        // The bone pile stands in for the corpse every human class shares and for the bone pile flat.
+        Assert.Equal([(380, 1), (380, 4)], art.Meshes.Keys.Order());
 
         // The payload states the bytes of every refreshed file, and names every file the refreshed media carries.
         JsonElement[] files = [.. images.SelectMany(image => image.TryGetProperty("dyeMask", out JsonElement mask) ? [image, mask] : new[] { image }),
-            .. section.GetProperty("effects").EnumerateArray(), section.GetProperty("effectGlow"), section.GetProperty("corpseMesh")];
+            .. section.GetProperty("effects").EnumerateArray(), section.GetProperty("effectGlow"),
+            .. section.GetProperty("meshes").EnumerateArray().DistinctBy(mesh => mesh.GetProperty("path").GetString())];
         foreach (JsonElement file in files)
         {
             byte[] bytes = content.ReadBytes(file.GetProperty("path").GetString()!).ToArray();

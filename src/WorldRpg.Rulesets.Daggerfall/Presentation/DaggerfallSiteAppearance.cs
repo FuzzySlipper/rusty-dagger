@@ -437,7 +437,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             ulong id = slot == DaggerfallPresentationObjectIds.ActiveLocationSlot
                 ? DaggerfallPresentationObjectIds.Gameplay(actor.DurableId, "Actor")
                 : DaggerfallPresentationObjectIds.LocationVisual(slot, visual.LocationOrdinal);
-            facts.Add(new AppearanceFact(id, false, 0, new Transform(actor.Position.ToVector(), rotation, Vector3.One), chosen,
+            facts.Add(new AppearanceFact(id, false, 0, new Transform(actor.Position.ToVector(), rotation, chosen == visual.CorpseMesh ? new Vector3(visual.CorpseMeshScale) : Vector3.One), chosen,
                 actorActive?.Invoke(actor.DurableId) != false && (actor.IsDefeated || perception?.Invoke(actor.DurableId).Invisible != true), RenderLayer.Scene));
         }
     }
@@ -1654,6 +1654,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         internal Appearance? Corpse { get; } = corpse;
         /// <summary>The refreshed mesh drawn in place of a shared corpse sprite, when the refreshed set has one.</summary>
         internal Appearance? CorpseMesh { get; set; }
+        /// <summary>The scale that draws the corpse mesh at the width of the corpse sprite it replaces.</summary>
+        internal float CorpseMeshScale { get; set; } = 1f;
         internal SpritePlayback? Playback { get; set; }
         internal string State { get; set; } = string.Empty;
         internal bool Defeated { get; set; }

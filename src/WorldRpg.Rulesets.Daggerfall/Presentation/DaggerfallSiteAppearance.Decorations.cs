@@ -13,7 +13,12 @@ internal sealed partial class DaggerfallSiteAppearance
     private readonly List<RenderResource> decorationResources = [];
 
     private sealed record DecorationVisual(DaggerfallSiteDecoration Definition, DecorationSprite Summer,
-        DecorationSprite Winter, ulong Ordinal);
+        DecorationSprite Winter, ulong Ordinal)
+    {
+        /// <summary>The refreshed mesh drawn in place of its sprite while refreshed art is drawn, when the refreshed set has one.</summary>
+        internal Appearance? Mesh { get; set; }
+        internal float MeshScale { get; set; } = 1f;
+    }
 
     private sealed class DecorationSprite(Appearance visual)
     {
@@ -27,7 +32,9 @@ internal sealed partial class DaggerfallSiteAppearance
         {
             var summer = CreateDecorationSprite(flat.Summer, flat.BaseAligned);
             var winter = flat.Summer == flat.Winter ? summer : CreateDecorationSprite(flat.Winter, flat.BaseAligned);
-            decorations.Add(new(flat, summer, winter, NextLocationVisualOrdinal()));
+            DecorationVisual visual = new(flat, summer, winter, NextLocationVisualOrdinal());
+            AttachDecorationMesh(visual);
+            decorations.Add(visual);
         }
     }
 
@@ -59,10 +66,23 @@ internal sealed partial class DaggerfallSiteAppearance
 
     private void AppendDecorationFacts(List<AppearanceFact> facts, int slot)
     {
+        bool refreshed = drawRefreshedEffects();
         foreach (var flat in decorations)
+        {
+            if (refreshed && flat.Mesh is { } mesh)
+            {
+                // The mesh rests on the floor its sprite stands on: the sprite's position less its pivot's share of its height.
+                NormalizedBillboardSprite sprite = flat.Definition.Summer;
+                float lift = flat.Definition.BaseAligned ? 0f : sprite.Pivot.Y * sprite.Size.Y;
+                facts.Add(new(DaggerfallPresentationObjectIds.LocationVisual(slot, flat.Ordinal), false, 0,
+                    Compose(worldAppearance.Transform, new Transform(flat.Definition.Position.ToVector() - Vector3.UnitY * lift, Quaternion.Identity, new Vector3(flat.MeshScale))),
+                    mesh, worldAppearance.Visible, worldAppearance.Layer));
+                continue;
+            }
             facts.Add(new(DaggerfallPresentationObjectIds.LocationVisual(slot, flat.Ordinal), false, 0,
                 Compose(worldAppearance.Transform, new Transform(flat.Definition.Position.ToVector(), Quaternion.Identity, Vector3.One)),
                 (winterMaterials ? flat.Winter : flat.Summer).Visual, worldAppearance.Visible, worldAppearance.Layer));
+        }
     }
 
     private void AdvanceDecorations()
@@ -80,6 +100,7 @@ internal sealed partial class DaggerfallSiteAppearance
             if (sprite.Playback is { } playback) values.Add(playback);
             values.Add(sprite.Visual);
         }
+        values.AddRange(decorations.Select(flat => flat.Mesh).OfType<Appearance>());
         values.AddRange(decorationAtlases.Values);
         values.AddRange(decorationResources);
         decorations.Clear();
