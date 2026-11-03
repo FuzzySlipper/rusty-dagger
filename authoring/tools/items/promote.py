@@ -34,8 +34,9 @@ Two areas promote icons rather than their own finals, each standing in for a cla
     `spell.icons` atlas, and each accepted targeting and element tile as `spell.target.N` and `spell.element.N`, tile N
     of the classic `spell.selectors` atlas.
 
-The `effects` area promotes the world effects the game animates: blood and the magic sparkle (TEXTURE.380, from the
-`effects` finals) and each spell element's missile and impact (TEXTURE.375-379, from the `spells` finals). Each
+The `effects` area promotes the effects the game animates: blood and the magic sparkle (TEXTURE.380, from the
+`effects` finals), each spell element's missile and impact (TEXTURE.375-379, from the `spells` finals), and the
+inventory window's magic and coin glints (TEXTURE.434 records 5 and 6, from the `effects` finals). Each
 effect becomes one PNG atlas (the renderer reads PNG) of its frames in classic order, all cropped to one box that
 holds every frame's art and the classic frame's place on the generation canvas, so the frames keep their relative
 size and position. The entry states where the classic frame sits in that box (`classic`, fractions of the frame,
@@ -83,6 +84,9 @@ WORLD_EFFECTS = {
     **{f"effect.blood.{record}": ("effects", f"texture-380--effect--texture-380-record-{record:03d}", f"effects/texture-380/effect/texture-380-record-{record:03d}")
        for record in range(3)},
     "effect.sparkle.magic": ("effects", "texture-380--effect--texture-380-record-003", "effects/texture-380/effect/texture-380-record-003"),
+    # The inventory window's glints: the magic shimmer over enchanted items and the coin glint behind stealable stock.
+    "effect.glint.magic": ("effects", "texture-434--effect--texture-434-record-005", "effects/texture-434/effect/texture-434-record-005"),
+    "effect.glint.coins": ("effects", "texture-434--effect--texture-434-record-006", "effects/texture-434/effect/texture-434-record-006"),
     **{f"effect.{kind}.{element}": ("spells", f"elements--{element}--world-effects--{folder}--texture-{archive}-record-{record:03d}",
                                      f"spells/elements/{element}/world-effects/{folder}/texture-{archive}-record-{record:03d}")
        for archive, element in zip(range(375, 380), ("fire", "cold", "poison", "shock", "magic"))

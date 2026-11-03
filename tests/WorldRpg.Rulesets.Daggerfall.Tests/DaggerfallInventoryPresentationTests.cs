@@ -22,6 +22,7 @@ public sealed class DaggerfallInventoryPresentationTests
         f.ItemInstances.ReplaceUnique(1001, original with { Material = "dwarven" });
         var row = Item(f.Ui.Read(), f.Key(1001));
         Assert.Equal("Dwarven Longsword", row.Label);
+        Assert.False(row.Enchanted, "A plain item does not shimmer.");
         Assert.DoesNotContain("Dwarven Dwarven", row.Details);
         var magic = f.Definitions.Magic.MagicItems.Values.First(value => value.Type == 0 && value.Name.Contains("%it", StringComparison.Ordinal));
         f.ItemInstances.ReplaceUnique(1001, original with { Material = "dwarven", Enchantment = magic.Key, Identified = true });
@@ -31,6 +32,8 @@ public sealed class DaggerfallInventoryPresentationTests
         Assert.NotEqual(row.Label, named);
         f.ItemInstances.ReplaceUnique(1001, original with { Material = "dwarven", Enchantment = magic.Key, Identified = false });
         Assert.Equal("Longsword", Item(f.Ui.Read(), f.Key(1001)).Label);
+        // An enchanted item shimmers whether or not it is identified, as the donor's window draws IsEnchanted.
+        Assert.True(Item(f.Ui.Read(), f.Key(1001)).Enchanted);
     }
 
     [Fact]

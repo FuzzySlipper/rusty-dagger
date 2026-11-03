@@ -29395,6 +29395,140 @@
     }
    },
    {
+    "replaces": "effect.glint.coins",
+    "path": "worldrpg/media/refreshed/effects/effect-glint-coins.png",
+    "byteLength": 83013,
+    "sha256": "bc56a39f1b926bfefb3e42cef90630affdfc014ef73321bfc9739ce091632f4d",
+    "width": 768,
+    "height": 765,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 255
+     },
+     {
+      "x": 256,
+      "y": 0,
+      "width": 256,
+      "height": 255
+     },
+     {
+      "x": 512,
+      "y": 0,
+      "width": 256,
+      "height": 255
+     },
+     {
+      "x": 0,
+      "y": 255,
+      "width": 256,
+      "height": 255
+     },
+     {
+      "x": 256,
+      "y": 255,
+      "width": 256,
+      "height": 255
+     },
+     {
+      "x": 512,
+      "y": 255,
+      "width": 256,
+      "height": 255
+     },
+     {
+      "x": 0,
+      "y": 510,
+      "width": 256,
+      "height": 255
+     },
+     {
+      "x": 256,
+      "y": 510,
+      "width": 256,
+      "height": 255
+     }
+    ],
+    "classic": {
+     "x": 0.1406,
+     "y": 0.2419,
+     "width": 0.7178,
+     "height": 0.5142
+    }
+   },
+   {
+    "replaces": "effect.glint.magic",
+    "path": "worldrpg/media/refreshed/effects/effect-glint-magic.png",
+    "byteLength": 133719,
+    "sha256": "eec3a7ccbfb12107aa4aa9404192fad377e05be15bf88b805cb0712c299f321c",
+    "width": 753,
+    "height": 768,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 251,
+      "height": 256
+     },
+     {
+      "x": 251,
+      "y": 0,
+      "width": 251,
+      "height": 256
+     },
+     {
+      "x": 502,
+      "y": 0,
+      "width": 251,
+      "height": 256
+     },
+     {
+      "x": 0,
+      "y": 256,
+      "width": 251,
+      "height": 256
+     },
+     {
+      "x": 251,
+      "y": 256,
+      "width": 251,
+      "height": 256
+     },
+     {
+      "x": 502,
+      "y": 256,
+      "width": 251,
+      "height": 256
+     },
+     {
+      "x": 0,
+      "y": 512,
+      "width": 251,
+      "height": 256
+     },
+     {
+      "x": 251,
+      "y": 512,
+      "width": 251,
+      "height": 256
+     },
+     {
+      "x": 502,
+      "y": 512,
+      "width": 251,
+      "height": 256
+     }
+    ],
+    "classic": {
+     "x": 0.1522,
+     "y": 0.2334,
+     "width": 0.7104,
+     "height": 0.5332
+    }
+   },
+   {
     "replaces": "effect.impact.cold",
     "path": "worldrpg/media/refreshed/effects/effect-impact-cold.png",
     "byteLength": 177143,

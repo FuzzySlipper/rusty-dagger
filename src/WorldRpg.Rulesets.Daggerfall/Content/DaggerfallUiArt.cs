@@ -158,6 +158,14 @@ internal sealed class DaggerfallUiArt
                 throw new InvalidOperationException($"Refreshed art '{image.MediaId}' repeats a published media identity.");
             refreshed.Add(image.MediaId);
         }
+        // The refreshed effect atlases the item lists draw their glints from.
+        foreach (DaggerfallEffectArt effect in replacements?.Effects.Values ?? [])
+        {
+            string id = DaggerfallArtReplacements.EffectMediaId(effect.Replaces);
+            if (!inventory.TryAdd(id, new InventoryEntry(effect.Path, effect.ByteLength, null, null)))
+                throw new InvalidOperationException($"Refreshed effect '{id}' repeats a published media identity.");
+            refreshed.Add(id);
+        }
         List<DaggerfallUiArtImage> images = [];
         foreach (string id in AlwaysShown.Concat(authored).Concat(pickScreens).Concat(itemIcons).Concat(portraits).Concat(panelArt ?? []).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
         {

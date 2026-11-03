@@ -1,4 +1,5 @@
 import { drawArt, heldDemandedRevision, heldRevision, image, type ArtTint } from './art.js';
+import { glint } from './glint.js';
 import type { PaperDoll, PaperDollLayer } from './character.js';
 import { mountDrag, type Drag } from './drag.js';
 import type { NavigationSurface } from './navigation.js';
@@ -17,6 +18,8 @@ export interface InventoryProjection {
   readonly bank?: BankProjection | null;
   /** The pack's tabs, in the order the ruleset gives them. */
   readonly categories?: readonly InventoryCategory[];
+  /** The item glints in the art drawn (checked with `isGlints` where they are shown). */
+  readonly glints?: unknown;
 }
 
 export interface InventoryCategory { readonly id: string; readonly label: string }
@@ -95,6 +98,8 @@ export interface InventoryItem {
   readonly iconTint?: ArtTint | null;
   readonly condition: ItemCondition | null;
   readonly identified: boolean;
+  /** Enchanted: the magic glint shimmers over it. */
+  readonly enchanted?: boolean;
   readonly gridSlot: number | null;
   readonly equippedSlots: readonly string[];
   readonly compatibleSlots: readonly string[];
@@ -1093,6 +1098,7 @@ function renderPlace(button: HTMLButtonElement, item: InventoryItem | undefined,
   button.dataset.inventoryDraggable = String(item !== undefined);
   button.classList.toggle('is-broken', item?.condition?.broken === true);
   button.classList.toggle('is-unidentified', item !== undefined && !item.identified);
+  button.classList.toggle('has-glint', item?.enchanted === true);
   if (item === undefined) {
     button.setAttribute('aria-label', `${placeLabel}, empty`);
     button.append(emptyMark());
@@ -1108,6 +1114,7 @@ function renderPlace(button: HTMLButtonElement, item: InventoryItem | undefined,
     icon.draggable = false;
     drawArt(icon, item.icon, item.iconTint ?? null);
     button.append(icon);
+    if (item.enchanted) button.append(glint('magic'));
   } else {
     const fallback = document.createElement('span');
     fallback.className = 'dagger-inventory-fallback-label';

@@ -20,11 +20,11 @@ public sealed class Arena2ClassicMediaPublicationTests
 
         // Five service screens and their donor companions are thirteen more artifacts and resources, and
         // the spell icon atlas and the targeting and element tiles two more: naming an image admits it.
-        Assert.Equal(79 + first.Audio.Count, first.Artifacts.Count);
+        Assert.Equal(81 + first.Audio.Count, first.Artifacts.Count);
         Assert.Equal(first.Artifacts.Count, first.MediaManifest.Resources.Count);
         Assert.Empty(first.MapMedia);
         // Fourteen more admitted source files, because those images are read as well as named.
-        Assert.Equal(57, first.Sources.Count);
+        Assert.Equal(58, first.Sources.Count);
         Assert.Equal(first.Artifacts.Select(artifact => artifact.RelativePath).OrderBy(path => path, StringComparer.Ordinal), first.Artifacts.Select(artifact => artifact.RelativePath));
         Assert.Equal(first.Artifacts.Select(artifact => artifact.RelativePath), second.Artifacts.Select(artifact => artifact.RelativePath));
         Assert.All(first.Artifacts.Zip(second.Artifacts), pair => Assert.Equal(pair.First.Bytes.ToArray(), pair.Second.Bytes.ToArray()));
@@ -91,11 +91,18 @@ public sealed class Arena2ClassicMediaPublicationTests
             first.Audio.Where(clip => clip.Clip.StartsWith("ambient.", StringComparison.Ordinal) || clip.Clip.StartsWith("dungeon.ambient.", StringComparison.Ordinal))
                 .ToDictionary(clip => clip.Clip, clip => (clip.SourceRecordOrdinal, clip.SourceNumericId), StringComparer.Ordinal)
                 .OrderBy(pair => pair.Key, StringComparer.Ordinal));
-        // Blood and the sparkle play once at 10 frames a second; each element's missile loops at 5 and its impact plays once at 15.
-        Assert.Equal(14, first.Effects.Count);
+        // Blood and the sparkle play once at 10 frames a second; each element's missile loops at 5 and its impact plays once
+        // at 15; the inventory's magic glint loops every 0.15 s and its coin glint every 0.08 s.
+        Assert.Equal(16, first.Effects.Count);
         Assert.All(first.Effects, effect => Assert.Equal(
-            effect.Effect.ToString().EndsWith("Missile", StringComparison.Ordinal) ? new ClassicSpriteTiming(5F, true)
-                : effect.Effect.ToString().EndsWith("Impact", StringComparison.Ordinal) ? new ClassicSpriteTiming(15F, false) : new ClassicSpriteTiming(10F, false),
+            effect.Effect switch
+            {
+                ClassicEffect.MagicGlint => new ClassicSpriteTiming(1F / .15F, true),
+                ClassicEffect.CoinGlint => new ClassicSpriteTiming(1F / .08F, true),
+                _ when effect.Effect.ToString().EndsWith("Missile", StringComparison.Ordinal) => new ClassicSpriteTiming(5F, true),
+                _ when effect.Effect.ToString().EndsWith("Impact", StringComparison.Ordinal) => new ClassicSpriteTiming(15F, false),
+                _ => new ClassicSpriteTiming(10F, false),
+            },
             effect.Timing));
         Assert.All(MobileSourceMetadata.All, mobile =>
         {
@@ -534,11 +541,11 @@ public sealed class Arena2ClassicMediaPublicationTests
             Read(arena2, "REST01I0.IMG"), Read(arena2, "REST02I0.IMG"), Read(arena2, "INVE08I0.IMG"), Read(arena2, "INVE10I0.IMG"), Read(arena2, "INVE11I0.IMG"),
             Read(arena2, "INVE12I0.IMG"), Read(arena2, "INVE14I0.IMG"), Read(arena2, "GILD01I0.IMG"), Read(arena2, "ICON00I0.IMG"), Read(arena2, "MASK04I0.IMG"),
             Read(arena2, "TEXTURE.216"), Read(arena2, "FONT0003.FNT"), Read(arena2, "WEAPON00.CIF"), Read(arena2, "WEAPON03.CIF"), Read(arena2, "WEAPON11.CIF"), Read(arena2, "FONT0000.FNT"), Read(arena2, "FONT0001.FNT"), Read(arena2, "FONT0002.FNT"), Read(arena2, "FONT0004.FNT"), ReadCorpusMapMedia(arena2), Read(arena2, "FMAP_PAL.COL"), Read(arena2, "MAP.PAL"), [], Read(arena2, "TEXTURE.205"),
-            Read(arena2, "TEXTURE.375"), Read(arena2, "TEXTURE.376"), Read(arena2, "TEXTURE.377"), Read(arena2, "TEXTURE.378"), Read(arena2, "TEXTURE.379")));
+            Read(arena2, "TEXTURE.375"), Read(arena2, "TEXTURE.376"), Read(arena2, "TEXTURE.377"), Read(arena2, "TEXTURE.378"), Read(arena2, "TEXTURE.379"), Read(arena2, "TEXTURE.434")));
 
         Assert.Equal(31, WeaponActions(publication, "weapon.dagger.steel").Sum(action => action.FrameCount));
-        Assert.Equal(67 + 79 + publication.Audio.Count, publication.Artifacts.Count);
-        Assert.Equal(50 + 75 + 2, publication.Sources.Count);
+        Assert.Equal(67 + 81 + publication.Audio.Count, publication.Artifacts.Count);
+        Assert.Equal(50 + 76 + 2, publication.Sources.Count);
         AssertPng(Artifact(publication, "media/combat/weapon-dagger-steel-atlas.png"), 3840, 600);
         Assert.All(publication.Audio, clip => Assert.Equal(11_025U, clip.SampleRate));
         // All twelve archives decode: the two spares and the werecreature form carry the same
@@ -694,7 +701,9 @@ public sealed class Arena2ClassicMediaPublicationTests
         CreatePalette(),
         [], CreateTextureArchive(36),
         // The five spell element archives: a missile and an impact record each.
-        CreateTextureArchive(2), CreateTextureArchive(2), CreateTextureArchive(2), CreateTextureArchive(2), CreateTextureArchive(2));
+        CreateTextureArchive(2), CreateTextureArchive(2), CreateTextureArchive(2), CreateTextureArchive(2), CreateTextureArchive(2),
+        // The inventory glints are records 5 and 6 of TEXTURE.434.
+        CreateTextureArchive(7));
 
     private static byte[] Read(string directory, string fileName) => File.ReadAllBytes(Path.Combine(directory, fileName));
 

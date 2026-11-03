@@ -31,7 +31,7 @@ internal sealed record DaggerfallArtRect(double X, double Y, double Width, doubl
 /// box, and where the classic frame sits in that box (fractions of the frame, top-down), which sizes and anchors it
 /// as the classic.
 /// </summary>
-internal sealed record DaggerfallEffectArt(string Replaces, string Path, ContentSha256 Sha256, int Width, int Height,
+internal sealed record DaggerfallEffectArt(string Replaces, string Path, ContentSha256 Sha256, long ByteLength, int Width, int Height,
     IReadOnlyList<DaggerfallArtRect> Frames, DaggerfallArtRect Classic);
 
 /// <summary>A published file of the refreshed set: its path and digest.</summary>
@@ -97,6 +97,9 @@ internal sealed class DaggerfallArtReplacements
     internal DaggerfallArtReplacement? For(string classicMediaId) =>
         _byClassic.TryGetValue(classicMediaId, out DaggerfallArtReplacement? replacement) ? replacement : null;
 
+    /// <summary>The media identity the page knows a refreshed effect atlas by, as the UI draws the inventory glints.</summary>
+    internal static string EffectMediaId(string classicMediaId) => $"refreshed.{classicMediaId}";
+
     /// <summary>The media identity drawn in place of a classic one: its replacement's, or the classic one when the set has none.</summary>
     internal string Drawn(string classicMediaId) => For(classicMediaId)?.MediaId ?? classicMediaId;
 
@@ -155,7 +158,8 @@ internal sealed class DaggerfallArtReplacements
                         || classic.Width <= 0 || classic.Height <= 0)
                         throw new InvalidOperationException($"Content pack '{packId}' places refreshed effect '{replaces}' outside its atlas.");
                     if (!effects.TryAdd(replaces, new(replaces, effect.GetProperty("path").GetString()!,
-                            DaggerfallContentHash.Parse(effect.GetProperty("sha256").GetString()!, $"Refreshed effect '{replaces}'"), width, height, frames, classic)))
+                            DaggerfallContentHash.Parse(effect.GetProperty("sha256").GetString()!, $"Refreshed effect '{replaces}'"),
+                            effect.GetProperty("byteLength").GetInt64(), width, height, frames, classic)))
                         throw new InvalidOperationException($"Content pack '{packId}' names refreshed effect '{replaces}' twice.");
                 }
             if (section.TryGetProperty("effectGlow", out JsonElement glowValue))

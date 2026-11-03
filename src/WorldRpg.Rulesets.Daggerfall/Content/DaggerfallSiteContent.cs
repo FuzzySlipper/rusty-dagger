@@ -2239,8 +2239,10 @@ internal static partial class DaggerfallSiteContent
         }
         // Blood and the sparkle are TEXTURE.380 records 0-3; each element's missile and impact are records 0 and 1 of its own archive.
         (string Name, int Ordinal)[] expected = [("blood0", 0), ("blood1", 1), ("blood2", 2), ("magicSparkle", 3),
-            .. DaggerfallSpellElements.Names.SelectMany(element => new[] { ($"{element}Missile", 0), ($"{element}Impact", 1) })];
-        if (effects.Count != expected.Length || expected.Any(value => !effects.ContainsKey(value.Name))) diagnostics.Add("Classic effects must provide blood0..blood2, magicSparkle and each element's missile and impact exactly once.");
+            .. DaggerfallSpellElements.Names.SelectMany(element => new[] { ($"{element}Missile", 0), ($"{element}Impact", 1) }),
+            // The inventory window's glints, TEXTURE.434 records 5 and 6.
+            ("magicGlint", 5), ("coinGlint", 6)];
+        if (effects.Count != expected.Length || expected.Any(value => !effects.ContainsKey(value.Name))) diagnostics.Add("Classic effects must provide blood0..blood2, magicSparkle, each element's missile and impact, and the magic and coin glints exactly once.");
         foreach ((string expectedName, int ordinal) in expected)
             if (effects.TryGetValue(expectedName, out NormalizedClassicEffect? effect) && effect.SourceRecordOrdinal != ordinal) diagnostics.Add($"Classic effect '{expectedName}' must retain source record ordinal {ordinal}.");
         return Array.AsReadOnly(effects.Values.OrderBy(effect => effect.Name, StringComparer.Ordinal).ToArray());

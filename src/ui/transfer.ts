@@ -1,4 +1,5 @@
 import { drawArt, image, type ArtTint } from './art.js';
+import { glint } from './glint.js';
 import type { Encumbrance, InventoryItem } from './inventory.js';
 import { redraw } from './redraw.js';
 import { createStepper, type Stepper } from './stepper.js';
@@ -25,6 +26,10 @@ export interface TransferRow {
   readonly icon: string | null;
   /** The dye or metal a refreshed icon is drawn in, or null. */
   readonly iconTint?: ArtTint | null;
+  /** Enchanted: the magic glint shimmers over its icon. */
+  readonly enchanted?: boolean;
+  /** Stock the player may steal: the coin glint turns behind its icon. */
+  readonly stealable?: boolean;
   /** Shown after the name for a stack; a row of one shows no count. */
   readonly quantity: string | null;
   /** The most of this row one command moves; above one, the row has a quantity stepper. */
@@ -61,7 +66,7 @@ export type TransferSideName = 'source' | 'pack';
 export function inventoryTransferRow(item: InventoryItem, command: string | null, refusal?: string | null): TransferRow {
   const count = Number(item.quantity);
   return {
-    key: item.key, label: item.label, icon: item.icon, iconTint: item.iconTint ?? null,
+    key: item.key, label: item.label, icon: item.icon, iconTint: item.iconTint ?? null, enchanted: item.enchanted === true,
     quantity: item.stackable ? item.quantity : null,
     maximumQuantity: item.stackable === true && Number.isSafeInteger(count) ? count : 1,
     facts: itemFacts(item), refusal: refusal ?? null,
@@ -119,6 +124,9 @@ export function mountTransfer(root: HTMLElement, handlers: {
           drawArt(icon, row.icon, row.iconTint ?? null);
           picture.append(icon);
         }
+        if (row.stealable) picture.prepend(glint('coins'));
+        if (row.enchanted) picture.append(glint('magic'));
+        picture.classList.toggle('has-glint', row.stealable === true || row.enchanted === true);
         const text = document.createElement('div');
         const label = document.createElement('strong');
         label.textContent = row.quantity === null ? row.label : `${row.label} × ${row.quantity}`;

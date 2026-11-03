@@ -342,6 +342,8 @@ the classic publication stays the fallback. `authoring/tools/items/promote.py` w
   frame sits in it (`classic`) so the game keeps the classic world size and anchor. Refreshed fire, shock, magic
   and the sparkle draw additively; a flying spell also trails particles of the soft white glow promotion writes
   (`effectGlow`), tinted per element, that burst where it lands. Classic art draws the classic sprites alone.
+  The inventory window's magic and coin glints (TEXTURE.434 records 5 and 6) are refreshed the same way and drawn
+  by the page.
 - **Shared corpse and bone pile.** The nineteen human enemy classes (Mage through Knight, and the city watch), men
   and women alike, fall as the one corpse TEXTURE.380 record 1 draws; refreshed, that is one particular man. Refreshed
   art draws them as a skull-free bone pile mesh instead, lying along the enemy's heading, and draws the same mesh for
