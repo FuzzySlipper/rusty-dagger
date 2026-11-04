@@ -34,7 +34,7 @@ sampled and matte.
 3. **Parts.** Give the weapon its `grip` and `parts` in the spec. `build.py` splits the icon into colour pieces
    (steel, brass, leather) and builds each part as `flat` (blades, guards, axe blades: two sheets meeting at the
    outline), `lathe` (grips, pommels, hafts: round in section; `ball` and `spikes` for a spiked head, `flanges` for a
-   flanged one), `disc` (a tsuba or a saber's bell), `chain` (a flail's links and ball), `socket` (the steel cone a chain hangs from) or `string` (a bowstring). Touching
+   flanged one), `disc` (a tsuba or a saber's bell), `chain` (a flail's links and ball), `socket` (the steel cone a chain hangs from), `hammer` (a war hammer's head, run through its `sections` across the haft), `langets` (riveted steel strips down a haft's flanks) or `string` (a bowstring). Touching
    lathe parts share one straight axis and one profile; `bridge` joins a part to the run above across a gap in the icon.
    Turned parts' necks and the ink at their seams are closed, so sections read as one piece; a detail thinner than about
    a centimetre reads as a crack at this crunch, so leave it to the paint rather than making it a part. `reach` runs a
@@ -58,6 +58,7 @@ sampled and matte.
 A flail's `chain` part also skins the model: `handle` carries everything else, and each link and the ball has its own joint, with a `rest` clip because the Engine admits a skin only through a GLB with a clip. In the game the item's `chain` in the held definition (`WorldRpg.Kit.Presentation.HeldChain`) makes those joints one ragdoll: the handle follows the hand, and the links and ball swing below it. Film a chain by playing a strike in manual time (`held.motion.play`, then `engine.time.advance`): `scripts/fp-arms/sheet.sh` jumps the hand between moments, which gives the chain nothing real to follow.
 
 The models are in the Engine's held-look frame: origin at the grip's centre, length along -Z with the tip forward,
-+Y one edge. A family's measured `look.grip` and `look.hold` then seat them where the clips held the pack's weapon.
++Y one edge, the edge that leads every slash of the clips, so what strikes goes on +Y (`turn` gives a model a half turn
+about its length). A family's measured `look.grip` and `look.hold` then seat them where the clips held the pack's weapon.
 The steel parts form the `metal` material, which the game tints per metal (iron … daedric), as the paper doll tints
 its bare-steel layers; everything else is `trim`.

@@ -207,19 +207,17 @@
    ]
   },
   {
-   "item": 126, "name": "warhammer", "family": "blunt", "hands": 2, "length": 1.10, "axis": "haft",
+   "item": 126, "name": "warhammer", "family": "blunt", "hands": 2, "length": 1.10, "axis": "haft", "turn": true,
    "records": [25], "icon": 25,
-   "firstPerson": {"cif": "WEAPON07", "use": "construction", "why": "the solid head block, and the steel sleeve and ring under it; the head's outline comes from the icon"},
-   "subject": "A two-handed warhammer: a long straight oiled wooden haft with a leather-bound grip, and a heavy steel head set across its top: a flat square hammer face on one side and a thick pointed beak on the other.",
-   "invent": "The head is a solid block of steel, square in section, wider than it is tall, with the haft passing through a socket in its middle. The haft is round in section.",
-   "grip": {"part": "haft", "span": [0, 0.34]},
+   "firstPerson": {"cif": "WEAPON07", "use": "compared", "why": "the head follows a real war hammer instead, at Patch's direction (#10574)"},
+   "subject": "A two-handed war hammer after a real one (Patch's reference): a long oiled wooden haft with riveted steel langets down its flanks, and a steel head set across its top: a compact socket block, a waisted neck with a collar flaring to a square hammer face on the striking side, and a curved spike on the other.",
+   "invent": "The classic's block matches no real war hammer, so the head departs from the icon and the classic frames at Patch's direction. The face stays larger than the reference's, to read at game distance. The haft is round in section.",
+   "grip": {"part": "haft", "span": [0, 0.3]},
    "secondGrip": [0, 0, 0.142],
    "parts": [
-    {"name": "head", "class": "any", "rows": [0, 140], "pick": "all", "slot": "metal", "shape": "flat", "profile": "round", "half": 0.05, "ramp": 0.02, "faces": 500, "cols": [0, 160], "light": 0.5},
-    {"name": "beak", "class": "any", "rows": [0, 140], "pick": "all", "slot": "metal", "shape": "flat", "profile": "ridge", "half": 0.03, "ramp": 0.05, "faces": 300, "cols": [161, 237], "light": 0.5, "root": {"toward": "head", "gain": 0.6}},
-    {"name": "sleeve", "class": "any", "rows": [143, 195], "cols": [105, 145], "pick": "all", "slot": "metal", "coloursFrom": "head", "shape": "lathe", "segments": 10, "smooth": 1, "radius": 0.026, "light": 0.7},
-    {"name": "ring", "class": "any", "rows": [196, 206], "cols": [105, 145], "pick": "all", "slot": "metal", "coloursFrom": "head", "shape": "lathe", "segments": 10, "smooth": 1, "radius": 0.031, "light": 0.7},
-    {"name": "haft", "class": "leather", "rows": [207, 690], "pick": "all", "shape": "lathe", "segments": 10, "smooth": 41},
+    {"name": "head", "class": "any", "rows": [0, 140], "cols": [0, 160], "pick": "all", "slot": "metal", "shape": "hammer", "on": "haft", "light": 0.5, "shade": [0.5, 1], "sections": [[-0.185, 0.001, 0.001, -0.095], [-0.175, 0.005, 0.003, -0.075], [-0.16, 0.01, 0.006, -0.052], [-0.145, 0.013, 0.008, -0.034], [-0.13, 0.015, 0.009, -0.021], [-0.118, 0.017, 0.01, -0.012], [-0.112, 0.019, 0.012, -0.009], [-0.107, 0.015, 0.009, -0.006], [-0.09, 0.015, 0.01, -0.002], [-0.07, 0.016, 0.011, 0], [-0.05, 0.019, 0.014, 0], [-0.04, 0.034, 0.024, 0], [-0.03, 0.038, 0.03, 0], [0.03, 0.038, 0.03, 0], [0.04, 0.03, 0.026, 0], [0.055, 0.022, 0.019, 0], [0.06, 0.027, 0.023, 0], [0.066, 0.027, 0.023, 0], [0.071, 0.021, 0.018, 0], [0.085, 0.024, 0.02, 0], [0.105, 0.036, 0.032, 0], [0.125, 0.05, 0.046, 0], [0.13, 0.046, 0.042, 0]], "seat": 0.033},
+    {"name": "haft", "class": "leather", "rows": [141, 690], "pick": "all", "shape": "lathe", "segments": 10, "smooth": 41, "radius": 0.0185},
+    {"name": "langets", "class": "steel", "rows": [0, 140], "shape": "langets", "on": "haft", "start": 0.01, "length": 0.26, "width": 0.022, "thick": 0.004, "offset": 0.017, "rivets": 3, "coloursFrom": "head", "light": 0.7, "shade": [0.5, 1]},
     {"name": "butt", "class": "steel", "pick": "bottom", "shape": "lathe", "segments": 10, "smooth": 3}
    ]
   },
