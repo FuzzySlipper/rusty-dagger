@@ -67,7 +67,7 @@ def prepare(name, rev, size):
     if (out / 'spec.json').exists():
         raise SystemExit(f'{out} already exists: use a new rev')
     out.mkdir(parents=True)
-    icon = Image.open(WORN / f'texture-234-record-{weapon["icon"]:03d}-frame-000.png').convert('RGBA')
+    icon = Image.open(WORN / f'texture-{weapon.get("art", 234)}-record-{weapon["icon"]:03d}-frame-000.png').convert('RGBA')
     icon, filled = fill_grip(upright(icon))
     icon.save(out / 'icon.png')
     role = ('is a painted inventory illustration of this weapon, drawn flat with its broad face toward the viewer. '

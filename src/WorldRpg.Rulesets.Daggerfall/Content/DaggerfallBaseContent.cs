@@ -163,7 +163,7 @@ internal static partial class DaggerfallBaseContent
             DaggerfallEncounterActors.AddMissing(actors, catalogs, mobiles, vocabulary);
             DaggerfallEncounterSet encounters = ReadEncounters(root, catalogs, mobiles, diagnostics);
             ValidateActorIdentities(actors, catalogs, mobiles, diagnostics);
-            DaggerfallItemTemplateLedger itemTemplates = ReadItemTemplateLedger(root, catalogs, items.Count, diagnostics);
+            DaggerfallItemTemplateLedger itemTemplates = ReadItemTemplateLedger(root, catalogs, diagnostics);
             DaggerfallCharacterPresentationSet characterPresentation = ReadCharacterPresentation(root, catalogs, diagnostics);
             DaggerfallMagicCatalogSet magic = ReadMagicCatalog(root, diagnostics);
             DaggerfallEnemySpells enemySpells = ReadEnemySpells(root, mobiles, magic, diagnostics);
@@ -2582,6 +2582,7 @@ internal static partial class DaggerfallBaseContent
         {
             diagnostics.Add($"The published item catalog carries {templates.Count} templates for 288 native targets.");
         }
+        ReadAuthoredItemTemplates(root, templates, diagnostics);
 
         Dictionary<int, DaggerfallMagicTemplateDefinition> magic = [];
         foreach (JsonElement entry in Array(section, "magic", diagnostics))
@@ -2615,6 +2616,48 @@ internal static partial class DaggerfallBaseContent
             new ReadOnlyDictionary<int, DaggerfallItemTemplateDefinition>(templates),
             new ReadOnlyDictionary<int, DaggerfallMagicTemplateDefinition>(magic))
         { Groups = new ReadOnlyDictionary<int, DaggerfallItemGroupDefinition>(groupDefinitions) };
+    }
+
+    private static readonly string[] AuthoredTemplateFields = ["index", "basedOn", "name", "baseWeight", "refreshedArt"];
+
+    /// <summary>
+    /// Applies the ruleset's own item templates (<c>authoredItemTemplates</c>, authored beside the imported catalog).
+    /// Each is an imported classic template with some of its fields changed: at its own index it replaces that
+    /// template (the mace, made lighter), and at an index past the classic catalog, <c>basedOn</c> another, it adds a
+    /// template modelled on that one (the club, the classic mace's values). A new template is always made from the
+    /// imported record, so a change to its model does not reach it. A field this section does not know is refused:
+    /// a misspelled value would otherwise load the classic one silently.
+    /// </summary>
+    private static void ReadAuthoredItemTemplates(JsonElement root, Dictionary<int, DaggerfallItemTemplateDefinition> templates,
+        DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!root.TryGetProperty("authoredItemTemplates", out JsonElement section)) return;
+        Dictionary<int, DaggerfallItemTemplateDefinition> imported = new(templates);
+        foreach (JsonElement entry in section.EnumerateArray())
+        {
+            int index = Integer(entry, "index", diagnostics);
+            int model = OptionalInteger(entry, "basedOn", diagnostics) ?? index;
+            foreach (JsonProperty field in entry.EnumerateObject().Where(field => !AuthoredTemplateFields.Contains(field.Name, StringComparer.Ordinal)))
+                diagnostics.Add($"Authored item template {index} sets '{field.Name}', which an authored template cannot change.");
+            if (!imported.TryGetValue(model, out DaggerfallItemTemplateDefinition? classic))
+            {
+                diagnostics.Add($"Authored item template {index} is made from template {model}, which the imported catalog lacks.");
+                continue;
+            }
+            if (model != index && index < DaggerfallItemTemplateLedger.TargetCount)
+            {
+                diagnostics.Add($"Authored item template {index} adds a template inside the classic catalog's indices.");
+                continue;
+            }
+            templates[index] = classic with
+            {
+                Index = index,
+                Name = OptionalText(entry, "name", diagnostics) ?? classic.Name,
+                BaseWeight = OptionalNumber(entry, "baseWeight", diagnostics) ?? classic.BaseWeight,
+                ClassicModel = model == index ? null : model,
+                RefreshedArt = OptionalText(entry, "refreshedArt", diagnostics),
+            };
+        }
     }
 
     /// <summary>
@@ -3118,12 +3161,12 @@ internal static partial class DaggerfallBaseContent
                     Integer(magnitude, "levelBase", diagnostics), Integer(magnitude, "levelHigh", diagnostics), Integer(magnitude, "perLevel", diagnostics));
     }
 
-    private static DaggerfallItemTemplateLedger ReadItemTemplateLedger(JsonElement root, DaggerfallCatalogSet catalogs, int publishedItems, DaggerfallContentDiagnostics diagnostics)
+    private static DaggerfallItemTemplateLedger ReadItemTemplateLedger(JsonElement root, DaggerfallCatalogSet catalogs, DaggerfallContentDiagnostics diagnostics)
     {
         if (!root.TryGetProperty("itemTemplateLedger", out JsonElement value) || value.ValueKind != JsonValueKind.Object)
         {
             diagnostics.Add("Base payload must carry an itemTemplateLedger section: every native item template target needs a provenance and a disposition before any catalog publication claims one.");
-            return new DaggerfallItemTemplateLedger(string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, 0, string.Empty, false, 0, 0, 0, 0, []);
+            return new DaggerfallItemTemplateLedger(string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, false, 0, 0, 0, 0, []);
         }
 
         JsonElement ledger = Object(value, "itemTemplateLedger", diagnostics);
@@ -3240,12 +3283,6 @@ internal static partial class DaggerfallBaseContent
             diagnostics.Add($"The item template ledger declares {indices.Count} distinct target indices where the classic space has {DaggerfallItemTemplateLedger.TargetCount}.");
         }
 
-        int declaredPublished = Integer(published, "count", diagnostics);
-        if (declaredPublished != publishedItems)
-        {
-            diagnostics.Add($"The item template ledger records {declaredPublished} published items where the payload defines {publishedItems}.");
-        }
-
         if (string.Equals(status, DaggerfallItemTemplateLedger.AbsentStatus, StringComparison.Ordinal) && decodedTemplates)
         {
             diagnostics.Add($"The item template ledger claims native decoding while its source status is '{status}'.");
@@ -3273,7 +3310,6 @@ internal static partial class DaggerfallBaseContent
             Text(baseline, "donorSource", diagnostics),
             substituteStatus,
             Text(substitute, "path", diagnostics),
-            declaredPublished,
             Text(published, "valueProvenance", diagnostics),
             decodedTemplates,
             Integer(summary, "targets", diagnostics),

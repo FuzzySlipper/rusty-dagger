@@ -4,7 +4,7 @@
 (the AAA First Person Arm Pack's male leather armour arms) playing the FPP melee clips that came with the old Rift
 Riders Unity game, both on the UE4 mannequin skeleton. The arms are clip-led: each weapon family loops its idle clip at
 rest and plays a clip for every classic strike, fitted to the strike's classic timing so the hit lands on the clip's
-strike mark. The classic sprite style (`classic`) is untouched.
+strike mark. The item wielded chooses the family and the look, and its metal tints the look. The classic sprite style (`classic`) is untouched.
 
 ## Licence: never commit the art
 
@@ -25,11 +25,13 @@ The game draws the arms from two parts:
   - `arms`: the shoulder, where the clips' right upper arm sits from their camera bone at the start of the rig's clip,
     so the clips' eye is the game's; the elbow pole and the default hand closures.
   - `families`: each weapon family, by the clip set it plays. Its `weapons` are the classic weapon visuals it draws,
-    `look` the held weapon (no model yet, so the hand plays its clips holding nothing) with the point the hand holds
-    and its hold, measured where the clips' `weapon_r` bone sits, `idle` the loop at rest and its length, `strikes` an
+    `look` the held weapon (a family with no model has the hand play its clips holding nothing) with the point the hand
+    holds and its hold, measured where the clips' `weapon_r` bone sits, `idle` the loop at rest and its length, `strikes` an
     Engine `ArmClip` per classic strike id with its `marks` (start, strike, recover, end as fractions of the clip) and
     `fade`. `twoHanded` lets the off hand play every clip (it otherwise rests out of view); `leftHand` lists strikes
     whose clips move it.
+  - `items`: what an item template changes, keyed by template index: its `family`, and its `model`, `grip` and `hold`
+    where they differ from that family's look. A template not listed draws its classic visual's family and look.
 - **The container**, `local/first-person.rpak` (ignored): both arms GLBs, each carrying every clip the definition names
   (not clip packs: the Engine shares an opened model's packs between everything that opens it, so a second set of
   arms, a weapon swapped or another site's viewmodel, could not associate them again), and `provenance.json`.
@@ -39,9 +41,9 @@ plays hidden and stays the swing's clock: its windup spans the classic frames be
 frames from the hit to the last and its recovery the last frame, and the clip plays through its marks over those
 phases on the world time the sprite reads. A strike a family has no clip for shows its sprite.
 
-### Families
+### Families and items
 
-| Family | Weapons | Clips | Hands |
+| Family | Visuals | Clips | Hands |
 |---|---|---|---|
 | `dagger` | `weapon.dagger.steel` | `FPP_Dagger`: strikeDown AttackD, strikeDownLeft AttackL, strikeLeft AttackR, strikeRight AttackLSlash, strikeDownRight AttackDHook, strikeUp AttackF; idle `FPP_Dag_Idle` | one |
 | `longsword` | `weapon.longblade`, `weapon.axe`, `weapon.flail`, `weapon.warhammer` | `FPP_Longsword`: Attack_D, _RD, _R, _L, _LD, _F; idle Longs_Idle | both |
@@ -50,9 +52,14 @@ phases on the world time the sprite reads. A strike a family has no clip for sho
 
 A strike's clip was chosen by which way its blade moves where it is fastest: a classic `strikeLeft` swings toward the
 left, so it plays the clip that cuts from the right. The bow, hand-to-hand and the werecreature have no fitting clip and
-keep their sprites (the pack's unarmed punch may serve the fist later). The mace is one-handed in Daggerfall, so it
-swings the sword-and-shield clips; the flail and warhammer are two-handed and keep the longsword's, as does the axe,
-whose visual draws the two-handed war axe too. The sword-and-shield idle holds the weapon upright beside the face, so a
+keep their sprites (the pack's unarmed punch may serve the fist later).
+
+A classic visual covers weapons of both kinds: `weapon.longblade` draws every sword and `weapon.axe` both axes. So the
+family follows the item's handedness in Daggerfall, and `items` moves the one-handed items off their visual's family:
+the tanto (114) to `dagger`, and the shortsword, wakazashi, broadsword, saber, longsword, katana and battle axe (116 to
+121, 127) and the club (288) to `sns`. The claymore, dai-katana and war axe stay on `longsword`, as do the flail and
+warhammer, which are two-handed too; the mace is one-handed, so its visual is on `sns`, and `items` lists it (124) for
+its model. The sword-and-shield idle holds the weapon upright beside the face, so a
 mace's head sits above the frame at rest and comes into view as it swings.
 
 ## Building it
@@ -86,9 +93,9 @@ them a little smaller than authored.
 ## Tuning: the workbench and contact sheets
 
 In `rusty dev --output window --live-debug` with `held` or `heldRetro`, the developer tools' **Workbench** tab and the
-`held.motion*` commands (`docs/playtesting.md`, "Developer commands") show a family with a chosen strike, hold each mark,
-scrub to any moment and play at any speed, and tune the marks and fade, the idle loop, the look's grip and hold, the
-shoulder and the palm. **Save** writes them into the held definition. `held.clip` reads what the arms play now, in play
+`held.motion*` commands (`docs/playtesting.md`, "Developer commands") show a look with a chosen strike, hold each mark,
+scrub to any moment and play at any speed, and tune the marks and fade, the idle loop, the look's grip and hold, an
+item's own grip and hold, the shoulder and the palm. A look is a classic visual or `item.N` for template N. **Save** writes them into the held definition. `held.clip` reads what the arms play now, in play
 or in the viewer.
 
 `scripts/fp-arms/sheet.sh ORIGIN LOOK OUT_DIR [STEP] [STRIKE...]` drives the viewer over a running host and writes a
@@ -99,8 +106,7 @@ marks.
 
 - The other arm sets (female leather, male and female cloth, male chainmail) are not built: a set chosen by the
   player's gender and armour needs its own bake where its skeleton's rest differs.
-- Only the dagger family draws a weapon model. A family has one look, and `weapon.longblade` is the classic visual
-  of every sword, so the other weapons wait for looks chosen per weapon item (#10580).
+- Weapons without a committed model draw only the hand. Each gets its `model` under `items` as it is made.
 
 ## Weapon models
 
@@ -109,7 +115,8 @@ packed by `build.sh` at `first-person/weapons/`. They are made in `authoring/too
 paper-doll icons (`authoring/docs/weapons.md`), so they carry no Asset Store art and are ordinary committed content.
 Each is in the Engine's held-look frame (origin at the grip's centre, length along -Z, +Y one edge), so a family's
 `look.grip` and `look.hold` seat it where the clips' `weapon_r` bone held the pack's weapon without retuning. Its
-steel parts are their own `metal` material, for the game to tint per metal; the other parts are `trim`.
+steel parts are their own `metal` material and the other parts are `trim`. The game tints the `metal` material with the
+item's metal, from the same `dyeTints` the paper doll draws with; steel stays untinted.
 
 ## Reused from rusty-riders
 

@@ -1,11 +1,12 @@
 using System.Numerics;
 using Rusty.Engine;
 using Rusty.Engine.FirstPerson;
+using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>
-/// The 3D first-person weapon of one family: clip-led arms (Engine <see cref="FirstPersonArms.Lead"/>) that loop the
+/// The 3D first-person weapon of one drawing (its family, its item's look and its metal): clip-led arms (Engine <see cref="FirstPersonArms.Lead"/>) that loop the
 /// family's idle clip at rest and play a strike's clip fitted to the strike's timing, with the look riding the main
 /// hand where the clip holds it (<see cref="FirstPersonArms.Ride"/>). It draws only; the classic weapon's sprite
 /// playback stays the swing's clock, so the hit is delivered and the attack released exactly as with the sprites. A
@@ -30,6 +31,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
 
     private readonly DaggerfallHeldArt art;
     private readonly DaggerfallHeldFamily family;
+    private readonly DaggerfallHeldItem? item;
     private readonly bool retro;
     private readonly FirstPersonArms arms;
     private readonly RenderResource? model;
@@ -44,26 +46,32 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     // World seconds since the arms were last led.
     private float since;
 
-    internal DaggerfallHeldViewmodel(IEngineContext engine, DaggerfallHeldArt art, string family, DaggerfallViewmodelStyle style, ulong weaponObject, ulong armsObject)
+    internal DaggerfallHeldViewmodel(IEngineContext engine, DaggerfallHeldArt art, DaggerfallHeldDrawing drawing, DaggerfallDyeTint? metal, DaggerfallViewmodelStyle style, ulong weaponObject, ulong armsObject)
     {
         this.art = art;
-        this.family = art.Document.Families[family];
-        Family = family;
+        Drawing = drawing;
+        family = art.Document.Families[drawing.Family];
+        item = drawing.Item is int template ? art.Document.Items[template] : null;
         retro = style == DaggerfallViewmodelStyle.HeldRetro;
         WeaponObject = weaponObject;
         using (ContentReference armsModel = art.Container.OpenReference(retro ? art.Document.RetroModel : art.Document.Rig.Model))
             arms = new FirstPersonArms(engine, art.Document.Arms, art.Document.Rig, armsObject, armsModel);
         try
         {
-            string[] missing = [.. new[] { this.family.Idle.Clip }.Concat(this.family.Strikes.Values.Select(clip => clip.Clip)).Where(clip => !arms.Clips.Contains(clip))];
+            string[] missing = [.. new[] { family.Idle.Clip }.Concat(family.Strikes.Values.Select(clip => clip.Clip)).Where(clip => !arms.Clips.Contains(clip))];
             if (missing.Length > 0)
-                throw new InvalidDataException($"{DaggerfallHeldArt.DocumentPath}: families.{family} names clips the arms lack: {string.Join(", ", missing)}. Rebuild {DaggerfallHeldArt.ContainerName} with scripts/fp-arms/build.sh.");
-            if (this.family.Look.Model is { } path)
+                throw new InvalidDataException($"{DaggerfallHeldArt.DocumentPath}: families.{drawing.Family} names clips the arms lack: {string.Join(", ", missing)}. Rebuild {DaggerfallHeldArt.ContainerName} with scripts/fp-arms/build.sh.");
+            if ((item?.Model ?? family.Look.Model) is { } path)
             {
                 using ContentReference lookModel = art.Container.OpenReference(path);
                 model = engine.Animation.OpenAnimatedMeshFromContent(new(lookModel));
-                try { look = engine.Animation.CreateAnimatedMeshAppearance(new(model)); }
-                catch { model.Dispose(); throw; }
+                try
+                {
+                    look = engine.Animation.CreateAnimatedMeshAppearance(new(model));
+                    if (metal is not null && art.MetalSlot(path) is uint slot)
+                        engine.Animation.UpdateAnimatedMeshMaterialFactors(new(look, new[] { MeshMaterialFactors.Tint(slot, DaggerfallHeldArt.MetalColor(metal)) }));
+                }
+                catch { look?.Dispose(); model.Dispose(); throw; }
             }
             else
             {
@@ -74,8 +82,8 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
         catch { arms.Dispose(); throw; }
     }
 
-    /// <summary>The family this weapon is drawn by.</summary>
-    internal string Family { get; }
+    /// <summary>What this weapon is drawn as: its family, its item's look and its metal.</summary>
+    internal DaggerfallHeldDrawing Drawing { get; }
 
     /// <summary>The published object the weapon's look is drawn on.</summary>
     internal ulong WeaponObject { get; }
@@ -137,7 +145,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
         since = 0;
         (Vector3 grip, Quaternion turn) = arms.Ride(MainAim());
         // The model's origin is its own grip; the hand holds the look's grip point.
-        Vector3 at = grip - Vector3.Transform(family.Look.Grip, turn);
+        Vector3 at = grip - Vector3.Transform(item?.Grip ?? family.Look.Grip, turn);
         facts.Add(new AppearanceFact(WeaponObject, false, 0, new Transform(at, turn, Vector3.One), look, shown && model is not null, RenderLayer.Viewmodel));
         facts.Add(arms.Fact(shown));
     }
@@ -177,7 +185,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     // The main hand rides its clip, holding the look as the family's look says; before the clip has faded in it rises
     // from where an empty hand rests.
     private HandAim MainAim() =>
-        new(HeldFrames.Mirror(HandAway), Quaternion.Identity, family.Look.Hold, 0, art.Document.Arms.Pole);
+        new(HeldFrames.Mirror(HandAway), Quaternion.Identity, item?.Hold ?? family.Look.Hold, 0, art.Document.Arms.Pole);
 
     // The off hand rests out of view, unless the family's look is held in both hands or the strike moves it: then it
     // plays the clip (reach 0).

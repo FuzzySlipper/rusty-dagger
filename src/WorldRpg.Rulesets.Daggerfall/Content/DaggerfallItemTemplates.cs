@@ -55,7 +55,27 @@ internal sealed record DaggerfallItemTemplateDefinition(
     int PlayerTextureArchive,
     int PlayerTextureRecord,
     string WeaponMediaId,
-    int DrawOrderOrEffect);
+    int DrawOrderOrEffect)
+{
+    /// <summary>
+    /// For a template the ruleset adds past the classic catalog (<c>authoredItemTemplates</c>), the classic
+    /// template it is modelled on; null for a classic template.
+    /// </summary>
+    internal int? ClassicModel { get; init; }
+
+    /// <summary>
+    /// The template the classic keeps its per-template tables by (swing and equip sounds, equip delays): its own
+    /// index, or for a template the ruleset adds, the classic template it is modelled on.
+    /// </summary>
+    internal int ClassicIndex => ClassicModel ?? Index;
+
+    /// <summary>
+    /// The name the refreshed art draws this template's paper-doll images under (<c>paper-doll.NAME.RECORD</c>),
+    /// in place of its classic records' <c>paper-doll.ARCHIVE.RECORD</c>: a template whose refreshed design differs
+    /// from another that shares its classic records. Null to use the classic records.
+    /// </summary>
+    internal string? RefreshedArt { get; init; }
+}
 
 /// <summary>One published magic template: its group placement, material and enchantments.</summary>
 /// <param name="Index">The magic template index.</param>

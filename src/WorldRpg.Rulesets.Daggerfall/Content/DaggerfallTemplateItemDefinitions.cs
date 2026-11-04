@@ -19,7 +19,7 @@ internal static class DaggerfallTemplateItemDefinitions
         [117] = "iron-wakazashi", [118] = "iron-broadsword", [119] = "iron-saber", [120] = "iron-longsword",
         [121] = "iron-katana", [122] = "iron-claymore", [123] = "iron-dai-katana", [124] = "iron-mace",
         [125] = "iron-flail", [126] = "iron-warhammer", [127] = "iron-battle-axe", [128] = "iron-war-axe",
-        [129] = "iron-short-bow", [130] = "iron-long-bow",
+        [129] = "iron-short-bow", [130] = "iron-long-bow", [288] = "iron-club",
     };
 
     private static readonly IReadOnlyDictionary<int, string> ArmorSources = new Dictionary<int, string>

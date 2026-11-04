@@ -140,7 +140,7 @@ The keys are the clip's four marks: 0 start, 1 strike, 2 recover, 3 end.
 
 | Command | What it does |
 |---|---|
-| `held.motion LOOK ACTION` | Shows the look's family at rest with the strike, and lists its clip, timing and marks. |
+| `held.motion LOOK ACTION` | Shows the look's family at rest with the strike, and lists its clip, timing and marks. A look is a classic visual, or `item.N` for an item template the definition lists. |
 | `held.motion.key N` | Holds the strike at mark N (-1 is rest). |
 | `held.motion.next` / `held.motion.prev` | Holds the next or previous mark, through rest. |
 | `held.motion.play SPEED` | Plays the strike from rest at SPEED (1 as in play, 0.25 a quarter; 0.01 to 4). |

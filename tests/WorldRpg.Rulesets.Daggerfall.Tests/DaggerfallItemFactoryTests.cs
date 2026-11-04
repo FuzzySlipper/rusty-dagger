@@ -23,7 +23,7 @@ public sealed class DaggerfallItemFactoryTests
         DaggerfallCreatedItem[] created = retained.Select(template => factory.Create(Request(template))).ToArray();
 
         Assert.Equal(retained.Length, created.Length);
-        Assert.Equal(288, created.Length);
+        Assert.Equal(289, created.Length);
         foreach ((DaggerfallItemTemplateDefinition template, DaggerfallCreatedItem item) in retained.Zip(created))
         {
             string expectedMaterial = template.Index == 131 ? "none"

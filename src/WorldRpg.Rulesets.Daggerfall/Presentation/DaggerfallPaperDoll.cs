@@ -166,7 +166,7 @@ internal static class DaggerfallPaperDollPolicy
         {
             PaperDollLayerPresentation? drawnLayer = IsArtifact(definitions, item, out int? artifactRecord)
                 ? artifactRecord is int record ? Item(presentation, ArtifactArchive(item, identity), HandRecord(template, item, record), UnchangedDye, art, clothing: false) : null
-                : Item(presentation, Archive(template, item, identity), Record(template, item), Dye(template, item), art, IsClothing(template));
+                : Item(presentation, Archive(template, item, identity), Record(template, item), Dye(template, item), art, IsClothing(template), template.RefreshedArt);
             if (drawnLayer is { } layer)
                 layers.Add(layer with { Slot = item.Slot });
             else unplaced.Add(item.Label());
@@ -190,9 +190,9 @@ internal static class DaggerfallPaperDollPolicy
     /// replacement at its own rect, smoothed, a clip moved to the same doll rows (an end of the classic image stays
     /// the end of the replacement, which may overhang it), and the mask kept at the classic image's rect.
     /// </summary>
-    private static PaperDollLayerPresentation Refreshed(PaperDollLayerPresentation layer, DaggerfallArtReplacements? art)
+    private static PaperDollLayerPresentation Refreshed(PaperDollLayerPresentation layer, DaggerfallArtReplacements? art, string? key = null)
     {
-        if (art?.For(layer.MediaId) is not { Doll: { } rect } replacement) return layer;
+        if (art?.For(key ?? layer.MediaId) is not { Doll: { } rect } replacement) return layer;
         double? Row(double? row) => row switch
         {
             null => null,
@@ -212,7 +212,7 @@ internal static class DaggerfallPaperDollPolicy
         new($"Paper-doll layer '{mediaId}' has no published placement.");
 
     private static PaperDollLayerPresentation? Item(DaggerfallCharacterPresentationSet presentation, int? archive, int record, string dye,
-        DaggerfallArtReplacements? art, bool clothing)
+        DaggerfallArtReplacements? art, bool clothing, string? refreshedArt = null)
     {
         if (archive is not int number || !presentation.PaperDollItems.TryGetValue((number, record), out DaggerfallPaperDollItemImage? image)
             || !image.Dyes.TryGetValue(dye, out string? mediaId))
@@ -221,10 +221,12 @@ internal static class DaggerfallPaperDollPolicy
         PaperDollLayerPresentation classic = new("item", mediaId, place.X, place.Y, place.Width, place.Height, Mask: image.MaskMediaId);
         // The refreshed record has one neutral image for every dye or metal, standing in for the record as published
         // undyed: neutral cloth, or bare steel, which a metal the classic leaves unchanged draws as it is.
+        // A template with its own refreshed design (RefreshedArt) is replaced under its own name, not its records'.
         string neutral = $"paper-doll.{number}.{record}";
-        if (!clothing && mediaId == neutral) return Refreshed(classic, art);
-        return art?.For(neutral) is { DyeMask: { } mask } && art.Tints.TryGetValue(dye, out DaggerfallDyeTint? tint)
-            ? Refreshed(classic with { MediaId = neutral }, art) with { Tint = new(tint.Multiply, tint.Brightness, mask.MediaId) }
+        string key = refreshedArt is { } name ? $"paper-doll.{name}.{record}" : neutral;
+        if (!clothing && mediaId == neutral) return Refreshed(classic, art, key);
+        return art?.For(key) is { DyeMask: { } mask } && art.Tints.TryGetValue(dye, out DaggerfallDyeTint? tint)
+            ? Refreshed(classic with { MediaId = neutral }, art, key) with { Tint = new(tint.Multiply, tint.Brightness, mask.MediaId) }
             : classic;
     }
 
@@ -252,7 +254,7 @@ internal static class DaggerfallPaperDollPolicy
         PaperDollLayerPresentation? image = IsArtifact(definitions, item, out int? artifactRecord)
             ? artifactRecord is int record ? Item(presentation, ArtifactArchive(item, wearer), record, UnchangedDye, art, clothing: false) : null
             : Item(presentation, Archive(template, item, wearer), Record(template, item) + (template.Index == KatanaTemplate ? 1 : 0),
-                Dye(template, item), art, IsClothing(template));
+                Dye(template, item), art, IsClothing(template), template.RefreshedArt);
         return image is null ? null : (image.MediaId, image.Tint);
     }
 

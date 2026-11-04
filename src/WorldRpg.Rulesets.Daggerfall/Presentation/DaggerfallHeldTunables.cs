@@ -8,7 +8,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// <summary>
 /// The values the first-person workbench's page shows for a strike of a family of the held art: the strike's marks
 /// (where its windup starts, its hit lands, its commit ends and its recovery ends in the clip) and fade, the family's
-/// idle loop and the look's grip and hold, and the arms' shoulder and the rig's palm. Save writes only the values the
+/// idle loop and the look's grip and hold, an item's own grip and hold where it states them, and the arms' shoulder and
+/// the rig's palm. Save writes only the values the
 /// page binds, so marks and looks set on the page stay on it, marked edited, after the viewer moves to another strike
 /// or family. Each
 /// control applies its value to the loaded art in place, as the held viewmodel reads it at every draw, and names where
@@ -17,8 +18,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// </summary>
 internal static class DaggerfallHeldTunables
 {
-    internal static List<TunableGroup> For(DaggerfallHeldArtDocument document, string family, string strike, PhaseTiming timing, ISet<string> edited, Action publish)
+    internal static List<TunableGroup> For(DaggerfallHeldArtDocument document, DaggerfallHeldDrawing drawing, string strike, PhaseTiming timing, ISet<string> edited, Action publish)
     {
+        string family = drawing.Family;
         List<TunableGroup> groups = [Marks(family, strike, document, $"Clip · {strike} ({timing.Duration:0.###} s, the hit at {timing.Windup:0.###} s)", edited, publish)];
         // The page binds only what it shows, and Save writes only bound values: marks and looks edited on another strike
         // or family stay on the page until the workbench ends.
@@ -28,6 +30,8 @@ internal static class DaggerfallHeldTunables
         groups.Add(Look(family, document, $"Look · {family} (the hand's hold, and the idle loop)", edited, publish));
         foreach (string name in document.Families.Keys.Where(name => name != family && edited.Contains(LookId(name))))
             groups.Add(Look(name, document, $"Look · {name} (edited)", edited, publish));
+        foreach (int template in document.Items.Keys.Where(template => template == drawing.Item || edited.Contains(ItemId(template))))
+            if (Item(template, document, edited, publish) is { } item) groups.Add(item);
 
         // The arms: where the clips' right shoulder sits from the eye, and the rig's palm from the wrist (where a look is held).
         HeldArms arms = document.Arms;
@@ -58,6 +62,18 @@ internal static class DaggerfallHeldTunables
         ]) { File = file };
     }
 
+    // An item's own grip and hold, where it states them. Setting one records the group as edited.
+    private static TunableGroup? Item(int template, DaggerfallHeldArtDocument document, ISet<string> edited, Action publish)
+    {
+        string id = ItemId(template);
+        Action changed = () => { edited.Add(id); publish(); };
+        DaggerfallHeldItem item = document.Items[template];
+        List<Tunable> controls = [];
+        if (item.Grip is not null) controls.AddRange(Vector($"{id}.grip", "hand's grip (look space)", () => item.Grip.Value, v => item.Grip = v, -.3F, .3F, .002F, $"/items/{template}/grip", changed));
+        if (item.Hold is not null) controls.AddRange(Vector($"{id}.hold", "hand's hold", () => item.Hold.Value, v => item.Hold = v, -180, 180, 1, $"/items/{template}/hold", changed));
+        return controls.Count == 0 ? null : new(id, $"Item · {template}", controls) { File = DaggerfallHeldArt.DocumentPath };
+    }
+
     // A strike's clip: its four marks, as fractions of the clip, and its fade. Setting one records the group as edited.
     private static TunableGroup Marks(string family, string strike, DaggerfallHeldArtDocument document, string title, ISet<string> edited, Action publish)
     {
@@ -82,6 +98,7 @@ internal static class DaggerfallHeldTunables
 
     private static string MarksId(string family, string strike) => $"clip.{family}.{strike}";
     private static string LookId(string family) => $"look.{family}";
+    private static string ItemId(int template) => $"item.{template}";
 
     // Three sliders over one authored point, applied in place and saved to its elements.
     private static IEnumerable<Tunable> Vector(string id, string label, Func<Vector3> get, Action<Vector3> set, float min, float max, float step,

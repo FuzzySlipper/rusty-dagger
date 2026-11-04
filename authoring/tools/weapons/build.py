@@ -10,7 +10,9 @@ a blade's diamond section; `round` rises in a quarter circle, a bar). A `lathe` 
 the icon's outline there, round in section, about one straight axis fitted to its run; lathe parts that touch are
 turned as one profile and share their rings, so they join without gaps, and a run's end reaches a flat part just beyond it. `smooth` rings median-filter
 the radii so studs and spikes on the outline do not swell it. `ball` makes a lathe part a sphere, the largest circle
-inside its outline, keeping the narrower turned outline below it (a collar). `spikes` sets cones on its widest ring's sphere: `count`, `length` and `base` in metres,
+inside its outline, keeping the narrower turned outline below it (a collar). `flanges` makes it a turned core (`core`, a share of its widest radius) with `count` flat plates
+`thickness` metres thick round it, each following the outline. `rows` limits a part to those icon rows, for a class
+the icon paints as one piece that is two parts. `spikes` sets cones on its widest ring's sphere: `count`, `length` and `base` in metres,
 spread evenly. A part's `light` is passed to paint.py.
 
 Writes OUT_DIR/reference.glb (the icon projected flat onto every part, the colour layout `palette_cells.py`
@@ -89,7 +91,11 @@ def components(mask):
 
 def part_mask(cls, part):
     want = {'steel': 1, 'brass': 2, 'leather': 3}[part['class']]
-    pieces = [m for m in components(cls == want) if m.sum() > 100]
+    chosen = cls == want
+    if 'rows' in part:   # a class the icon paints as one piece that is two parts (wood running into a grip)
+        top, bottom = part['rows']
+        chosen = chosen & (np.arange(H)[:, None] >= top) & (np.arange(H)[:, None] <= bottom)
+    pieces = [m for m in components(chosen) if m.sum() > 100]
     if not pieces:
         raise SystemExit(f'{name}: no {part["class"]} pixels for {part["name"]}')
     pieces.sort(key=lambda m: np.nonzero(m)[0].mean())   # top to bottom
@@ -211,6 +217,15 @@ def turned(chain):
                 for t in np.linspace(math.pi, end, segments + 1)]
         a, b = stations.index(mine[0]), stations.index(mine[-1])
         stations[a:b + 1] = ball + [s for s in collar if s[0] > ball[-1][0]]
+    plates = {}
+    for part in (p for p in chain if 'flanges' in p):
+        # The flanges take the outline; the turned core stays inside them, and the rows narrower than it (a tip, a
+        # collar) keep their outline.
+        mine = [s for s in stations if s[3] == part['name']]
+        core = part['flanges']['core'] * max(s[2] for s in mine)
+        plates[part['name']] = [list(s) for s in mine if s[2] > core]
+        for s in mine:
+            s[2] = min(s[2], core)
     above, below = joins([p['name'] for p in chain])
     if above is not None and above < stations[0][0]:   # reach a flat part just above or below (a guard)
         stations.insert(0, [above] + stations[0][1:])
@@ -236,12 +251,37 @@ def turned(chain):
             bm.faces.new(rings[0][::-1])
         if mine[-1] == len(stations) - 1:
             bm.faces.new(rings[-1])
+        if 'flanges' in part:
+            flanges(bm, vert, plates[part['name']], part['flanges'])
         if 'spikes' in part:
             y, cx, r, _, painted = max(stations[a:b + 1], key=lambda s: s[2])
             for v in spikes(bm, place(cx, y, 0), r * METRES, part['spikes']):
                 v[icon_x] = v.co.z / METRES + ORIGIN[0] + painted - cx
         meshes[part['name']] = bm
     return meshes
+
+
+def flanges(bm, vert, rows, spec):
+    """Flat plates spaced evenly round the axis, each running from the core out to the outline of the given rings."""
+    core = spec['core'] * max(s[2] for s in rows)
+    half = spec['thickness'] / 2 / METRES
+    for k in range(spec['count']):
+        a = 2 * math.pi * (k + 0.5) / spec['count']
+        c, n = math.cos(a), math.sin(a)
+        sides = []
+        for side in (half, -half):   # a strip of quads per face: one polygon's straight edges triangulate degenerate
+            sides.append([(vert(y, cx, r * c - side * n, r * n + side * c, painted),
+                           vert(y, cx, core * 0.9 * c - side * n, core * 0.9 * n + side * c, painted))
+                          for y, cx, r, _, painted in rows])
+        front, back = sides
+        for (a0, b0), (a1, b1) in zip(front, front[1:]):
+            bm.faces.new([a0, a1, b1, b0])
+        for (a0, b0), (a1, b1) in zip(back, back[1:]):
+            bm.faces.new([b0, b1, a1, a0])
+        for (f0, _), (f1, _), (k0, _), (k1, _) in zip(front, front[1:], back, back[1:]):
+            bm.faces.new([f1, f0, k0, k1])   # the outer edge
+        bm.faces.new([front[0][0], front[0][1], back[0][1], back[0][0]])
+        bm.faces.new([back[-1][0], back[-1][1], front[-1][1], front[-1][0]])
 
 
 def spikes(bm, centre, r, spec):
