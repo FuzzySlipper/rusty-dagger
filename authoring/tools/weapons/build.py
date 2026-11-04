@@ -7,9 +7,10 @@ when the class appears more than once (a guard and a pommel), a piece's index co
 them), or `all` its pieces; build.json lists every piece per class to choose from. A `flat` part is two sheets that
 meet at its outline, offset by `half` metres toward the middle over `ramp` metres (`profile` `ridge` rises straight,
 a blade's diamond section; `round` rises in a quarter circle, a bar). A `lathe` part is a ring every 5 mm as wide as
-the icon there, round in section; `smooth` rings median-filter the radii so studs and spikes on the outline do not
-swell it. `ball` makes a lathe part a sphere, the largest circle inside its outline, keeping the turned outline
-below it (a collar). `spikes` sets cones on its widest ring's sphere: `count`, `length` and `base` in metres,
+the icon's outline there, round in section; lathe parts that touch are turned as one profile and share their
+rings, so they join without gaps, and a run's end reaches a flat part just beyond it. `smooth` rings median-filter
+the radii so studs and spikes on the outline do not swell it. `ball` makes a lathe part a sphere, the largest circle
+inside its outline, keeping the narrower turned outline below it (a collar). `spikes` sets cones on its widest ring's sphere: `count`, `length` and `base` in metres,
 spread evenly. A part's `light` is passed to paint.py.
 
 Writes OUT_DIR/reference.glb (the icon projected flat onto every part, the colour layout `palette_cells.py`
@@ -159,53 +160,115 @@ def flat(bm, mask, part):
             bm.faces.new(list(dict.fromkeys(verts)))
 
 
-def lathe(bm, mask, part):
-    rows = [y for y in range(H) if mask[y].any()]
-    segments = part.get('segments', 12)
-    step = max(1, min(round(0.005 / METRES), len(rows) // 6))   # a ring every 5 mm, at least six to a part
+def turned(chain):
+    """Lathe parts that touch, turned as one profile so they share their rings: a ring every 5 mm (and at every
+    change of part) as wide as the icon's outline there, its ink edge included, so no join pinches or gaps. Each ring
+    belongs to the part with most pixels in its row; each part's mesh runs from its first ring to the next part's
+    first, so the pieces meet exactly. Returns a bmesh per part."""
+    union = np.any([masks[p['name']] for p in chain], axis=0)
+    ys = np.nonzero(union)[0]
+    top, bottom = int(ys.min()), int(ys.max())
+    band = np.zeros((H, W), bool)
+    band[top:bottom + 1] = pixels[top:bottom + 1, :, 3] > 0.5
+    outline = max(components(band), key=lambda m: (m & union).sum())
+    rows = [y for y in range(top, bottom + 1) if outline[y].any()]
+    owner, last = {}, chain[0]['name']
+    for y in rows:
+        count, name = max((int(masks[p['name']][y].sum()), p['name']) for p in chain)
+        last = name if count else last
+        owner[y] = last
+    step = max(1, round(0.005 / METRES))
+    changes = {y for a, b in zip(rows, rows[1:]) if owner[a] != owner[b] for y in (a, b)}
     stations = []
-    for y in rows[::step] + rows[-1:]:
-        xs = np.nonzero(mask[y])[0]
-        stations.append((y, (xs.min() + xs.max() + 1) / 2, (xs.max() - xs.min() + 1) / 2))
-    smooth = part.get('smooth', 1)
-    radii = [np.median([s[2] for s in stations[max(0, i - smooth // 2):i + smooth // 2 + 1]]) for i in range(len(stations))]
-    if part.get('ball'):   # a true sphere, the largest that fits the outline (spikes do not widen it), the turned outline kept below it (a collar)
-        d = distance(mask)
+    for y in sorted(set(rows[::step]) | {rows[-1]} | changes):
+        # The outline within a few pixels of the parts' own: their ink edge, not a guard that crosses the same row.
+        own = np.nonzero(union[y])[0] if union[y].any() else np.nonzero(outline[y])[0]
+        xs = np.nonzero(outline[y, max(0, own.min() - 4):own.max() + 5])[0] + max(0, own.min() - 4)
+        stations.append([y, (xs.min() + xs.max() + 1) / 2, (xs.max() - xs.min() + 1) / 2, owner[y]])
+    for part in chain:   # median-filter each part's radii on its own, so a ring's edge stays sharp
+        mine = [s for s in stations if s[3] == part['name']]
+        raw, k = [s[2] for s in mine], part.get('smooth', 1)
+        for j, s in enumerate(mine):
+            s[2] = float(np.median(raw[max(0, j - k // 2):j + k // 2 + 1]))
+    segments = max(p.get('segments', 12) for p in chain)
+    for part in (p for p in chain if p.get('ball')):
+        # A true sphere, the largest that fits the outline (spikes do not widen it). Below it the turned outline is
+        # kept where it is narrower than the ball (a collar), and the sphere ends where it is as narrow as the collar.
+        mine = [s for s in stations if s[3] == part['name']]
+        d = distance(masks[part['name']])
         cy, cx = np.unravel_index(int(np.argmax(d)), d.shape)
         r = float(d.max())
-        below = [(s, q) for s, q in zip(stations, radii) if s[0] > cy + r]
-        ball = [((cy + r * math.cos(t), cx, 0), max(r * math.sin(t), r * 0.05)) for t in np.linspace(math.pi, 0, segments + 1)]
-        stations, radii = [s for s, _ in ball] + [s for s, _ in below], [q for _, q in ball] + [q for _, q in below]
-    rings = []
-    for (y, cx, _), r in zip(stations, radii):
-        ring = []
-        for k in range(segments):
-            a = 2 * math.pi * k / segments
-            ring.append(bm.verts.new(place(cx + r * math.cos(a), y, r * math.sin(a) * METRES)))
-        rings.append(ring)
-    for a, b in zip(rings, rings[1:]):
-        for k in range(segments):
-            bm.faces.new([a[k], a[(k + 1) % segments], b[(k + 1) % segments], b[k]])
-    bm.faces.new(rings[0][::-1])
-    bm.faces.new(rings[-1])
-    if 'spikes' in part:
-        i = int(np.argmax(radii))
-        y, cx, _ = stations[i]
-        centre, r = place(cx, y, 0), radii[i] * METRES
-        spikes = part['spikes']
-        n = spikes['count']
-        for k in range(n):   # a Fibonacci sphere spreads the spikes evenly
-            z = 1 - 2 * (k + 0.5) / n
-            a = k * math.pi * (3 - math.sqrt(5))
-            direction = Vector((math.sqrt(1 - z * z) * math.cos(a), z, math.sqrt(1 - z * z) * math.sin(a)))
-            if direction.y < -0.55:   # none where the haft enters the ball
-                continue
-            cone = bmesh.ops.create_cone(bm, cap_ends=True, segments=6, radius1=spikes['base'], radius2=0,
-                                         depth=spikes['length'] + r * 0.3)
-            verts = cone['verts']
-            rotation = Vector((0, 0, 1)).rotation_difference(direction)
-            bmesh.ops.rotate(bm, verts=verts, cent=Vector(), matrix=rotation.to_matrix())
-            bmesh.ops.translate(bm, verts=verts, vec=centre + direction * (r + spikes['length'] / 2 - r * 0.15))
+        collar = [s for s in mine if s[0] > cy and s[2] < 0.8 * r]
+        end = math.asin(collar[0][2] / r) if collar else 0.0
+        ball = [[cy + r * math.cos(t), cx, max(r * math.sin(t), r * 0.05), part['name']]
+                for t in np.linspace(math.pi, end, segments + 1)]
+        a, b = stations.index(mine[0]), stations.index(mine[-1])
+        stations[a:b + 1] = ball + [s for s in collar if s[0] > ball[-1][0]]
+    above, below = joins([p['name'] for p in chain])
+    if above is not None and above < stations[0][0]:   # reach a flat part just above or below (a guard)
+        stations.insert(0, [above] + stations[0][1:])
+    if below is not None and below > stations[-1][0]:
+        stations.append([below] + stations[-1][1:])
+    meshes = {}
+    for part in chain:
+        mine = [i for i, s in enumerate(stations) if s[3] == part['name']]
+        a, b = mine[0], min(mine[-1] + 1, len(stations) - 1)
+        bm = bmesh.new()
+        rings = [[bm.verts.new(place(cx + r * math.cos(2 * math.pi * k / segments), y,
+                                     r * math.sin(2 * math.pi * k / segments) * METRES)) for k in range(segments)]
+                 for y, cx, r, _ in stations[a:b + 1]]
+        for lo, hi in zip(rings, rings[1:]):
+            for k in range(segments):
+                bm.faces.new([lo[k], lo[(k + 1) % segments], hi[(k + 1) % segments], hi[k]])
+        if a == 0:
+            bm.faces.new(rings[0][::-1])
+        if mine[-1] == len(stations) - 1:
+            bm.faces.new(rings[-1])
+        if 'spikes' in part:
+            y, cx, r, _ = max(stations[a:b + 1], key=lambda s: s[2])
+            spikes(bm, place(cx, y, 0), r * METRES, part['spikes'])
+        meshes[part['name']] = bm
+    return meshes
+
+
+def spikes(bm, centre, r, spec):
+    n = spec['count']
+    for k in range(n):   # a Fibonacci sphere spreads the spikes evenly
+        z = 1 - 2 * (k + 0.5) / n
+        a = k * math.pi * (3 - math.sqrt(5))
+        direction = Vector((math.sqrt(1 - z * z) * math.cos(a), z, math.sqrt(1 - z * z) * math.sin(a)))
+        if direction.y < -0.55:   # none where the haft enters the ball
+            continue
+        cone = bmesh.ops.create_cone(bm, cap_ends=True, segments=6, radius1=spec['base'], radius2=0,
+                                     depth=spec['length'] + r * 0.3)
+        verts = cone['verts']
+        bmesh.ops.rotate(bm, verts=verts, cent=Vector(), matrix=Vector((0, 0, 1)).rotation_difference(direction).to_matrix())
+        bmesh.ops.translate(bm, verts=verts, vec=centre + direction * (r + spec['length'] / 2 - r * 0.15))
+
+
+def rows_of(names):
+    ys = np.nonzero(np.any([masks[n] for n in names], axis=0))[0]
+    return int(ys.min()), int(ys.max())
+
+
+def joins(names):
+    """The rows where the other parts just above and below these end, when one ends within 20 pixels of them."""
+    top, bottom = rows_of(names)
+    others = [rows_of([n]) for n in masks if n not in names]
+    above = [b for t, b in others if top - 20 <= b <= top + 3 and t < top]
+    below = [t for t, b in others if bottom - 3 <= t <= bottom + 20 and b > bottom]
+    return (max(above) if above else None, min(below) if below else None)
+
+
+def chains():
+    """The lathe parts in runs that touch (within 20 pixels), top to bottom."""
+    runs = []
+    for part in sorted((p for p in weapon['parts'] if p['shape'] == 'lathe'), key=lambda p: rows_of([p['name']])[0]):
+        if runs and rows_of([part['name']])[0] <= rows_of([q['name'] for q in runs[-1]])[1] + 20:
+            runs[-1].append(part)
+        else:
+            runs.append([part])
+    return runs
 
 
 def material(label, image=None):
@@ -232,10 +295,14 @@ ORIGIN = ((gx.min() + gx.max() + 1) / 2, bottom - (lo + hi) / 2 * (bottom - top)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 icon = bpy.data.images.load(str(Path(icon_path).resolve()))
+lathed = {name: bm for chain in chains() for name, bm in turned(chain).items()}
 objects = []
 for part in weapon['parts']:
-    bm = bmesh.new()
-    (flat if part['shape'] == 'flat' else lathe)(bm, masks[part['name']], part)
+    if part['shape'] == 'flat':
+        bm = bmesh.new()
+        flat(bm, masks[part['name']], part)
+    else:
+        bm = lathed[part['name']]
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     layer = bm.loops.layers.uv.new('UVMap')

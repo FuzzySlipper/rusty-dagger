@@ -80,9 +80,16 @@
   },
   {
    "item": 124, "name": "mace", "family": "blunt", "hands": 1, "length": 0.70,
+   "records": [], "icon": null,
+   "note": "The flanged head of the classic first-person frames; its inventory and paper-doll art is new (#10581).",
+   "firstPerson": {"cif": "WEAPON05", "use": "design", "why": "the flanged head the new icon is drawn from"}
+  },
+  {
+   "item": null, "name": "club", "family": "blunt", "hands": 1, "length": 0.70,
    "records": [14, 15], "icon": 15, "pilot": true,
-   "firstPerson": {"cif": "WEAPON05", "use": "none", "why": "its flanged head conflicts with the icon's spiked ball; the icon wins (confirm at review)"},
-   "subject": "A one-handed mace: a round iron ball head studded all over with short conical spikes, set in a short iron collar on top of a straight oiled brown wooden haft; the lower haft is bound in red-brown leather straps for the grip and ends in a flat iron butt cap.",
+   "note": "A new weapon type (#10581): the spiked ball of the mace's classic paper-doll art. Item 124 keeps the name mace and takes the flanged head.",
+   "firstPerson": {"cif": "WEAPON05", "use": "none", "why": "the flanged head is the mace's (#10581)"},
+   "subject": "A one-handed spiked club: a round iron ball head studded all over with short conical spikes, set in a short iron collar on top of a straight oiled brown wooden haft; the lower haft is bound in red-brown leather straps for the grip and ends in a flat iron butt cap.",
    "invent": "The ball is a sphere with about a dozen evenly spaced short spikes, the same on every side. The haft is round in section. The leather grip binding is continuous from where the wood ends to the butt cap.",
    "grip": {"part": "grip"},
    "parts": [
