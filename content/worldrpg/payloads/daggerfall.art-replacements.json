@@ -48677,12 +48677,1233 @@
    },
    {
     "replaces": {
+     "archive": 2,
+     "record": 0
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-0.png",
+    "byteLength": 21021,
+    "sha256": "ad5293c322de0441eb5b9a5376611a49bc7821905d0d6b403b3e90d1d7cd714c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-1.png",
+    "byteLength": 30145,
+    "sha256": "20c112eecd9778691c0699e35f593940d8e40b193afb38f14866b7319b77d405",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 2
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-2.png",
+    "byteLength": 42827,
+    "sha256": "e0f4eda1288a6390861c15905c0dca9a12fb6939715653ef90a7dfa7e75d26c8",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 3
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-3.png",
+    "byteLength": 33781,
+    "sha256": "54b946e1279700041e9e15c01cc1f1a52b90275ece98838c1fb0977974a33eb6",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-4.png",
+    "byteLength": 31335,
+    "sha256": "80df89f0dbbbaa56def425e399892f5fd33c78843964d45034dd25c8887bc81d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 5
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-5.png",
+    "byteLength": 25973,
+    "sha256": "72f7f3dd99af96bfb4df0de0b811bf2fe43ecf8e32475b32330cd2a003d3fa83",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 6
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-6.png",
+    "byteLength": 30873,
+    "sha256": "985fa9e588f1568214152677734763686a1d40e0c7874fddb3870a1dc040e594",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 7
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-7.png",
+    "byteLength": 30943,
+    "sha256": "5ac94213509e9d5316127dbb1e18435333b0739c0398cecf4b32a4b9af05261d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 8
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-8.png",
+    "byteLength": 32259,
+    "sha256": "a2da96796c15a0e969c100dc8ff3c72a76614ab49f1e693f40137c2755376485",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 9
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-9.png",
+    "byteLength": 43106,
+    "sha256": "bfb2d224e37cf1be6683315024bff26e6e62ee5de81b77d1b8d3b6a9706bd623",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 10
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-10.png",
+    "byteLength": 38438,
+    "sha256": "c27bc5ec36ca923bfb8d8114e3d42a139caa7af62f795ddb7316794f8cc373db",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 11
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-11.png",
+    "byteLength": 43320,
+    "sha256": "afb8a9ed2907f0f7162059e0f6d83c5aacbe5dc3981223d0c7764fe7d398bced",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 12
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-12.png",
+    "byteLength": 43603,
+    "sha256": "8c853e8d14fd7399ee19cd3c09316d43bab1c5fadbfff9d517c71799e0a847d3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 13
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-13.png",
+    "byteLength": 42062,
+    "sha256": "68737d6550ebf18670856b67c14247cdc454941fdf4be502245cd4077a53b1c8",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 14
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-14.png",
+    "byteLength": 41546,
+    "sha256": "fe999a6a00512935bab1e8225f09dfb32fe2b208b048e467cb7ab32bbb776917",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 15
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-15.png",
+    "byteLength": 43285,
+    "sha256": "f95920e83e1befc9346632da567633d91e913f6ac600128825c1d18586939481",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 16
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-16.png",
+    "byteLength": 42385,
+    "sha256": "5df79a8d204836f01f862b2741bc088135fd556f2f8870e6c4aa31a290f4e1d6",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 17
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-17.png",
+    "byteLength": 39963,
+    "sha256": "1bd9902fc2ba8edede9ca227e3a0e8ef4bba3842ff6660d9af7294f2e64c0eb1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 18
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-18.png",
+    "byteLength": 41541,
+    "sha256": "ea832dd10d46ff6e46a575e3a8ef853537b0ec35130846ab841b76bd6477965c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 19
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-19.png",
+    "byteLength": 33929,
+    "sha256": "ec5f7c3b119772938241312035616bd629219fd9a704ff761ad93074f23a2ce2",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 20
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-20.png",
+    "byteLength": 28994,
+    "sha256": "b38dba68f96d7e71b1d4d8574bd97cef0baab2ca0c422d982bf7bb1c0c4d4ec3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 21
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-21.png",
+    "byteLength": 35273,
+    "sha256": "00dfaae73c816c22b247b27a3b3825e74f39cdde52b3e6f49e23b6c5c9fcd7c8",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 22
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-22.png",
+    "byteLength": 41290,
+    "sha256": "1a5a0b8ceb991573474ea7fc868b1348359539fd73fbb2fc5f423e0461d6e202",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 23
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-23.png",
+    "byteLength": 35364,
+    "sha256": "d373b31812e77ee9ec4f99986b878cd099fcb68db2e2e40a216e8ba2f826387e",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 24
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-24.png",
+    "byteLength": 35540,
+    "sha256": "01d7cc7fcc67d1c2c5a6aea969f1692590c8d1162479e74a34f25a920fbeccfb",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 25
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-25.png",
+    "byteLength": 33035,
+    "sha256": "fe527fb2f8d0ac56ab86f5bb5f557ea726f260415c2a87fe7a9a0889546b96e3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 26
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-26.png",
+    "byteLength": 36086,
+    "sha256": "d2a05f081aecb28599aa75332842a82de2eeaf9d55c3cede8fcc63aead349166",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 27
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-27.png",
+    "byteLength": 35476,
+    "sha256": "d6e30d52cc84c9c2cf2f9f0bcb1920d9da1f969b9816eb311b8647ca83d78224",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 28
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-28.png",
+    "byteLength": 37042,
+    "sha256": "21f9ebcebfcb3222e3a74bb34e31801aed7a77a0ceb6863b7a007259b85eea81",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 29
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-29.png",
+    "byteLength": 29591,
+    "sha256": "a5e2bcc4f48e145cba4bb7bce56d3482e633da9a8df3696a3d0199149583f415",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 30
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-30.png",
+    "byteLength": 25436,
+    "sha256": "eb5dc485be08f3e25b8c7c1781d5eb3782cee6be7b650d4fc3f2c0f21f330f69",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 31
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-31.png",
+    "byteLength": 29934,
+    "sha256": "f4cf6ef202e2bc72564d55bb3c4fd7c56081b82476b14999faf41228c091e7be",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 32
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-32.png",
+    "byteLength": 31885,
+    "sha256": "2a52ed9c71604d1423c761b39b512481eea0de4cbd7015b2e50f4fe6c442c758",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 33
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-33.png",
+    "byteLength": 32816,
+    "sha256": "d550360fe2fb055c927eb0b6a1f32a347ca46150971363736d8f934665e34e71",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 34
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-34.png",
+    "byteLength": 36507,
+    "sha256": "bfc0101ef69275f8239971e6725498f4c1d1ff64780a9ea316db9f1d0c796d6d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 35
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-35.png",
+    "byteLength": 32901,
+    "sha256": "1d21247e056510b8a63ad97e9e4479f7897f03aed87bc28d3377fb3f9fe7c48b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 36
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-36.png",
+    "byteLength": 31360,
+    "sha256": "8425dc236a42b64ab6e8696a3b5970fd30fe485a98d6968128236b4fe2f674ad",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 37
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-37.png",
+    "byteLength": 40262,
+    "sha256": "1b8c6dd119ca2fc8d64ecab2efd2ee610d8d4841a8fc75e0d20ad1f6d435e5c1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 38
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-38.png",
+    "byteLength": 34720,
+    "sha256": "c7cbacc8923710273c68819c3ac2dc437b0e64262c05c57af62a59cb7c872b1a",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 39
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-39.png",
+    "byteLength": 42442,
+    "sha256": "07c516f28884e138effa1905a9457511944cafcd2afb5f676edc251e6c987e25",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 40
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-40.png",
+    "byteLength": 41085,
+    "sha256": "c3e4a7ec36ab972e5a91d9dc40405dbcbe1e8529197962041fb8378e0b79de3b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 41
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-41.png",
+    "byteLength": 38576,
+    "sha256": "491e848bd118e9175f2039edbccadd9590705612e4a3f7dd26016b03e1e04125",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 42
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-42.png",
+    "byteLength": 43756,
+    "sha256": "f08ffb7456515848d19a24aacc7ac14d7e6a3bcc21a042049ace619cd69ee30b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 43
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-43.png",
+    "byteLength": 33522,
+    "sha256": "d46ff45eb6b54bdeb5837c74bdffcd68c5ed8b32ee8039045ae9dc5ba54a104b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 44
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-44.png",
+    "byteLength": 37179,
+    "sha256": "0163ac851e37df42d0011c9c878f43a391258c3154eb056f3f2c4df97249ceeb",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 45
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-45.png",
+    "byteLength": 40885,
+    "sha256": "51719961f8b800df914b9a0e8043e75922d61c85752a1cdf090b2b94f5999bda",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 46
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-46.png",
+    "byteLength": 36952,
+    "sha256": "04d05fd909489013d52298304160602b1376121ff2ecb334e1762aca5add9663",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 47
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-47.png",
+    "byteLength": 37374,
+    "sha256": "d985d31a4773ddb4b944be81a65acfb4a0920f5dae6d9847843d13ca4b0442f9",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 48
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-48.png",
+    "byteLength": 28852,
+    "sha256": "3756fecd9d9aaaf3f12f525304373bbc9cbfb49029287e95769b06cd93b03b79",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 49
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-49.png",
+    "byteLength": 35227,
+    "sha256": "e54ee69b31efc6f022b1a7b6c41238560262c001001a3a271c4cfe69f553715c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 50
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-50.png",
+    "byteLength": 28287,
+    "sha256": "55fe416514d3555e1e61c8f6b944b1b3039c77dd5e2155ccb0c895ebf496b91c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 51
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-51.png",
+    "byteLength": 42533,
+    "sha256": "01fed503bfad4628f47d5ed1bf6e62ca4b6ce054573aa2173f85c08807d871aa",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 52
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-52.png",
+    "byteLength": 34591,
+    "sha256": "f40d0528bf99641a1785d3cc5682d075854faf478e8dfa1eaa609fa27e7a0545",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 53
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-53.png",
+    "byteLength": 42442,
+    "sha256": "f827f400f5dd45e849159dbd6941fec83e51a9ec2a6cb72a89f695b9bec25ec4",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 54
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-54.png",
+    "byteLength": 21215,
+    "sha256": "d78f86213d5930f6a3314e61d64ddfb1d04b81f4e9c5d564c2b8dd2f983dc8a0",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 2,
+     "record": 55
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-002-55.png",
+    "byteLength": 42530,
+    "sha256": "03ad03cb37163d70c89d05eed82d743bdeab92bbc8313d5655cd77c69ff5a334",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 0
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-0.png",
+    "byteLength": 20020,
+    "sha256": "1e3947b9fe7ee1d3f25487d8196f1c4dd2c6600cdb97198e2e87b4f50d01363c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-1.png",
+    "byteLength": 33633,
+    "sha256": "514141e5a3a142024dff53d8295f77fadc4c1abea4eeb21e0078b2f9ebb31eab",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
      "archive": 4,
      "record": 2
     },
-    "path": "worldrpg/media/refreshed/surfaces/texture-004-2.png",
-    "byteLength": 24847,
-    "sha256": "0804224b74c82568c7bd1f3280d343782f15136753bf624b8d474a174ce5d9ae",
+    "path": "worldrpg/media/refreshed/terrain/texture-004-2.png",
+    "byteLength": 42252,
+    "sha256": "b74c5a86800a75b2ea4474f8f1d23b9d0c81c2e90e99c44d33e2b62dd39499c8",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 3
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-3.png",
+    "byteLength": 31239,
+    "sha256": "c60a7dab349989524b6b959104bce8c31891de75666d556a03474e36a2bc37a2",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-4.png",
+    "byteLength": 31520,
+    "sha256": "dfeb7357675ff8434080baecde596f24c77b2fd1f3a0bd1ee1a20740750869b4",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 5
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-5.png",
+    "byteLength": 25954,
+    "sha256": "58a7735c822dfc60b4eb00d74968493da094ce3fdfecd50a45848bb0cc1bd2d5",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 6
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-6.png",
+    "byteLength": 31616,
+    "sha256": "5e862f2d62055ee6086ecd2459372cf6894dc7bf70b5ab9d061cb624230116b4",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 7
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-7.png",
+    "byteLength": 33357,
+    "sha256": "24f5e7fa686c9510357936d5f797b744a14c32061b3f4ec581054d956c29f299",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 8
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-8.png",
+    "byteLength": 32853,
+    "sha256": "8f62430e914e1a4231cb2a7f47b42017ce61c8cf030d13d19a0f10267b41ac69",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 9
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-9.png",
+    "byteLength": 43019,
+    "sha256": "7ad42261c111423c58be7396fbe81e0c802acb51af9a0267481594f23b644e10",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 10
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-10.png",
+    "byteLength": 39395,
+    "sha256": "cc04ef93629da67c5bfa7bc3776af4e9fbefa2fe3400ee811ddbd48b3f1a2716",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 11
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-11.png",
+    "byteLength": 43254,
+    "sha256": "78f5dc16e73f6de57ae80f5be87129b8cf9a4b587a67ccb09b9ffa793fd01c37",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 12
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-12.png",
+    "byteLength": 43099,
+    "sha256": "d799e0c45aeddd251e6a74c4b78c9496986c2a96645d23718ef8aa73c01b9f98",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 13
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-13.png",
+    "byteLength": 42299,
+    "sha256": "928e147972c2ae2f0c722d6b6df932d78523ffe154945bfcb72272c6707bb850",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 14
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-14.png",
+    "byteLength": 40079,
+    "sha256": "b2ae250d91deeb98ee0ee405d505885844d2907d74b5c7392457f5d9e68ffb7f",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 15
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-15.png",
+    "byteLength": 42562,
+    "sha256": "f7b8ac24a50b0f28dbfe62bc8e515e658b5f592bf69e45172aee08b1a957b777",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 16
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-16.png",
+    "byteLength": 41221,
+    "sha256": "301e3bac31a2c32de880b6adeabd89e7dd0be95f8092032dd5c9b2d6f510d767",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 17
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-17.png",
+    "byteLength": 38685,
+    "sha256": "d39d5ceb00f3f751ed93f6185bca73f5c6e494b21f31f201bce3c59a5661827d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 18
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-18.png",
+    "byteLength": 40358,
+    "sha256": "1ef1ade4bbb4efeba0bbf0b4f240780607ddfe26e1e4d52e882a1500b6388067",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 19
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-19.png",
+    "byteLength": 33268,
+    "sha256": "19942a4b6560169151c1ef862db6079b8bf5ea33b11eeee1836abf840c8e4649",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 20
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-20.png",
+    "byteLength": 27113,
+    "sha256": "1561cde0cfe7db6137efebbe1e97fa7e67b4ef0eb4e55cd5e33a4e5f2f0227fc",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 21
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-21.png",
+    "byteLength": 34505,
+    "sha256": "66c6bd05aafb14c166fd11e8044bd58fc84039d5c5049ec22511426987cfe58f",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 22
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-22.png",
+    "byteLength": 40871,
+    "sha256": "59bc59e82a0427ad497c245b8c270af056e6f859c8d110d7ddffa49fec99d445",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 23
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-23.png",
+    "byteLength": 35182,
+    "sha256": "d5d06e784aaddacde9ac3476ecb02cc2cdb5773ff1ac1642bf8d8f8776f07a89",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 24
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-24.png",
+    "byteLength": 36089,
+    "sha256": "461aafbd99ffa987431cd596132446f39a384d191bb8b024bd11c3a8d29c9b77",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 25
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-25.png",
+    "byteLength": 35261,
+    "sha256": "d4c509fcd49faa31a75e11e165798d87325c1707c394ce0e20e296d20cd8081a",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 26
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-26.png",
+    "byteLength": 36364,
+    "sha256": "6fe12519abe7a44ff72f756b61234ed45070de1387038383c60085db40341d98",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 27
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-27.png",
+    "byteLength": 34250,
+    "sha256": "34b621c244201ea50be17edb072f0ed6f7e4f9d3d92d7352ef1953e5f8f434fc",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 28
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-28.png",
+    "byteLength": 36870,
+    "sha256": "1863d4a7d3c70398bd3eb0e5c714b282f13e131f2dc84ff18548f877fbfb800e",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 29
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-29.png",
+    "byteLength": 29071,
+    "sha256": "340df42a3b8d1c2f8b8aa248ca12abb56c06e1e24567348e500b56386eefbfae",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 30
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-30.png",
+    "byteLength": 24598,
+    "sha256": "a5a6519cb281ec643f34fa169b220a8fee79626ac5e0a4fb46720ff0aa84d282",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 31
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-31.png",
+    "byteLength": 28274,
+    "sha256": "a2c4b90f49ae6920b7d44d5aeefcf0f482a716dde1037af433f223a68488f2ce",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 32
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-32.png",
+    "byteLength": 30848,
+    "sha256": "9698c9ab2f5bca88b9ba911bc3c8a3bcea7a9430f980644abb2c820f594fd920",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 33
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-33.png",
+    "byteLength": 30711,
+    "sha256": "0c001aef54bd4ebeb07e3fa19e8b7b9e6420e01cab9139abf2774c9145f1c0c2",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 34
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-34.png",
+    "byteLength": 35746,
+    "sha256": "eef9c8b2028012cccfd6bfc04457f2ba560e048d6c8f0e00c611ef7304247d00",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 35
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-35.png",
+    "byteLength": 31931,
+    "sha256": "4cbb35558ff8c03e6d97ef82e89b3c7dba55c2036eefbfee84d803631e9627ce",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 36
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-36.png",
+    "byteLength": 30896,
+    "sha256": "7295183a350dea9e82c8379ab288edd0162e7a09434dadb2642fdb29387f8c28",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 37
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-37.png",
+    "byteLength": 39494,
+    "sha256": "daca93139ef185d6640caaa6f57839ad14d3a72c340a0fee3c34bdd9c8fc9dc3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 38
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-38.png",
+    "byteLength": 34680,
+    "sha256": "d7720d62e4fc0f14536d2bf1c1da30afabea91b7fd33a1525e78414a40b7a3e8",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 39
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-39.png",
+    "byteLength": 41872,
+    "sha256": "314ca91938f25d76b0b9d225e44743b421ef7c65046d42c11b2fc79f07ea75ec",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 40
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-40.png",
+    "byteLength": 40434,
+    "sha256": "db0295a9f02537eed742ecbaf10b461a659ec4bf979d60d5b1341dc5a9ec203b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 41
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-41.png",
+    "byteLength": 37412,
+    "sha256": "ba0f33d12acaa0e38d5f031dee139889a53e9b1394609ced5fb1274ecf6c4f59",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 42
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-42.png",
+    "byteLength": 43052,
+    "sha256": "bbcef03c5d3052f9576740eec6d4db05fece953b68d03153a098dfdf1655e027",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 43
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-43.png",
+    "byteLength": 32507,
+    "sha256": "c915e55b7381f940392a2f294b09d2f60e1d534f10f43fb061520ac899945639",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 44
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-44.png",
+    "byteLength": 36128,
+    "sha256": "2acd8618dfea4b24d0d28eeb07b2a7e73b2c231557cdcce00e7870a8fa472d71",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 45
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-45.png",
+    "byteLength": 39640,
+    "sha256": "2160ab2ce60c3a494ea38266da79f6ad59f3aae31eb362ee1ee93e5f6527b338",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 46
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-46.png",
+    "byteLength": 36830,
+    "sha256": "eade4073e300bb8700a5fc7e12272b3c47f2cd0926ed082c82598455f0fbde49",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 47
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-47.png",
+    "byteLength": 38372,
+    "sha256": "deebc3ee1510b08d58179e6db440958610b5592564ced9870aab19ba96464aeb",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 48
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-48.png",
+    "byteLength": 28380,
+    "sha256": "5b949a083e7ece44e7caba1cf4fdb78d5ef977ec5710da30ff2295518e4bf2e6",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 49
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-49.png",
+    "byteLength": 33977,
+    "sha256": "fb684f3b9a9397e77312843b5c8b2ff0c0cd37c17594926ce33f5955a97d01d3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 50
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-50.png",
+    "byteLength": 26759,
+    "sha256": "276de63870d41ac811c6b0ab9df81f4bc193e4ba6e3ac0b8db7a376afc63db78",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 51
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-51.png",
+    "byteLength": 42809,
+    "sha256": "49ec023cdd57698a3a9d9a61fe54d622eeb896c873ac8e33dce1c0a0a5ff40b1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 52
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-52.png",
+    "byteLength": 36228,
+    "sha256": "506754b502371fb2e38c2b61a8d269684bd8b4364f2b1b3a50e81d3c370c2960",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 53
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-53.png",
+    "byteLength": 41389,
+    "sha256": "4d9cd8eb9a2b129d85cd1fd3c090383cf8d8de7856a6c1bc16fa2eeb00614e56",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 54
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-54.png",
+    "byteLength": 19628,
+    "sha256": "e8a3dbf726e8e673f24c4d0b2de3c69f119806e171f8ea5d57747024cd1d0bb5",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 4,
+     "record": 55
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-004-55.png",
+    "byteLength": 42462,
+    "sha256": "ce48d08e4dbf063a074c0b7c774534aedd90ff8295cb234cb88d8ae2691f5ba7",
     "width": 128,
     "height": 128
    },
@@ -51823,12 +53044,1255 @@
    },
    {
     "replaces": {
+     "archive": 102,
+     "record": 0
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-0.png",
+    "byteLength": 21021,
+    "sha256": "ad5293c322de0441eb5b9a5376611a49bc7821905d0d6b403b3e90d1d7cd714c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-1.png",
+    "byteLength": 34057,
+    "sha256": "19c71aaf6267892f784fdb058e4fe64c72c17fe9ff37a21a8e4549a5b5f3c4b7",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 2
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-2.png",
+    "byteLength": 34221,
+    "sha256": "db5b4c3f5c60481aafc158a62616585ce4b9575ad3d7b6bd5832cbd10cdbfc3b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 3
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-3.png",
+    "byteLength": 34457,
+    "sha256": "85e35f0009adf22fb5fbb32f997cfdf25d582c01e166f715b3d194e355e75fbd",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-4.png",
+    "byteLength": 32045,
+    "sha256": "6a6964982619ae553a7dbef4d00c9f39d01f200d4e2d18919a840836d67d5a36",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 5
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-5.png",
+    "byteLength": 27498,
+    "sha256": "fb295b999eae1373d160f09bbb9e53a54f9375c7b0794ccb7f862ffc04b00a21",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 6
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-6.png",
+    "byteLength": 33080,
+    "sha256": "d8afaa64383f3e269907457dfeea664cb2440767fae548a4026114c9a1d27685",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 7
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-7.png",
+    "byteLength": 33822,
+    "sha256": "12c734bef250ea91fc791c3200761d931391d8a0fa1c43847fd69966ca023a16",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 8
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-8.png",
+    "byteLength": 33632,
+    "sha256": "517ca516a1c9e72dad8159935b04f4660a9c28ca7a65dac8605dcd93d1b995f2",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 9
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-9.png",
+    "byteLength": 35702,
+    "sha256": "41ae6b5d62b17a3f239962e76d5d7a334ca25e07d2aa9da22166df25b2175b34",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 10
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-10.png",
+    "byteLength": 36135,
+    "sha256": "cf6936e4451777bb913c966dbb34f60ec9ef8ba9e608994c6c37241cb22101bd",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 11
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-11.png",
+    "byteLength": 37079,
+    "sha256": "d1cf5889efab0780e711410c185aabd6e790ed3d04298b85623718fcb39146a9",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 12
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-12.png",
+    "byteLength": 37015,
+    "sha256": "b6ee54c95b790fa097275d59c6466613d1459a7b6aa927cfe1b2b00d7d7c4432",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 13
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-13.png",
+    "byteLength": 36723,
+    "sha256": "b23f8b8f372bf37ef00117c6dfaebb4b127ffb747e7c37734e59f039c34d79b8",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 14
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-14.png",
+    "byteLength": 36613,
+    "sha256": "b9a7430a126352bf8d77a84055196d0037ea9222a7ac5f0d7323715ca2e0b039",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 15
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-15.png",
+    "byteLength": 34922,
+    "sha256": "7fceecb5c7a37e35f7053232977ab2d339af3f84d15a32e022884aa84fe29e78",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 16
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-16.png",
+    "byteLength": 36796,
+    "sha256": "ac3aae4fe6e48fba6f818d05ad579300f1defad46b3928467b57381a79eff173",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 17
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-17.png",
+    "byteLength": 36042,
+    "sha256": "a041cdaa6c33604226f4a2d602c01bdf5b66e2ec103a12c460edae1d57cf8787",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 18
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-18.png",
+    "byteLength": 36972,
+    "sha256": "4e48f3e5ad6d9c73f52e537f59e0ff1c9363f87fb6a5d656289bbc903c42810c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 19
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-19.png",
+    "byteLength": 30719,
+    "sha256": "a9396dd11dc565713ec09753f33dfc4a2aeae68ffe87c92d748d7561ad39cf3b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 20
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-20.png",
+    "byteLength": 26952,
+    "sha256": "9d9f02fa67f83ff541c47ae741ff82c09b112cba815ef4e03d6059640a48808c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 21
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-21.png",
+    "byteLength": 31871,
+    "sha256": "0f85d1d23d2e7740276b115ef2f1d1ec456cd41e09c6f5d64a3f9d27418923a8",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 22
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-22.png",
+    "byteLength": 34031,
+    "sha256": "0e5ad84c3fa5283a697921099cf4cd9bfbb3f66d5bfa9caf3cbdf4c86c753f4f",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 23
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-23.png",
+    "byteLength": 31766,
+    "sha256": "eea291c9088cacf9991972e0e47811c063ba3ae07548971af76a8817cd7a9ec4",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 24
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-24.png",
+    "byteLength": 36310,
+    "sha256": "ad6418a3bd4e8d4d1236aae420dbdee56a3a4a4b95a4a42955554032a0af361e",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 25
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-25.png",
+    "byteLength": 35251,
+    "sha256": "fd42d2a04c0cf941bae5d9766125cf3fd5b33539772f4c4ba0e266fbb11b7d26",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 26
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-26.png",
+    "byteLength": 36888,
+    "sha256": "db316d3f7b9337a710a87ab16d30b11c9b7df2a283930ae05efcb27a42f48deb",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 27
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-27.png",
+    "byteLength": 36844,
+    "sha256": "031504815aaa75289796c85b339add6805ad2b54119dc0e562a9035c813b7f42",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 28
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-28.png",
+    "byteLength": 36296,
+    "sha256": "6e79763d70b371b43ad77f3985de2cbb99d3340940423bf9231e426fc33fcb45",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 29
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-29.png",
+    "byteLength": 28405,
+    "sha256": "dfec4262cea23748a88d6e2df9f5ba2ec16b67d7ec7f4fc6a3cc587bbb401ee0",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 30
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-30.png",
+    "byteLength": 26276,
+    "sha256": "ddbaf846ad5c567a3bae2c9d9bf801d0f7284151443616c3b5242cf0b0066a6f",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 31
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-31.png",
+    "byteLength": 30710,
+    "sha256": "8656b6b0013c10b05097a499ad3d2ef62c6b7063b42542594358c72a5b0bbc3b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 32
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-32.png",
+    "byteLength": 33077,
+    "sha256": "1af06ebee27a594436e7e94363dc42ff37cd64dcd4cbece53e970455c1f8bfba",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 33
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-33.png",
+    "byteLength": 32926,
+    "sha256": "5d81881ec934765aa97f762ee142a545087d2eca742a02540c577a75164feec4",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 34
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-34.png",
+    "byteLength": 32936,
+    "sha256": "a6a112e2e61da285d6346091441ca71557bf411de84a3701b9352f1ced80a2d4",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 35
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-35.png",
+    "byteLength": 31361,
+    "sha256": "fbd820b31cbdccac9bb487cec73f060d6c2e48eb2c68f400444b3a360538d019",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 36
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-36.png",
+    "byteLength": 31359,
+    "sha256": "c9e62ef4fe019330006ea46a540aaf7837d4f617c7ba64fe08ae19b35f7b9772",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 37
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-37.png",
+    "byteLength": 33334,
+    "sha256": "18f32f26b3da425fd59caf9a87d5e27f749684c9efae1dcea9fe9809938bd176",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 38
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-38.png",
+    "byteLength": 34551,
+    "sha256": "154f508ccf9833b45fc8190e41d0d92c17a3c65ff6d0a389adcc0218a2123370",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 39
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-39.png",
+    "byteLength": 37348,
+    "sha256": "f9e41512494db004cbaa16de6a31f3a7ed30836ab75eef34672600e2d0e935ed",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 40
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-40.png",
+    "byteLength": 34757,
+    "sha256": "cd3f11054594744721eb7d4fb3e64501b41035e5d03a1c168411e79852efb1fa",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 41
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-41.png",
+    "byteLength": 34552,
+    "sha256": "df2154922a608407a57f962af24a69f94add673118a4b028b5f1460ae1bd1dc0",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 42
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-42.png",
+    "byteLength": 37346,
+    "sha256": "c50e708a3e938d3b92d0299ef52b6b1cdcf7d176c3aae7c18591b8e6f9dceb0d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 43
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-43.png",
+    "byteLength": 33667,
+    "sha256": "3eb1e75520b09f45a4e7a0a62c301a2c40f78f79957055079d8a98bbe3060f38",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 44
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-44.png",
+    "byteLength": 34163,
+    "sha256": "a0818189e30b9204f8777188dacb395d1b3c425252ded1972d5376c6373c49ce",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 45
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-45.png",
+    "byteLength": 37550,
+    "sha256": "ccdde4733c97412d9f5a0118b1726767caec4083a3b47f5884f1b73fb4a524d0",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 46
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-46.png",
+    "byteLength": 24227,
+    "sha256": "08f1d25441da122975f6dc14c1dcfd0c472dfbdbce24ce0ce52d367d7380e752",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 47
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-47.png",
+    "byteLength": 32525,
+    "sha256": "7c27b0f2b442e2fba5a3c657f1747be604ae57442d249b4b98de9d805fcb77bb",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 48
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-48.png",
+    "byteLength": 30379,
+    "sha256": "a24ef64aa1167a191b05d444d0046b6bc12229cec0aaeb332c2dfe1fa7841919",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 49
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-49.png",
+    "byteLength": 28315,
+    "sha256": "63e60b731bd4a39f75c2d89c0fb19fbb78497a1adf5af95edddb9482bd18dcc1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 50
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-50.png",
+    "byteLength": 32002,
+    "sha256": "cdbb7f55c8ab4dd8db0298a83f066b4bc771e1dfa03f178813366d58d65bfd44",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 51
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-51.png",
+    "byteLength": 37233,
+    "sha256": "74b34279a117b950478bc472633c38d73125b562bfe08b6d3ddb14bdfb097074",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 52
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-52.png",
+    "byteLength": 36522,
+    "sha256": "34c761df9e1cdc0540e03caccea1e4442caa8d6b6f3a6c6c3db2f62d413ff198",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 53
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-53.png",
+    "byteLength": 36170,
+    "sha256": "6470504bea120ca02ea7a6bbdd3100bdd323a7321df6e1292a53e3eda3da7a7b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 54
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-54.png",
+    "byteLength": 24273,
+    "sha256": "b5a032bbce8fdf6344aac62484513a00a8f60fc9bce19685d790126af50aab9c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 102,
+     "record": 55
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-102-55.png",
+    "byteLength": 32799,
+    "sha256": "b0cf00210e1bc998e2a7dbcdadbec0d79c24b63fabd3f287af8c54cc03ea1019",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 0
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-0.png",
+    "byteLength": 21021,
+    "sha256": "ad5293c322de0441eb5b9a5376611a49bc7821905d0d6b403b3e90d1d7cd714c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-1.png",
+    "byteLength": 13850,
+    "sha256": "65877a4ec42b8f297eaeaaaeea60083c4e5fc1c50d592e290eeb70e6f54ac9c1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
      "archive": 103,
      "record": 2
     },
-    "path": "worldrpg/media/refreshed/surfaces/texture-103-2.png",
-    "byteLength": 8902,
-    "sha256": "da7a5dd608d82ac77d5503534cbe46af36886ec69b70443f52cab91e69a91fc8",
+    "path": "worldrpg/media/refreshed/terrain/texture-103-2.png",
+    "byteLength": 13850,
+    "sha256": "65877a4ec42b8f297eaeaaaeea60083c4e5fc1c50d592e290eeb70e6f54ac9c1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 3
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-3.png",
+    "byteLength": 13850,
+    "sha256": "65877a4ec42b8f297eaeaaaeea60083c4e5fc1c50d592e290eeb70e6f54ac9c1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-4.png",
+    "byteLength": 26869,
+    "sha256": "d7e1a5c3ef90c047614037564f2a7b1765b4d210f3b5c775be99c49cdd3dcf3d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 5
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-5.png",
+    "byteLength": 23253,
+    "sha256": "0301482ee9095134e72dc93056897cb97711e3ed469d4983936f72adfbce2a2d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 6
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-6.png",
+    "byteLength": 23015,
+    "sha256": "bc2b138f268f7be7022c5d888b84ac6b51a24b5bf6576c8589c55ffabf9712fb",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 7
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-7.png",
+    "byteLength": 19739,
+    "sha256": "0e7a33da4085a322882a4743a5197dee5c5d71cc09b47123a7a692aa597087c7",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 8
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-8.png",
+    "byteLength": 23401,
+    "sha256": "2b7fd81aaf978e8f6cf853ff43a8a7dd305bc9652bf6bcd40c240afb75d1c17f",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 9
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-9.png",
+    "byteLength": 13463,
+    "sha256": "948af2b9212ecb01a9b017f7a6f3894d4bb7c95860ce708b23b70eada6ecc1e3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 10
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-10.png",
+    "byteLength": 13463,
+    "sha256": "948af2b9212ecb01a9b017f7a6f3894d4bb7c95860ce708b23b70eada6ecc1e3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 11
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-11.png",
+    "byteLength": 13463,
+    "sha256": "948af2b9212ecb01a9b017f7a6f3894d4bb7c95860ce708b23b70eada6ecc1e3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 12
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-12.png",
+    "byteLength": 13463,
+    "sha256": "948af2b9212ecb01a9b017f7a6f3894d4bb7c95860ce708b23b70eada6ecc1e3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 13
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-13.png",
+    "byteLength": 13463,
+    "sha256": "948af2b9212ecb01a9b017f7a6f3894d4bb7c95860ce708b23b70eada6ecc1e3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 14
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-14.png",
+    "byteLength": 13463,
+    "sha256": "948af2b9212ecb01a9b017f7a6f3894d4bb7c95860ce708b23b70eada6ecc1e3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 15
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-15.png",
+    "byteLength": 13463,
+    "sha256": "948af2b9212ecb01a9b017f7a6f3894d4bb7c95860ce708b23b70eada6ecc1e3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 16
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-16.png",
+    "byteLength": 13463,
+    "sha256": "948af2b9212ecb01a9b017f7a6f3894d4bb7c95860ce708b23b70eada6ecc1e3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 17
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-17.png",
+    "byteLength": 13463,
+    "sha256": "948af2b9212ecb01a9b017f7a6f3894d4bb7c95860ce708b23b70eada6ecc1e3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 18
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-18.png",
+    "byteLength": 13463,
+    "sha256": "948af2b9212ecb01a9b017f7a6f3894d4bb7c95860ce708b23b70eada6ecc1e3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 19
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-19.png",
+    "byteLength": 26704,
+    "sha256": "eee9e026b4ce8c6befc9fbeb1913436d068edb62887285f118a0fc84ffd90cf5",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 20
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-20.png",
+    "byteLength": 23612,
+    "sha256": "39a741b093f7f032e61d8d7de98621b4d6b47fec13d4377054b5951efece8991",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 21
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-21.png",
+    "byteLength": 21816,
+    "sha256": "8736ffbab0a09626f0e318e55bb12f19d226728de00319b09a19494c43ae7dc8",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 22
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-22.png",
+    "byteLength": 18187,
+    "sha256": "a50420878ab9eaf377cf7edd909bc55e191fc9b37116c87f7b1c37e063ed918b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 23
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-23.png",
+    "byteLength": 20497,
+    "sha256": "ffd413b7e4306980686b7a0ee7defb58fc0426d61bde9c760ae4301bd6595f9c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 24
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-24.png",
+    "byteLength": 13463,
+    "sha256": "948af2b9212ecb01a9b017f7a6f3894d4bb7c95860ce708b23b70eada6ecc1e3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 25
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-25.png",
+    "byteLength": 13463,
+    "sha256": "948af2b9212ecb01a9b017f7a6f3894d4bb7c95860ce708b23b70eada6ecc1e3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 26
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-26.png",
+    "byteLength": 13463,
+    "sha256": "948af2b9212ecb01a9b017f7a6f3894d4bb7c95860ce708b23b70eada6ecc1e3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 27
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-27.png",
+    "byteLength": 13463,
+    "sha256": "948af2b9212ecb01a9b017f7a6f3894d4bb7c95860ce708b23b70eada6ecc1e3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 28
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-28.png",
+    "byteLength": 13463,
+    "sha256": "948af2b9212ecb01a9b017f7a6f3894d4bb7c95860ce708b23b70eada6ecc1e3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 29
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-29.png",
+    "byteLength": 26682,
+    "sha256": "c06afce5b518ceec81a3a277f13e7e70305851be65f840eadfbc1450cb3a0c3a",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 30
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-30.png",
+    "byteLength": 22847,
+    "sha256": "c52bdabcfa61693523036605fd6e3eb89781882c916ca591fb52a78860c9487f",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 31
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-31.png",
+    "byteLength": 23598,
+    "sha256": "f2d68b64263f2c5e16e36a5ffc753c124fb72e2706e623681b3ea36679366759",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 32
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-32.png",
+    "byteLength": 19356,
+    "sha256": "8569241a2820e1544a796a01e7fea49bd7685c67562b531fe93327b2b0fe69a8",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 33
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-33.png",
+    "byteLength": 23623,
+    "sha256": "01cb2c3a033f4e7a0f48f5fbade1491d80c0e2eaa74da0c934cb0dae4b4bde53",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 34
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-34.png",
+    "byteLength": 23340,
+    "sha256": "231544fe831314146e8121ae458eeb8f38258113b6d021603c24c14ef6e7bc2e",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 35
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-35.png",
+    "byteLength": 23331,
+    "sha256": "17b114fd6fb1e42d92965cb17cc6359bd514f0f9ec00db24f9dd75acc40092ce",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 36
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-36.png",
+    "byteLength": 23528,
+    "sha256": "ff8df1d9ebb2d124ed27ffac83a2abcce2fd24c39b111b8b03e6aab2dd79089a",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 37
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-37.png",
+    "byteLength": 20286,
+    "sha256": "456a3dfce4094cc6942a1d695866b57e736771ab3ba81cd6e6b3d68f4c4163ea",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 38
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-38.png",
+    "byteLength": 20015,
+    "sha256": "6b22071c06b2ab3797484ff997e75791670db6e599e2c89587fe770b4f4e51f8",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 39
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-39.png",
+    "byteLength": 13463,
+    "sha256": "948af2b9212ecb01a9b017f7a6f3894d4bb7c95860ce708b23b70eada6ecc1e3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 40
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-40.png",
+    "byteLength": 20421,
+    "sha256": "066fa6d771f60bbc116e67c4d8d7f90c163c51560f411857906b444dd3b6b35d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 41
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-41.png",
+    "byteLength": 20112,
+    "sha256": "64ce069cdc6efb8a99c0cfe74c2de522629afa0045aeb56cf5ddbe939364dbbf",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 42
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-42.png",
+    "byteLength": 13463,
+    "sha256": "948af2b9212ecb01a9b017f7a6f3894d4bb7c95860ce708b23b70eada6ecc1e3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 43
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-43.png",
+    "byteLength": 21605,
+    "sha256": "500b60b492ea8790fcfedc43b689e2bc47b338570abce10e8db45477a25c45dd",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 44
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-44.png",
+    "byteLength": 19601,
+    "sha256": "b48c13bb49f674183f472b25579fd7a952be37b30c085f98800a0df2f7db907e",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 45
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-45.png",
+    "byteLength": 13463,
+    "sha256": "948af2b9212ecb01a9b017f7a6f3894d4bb7c95860ce708b23b70eada6ecc1e3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 46
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-46.png",
+    "byteLength": 27958,
+    "sha256": "9017854e39f4078a22893d42b5cf4d4315c50aa98a12a3fa118ef9edd123ad4e",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 47
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-47.png",
+    "byteLength": 26994,
+    "sha256": "614096646d4187ac378c6fd8fe75a19f8d0574e87d97756e73adb3b0bd03df43",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 48
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-48.png",
+    "byteLength": 24104,
+    "sha256": "b7907d78a23dd571defe508bca9c4cb1cdfc69528e12c73852623d94043256f6",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 49
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-49.png",
+    "byteLength": 25154,
+    "sha256": "65d5ce916b048dd495d70261f62f4aed0bbc11787ef061561fd3e0206c48d247",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 50
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-50.png",
+    "byteLength": 24344,
+    "sha256": "59a7dbf3b6c2ca88065791fe2f75d1141b82a5ab38c96cde82c096c2018992a8",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 51
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-51.png",
+    "byteLength": 13463,
+    "sha256": "948af2b9212ecb01a9b017f7a6f3894d4bb7c95860ce708b23b70eada6ecc1e3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 52
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-52.png",
+    "byteLength": 13463,
+    "sha256": "948af2b9212ecb01a9b017f7a6f3894d4bb7c95860ce708b23b70eada6ecc1e3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 53
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-53.png",
+    "byteLength": 13463,
+    "sha256": "948af2b9212ecb01a9b017f7a6f3894d4bb7c95860ce708b23b70eada6ecc1e3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 54
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-54.png",
+    "byteLength": 13850,
+    "sha256": "65877a4ec42b8f297eaeaaaeea60083c4e5fc1c50d592e290eeb70e6f54ac9c1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 103,
+     "record": 55
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-103-55.png",
+    "byteLength": 27329,
+    "sha256": "4d57800fc3eb993189cc36bc55352e08bd58ab5f66e0b6b2a3a5125c073e9877",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 0
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-0.png",
+    "byteLength": 20961,
+    "sha256": "e5aa135afeae1f586b2d59862e052ae6d25d2087ae3ee68087810c833a2723d7",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-1.png",
+    "byteLength": 30060,
+    "sha256": "5a1b6bf70cf75ea26831db983afe92270d2600e5de081755952848ba70763cfe",
     "width": 128,
     "height": 128
    },
@@ -51837,9 +54301,592 @@
      "archive": 104,
      "record": 2
     },
-    "path": "worldrpg/media/refreshed/surfaces/texture-104-2.png",
-    "byteLength": 16701,
-    "sha256": "9c305784b6e4746ae6042b7cfda1c79c4bc360d8e40fab3200ee03dd72a57c73",
+    "path": "worldrpg/media/refreshed/terrain/texture-104-2.png",
+    "byteLength": 28568,
+    "sha256": "05326ca2714ef41778bcd7325d716d15c0168f9702e2db1e543da950a84bdac3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 3
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-3.png",
+    "byteLength": 29704,
+    "sha256": "ce25c0263adf9b97ff4747b6aa184c0804fa14c5385d6610a91ea7e0a9cf33fa",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-4.png",
+    "byteLength": 30156,
+    "sha256": "cb9779513360d5808b081df6bfa9f14a3939d6c1dbb06cee4e5d12f05aad29df",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 5
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-5.png",
+    "byteLength": 26478,
+    "sha256": "3acbc403f35ca50ea386765724020d9541e1a19d3a17bf69f7692bb99480f3dc",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 6
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-6.png",
+    "byteLength": 30117,
+    "sha256": "5fd26348d967b2815a2f48eec28560dfa15fd54270c93178204cfec024d8adca",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 7
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-7.png",
+    "byteLength": 30476,
+    "sha256": "634a8f6090e6eccf2feb987faa6757a361d4245c697cf6917559010bfebf7821",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 8
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-8.png",
+    "byteLength": 30823,
+    "sha256": "2531bf8cc80d97651a600b8fe6729fb0ea8d20c62d7fef6976841e0fa665fc8c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 9
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-9.png",
+    "byteLength": 31608,
+    "sha256": "1542692384aea5a83841961e6d024c8988ed19f535569a5f451d990b5ecf21aa",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 10
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-10.png",
+    "byteLength": 31617,
+    "sha256": "2892f832d57c7ba8a0a27cfa642485e88c15f537f7082f09ac775cbeff4744d4",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 11
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-11.png",
+    "byteLength": 32779,
+    "sha256": "2e1ec6e6977c4bad2dff6a95f39c674462756ac63ab82724a68d6515c7f8dc9e",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 12
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-12.png",
+    "byteLength": 32681,
+    "sha256": "fc4a412a940dd479e8a9ec017cae437d2180ae851a079ee6e877aaddf7625dbe",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 13
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-13.png",
+    "byteLength": 32452,
+    "sha256": "cb805800166f9458b5239760338f54177804c73365ecd1cad756691ce85ff878",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 14
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-14.png",
+    "byteLength": 31153,
+    "sha256": "068d83fc5cb4c7738f2473e585785bc068b3ce2f5966dae889d5e19ca840e64b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 15
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-15.png",
+    "byteLength": 29492,
+    "sha256": "fb9ad9da6125720ed3c9396870a20e12ae34dc568785f045df6983c3afd285a5",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 16
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-16.png",
+    "byteLength": 31682,
+    "sha256": "a62d9924830ff0f9a50b6dcdb209484468dc506b3832c23af3b912e43daf383d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 17
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-17.png",
+    "byteLength": 31024,
+    "sha256": "0a3dc7adc07bc9be4e38b893e82636046cfa83f8ea80848456b3524972d38d0d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 18
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-18.png",
+    "byteLength": 31338,
+    "sha256": "794c08a2bc711846836aeb7af497081e6346a50578a12e1cdb2e521cf68cc42f",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 19
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-19.png",
+    "byteLength": 27623,
+    "sha256": "47056f683f2c7f70efcfa2b085e91dd894944ff62fd1f57fe497ee544bb43b31",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 20
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-20.png",
+    "byteLength": 24927,
+    "sha256": "f663c4ccffc1cab691f3e38026a33231d9d5fd6aefa659273d644ebb0fc23d05",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 21
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-21.png",
+    "byteLength": 28302,
+    "sha256": "e3d7797c20d0429fd31fb6aa7caaaee2d6beb808306786d4c54e41825d4c9356",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 22
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-22.png",
+    "byteLength": 28922,
+    "sha256": "afb36a2e2be8f008d167a2b01a3169bc4ce20f919f605fc9dc8c095dea79fa2a",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 23
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-23.png",
+    "byteLength": 28237,
+    "sha256": "e7d8a332eed8d405044ed4e02db3968fd6db9949886e47b77870a209100f878b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 24
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-24.png",
+    "byteLength": 31887,
+    "sha256": "9789d9c35939af8c6b45108cda9e251bb67a943f6f76d931b33d7de0cfdc81fb",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 25
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-25.png",
+    "byteLength": 31265,
+    "sha256": "ba47cf5ed0ca74999f4967a3535249e8c720ef454812877ff1a9cceeec3f14b6",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 26
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-26.png",
+    "byteLength": 32525,
+    "sha256": "a189557efbd6398c36507f3fd20a16c78d8455de1922ce5c81213fb4e93285b7",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 27
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-27.png",
+    "byteLength": 32310,
+    "sha256": "320493e2a78cb34a7bc39e1d78066c857735960d1265fdabeb93aee5818a0db1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 28
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-28.png",
+    "byteLength": 31950,
+    "sha256": "23e98210ca629ceee9eebff4051aeeb39dbf0ca3619c7d5c29859311a4b9040b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 29
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-29.png",
+    "byteLength": 26782,
+    "sha256": "ffb5129b424bd181d28f06d359b1ec56a22f8f5f0f9660d33d87d65bbfd603c5",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 30
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-30.png",
+    "byteLength": 24853,
+    "sha256": "27c8ac8985dad63fa907f9a2f5f9ab6e3367f7575ca077ba80d193479fd383e6",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 31
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-31.png",
+    "byteLength": 28757,
+    "sha256": "4ef39ebeb392a021b1cfe92cb609ed654cf914fd3b54461fc5d2027ff860d2b1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 32
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-32.png",
+    "byteLength": 29171,
+    "sha256": "3cedce6479c13355636d2a4201dd1e9616ef47c2f2267b591c8b9c6e409094b4",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 33
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-33.png",
+    "byteLength": 29479,
+    "sha256": "71a316920a74c44b5644273f600fcd366ca65b5f36cbc937aa715aa27e8a1f3a",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 34
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-34.png",
+    "byteLength": 30196,
+    "sha256": "6700b48a0c05c2efbca356f4021906db6d710cc8a672b019801e199f84ec0dd8",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 35
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-35.png",
+    "byteLength": 28878,
+    "sha256": "95dce377249eca51e1578b074dcf9a67916ddefa820f87dfa642856cd46c1f68",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 36
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-36.png",
+    "byteLength": 29524,
+    "sha256": "16374e489392f5869736b02c6415e46b42f39e6c9ef8beeb7eb1185b80fef3d1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 37
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-37.png",
+    "byteLength": 30271,
+    "sha256": "ab01b700fcfef1faa7de825a299688a0d9354407373897bbd3d218119a1fb930",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 38
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-38.png",
+    "byteLength": 31405,
+    "sha256": "da61f1b5f7d9357b28e3598c8e33af068f3d0a0aa06e15f37fbd5505161e5b44",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 39
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-39.png",
+    "byteLength": 32910,
+    "sha256": "d5531b9127f1aa7cb56f495d7c495c0cd47a50d366b161702cd0bdbf766f98f6",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 40
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-40.png",
+    "byteLength": 30286,
+    "sha256": "fba33a64b308d535c6e29020030ca776ccc815e38570c369a4b24d2eb6b7aac1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 41
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-41.png",
+    "byteLength": 30297,
+    "sha256": "888fa6e33d1fd4f911d1dd6d82fe8f8c27c5f381e58d7d0eab0c7d954ce26254",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 42
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-42.png",
+    "byteLength": 32741,
+    "sha256": "75743a97965de6d2d684a8f89cce16b6d17e4d5005aac1ac08daea14d25e87aa",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 43
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-43.png",
+    "byteLength": 30661,
+    "sha256": "3a4bf9ef60736dbda2831b16fda2aa78a9da5657b371adda494ba0b2b0e22f60",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 44
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-44.png",
+    "byteLength": 30587,
+    "sha256": "da33a62c3dfee6aa4f6a70595f2433731e4af863717b99a37e20a98c076a4ae8",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 45
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-45.png",
+    "byteLength": 33041,
+    "sha256": "b2e64d1531622893d3286109591812d547a335c1b587e5c3926ca2f5efb7e5fa",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 46
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-46.png",
+    "byteLength": 23759,
+    "sha256": "f8c7e0f6a2e4a8d09a0132c9f9a59a4af63bc47ad1c55982bd14be96eb775e19",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 47
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-47.png",
+    "byteLength": 30050,
+    "sha256": "c7fe77ece1286931f708551f35852e4a9d848294e39817aeec52f5a4a9b2f7ce",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 48
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-48.png",
+    "byteLength": 29078,
+    "sha256": "6909fbf573d2e161ad2701b4a54b4908fd041c89f53b4c79d0a1b62d039c7e6b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 49
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-49.png",
+    "byteLength": 26546,
+    "sha256": "8eaf1e9dcaa2a681b5ee7fa93de659c07b91db37e3836faacbe0d21624efa7e3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 50
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-50.png",
+    "byteLength": 28756,
+    "sha256": "5b9f02cfa170b229b6e0e44943d1482e2a808c2215ca713bd8e00838c9549dde",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 51
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-51.png",
+    "byteLength": 32849,
+    "sha256": "2fdc5035686fa84268d32bf3aab43a54e1901819b8f87fe79d84a9a4b2278c82",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 52
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-52.png",
+    "byteLength": 32198,
+    "sha256": "8576ba9faff9c842c5be11aedba0e6771dfb13f933ae918aa68eb5ad604ab467",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 53
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-53.png",
+    "byteLength": 30673,
+    "sha256": "a6b294bef63b460e9caf53fc05022b41c76fb8ce2424e9742265886357528602",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 54
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-54.png",
+    "byteLength": 22158,
+    "sha256": "e52f8ffdc3aeb2aaf7273d32b7dff7ac1f9d49aec8dc0f14eb59020d8d54cf1e",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 104,
+     "record": 55
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-104-55.png",
+    "byteLength": 29323,
+    "sha256": "081c25ae885cad280d9be0a09895fa1ef4fa6d28d349b65305c477a04ed31fe4",
     "width": 128,
     "height": 128
    },
@@ -54617,12 +57664,1255 @@
    },
    {
     "replaces": {
+     "archive": 302,
+     "record": 0
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-0.png",
+    "byteLength": 21021,
+    "sha256": "ad5293c322de0441eb5b9a5376611a49bc7821905d0d6b403b3e90d1d7cd714c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-1.png",
+    "byteLength": 27709,
+    "sha256": "503803d5b379f3ea5f06df43cc5ca9ee9a66a3a0b996b07569f157c8b2afdd98",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 2
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-2.png",
+    "byteLength": 35451,
+    "sha256": "32fc70221b8f98bc8ed0187050cb9986dd30ea1588f13ff0ac3322edaabd17ed",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 3
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-3.png",
+    "byteLength": 36759,
+    "sha256": "6170674bee43eeb83e9f3725c47124d4724df0d897646840563c9a373b0d01d4",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-4.png",
+    "byteLength": 31415,
+    "sha256": "e08fab8d519bee98138cf1ab835e15d1818bd997a774dac34f32452f24851b9b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 5
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-5.png",
+    "byteLength": 27891,
+    "sha256": "53d7141a26a2d50cf3dcc66e52b4745ecac58d3157bd79ca6b7f9483377ead2e",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 6
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-6.png",
+    "byteLength": 32242,
+    "sha256": "57370e936a56eb8f6897730756095b7248d061d88d45dce1982722e4e8fc9acf",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 7
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-7.png",
+    "byteLength": 31359,
+    "sha256": "cd32c00b1f52f52ad56fd1fa9f378cec4e6e3786d22d24fb6d62731de38100ba",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 8
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-8.png",
+    "byteLength": 32185,
+    "sha256": "ac25684f3ba4fcadda6268308296da8e79917d278e874275278f1941a924da94",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 9
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-9.png",
+    "byteLength": 32423,
+    "sha256": "93841cb2c23452f505d1586ebf13a2cb33d8c078f3f665393f66292232b141e5",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 10
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-10.png",
+    "byteLength": 33393,
+    "sha256": "217eee36f787c42357fe4fab7b5394a0ffba13d3726876f6ffa8f90f8bfa5f2d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 11
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-11.png",
+    "byteLength": 36808,
+    "sha256": "83a0a9f9ee354f560d31e5a604261ebe92ed9e011fbd816115c4503a5b61c058",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 12
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-12.png",
+    "byteLength": 37070,
+    "sha256": "835f0c948c51b18dd8c5347221b4f68a8aaa39ebf10e73aa1f45ab767eb71dc8",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 13
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-13.png",
+    "byteLength": 36699,
+    "sha256": "e76c231f6853a3697ed5689413c0dfb723bd58bec38d60d01113b5a084be398d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 14
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-14.png",
+    "byteLength": 38713,
+    "sha256": "e58a5c812d06c8b051356c8c1363142e396581807fd5fc16dc6601ac0b988fc9",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 15
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-15.png",
+    "byteLength": 36323,
+    "sha256": "64e30be993ad26da72d7dc626217aeb37504fbe15658867755683d3a9932f033",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 16
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-16.png",
+    "byteLength": 38577,
+    "sha256": "573de7ab825926f19ace8dc67757fea24be389b6f925fcf15abb3d1a7e9d67a9",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 17
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-17.png",
+    "byteLength": 37728,
+    "sha256": "98fb69dd1ee37b4b4aa9b72473956d3ebecf105cb3a525d495ef9fc917cf4557",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 18
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-18.png",
+    "byteLength": 37902,
+    "sha256": "5cc51082c7c7bfaf68bc8b6a00e3b1e5bd60769e7fe7388d167dd684f4cac6d2",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 19
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-19.png",
+    "byteLength": 30653,
+    "sha256": "b4853bbeca8995664a1a7b0878f5f3e05ae725987091e90c00e66609505b06a1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 20
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-20.png",
+    "byteLength": 26349,
+    "sha256": "c7f957071f30c26b4e8fc11a38e916051cbb3ed3d36e3a0995b3459a25ed3bb7",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 21
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-21.png",
+    "byteLength": 31999,
+    "sha256": "df7fb4e32de790076013e266ef8848be4c7d0f6a8bd49e3a3262ed8a6d05a171",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 22
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-22.png",
+    "byteLength": 33971,
+    "sha256": "b5119f0b6142c6caf974636332ff7b0405f14f4955004786fd25b2e413d4deb1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 23
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-23.png",
+    "byteLength": 32341,
+    "sha256": "5eae6c2cc24d223a278052f58b4a61bcc6f89e5878c116be82fc7e9c91dc9036",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 24
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-24.png",
+    "byteLength": 34941,
+    "sha256": "f37fbaaf141f1def7463c8dd935108364666945fa5acb29d7491d173eaf39d1b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 25
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-25.png",
+    "byteLength": 32452,
+    "sha256": "8d47c11aed7958d74a74535b656b04ffd00aa23b21ff8567958ba6e05e5ee981",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 26
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-26.png",
+    "byteLength": 36833,
+    "sha256": "3cc93c6d27f34eb0e3f5168d9dfafe2d2a73425749f9cd4fcbb515db106b413d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 27
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-27.png",
+    "byteLength": 37963,
+    "sha256": "5b936fa0f83db8d19e7c2cdc33a4967f69240d211263f4d2e3bb18a00243f101",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 28
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-28.png",
+    "byteLength": 36312,
+    "sha256": "75bdbd0b1ec551cfd6ecd17b38b5c5ca463ab47d2a96d7f92ba5d159affc135b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 29
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-29.png",
+    "byteLength": 29301,
+    "sha256": "f0015bd8841f3202220013762c4e4c0cddef7f4a93c1536b6b65c7ad8f1df750",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 30
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-30.png",
+    "byteLength": 26764,
+    "sha256": "79d9a7fe06cf31e27232891e9da2fbe987f49ae3bd6b97d3203f5018d8992ce1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 31
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-31.png",
+    "byteLength": 32574,
+    "sha256": "a342fc39c5990c90f150f1d8c4abcc963083fb5dd3eaa9237e676ff52712d31e",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 32
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-32.png",
+    "byteLength": 35076,
+    "sha256": "f6a3d9bc3a47f8759e61e2a1d29239c44a5d0a4cb23e65c4f9c5ab9b15c11158",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 33
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-33.png",
+    "byteLength": 34445,
+    "sha256": "fd9633bcc5e3f6c7f648fd86fab95b8a135bbeebb4deb464e9e47bbf1e19eebb",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 34
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-34.png",
+    "byteLength": 32695,
+    "sha256": "715d3e92a217038ce87da5954549d86d057cbc341c3e402e9aeeaff537f63698",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 35
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-35.png",
+    "byteLength": 32060,
+    "sha256": "302d774ff67e9eaf26e803d26dcddd45b222005dd386a71e7fc9a51d0f93ebfc",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 36
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-36.png",
+    "byteLength": 32907,
+    "sha256": "79da38ff95ba1a47776dba48c8f5eeb81334a1b8ad1bc516306545b06dc80a40",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 37
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-37.png",
+    "byteLength": 33187,
+    "sha256": "78a96c86baf4b5680ce13ccf06b5ef4a3bb3e85e0105aa37eaf31ffc6e80a7b6",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 38
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-38.png",
+    "byteLength": 35917,
+    "sha256": "64eff2194763d2b9dffe0b58f3874e9e020ba1ecd4724ba1243cd8f976f01541",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 39
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-39.png",
+    "byteLength": 37152,
+    "sha256": "5a1eff2d73bb63af4aac9f20258bfeac91d5cc7d36e2d88b655770681797521f",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 40
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-40.png",
+    "byteLength": 34211,
+    "sha256": "ae7d8c957186380b17d6ca760cd76dbdd9b375ac9f021d572544626eb530a36f",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 41
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-41.png",
+    "byteLength": 34610,
+    "sha256": "d586692596668713364b119f7067d904ba11daa64227232bd406a0aeb220169a",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 42
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-42.png",
+    "byteLength": 38190,
+    "sha256": "1309adac756458ad4f85f8650934ff28c550cb7f100fdcb5625cc5b07a36cd60",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 43
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-43.png",
+    "byteLength": 34927,
+    "sha256": "b2be41a977f50ee07c246d3f5630d63d68823779653882b52f0b110cccaff049",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 44
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-44.png",
+    "byteLength": 35167,
+    "sha256": "3798138b3eabcf141164b2143f8a6a0014f9de63aad1c9d88a54faadd0e4b781",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 45
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-45.png",
+    "byteLength": 38583,
+    "sha256": "05c8c8edde79dcde1c78af4efe9183f11d54fd3fb2aeaa6607b7c4b32bde487d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 46
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-46.png",
+    "byteLength": 20528,
+    "sha256": "2aa5b1533878a3e9d2c0af3312c66859dcbb71ba81482b9d18905a222a93a0a2",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 47
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-47.png",
+    "byteLength": 30068,
+    "sha256": "32dfb79002aea2ea8ecf5c8a939619cf3138274fa4d38a49b0c4e95743985ff0",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 48
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-48.png",
+    "byteLength": 30687,
+    "sha256": "7f0f531b7d5b71900c43b03ba45c618fa2b28d5d2bcf6c1081304863fe06c4e1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 49
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-49.png",
+    "byteLength": 27946,
+    "sha256": "141ca525bf2b9d95a756c5d7dbe1b79086cc9cc6c73aa0f4e3b854073c033018",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 50
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-50.png",
+    "byteLength": 34222,
+    "sha256": "f4de1b662ac2936c2dffd32879ebc7cd140381e701c239a2464603b56e7242fd",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 51
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-51.png",
+    "byteLength": 37386,
+    "sha256": "a8a256a7cb00488b33eec6b9e5b4d93d9b7b8db56268d0630bc42762349ca374",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 52
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-52.png",
+    "byteLength": 35762,
+    "sha256": "8fc9ad66b33ced5ba88499ea3b742ed0f8a37b866f844fccd1ab68fc64ff05e5",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 53
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-53.png",
+    "byteLength": 37876,
+    "sha256": "e57acc19bfbabc458d8a4e3b7546cbd50400c9ee1e97c4949e58cf51b84abf49",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 54
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-54.png",
+    "byteLength": 24273,
+    "sha256": "b5a032bbce8fdf6344aac62484513a00a8f60fc9bce19685d790126af50aab9c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 302,
+     "record": 55
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-302-55.png",
+    "byteLength": 31088,
+    "sha256": "ed74db1c916c69239e22f5dbcee51207a0b85a6d65b5a07becb375dd8b3cab72",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 0
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-0.png",
+    "byteLength": 21021,
+    "sha256": "ad5293c322de0441eb5b9a5376611a49bc7821905d0d6b403b3e90d1d7cd714c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-1.png",
+    "byteLength": 12922,
+    "sha256": "7107682308aeb18b2fc4ea9e01879df6d63e255ea1f0e702be387910d3e97b87",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
      "archive": 303,
      "record": 2
     },
-    "path": "worldrpg/media/refreshed/surfaces/texture-303-2.png",
-    "byteLength": 7306,
-    "sha256": "8c004856302cb69ac9c43da8efc9d4502162bcca2a6bb8bdee4db747c52eb702",
+    "path": "worldrpg/media/refreshed/terrain/texture-303-2.png",
+    "byteLength": 12922,
+    "sha256": "7107682308aeb18b2fc4ea9e01879df6d63e255ea1f0e702be387910d3e97b87",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 3
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-3.png",
+    "byteLength": 12922,
+    "sha256": "7107682308aeb18b2fc4ea9e01879df6d63e255ea1f0e702be387910d3e97b87",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-4.png",
+    "byteLength": 27408,
+    "sha256": "cccacecdc08f6d71d2886bf3e9239fd4a9512207efdc7d71c674fcef332cd636",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 5
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-5.png",
+    "byteLength": 24407,
+    "sha256": "c5386c3fbb0598328aa806615df6ef92140df5d9a2644317506ad4b037a0ba7a",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 6
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-6.png",
+    "byteLength": 24159,
+    "sha256": "22fd811faf66dd9c179019247020f378a3e71f5238593d8e4e90eb352acb38c4",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 7
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-7.png",
+    "byteLength": 19232,
+    "sha256": "de12bb7f47796203cad1712ae3a579c23158c14db34c391de62db9199a07a9a1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 8
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-8.png",
+    "byteLength": 21998,
+    "sha256": "2725b81f06f87085780fe81282f206842d16f0ddf049bda117615fc12f1e8d35",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 9
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-9.png",
+    "byteLength": 12535,
+    "sha256": "2c917b1e90c0684b239c9aeec8da3350ffbc7db9caae7714b08986f42c8b1462",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 10
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-10.png",
+    "byteLength": 12535,
+    "sha256": "2c917b1e90c0684b239c9aeec8da3350ffbc7db9caae7714b08986f42c8b1462",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 11
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-11.png",
+    "byteLength": 12535,
+    "sha256": "2c917b1e90c0684b239c9aeec8da3350ffbc7db9caae7714b08986f42c8b1462",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 12
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-12.png",
+    "byteLength": 12535,
+    "sha256": "2c917b1e90c0684b239c9aeec8da3350ffbc7db9caae7714b08986f42c8b1462",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 13
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-13.png",
+    "byteLength": 12535,
+    "sha256": "2c917b1e90c0684b239c9aeec8da3350ffbc7db9caae7714b08986f42c8b1462",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 14
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-14.png",
+    "byteLength": 12535,
+    "sha256": "2c917b1e90c0684b239c9aeec8da3350ffbc7db9caae7714b08986f42c8b1462",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 15
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-15.png",
+    "byteLength": 12535,
+    "sha256": "2c917b1e90c0684b239c9aeec8da3350ffbc7db9caae7714b08986f42c8b1462",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 16
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-16.png",
+    "byteLength": 12535,
+    "sha256": "2c917b1e90c0684b239c9aeec8da3350ffbc7db9caae7714b08986f42c8b1462",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 17
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-17.png",
+    "byteLength": 12535,
+    "sha256": "2c917b1e90c0684b239c9aeec8da3350ffbc7db9caae7714b08986f42c8b1462",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 18
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-18.png",
+    "byteLength": 12535,
+    "sha256": "2c917b1e90c0684b239c9aeec8da3350ffbc7db9caae7714b08986f42c8b1462",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 19
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-19.png",
+    "byteLength": 26435,
+    "sha256": "1da0bd3f82b228c98d336024d7da26d742bf07888b13c245bdea86782af95796",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 20
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-20.png",
+    "byteLength": 23619,
+    "sha256": "0e76230a5ad267086ac711006fd7fdb06c016bf86b6650b31c05c5d99b223fe9",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 21
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-21.png",
+    "byteLength": 23861,
+    "sha256": "c2c2239f1436a2a8407e662e774e4027b6eec796cf92fe90786680521dfb74d3",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 22
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-22.png",
+    "byteLength": 18351,
+    "sha256": "861595c69ff91bfef516f57b7fb83093c0badd63dc76a5e6fe6e7427b7053979",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 23
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-23.png",
+    "byteLength": 22927,
+    "sha256": "5a538c44c85e9a4f38a68edb03597a227dd17cc5116aac269e8b2fde5193d430",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 24
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-24.png",
+    "byteLength": 12535,
+    "sha256": "2c917b1e90c0684b239c9aeec8da3350ffbc7db9caae7714b08986f42c8b1462",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 25
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-25.png",
+    "byteLength": 12535,
+    "sha256": "2c917b1e90c0684b239c9aeec8da3350ffbc7db9caae7714b08986f42c8b1462",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 26
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-26.png",
+    "byteLength": 12535,
+    "sha256": "2c917b1e90c0684b239c9aeec8da3350ffbc7db9caae7714b08986f42c8b1462",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 27
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-27.png",
+    "byteLength": 12535,
+    "sha256": "2c917b1e90c0684b239c9aeec8da3350ffbc7db9caae7714b08986f42c8b1462",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 28
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-28.png",
+    "byteLength": 12535,
+    "sha256": "2c917b1e90c0684b239c9aeec8da3350ffbc7db9caae7714b08986f42c8b1462",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 29
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-29.png",
+    "byteLength": 26114,
+    "sha256": "4a4ce8792ab7fdb6b9f2e0621fdceb85a1bbce4959fbed908c74e06fca06ce53",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 30
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-30.png",
+    "byteLength": 23303,
+    "sha256": "2509bef0afec215c3dbcae741bef7a650c95fbac2a1bc927479c6623683360e2",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 31
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-31.png",
+    "byteLength": 22756,
+    "sha256": "32ae50fc9789d9d93f2d30d1986e59f5791b1d9494980ecd9aa4bff1a275de61",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 32
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-32.png",
+    "byteLength": 20348,
+    "sha256": "6f9ed8e8c86df60985ac671aa6e59b53a0b194586b05c8ccc31206b616d6481b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 33
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-33.png",
+    "byteLength": 21975,
+    "sha256": "b6f74fa4797f5790d8ad5c35580dd935b0094196b454766182e40a292cc5318d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 34
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-34.png",
+    "byteLength": 23671,
+    "sha256": "479bd512ea9839f6a8ad4f7f1e8ea541550eea9d06c7cfce4d3b4e712c2226f8",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 35
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-35.png",
+    "byteLength": 23155,
+    "sha256": "ad8245d87c12a6c75d31acaa10a4ce03616d54f35018530b1c0d5764d24704e9",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 36
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-36.png",
+    "byteLength": 23139,
+    "sha256": "8349c8373313a4ff68474a702e085f3ae2280ae388b662e4d0cc140587bf739b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 37
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-37.png",
+    "byteLength": 20702,
+    "sha256": "c1b0c5ca2170e221d4e15ca172fb40ed7df7f7d35b06fea80b312799d7899db2",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 38
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-38.png",
+    "byteLength": 19789,
+    "sha256": "623cf39c6584f310ae9d08896e4e68c665ec42e13f03295b66fa109be4981792",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 39
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-39.png",
+    "byteLength": 12535,
+    "sha256": "2c917b1e90c0684b239c9aeec8da3350ffbc7db9caae7714b08986f42c8b1462",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 40
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-40.png",
+    "byteLength": 19953,
+    "sha256": "68018e07dc81790faa2c9cd901769a3d63cddfcc48457f44aaf2e882b5d14e78",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 41
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-41.png",
+    "byteLength": 19008,
+    "sha256": "9aec056aa881042c9c0ec8a9b892c54caf1f775bb3bfe5476fa1b1d7fb4ca10d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 42
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-42.png",
+    "byteLength": 12535,
+    "sha256": "2c917b1e90c0684b239c9aeec8da3350ffbc7db9caae7714b08986f42c8b1462",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 43
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-43.png",
+    "byteLength": 21332,
+    "sha256": "e9ddfc27a0741a18e0cff2d48a3f9c8de687ca83fe58a09e4e61232a14d89534",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 44
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-44.png",
+    "byteLength": 19990,
+    "sha256": "841754328f99cfffd5f32fe29ecb45af1465861666e59dcaa0b9255e45ec3f88",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 45
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-45.png",
+    "byteLength": 12535,
+    "sha256": "2c917b1e90c0684b239c9aeec8da3350ffbc7db9caae7714b08986f42c8b1462",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 46
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-46.png",
+    "byteLength": 20528,
+    "sha256": "2aa5b1533878a3e9d2c0af3312c66859dcbb71ba81482b9d18905a222a93a0a2",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 47
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-47.png",
+    "byteLength": 22645,
+    "sha256": "e341493f5ad0d8c4e6754536fd937c6b9acd9c24d1c0b8becca820382a4cd3db",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 48
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-48.png",
+    "byteLength": 25757,
+    "sha256": "9ec479b129e36490aece9f186acd2bdeae2b0b0ca9d83eb620d5339d80b76d8f",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 49
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-49.png",
+    "byteLength": 24179,
+    "sha256": "9c0238b1e9353cd701479cff0e4e57db585a3c4396649e925a8e9d320621945a",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 50
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-50.png",
+    "byteLength": 25676,
+    "sha256": "35ac992d91f5e9543c90e317a19247a91fc584ae63583f3180be513345e461f9",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 51
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-51.png",
+    "byteLength": 12535,
+    "sha256": "2c917b1e90c0684b239c9aeec8da3350ffbc7db9caae7714b08986f42c8b1462",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 52
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-52.png",
+    "byteLength": 12535,
+    "sha256": "2c917b1e90c0684b239c9aeec8da3350ffbc7db9caae7714b08986f42c8b1462",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 53
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-53.png",
+    "byteLength": 12535,
+    "sha256": "2c917b1e90c0684b239c9aeec8da3350ffbc7db9caae7714b08986f42c8b1462",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 54
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-54.png",
+    "byteLength": 12922,
+    "sha256": "7107682308aeb18b2fc4ea9e01879df6d63e255ea1f0e702be387910d3e97b87",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 303,
+     "record": 55
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-303-55.png",
+    "byteLength": 23128,
+    "sha256": "4c7a62bcfc8b22134b3fb7ef71518fe83026f6f17552ce674fefa3fe78e08fb2",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 0
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-0.png",
+    "byteLength": 20020,
+    "sha256": "1e3947b9fe7ee1d3f25487d8196f1c4dd2c6600cdb97198e2e87b4f50d01363c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-1.png",
+    "byteLength": 28374,
+    "sha256": "2a9d522d122bc80d106e68f94340efcf06ca52db2c0d8168ba4589bdcef742f4",
     "width": 128,
     "height": 128
    },
@@ -54631,9 +58921,592 @@
      "archive": 304,
      "record": 2
     },
-    "path": "worldrpg/media/refreshed/surfaces/texture-304-2.png",
-    "byteLength": 9179,
-    "sha256": "49b73c8988ea3a7eca0cf7b4ff610570f2dec8b673d59609bf7bde2b94ae1934",
+    "path": "worldrpg/media/refreshed/terrain/texture-304-2.png",
+    "byteLength": 33072,
+    "sha256": "5a8000196da0d1ba48b6c13b7b503a9bb255869e3833191fa63ad09524fe59bd",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 3
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-3.png",
+    "byteLength": 32501,
+    "sha256": "b0867bd21ab55842df792cf5d8477e75c621a6d11321d31d42bb14a3112aed91",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-4.png",
+    "byteLength": 30984,
+    "sha256": "d238f82cdf824408b31572e3d055427e29bc1ee84cde02c01c978dbb0eeda980",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 5
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-5.png",
+    "byteLength": 25503,
+    "sha256": "4e2564c9a5153a9d4e48ac67c6730791b5f05af55fc8588a394b369205f8b811",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 6
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-6.png",
+    "byteLength": 31613,
+    "sha256": "d61d398d41c1d03fdfa35b1dae43a0b46474890132e8c8c4c1f05c6324a270a0",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 7
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-7.png",
+    "byteLength": 30689,
+    "sha256": "5ec830ca895f6e2096f83298fe5600cc213f05e1972a3414e6de0296403b488f",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 8
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-8.png",
+    "byteLength": 32028,
+    "sha256": "5546f81335becaae48018bbe9f169ead8cd7485e4ecefeae1d2870f6f3b4cd7d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 9
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-9.png",
+    "byteLength": 32383,
+    "sha256": "d6b2c4fa5c7db75e2f753d3e4af0ab99e91a367390598c6c4fde99f58749e1b4",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 10
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-10.png",
+    "byteLength": 33175,
+    "sha256": "afe67356d69874e9cf416b903122870d9440b407ec79a5790bb0772f8b8d6b8d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 11
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-11.png",
+    "byteLength": 35396,
+    "sha256": "debb096d7163a7fbb1522e9aa3e14198c57ddffbcc62f8f153faa5f49ccd3b64",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 12
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-12.png",
+    "byteLength": 34742,
+    "sha256": "1251e0d3f03251f24f5d6cebedb4cfab27013f6b0499f969f1ae9cfac930f01c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 13
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-13.png",
+    "byteLength": 35190,
+    "sha256": "2365d22e396b7e73cfbb3ba4bd8fdad7745bd0124bdd7310781fbd9a976f54da",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 14
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-14.png",
+    "byteLength": 35681,
+    "sha256": "df7402aa474b1d729dae7c03d129e741b66782d6833d50c0f615dde42f89e617",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 15
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-15.png",
+    "byteLength": 33879,
+    "sha256": "4624dd9a096beee1482d51e84aa8d923110f3a2e5c39f05c54593abd92b68e68",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 16
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-16.png",
+    "byteLength": 35742,
+    "sha256": "e875bca809a150164f936b82c0fece68acab68ab9f7a6bc09bead9fda11e7fd2",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 17
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-17.png",
+    "byteLength": 33800,
+    "sha256": "5a1a3eab2a4bfae5079bd53e5fbf06ea86ad3b2c1aee2868e2278de731b43b86",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 18
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-18.png",
+    "byteLength": 34935,
+    "sha256": "065dbf4e9af01f4da69ad26d60860dbfb0ce480877ca7b0edca2f1d8b56c94ac",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 19
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-19.png",
+    "byteLength": 28976,
+    "sha256": "173e9f007e2f9e18207f776855237062b910c47c4c3d9696c9618144f5dfd0b6",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 20
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-20.png",
+    "byteLength": 25474,
+    "sha256": "bb3d57a71c434124e9bf63e2aa4c6dc767651c88a2f48261c0c9ba22dc5c3050",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 21
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-21.png",
+    "byteLength": 30239,
+    "sha256": "94f993b78206f3039714224fa9ebdb4632bc366db5d47c7fd10f596eaba87fd6",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 22
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-22.png",
+    "byteLength": 31639,
+    "sha256": "0cd1d884324b1f8753034ab4472d7f205009827b74eefa86e876df2674d972e1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 23
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-23.png",
+    "byteLength": 29165,
+    "sha256": "009d88438de86854d83c888384d09dcfcb49734eccf58ecbec17e200049270b1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 24
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-24.png",
+    "byteLength": 34237,
+    "sha256": "9b02056eb4ff7e5e11913b216e23c37e6a3d05118d6602a0fe186f093e8690c4",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 25
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-25.png",
+    "byteLength": 32113,
+    "sha256": "78f86b4da5f992004d5a0a26b5197204d59389fd345d9dbc254779ba4b032ccc",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 26
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-26.png",
+    "byteLength": 35326,
+    "sha256": "8e637f6883d2ecd2f1980d35f40bd985bf57dc13bc273dd92e46d6f3b7b10005",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 27
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-27.png",
+    "byteLength": 35180,
+    "sha256": "f6216a8ef05bdcc6f87e251847bb66075fdaac3e7d0937a659d470b7c08cedaf",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 28
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-28.png",
+    "byteLength": 34757,
+    "sha256": "c30994ac399d1381b212c93fe86c1f3d44ca94a185ee3034b9489926d2a6b199",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 29
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-29.png",
+    "byteLength": 28317,
+    "sha256": "fbae1bc52b21b8d7adc182e451145cd632243401a85ba2dbe3e4ea4243f8d039",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 30
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-30.png",
+    "byteLength": 26156,
+    "sha256": "deccbef2e66e0be89e4cc24d5bf7cf70365865bfb9b4fa4e29c8aea48b84e2ca",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 31
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-31.png",
+    "byteLength": 30497,
+    "sha256": "2620aa9b41bdfd733ec4c5279b93999a1bce18eda3158f94c16a42634a7dbfb6",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 32
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-32.png",
+    "byteLength": 32073,
+    "sha256": "777c9ed6624550e1b51e8adbc0474015103b89cb033dd61d17594fc590ab18d1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 33
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-33.png",
+    "byteLength": 32225,
+    "sha256": "5f3f6584c898b159736aa0b47f53e639704b3a1751077a50a70b50e3a19e4052",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 34
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-34.png",
+    "byteLength": 31098,
+    "sha256": "4d58a9e9aa00c9e3a9bb0c5485b25c614a72d8285a1063889588cd45c926e55e",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 35
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-35.png",
+    "byteLength": 31337,
+    "sha256": "d1b5fd1644efbd4e0c2589eb64204fcf3eb2bea747b3dcca703ce7b63ce933d4",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 36
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-36.png",
+    "byteLength": 31450,
+    "sha256": "33d7e50225315168805fa62d41c315cb9e24b659f4b3f072003e7a15030859cf",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 37
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-37.png",
+    "byteLength": 31688,
+    "sha256": "decb01f9b580940a687228f623eb2ba326e7522525c3fb405092dd42dd4a05e7",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 38
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-38.png",
+    "byteLength": 34067,
+    "sha256": "74641d5fbe55f548d78cd51e4a2c64cb8c96ee8bbbacdb7256b09f502bdc3f69",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 39
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-39.png",
+    "byteLength": 35788,
+    "sha256": "ba589ca62c7d06fdb73717c39d11d973a62d7b74616437c0a38043b242f260b4",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 40
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-40.png",
+    "byteLength": 32072,
+    "sha256": "86b400ba30ee9cbc17bf35eea47c81b75014b8ce1250f52bcbcbdbbed18e7ba8",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 41
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-41.png",
+    "byteLength": 32420,
+    "sha256": "7cbe7cf4f30732c04a7f806334d1f72526842b8e3942127dc8c6a2566b461b4c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 42
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-42.png",
+    "byteLength": 35958,
+    "sha256": "f4a91cf56e88dab5c14feded7443ac13092d2a9d4d7b36c64e92e7d71c619bbd",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 43
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-43.png",
+    "byteLength": 33351,
+    "sha256": "f34b3c59405a320d8aa9886a4f132d05c85f8a471f7dda8db16073cfe26e4524",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 44
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-44.png",
+    "byteLength": 33113,
+    "sha256": "10043662cc99d879e14d27977621631088d368dcf4d6096b524b7654d3c7c73b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 45
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-45.png",
+    "byteLength": 36453,
+    "sha256": "e82a9530cd8e1cce330139df2ee3d761cd2da4b04a73895cdae05b6ec35c7ac8",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 46
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-46.png",
+    "byteLength": 18944,
+    "sha256": "80af418985f9f484be91f296689ab80a028efe64a364563759d6d1e3c06d7fc4",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 47
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-47.png",
+    "byteLength": 28674,
+    "sha256": "f77ada5cd53b4576eade86ac458c76b2601d926200f240c0998a28bf8200e877",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 48
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-48.png",
+    "byteLength": 29968,
+    "sha256": "527af8fabbafe2039071cf5200cd7b49c9a98b72f851540a43793bcc8d3d7f77",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 49
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-49.png",
+    "byteLength": 26638,
+    "sha256": "cf09299593ca746ce10c4ba3d4e9fc94b833445e2990bbfd0bfe50245993e312",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 50
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-50.png",
+    "byteLength": 32351,
+    "sha256": "b91b31448af283eec483113f9ae71748fc519d22c2420b7058fe7d167080cb2a",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 51
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-51.png",
+    "byteLength": 36451,
+    "sha256": "0d3b057370dd6006255283a1e66fb84b080713d6820b160f5650bac8a1017f16",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 52
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-52.png",
+    "byteLength": 34768,
+    "sha256": "a3e3d5097765c8bbea4fda1604e5795a38f6773225fcf6c9bb176181e774ca45",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 53
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-53.png",
+    "byteLength": 35289,
+    "sha256": "6ce4048f3cf094eda785163cacccb0c133d725b318ffa5332b4b896bad2989cb",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 54
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-54.png",
+    "byteLength": 23445,
+    "sha256": "3915dea366f4c34d645553f2610a15be31d533c82aee974af75f627b0301827b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 304,
+     "record": 55
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-304-55.png",
+    "byteLength": 28962,
+    "sha256": "ef80600dc7d63ef95da2f87433f7441ae629d1bdf2d92b4ae0509e4c73cd5121",
     "width": 128,
     "height": 128
    },
@@ -57400,12 +62273,1255 @@
    },
    {
     "replaces": {
+     "archive": 402,
+     "record": 0
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-0.png",
+    "byteLength": 21021,
+    "sha256": "ad5293c322de0441eb5b9a5376611a49bc7821905d0d6b403b3e90d1d7cd714c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-1.png",
+    "byteLength": 35482,
+    "sha256": "b53eaf55223e3150fd0bd3b73ac62431ddcc04caba4cc6c8ea6e0abd6334190e",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 2
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-2.png",
+    "byteLength": 39175,
+    "sha256": "7ef2d3a48a6ddb1e28fc75c17a35115623e673f39a24bb06206957b0578ad22d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 3
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-3.png",
+    "byteLength": 24330,
+    "sha256": "32ce68cf09c3b49b5123a8dc1964985e89c280959226b643b2ad46d836cce27e",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-4.png",
+    "byteLength": 31286,
+    "sha256": "51c157db7b9607c4f77c9c10428012e03af942516ac24115b81ff9d6076636a0",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 5
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-5.png",
+    "byteLength": 27389,
+    "sha256": "20c3422122089f88bfb524e3744f9155d5008fe7e02e8287f36cf07fd66df63c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 6
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-6.png",
+    "byteLength": 32396,
+    "sha256": "4ca3d5a9030499152a8627ad1b2235fcc6615beb137921377d41e70acbba7ba0",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 7
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-7.png",
+    "byteLength": 34589,
+    "sha256": "5b79339e0b83d63de061a9be39d6feabcdae699835cf9e61e9a5a9610a07b297",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 8
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-8.png",
+    "byteLength": 31544,
+    "sha256": "4817c1e5954a23bf03bb15b6f4665e1da26777b5e02ce18b1d3d1d4e43fb73b4",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 9
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-9.png",
+    "byteLength": 38769,
+    "sha256": "205d9080669c471a94408cb44d9e0f4b8e54251ea1e5d6df9d4eb0802335575e",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 10
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-10.png",
+    "byteLength": 37498,
+    "sha256": "6f052630ad151629cdcf094813d006df88c911227549882a6d389d27b026897e",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 11
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-11.png",
+    "byteLength": 39470,
+    "sha256": "9d5658a4b8d12a1a60284016f334e67173c21e3ecbe68fdc72bd5fa90570761c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 12
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-12.png",
+    "byteLength": 39651,
+    "sha256": "6f8c5ee988093658a2dfb0e125b83bab99c6d607c0ca2a666d3d1309ba9f3ba5",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 13
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-13.png",
+    "byteLength": 39152,
+    "sha256": "eaddb316e6babb6f52e243c6a75ed98e29cdbef9bbc9f15412dda2242facf335",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 14
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-14.png",
+    "byteLength": 35631,
+    "sha256": "81a60d3032f50481fd7c5c60057315f20b354b2541fb38dcd6554e1c635f78a9",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 15
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-15.png",
+    "byteLength": 38175,
+    "sha256": "80f74ffc2b8fb96c9e03ccc97c152240f279180f7d8130a715e6c81fc02ad81b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 16
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-16.png",
+    "byteLength": 36418,
+    "sha256": "1b835661cae41435bd2f12471a4de14b5f430147f886a65002edf478543f668c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 17
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-17.png",
+    "byteLength": 34721,
+    "sha256": "923f967d1dce80d5854b39138428d221e8c8670d443d52791c643f8da671724a",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 18
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-18.png",
+    "byteLength": 35176,
+    "sha256": "43f56395e18ee74cd2c2b15fa7f98805749d6f03245d3cd24bced58398723d47",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 19
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-19.png",
+    "byteLength": 31684,
+    "sha256": "0182fa2d09a17e7820992126942f28cf1373f43f61f9f38067a1f864115666ed",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 20
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-20.png",
+    "byteLength": 27198,
+    "sha256": "db32986602eb36d2730c836c32275b3340a4e8d563ecf8db1f2eda793ee4374a",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 21
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-21.png",
+    "byteLength": 33629,
+    "sha256": "409509bfb96ca5ce9b96635e9780f1c09ca066cb29203170575d70198c771252",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 22
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-22.png",
+    "byteLength": 37504,
+    "sha256": "098ff9e64f9bc9d42adc9d4e99f8e16925a1a149e286fba1cd52d689df82b286",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 23
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-23.png",
+    "byteLength": 34996,
+    "sha256": "419215a87bcf9bcb1a982ba258e939c9e2ab4881fdb1260dd1fdfa5a5c41626d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 24
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-24.png",
+    "byteLength": 34458,
+    "sha256": "290518f94b5a2d8e292d618c4fc52f348de04cef2fc973f352101c972d96ce89",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 25
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-25.png",
+    "byteLength": 35230,
+    "sha256": "be63bd48d51541059b6753932132d8196e9aeb326412c708dda33fafbc19be3d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 26
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-26.png",
+    "byteLength": 34074,
+    "sha256": "1a154a970999433dca2831dec5fc9fab783e6f714766c0ab6fba340124e4b505",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 27
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-27.png",
+    "byteLength": 31001,
+    "sha256": "cad9d797f52add8416f914f4b70e47e0491a91e23a0d4ce3f25afe90619d5531",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 28
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-28.png",
+    "byteLength": 33595,
+    "sha256": "735ce33e8a72ef430a99e82c8844067d75cc46c93e3787bdfaaa7df282323386",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 29
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-29.png",
+    "byteLength": 26309,
+    "sha256": "f062c01eab6c56af65d8728da9286f1681f3fa66f32ff6e8823105ae8e7539c0",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 30
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-30.png",
+    "byteLength": 24360,
+    "sha256": "af7edf03a2b6cbd13cc22bb27b993e172fa6ca7d664dbfaadc288bfb734fb891",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 31
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-31.png",
+    "byteLength": 27272,
+    "sha256": "50ec515932507e4858823932e2236a36433f94f83cd0ebd2d390eee809fce836",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 32
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-32.png",
+    "byteLength": 27130,
+    "sha256": "1dbd663bc84498776b3f1b62548ccbf0b720615c4879efd562a33c0ac351112b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 33
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-33.png",
+    "byteLength": 28260,
+    "sha256": "fc0b195c98b62c4526d10f30959f07d24232b07fa1ef6db2fcd24c2cfc7e9efe",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 34
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-34.png",
+    "byteLength": 32433,
+    "sha256": "d2d4d3d8033519fefe3f8668841b024d50f7194a4010918765e57f04cfa90132",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 35
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-35.png",
+    "byteLength": 32252,
+    "sha256": "89df979dbd965cacb028a243cd13d8f7199a395af6548d5b572a0f5a908d05df",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 36
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-36.png",
+    "byteLength": 30570,
+    "sha256": "9844e9d1e34befb32e93eb21381db30cd584ceab4a3269350f62cfb0a4b7c121",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 37
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-37.png",
+    "byteLength": 35862,
+    "sha256": "894ae9919149df588d4b387c07acc235832f34dcce9f485b73c15dfd05eb89f4",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 38
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-38.png",
+    "byteLength": 34027,
+    "sha256": "83799a877c154967580238eb15634eb785c2acd51ce80dd061be6419d01f70b0",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 39
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-39.png",
+    "byteLength": 36852,
+    "sha256": "ea0aa4a2dac8f8cfc4ef21d956df5a6a0ec8348f741696b1184c2c44abdd19bd",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 40
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-40.png",
+    "byteLength": 36010,
+    "sha256": "09257f0dc535cb8c93350146d563348a4a1f4fa1e8d400c39383af2d2fd43b67",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 41
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-41.png",
+    "byteLength": 36114,
+    "sha256": "d72ced2a71b6ec671eed8fa61417c619a883ac95060311698aa225c4313daaf1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 42
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-42.png",
+    "byteLength": 38554,
+    "sha256": "1c9adcaad3c8b0b49499d1268eff801f1c0bca0c17835114b2d5ad13d441e876",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 43
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-43.png",
+    "byteLength": 32457,
+    "sha256": "6bc2f6092b58ced91ec90aa72447f85cd81fc625489c6253821d44f9c2b4b1e5",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 44
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-44.png",
+    "byteLength": 31472,
+    "sha256": "f01e5d5a28c4f37138aff9fa24ca461935ebaf298d937f72546382d08c47b8aa",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 45
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-45.png",
+    "byteLength": 35511,
+    "sha256": "3325315f365d69e57174da385da9865726efacb3cc2b619a26dcb97f30b0171f",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 46
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-46.png",
+    "byteLength": 20528,
+    "sha256": "2aa5b1533878a3e9d2c0af3312c66859dcbb71ba81482b9d18905a222a93a0a2",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 47
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-47.png",
+    "byteLength": 32802,
+    "sha256": "77168ee95fa599608cb25f02bbb893437f5222b08aa8e1807aaaf197469aba64",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 48
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-48.png",
+    "byteLength": 29030,
+    "sha256": "8f3f065d0f0071739b28529e3b5893e6092403f2ff5b5dd87e7f688718af8420",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 49
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-49.png",
+    "byteLength": 33066,
+    "sha256": "de61b6b33019e8899122cee3bc22e99d4f3e91f7773e89b86d70b59f2f172118",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 50
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-50.png",
+    "byteLength": 25434,
+    "sha256": "4279722890a94189e1549a252cc84bb8f56235e77c05f8216fb51a2ae910a041",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 51
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-51.png",
+    "byteLength": 40007,
+    "sha256": "75d78e9bfc6ebf3553bb414c34f1314aaccad4c001aab260b8e4aa9556fb1c8e",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 52
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-52.png",
+    "byteLength": 34931,
+    "sha256": "5ea3c1384c88a775b10ceecd33491f341b36f9dafb87a3e28365bbbb96d0f656",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 53
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-53.png",
+    "byteLength": 37819,
+    "sha256": "506ea6abd52274bffd36efa384d8bf02ae169334f827414b55caa852667df78a",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 54
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-54.png",
+    "byteLength": 27855,
+    "sha256": "70aa752e4f8db5c386df4d02cbd96fe7e7e02834a9f9b9b80e0e3f824f75539c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 402,
+     "record": 55
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-402-55.png",
+    "byteLength": 33289,
+    "sha256": "f5df294254c7379e0f7daa9970f9850dee23334c2b85c5006e37d6d6669b0a5b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 0
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-0.png",
+    "byteLength": 21021,
+    "sha256": "ad5293c322de0441eb5b9a5376611a49bc7821905d0d6b403b3e90d1d7cd714c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-1.png",
+    "byteLength": 20193,
+    "sha256": "2980c05d25761164152d85ccc336ac4d819cdd4f1fd736f851ff82e493ccbda6",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
      "archive": 403,
      "record": 2
     },
-    "path": "worldrpg/media/refreshed/surfaces/texture-403-2.png",
-    "byteLength": 14031,
-    "sha256": "23dc6492cfef84c257f71d50f99eeed17820ddaf38ce088d8b1e70395ba57944",
+    "path": "worldrpg/media/refreshed/terrain/texture-403-2.png",
+    "byteLength": 15883,
+    "sha256": "fa9139ed9b7fa4d1f5495821db09b8d75fcd0095b46e01e38148f49e6d59cf4e",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 3
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-3.png",
+    "byteLength": 18093,
+    "sha256": "3010f8fd539b0334175692ca7417064bb7fdc1983b5577ce83d571c7ffd9183f",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-4.png",
+    "byteLength": 26437,
+    "sha256": "108733d9f7980f1a0dba67f0ac467447686cc05e050a3617b580727d06aba276",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 5
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-5.png",
+    "byteLength": 25705,
+    "sha256": "8c93d5edeedc9daebb860400c618f809d6a4c9bb8c8c47d528b1c231fe2835ad",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 6
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-6.png",
+    "byteLength": 27100,
+    "sha256": "d75a0b31f4cd589c0e45ef38e5ea593ef3204ee3ffa75ab4c761b32dbe0f1d2e",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 7
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-7.png",
+    "byteLength": 19806,
+    "sha256": "d7401c3d81453f69e221ab9774fb29a46f0676e73c2f05b805a3e15cb3fe2e47",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 8
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-8.png",
+    "byteLength": 26016,
+    "sha256": "4f9b4b8150a8c1df08b8515547d92df885eec3514fe68e60c93b1bd1e9fcfd8b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 9
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-9.png",
+    "byteLength": 24713,
+    "sha256": "dab043a93a0294fad1eb8d9bc614fc6982e6a42e2892d04301378a645f85634d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 10
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-10.png",
+    "byteLength": 24981,
+    "sha256": "36db03e0089af910f0a42899821ea5bcf896884328c10452a256d9d95f2b6ae4",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 11
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-11.png",
+    "byteLength": 26577,
+    "sha256": "ef9ded2f26e8121314b66000b324f8d3c342ba61f7991b4d3bdbb07daca852e1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 12
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-12.png",
+    "byteLength": 20195,
+    "sha256": "0c0e82b816e74fc2d0de6e9d7ad9a9ac85350e0e7ec82887c229ccc579540ca0",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 13
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-13.png",
+    "byteLength": 25285,
+    "sha256": "aaf13ac7e215ae0a5d28b5e5d602dbcdde757ffde2c1650e0816134a0198f4df",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 14
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-14.png",
+    "byteLength": 22311,
+    "sha256": "767033629cc787ca5b5762f8c465cb4202908239f82db1dd320c3e3d34a47cb2",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 15
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-15.png",
+    "byteLength": 27433,
+    "sha256": "4fd97ef9f81e66e009f5f8ef4ab85db7a4d9bcfd908600f1b1b08c4da521e5a0",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 16
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-16.png",
+    "byteLength": 24539,
+    "sha256": "4ed9d38e9c9eb9bddc100914db12ba1bbb997d00212369b95a014c1d509b9ce0",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 17
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-17.png",
+    "byteLength": 22564,
+    "sha256": "9df877ee6d2c11cc1cd0958bbf295b9785dbf6e19498d03d9c8dd6c8b138ec2e",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 18
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-18.png",
+    "byteLength": 22944,
+    "sha256": "a76e3cdf7e4b9d6a57f886cb71d60d67adf8104c2e0c6b84dbc7c67b97241c02",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 19
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-19.png",
+    "byteLength": 27302,
+    "sha256": "5229e8f1fc9e1136059ee69a36b3fa163e749e169ea30b866f7a69936434d546",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 20
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-20.png",
+    "byteLength": 24631,
+    "sha256": "424634c1f236b557bc19503da727bf1bf6dc6681b1c1d9443cd78cd1e77659dc",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 21
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-21.png",
+    "byteLength": 24350,
+    "sha256": "4e704fe06bbee3fd7a32ff7618b13a2d722ca1011584cd57e5753b9476c623ed",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 22
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-22.png",
+    "byteLength": 20479,
+    "sha256": "1311ff351c89f44f175ea685d1360c6ccad5cbeb0beed49dd363f2c9a100dd2f",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 23
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-23.png",
+    "byteLength": 23784,
+    "sha256": "d85a975a402032ec7af141630eda79f439d70a8ee80202f8c02c45e4f9bd85c9",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 24
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-24.png",
+    "byteLength": 25860,
+    "sha256": "4de8098ee15eabb6edb248e119d9ec1212007be1cc8aa7448a3ab3204598491e",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 25
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-25.png",
+    "byteLength": 26722,
+    "sha256": "385ab21eca1d1181a692d11ef73b17a8cb74a0c09055759a399e140dab2f784a",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 26
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-26.png",
+    "byteLength": 25086,
+    "sha256": "63d9b36aebfa5266444fb7d61adb5018d914ed3c08abcbce34af86c289918241",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 27
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-27.png",
+    "byteLength": 21233,
+    "sha256": "639b1104eaff687147eb9c21db5e7f49b371cc1facc25103a3770e3653981d0f",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 28
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-28.png",
+    "byteLength": 22970,
+    "sha256": "ad5975db85bf1ffb100c2384a801e5107f3cf39be803d584cef1d9a2a1bd2a0a",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 29
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-29.png",
+    "byteLength": 26731,
+    "sha256": "2734f780146ba493e1db2958709691397884f76d1c8576bf47a9fb1c6e1a3431",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 30
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-30.png",
+    "byteLength": 25405,
+    "sha256": "1202bf70da40ae715db34904d2fa723ee00734d66eff2e594a3b8a025bd77e50",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 31
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-31.png",
+    "byteLength": 24279,
+    "sha256": "feb84283699ca9c12db49f258332fccfc37a3d3fdc4e40600193355dcecb133e",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 32
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-32.png",
+    "byteLength": 22172,
+    "sha256": "1d2204571f64c5e5ff948069c64b8fb1af765f82cc0363b75c478a0d5d3f57b2",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 33
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-33.png",
+    "byteLength": 24336,
+    "sha256": "7a92927f8e7e57c6bc6ab3d7aac4b7c227ac8c26d27da4c1c4f5bec7565d2df4",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 34
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-34.png",
+    "byteLength": 27935,
+    "sha256": "83f6ac213546e97917ff563ab9eb1bb08d45e540cf62420c7164c4b9dcddce23",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 35
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-35.png",
+    "byteLength": 32299,
+    "sha256": "dde3444cf7cfac7b29ea15db3f1f5f48d97f835650f0dc2966ad891633500dc7",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 36
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-36.png",
+    "byteLength": 28683,
+    "sha256": "26d73b4a9f16e6fd7d386983d5097a89cb6ceb7d74cdcadd119b9343cf6c0352",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 37
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-37.png",
+    "byteLength": 28409,
+    "sha256": "bac2a8994461d3ab7093b8835c954d4f9086a80c0bfc276d03c0291989a8c496",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 38
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-38.png",
+    "byteLength": 31089,
+    "sha256": "77867686b0f3cdb5cee7d6319b7ccce78212cd87def83031ea0e066af56ea0fa",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 39
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-39.png",
+    "byteLength": 29685,
+    "sha256": "cbac14c80f4e6939565d89168094e2f9cc9aa7896e800c9f61a1c29fff16fb7f",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 40
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-40.png",
+    "byteLength": 28348,
+    "sha256": "626fc3a6afd75cbb5910261c0fe3b90fac6881959fc106f9414d31138c917b89",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 41
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-41.png",
+    "byteLength": 25752,
+    "sha256": "1e16080514f8c5164b8ed1c3e2e7dc8082b4408afe59746a1f51bac49eb8d7f7",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 42
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-42.png",
+    "byteLength": 26129,
+    "sha256": "24de4b6c90ec4a62b4f777b3e1a4f4e1e13472477a096b5c0cea29fe58886bc1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 43
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-43.png",
+    "byteLength": 29354,
+    "sha256": "1b40e564d3448e54a713eaa10a545cec722cf1078a54ed6907247c1003023f63",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 44
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-44.png",
+    "byteLength": 26104,
+    "sha256": "a70062a1f9092909922afc1eea966ea3c02f05a9e284cac80c693f99b29c8931",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 45
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-45.png",
+    "byteLength": 25323,
+    "sha256": "54b2320bf415fc306b007e01c535a3982f818b3cccedb37ec7ef52cd914b4555",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 46
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-46.png",
+    "byteLength": 20528,
+    "sha256": "2aa5b1533878a3e9d2c0af3312c66859dcbb71ba81482b9d18905a222a93a0a2",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 47
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-47.png",
+    "byteLength": 24052,
+    "sha256": "aa0b3b64099857d29871d28869773eaa3478e23db35116fc23e654fb2eb554dc",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 48
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-48.png",
+    "byteLength": 25613,
+    "sha256": "49e74746183b66cb0f702d291d030507a32b44e2f0db8f8b40e5ed5d30885951",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 49
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-49.png",
+    "byteLength": 26439,
+    "sha256": "77523971f98500f7433d3aec34f3c80864db8f04bd4e3dfa6d807381c8870f37",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 50
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-50.png",
+    "byteLength": 25101,
+    "sha256": "1bad0a271e7fce088e1041dddfef290e48b01a768bb742954ada0b17cfe9c0fd",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 51
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-51.png",
+    "byteLength": 26900,
+    "sha256": "139e3f17f118afc0e8adf1b7ffaa1469193d32d1018d95798c5a20ddf3ffb308",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 52
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-52.png",
+    "byteLength": 27953,
+    "sha256": "9b8eefc5df6c919bf902a60fbc0b3d7fa68627cd02abd86b341fb01aa34b5297",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 53
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-53.png",
+    "byteLength": 22951,
+    "sha256": "9fcb490c9b4271219e58785671591c11a32b8f33f316633d78f245a5182ff3af",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 54
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-54.png",
+    "byteLength": 12551,
+    "sha256": "49b0c0a5d066063bca32c4d0d87d00d3fefce6acaf1805f1b2629de69b3e6f88",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 403,
+     "record": 55
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-403-55.png",
+    "byteLength": 23881,
+    "sha256": "46f2d9fd88dc959de3e28e7a8d91a8a3e2bb8240f8d06022494465d0ceaaccea",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 0
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-0.png",
+    "byteLength": 21021,
+    "sha256": "ad5293c322de0441eb5b9a5376611a49bc7821905d0d6b403b3e90d1d7cd714c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-1.png",
+    "byteLength": 35482,
+    "sha256": "b53eaf55223e3150fd0bd3b73ac62431ddcc04caba4cc6c8ea6e0abd6334190e",
     "width": 128,
     "height": 128
    },
@@ -57414,9 +63530,592 @@
      "archive": 404,
      "record": 2
     },
-    "path": "worldrpg/media/refreshed/surfaces/texture-404-2.png",
-    "byteLength": 28602,
-    "sha256": "ba7cb728535b49169e918553770e06a96abc557bce62a04b84aba93942cebe2c",
+    "path": "worldrpg/media/refreshed/terrain/texture-404-2.png",
+    "byteLength": 39175,
+    "sha256": "7ef2d3a48a6ddb1e28fc75c17a35115623e673f39a24bb06206957b0578ad22d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 3
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-3.png",
+    "byteLength": 24330,
+    "sha256": "32ce68cf09c3b49b5123a8dc1964985e89c280959226b643b2ad46d836cce27e",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-4.png",
+    "byteLength": 31392,
+    "sha256": "091d6b3d0941b14534cd0fdb43fa3b40c1a20c6b1d6fd1d80fd37bc58b7f3540",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 5
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-5.png",
+    "byteLength": 28180,
+    "sha256": "ca9a8c0b056b1e2c4d3bfe217018349adee1f0a299eadeaf1eb000f07fa36c61",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 6
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-6.png",
+    "byteLength": 31410,
+    "sha256": "b9aa89e8e08de4fd9b55139aa14bc2a246387dc6965e4dfb4a0bca5b019daa5c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 7
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-7.png",
+    "byteLength": 33968,
+    "sha256": "5b6ab82001be7db705dbbbfd55e3f20457d058f172ed20328d908363fb95c49a",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 8
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-8.png",
+    "byteLength": 31528,
+    "sha256": "fc16dbac45f2fcf6815b58a0d809a4c23055fa9aed62d007298dedba52df55b9",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 9
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-9.png",
+    "byteLength": 38760,
+    "sha256": "24b22472e3f77f66ab1757856a8c73894a740f9477816663e63037003a1c5634",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 10
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-10.png",
+    "byteLength": 37450,
+    "sha256": "f748d8221400618f9c99f0e7b5952f0740ecb498d520506c86024156c06bf012",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 11
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-11.png",
+    "byteLength": 39490,
+    "sha256": "937a92f0b1a807e95d166cf9e52fddd530f9881b4c6bf54ea17e1b4eaa9e4144",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 12
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-12.png",
+    "byteLength": 39710,
+    "sha256": "72084edd7d378690a7ecb10396a890d6711333f7439d856ac424bae47c8210bf",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 13
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-13.png",
+    "byteLength": 39180,
+    "sha256": "4a2e29cba8c1eac0790837a87723e04e495c77cbc293096f280a543f38dcd393",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 14
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-14.png",
+    "byteLength": 35609,
+    "sha256": "c978a89f47968f87faedc3b5c36ac66b4fc760f218770f4fb60e7fa260f85c4b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 15
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-15.png",
+    "byteLength": 38156,
+    "sha256": "acd451af1163b43dfc59c003bc3d37c9e6743eb5a998d94c498a3cdeb0c71590",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 16
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-16.png",
+    "byteLength": 36396,
+    "sha256": "3f57649b9b52c9ac2cf7e829bc5c6add7528eb41638f0ee3a19358d8085d0530",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 17
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-17.png",
+    "byteLength": 34746,
+    "sha256": "8649c9645562503c16416435a6ff04ca91081923f8b7eda8440906899d75e964",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 18
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-18.png",
+    "byteLength": 35280,
+    "sha256": "e52925fcd0aa91e7e6a735631c02c0eda080ef87e8ea59d3c16f72d7e58f2710",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 19
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-19.png",
+    "byteLength": 31670,
+    "sha256": "f3e8d265ac30a95173908a49d53b84cb6500c1ab9f1e9ab6dd4140265e52ae81",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 20
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-20.png",
+    "byteLength": 27153,
+    "sha256": "b3ec8175d64511bfee5db33530cd68754aa65722e42bb8160e9e4496f50561fb",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 21
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-21.png",
+    "byteLength": 33575,
+    "sha256": "ea8dd8a70d6fa43dc13cfe1f61f9a0678f9cc53d0a3658235a393ccd25b66392",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 22
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-22.png",
+    "byteLength": 37132,
+    "sha256": "b7029ef31ac28aaf1af85da1686cc279383a1dc81ae1b88bf7cd6be8dd2b0ac7",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 23
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-23.png",
+    "byteLength": 34958,
+    "sha256": "06561adcf64b6450d9879419af872aeef1a1468ec6dd919535cb3f8df4e50804",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 24
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-24.png",
+    "byteLength": 34399,
+    "sha256": "a6034ae2824ff95d3ff081d58e063c9685185799dc6b45fb8023a28c24d41687",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 25
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-25.png",
+    "byteLength": 35171,
+    "sha256": "4332ca4396132c2c33e3b5a7cc88710bab1f44010563a37bbbff6ae348caae4f",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 26
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-26.png",
+    "byteLength": 34148,
+    "sha256": "aa996557b4411eebabdface9cc9265be96975f13e750a3a28f735bec5de1d761",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 27
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-27.png",
+    "byteLength": 31027,
+    "sha256": "f019df9f5af26824b64a4d7be01dea7691322fbb750d414ab07b826b698e75da",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 28
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-28.png",
+    "byteLength": 33621,
+    "sha256": "92a31e9144bd7cee725a0714d6e817dc4d204e097753a3040ee35bc35b202f46",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 29
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-29.png",
+    "byteLength": 26953,
+    "sha256": "bed3dfd23016b4b6330a3ed5f01b7375c633ff55197f2f3f989d841d089d95ba",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 30
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-30.png",
+    "byteLength": 24777,
+    "sha256": "369d05ac598605111a6fa4f0e091ed88b5d6506b93873f30746cc21236875c2b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 31
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-31.png",
+    "byteLength": 27254,
+    "sha256": "cee867923f1a4edb272cad1cc697fe38f375aa5ae3630c1d44a6c7b03dbbbc3f",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 32
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-32.png",
+    "byteLength": 26610,
+    "sha256": "fc9b4cff7890cacc3861a07485bbfbcfbfcea8790432f11673c6105bd669fa21",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 33
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-33.png",
+    "byteLength": 27427,
+    "sha256": "530052711f2f870024067aea76c5476c6a822eb1163f5c89793422eb36f25e3b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 34
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-34.png",
+    "byteLength": 32288,
+    "sha256": "eda4b5546426d0ca809b0377b35ee99fa1f7ed39a615c7cbb7cdcf4fbfffe750",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 35
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-35.png",
+    "byteLength": 32446,
+    "sha256": "92d76ee117b146b29e62f894a3c6fd0504de25fd2d2a0a723a1f73c759a50e2a",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 36
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-36.png",
+    "byteLength": 30909,
+    "sha256": "98d4037c34d5d91c5dd64bed0cc77b62dc7f2d73050f53f1f52f325bcabc9a79",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 37
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-37.png",
+    "byteLength": 35729,
+    "sha256": "5a1c84fae3b853f9e5986026919753fd940a449757a7719d29829654347f4aba",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 38
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-38.png",
+    "byteLength": 34541,
+    "sha256": "33b18fabac219615b3acdd316a6c00fbb7988575f3ba4fd7932a8390d199319f",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 39
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-39.png",
+    "byteLength": 36997,
+    "sha256": "92f9063c338ec254449e054d591fbfa36499a77f4cea826b24f5d2a973db9f3b",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 40
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-40.png",
+    "byteLength": 36053,
+    "sha256": "05e4dba3ceb068281915d75071ed71849ab1d0c5a580c32b3e2ab7136aa3bbac",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 41
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-41.png",
+    "byteLength": 35612,
+    "sha256": "42bcb892ce7596d4a4f238b9a9839aeae120c02d790267e3df39acc963668c53",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 42
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-42.png",
+    "byteLength": 38613,
+    "sha256": "a045c6af6204a9d1044dbc51a5235693495ad1024b1c35eeda7a28d56566d341",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 43
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-43.png",
+    "byteLength": 32554,
+    "sha256": "d78bde5bbe0f143a5fcdb127506169cd6e507d2d624315090af04c2d0dc7fee1",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 44
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-44.png",
+    "byteLength": 30914,
+    "sha256": "9aba52a77d274480f9bcc7743cb82fde33337f17ed555982e60b4d211e4d101d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 45
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-45.png",
+    "byteLength": 35645,
+    "sha256": "0cd2116cbc5b1d80ad63527a3eace63fa0582f49522deb968e6fe67fccc2216e",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 46
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-46.png",
+    "byteLength": 29964,
+    "sha256": "e3e6919c7d50ec7b522429e054d1cde0ce80355386523442dd0df4b73b32d66a",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 47
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-47.png",
+    "byteLength": 29964,
+    "sha256": "e3e6919c7d50ec7b522429e054d1cde0ce80355386523442dd0df4b73b32d66a",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 48
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-48.png",
+    "byteLength": 28663,
+    "sha256": "a41c3851f0e00a91a3b814209f2d73243544f6d303a573489f1bca181c686b6d",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 49
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-49.png",
+    "byteLength": 34004,
+    "sha256": "42d5d11009ec254f7398fdf636f51d0643c223c82aab66f27db4495f5174417c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 50
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-50.png",
+    "byteLength": 24878,
+    "sha256": "88b61380a9df80889c0bc4f1744d9bf2d42eb5cfb6415a6558fbac09ba96b146",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 51
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-51.png",
+    "byteLength": 40040,
+    "sha256": "8aef83c493edffca6a795c19d66fe3b04fe7bcce62dc83af418645d442f3e611",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 52
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-52.png",
+    "byteLength": 34817,
+    "sha256": "a31483d32af2a5f61691d1793c0195a12826d5fd2365447f50a32b1a3d5fb021",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 53
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-53.png",
+    "byteLength": 37825,
+    "sha256": "2fa0a418ffb86bd9e0c26c6c883c7b7caf2793eac73b16f44a177e81f46f5651",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 54
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-54.png",
+    "byteLength": 27855,
+    "sha256": "70aa752e4f8db5c386df4d02cbd96fe7e7e02834a9f9b9b80e0e3f824f75539c",
+    "width": 128,
+    "height": 128
+   },
+   {
+    "replaces": {
+     "archive": 404,
+     "record": 55
+    },
+    "path": "worldrpg/media/refreshed/terrain/texture-404-55.png",
+    "byteLength": 27855,
+    "sha256": "70aa752e4f8db5c386df4d02cbd96fe7e7e02834a9f9b9b80e0e3f824f75539c",
     "width": 128,
     "height": 128
    },
