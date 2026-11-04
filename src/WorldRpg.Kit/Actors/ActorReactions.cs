@@ -21,15 +21,22 @@ public sealed class ActorReactions(ActorNavigationCoordinator navigation)
         internal float Deceleration = deceleration;
         internal ActorNavigationMode Mode = mode;
         internal float? PeakY;
+        internal bool Wedged;
+
+        /// <summary>Whether gravity has a say: a flyer or a swimmer is never left falling.</summary>
+        internal bool Falls => Mode is not (ActorNavigationMode.Flying or ActorNavigationMode.Swimming);
     }
 
     private readonly Dictionary<long, Reaction> _active = [];
 
     public bool Holds(long actorId) => _active.ContainsKey(actorId);
 
-    /// <summary>Holds an actor for <paramref name="seconds"/>, thrown at <paramref name="velocity"/> until <paramref name="deceleration"/> stops it.</summary>
+    /// <summary>
+    /// Holds an actor for <paramref name="seconds"/>, thrown at <paramref name="velocity"/> until <paramref name="deceleration"/>
+    /// stops it. A swimmer is only held: the controller needs its water, and a blow doesn't carry through it.
+    /// </summary>
     public void Begin(long actorId, Vector3 velocity, double seconds, float deceleration, ActorNavigationMode mode) =>
-        _active[actorId] = new(velocity, seconds, deceleration, mode);
+        _active[actorId] = new(mode == ActorNavigationMode.Swimming ? Vector3.Zero : velocity, seconds, deceleration, mode);
 
     /// <summary>Runs every reaction one admitted step. An actor that is gone or defeated drops out.</summary>
     public void Step(ActorsState actors, float seconds, Action<ActorThrowLanding> landed)
@@ -40,17 +47,15 @@ public sealed class ActorReactions(ActorNavigationCoordinator navigation)
             if (!actors.TryGet(id, out ActorState actor) || actor.IsDefeated) { _active.Remove(id); continue; }
             Reaction reaction = _active[id];
             reaction.Seconds -= seconds;
-            bool grounded = actor.Actor.Store.Get(actor.Actor.Entity, EngineComponentTypes.CharacterMotion).Grounded;
-            bool flying = reaction.Mode == ActorNavigationMode.Flying;
-            bool carried = reaction.Velocity != Vector3.Zero || !grounded && !flying;
-            if (carried && reaction.Mode != ActorNavigationMode.Swimming) Carry(actor, reaction, seconds, landed);
-            bool settled = reaction.Velocity == Vector3.Zero
-                && (flying || actor.Actor.Store.Get(actor.Actor.Entity, EngineComponentTypes.CharacterMotion).Grounded);
-            if (reaction.Seconds > 0d || !settled) continue;
+            if (reaction.Velocity != Vector3.Zero || Airborne(actor, reaction)) Carry(actor, reaction, seconds, landed);
+            if (reaction.Seconds > 0d || reaction.Velocity != Vector3.Zero || Airborne(actor, reaction)) continue;
             navigation.Settle(actor);
             _active.Remove(id);
         }
     }
+
+    private static bool Airborne(ActorState actor, Reaction reaction) => reaction.Falls && !reaction.Wedged
+        && !actor.Actor.Store.Get(actor.Actor.Entity, EngineComponentTypes.CharacterMotion).Grounded;
 
     private void Carry(ActorState actor, Reaction reaction, float seconds, Action<ActorThrowLanding> landed)
     {
@@ -61,7 +66,7 @@ public sealed class ActorReactions(ActorNavigationCoordinator navigation)
         if (step is not { } accepted || accepted.Displacement.LengthSquared() < 1e-7f && accepted.BlockFlags != CharacterBlockFlags.None)
         {
             reaction.Velocity = Vector3.Zero; // A wall or a wedge stops the throw dead.
-            if (step is null) reaction.PeakY = null;
+            if (step is null) (reaction.PeakY, reaction.Wedged) = (null, true);
         }
         else if (speed > 0f) reaction.Velocity *= Math.Max(0f, speed - reaction.Deceleration * seconds) / speed;
         CharacterMotion motion = actor.Actor.Store.Get(actor.Actor.Entity, EngineComponentTypes.CharacterMotion);

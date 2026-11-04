@@ -766,6 +766,27 @@ public sealed class PlayerAttackSessionTests
     }
 
     [Fact]
+    public void A_held_swimmer_waits_out_its_hold_and_then_acts_again()
+    {
+        List<string> releases = [];
+        (DaggerfallSession session, AppearanceFake _, PerceptionFake _) = VisibleEnemySession(releases, distance: 5d);
+        using DaggerfallSession disposable = session;
+        ulong step = 1;
+        RunSeconds(session, ref step, .1d);
+        Assert.NotEqual(EnemyBehaviorState.Idle, session.EnemyBehavior.LastEvidence[2000].State);
+
+        session.Reactions.Begin(2000, new Vector3(4f, 0f, 0f), .2d, 9f, ActorNavigationMode.Swimming);
+        RunSeconds(session, ref step, .1d);
+        Assert.True(session.Reactions.Holds(2000));
+        Assert.Equal(EnemyBehaviorState.Idle, session.EnemyBehavior.LastEvidence[2000].State);
+
+        RunSeconds(session, ref step, .25d);
+
+        Assert.False(session.Reactions.Holds(2000));
+        Assert.NotEqual(EnemyBehaviorState.Idle, session.EnemyBehavior.LastEvidence[2000].State);
+    }
+
+    [Fact]
     public void A_landed_blow_catches_world_time_for_a_step_then_lets_it_run()
     {
         List<string> releases = [];

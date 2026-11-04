@@ -19,6 +19,9 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
     private ActorReactions _reactions = null!;
     private int _hitStopSteps;
 
+    /// <summary>Who a blow is holding now.</summary>
+    internal ActorReactions Reactions => _reactions;
+
     /// <summary>Whether a landed blow is catching world time now.</summary>
     internal bool HitStopped => _hitStopSteps > 0;
 

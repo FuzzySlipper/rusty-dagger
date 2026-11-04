@@ -376,6 +376,44 @@ public sealed class ActorNavigationAndCameraTests
         Assert.False(reactions.Holds(404));
     }
 
+    [Theory]
+    [InlineData(4f, true)] // A kick's push, which nothing could spend.
+    [InlineData(0f, false)] // A hold with no push, off the ground as swimmers are.
+    public void A_swimmer_is_held_for_its_time_and_released_whatever_the_blow_gave_it(float push, bool grounded)
+    {
+        using SpatialSession session = new(new SpatialSessionHandle(12), () => { });
+        (ActorReactions reactions, SpatialDouble spatial, ActorsState actors) = Thrown(session);
+        using ActorsState disposable = actors;
+        ActorState swimmer = actors.Get(42);
+        CharacterMotion motion = actors.Store.Get(swimmer.Actor.Entity, EngineComponentTypes.CharacterMotion);
+        actors.Store.Set(swimmer.Actor.Entity, EngineComponentTypes.CharacterMotion, motion with { Grounded = grounded });
+
+        reactions.Begin(42, new Vector3(push, 0f, 0f), .15d, 9f, ActorNavigationMode.Swimming);
+        reactions.Step(actors, .1f, _ => { });
+        Assert.True(reactions.Holds(42));
+        reactions.Step(actors, .1f, _ => { });
+
+        Assert.False(reactions.Holds(42));
+        Assert.Empty(spatial.CharacterRequests); // Held on the spot: never thrown.
+    }
+
+    [Fact]
+    public void An_actor_wedged_in_the_air_is_released_rather_than_held_for_ever()
+    {
+        using SpatialSession session = new(new SpatialSessionHandle(12), () => { });
+        (ActorReactions reactions, SpatialDouble spatial, ActorsState actors) = Thrown(session);
+        using ActorsState disposable = actors;
+        ActorState wedged = actors.Get(42);
+        CharacterMotion motion = actors.Store.Get(wedged.Actor.Entity, EngineComponentTypes.CharacterMotion);
+        actors.Store.Set(wedged.Actor.Entity, EngineComponentTypes.CharacterMotion, motion with { Grounded = false });
+        spatial.Unresolved = true;
+
+        reactions.Begin(42, new Vector3(4f, 0f, 0f), .05d, 1f, ActorNavigationMode.Ground);
+        reactions.Step(actors, .1f, _ => { });
+
+        Assert.False(reactions.Holds(42));
+    }
+
     private static (ActorReactions, SpatialDouble, ActorsState) Thrown(SpatialSession session)
     {
         SpatialDouble spatial = SpatialDouble.Create();
@@ -416,6 +454,7 @@ public sealed class ActorNavigationAndCameraTests
         internal Vector3 CharacterDisplacement { get; set; } = Vector3.UnitX;
         internal CharacterBlockFlags CharacterBlocks { get; set; } = CharacterBlockFlags.None;
         internal bool? CharacterGrounded { get; set; }
+        internal bool Unresolved { get; set; }
         /// <summary>The trigger rows the Engine would hold from the product's last trigger reconcile.</summary>
         internal List<SpatialEntityCollider> TriggerRows { get; } = [];
 
@@ -439,6 +478,8 @@ public sealed class ActorNavigationAndCameraTests
             {
                 CharacterStepRequest request = (CharacterStepRequest)arguments![0]!;
                 CharacterRequests.Add(request);
+                if (Unresolved) throw new EngineCallException("Spatial", "ProposeCharacterStep", 1,
+                    new[] { new EngineDiagnostic("unresolved-character-controller-penetration", "Wedged.", "test") });
                 Transform before = new(request.Position, Quaternion.Identity, Vector3.One);
                 Transform after = before with { Translation = before.Translation + CharacterDisplacement };
                 CharacterMotion motion = request.Motion with
