@@ -118,10 +118,10 @@ def caption(comfy, image, cache, key):
     return cache[key]
 
 
-def generate_raw(comfy, generate, prompt, init_path, size, mode, denoise, out):
+def generate_raw(comfy, generate, prompt, init_path, size, mode, denoise, out, negative=NEGATIVE):
     init = comfy.upload(str(init_path))["name"]
     seamless = mode != "disable"
-    g = generate.zimage("z_image_bf16.safetensors", prompt, NEGATIVE, 1, size, generate.MODELS["zimage-base"], [], seamless, None, .35)
+    g = generate.zimage("z_image_bf16.safetensors", prompt, negative, 1, size, generate.MODELS["zimage-base"], [], seamless, None, .35)
     if seamless:
         g["seamless"]["inputs"]["tiling"] = mode
         g["circular"]["inputs"]["tiling"] = mode
