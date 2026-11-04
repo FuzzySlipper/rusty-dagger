@@ -265,6 +265,26 @@ public sealed class DaggerCombatDamagePolicyTests
     }
 
     [Fact]
+    public void Only_the_first_blow_on_an_unaware_target_is_a_backstab()
+    {
+        using DamagePolicyFixture fixture = new(armed: false);
+        fixture.PlayerStrength(50);
+        fixture.PlayerBackstabbingSkill(100);
+        fixture.Unaware.Add(2);
+        int Blow(ulong generation)
+        {
+            fixture.Script(body: 0, deflect: null, damage: 7, afterDamage: 100);
+            return fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, generation, 1, .125d, Delayed: false)).Outcome.Damage;
+        }
+
+        int backstab = Blow(1), ordinary = Blow(2);
+
+        Assert.Equal(ordinary * 3, backstab);
+        Assert.Equal(ordinary, Blow(3));
+        Assert.Single(fixture.SkillUses, use => use.Skill == "backstabbing");
+    }
+
+    [Fact]
     public void A_target_that_noticed_the_player_takes_no_backstab_from_any_side()
     {
         using DamagePolicyFixture fixture = new();
@@ -879,7 +899,7 @@ public sealed class DaggerCombatDamagePolicyTests
                 mitigation: mitigation ?? seams.PhysicalMitigation,
                 delivery: ops => Delivery = (delivery ?? seams.PhysicalDelivery)(ops),
                 attackTuning: DaggerfallAttackTuning.Default,
-                targetUnaware: Unaware.Contains, alertTarget: id => Alerted.Add(id), playerRush: () => Rush,
+                targetUnaware: Unaware.Contains, alertTarget: id => { Alerted.Add(id); Unaware.Remove(id); }, playerRush: () => Rush,
                 contact: Contact = CombatCollaborators.Contact(_actors, _spatial, () => _playerPosition),
                 strikePose: actor => CombatCollaborators.StrikePose(_actors, actor, _playerPosition),
                 actorVelocity: id => id == DaggerfallActorIdentity.PlayerEntityId ? PlayerVelocity : Vector3.Zero);

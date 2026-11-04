@@ -179,11 +179,20 @@ internal sealed class DaggerfallEnemyBehaviorModule
     internal bool IsPacified(long actorId) =>
         _actors.TryGet(actorId, out ActorState actor) && (Senses(actor).Pacified || _questRestrained(actorId));
 
-    /// <summary>A blow tells an actor who struck it: it turns on its attacker, even from behind.</summary>
+    /// <summary>
+    /// A blow tells an actor who struck it: it turns on its attacker, even from behind. It knows at once, since an
+    /// actor that can't move skips its senses, and being struck is already an encounter no language can pacify.
+    /// </summary>
     internal void Provoke(long actorId, long gameMinute)
     {
-        if (_actors.TryGet(actorId, out ActorState actor)) Senses(actor).ProvokedUntilMinute = gameMinute + 1;
+        if (!_actors.TryGet(actorId, out ActorState actor)) return;
+        DaggerfallEnemyPerceptionMemory memory = Senses(actor);
+        memory.ProvokedUntilMinute = gameMinute + 1;
+        memory.Detected = memory.HasEncounteredPlayer = true;
     }
+
+    /// <summary>Whether an actor hasn't noticed the player. Its pursuit state can't say: paralysis idles an actor that knows.</summary>
+    internal bool Unaware(long actorId) => _actors.TryGet(actorId, out ActorState actor) && !Senses(actor).Detected;
 
     internal void Pacify(long actorId)
     {
