@@ -45,6 +45,10 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     private readonly DaggerfallAttackTuning _attackTuning;
     private string _playerAttack = DaggerfallAttackIds.Fast[0];
     private long? _sweptTarget;
+    private bool _playerFinisher;
+    private readonly Func<long, bool> _targetUnaware;
+    private readonly Action<long> _alertTarget;
+    private readonly Func<DaggerfallAdrenalineRush?> _playerRush;
     private readonly Func<long, long, ulong, ulong, ulong, DaggerfallWabbajackResult> _transformActor;
     internal DaggerfallHandEquipCountdown EquipCountdown { get; set; } = new(0, 0);
     internal void EquipmentChanged(DaggerfallEquipmentChange change) => EquipCountdown = new(
@@ -91,6 +95,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         Action<DaggerfallMonsterHitExposure> monsterHit, Func<long, bool> actorGameplayActive, Func<long, string?> actorTeam,
         IDaggerfallPhysicalMitigation mitigation, Func<IDaggerfallPhysicalHarmOperations, IDaggerfallPhysicalDelivery> delivery,
         DaggerfallAttackTuning attackTuning,
+        Func<long, bool>? targetUnaware = null, Action<long>? alertTarget = null, Func<DaggerfallAdrenalineRush?>? playerRush = null,
         ActorContact? contact = null, Func<long, DaggerfallStrikePose?>? strikePose = null, Func<CharacterStepEnvironment?>? contactEnvironment = null,
         Func<long, Vector3>? actorVelocity = null)
     {
@@ -124,6 +129,9 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         _actorTeam = actorTeam ?? throw new ArgumentNullException(nameof(actorTeam));
         _mitigation = mitigation ?? throw new ArgumentNullException(nameof(mitigation));
         _attackTuning = attackTuning ?? throw new ArgumentNullException(nameof(attackTuning));
+        _targetUnaware = targetUnaware ?? (_ => false);
+        _alertTarget = alertTarget ?? (_ => { });
+        _playerRush = playerRush ?? (() => null);
         _weaponMaterialModifiers = DaggerfallFormulaPolicy.ClassicWeaponMaterialModifiers;
         _actions = definitions.Actions;
         _delivery = (delivery ?? throw new ArgumentNullException(nameof(delivery)))(this);
@@ -185,7 +193,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         var molagBalSource = rangedAttack ? null : CaptureMolagBalSource(request.AttackerId);
         var poisonSource = CaptureWeaponPoison(request.AttackerId, rangedWeapon);
         var strikeSource = DaggerfallItemCastTriggers.CaptureStrike(_catalog.Magic, _itemInstances, _actors.Entities, rangedWeapon ?? EquippedWeapon(request.AttackerId));
-        DaggerfallAdmittedAttack admitted = new(request, attacker, attack, rangedAttack, !enemyAttack && _playerAttack == DaggerfallAttackIds.PowerOut ? _attackTuning.PowerDamageMultiplier : 1d, selectedAction, feedback,
+        DaggerfallAdmittedAttack admitted = new(request, attacker, attack, rangedAttack, enemyAttack ? 1d : PlayerDamageScale, !enemyAttack && (_playerFinisher || _playerAttack == DaggerfallAttackIds.PowerOut), selectedAction, feedback,
             wabbajackSource, molagBalSource, poisonSource, strikeSource, rangedWeapon);
         if (!_delivery.TryPrepare(admitted, facts, out DaggerfallPreparedAttack delivered)) return false;
         prepared = delivered;
@@ -230,7 +238,28 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     internal void SetSweptTarget(long target) => _sweptTarget = target;
 
     /// <summary>Names the attack the next player admission carries, from the attack clock.</summary>
-    internal void SelectPlayerAttack(string attack) => _playerAttack = attack;
+    internal void SelectPlayerAttack(string attack, bool finisher = false) => (_playerAttack, _playerFinisher) = (attack, finisher);
+
+    /// <summary>Whether the player is too short of stamina for a power attack, a kick or a guard.</summary>
+    internal bool PlayerWinded => _actors.Player.Stats.GetTrack(TrackId.Parse(StaminaTrack)).Current <= _attackTuning.Combatant.WindedStamina;
+
+    /// <summary>What an active Adrenaline Rush scales the player's attack time by: it wakes below an eighth of full health.</summary>
+    internal double PlayerRushTimeScale => PlayerRushing is { } rush ? rush.Improved ? _attackTuning.Combatant.ImprovedRushTimeScale : _attackTuning.Combatant.RushTimeScale : 1d;
+
+    private double PlayerRushDamageScale => PlayerRushing is { } rush ? rush.Improved ? _attackTuning.Combatant.ImprovedRushDamageScale : _attackTuning.Combatant.RushDamageScale : 1d;
+
+    private DaggerfallAdrenalineRush? PlayerRushing
+    {
+        get
+        {
+            Track health = _actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
+            return health.Current < health.Maximum.Value / 8d ? _playerRush() : null;
+        }
+    }
+
+    /// <summary>What a player blow's damage is scaled by: a power release, a winded blow and an Adrenaline Rush.</summary>
+    private double PlayerDamageScale => (_playerAttack == DaggerfallAttackIds.PowerOut ? _attackTuning.PowerDamageMultiplier : 1d)
+        * (PlayerWinded ? _attackTuning.Combatant.WindedDamageScale : 1d) * PlayerRushDamageScale;
 
     /// <summary>Whether a blow past its hit frame is still winding up to land on <paramref name="target"/>.</summary>
     internal bool HoldsImpactAt(long target) => _delivery.HoldsImpactAt(target);
@@ -383,6 +412,13 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
             return false;
         }
         bool kick = _playerAttack == DaggerfallAttackIds.Kick;
+        // A winded character has no breath for a kick or a power release; a fast attack still goes, slower and weaker.
+        if (PlayerWinded && (kick || _playerAttack == DaggerfallAttackIds.PowerOut))
+        {
+            attack = default!;
+            facts.Append(new AttackRejectedFact(AttackRejection.Winded));
+            return false;
+        }
         int staminaCost = kick ? _attackTuning.KickStaminaCost
             : _playerAttack == DaggerfallAttackIds.PowerOut ? (int)Math.Round(playerAction.StaminaCost!.Value * _attackTuning.PowerStaminaMultiplier, MidpointRounding.AwayFromZero)
             : playerAction.StaminaCost!.Value;
@@ -425,8 +461,9 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     /// </summary>
     private static void SpendPlayerStamina(Combatant player, int staminaCost)
     {
+        // Fighting winds a character but never empties the pool: the collapse belongs to running and swimming.
         Track stamina = player.Stats.GetTrack(TrackId.Parse(StaminaTrack));
-        _ = stamina.Spend(Math.Min(stamina.Current, staminaCost));
+        _ = stamina.Spend(Math.Max(0d, Math.Min(stamina.Current - 1d, staminaCost)));
     }
 
     private CombatParticipants Participants(long attacker, long target, string action) => new(
@@ -440,7 +477,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     /// paths produced, and the total is bounded at zero.
     /// </summary>
     private Action<DamageEvent> DamageRoll(ExplicitMeleeRequest request, Combatant attacker, Combatant target,
-        DaggerfallAttackDefinition attack, bool enemy, int attackDamageMod, int backstabChance) => damage =>
+        DaggerfallAttackDefinition attack, bool enemy, int attackDamageMod) => damage =>
     {
         int rolled = attack.Skill == DaggerfallMechanicsIds.HandToHand.Value
             ? DaggerfallFormulaPolicy.CalculateHandToHandAttackDamage(
@@ -457,11 +494,6 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
                 StrengthModifier(attacker),
                 DaggerfallFormulaPolicy.WeaponMaterialDamageModifier(attack.Material, _weaponMaterialModifiers),
                 EnemyTypeBonus(attacker, target));
-        // The donor triples on a successful backstab roll only when the backstab chance exceeds one,
-        // so a one-point chance never rolls; the bounded zero floor is the donor's own final clamp.
-        if (backstabChance > 1)
-            rolled = DaggerfallFormulaPolicy.CalculateBackstabDamage(rolled, backstabChance,
-                Draw(request, attacker.Id, target.Id, CombatRandomKey.BackstabRollSalt, 1, 100, enemy) <= backstabChance);
         damage.Damage = Math.Max(0, rolled);
     };
 
@@ -715,31 +747,6 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         ?? ReadWeapon(_equipment.Read(), "left-hand")?.Weapon.Skill
         ?? DaggerfallMechanicsIds.HandToHand.Value;
 
-    private bool BackstabOpportunity(Combatant attacker, Combatant target)
-    {
-        if (attacker.Id != PlayerId || target.Id == PlayerId || !_actors.TryGet(target.Id, out ActorState targetActor)
-            || _playerPosition() is not WorldPoint playerPosition)
-            return false;
-
-        float dx = playerPosition.X - targetActor.Position.X;
-        float dz = playerPosition.Z - targetActor.Position.Z;
-        float distanceSquared = (dx * dx) + (dz * dz);
-        if (!float.IsFinite(distanceSquared) || distanceSquared <= float.Epsilon)
-            return false;
-
-        // DFU rounds the target-to-player angle into eight 45-degree facings using
-        // nearest-even ties, then treats facing indices 3, 4 and 5 as back-facing.
-        // ActorPose's zero heading faces -Z and positive yaw turns toward +X.
-        Vector3 targetForward = ActorHeading.Forward(targetActor.HeadingYawRadians);
-        float inverseDistance = 1f / MathF.Sqrt(distanceSquared);
-        float dot = Math.Clamp(((targetForward.X * dx) + (targetForward.Z * dz)) * inverseDistance, -1f, 1f);
-        float facingSector = MathF.Acos(dot) / (MathF.PI / 4f);
-        int roundedSector = (int)MathF.Round(facingSector, MidpointRounding.ToEven);
-        return roundedSector is >= 3 and <= 5;
-    }
-
-
-
     /// <summary>
     /// The damage modifier a player attack carries into the damage roll. Racial modifiers require a
     /// weapon; expert proficiency also applies to hand-to-hand under the selected donor policy. An enemy
@@ -748,12 +755,13 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     private int PlayerDamageModifier(DaggerfallAttackDefinition attack)
     {
         int level = _actors.Player.Progression.Level;
+        int skill = attack.Material is null ? 0 : (int)(_actors.Player.Stats.GetStat(StatId.Parse(attack.Skill)).ValueInt * _attackTuning.Combatant.SkillDamagePerPoint);
         int proficiency = DaggerfallFormulaPolicy.CalculateProficiencyDamage(
             _character()?.Career.ExpertProficiencies.Contains(attack.Skill, StringComparer.Ordinal) == true, level);
         int racial = attack.Material is not null
             ? DaggerfallFormulaPolicy.CalculateRacialDamage(DonorRaceId(), attack.Skill == DaggerfallSkills.Archery, level)
             : 0;
-        return checked(proficiency + racial);
+        return checked(skill + proficiency + racial);
     }
 
     /// <summary>
@@ -806,10 +814,9 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     int IDaggerfallPhysicalHarmOperations.Draw(ExplicitMeleeRequest request, long attacker, long target, int salt, int minimum, int maximum, bool enemy) =>
         Draw(request, attacker, target, salt, minimum, maximum, enemy);
     Action<DamageEvent> IDaggerfallPhysicalHarmOperations.DamageRoll(ExplicitMeleeRequest request, Combatant attacker, Combatant target,
-        DaggerfallAttackDefinition attack, bool enemy, int attackDamageMod, int backstabChance) =>
-        DamageRoll(request, attacker, target, attack, enemy, attackDamageMod, backstabChance);
+        DaggerfallAttackDefinition attack, bool enemy, int attackDamageMod) =>
+        DamageRoll(request, attacker, target, attack, enemy, attackDamageMod);
     int IDaggerfallPhysicalHarmOperations.PlayerDamageModifier(DaggerfallAttackDefinition attack) => PlayerDamageModifier(attack);
-    bool IDaggerfallPhysicalHarmOperations.BackstabOpportunity(Combatant attacker, Combatant target) => BackstabOpportunity(attacker, target);
     int IDaggerfallPhysicalHarmOperations.EnemyTypeBonus(Combatant attacker, Combatant target) => EnemyTypeBonus(attacker, target);
     EquipmentRead IDaggerfallPhysicalHarmOperations.EquipmentOf(long owner) => owner == PlayerId ? _equipment.Read() : _actorEquipment(owner).Read();
     int IDaggerfallPhysicalHarmOperations.AttackChanceModifier() => _attackChanceModifier();
@@ -834,6 +841,11 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
                 request.Generation, request.SimulationStep, CombatRandomKey.WeaponConditionSalt), request.Generation, request.SimulationStep, facts);
     }
     string IDaggerfallPhysicalHarmOperations.PlayerWeaponSkill() => PlayerWeaponSkill();
+    bool IDaggerfallPhysicalHarmOperations.TargetUnaware(long target) => _targetUnaware(target);
+    void IDaggerfallPhysicalHarmOperations.AlertTarget(long target) => _alertTarget(target);
+    double IDaggerfallPhysicalHarmOperations.BackstabMultiplier(Combatant attacker) => _attackTuning.Combatant.BackstabMultiplier(ReadStat(attacker, new DaggerfallStatId("backstabbing")));
+    void IDaggerfallPhysicalHarmOperations.DrainStamina(AttackRequest request, long target, int damage, FactBuffer<IProductFact> facts) =>
+        ApplyFatigueConsequence(request.AttackerId, target, damage, request.Generation, request.SimulationStep, facts);
     long? IDaggerfallPhysicalHarmOperations.TakeSweptTarget()
     {
         long? target = _sweptTarget;
@@ -882,7 +894,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         string action = attack.Action ?? request.Action ?? _definitions[request.AttackerId].ActionId ?? "attack";
         // Capture the weapon skill at the admitted operation boundary. Applying the hit may break
         // the weapon through physical wear and unequip it before the skill-use reaction runs.
-        string? playerWeaponSkill = request.AttackerId == PlayerId ? PlayerWeaponSkill() : null;
+        string? playerWeaponSkill = request.AttackerId == PlayerId ? attack.Admission?.Attack.Skill ?? PlayerWeaponSkill() : null;
         ApplyDamage(Participants(request.AttackerId, target, action), request.AttackerId, target, strikeDamage, attack.Body,
             enemyAttack, request.Generation, request.SimulationStep, attack.Feedback, facts, attack.MolagBalSource,
             admittedBaseDamage: strikeDamage != outcome.Damage ? outcome.Damage : null, rangedWeapon: attack.RangedWeapon, mitigated: attack.Mitigated);

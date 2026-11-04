@@ -142,7 +142,9 @@ Daggerfall's default physical owners are the contact rules (DEC-12): no to-hit
 roll, swings and arrows harm whoever they physically meet, and targets deflect
 or absorb by channel. Holding the product's `block` intent raises a guard that
 costs stamina and adds deflection, stays down for a swing's whole strike, and
-keeps action-driven time running while it rises, holds or settles. Worn armor
+keeps action-driven time running while it rises, holds or settles. Speed,
+weapon skill and Strength set an attack's pace, and a winded character loses the
+power attack, kick and guard. Worn armor
 enchantments shift what the player's armor absorbs, and a connect trains the
 weapon skill even when it is deflected. Blows present four outcomes: a whiff
 (`AttackWhiffedFact`, the swing alone), a deflection or whole absorption

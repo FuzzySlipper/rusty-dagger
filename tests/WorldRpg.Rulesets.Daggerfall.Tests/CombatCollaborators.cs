@@ -92,7 +92,8 @@ internal static class CombatCollaborators
     internal static DaggerCombatRules SessionRules(DaggerfallSession session, DaggerfallDefinitions definitions,
         IReadOnlyDictionary<long, DaggerfallActorDefinition> authored, TargetingService targeting, SpatialMovementSystem spatial,
         Func<long, bool>? physicalAttacksBlocked = null, Func<long, bool>? actorGameplayActive = null,
-        IRandomService? random = null, Action<DaggerfallSkillUse>? skillUses = null, Func<WorldPoint?>? playerPosition = null)
+        IRandomService? random = null, Action<DaggerfallSkillUse>? skillUses = null, Func<WorldPoint?>? playerPosition = null,
+        Func<long, bool>? targetUnaware = null)
     {
         IRandomService draws = random ?? SessionRandom.Create();
         Func<WorldPoint?> position = playerPosition ?? (() => session.State.PlayerControl.Position);
@@ -112,7 +113,7 @@ internal static class CombatCollaborators
             molagBalStrike: (_, _, _, _, _, _, _) => throw new InvalidOperationException("This fact arms no Mace of Molag Bal."),
             itemStrike: (_, _, _, damage) => damage, monsterHit: _ => { },
             actorGameplayActive: actorGameplayActive ?? (_ => true), actorTeam: id => authored.GetValueOrDefault(id)?.Team,
-            mitigation: seams.PhysicalMitigation, delivery: seams.PhysicalDelivery, attackTuning: DaggerfallAttackTuning.Default,
+            mitigation: seams.PhysicalMitigation, delivery: seams.PhysicalDelivery, attackTuning: DaggerfallAttackTuning.Default, targetUnaware: targetUnaware,
             contact: Contact(session.State.Actors, spatial, position), strikePose: actor => StrikePose(session.State.Actors, actor, position()));
     }
 }

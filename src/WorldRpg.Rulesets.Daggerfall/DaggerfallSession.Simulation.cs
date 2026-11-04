@@ -303,7 +303,7 @@ internal sealed partial class DaggerfallSession
     /// press until the clock has finished its motion.
     /// </summary>
     private void StepGuard(double seconds, ulong generation, ulong simulationStep) => _guard.Step(seconds,
-        canGuard: State.WeaponDrawn && !State.Effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId).PhysicalAttacks && !State.Actors.Player.IsDefeated,
+        canGuard: !_combat.PlayerWinded && State.WeaponDrawn && !State.Effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId).PhysicalAttacks && !State.Actors.Player.IsDefeated,
         swinging: State.Actors.Player.Actor.Get<AttackState>().Pending is not null || _attackClock.Busy,
         generation, simulationStep, _facts);
 

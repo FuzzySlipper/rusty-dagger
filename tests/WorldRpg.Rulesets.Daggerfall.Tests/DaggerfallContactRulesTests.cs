@@ -354,12 +354,31 @@ public sealed class DaggerfallContactRulesTests
     }
 
     [Fact]
+    public void Luck_above_average_and_the_players_biography_raise_deflection()
+    {
+        using Fixture fixture = new();
+        int avoid = 0;
+        DaggerfallSeamInputs inputs = fixture.SeamInputs with { PlayerAvoidHit = () => avoid };
+        DaggerfallContactMitigation mitigation = new(inputs, Tuning, new FixedGuard());
+        StatsComponent stats = fixture.Actors.Player.Stats;
+        stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Luck.Value)).BaseValue = 50;
+        int average = mitigation.DeflectionChance(Player);
+
+        stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Luck.Value)).BaseValue = 80;
+        Assert.Equal(average + 3, mitigation.DeflectionChance(Player));
+
+        stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Luck.Value)).BaseValue = 50;
+        avoid = 5;
+        Assert.Equal(average + 5, mitigation.DeflectionChance(Player));
+    }
+
+    [Fact]
     public void Holding_block_raises_a_guard_only_with_a_drawn_weapon_and_no_swing_and_it_costs_stamina_until_the_pool_empties()
     {
         using Fixture fixture = new();
         DaggerfallContactGuard guard = new(fixture.SeamInputs, Tuning);
         Track stamina = fixture.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value));
-        stamina.SetCurrent(10d);
+        stamina.SetCurrent(100d);
         FactBuffer<IProductFact> facts = new();
 
         guard.Step(.5d, canGuard: true, swinging: false, 1, 1, facts);
@@ -371,9 +390,9 @@ public sealed class DaggerfallContactRulesTests
         Assert.False(guard.Raised); // Never raised mid-swing.
         guard.Step(.5d, canGuard: true, swinging: false, 1, 4, facts);
         Assert.True(guard.Raised);
-        Assert.Equal(10d, stamina.Current); // Raising is free; holding is not.
+        Assert.Equal(100d, stamina.Current); // Raising is free; holding is not.
         guard.Step(.5d, canGuard: true, swinging: false, 1, 5, facts);
-        Assert.Equal(10d - Tuning.GuardStaminaPerSecond * .5d, stamina.Current, 6);
+        Assert.Equal(100d - Tuning.GuardStaminaPerSecond * .5d, stamina.Current, 6);
         guard.Step(.5d, canGuard: true, swinging: true, 1, 6, facts);
         Assert.False(guard.Raised); // A swing ends the block.
         guard.Step(.5d, canGuard: true, swinging: false, 1, 7, facts);

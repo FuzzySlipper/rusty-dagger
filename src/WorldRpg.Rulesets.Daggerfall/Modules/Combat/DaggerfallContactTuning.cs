@@ -12,8 +12,8 @@ internal sealed record DaggerfallChannelDeflection(DaggerfallDeflectionMode Mode
 internal sealed record DaggerfallContactTuning(
     double SwingWidth, double SwingHeight, double SwingDrop, double DefaultReach,
     double ProjectileSpeed, double DefaultRange,
-    double CriticalChancePerSkillPoint, double CriticalChancePerAttackChancePoint, double CriticalDamageMultiplier,
-    double DeflectionBaseChance, double DeflectionPerDodgingPoint, double DeflectionPerAgilityAbove50, double DeflectionMaximumChance,
+    double CriticalChancePerSkillPoint, double CriticalChancePerAttackChancePoint, double CriticalDamageMultiplier, double CriticalPerLuckAbove50,
+    double DeflectionBaseChance, double DeflectionPerDodgingPoint, double DeflectionPerAgilityAbove50, double DeflectionPerLuckAbove50, double DeflectionMaximumChance,
     IReadOnlyDictionary<HarmChannelId, DaggerfallChannelDeflection> Deflection,
     double AbsorptionPerArmorPoint, double AbsorptionPerShieldPoint, double AbsorptionPerArmorValueShift, double MonsterArmorBaseline, double MonsterAbsorptionPerPoint,
     IReadOnlyDictionary<HarmChannelId, double> AbsorptionMultipliers,
@@ -21,7 +21,7 @@ internal sealed record DaggerfallContactTuning(
     double TouchReach, double TouchWidth, double TouchHeight, double TouchDrop,
     double EngageReachFraction, double EnemyWindUpSeconds, double ArcherLeadFraction)
 {
-    internal static DaggerfallContactTuning Default { get; } = new(1.2d, 1.2d, .5d, 2.25d, 25d, 51.2d, .3d, 1d, 1.5d, 5d, .3d, .2d, 60d,
+    internal static DaggerfallContactTuning Default { get; } = new(1.2d, 1.2d, .5d, 2.25d, 25d, 51.2d, .6d, 1d, 2d, .1d, 5d, .3d, .2d, .1d, 60d,
         new Dictionary<HarmChannelId, DaggerfallChannelDeflection>
         {
             [new("edged")] = new(DaggerfallDeflectionMode.Full, 1d),
@@ -31,7 +31,7 @@ internal sealed record DaggerfallContactTuning(
         },
         .4d, .4d, .2d, 10d, .5d,
         new Dictionary<HarmChannelId, double> { [new("edged")] = 1d, [new("piercing")] = .8d, [new("blunt")] = .6d, [new("physical")] = .8d },
-        4d, 25d, 15d, 85d, 2d, .8d, 1d, .3d, .75d, .4d, 1d);
+        32d, 25d, 15d, 85d, 2d, .8d, 1d, .3d, .75d, .4d, 1d);
 
     internal DaggerfallChannelDeflection? DeflectionFor(HarmChannelId channel) => Deflection.GetValueOrDefault(channel);
     internal double AbsorptionMultiplier(HarmChannelId channel) => AbsorptionMultipliers.GetValueOrDefault(channel);
@@ -60,8 +60,8 @@ internal sealed record DaggerfallContactTuning(
         return new(
             Positive(melee, "swingWidth"), Positive(melee, "swingHeight"), NonNegative(melee, "swingDrop"), Positive(melee, "defaultReach"),
             Positive(projectile, "speedMetersPerSecond"), Positive(projectile, "defaultRange"),
-            NonNegative(critical, "chancePerSkillPoint"), NonNegative(critical, "chancePerAttackChancePoint"), Positive(critical, "damageMultiplier"),
-            NonNegative(deflection, "baseChance"), NonNegative(deflection, "dodgingPerPoint"), NonNegative(deflection, "agilityPerPointAbove50"),
+            NonNegative(critical, "chancePerSkillPoint"), NonNegative(critical, "chancePerAttackChancePoint"), Positive(critical, "damageMultiplier"), NonNegative(critical, "luckPerPointAbove50"),
+            NonNegative(deflection, "baseChance"), NonNegative(deflection, "dodgingPerPoint"), NonNegative(deflection, "agilityPerPointAbove50"), NonNegative(deflection, "luckPerPointAbove50"),
             Percent(deflection, "maximumChance"), channels,
             NonNegative(absorption, "perArmorPoint"), NonNegative(absorption, "perShieldPoint"), NonNegative(absorption, "perArmorValueShift"),
             NonNegative(absorption, "monsterArmorBaseline"), NonNegative(absorption, "monsterAbsorbPerPoint"), multipliers,

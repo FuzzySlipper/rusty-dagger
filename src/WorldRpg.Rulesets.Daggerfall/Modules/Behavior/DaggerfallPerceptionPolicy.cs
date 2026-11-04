@@ -96,6 +96,8 @@ internal sealed class DaggerfallEnemyPerceptionMemory
     internal bool ForcedHostile { get; set; }
     internal long? LastStealthCheckMinute { get; set; }
     internal long? LastDirectSightMinute { get; set; }
+    /// <summary>Through this game minute the actor knows where its attacker is, having been struck; not saved.</summary>
+    internal long? ProvokedUntilMinute { get; set; }
 
     internal void SetForcedHostile(bool hostile)
     {
@@ -182,7 +184,7 @@ internal static class DaggerfallPerceptionPolicy
             else if (context.TargetShade)
                 blockedByIllusion = !BreaksThrough(DaggerfallPerceptionQueryDefaults.ShadeBreakthroughChance, context, rollPercent);
         }
-        bool inSight = physicalSight && !blockedByIllusion;
+        bool inSight = (physicalSight || hasPair && memory.ProvokedUntilMinute >= context.GameMinute) && !blockedByIllusion;
         if (inSight)
             memory.LastDirectSightMinute = context.GameMinute;
 

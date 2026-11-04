@@ -151,7 +151,7 @@ public sealed class PlayerAttackSessionTests
         List<IProductFact> emptySpace = [];
         facts.Deliver(emptySpace.Add);
 
-        Assert.Equal(staminaBefore - 11, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
+        Assert.Equal(staminaBefore - 64, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
         // A swing at empty space waits for its hit frame like any other, and only there meets nothing.
         PlayerAttackStartedFact started = Assert.Single(emptySpace.OfType<PlayerAttackStartedFact>());
         Assert.Equal(((long?)null, new DaggerfallStrikeFeedback(true, "sound.347")), (started.TargetId, started.Feedback));
@@ -172,7 +172,7 @@ public sealed class PlayerAttackSessionTests
         List<IProductFact> coolingDown = [];
         facts.Deliver(coolingDown.Add);
         Assert.Equal([new AttackRejectedFact(AttackRejection.Cooldown, DaggerfallActorIdentity.PlayerEntityId)], coolingDown);
-        Assert.Equal(staminaBefore - 11, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
+        Assert.Equal(staminaBefore - 64, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
 
         session.Touches(2000);
         combat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 8, 20, .125), facts);
@@ -355,17 +355,16 @@ public sealed class PlayerAttackSessionTests
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
         TargetingService backstabTargeting = CombatCollaborators.Targeting(session.State.Actors, authored, out SpatialMovementSystem backstabSpatial, out SpatialFake contact);
         using SpatialMovementSystem ownedBackstabSpatial = backstabSpatial;
+        bool unaware = true;
         DaggerCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, backstabTargeting, backstabSpatial,
             random: RandomMaximum.Create(), skillUses: use => session.State.SkillUses.Record(use),
-            playerPosition: () => session.State.PlayerControl.Position);
+            playerPosition: () => session.State.PlayerControl.Position, targetUnaware: _ => unaware);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("backstabbing")).BaseValue = 37;
 
         WorldPoint player = session.State.PlayerControl.Position!.Value;
         ActorState target = session.State.Actors.Get(2000);
         // Every swing lands, and this fact needs the target alive for each of them.
         void Heal() => target.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(target.Stats.GetTrack(TrackId.Parse("health")).Maximum.Value);
-        // With zero heading an actor faces -Z; putting the player at +Z leaves the actor's back
-        // toward the accepted player attack, matching the donor's IsBackFacing opportunity.
         target.ApplyPose(new ActorPose(new WorldPoint(player.X, player.Y, player.Z - 1f), 0f));
         contact.OverlapContactsResult = _ => Touching(target.Actor.Entity.Value);
         FactBuffer<IProductFact> facts = new();
@@ -388,23 +387,21 @@ public sealed class PlayerAttackSessionTests
         Assert.Contains(replayFacts, fact => fact is AttackRejectedFact { Reason: AttackRejection.Cooldown });
         Assert.Equal(1, session.State.Progression.SkillUses["backstabbing"]);
 
-        // DFU's 100-degree sector rounds to facing index 2, which is a side-facing opportunity
-        // and therefore contributes no use tally.
-        target.ApplyPose(new ActorPose(target.Position, MathF.PI * 80f / 180f));
+        // A target that has noticed the player is no opportunity, whichever way it faces.
+        unaware = false;
         Heal();
         combat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 32, 1, .125), facts);
-        List<IProductFact> sideFacts = [];
-        facts.Deliver(sideFacts.Add);
-        Assert.Single(sideFacts.OfType<AttackHitFact>());
+        List<IProductFact> awareFacts = [];
+        facts.Deliver(awareFacts.Add);
+        Assert.Single(awareFacts.OfType<AttackHitFact>());
         Assert.Equal(1, session.State.Progression.SkillUses["backstabbing"]);
 
-        // The donor's 135-degree sector rounds to facing index 3, the first back-facing sector.
-        target.ApplyPose(new ActorPose(target.Position, MathF.PI / 4f));
+        unaware = true;
         Heal();
         combat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 33, 1, .125), facts);
-        List<IProductFact> diagonalFacts = [];
-        facts.Deliver(diagonalFacts.Add);
-        Assert.Single(diagonalFacts.OfType<AttackHitFact>());
+        List<IProductFact> unawareFacts = [];
+        facts.Deliver(unawareFacts.Add);
+        Assert.Single(unawareFacts.OfType<AttackHitFact>());
         Assert.Equal(2, session.State.Progression.SkillUses["backstabbing"]);
 
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());

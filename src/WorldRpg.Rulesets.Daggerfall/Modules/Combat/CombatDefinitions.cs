@@ -76,6 +76,9 @@ internal static class DaggerfallHarmChannels
             : Unaligned;
 }
 
+/// <summary>An Adrenaline Rush the player has, improved or not.</summary>
+internal readonly record struct DaggerfallAdrenalineRush(bool Improved);
+
 internal static class CombatRandomKey
 {
     internal const ulong Seed = 0;
@@ -85,7 +88,6 @@ internal static class CombatRandomKey
     internal const int BodySalt = 3;
     internal const int WeaponConditionSalt = 4;
     internal const int ArmorConditionSalt = 5;
-    internal const int BackstabRollSalt = 7;
     // A monster works its authored attack slots in order, and each slot gates itself on a reflex
     // roll and its own damage roll. Each draw takes its slot number as
     // an offset from the kind base so slot rolls stay keyed independently.

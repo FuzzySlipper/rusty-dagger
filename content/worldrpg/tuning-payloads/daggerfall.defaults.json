@@ -196,9 +196,10 @@
       "defaultRange": 51.2
     },
     "critical": {
-      "chancePerSkillPoint": 0.3,
+      "chancePerSkillPoint": 0.6,
       "chancePerAttackChancePoint": 1.0,
-      "damageMultiplier": 1.5
+      "damageMultiplier": 2,
+      "luckPerPointAbove50": 0.1
     },
     "deflection": {
       "baseChance": 5,
@@ -219,7 +220,8 @@
         "physical": {
           "mode": "full"
         }
-      }
+      },
+      "luckPerPointAbove50": 0.1
     },
     "absorption": {
       "perArmorPoint": 0.4,
@@ -235,7 +237,7 @@
       }
     },
     "guard": {
-      "staminaPerSecond": 4,
+      "staminaPerSecond": 32,
       "deflectionBonus": 25,
       "shieldDeflectionBonus": 15,
       "maximumChance": 85
@@ -261,7 +263,7 @@
       "commit": 0.12,
       "recovery": 0.4
     },
-    "kickStaminaCost": 6,
+    "kickStaminaCost": 64,
     "kickDamage": 1,
     "classes": {
       "short-blade": {
@@ -406,7 +408,27 @@
           }
         }
       }
-    ]
+    ],
+    "combatant": {
+      "speedPerPointAbove50": 0.004,
+      "skillAt100": 0.15,
+      "strengthPerPointAbove50": 0.004,
+      "minimumTimeScale": 0.5,
+      "skillDamagePerPoint": 0.05,
+      "chainSkills": [
+        35,
+        70
+      ],
+      "windedStamina": 128,
+      "windedTimeScale": 1.4,
+      "windedDamageScale": 0.5,
+      "backstabMinimum": 1.5,
+      "backstabMaximum": 3,
+      "rushTimeScale": 0.85,
+      "rushDamageScale": 1.25,
+      "improvedRushTimeScale": 0.75,
+      "improvedRushDamageScale": 1.5
+    }
   },
   "enemyBehavior": {
     "detectionDistance": 12.0,

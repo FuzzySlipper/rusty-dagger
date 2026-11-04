@@ -436,6 +436,42 @@ public sealed class DaggerfallPlayerAttackClockTests
         foreach (var (skill, attacks) in tuning.Classes) Assert.Equal(attacks, DaggerfallTuning.Defaults.Attacks.For(skill));
     }
 
+    [Fact]
+    public void The_chain_wraps_at_the_length_the_weapon_skill_reaches()
+    {
+        Stage stage = new() { Chain = 2 };
+        stage.Tap();
+        foreach (string next in new[] { "fastB", "fastA", "fastB" })
+        {
+            stage.Steps(4); // Into the recovery.
+            stage.Log.Clear();
+            stage.Tap();
+            Assert.Equal([$"start {next}", $"motion {next}"], stage.Log);
+        }
+    }
+
+    [Fact]
+    public void What_the_character_scales_an_attacks_time_by_reaches_the_motion()
+    {
+        Stage stage = new() { Scale = .5d };
+        stage.Tap();
+        DaggerfallAttackTiming fast = Tuning.For("short-blade").Fast;
+        Assert.Equal(new DaggerfallAttackTiming(fast.Windup * .5d, fast.Commit * .5d, fast.Recovery * .5d), stage.Timings["fastA"]);
+    }
+
+    [Fact]
+    public void A_winded_hold_never_charges_and_falls_to_a_fast_attack_on_release()
+    {
+        Stage stage = new() { Tired = true };
+        stage.Down();
+        stage.Clock.Press();
+        stage.Steps((int)Math.Ceiling(Tuning.PowerThresholdSeconds * 3d / Step));
+        Assert.Empty(stage.Log);
+        stage.Up();
+        stage.Steps(1);
+        Assert.Equal(1, stage.Count("start fastA"));
+    }
+
     /// <summary>The clock over a session that records what it was asked, in order.</summary>
     private sealed class Stage : IDaggerfallPlayerAttacks
     {
@@ -469,7 +505,14 @@ public sealed class DaggerfallPlayerAttackClockTests
 
         internal void Up() => Clock.Observe([Input(InputEventKind.MappedDigital, InputEdge.Released, intent: "attack")], []);
 
+        internal int Chain { get; set; } = 4;
+        internal bool Tired { get; set; }
+        internal double Scale { get; set; } = 1d;
+
         string IDaggerfallPlayerAttacks.WeaponSkill => "short-blade";
+        int IDaggerfallPlayerAttacks.ChainLength => Chain;
+        bool IDaggerfallPlayerAttacks.Winded => Tired;
+        double IDaggerfallPlayerAttacks.TimeScale(string attack) => Scale;
         DaggerfallAttackTiming? IDaggerfallPlayerAttacks.ShotTiming => Shot;
 
         bool IDaggerfallPlayerAttacks.Start(string attack)
