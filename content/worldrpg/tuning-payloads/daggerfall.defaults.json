@@ -275,7 +275,8 @@
           "windup": 0.15,
           "commit": 0.12,
           "recovery": 0.35
-        }
+        },
+        "reach": 1.9
       },
       "long-blade": {
         "fast": {
@@ -288,7 +289,8 @@
           "windup": 0.2,
           "commit": 0.15,
           "recovery": 0.4
-        }
+        },
+        "reach": 2.3
       },
       "axe": {
         "fast": {
@@ -301,7 +303,8 @@
           "windup": 0.22,
           "commit": 0.15,
           "recovery": 0.45
-        }
+        },
+        "reach": 2.2
       },
       "blunt-weapon": {
         "fast": {
@@ -314,7 +317,8 @@
           "windup": 0.25,
           "commit": 0.15,
           "recovery": 0.45
-        }
+        },
+        "reach": 2.2
       },
       "hand-to-hand": {
         "fast": {
@@ -327,7 +331,41 @@
           "windup": 0.12,
           "commit": 0.1,
           "recovery": 0.3
-        }
+        },
+        "reach": 1.6
+      }
+    },
+    "kickReach": 1.7,
+    "paths": {
+      "fastA": {
+        "start": 37,
+        "end": -61,
+        "tilt": 10
+      },
+      "fastB": {
+        "start": -50,
+        "end": 45,
+        "tilt": -10
+      },
+      "fastC": {
+        "start": -35,
+        "end": 30,
+        "tilt": 85
+      },
+      "fastD": {
+        "start": -12,
+        "end": 12,
+        "tilt": 0
+      },
+      "powerOut": {
+        "start": -45,
+        "end": 35,
+        "tilt": 80
+      },
+      "kick": {
+        "start": -12,
+        "end": 12,
+        "tilt": 0
       }
     }
   },

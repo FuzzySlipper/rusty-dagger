@@ -15,8 +15,9 @@ public sealed class DaggerfallPlayerAttackClockTests
     private static readonly DaggerfallAttackTiming Fast = new(.25d, .25d, .25d);
     private static readonly DaggerfallAttackTiming Release = new(.25d, .25d, .5d);
     private static readonly DaggerfallAttackTiming Kick = new(.25d, .125d, .25d);
-    private static readonly DaggerfallAttackTuning Tuning = new(.25d, 2d, 2d, Kick, 6, 1,
-        new Dictionary<string, DaggerfallWeaponClassAttacks> { ["short-blade"] = new(Fast, .5d, Release) });
+    private static readonly DaggerfallAttackTuning Tuning = new(.25d, 2d, 2d, Kick, 6, 1, 1.7f,
+        new Dictionary<string, DaggerfallWeaponClassAttacks> { ["short-blade"] = new(Fast, .5d, Release, 2f) },
+        new Dictionary<string, DaggerfallAttackPath>());
 
     [Fact]
     public void A_tap_starts_fastA_in_its_own_step()
@@ -229,6 +230,31 @@ public sealed class DaggerfallPlayerAttackClockTests
     }
 
     [Fact]
+    public void A_sweep_that_meets_nothing_runs_the_hit_window_out_and_then_resolves_once()
+    {
+        Stage stage = new() { MeetsAt = 2d };
+        stage.Tap();
+
+        stage.Steps(30);
+
+        Assert.Single(stage.Log, entry => entry == "impact");
+        Assert.Equal(1d, stage.Cycles[^1]);
+        Assert.Equal(stage.Cycles.Order(), stage.Cycles);
+    }
+
+    [Fact]
+    public void A_sweep_stops_at_what_it_meets_inside_the_hit_window()
+    {
+        Stage stage = new() { MeetsAt = .4d };
+        stage.Tap();
+
+        stage.Steps(30);
+
+        Assert.Single(stage.Log, entry => entry == "impact");
+        Assert.InRange(stage.Cycles[^1], .4d, .9d);
+    }
+
+    [Fact]
     public void A_refused_chain_leaves_the_swing_it_would_have_cut_to_finish()
     {
         Stage stage = new();
@@ -435,6 +461,10 @@ public sealed class DaggerfallPlayerAttackClockTests
             for (int step = 0; step < count; step++) Clock.Step(Step);
         }
 
+        /// <summary>Where in the hit window the sweep meets something; past 1 it meets nothing.</summary>
+        internal double MeetsAt { get; set; }
+        internal List<double> Cycles { get; } = [];
+
         internal void Down() => Clock.Observe([Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1F, intent: "attack")], []);
 
         internal void Up() => Clock.Observe([Input(InputEventKind.MappedDigital, InputEdge.Released, intent: "attack")], []);
@@ -446,6 +476,12 @@ public sealed class DaggerfallPlayerAttackClockTests
         {
             Log.Add($"start {attack}");
             return !Refusing;
+        }
+
+        bool IDaggerfallPlayerAttacks.Sweep(double cycle)
+        {
+            Cycles.Add(cycle);
+            return cycle >= MeetsAt;
         }
 
         void IDaggerfallPlayerAttacks.Impact() => Log.Add("impact");

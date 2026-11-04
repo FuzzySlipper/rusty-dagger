@@ -58,13 +58,13 @@ public sealed class ContactGuardSessionTests
         Assert.NotNull(f.Session.State.Actors.Player.Actor.Get<AttackState>().Pending);
         Assert.False(f.Session.PlayerGuardRaised);
 
-        // The blow lands as the windup ends, but the swing's recovery still plays.
+        // A swing that meets no one resolves as its hit window closes, but its recovery still plays.
         DaggerfallAttackTiming fast = DaggerfallTuning.Defaults.Attacks.For("long-blade").Fast;
-        for (int step = 0; step < Steps(fast.Windup) + 2; step++) f.Step();
+        for (int step = 0; step < Steps(fast.Windup + fast.Commit) + 2; step++) f.Step();
         Assert.Null(f.Session.State.Actors.Player.Actor.Get<AttackState>().Pending);
         Assert.False(f.Session.PlayerGuardRaised);
 
-        for (int step = 0; step < Steps(fast.Commit + fast.Recovery) && !f.Session.PlayerGuardRaised; step++) f.Step();
+        for (int step = 0; step < Steps(fast.Recovery) && !f.Session.PlayerGuardRaised; step++) f.Step();
         Assert.True(f.Session.PlayerGuardRaised);
 
         static int Steps(double seconds) => (int)Math.Ceiling(seconds * 60d);

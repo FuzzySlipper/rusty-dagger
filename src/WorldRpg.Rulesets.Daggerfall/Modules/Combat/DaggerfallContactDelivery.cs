@@ -15,8 +15,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 /// Physical delivery by contact. There is no to-hit roll: a blow that physically connects has hit, and the
 /// target's mitigation decides what it takes.
 /// <list type="bullet">
-/// <item>A melee swing, targeted or not, waits for its hit frame and reaches every actor body its swing
-/// volume touches there, which may be an actor it was not aimed at, or several.</item>
+/// <item>The player's swing sweeps an authored arc through its hit window and lands on the first actor body in its
+/// path. An enemy's swing waits for its hit frame and reaches every actor body its swing volume touches there, which may
+/// be an actor it was not aimed at, or several.</item>
 /// <item>An arrow flies segment by segment each admitted step from the shooter's eye, and harms the first
 /// actor body it meets; world geometry stops it. An enemy archer leads a moving target and holds a shot
 /// another body or the world would stop.</item>
@@ -80,6 +81,13 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         {
             // A shot with no animated release (an explicit attack) flies its whole range at once.
             if (Launch(new DeferredAttackImpact(request, attack)) is not Shot shot || !Fly(shot, shot.Remaining, facts)) Whiff(request, attack, facts);
+            return;
+        }
+        // The player's timed swing has already swept its arc through the hit window, and met whom it met.
+        if (request.AttackerId == PlayerId && request.Delayed)
+        {
+            if (ops.TakeSweptTarget() is long swept) Connect(request, attack, swept, facts);
+            else Whiff(request, attack, facts);
             return;
         }
         if (ops.StrikePose(request.AttackerId) is not DaggerfallStrikePose pose) { Whiff(request, attack, facts); return; }

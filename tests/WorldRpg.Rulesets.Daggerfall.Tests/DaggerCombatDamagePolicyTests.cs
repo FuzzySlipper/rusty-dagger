@@ -418,10 +418,10 @@ public sealed class DaggerCombatDamagePolicyTests
         // A targeted swing hands its impact to the shared pending state; the attack clock delivers it.
         using DamagePolicyFixture fixture = new();
         fixture.Script(body: 9, damage: 10);
-        fixture.Touches(2);
         AttackRequest request = new(DaggerfallActorIdentity.PlayerEntityId, 2, 5, 9, .125d, Delayed: true);
 
         IReadOnlyList<IProductFact> admitted = fixture.StartSwing(request, out bool started);
+        fixture.Swept(2);
 
         Assert.True(started);
         PlayerAttackStartedFact opening = Assert.Single(admitted.OfType<PlayerAttackStartedFact>());
@@ -439,9 +439,9 @@ public sealed class DaggerCombatDamagePolicyTests
     public void A_swing_whose_animation_never_reaches_its_hit_frame_delivers_nothing()
     {
         using DamagePolicyFixture fixture = new();
-        fixture.Touches(2);
         AttackRequest request = new(DaggerfallActorIdentity.PlayerEntityId, 2, 5, 9, .125d, Delayed: true);
         _ = fixture.StartSwing(request, out bool started);
+        fixture.Swept(2);
         Assert.True(started);
 
         IReadOnlyList<IProductFact> impact = fixture.DeliverImpact(request, expired: true);
@@ -449,6 +449,25 @@ public sealed class DaggerCombatDamagePolicyTests
         Assert.DoesNotContain(impact, fact => fact is AttackHitFact or AttackWhiffedFact or EquipmentWornFact);
         // A delivered or expired swing leaves nothing pending, so the next admitted swing is ready.
         Assert.True(fixture.IsSwingReady(DaggerfallActorIdentity.PlayerEntityId, 5, 40));
+    }
+
+    [Fact]
+    public void A_swing_cancelled_after_its_sweep_met_someone_leaves_nothing_for_the_next_swing_to_land_on()
+    {
+        using DamagePolicyFixture fixture = new();
+        fixture.StartSwing(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, null, 5, 9, .125d, Delayed: true), out _);
+        fixture.Swept(2);
+        fixture.CancelSwing(DaggerfallActorIdentity.PlayerEntityId, 5);
+
+        // The next swing's sweep meets nothing, wherever the last one's body now stands.
+        AttackRequest next = new(DaggerfallActorIdentity.PlayerEntityId, null, 5, 500, .125d, Delayed: true);
+        fixture.StartSwing(next, out bool started);
+        Assert.True(started);
+        fixture.Script(body: 0, damage: 5);
+        IReadOnlyList<IProductFact> impact = fixture.DeliverImpact(next);
+
+        Assert.Empty(impact.OfType<AttackHitFact>());
+        Assert.Single(impact.OfType<AttackWhiffedFact>());
     }
 
     [Fact]
@@ -786,6 +805,9 @@ public sealed class DaggerCombatDamagePolicyTests
         /// <summary>The swing and touch volumes meet the given actor's body.</summary>
         internal void Touches(long actorId) => Spatial.OverlapContactsResult = _ => TestSessions.Touching(EntityOf(actorId));
 
+        /// <summary>The player's sweep met the given actor, whom the swing's impact takes.</summary>
+        internal void Swept(long actorId) => _combat.SetSweptTarget(actorId);
+
         /// <summary>Every arrow segment meets the given actor's body.</summary>
         internal void ArrowsMeet(long actorId)
         {
@@ -939,6 +961,7 @@ public sealed class DaggerCombatDamagePolicyTests
         {
             Touches(request.TargetId!.Value);
             List<IProductFact> facts = [.. StartSwing(request, out bool admitted)];
+            if (request.AttackerId == DaggerfallActorIdentity.PlayerEntityId) Swept(request.TargetId.Value);
             if (request.Delayed)
             {
                 facts.AddRange(DeliverImpact(request));

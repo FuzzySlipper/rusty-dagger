@@ -76,29 +76,51 @@ public sealed class DaggerfallContactRulesTests
     }
 
     [Fact]
-    public void A_player_swing_reaches_every_actor_its_volume_touches_and_a_whiff_reports_it_met_nothing()
+    public void A_timed_player_swing_lands_one_blow_on_the_body_its_sweep_met_asks_no_volume_and_one_that_met_nothing_whiffs()
     {
         KeyedRandom random = KeyedRandom.Create(8);
         using Fixture fixture = new(random: random.Service);
-        fixture.Spatial.OverlapContactsResult = _ => Touching(fixture.Actors.Get(2).Actor.Entity.Value);
+        ActorState bystander = fixture.SpawnBrigand(3, new WorldPoint(1f, 0f, .4f));
+        // Were the volume still asked, it would answer both bodies.
+        fixture.Spatial.OverlapContactsResult = _ => Touching(fixture.Actors.Get(2).Actor.Entity.Value, bystander.Actor.Entity.Value);
         AttackRequest swing = new(Player, null, 3, 5, .125d, Delayed: true);
 
         Assert.Null(Assert.Single(fixture.StartSwing(swing, out bool admitted).OfType<PlayerAttackStartedFact>()).TargetId);
         Assert.True(admitted);
+        fixture.Swept(2);
         IReadOnlyList<IProductFact> facts = fixture.DeliverImpact(swing);
 
         AttackHitFact hit = Assert.Single(facts.OfType<AttackHitFact>());
         Assert.Equal((Player, 2L), (hit.AttackerId, hit.TargetId));
-        SpatialContactQueryRequest volume = Assert.Single(fixture.Spatial.OverlapContactsRequests);
-        Assert.Equal(SpatialShapeKind.Box, volume.Shape.Kind);
-        Assert.Equal(new Vector3(0f, 1.65f, 0f), volume.Start.Translation);
+        Assert.Empty(fixture.Spatial.OverlapContactsRequests);
         Assert.Contains(fixture.SkillUses, use => use.Reason == DaggerfallSkillUseReason.WeaponHit);
 
-        fixture.Spatial.OverlapContactsResult = _ => Touching();
         AttackRequest whiff = swing with { SimulationStep = 500 };
         fixture.StartSwing(whiff, out _);
         AttackWhiffedFact whiffed = Assert.Single(fixture.DeliverImpact(whiff).OfType<AttackWhiffedFact>());
         Assert.Equal((Player, (long?)null, false), (whiffed.AttackerId, whiffed.TargetId, whiffed.EnemyAttack));
+    }
+
+    [Fact]
+    public void An_enemy_swing_and_an_undelayed_player_swing_reach_every_actor_their_volume_touches()
+    {
+        using Fixture fixture = new(random: KeyedRandom.Create(8).Service);
+        fixture.EquipNpcWeapon(2, "iron-longsword", 9001);
+        ActorState bystander = fixture.SpawnBrigand(3, new WorldPoint(1f, 0f, .4f));
+        fixture.Spatial.OverlapContactsResult = _ => Touching(fixture.Actors.Player.Actor.Entity.Value, bystander.Actor.Entity.Value);
+        AttackRequest enemy = new(2, Player, 5, 9, .125d, Delayed: true);
+        fixture.StartSwing(enemy, out _);
+
+        IReadOnlyList<IProductFact> facts = [.. fixture.DeliverImpact(enemy), .. fixture.AdvanceFlight(5, 9, steps: 5)];
+
+        Assert.Equal([Player, 3L], facts.OfType<AttackHitFact>().Select(hit => hit.TargetId));
+        SpatialContactQueryRequest volume = Assert.Single(fixture.Spatial.OverlapContactsRequests);
+        Assert.Equal(SpatialShapeKind.Box, volume.Shape.Kind);
+        Assert.Equal(new Vector3(1f, 1.62f, 0f), volume.Start.Translation);
+
+        fixture.Spatial.OverlapContactsResult = _ => Touching(fixture.Actors.Get(2).Actor.Entity.Value, bystander.Actor.Entity.Value);
+        IReadOnlyList<IProductFact> explicitSwing = fixture.StartSwing(new AttackRequest(Player, 2, 7, 1, .125d, Delayed: false), out _);
+        Assert.Equal([2L, 3L], explicitSwing.OfType<AttackHitFact>().Select(hit => hit.TargetId));
     }
 
     [Fact]
@@ -108,15 +130,15 @@ public sealed class DaggerfallContactRulesTests
         AttackRequest swing = new(Player, null, 3, 5, .125d, Delayed: true);
 
         using Fixture landing = new(random: KeyedRandom.Create(8).Service);
-        landing.Spatial.OverlapContactsResult = _ => Touching(landing.Actors.Get(2).Actor.Entity.Value);
         landing.StartSwing(swing, out _);
+        landing.Swept(2);
         Assert.Single(landing.DeliverImpact(swing).OfType<AttackHitFact>());
         Assert.Equal(1, WeaponHits(landing));
 
         // The lowest draw on every percentile deflects the edged blow whole.
         using Fixture deflected = new(random: RandomMinimum.Create());
-        deflected.Spatial.OverlapContactsResult = _ => Touching(deflected.Actors.Get(2).Actor.Entity.Value);
         deflected.StartSwing(swing, out _);
+        deflected.Swept(2);
         IReadOnlyList<IProductFact> turned = deflected.DeliverImpact(swing);
         Assert.Empty(turned.OfType<AttackHitFact>());
         AttackNegatedFact negated = Assert.Single(turned.OfType<AttackNegatedFact>());
@@ -130,7 +152,7 @@ public sealed class DaggerfallContactRulesTests
     }
 
     [Fact]
-    public void A_swing_aimed_at_an_actor_defeated_before_its_hit_frame_still_reaches_whoever_its_volume_touches_there()
+    public void A_swing_aimed_at_an_actor_defeated_before_its_blow_still_lands_on_whoever_its_sweep_met()
     {
         using Fixture fixture = new(random: KeyedRandom.Create(8).Service);
         ActorState bystander = fixture.SpawnBrigand(3, new WorldPoint(1f, 0f, .4f));
@@ -139,10 +161,9 @@ public sealed class DaggerfallContactRulesTests
         Assert.True(admitted);
 
         fixture.Actors.Get(2).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(0);
-        fixture.Spatial.OverlapContactsResult = _ => Touching(bystander.Actor.Entity.Value);
+        fixture.Swept(3);
 
         Assert.Equal(3L, Assert.Single(fixture.DeliverImpact(swing).OfType<AttackHitFact>()).TargetId);
-        Assert.Single(fixture.Spatial.OverlapContactsRequests);
     }
 
     [Fact]

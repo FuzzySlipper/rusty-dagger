@@ -116,6 +116,8 @@ internal interface IDaggerfallPhysicalHarmOperations
     /// <summary>Wears the attacker's equipped weapon for a strike of <paramref name="damage"/>, as a hit's wear does.</summary>
     void WearAttackersWeapon(AttackRequest request, long target, int damage, FactBuffer<IProductFact> facts);
     string PlayerWeaponSkill();
+    /// <summary>Whom the player's swing swept into, consumed by the impact it decides; null when it met no one.</summary>
+    long? TakeSweptTarget();
     void RecordPlayerWeaponHit(string weaponSkill);
     int ItemStrike(long attacker, long target, DaggerfallItemStrikeSource source, int damage);
     bool WieldsRazor(long attacker);

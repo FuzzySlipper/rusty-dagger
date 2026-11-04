@@ -176,8 +176,8 @@ protocol, revision guard or whole-state snapshot for every action.
 
 Timing remains deliberate product policy. An attack spends its costs at
 admission and is decided at impact: a player attack, aimed or not, resolves by
-contact as the rules' attack clock ends its windup; enemy attacks apply at the
-authored damage marker.
+contact as its arc sweeps through the hit window on the rules' attack clock; enemy
+attacks apply at the authored damage marker.
 Interrupting delivery retains charged costs/cooldown. Pending strikes are
 transient on load; remaining cooldown is restored onto the new timeline. Keep
 keyed gameplay RNG and admitted-step catch-up semantics. Consult the

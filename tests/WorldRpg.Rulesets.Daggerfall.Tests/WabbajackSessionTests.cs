@@ -80,7 +80,7 @@ public sealed class WabbajackSessionTests
         using Fixture f = new(true);
         var original = f.Session.State.Actors.Get(f.Target).Actor.Entity;
         var facts = new FactBuffer<IProductFact>();
-        f.Session.Touches(f.Target);
+        f.Session.SweptInto(f.Target);
         Assert.True(f.Session.State.Kit.AttackExecution.Start(new(1, f.Target, 1, 1, .125, true), facts));
         f.Session.State.Equipment.Unequip(f.Item);
         f.Session.State.Inventory.Destroy(f.Item);

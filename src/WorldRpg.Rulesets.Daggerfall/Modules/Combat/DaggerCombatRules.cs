@@ -44,6 +44,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     private readonly Func<int> _attackChanceModifier;
     private readonly DaggerfallAttackTuning _attackTuning;
     private string _playerAttack = DaggerfallAttackIds.Fast[0];
+    private long? _sweptTarget;
     private readonly Func<long, long, ulong, ulong, ulong, DaggerfallWabbajackResult> _transformActor;
     internal DaggerfallHandEquipCountdown EquipCountdown { get; set; } = new(0, 0);
     internal void EquipmentChanged(DaggerfallEquipmentChange change) => EquipCountdown = new(
@@ -221,6 +222,9 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         return _delivery.DeferImpact(impact, facts);
     }
 
+    /// <summary>Records whom the player's sweep met, which the blow's impact takes.</summary>
+    internal void SetSweptTarget(long target) => _sweptTarget = target;
+
     /// <summary>Names the attack the next player admission carries, from the attack clock.</summary>
     internal void SelectPlayerAttack(string attack) => _playerAttack = attack;
 
@@ -359,6 +363,8 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     private bool TryAdmitPlayerAttack(AttackRequest request, Combatant player, out DaggerfallAttackDefinition attack, FactBuffer<IProductFact> facts)
     {
         ulong generation = request.Generation, simulationStep = request.SimulationStep;
+        // A swing that was cancelled after its sweep met someone never took its target to an impact.
+        _sweptTarget = null;
         if (!PlayerWeaponReady)
         {
             attack = default!;
@@ -824,6 +830,12 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
                 request.Generation, request.SimulationStep, CombatRandomKey.WeaponConditionSalt), request.Generation, request.SimulationStep, facts);
     }
     string IDaggerfallPhysicalHarmOperations.PlayerWeaponSkill() => PlayerWeaponSkill();
+    long? IDaggerfallPhysicalHarmOperations.TakeSweptTarget()
+    {
+        long? target = _sweptTarget;
+        _sweptTarget = null;
+        return target;
+    }
     void IDaggerfallPhysicalHarmOperations.RecordPlayerWeaponHit(string weaponSkill) => RecordPlayerWeaponHit(weaponSkill);
     int IDaggerfallPhysicalHarmOperations.ItemStrike(long attacker, long target, DaggerfallItemStrikeSource source, int damage) => _itemStrike(attacker, target, source, damage);
     bool IDaggerfallPhysicalHarmOperations.WieldsRazor(long attacker) => WieldsRazor(attacker);

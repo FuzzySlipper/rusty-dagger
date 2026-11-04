@@ -15,6 +15,10 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
     private DaggerfallPlayerAttackClock _attackClock = null!;
     private readonly List<AttackImpactNotice> _playerImpacts = [];
     private (ulong Generation, ulong SimulationStep, double Seconds) _attackStep;
+    private string? _attack;
+    private SwingSweep? _swing;
+    // The last swing's sweep, for the developer overlay.
+    private SwingSweep? _lastSwing;
 
     /// <summary>Advances the player's attack by one admitted step, retiring it when the player can no longer fight.</summary>
     private void StepPlayerAttack(double seconds, ulong generation, ulong simulationStep)
@@ -49,6 +53,8 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
         var (generation, simulationStep, seconds) = _attackStep;
         LookReceipt look = _input.ResolveCurrentLook(State.PlayerControl);
         _combat.SelectPlayerAttack(attack);
+        _attack = attack;
+        _swing = null;
         State.Kit.Attacks.TryPlayerMelee(State.PlayerControl, look, generation, simulationStep, seconds, _facts);
         if (State.Actors.Player.Actor.Get<AttackState>().Pending is null) return false;
         // A swing admitted here lowers a raised guard before anything resolves against it.
@@ -58,6 +64,16 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
         // is the product-side identity join.
         _ = TryTriggerDungeonActionRay(look.Forward, _tuning.MeleeTargeting.MaximumDistance, DaggerfallDungeonActionEvent.Attack);
         TryBashDoorWithSwing(look);
+        return true;
+    }
+
+    bool IDaggerfallPlayerAttacks.Sweep(double cycle)
+    {
+        // A shot's flight decides what it meets, and a player with no pose has nothing to sweep from.
+        if (_attack == DaggerfallAttackIds.Shot || StrikePose(DaggerfallActorIdentity.PlayerEntityId) is not { } pose) return true;
+        _lastSwing = _swing ??= new SwingSweep(_contact, DaggerfallActorIdentity.PlayerEntityId, _tuning.Attacks.Arc(_attack!, _combat.PlayerWeaponSkill()));
+        if (_swing.Advance(pose.Eye, pose.Forward, (float)cycle, _sites?.CharacterEnvironment(State.PlayerControl.Motion)) is not long struck) return false;
+        _combat.SetSweptTarget(struck);
         return true;
     }
 

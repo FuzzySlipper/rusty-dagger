@@ -1,3 +1,4 @@
+using WorldRpg.Kit.Combat;
 using System.Numerics;
 using System.Text.Json;
 using Rusty.Engine;
@@ -31,11 +32,12 @@ internal sealed partial class DaggerfallSession : IDeveloperInspectionSession
     internal const string MarkersOverlaySet = "markers";
     internal const string PlayerOverlaySet = "player";
     internal const string ProbeOverlaySet = "probe";
+    internal const string SwingOverlaySet = "swing";
     /// <summary>How far from the player the place-wide sets draw: a town has thousands of doors and markers.</summary>
     private const float OverlayRadius = 60F;
 
     private static readonly IReadOnlyList<string> DaggerOverlaySets =
-        [InteractionOverlaySet, PeopleOverlaySet, DoorsOverlaySet, ActorsOverlaySet, MarkersOverlaySet, PlayerOverlaySet];
+        [InteractionOverlaySet, PeopleOverlaySet, DoorsOverlaySet, ActorsOverlaySet, MarkersOverlaySet, PlayerOverlaySet, SwingOverlaySet];
     private readonly HashSet<string> _debugOverlays = new(StringComparer.Ordinal);
 
     public IReadOnlyList<string> DebugOverlaySets => DaggerOverlaySets;
@@ -79,9 +81,18 @@ internal sealed partial class DaggerfallSession : IDeveloperInspectionSession
                 case ActorsOverlaySet: ActorsOverlay(items, position); break;
                 case MarkersOverlaySet: MarkersOverlay(items, position); break;
                 case PlayerOverlaySet: PlayerOverlay(items, position); break;
+                case SwingOverlaySet: SwingOverlay(items); break;
             }
             _engine.Graphics.PublishOverlaySet(new(name, items.ToArray()));
         }
+    }
+
+    /// <summary>The last swing's rays, in the colour of what each met.</summary>
+    private void SwingOverlay(List<OverlayItem> items)
+    {
+        foreach (SwingRay ray in _lastSwing?.Rays ?? [])
+            items.Add(OverlayItem.Segment(OverlayPlace.World, ray.From, ray.To,
+                ray.Kind == ContactKind.Actor ? Ink.Hostile : ray.Kind == ContactKind.World ? Ink.Refused : Ink.Query, onTop: true));
     }
 
     /// <summary>The activation query's ray, and each target's point, reach and focus reason in its colour.</summary>

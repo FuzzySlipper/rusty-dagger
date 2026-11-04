@@ -53,13 +53,13 @@ public sealed class ContactRulesAcceptanceTests
     }
 
     [Fact]
-    public void A_player_swing_lands_on_the_enemy_its_volume_touches_at_the_hit_frame()
+    public void A_player_swing_lands_on_the_enemy_its_sweep_meets_in_the_hit_window()
     {
         List<string> releases = [];
         (DaggerfallSession session, AppearanceFake appearance, _) = VisibleEnemySession(releases, out SpatialFake spatial, random: RandomMaximum.Create());
         using DaggerfallSession disposable = session;
         session.State.WeaponDrawn = true;
-        spatial.OverlapContactsResult = _ => Touching(session.State.Actors.Get(Enemy).Actor.Entity.Value);
+        session.Touches(Enemy);
         double health = Health(session, Enemy);
 
         session.Update(new ProductUpdate(OuterUpdate(1), AttackTap));
@@ -72,7 +72,7 @@ public sealed class ContactRulesAcceptanceTests
         RunSeconds(session, ref step, DaggerfallTuning.Defaults.Attacks.For("long-blade").Fast.Windup + 2d / 60d);
 
         Assert.Null(session.State.Actors.Player.Attack.Pending);
-        Assert.Contains(spatial.OverlapContactsRequests, request => request.Shape.Kind == SpatialShapeKind.Box);
+        Assert.Empty(spatial.OverlapContactsRequests);
         Assert.True(Health(session, Enemy) < health, session.ReadPlaytestObservation().Message);
     }
 

@@ -143,6 +143,7 @@ public sealed class DaggerfallHitConsequencesTests
         s.State.ItemInstances.RegisterUnique(9001, DaggerfallItemInstanceMetadata.Default(f.Definitions.RequireItem(new("iron-longsword")), DaggerfallItemOwner.Player) with { PoisonVariant = 131 });
         equipment.Equip(spare, [new("right-hand")]);
         double health = s.State.Actors.Get(target).Stats.GetTrack(TrackId.Parse("health")).Current;
+        s.SweptInto(target);
         s.State.Kit.AttackExecution.ApplyImpacts([new(1, target, 7, 13, false), new(1, target, 7, 13, false)], 7, Facts(s));
         Assert.Null(s.State.ItemInstances.RequireUnique(id).PoisonVariant);
         Assert.Equal(131, s.State.ItemInstances.RequireUnique(9001).PoisonVariant);
@@ -162,7 +163,7 @@ public sealed class DaggerfallHitConsequencesTests
         s.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 80;
         long target = Spawn(s, 0);
         s.State.Actors.Player.Actor.Get<CombatContributions>().Rules.Add(new RefusePhysical(refusal));
-        if (refusal != "whiff") s.Touches(target);
+        if (refusal != "whiff") s.SweptInto(target);
         Assert.True(s.State.Kit.AttackExecution.Start(new(1, target, 7, 13, .125, true), Facts(s)));
         s.State.Kit.AttackExecution.ApplyImpacts([new(1, target, 7, 13, false)], 7, Facts(s));
         Assert.Equal(128, s.State.ItemInstances.RequireUnique(id).PoisonVariant);
@@ -331,7 +332,7 @@ public sealed class DaggerfallHitConsequencesTests
         void Strike(DaggerfallSession session, ulong step)
         {
             session.State.ItemInstances.ReplaceUnique(id, session.State.ItemInstances.RequireUnique(id) with { PoisonVariant = 128 });
-            session.Touches(target);
+            session.SweptInto(target);
             Assert.True(session.State.Kit.AttackExecution.Start(new(1, target, 7, step, .125, true), Facts(session)));
             session.State.Kit.AttackExecution.ApplyImpacts([new(1, target, 7, step, false)], 7, Facts(session));
             Assert.Null(session.State.ItemInstances.RequireUnique(id).PoisonVariant);

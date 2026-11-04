@@ -2,6 +2,7 @@ using WorldRpg.Kit.Combat;
 using WorldRpg.Kit.Targeting;
 using System.Numerics;
 using System.Reflection;
+using System.Text.Json;
 using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
@@ -327,7 +328,7 @@ public sealed class PlayerAttackSessionTests
 
         // A blow that met nothing is a result too, and once the result has aged out the rejection shows.
         outcomes.React(new AttackWhiffedFact(1, 2008, false, 1, 200));
-        Assert.Equal("Your blow meets nothing; Rat is out of reach", presentation.LastOutcome);
+        Assert.Equal("Your blow misses Rat", presentation.LastOutcome);
         outcomes.React(new AttackWhiffedFact(2008, DaggerfallActorIdentity.PlayerEntityId, true, 1, 201));
         Assert.Equal("Rat's blow misses you", presentation.LastOutcome);
         presentation.Advance(presentation.LifetimeSeconds);
@@ -615,8 +616,139 @@ public sealed class PlayerAttackSessionTests
         return (session, () => session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current);
     }
 
+    /// <summary>A body the player's rays meet between two bearings, degrees right of a look along -Z, at a distance.</summary>
+    private readonly record struct BearingBody(long Actor, float FromDegrees, float ToDegrees, float Distance = 1f);
+
+    /// <summary>Answers level rays by bearing, the first listed body in range taking the ray; a body gets a health pool to take a blow from.</summary>
+    private static void PlaceByBearing(DaggerfallSession session, params BearingBody[] bodies)
+    {
+        session.State.PlayerControl.YawRadians = 0f;
+        session.State.PlayerControl.PitchRadians = 0f;
+        foreach (BearingBody body in bodies)
+        {
+            Track health = session.State.Actors.Get(body.Actor).Stats.GetTrack(TrackId.Parse("health"));
+            health.Maximum.BaseValue = 1000;
+            health.SetCurrent(1000);
+        }
+        session.Spatial().FloorHit = request =>
+        {
+            if (MathF.Abs(request.Direction.Y) > .9f) return default;
+            float bearing = float.RadiansToDegrees(MathF.Atan2(request.Direction.X, -request.Direction.Z));
+            foreach (BearingBody body in bodies)
+                if (bearing >= body.FromDegrees && bearing <= body.ToDegrees && body.Distance <= request.MaxDistance)
+                    return new SpatialHit(true, SpatialHitKind.Entity, session.State.Actors.Get(body.Actor).Actor.Entity.Value, 0, 0, 0, 0, 0, 0, default,
+                        request.Origin + request.Direction * body.Distance, -request.Direction, body.Distance, 0d, 0d, false, true);
+            return default;
+        };
+    }
+
+    private static double Wounds(DaggerfallSession session, long actor) => 1000 - session.State.Actors.Get(actor).Stats.GetTrack(TrackId.Parse("health")).Current;
+
+    private static string LastCombatEvent(DaggerfallSession session)
+    {
+        using JsonDocument observation = JsonDocument.Parse(session.ReadPlaytestObservation().Message);
+        return observation.RootElement.GetProperty("lastCombatEvent").GetProperty("kind").GetString()!;
+    }
+
+    private static DaggerfallAttackTiming Fast => DaggerfallTuning.Defaults.Attacks.For("long-blade").Fast;
+
     [Fact]
-    public void The_blow_lands_by_the_clock_at_the_end_of_its_windup_with_no_viewmodel_and_no_marker()
+    public void A_right_to_left_cut_meets_the_right_hand_of_two_adjacent_enemies_and_only_that_one()
+    {
+        (DaggerfallSession session, Func<double> _) = WithoutViewmodel();
+        using DaggerfallSession disposable = session;
+        long left = session.SpawnActor("rat", new ActorPose(session.State.Actors.Get(2000).Position, 0f));
+        PlaceByBearing(session, new BearingBody(2000, 5f, 20f), new BearingBody(left, -20f, -5f));
+
+        ulong step = 1;
+        session.Update(new ProductUpdate(OuterUpdate(step++), AttackTap)); // fastA runs from 37 right to 61 left.
+        RunSeconds(session, ref step, Fast.Windup + Fast.Commit + Fast.Recovery + .1d);
+
+        Assert.True(Wounds(session, 2000) > 0d);
+        Assert.Equal(0d, Wounds(session, left));
+    }
+
+    [Fact]
+    public void A_left_to_right_cut_meets_the_left_hand_of_the_same_two()
+    {
+        (DaggerfallSession session, Func<double> _) = WithoutViewmodel();
+        using DaggerfallSession disposable = session;
+        long left = session.SpawnActor("rat", new ActorPose(session.State.Actors.Get(2000).Position, 0f));
+        // The first cut passes wide of both, and the press in its recovery chains the left-to-right fastB.
+        ulong step = 1;
+        session.Touches();
+        session.Update(new ProductUpdate(OuterUpdate(step++), AttackTap));
+        RunSeconds(session, ref step, Fast.Windup + Fast.Commit + 2d / 60d);
+        PlaceByBearing(session, new BearingBody(2000, 5f, 20f), new BearingBody(left, -20f, -5f));
+        session.Update(new ProductUpdate(OuterUpdate(step++), AttackTap));
+        RunSeconds(session, ref step, Fast.Windup + Fast.Commit + 2d / 60d);
+
+        Assert.True(Wounds(session, left) > 0d);
+        Assert.Equal(0d, Wounds(session, 2000));
+    }
+
+    [Theory]
+    [InlineData(40f, 60f, 1f)] // Beside the cut, past where it starts.
+    [InlineData(5f, 20f, 3f)] // In its path, beyond the weapon's reach.
+    public void A_cut_that_passes_beside_or_short_of_an_enemy_whiffs(float from, float to, float distance)
+    {
+        (DaggerfallSession session, Func<double> _) = WithoutViewmodel();
+        using DaggerfallSession disposable = session;
+        PlaceByBearing(session, new BearingBody(2000, from, to, distance));
+
+        ulong step = 1;
+        session.Update(new ProductUpdate(OuterUpdate(step++), AttackTap));
+        RunSeconds(session, ref step, Fast.Windup + Fast.Commit + 2d / 60d);
+
+        Assert.Equal(0d, Wounds(session, 2000));
+        Assert.Equal("AttackWhiffed", LastCombatEvent(session));
+    }
+
+    /// <summary>When a body between two bearings takes the blow, in seconds after the tap.</summary>
+    private static double BlowLandsAt(float from, float to)
+    {
+        (DaggerfallSession session, Func<double> _) = WithoutViewmodel();
+        using DaggerfallSession disposable = session;
+        PlaceByBearing(session, new BearingBody(2000, from, to));
+        session.Update(new ProductUpdate(OuterUpdate(1), AttackTap));
+        for (ulong step = 2; step < 60; step++)
+        {
+            session.Update(new ProductUpdate(OuterUpdate(step), []));
+            if (Wounds(session, 2000) > 0d) return (step - 1) / 60d;
+        }
+        throw new Xunit.Sdk.XunitException("The blow never landed.");
+    }
+
+    [Fact]
+    public void The_blow_resolves_inside_the_hit_window_and_later_for_a_body_later_in_the_arc()
+    {
+        const double step = 1d / 60d;
+        double early = BlowLandsAt(30f, 36f), late = BlowLandsAt(-58f, -50f);
+
+        Assert.InRange(early, Fast.Windup - step / 2d, Fast.Windup + Fast.Commit + step / 2d);
+        Assert.InRange(late, Fast.Windup - step / 2d, Fast.Windup + Fast.Commit + step / 2d);
+        Assert.True(early < late, $"A body at the arc's start took the blow at {early}, one at its end at {late}.");
+    }
+
+    [Fact]
+    public void A_sweep_that_meets_nothing_whiffs_when_the_window_closes()
+    {
+        (DaggerfallSession session, Func<double> _) = WithoutViewmodel();
+        using DaggerfallSession disposable = session;
+        PlaceByBearing(session);
+
+        ulong step = 1;
+        session.Update(new ProductUpdate(OuterUpdate(step++), AttackTap));
+        RunSeconds(session, ref step, Fast.Windup + Fast.Commit - 3d / 60d);
+        Assert.NotNull(session.State.Actors.Player.Attack.Pending);
+
+        RunSeconds(session, ref step, 4d / 60d);
+        Assert.Null(session.State.Actors.Player.Attack.Pending);
+        Assert.Equal("AttackWhiffed", LastCombatEvent(session));
+    }
+
+    [Fact]
+    public void The_blow_lands_by_the_clock_in_its_hit_window_with_no_viewmodel_and_no_marker()
     {
         (DaggerfallSession session, Func<double> health) = WithoutViewmodel();
         using DaggerfallSession disposable = session;

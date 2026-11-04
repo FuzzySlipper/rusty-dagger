@@ -31,7 +31,10 @@ internal interface IDaggerfallPlayerAttacks
     /// <summary>Starts an attack through admission; false when it was refused and no motion plays.</summary>
     bool Start(string attack);
 
-    /// <summary>The started attack reached the end of its windup: its blow lands now.</summary>
+    /// <summary>Sweeps the started attack on to <paramref name="cycle"/> (0 to 1) of its hit window; true once it has met something.</summary>
+    bool Sweep(double cycle);
+
+    /// <summary>The started attack's hit window is over or it met something: its blow resolves now.</summary>
     void Impact();
 
     /// <summary>A motion began: presentation plays it. A null timing is an untimed hold.</summary>
@@ -45,7 +48,8 @@ internal interface IDaggerfallPlayerAttacks
 /// The player's attack as the rules time it. A press released before the power threshold is a fast attack and one
 /// held past it charges a power attack, which holds until release. A press during a recovery chains the next fast
 /// attack at once, and one made earlier in a swing waits for the recovery; a swing that runs out resets the chain.
-/// The blow lands at the end of the windup, with or without anything drawing it. The clock is advanced by admitted
+/// The hit window opens as the windup ends and the attack sweeps through it, with or without anything drawing it, and
+/// the blow resolves when it meets something or the window closes. The clock is advanced by admitted
 /// steps only, so held time holds it, and it is transient: a save or a site change retires what is in progress.
 /// </summary>
 internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning, IDaggerfallPlayerAttacks attacks)
@@ -125,8 +129,12 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
             playing.Seconds += seconds;
             if (playing.Delivers && !playing.Landed && playing.Seconds >= playing.Timing!.Value.Windup)
             {
-                playing.Landed = true;
-                attacks.Impact();
+                double cycle = Math.Min(1d, (playing.Seconds - playing.Timing.Value.Windup) / playing.Timing.Value.Commit);
+                if (attacks.Sweep(cycle) || cycle >= 1d)
+                {
+                    playing.Landed = true;
+                    attacks.Impact();
+                }
             }
             if (playing.Attack == DaggerfallAttackIds.PowerHold)
             {
