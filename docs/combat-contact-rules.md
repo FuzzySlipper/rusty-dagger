@@ -26,7 +26,7 @@ The owners live in `src/WorldRpg.Rulesets.Daggerfall/Modules/Combat/`
 
 ## Arcs
 
-The `attacks` tuning group holds each attack's path (`paths`: a start and end bearing in degrees right of the view, and a tilt turning the plane clockwise about the view, so at 90 a positive bearing is down) and each weapon class's `reach`. `world.overlay-on swing` draws the last swing's rays in the colour of what each met.
+The `attacks` tuning group holds each attack's path (`paths`: a start and end bearing in degrees right of the view, and a tilt turning the plane clockwise about the view, so at 90 a positive bearing is down) and each weapon class's `reach`. `world.overlay-on swing` then `engine.inspect.overlay show set swing`, after a first swing has published the set, draws the last swing's arc: the rays' ends joined across the view, cyan where they met nothing, with a marker where one met a body (red) or the world. Page captures show it; the runtime's world frames don't.
 
 ## Tuning
 

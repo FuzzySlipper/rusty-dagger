@@ -87,12 +87,20 @@ internal sealed partial class DaggerfallSession : IDeveloperInspectionSession
         }
     }
 
-    /// <summary>The last swing's rays, in the colour of what each met.</summary>
+    /// <summary>
+    /// The last swing's arc: its rays' ends joined in order, since a ray from the eye is a point seen from the eye, with a
+    /// marker where a ray met something, in the colour of what it met.
+    /// </summary>
     private void SwingOverlay(List<OverlayItem> items)
     {
-        foreach (SwingRay ray in _lastSwing?.Rays ?? [])
-            items.Add(OverlayItem.Segment(OverlayPlace.World, ray.From, ray.To,
-                ray.Kind == ContactKind.Actor ? Ink.Hostile : ray.Kind == ContactKind.World ? Ink.Refused : Ink.Query, onTop: true));
+        IReadOnlyList<SwingRay> rays = _lastSwing?.Rays ?? [];
+        for (int ray = 0; ray < rays.Count; ray++)
+        {
+            Color color = rays[ray].Kind == ContactKind.Actor ? Ink.Hostile : rays[ray].Kind == ContactKind.World ? Ink.Refused : Ink.Query;
+            items.Add(OverlayItem.Segment(OverlayPlace.World, rays[ray].From, rays[ray].To, color, onTop: true));
+            if (ray > 0) items.Add(OverlayItem.Segment(OverlayPlace.World, rays[ray - 1].To, rays[ray].To, color, onTop: true));
+            if (rays[ray].Kind != ContactKind.None) items.Add(OverlayItem.Marker(OverlayPlace.World, rays[ray].To, .1F, color, onTop: true));
+        }
     }
 
     /// <summary>The activation query's ray, and each target's point, reach and focus reason in its colour.</summary>
