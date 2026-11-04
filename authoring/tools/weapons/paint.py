@@ -9,7 +9,7 @@ constrained to its own object and harvesting a ramp of `--steps` colours from it
 --cell metres across takes one flat colour from that ramp by the icon's brightness there, a soft light and an
 ordered dither. The defaults are the set's `crunch` in authoring/specs/weapons/weapons.json (Patch chose 2 mm
 cells); the options exist to compare treatments. A part's `light` in the spec overrides --light: a round part the
-flat icon says little about (a mace's ball) takes more of the soft light. Writes OUT_DIR/model.glb (build.py's
+flat icon says little about (a club's ball) takes more of the soft light. Writes OUT_DIR/model.glb (build.py's
 model with the painted `metal` and `trim` textures, sampled nearest, matte) and palette_cells' report.
 """
 import argparse
