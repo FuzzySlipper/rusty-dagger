@@ -220,9 +220,9 @@
    "invent": "The blade is flat and thin at its edge, thickening toward the socket. The socket is a short steel sleeve around the haft. The haft is round in section.",
    "grip": {"part": "haft", "span": [0, 0.3]},
    "parts": [
-    {"name": "blade", "class": "any", "cols": [81, 416], "rows": [0, 345], "pick": "all", "slot": "metal", "shape": "flat", "profile": "ridge", "half": 0.009, "ramp": 0.03, "faces": 900, "root": {"toward": "socket", "gain": 0.8}},
-    {"name": "socket", "class": "any", "cols": [0, 80], "rows": [0, 340], "pick": "all", "slot": "metal", "shape": "lathe", "segments": 12, "smooth": 9},
-    {"name": "haft", "class": "leather", "rows": [341, 859], "shape": "lathe", "segments": 10, "smooth": 41}
+    {"name": "blade", "class": "any", "cols": [52, 416], "rows": [0, 345], "pick": "all", "slot": "metal", "shape": "flat", "profile": "ridge", "half": 0.009, "ramp": 0.03, "faces": 900, "root": {"toward": "socket", "gain": 0.8}},
+    {"name": "socket", "class": "any", "cols": [0, 80], "rows": [0, 340], "pick": "all", "slot": "metal", "shape": "lathe", "segments": 12, "smooth": 9, "radius": 0.025},
+    {"name": "haft", "class": "leather", "rows": [341, 859], "shape": "lathe", "segments": 10, "smooth": 41, "radius": 0.019}
    ]
   },
   {
