@@ -18,6 +18,8 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
     private DaggerfallPlayerStamina _stamina = null!;
     private ActorReactions _reactions = null!;
     private int _hitStopSteps;
+    // Whether the attack in progress started aimed at a civilian.
+    private bool _attackHarmsCivilians;
 
     /// <summary>Who a blow is holding now.</summary>
     internal ActorReactions Reactions => _reactions;
@@ -97,9 +99,29 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
         }
     }
 
+    /// <summary>
+    /// Whether the view meets a civilian's body as an attack starts, allies and world aside. That one look decides for the
+    /// attack's whole life: a player fighting beside civilians doesn't harm them, and one who means to harms any it meets.
+    /// </summary>
+    private bool AimedAtCivilian()
+    {
+        if (StrikePose(DaggerfallActorIdentity.PlayerEntityId) is not { } pose) return false;
+        SegmentContact aim = _contact.Segment(DaggerfallActorIdentity.PlayerEntityId, pose.Eye, pose.Eye + pose.Forward * (float)_tuning.Attacks.AimRange,
+            _sites?.CharacterEnvironment(State.PlayerControl.Motion), IsPlayerAlly);
+        return aim.ActorId is long met && IsCivilian(met);
+    }
+
+    private bool IsPlayerAlly(long actor) => EffectiveFoeTeam(actor) == "player-ally";
+
+    private bool IsCivilian(long actor) => _roster.Definitions.TryGetValue(actor, out DaggerfallActorDefinition? definition) && definition.Kind == DaggerfallActorKinds.Civilian;
+
+    /// <summary>Whether a player's attack goes through a body: always an ally, and a civilian unless it started aimed at one.</summary>
+    internal bool PassesThrough(long actor, bool harmsCivilians) => IsPlayerAlly(actor) || !harmsCivilians && IsCivilian(actor);
+
     bool IDaggerfallPlayerAttacks.Start(string attack)
     {
         var (generation, simulationStep, seconds) = _attackStep;
+        _attackHarmsCivilians = AimedAtCivilian();
         if (attack == DaggerfallAttackIds.Cast)
         {
             if (!ReadyCast()) return false;
@@ -109,7 +131,7 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
         }
         LookReceipt look = _input.ResolveCurrentLook(State.PlayerControl);
         int chain = _tuning.Attacks.Combatant.ChainLength(PlayerStat(_combat.PlayerWeaponSkill()));
-        _combat.SelectPlayerAttack(attack, finisher: attack == DaggerfallAttackIds.Fast[chain - 1]);
+        _combat.SelectPlayerAttack(attack, finisher: attack == DaggerfallAttackIds.Fast[chain - 1], _attackHarmsCivilians);
         _attack = attack;
         _swing = null;
         State.Kit.Attacks.TryPlayerMelee(State.PlayerControl, look, generation, simulationStep, seconds, _facts);
@@ -128,7 +150,8 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
     {
         // A shot's flight decides what it meets, a cast meets nothing, and a player with no pose has nothing to sweep from.
         if (_attack is DaggerfallAttackIds.Shot or DaggerfallAttackIds.Cast || StrikePose(DaggerfallActorIdentity.PlayerEntityId) is not { } pose) return true;
-        _lastSwing = _swing ??= new SwingSweep(_contact, DaggerfallActorIdentity.PlayerEntityId, _tuning.Attacks.Arc(_attack!, _combat.PlayerWeaponSkill(), _combat.PlayerWeaponTemplate()));
+        _lastSwing = _swing ??= new SwingSweep(_contact, DaggerfallActorIdentity.PlayerEntityId, _tuning.Attacks.Arc(_attack!, _combat.PlayerWeaponSkill(), _combat.PlayerWeaponTemplate()),
+            passes: actor => PassesThrough(actor, _attackHarmsCivilians));
         if (_swing.Advance(pose.Eye, pose.Forward, (float)cycle, _sites?.CharacterEnvironment(State.PlayerControl.Motion)) is not long struck) return false;
         _combat.SetSweptTarget(struck);
         return true;

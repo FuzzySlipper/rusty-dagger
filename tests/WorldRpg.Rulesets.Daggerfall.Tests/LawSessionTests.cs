@@ -74,7 +74,7 @@ public sealed class LawSessionTests
         s.State.Character.LearnSpell("custom-spell.1");
         Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell("custom-spell.1").Outcome);
         s.Touches(target);
-        var result = s.ReleaseReadySpell(1, Vector3.UnitZ);
+        var result = s.ReleaseReadySpell(1, Vector3.UnitZ, harmsCivilians: true);
         Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, result.Outcome);
         Assert.True(health.Current < (lethal ? 1 : 1000));
         var incident = Assert.Single(s.State.Crime.Incidents);
@@ -151,7 +151,7 @@ public sealed class LawSessionTests
         s.State.Character.LearnSpell("custom-spell.1");
         Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell("custom-spell.1").Outcome);
         s.Touches(target);
-        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, s.ReleaseReadySpell(1, Vector3.UnitZ).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, s.ReleaseReadySpell(1, Vector3.UnitZ, harmsCivilians: true).Outcome);
         Assert.True(health.Current <= 980);
         Assert.Equal(lethal ? 2 : 1, s.State.Crime.Incidents.Count);
         Assert.Single(s.State.Crime.Incidents, incident => incident.Crime == DaggerfallCrimeKind.Assault);

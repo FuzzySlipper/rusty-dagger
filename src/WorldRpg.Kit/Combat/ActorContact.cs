@@ -65,13 +65,16 @@ public sealed class ActorContact
         _eligible = eligible ?? throw new ArgumentNullException(nameof(eligible));
     }
 
-    /// <summary>The bodies of every live eligible actor except <paramref name="excluded"/>, the query's own source.</summary>
-    public SpatialEntityCollider[] Colliders(long? excluded)
+    /// <summary>
+    /// The bodies of every live eligible actor except <paramref name="excluded"/>, the query's own source, and those
+    /// <paramref name="passes"/> says this query goes through.
+    /// </summary>
+    public SpatialEntityCollider[] Colliders(long? excluded, Func<long, bool>? passes = null)
     {
         Vector3 reach = new(_body.HalfWidth, 0f, _body.HalfWidth);
         Vector3 top = new(_body.HalfWidth, _body.Height, _body.HalfWidth);
         IEnumerable<SpatialEntityCollider> colliders = _actors.All
-            .Where(actor => actor.DurableId != excluded && !actor.IsDefeated && _eligible(actor.DurableId))
+            .Where(actor => actor.DurableId != excluded && !actor.IsDefeated && _eligible(actor.DurableId) && passes?.Invoke(actor.DurableId) != true)
             .Select(actor => new SpatialEntityCollider(actor.Actor.Entity.Value, actor.Position.ToVector() - reach,
                 actor.Position.ToVector() + top, 0, 0, true, false, false));
         if (_actors.Player.DurableId != excluded && !_actors.Player.IsDefeated)
@@ -97,9 +100,9 @@ public sealed class ActorContact
     /// touched: the line from <paramref name="origin"/> (the attacker's eye or chest) to the contact
     /// must be clear of the world. Actor bodies do not shield one another, so one swing can touch several.
     /// </summary>
-    public VolumeContact Volume(long? source, SpatialShape shape, SpatialPose pose, Vector3 origin, CharacterStepEnvironment? environment = null)
+    public VolumeContact Volume(long? source, SpatialShape shape, SpatialPose pose, Vector3 origin, CharacterStepEnvironment? environment = null, Func<long, bool>? passes = null)
     {
-        (SpatialContact[] contacts, bool world, bool truncated) = _spatial.OverlapContacts(shape, pose, Colliders(source), environment);
+        (SpatialContact[] contacts, bool world, bool truncated) = _spatial.OverlapContacts(shape, pose, Colliders(source, passes), environment);
         List<ActorVolumeContact> touched = [];
         foreach (SpatialContact contact in contacts)
         {
@@ -128,13 +131,13 @@ public sealed class ActorContact
     /// <paramref name="to"/> during one admitted step, ignoring its own <paramref name="source"/>. A caller
     /// steps the same projectile segment by segment until it reports contact.
     /// </summary>
-    public SegmentContact Segment(long? source, Vector3 from, Vector3 to, CharacterStepEnvironment? environment = null)
+    public SegmentContact Segment(long? source, Vector3 from, Vector3 to, CharacterStepEnvironment? environment = null, Func<long, bool>? passes = null)
     {
         Vector3 delta = to - from;
         float distance = delta.Length();
         if (!float.IsFinite(distance) || distance <= 0f)
             throw new ArgumentOutOfRangeException(nameof(to), "A contact segment needs a finite, positive length.");
-        SpatialHit hit = _spatial.CastRay(from, delta / distance, distance, Colliders(source), environment);
+        SpatialHit hit = _spatial.CastRay(from, delta / distance, distance, Colliders(source, passes), environment);
         if (!hit.Present) return SegmentContact.None;
         long? actor = ActorFor(hit);
         return new(actor is null ? ContactKind.World : ContactKind.Actor, actor, hit.Point, hit.Distance);

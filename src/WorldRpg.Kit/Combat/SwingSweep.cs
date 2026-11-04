@@ -38,7 +38,8 @@ public readonly record struct SwingRay(Vector3 From, Vector3 To, ContactKind Kin
 /// <param name="source">The swinging actor, whose own body is ignored.</param>
 /// <param name="arc">The arc swept.</param>
 /// <param name="rayStepDegrees">The widest gap between rays, narrower than a body at the arc's range.</param>
-public sealed class SwingSweep(ActorContact contact, long source, SwingArc arc, float rayStepDegrees = 6f)
+/// <param name="passes">The bodies this swing goes through, as if they weren't there.</param>
+public sealed class SwingSweep(ActorContact contact, long source, SwingArc arc, float rayStepDegrees = 6f, Func<long, bool>? passes = null)
 {
     private readonly HashSet<long> _struck = [];
     private readonly List<SwingRay> _rays = [];
@@ -57,7 +58,7 @@ public sealed class SwingSweep(ActorContact contact, long source, SwingArc arc, 
         {
             float at = gaps == 0 ? cycle : float.Lerp(from, cycle, ray / (float)gaps);
             Vector3 to = eye + arc.Direction(at, forward) * arc.Range;
-            SegmentContact met = contact.Segment(source, eye, to, environment);
+            SegmentContact met = contact.Segment(source, eye, to, environment, passes);
             _rays.Add(new(eye, met.Kind == ContactKind.None ? to : met.Point, met.Kind));
             if (met.Kind != ContactKind.Actor || !_struck.Add(met.ActorId!.Value)) continue;
             _cycle = at;

@@ -80,7 +80,7 @@ internal sealed partial class DaggerfallSession
     {
         long player = State.Actors.Player.DurableId;
         DaggerfallReadySpell? ready = Casting.ReadyFor(player);
-        ReportCast(ReleaseReadySpell(player, _input.ResolveCurrentLook(State.PlayerControl).Forward).Outcome);
+        ReportCast(ReleaseReadySpell(player, _input.ResolveCurrentLook(State.PlayerControl).Forward, _attackHarmsCivilians).Outcome);
         // The spell the player set active stays ready for the next cast; what an item readied was good for one.
         if (ready is { Source: DaggerfallCastSource.Spell } chosen && Casting.ReadyFor(player) is null && State.Character.KnownSpells.Contains(chosen.SpellKey))
             Casting.RestoreReadySpell(chosen with { Cost = Casting.AvailableSpellCost(player, chosen.SpellKey) ?? chosen.Cost });
@@ -173,7 +173,7 @@ internal sealed partial class DaggerfallSession
         && !(hit.Kind == SpatialHitKind.Entity && _contact.ActorFor(hit) == DaggerfallActorIdentity.PlayerEntityId);
 
     /// <summary>Releases the ready source at its live position. Ranged bundles await Engine collision delivery.</summary>
-    internal DaggerfallCastResult ReleaseReadySpell(long casterId, Vector3 direction)
+    internal DaggerfallCastResult ReleaseReadySpell(long casterId, Vector3 direction, bool harmsCivilians = false)
     {
         if (Casting.ReadyFor(casterId) is not { } ready) return new(DaggerfallCastOutcome.Unready);
         var target = DaggerfallMagicCostPolicy.TargetForRangeType(_definitions.Magic.Spells[ready.SpellKey].RangeType);
@@ -188,16 +188,22 @@ internal sealed partial class DaggerfallSession
         DaggerfallCastResult release = Casting.Release(casterId, target != DaggerfallSpellTarget.ByTouch || touch.Releases,
             eye, ValidDirection(direction) ? Vector3.Normalize(direction) : null);
         if (release.Bundle is not { } bundle) return release;
+        bundle.HarmsCivilians = harmsCivilians;
         if (casterId == State.Actors.Player.DurableId && ready.Source == DaggerfallCastSource.Spell)
             _lastPlayerSpell = ready.SpellKey;
+        Func<long, bool>? passes = SpellPasses(bundle);
         switch (target)
         {
             case DaggerfallSpellTarget.CasterOnly: return Casting.Deliver(bundle, [casterId]);
-            case DaggerfallSpellTarget.ByTouch: return Casting.Deliver(bundle, touch.Targets);
-            case DaggerfallSpellTarget.AreaAroundCaster: return Casting.Deliver(bundle, AreaSpellTargets(casterId, origin.ToVector(), true));
+            case DaggerfallSpellTarget.ByTouch: return Casting.Deliver(bundle, [.. touch.Targets.Where(id => passes?.Invoke(id) != true)]);
+            case DaggerfallSpellTarget.AreaAroundCaster: return Casting.Deliver(bundle, AreaSpellTargets(casterId, origin.ToVector(), true, passes: passes));
             default: return release;
         }
     }
+
+    /// <summary>The bodies a spell the player released goes through; anyone else's meets everyone.</summary>
+    private Func<long, bool>? SpellPasses(DaggerfallLiveSpell bundle) =>
+        bundle.CasterId == State.Actors.Player.DurableId ? id => PassesThrough(id, bundle.HarmsCivilians) : null;
 
     /// <summary>Actual ranged flight callers submit their physical swept segment; Engine chooses the first collision.</summary>
     internal DaggerfallCastResult DeliverSpellImpact(DaggerfallLiveSpell bundle, Vector3 from, Vector3 to)
@@ -207,11 +213,12 @@ internal sealed partial class DaggerfallSession
             return bundle.ActionSource is not null ? Casting.Deliver(bundle, []) : new(DaggerfallCastOutcome.InvalidTarget, bundle);
         Vector3 delta = to - from;
         if (!ValidDirection(delta)) return bundle.ActionSource is not null ? Casting.Deliver(bundle, []) : new(DaggerfallCastOutcome.InvalidTarget, bundle);
-        SegmentContact contact = _contact.Segment(bundle.CasterId, from, to, _sites.CharacterEnvironment(State.PlayerControl.Motion));
+        Func<long, bool>? passes = SpellPasses(bundle);
+        SegmentContact contact = _contact.Segment(bundle.CasterId, from, to, _sites.CharacterEnvironment(State.PlayerControl.Motion), passes);
         if (contact.Kind == ContactKind.None) return new(DaggerfallCastOutcome.Released, bundle); // Still in flight.
         _appearance.PlaySpellImpact(bundle.Sequence, bundle.Spell.Element, contact.Point);
         if (bundle.Target == DaggerfallSpellTarget.AreaAtRange)
-            return Casting.Deliver(bundle, AreaSpellTargets(bundle.CasterId, contact.Point, false));
+            return Casting.Deliver(bundle, AreaSpellTargets(bundle.CasterId, contact.Point, false, passes: passes));
         return Casting.Deliver(bundle, contact.ActorId is long id ? [id] : []);
     }
 
@@ -235,11 +242,11 @@ internal sealed partial class DaggerfallSession
             ? new(site.Position.ToVector() + Vector3.UnitY * (ActorContactBody.Height * ActorEyeFraction), ActorHeading.Forward(site.HeadingYawRadians))
             : null;
     }
-    private long[] AreaSpellTargets(long? caster, Vector3 center, bool excludeCaster, double radius = 4d, bool exclusive = false)
+    private long[] AreaSpellTargets(long? caster, Vector3 center, bool excludeCaster, double radius = 4d, bool exclusive = false, Func<long, bool>? passes = null)
     {
         long observer = caster ?? State.Actors.Player.DurableId;
         return NearbyContacts(observer, center, CurrentPositions()
-                .Where(pair => IsSpellEligibleActor(pair.Key) && (!excludeCaster || caster is not long source || pair.Key != source)), radius, exclusive)
+                .Where(pair => IsSpellEligibleActor(pair.Key) && passes?.Invoke(pair.Key) != true && (!excludeCaster || caster is not long source || pair.Key != source)), radius, exclusive)
             .Keys.Order().ToArray();
     }
     /// <summary>Engine supplies current distances; callers decide strict range and target eligibility without a second spatial index.</summary>
