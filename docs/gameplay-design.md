@@ -151,7 +151,10 @@ started aimed at one, and then it harms any it meets. Spells leave the left hand
 follow a swing's recovery, and no attack starts until it has recovered. Fighting spends Stamina, which
 refills on its own, and a winded character loses the power attack, kick and guard
 until it does. Fatigue is the slow pool beneath it: only rest and magic recover
-it, and as it rises it squeezes Stamina, until the classic collapse. Worn armor
+it, and as it rises it squeezes Stamina, until the classic collapse. A room, a
+home or guild quarters recovers it at the classic rate, and a rough camp at a
+share of that (`rest.innFatigueMultiplier`), as do a collapse and cautious travel
+that camps rather than paying for inns. Worn armor
 enchantments shift what the player's armor absorbs, and a connect trains the
 weapon skill even when it is deflected. Blows present four outcomes: a whiff
 (`AttackWhiffedFact`, the swing alone), a deflection or whole absorption

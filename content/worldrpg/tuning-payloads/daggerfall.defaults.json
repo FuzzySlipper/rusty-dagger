@@ -468,6 +468,9 @@
       "punchSettleRate": 14
     }
   },
+  "rest": {
+    "innFatigueMultiplier": 4
+  },
   "hazards": {
     "burningFlats": [
       [

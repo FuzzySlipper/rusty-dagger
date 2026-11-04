@@ -87,7 +87,7 @@ internal sealed class DaggerfallRestRecoveryModule
                 if (request.Mode == DaggerfallRestMode.Loiter) continue;
                 var inputs = currentRecoveryInputs?.Invoke()
                     ?? (endurance, medical, rapidHealing, noRegeneration);
-                RecoverOneHour(player, inputs.Endurance, inputs.Medical, inputs.RapidHealing, inputs.NoRegeneration);
+                RecoverOneHour(player, inputs.Endurance, inputs.Medical, inputs.RapidHealing, inputs.NoRegeneration, eligibility.FatigueDivisor);
                 recordMedicalRest();
             }
 
@@ -110,14 +110,17 @@ internal sealed class DaggerfallRestRecoveryModule
             FatigueRecovered: Current(player, DaggerfallMechanicsIds.Fatigue) - fatigueBefore,
             SpellPointsRecovered: Current(player, DaggerfallMechanicsIds.Magicka) - spellBefore,
             Interruption: interruption,
-            Message: Message(request.Mode, interruption, elapsed, recoveryHours));
+            Message: Message(request.Mode, interruption, elapsed, recoveryHours, eligibility.FatigueDivisor));
     }
 
-    /// <summary>The donor restores cautious-travel vitals before its shared elapsed-time consequences.</summary>
-    internal static void RecoverForCautiousTravel(StatsComponent player, bool noRegeneration)
+    /// <summary>
+    /// The donor restores cautious-travel vitals before its shared elapsed-time consequences. Fatigue follows the
+    /// nights' lodging: inns restore all of it, and camping on the road the camp's share.
+    /// </summary>
+    internal static void RecoverForCautiousTravel(StatsComponent player, bool noRegeneration, int fatigueDivisor)
     {
         Recover(player, Maximum(player, DaggerfallMechanicsIds.HealthMaximum),
-            Maximum(player, DaggerfallMechanicsIds.FatigueMaximum),
+            Maximum(player, DaggerfallMechanicsIds.FatigueMaximum) / fatigueDivisor,
             noRegeneration ? 0 : Maximum(player, DaggerfallMechanicsIds.MagickaMaximum));
     }
 
@@ -125,7 +128,7 @@ internal sealed class DaggerfallRestRecoveryModule
     /// One hour of rest recovery outside a rest: the donor's exhaustion collapse applies the same hourly
     /// health, fatigue and spell point rates as a rest hour once it has raised the time by an hour.
     /// </summary>
-    internal static void RecoverOneHour(StatsComponent player, int endurance, int medical, bool rapidHealing, bool noRegeneration)
+    internal static void RecoverOneHour(StatsComponent player, int endurance, int medical, bool rapidHealing, bool noRegeneration, int fatigueDivisor)
     {
         ArgumentNullException.ThrowIfNull(player);
         (int healthRate, int fatigueRate, int spellRate) = DaggerfallRestPolicy.RecoveryRates(
@@ -133,7 +136,7 @@ internal sealed class DaggerfallRestRecoveryModule
             Maximum(player, DaggerfallMechanicsIds.HealthMaximum),
             Maximum(player, DaggerfallMechanicsIds.FatigueMaximum),
             Maximum(player, DaggerfallMechanicsIds.MagickaMaximum),
-            rapidHealing, noRegeneration);
+            rapidHealing, noRegeneration, fatigueDivisor);
         Recover(player, healthRate, fatigueRate, spellRate);
     }
 
@@ -156,7 +159,7 @@ internal sealed class DaggerfallRestRecoveryModule
     private static int Maximum(StatsComponent stats, DaggerfallStatId id) =>
         checked((int)stats.GetStat(StatId.Parse(id.Value)).ValueInt);
 
-    private static string Message(DaggerfallRestMode mode, DaggerfallRestInterruption interruption, long elapsed, int recoveryHours)
+    private static string Message(DaggerfallRestMode mode, DaggerfallRestInterruption interruption, long elapsed, int recoveryHours, int fatigueDivisor)
     {
         if (interruption == DaggerfallRestInterruption.Encounter) return "Your rest was interrupted by an encounter.";
         if (interruption == DaggerfallRestInterruption.Prevented) return "You cannot continue resting here.";
@@ -164,6 +167,7 @@ internal sealed class DaggerfallRestRecoveryModule
         if (interruption == DaggerfallRestInterruption.Stopped) return "Rest stopped.";
         if (mode == DaggerfallRestMode.Loiter) return $"Loitered for {elapsed / DaggerfallRestPolicy.SecondsPerRestHour} hour(s).";
         if (mode == DaggerfallRestMode.UntilHealed) return recoveryHours == 0 ? "You are already fully recovered." : "You are fully recovered.";
-        return $"Rested for {elapsed / DaggerfallRestPolicy.SecondsPerRestHour} hour(s).";
+        string rested = $"Rested for {elapsed / DaggerfallRestPolicy.SecondsPerRestHour} hour(s).";
+        return fatigueDivisor > 1 ? $"{rested} The rough ground does little for your fatigue." : rested;
     }
 }

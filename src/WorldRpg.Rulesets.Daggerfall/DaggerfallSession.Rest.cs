@@ -155,7 +155,7 @@ internal sealed partial class DaggerfallSession
             if (site.Exterior is { } exterior && cell == new DaggerfallExteriorCellId(exterior.MapPixelX, exterior.MapPixelY))
                 return new(false, Message: "Camping in a town is not permitted.");
         }
-        return new(true);
+        return new(true, FatigueDivisor: _tuning.Rest.InnFatigueMultiplier);
     }
 
     internal static bool FightersGuildRestAllowed(DaggerfallInteriorBuilding? building,
