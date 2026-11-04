@@ -18,7 +18,7 @@ round plate `half` metres either side of the centre of the icon's tilted ellipse
 `ball` with `spikes`. A `string` part is a cord of `radius` from tip to tip. Both take their colour from their piece of
 the icon. A lathe part with `bridge` always joins the run above it, across a gap in the icon. `reach` runs a flat part on to the named part it joins, and `root` thickens it by `gain` toward the part named `toward`.
 A lathe part's `radius` in metres replaces the icon's width, for an icon drawn fatter than the thing. A chain skins the model to joints that can swing it: see rigged(). A part's `slot` overrides its material (`any` parts default to `trim`). `spikes` sets cones on its widest ring's sphere: `count`, `length` and `base` in metres,
-spread evenly. A part's `light` and `shade` are passed to paint.py.
+spread evenly. A part's `light` and `shade` are passed to paint.py, and `coloursFrom` paints it in another part's colours.
 
 Writes OUT_DIR/reference.glb (the icon projected flat onto every part, the colour layout `palette_cells.py`
 classifies) and OUT_DIR/model.glb (the same mesh with unwrapped UVs and blank textures for it to paint). Both are
@@ -641,7 +641,7 @@ def pieces(want):
 report = {'weapon': name, 'metresPerPixel': METRES, 'origin': ORIGIN,
           'pieces': {c: pieces(i) for c, i in (('steel', 1), ('brass', 2), ('leather', 3))},   # rows and pixels, top first
           'parts': {p['name']: {'slot': slot_of(p), 'seeds': seeds(masks[p['name']]),
-                                **{key: p[key] for key in ('light', 'shade') if key in p}} for p in weapon['parts']},
+                                **{key: p[key] for key in ('light', 'shade', 'coloursFrom') if key in p}} for p in weapon['parts']},
           'triangles': {o.name: sum(len(p.vertices) - 2 for p in o.data.polygons) for o in objects}}
 (out / 'build.json').write_text(json.dumps(report, indent=1) + '\n')
 print('BUILT', json.dumps(report))

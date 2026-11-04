@@ -36,13 +36,15 @@
   {
    "item": 115, "name": "staff", "family": "blunt", "hands": 2, "length": 1.80,
    "records": [21], "icon": 21,
-   "firstPerson": {"cif": "WEAPON01", "use": "construction", "why": "iron end caps"},
+   "firstPerson": {"cif": "WEAPON01", "use": "construction", "why": "the iron end caps, which the icon shows too"},
    "subject": "A long plain wooden quarterstaff: one straight oiled brown wooden pole of even thickness with a small dark iron cap at each end.",
    "invent": "The pole is round in section and straight, with the same cap at both ends.",
    "grip": {"part": "haft", "span": [0.4, 0.6]},
    "secondGrip": [0, 0, 0.508],
    "parts": [
-    {"name": "haft", "class": "leather", "pick": "all", "shape": "lathe", "segments": 10, "smooth": 41, "radius": 0.017}
+    {"name": "capTop", "class": "any", "rows": [0, 25], "pick": "all", "slot": "metal", "shape": "lathe", "segments": 10, "smooth": 1, "radius": 0.021},
+    {"name": "haft", "class": "leather", "pick": "all", "shape": "lathe", "segments": 10, "smooth": 41, "radius": 0.017, "rows": [26, 846]},
+    {"name": "capBottom", "coloursFrom": "capTop", "class": "any", "rows": [847, 872], "pick": "all", "slot": "metal", "shape": "lathe", "segments": 10, "smooth": 1, "radius": 0.021}
    ]
   },
   {
@@ -192,7 +194,7 @@
   {
    "item": 125, "name": "flail", "family": "blunt", "hands": 2, "length": 0.95, "axis": "haft",
    "records": [8], "icon": 8,
-   "firstPerson": {"cif": "WEAPON06", "use": "construction", "why": "chain links and socket"},
+   "firstPerson": {"cif": "WEAPON06", "use": "compared", "why": "the same ball and links; the classic's conical socket at the haft's top is left out, and the haft is shorter so the ball can hang in view (#10574)"},
    "subject": "A flail: a straight oiled wooden handle with a steel cap and ring at its end, a chain of oval iron links hanging from the ring, and a round iron ball studded all over with short conical spikes at the end of the chain.",
    "invent": "The handle is round in section. The chain links are oval rings, each turned at right angles to the next. The ball has the same spikes on every side.",
    "grip": {"part": "haft", "span": [0, 0.65]},
@@ -206,7 +208,7 @@
   {
    "item": 126, "name": "warhammer", "family": "blunt", "hands": 2, "length": 1.10, "axis": "haft",
    "records": [25], "icon": 25,
-   "firstPerson": {"cif": "WEAPON07", "use": "construction", "why": "head block and shaft rings"},
+   "firstPerson": {"cif": "WEAPON07", "use": "compared", "why": "the head comes from the icon; the classic's steel sleeve and ring under the head are left out, as the war axe keeps its plain socket (#10574)"},
    "subject": "A two-handed warhammer: a long straight oiled wooden haft with a leather-bound grip, and a heavy steel head set across its top: a flat square hammer face on one side and a thick pointed beak on the other.",
    "invent": "The head is a solid block of steel, square in section, wider than it is tall, with the haft passing through a socket in its middle. The haft is round in section.",
    "grip": {"part": "haft", "span": [0, 0.3]},
