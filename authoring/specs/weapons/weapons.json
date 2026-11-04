@@ -257,6 +257,7 @@
    "invent": "The stave is flattened in section and curves only in one plane. The string runs straight from tip to tip, and the bow is unstrung of any arrow; the arrow is its own model.",
    "grip": {"part": "stave", "span": [0.44, 0.56]},
    "draw": {"length": 0.42, "rest": 0.016},
+   "turn": true,
    "parts": [
     {"name": "stave", "class": "any", "pick": "all", "open": 3, "shape": "flat", "profile": "round", "half": 0.009, "ramp": 0.006, "faces": 2400},
     {"name": "string", "class": "brass", "shape": "string", "radius": 0.0015}
@@ -270,6 +271,7 @@
    "invent": "The stave is D-shaped in section and curves only in one plane. The string runs straight from tip to tip, and the bow is unstrung of any arrow; the arrow is its own model.",
    "grip": {"part": "stave", "span": [0.44, 0.56]},
    "draw": {"length": 0.58, "rest": 0.016},
+   "turn": true,
    "parts": [
     {"name": "stave", "class": "any", "pick": "all", "open": 3, "shape": "flat", "profile": "round", "half": 0.008, "ramp": 0.006, "faces": 2400},
     {"name": "string", "class": "brass", "shape": "string", "radius": 0.0015, "shade": [0.75, 1]}

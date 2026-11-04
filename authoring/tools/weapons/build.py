@@ -742,7 +742,8 @@ def rigged():
 
 
 def bent(points, sign, angle):
-    """Where a limb's tip goes when its joints turn through `angle` between them: `points` run from root to tip, in (y, z)."""
+    """Where a limb's tip goes when its joints turn through `angle` between them, `sign` the way they turn: `points` run
+    from root to tip, in (y, z)."""
     at, turned_by = np.array(points[0]), 0.0
     for share, a, b in zip(BEND, points, points[1:]):
         turned_by += sign * share * angle
@@ -753,7 +754,7 @@ def bent(points, sign, angle):
 
 
 def limb_angle(points, sign, nock, drawn):
-    """How far a limb bends for the string's length to hold with the nock `drawn` metres back of `nock`, in (y, z)."""
+    """How far a limb bends for the string's length to hold with the nock moved `drawn` metres along z from `nock`, in (y, z)."""
     pulled = np.array((nock[0], nock[1] + drawn))
     length = np.hypot(*(np.array(points[-1]) - nock))
     low, high = 0.0, 2.0
@@ -765,8 +766,8 @@ def limb_angle(points, sign, nock, drawn):
 
 def strung():
     """Rigs a bow to draw: skins it to `handle` over the grip, joints down each limb (`upper1` .. and `lower1` ..), and `nock` where the string holds the
-    arrow. Each joint is a bone pointing along the limb, and `nock` points through the arrow's rest on the -X side of
-    the grip, so an arrow on it stays clear of the bow. The clips are `rest`, `draw` (a second, the nock moving steadily
+    arrow. Each joint is a bone pointing along the limb, and `nock` points through the arrow's rest on the archer's left
+    of the grip, so an arrow on it stays clear of the bow. The clips are `rest`, `draw` (a second, the nock moving steadily
     back to the spec's `draw.length`, each limb bending as far as keeps the string its length) and `loose`."""
     draw = weapon.get('draw')
     if not draw:
@@ -780,6 +781,7 @@ def strung():
     ends = sorted(v.co.y for v in cord.data.vertices)
     tips = {+1: ends[-1], -1: ends[0]}
     brace = float(np.mean([v.co.z for v in cord.data.vertices]))
+    back = math.copysign(1, brace)   # the way the string pulls from the grip, toward the archer
     nock_y = (tips[1] + tips[-1]) / 2
     limbs = {}
     for sign, side in ((1, 'upper'), (-1, 'lower')):
@@ -801,7 +803,7 @@ def strung():
             bone.head, bone.tail, bone.parent = (0, *a), (0, *b), parent
             parent = bone
     nock = bones.new('nock')
-    nock.head, nock.tail, nock.parent = (0, nock_y, brace), (-draw['rest'], nock_y, 0), handle
+    nock.head, nock.tail, nock.parent = (0, nock_y, brace), (-back * draw['rest'], nock_y, 0), handle
     bpy.ops.object.mode_set(mode='OBJECT')
 
     def joints_of(y):
@@ -837,18 +839,18 @@ def strung():
     def pose(drawn, frame):
         """Keys the joints at the nock `drawn` metres back."""
         for side, (sign, points) in limbs.items():
-            angle = limb_angle(points, sign, (nock_y, brace), drawn)
+            angle = limb_angle(points, sign * back, (nock_y, brace), back * drawn)
             for n, share in enumerate(BEND, 1):
                 bone = poses[f'{side}{n}']
                 rest = bone.bone.matrix_local.to_quaternion()
-                bone.rotation_quaternion = rest.inverted() @ Matrix.Rotation(sign * share * angle, 4, 'X').to_quaternion() @ rest
+                bone.rotation_quaternion = rest.inverted() @ Matrix.Rotation(sign * back * share * angle, 4, 'X').to_quaternion() @ rest
                 bone.keyframe_insert('rotation_quaternion', frame=frame)
         bone = poses['nock']
         rest = bone.bone.matrix_local.to_quaternion()
-        aim = math.atan2(draw['rest'], brace + drawn) - math.atan2(draw['rest'], brace)
+        aim = math.atan2(draw['rest'], abs(brace) + drawn) - math.atan2(draw['rest'], abs(brace))
         bone.rotation_quaternion = rest.inverted() @ Matrix.Rotation(aim, 4, 'Y').to_quaternion() @ rest
         bone.keyframe_insert('rotation_quaternion', frame=frame)
-        bone.location = rest.inverted() @ Vector((0, 0, drawn))
+        bone.location = rest.inverted() @ Vector((0, 0, back * drawn))
         bone.keyframe_insert('location', frame=frame)
 
     steps = 8
