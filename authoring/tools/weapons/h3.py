@@ -1,25 +1,49 @@
 #!/usr/bin/env python3
 """Builds the H3 turnaround request for one weapon in authoring/specs/weapons/weapons.json.
 
+  python3 authoring/tools/weapons/h3.py join flail [--seed 41]
   python3 authoring/tools/weapons/h3.py prepare dagger r01 [--size 512]
 
-writes authoring/gen-raw/weapons/<name>/h3-<rev>/: icon.png (the refreshed paper-doll layer stood upright,
-point up, with the gap the hand left in the grip filled) and spec.json for asset-pipeline's
+`join` has Qwen rejoin an icon the paper doll draws in pieces. `prepare` writes
+authoring/gen-raw/weapons/<name>/h3-<rev>/: icon.png (the joined icon, or else the refreshed paper-doll layer with the
+gap the hand left in a straight grip filled, stood upright, point up; a spec `flip` turns a joined icon over) and spec.json for asset-pipeline's
 legacy/experiments/h3-turnaround/run_turnaround.py. A changed request needs a new rev, so an older
 attempt is never mistaken for the new one.
 """
 import argparse
 import json
+import os
+import subprocess
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[3]
 SPEC = ROOT / 'authoring/specs/weapons/weapons.json'
 WORN = ROOT / 'authoring/gen-raw/worn'
 OUT = ROOT / 'authoring/gen-raw/weapons'
+PIPELINE = Path(os.environ.get('ASSET_PIPELINE', ROOT.parent / 'asset-pipeline'))
+COMFY = os.environ.get('COMFY_URL', 'http://192.168.1.20:8188')
+GREEN = (0, 177, 64)
 SOLID = 250
+
+
+def stand(image, flip, haft=False):
+    """Turns a whole weapon so its long axis is vertical, a half turn further when the spec says its head came out below.
+    With `haft` the axis is the wooden haft's alone, and the heavier end goes up: a big head would otherwise tilt it."""
+    pixels = np.asarray(image).astype(int)
+    chosen = pixels[..., 3] > 20
+    if haft:
+        chosen &= (pixels[..., 0] > pixels[..., 2] + 30) & (pixels[..., 0] > pixels[..., 1] + 15)
+    ys, xs = np.nonzero(chosen)
+    _, vectors = np.linalg.eigh(np.cov(np.vstack([xs, ys])))
+    axis = vectors[:, 1]
+    turned = image.rotate(float(np.degrees(np.arctan2(axis[1], axis[0]))) + 90 + (180 if flip else 0), Image.BICUBIC, expand=True)
+    turned = turned.crop(turned.getbbox())
+    alpha = np.asarray(turned)[..., 3] > 20
+    half = alpha.shape[0] // 2
+    return turned.rotate(180) if haft and alpha[:half].sum() < alpha[half:].sum() else turned
 
 
 def grip_gap(image):
@@ -58,6 +82,35 @@ def fill_grip(image):
     return Image.fromarray(pixels), [int(top), int(bottom)]
 
 
+JOIN = ('Picture 1 is a painted fantasy RPG inventory illustration of a weapon on a flat green background, drawn in separate '
+        'pieces with gaps where a hand holds it. The weapon: {subject} Redraw it as one complete, unbroken weapon: paint the '
+        'missing parts of the grip, haft, stave or string continuously across every gap, so nothing is left floating. Keep its '
+        'angle, position, size, colours, fittings and painting style exactly. Add nothing else. Flat green background.')
+
+
+def join(name, seed):
+    """Has Qwen rejoin an icon the paper doll draws in pieces, in place, and keys it: joined.png beside the weapon's runs.
+    A row-by-row fill can only serve a straight grip, not a haft, a chain or a bow."""
+    spec = json.loads(SPEC.read_text())
+    weapon = next(w for w in spec['weapons'] if w['name'] == name)
+    out = OUT / name
+    out.mkdir(parents=True, exist_ok=True)
+    icon = Image.open(WORN / f'texture-{weapon.get("art", 234)}-record-{weapon["icon"]:03d}-frame-000.png').convert('RGBA')
+    flat = Image.new('RGB', icon.size, GREEN)
+    flat.paste(icon, (0, 0), icon)
+    flat.save(out / 'join-source.png')
+    subprocess.run(['python3', 'tools/texture-edit/qwen_edit.py', '--image', str(out / 'join-source.png'), '--prompt',
+                    JOIN.format(subject=weapon['subject']), '--seed', str(seed), '--out', str(out / 'join-edit.png')],
+                   cwd=PIPELINE, check=True, stdout=subprocess.DEVNULL, env={**os.environ, 'COMFY_URL': COMFY})
+    edit = Image.open(out / 'join-edit.png').convert('RGB').resize(icon.size, Image.LANCZOS)
+    rgb = np.asarray(edit).astype(int)
+    keyed = ~((rgb[..., 1] > rgb[..., 0] + 40) & (rgb[..., 1] > rgb[..., 2] + 30))
+    alpha = Image.fromarray((keyed * 255).astype(np.uint8)).filter(ImageFilter.MinFilter(3)).filter(ImageFilter.GaussianBlur(0.8))
+    edit.putalpha(alpha)
+    edit.save(out / 'joined.png')
+    print(out / 'joined.png')
+
+
 def prepare(name, rev, size):
     spec = json.loads(SPEC.read_text())
     weapon = next(w for w in spec['weapons'] if w['name'] == name)
@@ -67,8 +120,12 @@ def prepare(name, rev, size):
     if (out / 'spec.json').exists():
         raise SystemExit(f'{out} already exists: use a new rev')
     out.mkdir(parents=True)
-    icon = Image.open(WORN / f'texture-{weapon.get("art", 234)}-record-{weapon["icon"]:03d}-frame-000.png').convert('RGBA')
-    icon, filled = fill_grip(upright(icon))
+    joined = OUT / name / 'joined.png'
+    if joined.exists():
+        icon, filled = stand(Image.open(joined).convert('RGBA'), weapon.get('flip', False), weapon.get('axis') == 'haft'), 'by join'
+    else:
+        icon = Image.open(WORN / f'texture-{weapon.get("art", 234)}-record-{weapon["icon"]:03d}-frame-000.png').convert('RGBA')
+        icon, filled = fill_grip(upright(icon))
     icon.save(out / 'icon.png')
     role = ('is a painted inventory illustration of this weapon, drawn flat with its broad face toward the viewer. '
             'Use it as the design authority for its outline, proportions, colours and fittings. The middle of the grip, '
@@ -90,8 +147,14 @@ def main():
     prep.add_argument('name')
     prep.add_argument('rev')
     prep.add_argument('--size', type=int, default=512)
+    joining = sub.add_parser('join')
+    joining.add_argument('name')
+    joining.add_argument('--seed', type=int, default=41)
     args = parser.parse_args()
-    prepare(args.name, args.rev, args.size)
+    if args.command == 'join':
+        join(args.name, args.seed)
+    else:
+        prepare(args.name, args.rev, args.size)
 
 
 if __name__ == '__main__':
