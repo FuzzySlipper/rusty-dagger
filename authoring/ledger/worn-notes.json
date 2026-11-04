@@ -4702,5 +4702,13 @@
  "texture-433-record-026-frame-000": {
   "status": "accepted",
   "note": "Converted on 2026-11-01 (worn-artifacts), trimmed to the classic silhouette (heads.py --worn); the female record's source is the male one's pixel for pixel, so it takes the male final; Patch accepted it on 2026-11-01."
+ },
+ "texture-mace-record-014-frame-000": {
+  "status": "accepted",
+  "note": "The flanged mace (#10581): a Qwen edit of the accepted club layer 234/14 with the classic WEAPON05 head as reference, the grip gap cut back from the club's outline; Patch accepted it on 2026-11-03."
+ },
+ "texture-mace-record-015-frame-000": {
+  "status": "accepted",
+  "note": "The flanged mace (#10581): a Qwen edit of the accepted club layer 234/15 with the classic WEAPON05 head as reference, the grip gap cut back from the club's outline; Patch accepted it on 2026-11-03."
  }
 }
