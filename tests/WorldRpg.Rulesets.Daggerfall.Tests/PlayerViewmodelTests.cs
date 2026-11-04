@@ -273,6 +273,23 @@ public sealed class PlayerViewmodelTests
     }
 
     [Fact]
+    public void A_cast_cutting_into_a_swings_recovery_rests_the_weapon_while_the_hand_plays()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        content.Add("weapon/dagger.png", Hash);
+        AppearanceFake appearance = new(releases);
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
+        presentation.React(new PlayerAttackMotionFact("fastA", new(.2d, .1d, .1d), 1, 1));
+        Assert.True(Viewmodel(presentation).Strike);
+
+        presentation.React(new PlayerCastMotionFact(0, new(.2d, .02d, .2d), 1, 2));
+
+        Assert.False(Viewmodel(presentation).Strike);
+    }
+
+    [Fact]
     public void A_cast_with_no_hand_in_the_data_draws_nothing_and_breaks_nothing()
     {
         List<string> releases = [];

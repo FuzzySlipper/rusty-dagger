@@ -26,10 +26,42 @@ public sealed class KnownReadySpellSessionTests
         f.Submit(new{action="spell-ready",key="spell.023"});
         double before=Magicka(s).Current;
         f.Cast();
-        Assert.Null(s.ReadSpells().Ready);Assert.Equal("Spell cast.",s.ReadSpells().Result);
+        Assert.Equal("spell.023",s.ReadSpells().Ready);Assert.Equal("Spell cast.",s.ReadSpells().Result);
         Assert.Equal(before-row.Cost,Magicka(s).Current);
         Assert.Equal("regenerate",Assert.Single(s.State.Effects.Active).Definition.Key);
         Assert.Equal(2,s.Casting.NextSequence);
+    }
+
+    [Fact]
+    public void The_spell_set_active_stays_ready_cast_after_cast_with_no_spellbook_and_each_cast_is_paid_for()
+    {
+        using Fixture f=new();var s=f.Session;Fund(s);
+        s.State.Character.LearnSpell("spell.023");f.Submit(new{action="spell-ready",key="spell.023"});
+        int cost=s.Casting.ReadyFor(1)!.Cost;
+        double before=Magicka(s).Current;
+        Assert.True(cost>0);
+
+        f.Cast();
+        Assert.Equal(before-cost,Magicka(s).Current);
+        Assert.Equal("spell.023",s.ReadSpells().Ready);
+        f.Cast();
+
+        Assert.Equal(before-cost*2,Magicka(s).Current);
+        Assert.Equal("spell.023",s.ReadSpells().Ready);
+        Assert.Equal("Spell cast.",s.ReadSpells().Result);
+    }
+
+    [Fact]
+    public void A_spell_an_item_readied_is_good_for_one_cast()
+    {
+        using Fixture f=new();var s=f.Session;Fund(s);
+        var item=s.State.Inventory.Read().UniqueItems.First();
+        ulong id=s.State.Inventory.GetDurableItemId(item.Entity).Value;
+        s.Casting.Ready(1,"spell.023",id);
+
+        f.Cast();
+
+        Assert.Null(s.Casting.ReadyFor(1));
     }
 
     [Fact]
@@ -113,7 +145,7 @@ public sealed class KnownReadySpellSessionTests
         f.Submit(new{action="spell-cast"});Assert.Equal("spell.023",s.Casting.ReadyFor(1)!.SpellKey);
         Assert.Empty(s.State.Effects.Active);
         f.Submit(new{action="menu",open=false});f.Cast();
-        Assert.Null(s.Casting.ReadyFor(1));Assert.Single(s.State.Effects.Active);
+        Assert.NotNull(s.Casting.ReadyFor(1));Assert.Single(s.State.Effects.Active);
         Assert.Equal("Spell cast.",s.ReadSpells().Result);
         f.Submit(new{action="spell-unready"});Assert.Null(s.Casting.ReadyFor(1));
         var item=s.State.Inventory.Read().UniqueItems.First();

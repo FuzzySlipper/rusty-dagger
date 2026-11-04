@@ -106,6 +106,9 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     /// <summary>What the arms are sampling: the clip, its time and phase, and any clip fading out under it.</summary>
     internal ArmClipReading Clip => arms.Clip;
 
+    /// <summary>The action whose clip the arms play now; null while they rest.</summary>
+    internal string? Playing => strike?.Action;
+
     /// <summary>Whether the family has a clip for a classic strike action.</summary>
     internal bool Moves(string action) => action == DaggerfallAttackIds.PowerHold ? family.PowerHold is not null : family.Strikes.ContainsKey(action);
 

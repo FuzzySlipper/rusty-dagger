@@ -389,13 +389,13 @@ public sealed partial class DaggerfallEquipmentWearTests
 
         /// <summary>
         /// Scripts one connecting blow's draws in order: the body, the deflection a full channel draws (the top
-        /// of the percentile turns nothing aside), the damage roll and its critical draw, then what its
+        /// of the percentile turns nothing aside), the damage roll, then what its
         /// application draws. A blow with no damage scripted is one that stops at its negation.
         /// </summary>
         internal void Script(int body, int deflect = 100, int? damage = null, int? wornWeaponRoll = null, int? wornArmourRoll = null, int? razorSave = null)
         {
             List<int> draws = [body, deflect];
-            if (damage is int rolled) draws.AddRange([rolled, 100]);
+            if (damage is int rolled) draws.Add(rolled);
             if (razorSave is int save) draws.Add(save);
             if (wornWeaponRoll is int weapon) draws.Add(weapon);
             if (wornArmourRoll is int armour) draws.Add(armour);
