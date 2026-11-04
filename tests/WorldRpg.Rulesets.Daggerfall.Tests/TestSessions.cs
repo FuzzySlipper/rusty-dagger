@@ -418,11 +418,12 @@ internal static class TestSessions
                 yield return (path, TestContentFiles.ReadCopy(Path.Combine(root, "content", path)));
             }
         }
-        // A site appearance admits the refreshed world effects and their particle glow, and the items dropped piles
-        // stand as, with its own textures.
+        // A site appearance admits the refreshed world effects and their particle glow, the items dropped piles stand
+        // as, and the refreshed surfaces its walls, floors and ceilings draw, with its own textures.
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(TestContentFiles.Read(Path.Combine(root, "content", "worldrpg/payloads/daggerfall.art-replacements.json")), "daggerfall.art-replacements");
         IEnumerable<string> world = art.All.SelectMany(replacement => new[] { replacement.World?.File.Path, replacement.DyeMask?.World?.File.Path }).OfType<string>();
-        foreach (string path in art.Effects.Values.Select(effect => effect.Path).Append(art.EffectGlow!.Path).Concat(art.Meshes.Values.Select(mesh => mesh.File.Path)).Concat(world).Distinct())
+        foreach (string path in art.Effects.Values.Select(effect => effect.Path).Append(art.EffectGlow!.Path).Concat(art.Meshes.Values.Select(mesh => mesh.File.Path)).Concat(world)
+                     .Concat(art.Surfaces.Values.Select(surface => surface.File.Path)).Distinct())
             yield return (path, TestContentFiles.ReadCopy(Path.Combine(root, "content", path)));
     }
 

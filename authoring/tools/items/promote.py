@@ -47,6 +47,10 @@ pile resting on the floor, stands in for TEXTURE.380 record 1 (the corpse every 
 women alike, so it is no one in particular) and record 4 (the bone pile placed in dungeons). Each entry states the
 mesh's footprint, its longest side in metres, so the game draws it at the width of the classic sprite it replaces.
 
+The `surfaces` area promotes the walls, floors and ceilings (`surfaces`): each accepted final `texture-AAA-R`, from
+its family's folder under gen-raw/surfaces (tools/surfaces/batch.py), stands in for classic TEXTURE.AAA record R as an
+8-bit RGBA PNG at its own size, and the game draws it on the location materials and terrain that draw that record.
+
 Icons are written at their area's ICON pixels on the longer side and carry no doll rect.
 
 A worn image and an item icon is also what a dropped item stands as on the ground, and the renderer reads PNG, so
@@ -57,7 +61,7 @@ opaque box in the import's published image), from which the game sizes it on the
 Only finals whose ledger/AREA-notes.json status is `accepted` are promoted. Rerunning an area replaces that
 area's entries and files and keeps every other area's.
 
-    promote.py --area paper-doll --area worn --area items --area spells --area effects
+    promote.py --area paper-doll --area worn --area items --area spells --area effects --area surfaces
 """
 import argparse, hashlib, io, json, re
 from pathlib import Path
@@ -73,7 +77,8 @@ CONTENT = REPOSITORY / "content"
 MEDIA = "worldrpg/media/refreshed"
 PAYLOAD = CONTENT / "worldrpg/payloads/daggerfall.art-replacements.json"
 QUALITY = 90
-AREAS = ("paper-doll", "worn", "items", "spells", "effects")
+AREAS = ("paper-doll", "worn", "items", "spells", "effects", "surfaces")
+SURFACE = re.compile(r"texture-(\d{3})-(\d+)")
 ICON = {"items": 256, "spells": 128}   # pixels on an icon's longer side: an item slot, a spell glyph of about 3rem
 CLASSIC_MANIFEST = REPOSITORY / "local/import/staging/worldrpg/imports/shared/media/classic/manifest.json"
 IMPORTED = REPOSITORY / "local/import/staging/worldrpg/payloads/daggerfall.imported.json"
@@ -377,6 +382,21 @@ def classic_size(media):
     return {"width": right - left, "height": bottom - top}
 
 
+def surfaces():
+    """Each accepted surface final's entry, by the classic texture record it replaces."""
+    finals = {path.stem: path for path in (AUTHORING / "gen-raw" / "surfaces").glob("*/texture-*.png") if path.parent.name != "raw"}
+    promoted = []
+    for key, note in ledger("surfaces").items():
+        if note.get("status") != "accepted":
+            continue
+        if key not in finals:
+            raise SystemExit(f"{key} is accepted in ledger/surfaces-notes.json but has no final under gen-raw/surfaces.")
+        archive, record = map(int, SURFACE.fullmatch(key).groups())
+        promoted.append({"replaces": {"archive": archive, "record": record},
+                         **world_png(Image.open(finals[key]), f"{MEDIA}/surfaces/{key}.png")})
+    return sorted(promoted, key=lambda entry: (entry["replaces"]["archive"], entry["replaces"]["record"]))
+
+
 def icon_entry(replaces, image, name, world=None):
     """An icon's entry; with its classic size, also its world PNG."""
     entry = {"replaces": replaces, "mediaId": f"refreshed.{replaces}", **webp(image, f"{MEDIA}/{name}.webp"),
@@ -403,6 +423,14 @@ def main():
             payload["artReplacements"].pop("corpseMesh", None)
             payload["artReplacements"]["meshes"] = world_meshes()
             print(f"effects: {len(effects)} effects, {sum(entry['byteLength'] for entry in effects) / 1e6:.1f} MB", flush=True)
+            continue
+        if area == "surfaces":
+            directory = CONTENT / MEDIA / "surfaces"
+            directory.mkdir(parents=True, exist_ok=True)
+            for old in directory.glob("*.png"):
+                old.unlink()
+            promoted = payload["artReplacements"]["surfaces"] = surfaces()
+            print(f"surfaces: {len(promoted)} finals, {sum(entry['byteLength'] for entry in promoted) / 1e6:.1f} MB", flush=True)
             continue
         notes = ledger(area)
         accepted = sorted(key for key, note in notes.items() if note.get("status") == "accepted")
