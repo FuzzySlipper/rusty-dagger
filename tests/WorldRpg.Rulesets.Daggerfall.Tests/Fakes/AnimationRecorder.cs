@@ -10,6 +10,9 @@ internal class AnimationRecorder : DispatchProxy
     internal List<string?> OpenedPaths { get; } = [];
     internal List<Appearance> Created { get; } = [];
     internal int ReleasedAppearances { get; private set; }
+    /// <summary>The joints and clips an opened model reports.</summary>
+    internal AnimationJointInfo[] Joints { get; set; } = [];
+    internal AnimationClipInfo[] Clips { get; set; } = [];
     internal static AnimationRecorder Create()
     {
         var service = Create<IAnimationService, AnimationRecorder>();
@@ -20,6 +23,8 @@ internal class AnimationRecorder : DispatchProxy
     {
         nameof(IAnimationService.OpenAnimatedMeshFromContent) => Open((AnimationContentRequest)args![0]!),
         nameof(IAnimationService.CreateAnimatedMeshAppearance) => NewAppearance(),
+        nameof(IAnimationService.ReadJoints) => new ReadOnlyMemory<AnimationJointInfo>(Joints),
+        nameof(IAnimationService.ReadClips) => new ReadOnlyMemory<AnimationClipInfo>(Clips),
         _ => throw new NotSupportedException(method?.Name),
     };
     private RenderResource Open(AnimationContentRequest request)

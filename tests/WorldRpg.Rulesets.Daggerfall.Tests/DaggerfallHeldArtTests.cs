@@ -5,6 +5,7 @@ using WorldRpg.Kit;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
@@ -200,6 +201,80 @@ public sealed class DaggerfallHeldArtTests
             tuning["viewmodel"]!["style"] = style;
             return System.Text.Encoding.UTF8.GetBytes(tuning.ToJsonString());
         }
+    }
+
+    [Fact]
+    public void Leaving_the_workbench_with_the_weapon_sheathed_draws_nothing_and_releases_the_preview()
+    {
+        List<string> releases = [];
+        (DaggerfallSiteAppearance presentation, AppearanceFake appearance, EngineContextFake engine) = Viewing(releases);
+        using (presentation)
+        {
+            presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: false);
+            presentation.ViewHeld(new("sns", 120, DaggerfallHeldDrawing.Steel));
+
+            presentation.EndHeldView();
+
+            Assert.Null(presentation.DrawnHeld);
+            presentation.Publish(EmptyActors());
+            Assert.DoesNotContain(appearance.Snapshots.Last(), fact => fact.Layer == RenderLayer.Viewmodel);
+            presentation.BeginAdmittedUpdate();
+            Assert.Equal(2, engine.Animation.ReleasedAppearances); // The arms and the look.
+        }
+    }
+
+    [Fact]
+    public void Leaving_the_workbench_with_a_weapon_drawn_gives_the_hands_back_what_they_wield()
+    {
+        List<string> releases = [];
+        (DaggerfallSiteAppearance presentation, _, _) = Viewing(releases);
+        using (presentation)
+        {
+            presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
+            DaggerfallHeldDrawing wielded = presentation.DrawnHeld!.Drawing;
+            Assert.Equal(new DaggerfallHeldDrawing("sns", 120, DaggerfallHeldDrawing.Steel), wielded);
+            presentation.ViewHeld(new("longsword", null, DaggerfallHeldDrawing.Steel));
+
+            presentation.EndHeldView();
+
+            Assert.Equal(wielded, presentation.DrawnHeld!.Drawing);
+        }
+    }
+
+    // A site drawing the authored art through arms whose model has the rig's joints and every clip, whatever the hands
+    // wield standing for a longsword (template 120).
+    private static (DaggerfallSiteAppearance Presentation, AppearanceFake Appearance, EngineContextFake Engine) Viewing(List<string> releases)
+    {
+        ContentFake content = MediaContent(releases);
+        content.Add("weapon/dagger.png", Hash);
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(Hash, releases).Service, appearance, PerceptionFake.Create().Service);
+        DaggerfallHeldArt art = Read(Document());
+        engine.Animation.Joints = Joints(art.Document.Rig);
+        engine.Animation.Clips = [.. art.Document.Families.Values.SelectMany(family => family.Strikes.Values.Select(clip => clip.Clip).Append(family.Idle.Clip)).Distinct()
+            .Select(clip => new AnimationClipInfo(clip, clip, 1, true, 0))];
+        DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
+        presentation.UseHeldArt(engine.Context, art, DaggerfallViewmodelStyle.Held, new Dictionary<string, DaggerfallDyeTint>(), _ => (120, DaggerfallHeldDrawing.Steel));
+        return (presentation, appearance, engine);
+    }
+
+    // Both arms' joints under one root: the upper arm, the forearm and its twist, the hand and its digits.
+    private static AnimationJointInfo[] Joints(ArmRig rig)
+    {
+        List<AnimationJointInfo> joints = [new("root", uint.MaxValue)];
+        uint Add(string name, uint parent)
+        {
+            joints.Add(new(name, parent));
+            return (uint)joints.Count - 1;
+        }
+        foreach (ArmJoints arm in new[] { rig.Main, rig.Off })
+        {
+            uint lower = Add(arm.Lower, Add(arm.Upper, 0));
+            foreach (var twist in arm.Twist) Add(twist.Joint, lower);
+            uint hand = Add(arm.Hand, lower);
+            foreach (string[] digit in arm.Fingers.Append(arm.Thumb)) digit.Aggregate(hand, (parent, joint) => Add(joint, parent));
+        }
+        return [.. joints];
     }
 
     // The authored held definition.

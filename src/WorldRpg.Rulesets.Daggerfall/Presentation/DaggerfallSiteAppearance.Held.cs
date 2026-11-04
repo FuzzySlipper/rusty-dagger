@@ -97,10 +97,16 @@ internal sealed partial class DaggerfallSiteAppearance
     }
 
     // The hands changed what they wield, or the workbench gave them back: the 3D weapon is drawn anew if the wielded
-    // item draws differently, as a sword swapped for another of the same classic visual does.
+    // item draws differently, as a sword swapped for another of the same classic visual does. With no weapon drawn
+    // nothing is: a sheathed weapon leaves the workbench's view nothing to hand back to.
     private void RefreshHeld()
     {
-        if (heldViewed || viewmodel is not { } weapon) return;
+        if (heldViewed) return;
+        if (viewmodel is not { } weapon)
+        {
+            RetireHeld();
+            return;
+        }
         if (held is { } shown && shown.Drawing == Drawing(weapon.Weapon))
         {
             shown.Rest(IdleFrame(weapon.Weapon));
