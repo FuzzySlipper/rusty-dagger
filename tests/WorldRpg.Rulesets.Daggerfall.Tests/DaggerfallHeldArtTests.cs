@@ -108,6 +108,7 @@ public sealed class DaggerfallHeldArtTests
 
         Assert.Equal(120, longsword.Item);
         Assert.Equal("first-person/weapons/longsword.glb", art.Document.Items[120].Model);
+        Assert.All(art.Document.Items.Values, item => Assert.NotNull(item.Model));
         Assert.Null(dagger.Item);
         Assert.Equal("first-person/weapons/dagger.glb", art.Document.Families[dagger.Family].Look.Model);
         Assert.NotEqual(art.Drawing("weapon.longblade", 120, "ebony"), longsword);
@@ -172,7 +173,7 @@ public sealed class DaggerfallHeldArtTests
 
         Assert.Contains("'first-person/arms.glb' is not in first-person.rpak", Assert.Throws<InvalidDataException>(() => Read(Document(), models: [])).Message, StringComparison.Ordinal);
         Assert.Contains("'first-person/dagger.glb' is not in first-person.rpak", Assert.Throws<InvalidDataException>(() => Read(document)).Message, StringComparison.Ordinal);
-        Assert.Equal("first-person/dagger.glb", Read(document, models: ["first-person/arms.glb", "first-person/arms-retro.glb", "first-person/dagger.glb", "first-person/weapons/longsword.glb", "first-person/weapons/club.glb", "first-person/weapons/mace.glb"]).Document.Families["dagger"].Look.Model);
+        Assert.Equal("first-person/dagger.glb", Read(document, models: ["first-person/arms.glb", "first-person/arms-retro.glb", "first-person/dagger.glb", .. Weapons()]).Document.Families["dagger"].Look.Model);
     }
 
     [Fact]
@@ -281,15 +282,16 @@ public sealed class DaggerfallHeldArtTests
     internal static JsonObject Document() =>
         JsonNode.Parse(File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content", DaggerfallHeldArt.DocumentPath)))!.AsObject();
 
+    private static string[] Weapons() => Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/first-person/weapons"), "*.glb")
+        .Select(path => $"first-person/weapons/{Path.GetFileName(path)}").ToArray();
+
     // The definition read over a container that carries the given models (by default what scripts/fp-arms/build.sh
     // packs: both arms and the committed weapon models).
     internal static DaggerfallHeldArt Read(JsonObject document, string[]? models = null)
     {
         BundleContentFake service = new();
         service.Container(DaggerfallHeldArt.ContainerName);
-        string[] weapons = Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/first-person/weapons"), "*.glb")
-            .Select(path => $"first-person/weapons/{Path.GetFileName(path)}").ToArray();
-        foreach (string model in models ?? ["first-person/arms.glb", "first-person/arms-retro.glb", .. weapons])
+        foreach (string model in models ?? ["first-person/arms.glb", "first-person/arms-retro.glb", .. Weapons()])
             service.Add(DaggerfallHeldArt.ContainerName, model, [7]);
         ProductContentBundle container = new ProductContent(Array.Empty<ProductContentFile>(), service).OpenContainer(DaggerfallHeldArt.ContainerName);
         return DaggerfallHeldArt.Read(container, System.Text.Encoding.UTF8.GetBytes(document.ToJsonString()));

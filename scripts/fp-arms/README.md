@@ -58,8 +58,8 @@ A classic visual covers weapons of both kinds: `weapon.longblade` draws every sw
 family follows the item's handedness in Daggerfall, and `items` moves the one-handed items off their visual's family:
 the tanto (114) to `dagger`, and the shortsword, wakazashi, broadsword, saber, longsword, katana and battle axe (116 to
 121, 127) and the club (288) to `sns`. The claymore, dai-katana and war axe stay on `longsword`, as do the flail and
-warhammer, which are two-handed too; the mace is one-handed, so its visual is on `sns`, and `items` lists it (124) for
-its model. The sword-and-shield idle holds the weapon upright beside the face, so a
+warhammer, which are two-handed too; the mace is one-handed, so its visual is on `sns`. Every melee weapon but the dagger,
+whose family's look is its own, is listed for its model. The sword-and-shield idle holds the weapon upright beside the face, so a
 mace's head sits above the frame at rest and comes into view as it swings.
 
 ## Building it
@@ -106,7 +106,7 @@ marks.
 
 - The other arm sets (female leather, male and female cloth, male chainmail) are not built: a set chosen by the
   player's gender and armour needs its own bake where its skeleton's rest differs.
-- Weapons without a committed model draw only the hand. Each gets its `model` under `items` as it is made.
+- The bows draw their sprites: there are no clips for them yet, so their models wait for those.
 
 ## Weapon models
 
