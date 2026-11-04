@@ -163,8 +163,8 @@ public sealed class DaggerfallHitConsequencesTests
         s.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 80;
         long target = Spawn(s, 0);
         s.State.Actors.Player.Actor.Get<CombatContributions>().Rules.Add(new RefusePhysical(refusal));
-        if (refusal != "whiff") s.SweptInto(target);
         Assert.True(s.State.Kit.AttackExecution.Start(new(1, target, 7, 13, .125, true), Facts(s)));
+        if (refusal != "whiff") s.SweptInto(target);
         s.State.Kit.AttackExecution.ApplyImpacts([new(1, target, 7, 13, false)], 7, Facts(s));
         Assert.Equal(128, s.State.ItemInstances.RequireUnique(id).PoisonVariant);
     }
@@ -332,8 +332,8 @@ public sealed class DaggerfallHitConsequencesTests
         void Strike(DaggerfallSession session, ulong step)
         {
             session.State.ItemInstances.ReplaceUnique(id, session.State.ItemInstances.RequireUnique(id) with { PoisonVariant = 128 });
-            session.SweptInto(target);
             Assert.True(session.State.Kit.AttackExecution.Start(new(1, target, 7, step, .125, true), Facts(session)));
+            session.SweptInto(target);
             session.State.Kit.AttackExecution.ApplyImpacts([new(1, target, 7, step, false)], 7, Facts(session));
             Assert.Null(session.State.ItemInstances.RequireUnique(id).PoisonVariant);
             Assert.Equal(level > 1, session.State.Poisons.IsAfflicted(session.State.Actors.Get(target).Actor));

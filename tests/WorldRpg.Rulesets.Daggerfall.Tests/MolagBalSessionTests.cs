@@ -115,8 +115,8 @@ public sealed class MolagBalSessionTests
         FinishEquipmentDelay(s);
         FactBuffer<IProductFact> facts = new();
         s.State.Kit.AttackExecution.ObserveTimeline(1, 1);
-        s.SweptInto(f.Enemy);
         Assert.True(s.State.Kit.AttackExecution.Start(new(1, f.Enemy, 1, 1, .125, true), facts));
+        s.SweptInto(f.Enemy);
         if (equipAfter) Assert.Equal(EquipmentMoveOutcome.Applied,
             s.EquipmentMoves.MoveToSlot(f.Weapon, new EquipmentSlotId("right-hand")).Outcome);
         else f.EquipPlain();
