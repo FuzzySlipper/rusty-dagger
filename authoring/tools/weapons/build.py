@@ -27,6 +27,8 @@ in the held-look frame: origin at the grip's centre, length along -Z with the ti
 guard's arms), the broad face toward ±X. Each part is its own object; materials are `metal`
 (the steel parts, tinted per metal by the game) and `trim` (everything else), one UV layout each. build.json
 gives each part's seed colours: its icon pixels' colours at eight steps of brightness, for palette_cells regions.
+A part's `open` drops anything thinner than twice that many pixels from it, and a flat part's `vanes` fans its two sides into
+three vanes round its length. A weapon's `draw` rigs a bow (see strung()).
 """
 import colorsys
 import json
@@ -55,6 +57,8 @@ INK = 0.22    # a pixel darker than this at a seam is the painted line between s
 SEAM = 12     # rows either side of a seam whose ink is lifted
 SEAMS, SPANS = [], []   # where turned parts meet, and each run's rows and columns
 RIG = []   # a chain's joints in order, each where it turns, and the point its last joint ends at
+BEND = (0.3, 0.3, 0.25, 0.15)   # each joint's share of a bow limb's bend, out to the stiff tip
+FPS = 24   # the rate a bow's clips are keyed at
 INSET = 0.7   # a turned part's colour comes from this share of its width: the side would otherwise take the ink outline
 
 
@@ -102,8 +106,20 @@ def components(mask):
     return sorted(found, key=lambda m: -m.sum())
 
 
+def opened(mask, reach):
+    """A mask without anything thinner than twice `reach` pixels, such as a line a turnaround drew beside the part."""
+    def spread(m, grow):
+        for _ in range(reach):
+            shifted = [np.roll(m, shift, axis) for shift in (1, -1) for axis in (0, 1)]
+            m = np.logical_or.reduce([m, *shifted]) if grow else np.logical_and.reduce([m, *shifted])
+        return m
+    return spread(spread(mask, False), True) & mask
+
+
 def part_mask(cls, part):
     chosen = pixels[..., 3] > 0.5 if part['class'] == 'any' else cls == {'steel': 1, 'brass': 2, 'leather': 3}[part['class']]
+    if 'open' in part:
+        chosen = opened(chosen, part['open'])
     if 'rows' in part:   # a class the icon paints as one piece that is two parts (wood running into a grip)
         top, bottom = part['rows']
         chosen = chosen & (np.arange(H)[:, None] >= top) & (np.arange(H)[:, None] <= bottom)
@@ -505,7 +521,22 @@ def string(bm, part):
     opaque = pixels[..., 3] > 0.5
     ys = np.nonzero(opaque.any(axis=1))[0]
     ends = [place(np.nonzero(opaque[y])[0].mean(), y, 0) for y in (ys.min(), ys.max())]
-    tube(bm, ends, part['radius'], 4, False)
+    # A bow's string has a ring where the arrow nocks, so that it draws into two straight lengths.
+    tube(bm, [ends[0], (ends[0] + ends[1]) / 2, ends[1]] if 'draw' in weapon else ends, part['radius'], 4, False)
+
+
+def fanned(bm):
+    """Turns a flat part's two sides into three vanes a third of a turn apart round its length: the right side stays,
+    and the left, the fletching's other colour, makes the other two. Each keeps the icon colours it was built on."""
+    icon_x, icon_y = bm.verts.layers.float.new('icon_x'), bm.verts.layers.float.new('icon_y')
+    for v in bm.verts:
+        v[icon_x], v[icon_y] = v.co.z / METRES + ORIGIN[0], ORIGIN[1] - v.co.y / METRES
+    left = [f for f in bm.faces if all(v.co.z < 0 for v in f.verts)]
+    verts = list({v for f in left for v in f.verts})
+    edges = list({e for f in left for e in f.edges})
+    copy = [g for g in bmesh.ops.duplicate(bm, geom=verts + edges + left)['geom'] if isinstance(g, bmesh.types.BMVert)]
+    for moved, angle in ((verts, math.pi / 3), (copy, -math.pi / 3)):
+        bmesh.ops.rotate(bm, verts=moved, cent=(0, 0, 0), matrix=Matrix.Rotation(angle, 3, 'Y'))
 
 
 def disc(bm, mask, part):
@@ -575,6 +606,8 @@ for part in weapon['parts']:
         bm = bmesh.new()
         if part['shape'] == 'flat':
             flat(bm, masks[part['name']], part)
+            if part.get('vanes'):
+                fanned(bm)
         elif part['shape'] == 'disc':
             disc(bm, masks[part['name']], part)
         elif part['shape'] == 'chain':
@@ -618,6 +651,27 @@ for part in weapon['parts']:
         bpy.ops.object.modifier_apply(modifier=mod.name)
     obj['slot'] = slot_of(part)
     objects.append(obj)
+
+def grip_half():
+    """Half the length of the grip, in metres."""
+    lo, hi = grip.get('span', [0, 1])
+    return (hi - lo) / 2 * weapon['length']
+
+
+def stood():
+    """Stands a bow with its string along its length and the middle of its grip at the origin."""
+    stave, cord = (next(o for o in objects if o.name == n) for n in ('stave', 'string'))
+    ends = sorted((v.co for v in cord.data.vertices), key=lambda co: co.y)
+    upright = (sum(ends[-4:], Vector()) - sum(ends[:4], Vector())).normalized().rotation_difference(Vector((0, 1, 0))).to_matrix().to_4x4()
+    stave.data.transform(upright)
+    held = [v.co.z for v in stave.data.vertices if abs(v.co.y) < grip_half()]
+    for obj, turn in ((stave, Matrix()), (cord, upright)):
+        obj.data.transform(Matrix.Translation((0, 0, -float(np.mean(held)))) @ turn)
+
+
+if 'draw' in weapon:
+    stood()
+
 
 def lifted():
     """The icon with the ink at each seam between turned parts replaced from just beyond the seam, and the rows a run
@@ -687,7 +741,133 @@ def rigged():
         armature.pose.bones['handle'].keyframe_insert('location', frame=frame)
 
 
+def bent(points, sign, angle):
+    """Where a limb's tip goes when its joints turn through `angle` between them: `points` run from root to tip, in (y, z)."""
+    at, turned_by = np.array(points[0]), 0.0
+    for share, a, b in zip(BEND, points, points[1:]):
+        turned_by += sign * share * angle
+        cos, sin = math.cos(turned_by), math.sin(turned_by)
+        dy, dz = b[0] - a[0], b[1] - a[1]
+        at = at + (dy * cos - dz * sin, dy * sin + dz * cos)
+    return at
+
+
+def limb_angle(points, sign, nock, drawn):
+    """How far a limb bends for the string's length to hold with the nock `drawn` metres back of `nock`, in (y, z)."""
+    pulled = np.array((nock[0], nock[1] + drawn))
+    length = np.hypot(*(np.array(points[-1]) - nock))
+    low, high = 0.0, 2.0
+    for _ in range(40):
+        angle = (low + high) / 2
+        low, high = (angle, high) if np.hypot(*(bent(points, sign, angle) - pulled)) > length else (low, angle)
+    return (low + high) / 2
+
+
+def strung():
+    """Rigs a bow to draw: skins it to `handle` over the grip, joints down each limb (`upper1` .. and `lower1` ..), and `nock` where the string holds the
+    arrow. Each joint is a bone pointing along the limb, and `nock` points through the arrow's rest on the -X side of
+    the grip, so an arrow on it stays clear of the bow. The clips are `rest`, `draw` (a second, the nock moving steadily
+    back to the spec's `draw.length`, each limb bending as far as keeps the string its length) and `loose`."""
+    draw = weapon.get('draw')
+    if not draw:
+        return
+    stave, cord = (next(o for o in objects if o.name == n) for n in ('stave', 'string'))
+    half = grip_half()
+
+    def centre(y, reach=0.01):
+        return float(np.mean([v.co.z for v in stave.data.vertices if abs(v.co.y - y) < reach]))
+
+    ends = sorted(v.co.y for v in cord.data.vertices)
+    tips = {+1: ends[-1], -1: ends[0]}
+    brace = float(np.mean([v.co.z for v in cord.data.vertices]))
+    nock_y = (tips[1] + tips[-1]) / 2
+    limbs = {}
+    for sign, side in ((1, 'upper'), (-1, 'lower')):
+        ys = np.linspace(sign * half, tips[sign], len(BEND) + 1)
+        limbs[side] = (sign, [(float(y), centre(float(y))) for y in ys[:-1]] + [(float(tips[sign]), brace)])
+    armature = bpy.data.objects.new('rig', bpy.data.armatures.new('rig'))
+    bpy.context.scene.collection.objects.link(armature)
+    bpy.ops.object.select_all(action='DESELECT')
+    armature.select_set(True)
+    bpy.context.view_layer.objects.active = armature
+    bpy.ops.object.mode_set(mode='EDIT')
+    bones = armature.data.edit_bones
+    handle = bones.new('handle')
+    handle.head, handle.tail = (0, -half, 0), (0, half, 0)
+    for side, (sign, points) in limbs.items():
+        parent = handle
+        for n, (a, b) in enumerate(zip(points, points[1:]), 1):
+            bone = bones.new(f'{side}{n}')
+            bone.head, bone.tail, bone.parent = (0, *a), (0, *b), parent
+            parent = bone
+    nock = bones.new('nock')
+    nock.head, nock.tail, nock.parent = (0, nock_y, brace), (-draw['rest'], nock_y, 0), handle
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+    def joints_of(y):
+        """The joints a point of the stave at `y` weighs on: each limb joint over its length, blending to its neighbours'."""
+        sign, side = (1, 'upper') if y > 0 else (-1, 'lower')
+        along = (abs(y) - half) / (abs(tips[sign]) - half) * len(BEND)
+        if along <= 0:
+            return {'handle': 1}
+        n = min(int(along), len(BEND) - 1)
+        name_of = lambda k: 'handle' if k < 0 else f'{side}{k + 1}'
+        off = along - n - 0.5
+        if off < 0:
+            return {name_of(n): 1 + off, name_of(n - 1): -off}
+        return {name_of(n): 1 - off, name_of(n + 1): off} if n + 1 < len(BEND) else {name_of(n): 1}
+
+    for vertex in stave.data.vertices:
+        for joint, weight in joints_of(vertex.co.y).items():
+            group = stave.vertex_groups.get(joint) or stave.vertex_groups.new(name=joint)
+            group.add([vertex.index], weight, 'REPLACE')
+    for vertex in cord.data.vertices:
+        tip = vertex.co.y - nock_y
+        joint = 'nock' if abs(tip) < 0.01 else f'upper{len(BEND)}' if tip > 0 else f'lower{len(BEND)}'
+        group = cord.vertex_groups.get(joint) or cord.vertex_groups.new(name=joint)
+        group.add([vertex.index], 1, 'REPLACE')
+    for obj in (stave, cord):
+        obj.modifiers.new('rig', 'ARMATURE').object = armature
+        obj.parent = armature
+
+    poses = armature.pose.bones
+    for bone in poses:
+        bone.rotation_mode = 'QUATERNION'
+
+    def pose(drawn, frame):
+        """Keys the joints at the nock `drawn` metres back."""
+        for side, (sign, points) in limbs.items():
+            angle = limb_angle(points, sign, (nock_y, brace), drawn)
+            for n, share in enumerate(BEND, 1):
+                bone = poses[f'{side}{n}']
+                rest = bone.bone.matrix_local.to_quaternion()
+                bone.rotation_quaternion = rest.inverted() @ Matrix.Rotation(sign * share * angle, 4, 'X').to_quaternion() @ rest
+                bone.keyframe_insert('rotation_quaternion', frame=frame)
+        bone = poses['nock']
+        rest = bone.bone.matrix_local.to_quaternion()
+        aim = math.atan2(draw['rest'], brace + drawn) - math.atan2(draw['rest'], brace)
+        bone.rotation_quaternion = rest.inverted() @ Matrix.Rotation(aim, 4, 'Y').to_quaternion() @ rest
+        bone.keyframe_insert('rotation_quaternion', frame=frame)
+        bone.location = rest.inverted() @ Vector((0, 0, drawn))
+        bone.keyframe_insert('location', frame=frame)
+
+    steps = 8
+    clips = {'rest': [(0, 1), (0, 2)],
+             'draw': [(draw['length'] * k / steps, 1 + k * FPS / steps) for k in range(steps + 1)],
+             'loose': [(draw['length'], 1), (0, 3)]}
+    armature.animation_data_create()
+    for clip, keys in clips.items():
+        action = armature.animation_data.action = bpy.data.actions.new(clip)
+        for drawn, frame in keys:
+            pose(drawn, frame)
+        armature.animation_data.action = None
+        track = armature.animation_data.nla_tracks.new()
+        track.name = clip
+        track.strips.new(clip, 1, action)
+
+
 rigged()
+strung()
 
 # The painted model: the same part objects, each slot's parts sharing one material and one unwrapped UV layout
 # (so palette_cells can name regions by part), with a blank texture per slot for it to fill.

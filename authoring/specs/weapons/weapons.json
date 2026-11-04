@@ -252,39 +252,41 @@
   {
    "item": 129, "name": "short-bow", "family": "bow", "hands": 2, "length": 1.10,
    "records": [16], "icon": 16,
-   "firstPerson": {"cif": "WEAPON09", "use": "construction", "why": "grip wrap and rings"},
+   "firstPerson": {"cif": "WEAPON09", "use": "compared", "why": "its grey grip and steel rings differ from the icon's leather wrap, and the icon wins"},
    "subject": "A short recurve bow: one continuous curved wooden stave, thicker at a leather-wrapped central grip and tapering to both tips, strung with one straight thin pale string.",
-   "invent": "The stave is flattened in section and curves only in one plane. The string runs straight from tip to tip, and the bow is unstrung of any arrow.",
+   "invent": "The stave is flattened in section and curves only in one plane. The string runs straight from tip to tip, and the bow is unstrung of any arrow; the arrow is its own model.",
    "grip": {"part": "stave", "span": [0.44, 0.56]},
+   "draw": {"length": 0.42, "rest": 0.016},
    "parts": [
-    {"name": "stave", "class": "any", "pick": "all", "shape": "flat", "profile": "round", "half": 0.009, "ramp": 0.006, "faces": 1200},
+    {"name": "stave", "class": "any", "pick": "all", "open": 3, "shape": "flat", "profile": "round", "half": 0.009, "ramp": 0.006, "faces": 2400},
     {"name": "string", "class": "brass", "shape": "string", "radius": 0.0015}
    ]
   },
   {
    "item": 130, "name": "long-bow", "family": "bow", "hands": 2, "length": 1.70,
    "records": [11], "icon": 11,
-   "firstPerson": {"cif": "WEAPON09", "use": "construction", "why": "grip wrap and rings"},
+   "firstPerson": {"cif": "WEAPON09", "use": "compared", "why": "its grey grip and steel rings differ from the icon's leather wrap, and the icon wins"},
    "subject": "A tall plain longbow: one continuous long curved wooden stave, thicker at a leather-wrapped central grip and tapering to both tips, strung with one straight thin pale string.",
-   "invent": "The stave is D-shaped in section and curves only in one plane. The string runs straight from tip to tip, and the bow is unstrung of any arrow.",
+   "invent": "The stave is D-shaped in section and curves only in one plane. The string runs straight from tip to tip, and the bow is unstrung of any arrow; the arrow is its own model.",
    "grip": {"part": "stave", "span": [0.44, 0.56]},
+   "draw": {"length": 0.58, "rest": 0.016},
    "parts": [
-    {"name": "stave", "class": "any", "pick": "all", "shape": "flat", "profile": "round", "half": 0.008, "ramp": 0.006, "faces": 1200},
-    {"name": "string", "class": "brass", "shape": "string", "radius": 0.0015}
+    {"name": "stave", "class": "any", "pick": "all", "open": 3, "shape": "flat", "profile": "round", "half": 0.008, "ramp": 0.006, "faces": 2400},
+    {"name": "string", "class": "brass", "shape": "string", "radius": 0.0015, "shade": [0.75, 1]}
    ]
   },
   {
    "item": 131, "name": "arrow", "family": "bow", "hands": 0, "length": 0.75,
    "records": [], "icon": null,
    "note": "No paper-doll layer: its design is the accepted refreshed ground icon, authoring/gen-raw/items/texture-207-record-016.",
-   "firstPerson": {"cif": "WEAPON09", "use": "construction", "why": "the nocked arrow; there is no paper-doll layer"},
+   "firstPerson": {"cif": "WEAPON09", "use": "compared", "why": "the nocked arrow's thin shaft and green fletching agree with the ground icon"},
    "subject": "One straight arrow: a barbed steel broadhead bound to a thin straight brown wooden shaft, with green and yellow feather fletching and a dark nock at the far end.",
    "invent": "The shaft is round in section. The broadhead is flat and thin at its edges. The feathers stand out from the shaft in three vanes spaced evenly round it.",
-   "grip": {"part": "shaft"},
+   "grip": {"part": "shaft", "span": [0, 0.01]},
    "parts": [
     {"name": "head", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.0035, "ramp": 0.008, "faces": 300, "root": {"toward": "shaft", "gain": 0.8}},
     {"name": "shaft", "class": "any", "rows": [130, 735], "cols": [46, 73], "pick": "all", "shape": "lathe", "segments": 8, "smooth": 41, "radius": 0.0065},
-    {"name": "fletching", "class": "any", "rows": [545, 738], "pick": "all", "slot": "trim", "shape": "flat", "profile": "ridge", "half": 0.0012, "ramp": 0.004, "faces": 500}
+    {"name": "fletching", "class": "any", "rows": [545, 738], "pick": "all", "slot": "trim", "shape": "flat", "vanes": true, "profile": "ridge", "half": 0.0012, "ramp": 0.004, "faces": 500}
    ]
   }
  ]
