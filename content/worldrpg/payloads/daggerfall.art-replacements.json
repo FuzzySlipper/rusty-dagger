@@ -45778,6 +45778,76 @@
     }
    },
    {
+    "replaces": "paper-doll.mace.14",
+    "mediaId": "refreshed.paper-doll.mace.14",
+    "path": "worldrpg/media/refreshed/worn/texture-mace-record-014-frame-000.webp",
+    "byteLength": 18636,
+    "sha256": "e4b596802d9e89399cf8d0a57dfe4d655c7f0ebe80336517a5c7601985b0ffbb",
+    "width": 783,
+    "height": 258,
+    "doll": {
+     "x": 3.1111,
+     "y": 87.0,
+     "width": 87.0,
+     "height": 28.6667
+    },
+    "world": {
+     "path": "worldrpg/media/refreshed/worn/texture-mace-record-014-frame-000.png",
+     "byteLength": 5886,
+     "sha256": "f25d7a2102af893ecaec0a7f3ad4a4d2b88782b92363decda7f6264c78c17cfd",
+     "width": 128,
+     "height": 42
+    },
+    "dyeMask": {
+     "mediaId": "refreshed.paper-doll.mace.14.dye",
+     "path": "worldrpg/media/refreshed/worn/texture-mace-record-014-frame-000-dye.webp",
+     "byteLength": 9112,
+     "sha256": "cde204c16b696f84746b07dcadea0ebc9b0722cb5d3ffb99406b8a373849c7aa",
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-mace-record-014-frame-000-dye.png",
+      "byteLength": 2262,
+      "sha256": "5d293752755b8f2764f975b54b40c9f324d3cfed5d11f7602a760fa6182e8d89",
+      "width": 128,
+      "height": 42
+     }
+    }
+   },
+   {
+    "replaces": "paper-doll.mace.15",
+    "mediaId": "refreshed.paper-doll.mace.15",
+    "path": "worldrpg/media/refreshed/worn/texture-mace-record-015-frame-000.webp",
+    "byteLength": 24732,
+    "sha256": "cf80a354c7284848173fc985134725504964ffd59e098bf4023a9445a8053346",
+    "width": 554,
+    "height": 756,
+    "doll": {
+     "x": 13.0,
+     "y": 79.4545,
+     "width": 50.3636,
+     "height": 68.7273
+    },
+    "world": {
+     "path": "worldrpg/media/refreshed/worn/texture-mace-record-015-frame-000.png",
+     "byteLength": 8154,
+     "sha256": "84aa56e717e27c1d7d725c654cffc8a51fe8be294f565fd106dc811afad525a6",
+     "width": 94,
+     "height": 128
+    },
+    "dyeMask": {
+     "mediaId": "refreshed.paper-doll.mace.15.dye",
+     "path": "worldrpg/media/refreshed/worn/texture-mace-record-015-frame-000-dye.webp",
+     "byteLength": 14606,
+     "sha256": "de652a34a71c38fb8deb69e8a9d9acabbe9c5bc299102fd5633646cc098c7c39",
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-mace-record-015-frame-000-dye.png",
+      "byteLength": 3173,
+      "sha256": "6082997364b44ed44d1675f076b9a59fbf26503f05084464ea70000f5604442b",
+      "width": 94,
+      "height": 128
+     }
+    }
+   },
+   {
     "replaces": "spell.element.0",
     "mediaId": "refreshed.spell.element.0",
     "path": "worldrpg/media/refreshed/spells/elements--fire--element-icon.webp",
