@@ -191,7 +191,6 @@ public sealed class EnemyCombatSessionTests
         (DaggerfallSession session, AppearanceFake appearance, _) = VisibleEnemySession(releases);
         using DaggerfallSession disposable = session;
         double healthBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
-        ProductInputEvent attack = Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "attack");
 
         // The enemy decides a hitting swing; its damage frame has not been reached.
         session.Update(new ProductUpdate(OuterUpdate(1), []));
@@ -200,17 +199,18 @@ public sealed class EnemyCombatSessionTests
         // The player swings while that strike is still in flight. The swing is admitted in this update
         // and starts the player's own cooldown; the enemy's strike has still not landed.
         Assert.True(session.State.Kit.AttackExecution.IsReady(DaggerfallActorIdentity.PlayerEntityId, 1, 2));
-        session.Update(new ProductUpdate(OuterUpdate(2), [attack]));
+        session.Update(new ProductUpdate(OuterUpdate(2), AttackTap));
+        session.Update(new ProductUpdate(OuterUpdate(3), []));
         Assert.NotNull(session.LastMeleeTargeting);
-        Assert.False(session.State.Kit.AttackExecution.IsReady(DaggerfallActorIdentity.PlayerEntityId, 1, 3));
+        Assert.False(session.State.Kit.AttackExecution.IsReady(DaggerfallActorIdentity.PlayerEntityId, 1, 4));
         Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
 
         // The enemy's strike lands at its own frame and wind-up, independently of the player's swing.
         session.Touches(DaggerfallActorIdentity.PlayerEntityId);
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
-        session.Update(new ProductUpdate(OuterUpdate(3), []));
+        session.Update(new ProductUpdate(OuterUpdate(4), []));
         appearance.AdvanceReceiptForAll = null;
-        RunWindUp(session, 4, 1);
+        RunWindUp(session, 5, 1);
         Assert.True(session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current < healthBefore);
     }
 

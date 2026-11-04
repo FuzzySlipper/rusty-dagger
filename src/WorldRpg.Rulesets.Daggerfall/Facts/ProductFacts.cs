@@ -48,17 +48,21 @@ internal sealed record DungeonMagickaDrainedFact(long TargetActorId, string Acti
 internal enum AttackRejection { MissingPlayerPosition, UnknownExplicitCombatant, TargetDefeated, Equipping, Cooldown, AttackInProgress, NoAttackPolicy, InsufficientWeaponMaterial, EmptyQuiver, Incapacitated }
 internal sealed record AttackRejectedFact(AttackRejection Reason, long? ActorId = null) : IProductFact;
 /// <summary>
-/// One player melee swing passed cooldown and stamina admission, independently of its target outcome.
-/// A swing delivers its impact when the strike animation reaches its hit frame, so
-/// <paramref name="FrameSeconds"/> carries that animation's tick time and <paramref name="TargetId"/> the
-/// target it was aimed at, if any. An admitted swing with neither resolves inside its own update.
+/// One player attack passed cooldown and stamina admission, independently of what it meets.
+/// <paramref name="TargetId"/> is the target it was aimed at, if any.
 /// </summary>
 /// <summary>The player's guard went up or came down; presentation raises or lowers the held weapon.</summary>
 internal sealed record PlayerGuardChangedFact(bool Raised, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
-internal sealed record PlayerAttackStartedFact(ulong OriginatingGeneration, ulong OriginatingSimulationStep,
-    long? TargetId = null, double FrameSeconds = 0d, int HitFrame = DaggerfallFormulaPolicy.MeleeWeaponHitFrame,
-    bool WaitsWithoutTarget = false) : IProductFact
+internal sealed record PlayerAttackStartedFact(ulong OriginatingGeneration, ulong OriginatingSimulationStep, long? TargetId = null) : IProductFact
 { internal DaggerfallStrikeFeedback Feedback { get; init; } = DaggerfallStrikeFeedback.Unarmed; }
+/// <summary>
+/// A player attack motion began, which presentation plays to the rules' clock. <paramref name="Attack"/> is one of
+/// <see cref="Modules.Combat.DaggerfallAttackIds"/>; a null <paramref name="Timing"/> is a hold with no set length.
+/// </summary>
+internal sealed record PlayerAttackMotionFact(string Attack, Modules.Combat.DaggerfallAttackTiming? Timing,
+    ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
+/// <summary>The player's last attack motion ended with nothing after it: the weapon returns to rest.</summary>
+internal sealed record PlayerAttackRestFact(ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
 /// <summary>
 /// An enemy's swing at <paramref name="TargetId"/> began a wind-up its damage cannot land before:
 /// <paramref name="WindUpSeconds"/> after the admitted step, however early the strike's frame comes.

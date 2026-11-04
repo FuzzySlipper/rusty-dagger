@@ -721,6 +721,21 @@ internal static class TestSessions
 
     internal static ProductInputEvent Input(InputEventKind kind, InputEdge edge = InputEdge.None, KeyboardControl keyboard = KeyboardControl.None, float x = 0F, float y = 0F, InputPhase phase = InputPhase.None, string intent = "") => new(kind, edge, InputDevice.None, InputChannel.None, InputAxis.None, keyboard, PointerButton.None, ControllerButton.None, ControllerAxis.None, InputClearReason.None, InputValueKind.None, phase, InputProvenance.None, default, default, default, x, y, ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty, Encoding.UTF8.GetBytes(intent), ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty);
 
+    /// <summary>The mapped attack button going down.</summary>
+    internal static ProductInputEvent AttackDown => Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack");
+
+    /// <summary>The mapped attack button coming up.</summary>
+    internal static ProductInputEvent AttackUp => Input(InputEventKind.MappedDigital, InputEdge.Released, phase: InputPhase.Released, intent: "attack");
+
+    /// <summary>A click of the attack button inside one update, which the attack clock reads as a tap.</summary>
+    internal static ProductInputEvent[] AttackTap => [AttackDown, AttackUp];
+
+    /// <summary>Runs an update for every admitted step of <paramref name="seconds"/> at <see cref="OuterUpdate"/>'s rate, from <paramref name="step"/>, leaving it at the next step.</summary>
+    internal static void RunSeconds(DaggerfallSession session, ref ulong step, double seconds)
+    {
+        for (int remaining = (int)Math.Ceiling(seconds * 60d - 1e-9); remaining > 0; remaining--) session.Update(new ProductUpdate(OuterUpdate(step++), []));
+    }
+
     /// <summary>One physical controller button edge, as the shell publishes it.</summary>
     internal static ProductInputEvent PadButton(ControllerButton button, InputEdge edge) =>
         Input(InputEventKind.ControllerButton, edge, x: edge == InputEdge.Pressed ? 1F : 0F) with

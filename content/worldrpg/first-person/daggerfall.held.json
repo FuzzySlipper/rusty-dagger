@@ -2,7 +2,11 @@
   "rig": {
     "model": "first-person/arms.glb",
     "clip": "FPP_Dag_Idle",
-    "turn": [0, 0, 0],
+    "turn": [
+      0,
+      0,
+      0
+    ],
     "scale": 1,
     "main": {
       "upper": "upperarm_r",
@@ -81,56 +85,148 @@
       ]
     },
     "digits": "Measured",
-    "palm": [0.0041, 0.0955, -0.0364],
+    "palm": [
+      0.0041,
+      0.0955,
+      -0.0364
+    ],
     "grip": {
       "main": {
         "fingers": [
-          [35, 75, 89],
-          [46, 58, 61],
-          [46, 56, 58],
-          [50, 57, 45]
+          [
+            35,
+            75,
+            89
+          ],
+          [
+            46,
+            58,
+            61
+          ],
+          [
+            46,
+            56,
+            58
+          ],
+          [
+            50,
+            57,
+            45
+          ]
         ],
         "thumb": [
-          [-10, -19],
-          [16, -55],
-          [-24, -89]
+          [
+            -10,
+            -19
+          ],
+          [
+            16,
+            -55
+          ],
+          [
+            -24,
+            -89
+          ]
         ]
       }
     }
   },
   "retroModel": "first-person/arms-retro.glb",
   "arms": {
-    "shoulder": [0.171, -0.2297, 0.0546],
-    "pole": [0.5, -0.75, 0.05],
-    "hold": [19, -97, -14],
+    "shoulder": [
+      0.171,
+      -0.2297,
+      0.0546
+    ],
+    "pole": [
+      0.5,
+      -0.75,
+      0.05
+    ],
+    "hold": [
+      19,
+      -97,
+      -14
+    ],
     "hands": {
       "close": {
-        "fingers": [2, 2, 2],
+        "fingers": [
+          2,
+          2,
+          2
+        ],
         "thumb": [
-          [1, -1],
-          [2, 0],
-          [2, 0]
+          [
+            1,
+            -1
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            2,
+            0
+          ]
         ]
       },
       "open": {
-        "fingers": [-62, -70, -45],
+        "fingers": [
+          -62,
+          -70,
+          -45
+        ],
         "thumb": [
-          [0, 10],
-          [-70, 0],
-          [-70, 0]
+          [
+            0,
+            10
+          ],
+          [
+            -70,
+            0
+          ],
+          [
+            -70,
+            0
+          ]
         ]
       },
       "pose": {
         "fingers": [
-          [62, 70, 45],
-          [62, 70, 45],
-          [62, 70, 45],
-          [62, 69, 45]
+          [
+            62,
+            70,
+            45
+          ],
+          [
+            62,
+            70,
+            45
+          ],
+          [
+            62,
+            70,
+            45
+          ],
+          [
+            62,
+            69,
+            45
+          ]
         ],
         "thumb": [
-          [10, 21],
-          [26, -72],
-          [-23, -75]
+          [
+            10,
+            21
+          ],
+          [
+            26,
+            -72
+          ],
+          [
+            -23,
+            -75
+          ]
         ]
       }
     }
@@ -142,15 +238,23 @@
       ],
       "look": {
         "model": "first-person/weapons/dagger.glb",
-        "grip": [0.0, 0.0, 0.0],
-        "hold": [-7.22, 92.26, 25.91]
+        "grip": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "hold": [
+          -7.22,
+          92.26,
+          25.91
+        ]
       },
       "idle": {
         "clip": "FPP_Dag_Idle",
         "seconds": 5.8
       },
       "strikes": {
-        "strikeDown": {
+        "fastA": {
           "clip": "FPP_Dag_AttackD",
           "marks": {
             "start": 0,
@@ -160,7 +264,7 @@
           },
           "fade": 0.1
         },
-        "strikeDownLeft": {
+        "fastB": {
           "clip": "FPP_Dag_AttackL",
           "marks": {
             "start": 0,
@@ -170,7 +274,7 @@
           },
           "fade": 0.1
         },
-        "strikeLeft": {
+        "fastC": {
           "clip": "FPP_Dag_AttackR",
           "marks": {
             "start": 0,
@@ -180,7 +284,7 @@
           },
           "fade": 0.1
         },
-        "strikeRight": {
+        "fastD": {
           "clip": "FPP_Dag_AttackLSlash",
           "marks": {
             "start": 0,
@@ -189,28 +293,9 @@
             "end": 0.864
           },
           "fade": 0.1
-        },
-        "strikeDownRight": {
-          "clip": "FPP_Dag_AttackDHook",
-          "marks": {
-            "start": 0,
-            "strike": 0.192,
-            "recover": 0.677,
-            "end": 0.919
-          },
-          "fade": 0.1
-        },
-        "strikeUp": {
-          "clip": "FPP_Dag_AttackF",
-          "marks": {
-            "start": 0,
-            "strike": 0.164,
-            "recover": 0.525,
-            "end": 0.705
-          },
-          "fade": 0.1
         }
-      }
+      },
+      "class": "short-blade"
     },
     "longsword": {
       "weapons": [
@@ -221,8 +306,16 @@
       ],
       "look": {
         "model": null,
-        "grip": [0.0035, 0.0158, -0.0083],
-        "hold": [-8.18, -86.34, 38.1]
+        "grip": [
+          0.0035,
+          0.0158,
+          -0.0083
+        ],
+        "hold": [
+          -8.18,
+          -86.34,
+          38.1
+        ]
       },
       "twoHanded": true,
       "idle": {
@@ -230,7 +323,7 @@
         "seconds": 4.4333
       },
       "strikes": {
-        "strikeDown": {
+        "fastA": {
           "clip": "FPP_Longs_Attack_D",
           "marks": {
             "start": 0,
@@ -240,7 +333,7 @@
           },
           "fade": 0.1
         },
-        "strikeDownLeft": {
+        "fastB": {
           "clip": "FPP_Longs_Attack_RD",
           "marks": {
             "start": 0,
@@ -250,7 +343,7 @@
           },
           "fade": 0.1
         },
-        "strikeLeft": {
+        "fastC": {
           "clip": "FPP_Longs_Attack_R",
           "marks": {
             "start": 0,
@@ -260,7 +353,7 @@
           },
           "fade": 0.1
         },
-        "strikeRight": {
+        "fastD": {
           "clip": "FPP_Longs_Attack_L",
           "marks": {
             "start": 0,
@@ -269,28 +362,9 @@
             "end": 0.897
           },
           "fade": 0.1
-        },
-        "strikeDownRight": {
-          "clip": "FPP_Longs_Attack_LD",
-          "marks": {
-            "start": 0,
-            "strike": 0.155,
-            "recover": 0.67,
-            "end": 0.928
-          },
-          "fade": 0.1
-        },
-        "strikeUp": {
-          "clip": "FPP_Longs_Attack_F",
-          "marks": {
-            "start": 0,
-            "strike": 0.165,
-            "recover": 0.596,
-            "end": 0.812
-          },
-          "fade": 0.1
         }
-      }
+      },
+      "class": "long-blade"
     },
     "sns": {
       "weapons": [
@@ -298,15 +372,23 @@
       ],
       "look": {
         "model": null,
-        "grip": [0.0029, 0.0012, 0.0011],
-        "hold": [6.98, -87.91, 35.78]
+        "grip": [
+          0.0029,
+          0.0012,
+          0.0011
+        ],
+        "hold": [
+          6.98,
+          -87.91,
+          35.78
+        ]
       },
       "idle": {
         "clip": "FPP_sns_Idle",
         "seconds": 4.6333
       },
       "strikes": {
-        "strikeDown": {
+        "fastA": {
           "clip": "FPP_sns_AttackHeavyU",
           "marks": {
             "start": 0,
@@ -316,7 +398,7 @@
           },
           "fade": 0.1
         },
-        "strikeDownLeft": {
+        "fastB": {
           "clip": "FPP_sns_Attack_RD",
           "marks": {
             "start": 0,
@@ -326,7 +408,7 @@
           },
           "fade": 0.1
         },
-        "strikeLeft": {
+        "fastC": {
           "clip": "FPP_sns_Attack_RU",
           "marks": {
             "start": 0,
@@ -336,7 +418,7 @@
           },
           "fade": 0.1
         },
-        "strikeRight": {
+        "fastD": {
           "clip": "FPP_sns_Attack_LU",
           "marks": {
             "start": 0,
@@ -345,28 +427,9 @@
             "end": 0.956
           },
           "fade": 0.1
-        },
-        "strikeDownRight": {
-          "clip": "FPP_sns_AttackHeavyL",
-          "marks": {
-            "start": 0,
-            "strike": 0.425,
-            "recover": 0.78,
-            "end": 0.958
-          },
-          "fade": 0.1
-        },
-        "strikeUp": {
-          "clip": "FPP_sns_Attack_F",
-          "marks": {
-            "start": 0,
-            "strike": 0.187,
-            "recover": 0.622,
-            "end": 0.84
-          },
-          "fade": 0.1
         }
-      }
+      },
+      "class": "long-blade"
     },
     "halberd": {
       "weapons": [
@@ -374,8 +437,16 @@
       ],
       "look": {
         "model": null,
-        "grip": [0.0046, 0.0069, -0.0823],
-        "hold": [-27.03, -89.9, 33.36]
+        "grip": [
+          0.0046,
+          0.0069,
+          -0.0823
+        ],
+        "hold": [
+          -27.03,
+          -89.9,
+          33.36
+        ]
       },
       "idle": {
         "clip": "FPP_Halb_Idle",
@@ -383,7 +454,7 @@
       },
       "twoHanded": true,
       "strikes": {
-        "strikeDown": {
+        "fastA": {
           "clip": "FPP_Halb_Attack_D",
           "marks": {
             "start": 0,
@@ -393,7 +464,7 @@
           },
           "fade": 0.1
         },
-        "strikeDownLeft": {
+        "fastB": {
           "clip": "FPP_Halb_Attack_RDfast",
           "marks": {
             "start": 0,
@@ -403,7 +474,7 @@
           },
           "fade": 0.1
         },
-        "strikeLeft": {
+        "fastC": {
           "clip": "FPP_Halb_Attack_R",
           "marks": {
             "start": 0,
@@ -413,7 +484,7 @@
           },
           "fade": 0.1
         },
-        "strikeRight": {
+        "fastD": {
           "clip": "FPP_Halb_AttackHeavy_L",
           "marks": {
             "start": 0,
@@ -422,28 +493,9 @@
             "end": 0.973
           },
           "fade": 0.1
-        },
-        "strikeDownRight": {
-          "clip": "FPP_Halb_Attack_LD",
-          "marks": {
-            "start": 0,
-            "strike": 0.276,
-            "recover": 0.648,
-            "end": 0.835
-          },
-          "fade": 0.1
-        },
-        "strikeUp": {
-          "clip": "FPP_Halb_Attack_F",
-          "marks": {
-            "start": 0,
-            "strike": 0.209,
-            "recover": 0.654,
-            "end": 0.876
-          },
-          "fade": 0.1
         }
-      }
+      },
+      "class": "blunt-weapon"
     }
   },
   "items": {

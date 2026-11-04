@@ -63,13 +63,14 @@ public sealed class CastingSessionTests
         magicka.Maximum.BaseValue = 1000; magicka.SetCurrent(1000);
         Assert.Null(s.MagicProfile(enemy).PlayerRace);
         Assert.Equal(DaggerfallCastOutcome.Ready, s.Casting.Ready(enemy, f.Spell.Key).Outcome);
-        f.Spatial.CapsuleCastHit = _ => default(SpatialHit) with { Present = true, Kind = SpatialHitKind.Entity, Entity = s.State.Actors.Player.Actor.Entity.Value };
+        s.Touches(DaggerfallActorIdentity.PlayerEntityId);
         var result = s.ReleaseReadySpell(enemy, Vector3.UnitZ);
         Assert.Equal(immune ? DaggerfallCastOutcome.Immune : DaggerfallCastOutcome.Applied, Assert.Single(result.Bundle!.Results).Outcome);
         Assert.Equal(Math.Max(1, s.DefinitionsByActor[enemy].Level ?? 1), result.Bundle.CasterLevel);
-        var sweep = Assert.Single(f.Spatial.CapsuleCastRequests);
-        Assert.Equal(.25, sweep.Radius); Assert.Equal(0, sweep.HalfHeight); Assert.Equal(3f, sweep.Translation.Length());
-        Assert.DoesNotContain(sweep.Entities.ToArray(), collider => collider.Entity == s.State.Actors.Get(enemy).Actor.Entity.Value);
+        // The touch reaches by its volume, which never contacts its own caster.
+        var volume = Assert.Single(f.Spatial.OverlapContactsRequests);
+        Assert.Equal(SpatialShapeKind.Box, volume.Shape.Kind);
+        Assert.DoesNotContain(volume.Entities.ToArray(), collider => collider.Entity == s.State.Actors.Get(enemy).Actor.Entity.Value);
         using var restored = f.Restore(s.CaptureSave());
         Assert.Equal(race, restored.MagicProfile(1).PlayerRace!.Id);
     }

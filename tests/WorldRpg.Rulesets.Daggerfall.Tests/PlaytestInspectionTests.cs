@@ -72,7 +72,7 @@ public sealed class PlaytestInspectionTests
     }
 
     [Fact]
-    public void Playtest_actions_follow_saved_binding_and_live_attack_timing_without_spending_resources()
+    public void Playtest_actions_follow_saved_binding_and_hold_an_attack_for_a_tap_whatever_the_speed_without_spending_resources()
     {
         var (created, _, perception) = VisibleEnemySession([]);
         perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1, 1, PerceptionPairKind.Visible, 1));
@@ -89,8 +89,9 @@ public sealed class PlaytestInspectionTests
         double slow = session.InspectPlaytestAction("attack").DurationMs;
         speed.BaseValue = 90;
         double fast = session.InspectPlaytestAction("attack").DurationMs;
-        Assert.True(fast < slow, $"Expected live speed to shorten observation window: slow={slow}, fast={fast}");
-        Assert.InRange(fast, 1, 2000);
+        // The hold stays under the power threshold, so the action is a tap and the motion runs on from it.
+        Assert.Equal(slow, fast);
+        Assert.True(fast / 1000d < DaggerfallTuning.Defaults.Attacks.PowerThresholdSeconds);
         Assert.Equal(before, stamina.Current);
         Assert.Null(session.State.Actors.Player.Attack.Pending);
     }

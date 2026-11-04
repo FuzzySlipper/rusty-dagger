@@ -237,9 +237,9 @@ public sealed class DaggerfallMusicSessionTests
             new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults) { Music = bundle });
         session.Touches(2000);
         session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d),
-            [Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack")]));
-        appearance.AdvanceReceiptForAll = WeaponHitReading(2, 2);
-        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 2, 60, 1, 0, 1d / 60d), []));
+            AttackTap));
+        ulong step = 2;
+        RunSeconds(session, ref step, DaggerfallTuning.Defaults.Attacks.For("long-blade").Fast.Windup + 2d / 60d);
         Assert.Equal(1, session.State.Progression.SkillUses["long-blade"]);
         Assert.Equal("song_dungeon", session.MusicTrack);
         Assert.Equal(1, engine.OpenedMusicClips);

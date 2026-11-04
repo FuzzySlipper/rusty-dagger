@@ -257,7 +257,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// </summary>
     private void RetireDepartingSwing(DaggerfallSiteProjection source)
     {
-        source.Appearance.RetirePendingSwing();
+        if (_latestUpdateGeneration is ulong swinging) RetirePlayerAttack(swinging);
         IReadOnlyList<AttackImpactNotice> impacts = source.Appearance.TakeAttackImpacts();
         if (impacts.Count == 0) return;
         if (_latestUpdateGeneration is not ulong generation) return;

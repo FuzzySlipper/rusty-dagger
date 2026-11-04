@@ -13,7 +13,7 @@ internal sealed partial class DaggerfallSession : IDeveloperHeldSession
 {
     private DaggerfallHeldWorkbench? _heldWorkbench;
 
-    private DaggerfallHeldWorkbench Workbench => _heldWorkbench ??= new(_composition.HeldArt, _tuning.Viewmodel.Style, () => _appearance, () =>
+    private DaggerfallHeldWorkbench Workbench => _heldWorkbench ??= new(_composition.HeldArt, _tuning.Attacks, _tuning.Viewmodel.Style, () => _appearance, () =>
     {
         if (!_inAdmittedUpdate && !_disposed) PublishPresentation();
     });

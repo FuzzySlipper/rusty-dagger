@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Rusty.Engine;
 using Rusty.Engine.FirstPerson;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Kit;
 using WorldRpg.Rulesets.Daggerfall.Content;
 
@@ -137,10 +138,14 @@ internal sealed class DaggerfallHeldArt
             if (family.Strikes.Count == 0) problems.Add($"{at}.strikes: names no strike clip.");
             foreach (var (action, clip) in family.Strikes)
             {
-                if (!NormalizedClassicWeapon.StrikeActions.Contains(action))
-                    problems.Add($"{at}.strikes.{action}: is not a classic strike action ({string.Join(", ", NormalizedClassicWeapon.StrikeActions)}).");
+                if (!DaggerfallAttackIds.All.Contains(action) || action == DaggerfallAttackIds.PowerHold)
+                    problems.Add($"{at}.strikes.{action}: is not an attack with a timed clip ({string.Join(", ", DaggerfallAttackIds.All.Except([DaggerfallAttackIds.PowerHold]))}).");
                 Add(clip.Problems(), $"{at}.strikes.{action}");
             }
+            if (!DaggerfallAttackTuning.Default.Classes.ContainsKey(family.Class))
+                problems.Add($"{at}.class: '{family.Class}' is no weapon class ({string.Join(", ", DaggerfallAttackTuning.Default.Classes.Keys)}).");
+            if (family.PowerHold is { } hold && (hold.Clip.Length == 0 || (hold.Seconds is > 0) == (hold.At is >= 0F and <= 1F)))
+                problems.Add($"{at}.powerHold: must name a clip with either seconds to loop over or a point (0 to 1) to hold at.");
             foreach (string action in (family.LeftHand ?? []).Where(action => !family.Strikes.ContainsKey(action)))
                 problems.Add($"{at}.leftHand: '{action}' has no strike clip here.");
         }
@@ -148,7 +153,7 @@ internal sealed class DaggerfallHeldArt
         {
             if (!document.Families.TryGetValue(item.Family, out DaggerfallHeldFamily? family))
                 problems.Add($"items.{template}.family: names no family ({string.Join(", ", document.Families.Keys)}).");
-            else if (NormalizedClassicWeapon.StrikeActions.Except(family.Strikes.Keys).ToArray() is { Length: > 0 } missing)
+            else if (DaggerfallAttackIds.Fast.Except(family.Strikes.Keys).ToArray() is { Length: > 0 } missing)
                 problems.Add($"items.{template}.family: {item.Family} has no clip for {string.Join(", ", missing)}.");
         }
         IEnumerable<string> models = [document.Rig.Model, document.RetroModel, .. document.Families.Values.Select(family => family.Look.Model).OfType<string>(),
@@ -203,10 +208,20 @@ internal sealed record DaggerfallHeldFamily(IReadOnlyList<string> Weapons, Dagge
 {
     public bool TwoHanded { get; init; }
     public string[]? LeftHand { get; init; }
+    /// <summary>The weapon class the workbench times this family's attacks by, as play times them.</summary>
+    public string Class { get; init; } = DaggerfallSkills.ShortBlade;
+    /// <summary>Where a charged power attack waits for release; without one its sprite shows the hold.</summary>
+    public DaggerfallPowerHold? PowerHold { get; init; }
 
     /// <summary>Whether the off hand plays the clip of <paramref name="action"/> (null at rest).</summary>
     internal bool MovesLeft(string? action) => TwoHanded || action is not null && (LeftHand?.Contains(action) ?? false);
 }
+
+/// <summary>
+/// A charged power attack's hold: <see cref="Clip"/> looped once every <see cref="Seconds"/>, or held still at the
+/// point <see cref="At"/> of it (0 to 1), for a clip whose own hold doesn't join its charge.
+/// </summary>
+internal sealed record DaggerfallPowerHold(string Clip, float? Seconds = null, float? At = null);
 
 /// <summary>A clip the arms loop at rest, once every <see cref="Seconds"/> of world time.</summary>
 internal sealed record DaggerfallIdleClip(string Clip, float Seconds)

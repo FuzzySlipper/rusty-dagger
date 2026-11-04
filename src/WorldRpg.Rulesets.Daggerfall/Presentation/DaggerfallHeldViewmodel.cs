@@ -1,25 +1,24 @@
 using System.Numerics;
 using Rusty.Engine;
 using Rusty.Engine.FirstPerson;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>
 /// The 3D first-person weapon of one drawing (its family, its item's look and its metal): clip-led arms (Engine <see cref="FirstPersonArms.Lead"/>) that loop the
-/// family's idle clip at rest and play a strike's clip fitted to the strike's timing, with the look riding the main
-/// hand where the clip holds it (<see cref="FirstPersonArms.Ride"/>). It draws only; the classic weapon's sprite
-/// playback stays the swing's clock, so the hit is delivered and the attack released exactly as with the sprites. A
-/// strike is timed to that playback (<see cref="Timing"/>): its windup spans the frames before the hit frame, its commit
-/// the frames from the hit to the last, and its recovery the last frame, so the clip's strike mark lands with the hit.
-/// The clips play on the world time the sprite playback reads (<see cref="Step"/>), so a held world holds them too.
+/// family's idle clip at rest and play an attack's clip fitted to the rules' timing, with the look riding the main
+/// hand where the clip holds it (<see cref="FirstPersonArms.Ride"/>). It draws only: the rules' attack clock delivers the
+/// hit, and the clip's strike mark lands with it as the windup ends. The clips play on world time
+/// (<see cref="Step"/>), so a held world holds them too.
 /// </summary>
 /// <remarks>
 /// The clips are baked as their own camera saw them, with the eye at the model's origin, so the arms are placed with
 /// their right upper arm at the definition's shoulder, where the clips' sits from the eye. The off hand rests below and
 /// behind the view, as Daggerfall draws one weapon hand, unless the family holds its look in both hands or the strike
-/// moves it. <see cref="DaggerfallViewmodelStyle.HeldRetro"/> samples the clips once per classic frame and holds the
-/// sample for the frame, so the hit frame shows the strike mark, and draws the retro arms (their colour map alone,
+/// moves it. <see cref="DaggerfallViewmodelStyle.HeldRetro"/> samples the clips at a sprite's cadence and holds the
+/// sample for the frame, so the hit shows the strike mark, and draws the retro arms (their colour map alone,
 /// small and unfiltered): the classic look without redrawing the weapon. The developer workbench plays a
 /// strike at any speed or shows it paused at a moment.
 /// </remarks>
@@ -45,6 +44,11 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     private float idleFrame;
     // World seconds since the arms were last led.
     private float since;
+    // Whether the charged power attack is held, and for how long, which a looping hold plays on.
+    private bool holding;
+    private float held;
+    // The shortest phase a clip is fitted to: a power attack's charge is all windup.
+    private const float MinimumPhase = .001F;
 
     internal DaggerfallHeldViewmodel(IEngineContext engine, DaggerfallHeldArt art, DaggerfallHeldDrawing drawing, DaggerfallDyeTint? metal, DaggerfallViewmodelStyle style, ulong weaponObject, ulong armsObject)
     {
@@ -92,24 +96,23 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     internal ArmClipReading Clip => arms.Clip;
 
     /// <summary>Whether the family has a clip for a classic strike action.</summary>
-    internal bool Moves(string action) => family.Strikes.ContainsKey(action);
+    internal bool Moves(string action) => action == DaggerfallAttackIds.PowerHold ? family.PowerHold is not null : family.Strikes.ContainsKey(action);
 
     /// <summary>
-    /// A strike's phases timed to the classic playback of <paramref name="frames"/> frames of <paramref name="frame"/>
-    /// seconds each with its hit on frame <paramref name="hitFrame"/>.
+    /// Starts an attack's clip to the rules' <paramref name="timing"/>; it fades in over what the arms play now, which is
+    /// also how a chained attack cuts the last one's recovery. <paramref name="hitFrame"/> sets the retro style's cadence.
     /// </summary>
-    internal static PhaseTiming Timing(float frame, int hitFrame, int frames) =>
-        new(hitFrame * frame, Math.Max(1, frames - 1 - hitFrame) * frame, frame);
+    internal void Attack(string action, DaggerfallAttackTiming timing, int hitFrame) =>
+        Play(action, new PhaseTiming((float)timing.Windup, MathF.Max((float)timing.Commit, MinimumPhase), MathF.Max((float)timing.Recovery, MinimumPhase)),
+            (float)(timing.Windup / hitFrame), 1);
 
-    /// <summary>
-    /// Starts a strike's clip, timed to the classic playback of <paramref name="frames"/> frames of
-    /// <paramref name="frameSeconds"/> each with its hit on frame <paramref name="hitFrame"/>; it fades in over what the
-    /// arms play now.
-    /// </summary>
-    internal void Strike(string action, double frameSeconds, int hitFrame, int frames)
+    /// <summary>Keeps the charged power attack where the family's <c>powerHold</c> says, until the release plays.</summary>
+    internal void Hold()
     {
-        float frame = (float)frameSeconds;
-        Play(action, Timing(frame, hitFrame, frames), frame, 1);
+        strike = null;
+        rate = 1;
+        held = 0;
+        holding = true;
     }
 
     /// <summary>
@@ -118,6 +121,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     /// </summary>
     internal void Play(string action, PhaseTiming timing, float frame, float speed, float? pausedAt = null)
     {
+        holding = false;
         strike = (action, timing, frame, pausedAt ?? 0);
         rate = pausedAt is null ? speed : 0;
     }
@@ -125,6 +129,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     /// <summary>Ends any strike: the arms loop the idle clip, sampled once per <paramref name="frame"/> seconds by the retro style.</summary>
     internal void Rest(float frame)
     {
+        holding = false;
         strike = null;
         rate = 1;
         idleFrame = frame;
@@ -134,6 +139,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     internal void Step(float seconds)
     {
         since += seconds;
+        if (holding) held += seconds;
         if (strike is { } playing) strike = playing with { Seconds = playing.Seconds + seconds * rate };
         else idle += seconds;
     }
@@ -166,6 +172,8 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     // The strike's clip where it has got to, or the idle loop at rest and once the strike is over.
     private ArmClipFrame Frame()
     {
+        if (holding && family.PowerHold is { } hold)
+            return new(hold.Clip, hold.At ?? held / hold.Seconds!.Value % 1);
         if (strike is { } playing && playing.Seconds <= playing.Timing.Duration)
             return family.Strikes[playing.Action].At(playing.Timing, Sampled(playing.Seconds, playing.Frame, playing.Timing.Duration));
         double seconds = retro && idleFrame > 0 ? Math.Floor(idle / idleFrame) * idleFrame : idle;

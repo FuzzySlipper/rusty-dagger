@@ -1,6 +1,7 @@
 using WorldRpg.Kit.Combat;
 using WorldRpg.Kit.Targeting;
 using System.Numerics;
+using System.Reflection;
 using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
@@ -71,31 +72,23 @@ public sealed class PlayerAttackSessionTests
         DaggerfallItemInstanceMetadata sword = session.State.ItemInstances.RequireUnique(1001);
         session.State.ItemInstances.ReplaceUnique(1001, sword with { CurrentCondition = 100, MaximumCondition = 100 });
         session.Touches(2000);
-        ProductInputEvent pressed = Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack");
-        ProductUpdateFacts first = new(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d);
+        double windup = DaggerfallTuning.Defaults.Attacks.For("long-blade").Fast.Windup + 2d / 60d;
 
-        session.Update(new ProductUpdate(first, [pressed]));
+        ulong step = 1;
+        session.Update(new ProductUpdate(OuterUpdate(step++), AttackTap));
         // The operation is decided and charged at admission; the delivered hit is what tallies it.
-        appearance.AdvanceReceiptForAll = WeaponHitReading(2, 2);
-        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 2, 60, 1, 0, 1d / 60d), []));
+        Assert.Equal(0, session.State.Progression.SkillUses["long-blade"]);
+        RunSeconds(session, ref step, windup);
         Assert.Equal(1, session.State.Progression.SkillUses["long-blade"]);
         Assert.Equal(1, session.State.Progression.SkillUses["critical-strike"]);
 
-        // The Engine admitted this exact generation/step already. Replaying its UI input reaches
-        // the normal session path, but AttackExecution refuses it before Daggerfall can tally again.
-        session.Update(new ProductUpdate(first, [pressed]));
+        // The rest of the motion adds nothing to the one hit.
+        RunSeconds(session, ref step, 1d);
         Assert.Equal(1, session.State.Progression.SkillUses["long-blade"]);
-        Assert.Equal(1, session.State.Progression.SkillUses["critical-strike"]);
 
-        // Clear the presentation strike latch, then submit a distinct later operation in the same
-        // generation after its combat cooldown. It is an independent admitted hit, so it counts.
-        appearance.AdvanceReceiptForAll = CompletedMarker(1);
-        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 2, 2, 60, 1, 0, 1d / 60d), []));
-        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 3, 3, 60, 1, 0, 1d / 60d), []));
-        appearance.AdvanceReceiptForAll = null;
-        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 100, 100, 60, 1, 0, 1d / 60d), [pressed]));
-        appearance.AdvanceReceiptForAll = WeaponHitReading(2, 2, sequence: 2);
-        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 101, 101, 60, 1, 0, 1d / 60d), []));
+        // A distinct later operation is an independent admitted hit, so it counts.
+        session.Update(new ProductUpdate(OuterUpdate(step++), AttackTap));
+        RunSeconds(session, ref step, windup);
         Assert.Equal(2, session.State.Progression.SkillUses["long-blade"]);
         Assert.Equal(2, session.State.Progression.SkillUses["critical-strike"]);
 
@@ -160,11 +153,11 @@ public sealed class PlayerAttackSessionTests
         Assert.Equal(staminaBefore - 11, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
         // A swing at empty space waits for its hit frame like any other, and only there meets nothing.
         PlayerAttackStartedFact started = Assert.Single(emptySpace.OfType<PlayerAttackStartedFact>());
-        Assert.Equal(((long?)null, true, new DaggerfallStrikeFeedback(true, "sound.347")), (started.TargetId, started.WaitsWithoutTarget, started.Feedback));
+        Assert.Equal(((long?)null, new DaggerfallStrikeFeedback(true, "sound.347")), (started.TargetId, started.Feedback));
         Assert.DoesNotContain(emptySpace, fact => fact is AttackRejectedFact);
-        Assert.Equal(new AttackCooldown(DaggerfallActorIdentity.PlayerEntityId, 6), Assert.Single(combat.Execution.CaptureCooldowns(7, 13)));
+        Assert.Equal(new AttackCooldown(DaggerfallActorIdentity.PlayerEntityId, 1), Assert.Single(combat.Execution.CaptureCooldowns(7, 13)));
 
-        combat.Attacks.TryPlayerMelee(session.State.PlayerControl, ForwardLook(), 7, 14, .125, facts);
+        combat.Attacks.TryPlayerMelee(session.State.PlayerControl, ForwardLook(), 7, 13, .125, facts);
         List<IProductFact> swinging = [];
         facts.Deliver(swinging.Add);
         Assert.Equal([new AttackRejectedFact(AttackRejection.AttackInProgress, DaggerfallActorIdentity.PlayerEntityId)], swinging);
@@ -174,7 +167,7 @@ public sealed class PlayerAttackSessionTests
         facts.Deliver(whiffed.Add);
         Assert.Single(whiffed.OfType<AttackWhiffedFact>());
 
-        combat.Attacks.TryPlayerMelee(session.State.PlayerControl, ForwardLook(), 7, 14, .125, facts);
+        combat.Attacks.TryPlayerMelee(session.State.PlayerControl, ForwardLook(), 7, 13, .125, facts);
         List<IProductFact> coolingDown = [];
         facts.Deliver(coolingDown.Add);
         Assert.Equal([new AttackRejectedFact(AttackRejection.Cooldown, DaggerfallActorIdentity.PlayerEntityId)], coolingDown);
@@ -184,7 +177,7 @@ public sealed class PlayerAttackSessionTests
         combat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 8, 20, .125), facts);
         List<IProductFact> materialImmune = [];
         facts.Deliver(materialImmune.Add);
-        Assert.Equal(new PlayerAttackStartedFact(8, 20) { Feedback = new(true, "sound.347") },
+        Assert.Equal(new PlayerAttackStartedFact(8, 20, 2000) { Feedback = new(true, "sound.347") },
             Assert.Single(materialImmune.OfType<PlayerAttackStartedFact>()));
         Assert.Contains(new AttackRejectedFact(AttackRejection.InsufficientWeaponMaterial), materialImmune);
         Assert.DoesNotContain(materialImmune, fact => fact is AttackHitFact or AttackWhiffedFact);
@@ -296,7 +289,7 @@ public sealed class PlayerAttackSessionTests
         // shows no text for; what the perception query compared belongs to the playtest diagnostics.
         perception.Receipt = new PerceptionReadoutResult(ReadOnlyMemory<PerceptionPair>.Empty, ReadOnlyMemory<PerceptionAggregate>.Empty, 0, false, 0, 1, 42, 42, 42, 41, 1, 0, 0);
         string before = session.Presentation.LastOutcome;
-        session.Update(new ProductUpdate(OuterUpdate(1), [PadButton(ControllerButton.Button0, InputEdge.Pressed)]));
+        session.Update(new ProductUpdate(OuterUpdate(1), [PadButton(ControllerButton.Button0, InputEdge.Pressed), PadButton(ControllerButton.Button0, InputEdge.Released)]));
 
         Assert.Equal(before, session.Presentation.LastOutcome);
         Assert.DoesNotContain("Nothing in reach", session.Presentation.LastOutcome);
@@ -456,10 +449,10 @@ public sealed class PlayerAttackSessionTests
         Assert.Equal(.5d, evidence.Request.Observers.Span[0].MinimumFacingCosine);
         Assert.Equal(1, evidence.Receipt.Pairs.Length);
         // The visibility receipt selects the target at admission; that same target takes the swing's
-        // damage when the animation reaches its hit frame.
+        // damage when its windup ends.
         Assert.Equal(healthBefore, session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current);
-        appearance.AdvanceReceiptForAll = WeaponHitReading(2, 2);
-        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 0, 1, 1, 1, 60, 1, 0, 1d / 60d), []));
+        for (ulong step = 2; step <= 40; step++)
+            session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 0, 1, step, step, 60, 1, 0, 1d / 60d), []));
         Assert.True(session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current < healthBefore);
     }
 
@@ -484,21 +477,20 @@ public sealed class PlayerAttackSessionTests
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         session.AdmitSiteProfiles(new DaggerfallSiteProfiles([inputs, castle]));
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
-        ProductInputEvent pressed = Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack");
 
-        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d), [pressed]));
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d), AttackTap));
         double targetHealth = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
         double playerHealth = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
 
-        // The swing is admitted, charged and still in flight: the projection playing it owns the
-        // impact frame, so the shared state holds the attack even long past its cooldown.
+        // The swing is admitted, charged and still winding up, so the shared state holds the attack
+        // even long past its cooldown.
         Assert.False(session.State.Kit.AttackExecution.IsReady(DaggerfallActorIdentity.PlayerEntityId, 1, 500));
 
         double targetHealthBeforeTransition = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
         Assert.Equal(targetHealth, targetHealthBeforeTransition);
         Assert.True(session.TryTransitionTo(castle.ProfileKey));
 
-        // The departing projection could not deliver that frame, so the charge is retired with it —
+        // A site change retires the attack in progress, so the charge goes with it:
         // the admitted swing never landed on anything, and melee is admitted again instead of staying
         // charged forever. The target itself left with the source site, so its health is read before
         // the transition.
@@ -597,10 +589,175 @@ public sealed class PlayerAttackSessionTests
         Assert.Single(perception.Requests.Last().Targets.Span.ToArray());
     }
 
+    /// <summary>A session whose hands draw nothing: no weapon art, so no viewmodel, with one enemy in the swing's way.</summary>
+    private static (DaggerfallSession Session, Func<double> EnemyHealth) WithoutViewmodel()
+    {
+        DaggerfallSiteProfile authored = ReadInputs(TestData.RepositoryRoot);
+        DaggerfallSiteProfile inputs = new(authored.Project, authored.Geometry, authored.WorldAppearance, authored.InitialLook, authored.Materials, authored.ActorSprites,
+            authored.MobileSprites, authored.Audio, authored.ClassicPresentation with
+            {
+                Weapons = new Dictionary<string, NormalizedClassicWeapon>(),
+                CompatibleItemVisuals = new Dictionary<string, string>(),
+                UnarmedVisual = null,
+            },
+            authored.Site, authored.Doors, authored.ProfileKind, authored.ProfileKey.LogicalId, authored.Portals, authored.Anchors.Values.ToArray(),
+            authored.Lights, authored.GroundContainerSprites, authored.DungeonMap, authored.DungeonActions, authored.DungeonActionModels,
+            authored.InteriorBuilding, authored.QuestMarkers, authored.BillboardSprites);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service,
+            new AppearanceFake(releases), PerceptionFake.Create().Service);
+        DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
+        session.State.WeaponDrawn = true;
+        session.Touches(2000);
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
+        return (session, () => session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current);
+    }
+
+    [Fact]
+    public void The_blow_lands_by_the_clock_at_the_end_of_its_windup_with_no_viewmodel_and_no_marker()
+    {
+        (DaggerfallSession session, Func<double> health) = WithoutViewmodel();
+        using DaggerfallSession disposable = session;
+        object appearance = typeof(DaggerfallSession).GetProperty("_appearance", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(session)!;
+        Assert.Null(typeof(DaggerfallSiteAppearance).GetField("viewmodel", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(appearance));
+        double before = health();
+        double windup = DaggerfallTuning.Defaults.Attacks.For("long-blade").Fast.Windup;
+
+        ulong step = 1;
+        session.Update(new ProductUpdate(OuterUpdate(step++), AttackTap));
+        Assert.NotNull(session.State.Actors.Player.Attack.Pending);
+        RunSeconds(session, ref step, windup - 2d / 60d);
+        Assert.Equal(before, health());
+
+        RunSeconds(session, ref step, 3d / 60d);
+        Assert.True(health() < before);
+        Assert.Null(session.State.Actors.Player.Attack.Pending);
+    }
+
+    /// <summary>A real click or a real hold of one blow on the enemy: what it took off the enemy and the player's stamina.</summary>
+    private static (double Damage, double Stamina) MeasuredBlow(bool power)
+    {
+        List<string> releases = [];
+        (DaggerfallSession session, AppearanceFake _, PerceptionFake _) = VisibleEnemySession(releases, distance: 5d);
+        using DaggerfallSession disposable = session;
+        session.State.WeaponDrawn = true;
+        session.Touches(2000);
+        session.State.Kit.Rules.RegisterAction(session.DefinitionsByActor[1].ActionId!, new TheBlowItself());
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
+        Track health = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health"));
+        health.Maximum.BaseValue = 1000;
+        health.SetCurrent(1000);
+        Track stamina = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina"));
+        double staminaBefore = stamina.Current;
+        DaggerfallWeaponClassAttacks attacks = DaggerfallTuning.Defaults.Attacks.For("long-blade");
+
+        ulong step = 1;
+        if (power)
+        {
+            session.Update(new ProductUpdate(OuterUpdate(step++), [AttackDown]));
+            RunSeconds(session, ref step, DaggerfallTuning.Defaults.Attacks.PowerThresholdSeconds + attacks.PowerCharge + .1d);
+            Assert.Equal(1000, health.Current); // Charging spends nothing and strikes nothing.
+            Assert.Equal(staminaBefore, stamina.Current);
+            session.Update(new ProductUpdate(OuterUpdate(step++), [AttackUp]));
+            RunSeconds(session, ref step, attacks.PowerRelease.Windup + 2d / 60d);
+        }
+        else
+        {
+            session.Update(new ProductUpdate(OuterUpdate(step++), AttackTap));
+            RunSeconds(session, ref step, attacks.Fast.Windup + 2d / 60d);
+        }
+        return (1000 - health.Current, staminaBefore - stamina.Current);
+    }
+
+    [Fact]
+    public void A_power_release_does_double_the_damage_for_double_the_stamina_of_a_tap()
+    {
+        (double tapDamage, double tapStamina) = MeasuredBlow(power: false);
+        (double powerDamage, double powerStamina) = MeasuredBlow(power: true);
+
+        Assert.True(tapDamage > 0d);
+        Assert.Equal(tapDamage * DaggerfallTuning.Defaults.Attacks.PowerDamageMultiplier, powerDamage);
+        Assert.Equal(tapStamina * DaggerfallTuning.Defaults.Attacks.PowerStaminaMultiplier, powerStamina);
+    }
+
+    /// <summary>The enemy's natural armour is no part of what a power attack doubles.</summary>
+    private sealed class TheBlowItself : ICombatContribution
+    {
+        public void Mitigate(MitigationEvent value) => value.Absorbed = 0;
+    }
+
+    [Fact]
+    public void A_kick_lands_from_its_own_binding_for_its_own_cost()
+    {
+        (DaggerfallSession session, Func<double> health) = WithoutViewmodel();
+        using DaggerfallSession disposable = session;
+        Track stamina = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina"));
+        double before = stamina.Current;
+        int spent = 0;
+        session.State.Kit.Rules.RegisterAction(session.DefinitionsByActor[1].ActionId!, new CountingBlow(() => spent++));
+
+        ulong step = 1;
+        session.Update(new ProductUpdate(OuterUpdate(step++), [Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "kick")]));
+        Assert.Equal(before - DaggerfallTuning.Defaults.Attacks.KickStaminaCost, stamina.Current);
+        RunSeconds(session, ref step, DaggerfallTuning.Defaults.Attacks.Kick.Windup + 2d / 60d);
+
+        Assert.Equal(1, spent);
+    }
+
+    private sealed class CountingBlow(Action counted) : ICombatContribution
+    {
+        public void Damage(DamageEvent value) => counted();
+    }
+
+    [Fact]
+    public void Guard_and_kick_are_in_the_control_catalog_with_their_keys_labels_and_pad_buttons()
+    {
+        DaggerfallControlAction guard = Assert.Single(DaggerfallControlSettings.Catalog, action => action.Id == "block");
+        DaggerfallControlAction kick = Assert.Single(DaggerfallControlSettings.Catalog, action => action.Id == "kick");
+
+        Assert.Equal(["Secondary"], guard.DefaultKeys);
+        Assert.Equal(["KeyG"], kick.DefaultKeys);
+        Assert.Equal(("combat", "combat"), (guard.Category, kick.Category));
+        Assert.Equal("Guard", DaggerfallControlSettings.Labels["block"]);
+        Assert.Equal("Kick", DaggerfallControlSettings.Labels["kick"]);
+        Assert.Contains(DaggerfallTuning.Defaults.ControllerInput.Actions, binding => binding.Button == ControllerButton.Button4 && binding.Action == DaggerfallInput.Block);
+        Assert.Contains(DaggerfallTuning.Defaults.ControllerInput.Actions, binding => binding.Button == ControllerButton.Button5 && binding.Action == DaggerfallInput.Kick);
+    }
+
+    [Fact]
+    public void The_pads_guard_button_raises_the_guard_while_held()
+    {
+        (DaggerfallSession session, Func<double> _) = WithoutViewmodel();
+        using DaggerfallSession disposable = session;
+
+        ulong step = 1;
+        session.Update(new ProductUpdate(OuterUpdate(step++), [PadButton(ControllerButton.Button4, InputEdge.Pressed)]));
+        session.Update(new ProductUpdate(OuterUpdate(step++), []));
+
+        Assert.True(session.PlayerGuardRaised);
+    }
+
+    [Fact]
+    public void The_pads_attack_button_held_past_the_threshold_charges_a_power_attack()
+    {
+        (DaggerfallSession session, Func<double> _) = WithoutViewmodel();
+        using DaggerfallSession disposable = session;
+        Track stamina = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina"));
+        double before = stamina.Current;
+
+        ulong step = 1;
+        session.Update(new ProductUpdate(OuterUpdate(step++), [PadButton(ControllerButton.Button0, InputEdge.Pressed)]));
+
+        // A hold spends nothing until it is released; a tap would have spent the swing already.
+        Assert.Equal(before, stamina.Current);
+    }
+
     private static ProductUpdateState AttackUpdate()
     {
         ProductUpdateState update = new(.125f);
-        update.Add(Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "attack"));
+        foreach (ProductInputEvent input in AttackTap) update.Add(input);
         return update;
     }
 

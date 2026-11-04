@@ -112,7 +112,7 @@ internal static class CombatCollaborators
             molagBalStrike: (_, _, _, _, _, _, _) => throw new InvalidOperationException("This fact arms no Mace of Molag Bal."),
             itemStrike: (_, _, _, damage) => damage, monsterHit: _ => { },
             actorGameplayActive: actorGameplayActive ?? (_ => true), actorTeam: id => authored.GetValueOrDefault(id)?.Team,
-            mitigation: seams.PhysicalMitigation, delivery: seams.PhysicalDelivery,
+            mitigation: seams.PhysicalMitigation, delivery: seams.PhysicalDelivery, attackTuning: DaggerfallAttackTuning.Default,
             contact: Contact(session.State.Actors, spatial, position), strikePose: actor => StrikePose(session.State.Actors, actor, position()));
     }
 }

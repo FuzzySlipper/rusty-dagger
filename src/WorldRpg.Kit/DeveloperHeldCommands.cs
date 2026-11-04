@@ -48,7 +48,7 @@ public sealed class DeveloperHeldDebugModule(Func<IDeveloperHeldSession> current
     public static TunablesDebugModule Workbench(IContentSourceService source, Func<IDeveloperHeldSession> current) =>
         new(source, () => current().HeldWorkbench(), (chooser, value) => current().ChooseHeld(chooser, value));
 
-    [DebugCommand("held.motion", Description = "Developer motion viewer: show a held LOOK (e.g. weapon.dagger.steel) at rest with one of its ACTIONs (e.g. strikeDown), and list that action's keys.")]
+    [DebugCommand("held.motion", Description = "Developer motion viewer: show a held LOOK (e.g. weapon.dagger.steel) at rest with one of its ACTIONs (e.g. fastA), and list that action's keys.")]
     public DebugCommandResult Show(string look, string action) => current().ShowHeld(look, action);
 
     [DebugCommand("held.motion.key", Description = "Developer motion viewer: hold the shown look exactly at key N (0 is the first key; -1 is rest).")]

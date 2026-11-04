@@ -255,6 +255,7 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
             roll = value =>
             {
                 rolled(value);
+                value.Damage = (int)Math.Round(value.Damage * admission.DamageMultiplier, MidpointRounding.AwayFromZero);
                 if (ops.Draw(key, attacker.Id, targetId, CriticalSalt, 1, 100, enemy) <= CriticalChance(attacker))
                     value.Damage = (int)Math.Round(value.Damage * tuning.CriticalDamageMultiplier, MidpointRounding.AwayFromZero);
             };

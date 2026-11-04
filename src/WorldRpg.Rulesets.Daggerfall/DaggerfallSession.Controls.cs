@@ -44,7 +44,7 @@ internal sealed partial class DaggerfallSession
             Forward = Key("move.forward"), Backward = Key("move.backward"),
             Left = Key("move.left"), Right = Key("move.right"),
         }, DaggerfallInput.Bindings);
-        if (_tuning.ControllerInput is { } pad) _input.RebindControllerActions(settings.ControllerActions(pad.Actions));
+        if (_tuning.ControllerInput is { } pad) _input.RebindControllerActions(_reboundPad = settings.ControllerActions(pad.Actions));
         foreach ((string bus, _) in DaggerfallControlSettings.SoundBuses)
             _engine.Audio.SetBusVolume(new AudioBusVolumeRequest(SoundBus(bus), settings.Volume(bus)));
         _input.ClearHeldInput();
@@ -60,6 +60,11 @@ internal sealed partial class DaggerfallSession
         "music" => AudioBus.Music, "ambient" => AudioBus.Ambient, "effects" => AudioBus.Sfx, "interface" => AudioBus.Ui,
         _ => throw new ArgumentOutOfRangeException(nameof(bus), bus, "No sound bus carries this id."),
     };
+
+    private IReadOnlyList<ControllerActionBinding>? _reboundPad;
+
+    /// <summary>The pad buttons in force, rebinding included, whose held state the attack and the guard read.</summary>
+    private IReadOnlyList<ControllerActionBinding> PadBindings => _reboundPad ?? PadActions;
 
     /// <summary>The authored pad layout the player's controller bindings start from.</summary>
     internal IReadOnlyList<ControllerActionBinding> PadActions => _tuning.ControllerInput?.Actions ?? [];

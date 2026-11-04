@@ -3,6 +3,7 @@ using Rusty.Engine;
 using Rusty.Engine.FirstPerson;
 using WorldRpg.Kit;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
@@ -11,13 +12,13 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
 /// Checks the 3D first-person art is read from the authored held definition (content/worldrpg/first-person): weapon
-/// families whose clip-led arms play a clip per classic strike, each fitted so the clip's strike mark lands on the
-/// classic hit, drawn with the container's models.
+/// families whose clip-led arms play a clip per fast attack, each fitted so the clip's strike mark lands as the
+/// rules' windup ends, drawn with the container's models.
 /// </summary>
 public sealed class DaggerfallHeldArtTests
 {
     [Fact]
-    public void Every_family_plays_a_clip_for_every_classic_strike_with_its_strike_mark_on_the_hit()
+    public void Every_family_plays_a_clip_for_every_fast_attack_with_its_strike_mark_on_the_hit()
     {
         DaggerfallHeldArt art = Read(Document());
 
@@ -29,11 +30,12 @@ public sealed class DaggerfallHeldArtTests
         Assert.Equal("halberd", art.Family("weapon.staff"));
         Assert.Null(art.Family("weapon.bow"));
         Assert.Empty(art.Document.Rig.Problems());
-        // The viewmodel times a strike to the classic playback: five frames, the hit on frame 2.
-        PhaseTiming timing = DaggerfallHeldViewmodel.Timing(.1F, 2, 5);
         foreach (var (name, family) in art.Document.Families)
         {
-            Assert.Equal(NormalizedClassicWeapon.StrikeActions.Order(), family.Strikes.Keys.Order());
+            // The viewmodel times an attack by its family's weapon class.
+            DaggerfallAttackTiming fast = DaggerfallAttackTuning.Default.For(family.Class).Fast;
+            PhaseTiming timing = new((float)fast.Windup, (float)fast.Commit, (float)fast.Recovery);
+            Assert.Equal(DaggerfallAttackIds.Fast.Order(), family.Strikes.Keys.Order());
             foreach (var (action, clip) in family.Strikes)
             {
                 Assert.Empty(clip.Problems());
@@ -52,18 +54,20 @@ public sealed class DaggerfallHeldArtTests
         DaggerfallHeldFamily dagger = art.Document.Families["dagger"], sword = art.Document.Families["longsword"], mace = art.Document.Families["sns"];
 
         Assert.False(dagger.MovesLeft(null));
-        Assert.False(dagger.MovesLeft("strikeDown"));
+        Assert.False(dagger.MovesLeft("fastA"));
         Assert.True(sword.MovesLeft(null));
-        Assert.True(sword.MovesLeft("strikeDown"));
-        Assert.False(mace.MovesLeft("strikeDown"));
-        Assert.True((dagger with { LeftHand = ["strikeDown"] }).MovesLeft("strikeDown"));
+        Assert.True(sword.MovesLeft("fastA"));
+        Assert.False(mace.MovesLeft("fastA"));
+        Assert.True((dagger with { LeftHand = ["fastA"] }).MovesLeft("fastA"));
     }
 
     [Theory]
     [InlineData("strikes", "families.dagger.strikes.thrust")]
-    [InlineData("marks", "families.dagger.strikes.strikeDown.marks")]
+    [InlineData("hold", "families.dagger.strikes.powerHold: is not an attack with a timed clip")]
+    [InlineData("powerHold", "families.dagger.powerHold: must name a clip")]
+    [InlineData("marks", "families.dagger.strikes.fastA.marks")]
     [InlineData("weapons", "families.longsword.weapons: 'weapon.dagger.steel' is drawn by another family too")]
-    [InlineData("leftHand", "families.dagger.leftHand: 'strikeUp' has no strike clip here")]
+    [InlineData("leftHand", "families.dagger.leftHand: 'fastB' has no strike clip here")]
     [InlineData("idle", "families.dagger.idle.seconds")]
     public void What_cannot_be_drawn_is_refused_by_field(string broken, string field)
     {
@@ -72,10 +76,12 @@ public sealed class DaggerfallHeldArtTests
         JsonObject strikes = dagger["strikes"]!.AsObject();
         switch (broken)
         {
-            case "strikes": strikes["thrust"] = strikes["strikeDown"]!.DeepClone(); break;
-            case "marks": strikes["strikeDown"]!["marks"]!["strike"] = 0.99; break;
+            case "strikes": strikes["thrust"] = strikes["fastA"]!.DeepClone(); break;
+            case "hold": strikes["powerHold"] = strikes["fastA"]!.DeepClone(); break;
+            case "powerHold": dagger["powerHold"] = new JsonObject { ["clip"] = "FPP_Dag_Idle" }; break;
+            case "marks": strikes["fastA"]!["marks"]!["strike"] = 0.99; break;
             case "weapons": document["families"]!["longsword"]!["weapons"]!.AsArray().Add("weapon.dagger.steel"); break;
-            case "leftHand": strikes.Remove("strikeUp"); dagger["leftHand"] = new JsonArray("strikeUp"); break;
+            case "leftHand": strikes.Remove("fastB"); dagger["leftHand"] = new JsonArray("fastB"); break;
             case "idle": dagger["idle"]!["seconds"] = 0; break;
         }
 
@@ -116,7 +122,7 @@ public sealed class DaggerfallHeldArtTests
 
     [Theory]
     [InlineData("family", "items.120.family: names no family")]
-    [InlineData("clip", "items.120.family: sns has no clip for strikeUp")]
+    [InlineData("clip", "items.120.family: sns has no clip for fastB")]
     [InlineData("model", "'first-person/weapons/lost.glb' is not in first-person.rpak")]
     public void An_item_that_cannot_be_drawn_is_refused_by_field(string broken, string field)
     {
@@ -124,7 +130,7 @@ public sealed class DaggerfallHeldArtTests
         switch (broken)
         {
             case "family": document["items"]!["120"]!["family"] = "greatsword"; break;
-            case "clip": document["families"]!["sns"]!["strikes"]!.AsObject().Remove("strikeUp"); break;
+            case "clip": document["families"]!["sns"]!["strikes"]!.AsObject().Remove("fastB"); break;
             case "model": document["items"]!["120"]!["model"] = "first-person/weapons/lost.glb"; break;
         }
 

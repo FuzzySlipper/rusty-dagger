@@ -62,12 +62,14 @@ public sealed class ContactRulesAcceptanceTests
         spatial.OverlapContactsResult = _ => Touching(session.State.Actors.Get(Enemy).Actor.Entity.Value);
         double health = Health(session, Enemy);
 
-        session.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "attack")]));
+        session.Update(new ProductUpdate(OuterUpdate(1), AttackTap));
+        // The enemy decided a swing at the player this update, so the swing waits a step behind it.
+        session.Update(new ProductUpdate(OuterUpdate(2), []));
         Assert.NotNull(session.State.Actors.Player.Attack.Pending);
         Assert.Equal(health, Health(session, Enemy));
 
-        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: 1);
-        session.Update(new ProductUpdate(OuterUpdate(2), []));
+        ulong step = 3;
+        RunSeconds(session, ref step, DaggerfallTuning.Defaults.Attacks.For("long-blade").Fast.Windup + 2d / 60d);
 
         Assert.Null(session.State.Actors.Player.Attack.Pending);
         Assert.Contains(spatial.OverlapContactsRequests, request => request.Shape.Kind == SpatialShapeKind.Box);
@@ -200,9 +202,7 @@ public sealed class ContactRulesAcceptanceTests
 
         f.Attack();
         Assert.NotNull(f.Game.State.Actors.Player.Attack.Pending);
-        uint releaseFrame = DaggerfallFormulaPolicy.BowWeaponHitFrame;
-        f.Appearance.AdvanceReceiptForAll = WeaponHitReading(f.Appearance.PlaybackRequests.Last().Frames.Span[(int)releaseFrame].FrameId, releaseFrame);
-        for (int step = 0; step < 30 && Health(f.Game, NewGameBowSessionTests.Fixture.Target) == health; step++) f.Advance();
+        for (int step = 0; step < 240 && Health(f.Game, NewGameBowSessionTests.Fixture.Target) == health; step++) f.Advance();
 
         Assert.True(Health(f.Game, NewGameBowSessionTests.Fixture.Target) < health, f.Game.ReadPlaytestObservation().Message);
     }

@@ -1,5 +1,6 @@
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Facts;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
@@ -26,13 +27,12 @@ internal sealed class DaggerfallContactGuard(DaggerfallSeamInputs session, Dagge
 
     public bool WantsTime => Raised || _held && _couldRaise;
 
-    public void Observe(ReadOnlySpan<ProductInputEvent> inputs)
+    public void Observe(ReadOnlySpan<ProductInputEvent> inputs, IReadOnlyList<ControllerActionBinding> pad)
     {
         foreach (ProductInputEvent input in inputs)
         {
             if (input.Kind == InputEventKind.Clear) _held = false;
-            else if (input.Kind is InputEventKind.MappedDigital or InputEventKind.DirectDigital && input.Intent.Span.SequenceEqual(Intent))
-                _held = input.Edge != InputEdge.Released && input.X > 0f;
+            else if (DaggerfallInput.HeldChange(input, Intent, DaggerfallInput.Block, pad) is bool held) _held = held;
         }
     }
 

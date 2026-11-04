@@ -81,8 +81,10 @@
     <RustyEngineProductInputIntent Include="recast" Value="digital" />
     <RustyEngineProductInputIntent Include="abort-spell" Value="digital" />
     <RustyEngineProductInputIntent Include="attack" Value="digital" />
-    <RustyEngineProductInputMapping Include="attack.primary" Intent="attack" Trigger="pointer-button:primary:pressed" />
-    <!-- A rules variant with an active block reads this held intent; a ruleset with no guard reads nothing. -->
+    <!-- Held, not pressed: the attack clock tells a tap from a charge by when the button comes up. -->
+    <RustyEngineProductInputMapping Include="attack.primary" Intent="attack" Trigger="pointer-button:primary:held" />
+    <RustyEngineProductInputIntent Include="kick" Value="digital" />
+    <RustyEngineProductInputMapping Include="kick.key-g" Intent="kick" Trigger="key:key-g:pressed" />
     <RustyEngineProductInputIntent Include="block" Value="digital" />
     <RustyEngineProductInputMapping Include="block.secondary" Intent="block" Trigger="pointer-button:secondary:held" />
     <RustyEngineProductInputIntent Include="interact" Value="digital" />

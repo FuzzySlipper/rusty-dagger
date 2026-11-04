@@ -42,6 +42,8 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     /// <summary>Whether admitted static geometry stands between a shot's release and its aim.</summary>
     /// <summary>The armor-value shift the defender's worn enchantments give, zero when none do.</summary>
     private readonly Func<int> _attackChanceModifier;
+    private readonly DaggerfallAttackTuning _attackTuning;
+    private string _playerAttack = DaggerfallAttackIds.Fast[0];
     private readonly Func<long, long, ulong, ulong, ulong, DaggerfallWabbajackResult> _transformActor;
     internal DaggerfallHandEquipCountdown EquipCountdown { get; set; } = new(0, 0);
     internal void EquipmentChanged(DaggerfallEquipmentChange change) => EquipCountdown = new(
@@ -87,6 +89,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         Func<long, long, ulong, int, int, ulong, ulong, (double Magicka, int Strength)> molagBalStrike, Func<long, long, DaggerfallItemStrikeSource, int, int> itemStrike,
         Action<DaggerfallMonsterHitExposure> monsterHit, Func<long, bool> actorGameplayActive, Func<long, string?> actorTeam,
         IDaggerfallPhysicalMitigation mitigation, Func<IDaggerfallPhysicalHarmOperations, IDaggerfallPhysicalDelivery> delivery,
+        DaggerfallAttackTuning attackTuning,
         ActorContact? contact = null, Func<long, DaggerfallStrikePose?>? strikePose = null, Func<CharacterStepEnvironment?>? contactEnvironment = null,
         Func<long, Vector3>? actorVelocity = null)
     {
@@ -119,6 +122,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         _actorGameplayActive = actorGameplayActive ?? throw new ArgumentNullException(nameof(actorGameplayActive));
         _actorTeam = actorTeam ?? throw new ArgumentNullException(nameof(actorTeam));
         _mitigation = mitigation ?? throw new ArgumentNullException(nameof(mitigation));
+        _attackTuning = attackTuning ?? throw new ArgumentNullException(nameof(attackTuning));
         _weaponMaterialModifiers = DaggerfallFormulaPolicy.ClassicWeaponMaterialModifiers;
         _actions = definitions.Actions;
         _delivery = (delivery ?? throw new ArgumentNullException(nameof(delivery)))(this);
@@ -152,7 +156,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         // player swing and every enemy swing wait for their animation's impact frame.
         bool enemyAttack = request.AttackerId != PlayerId;
         DaggerfallAttackDefinition attack;
-        bool rangedAttack = !enemyAttack && PlayerHoldsBow();
+        bool rangedAttack = !enemyAttack && PlayerHoldsBow() && _playerAttack != DaggerfallAttackIds.Kick;
         string? selectedAction = request.Action;
         WorldRpg.Kit.Inventory.UniqueInventoryItem? rangedWeapon = null;
         if (!enemyAttack)
@@ -180,7 +184,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         var molagBalSource = rangedAttack ? null : CaptureMolagBalSource(request.AttackerId);
         var poisonSource = CaptureWeaponPoison(request.AttackerId, rangedWeapon);
         var strikeSource = DaggerfallItemCastTriggers.CaptureStrike(_catalog.Magic, _itemInstances, _actors.Entities, rangedWeapon ?? EquippedWeapon(request.AttackerId));
-        DaggerfallAdmittedAttack admitted = new(request, attacker, attack, rangedAttack, selectedAction, feedback,
+        DaggerfallAdmittedAttack admitted = new(request, attacker, attack, rangedAttack, !enemyAttack && _playerAttack == DaggerfallAttackIds.PowerOut ? _attackTuning.PowerDamageMultiplier : 1d, selectedAction, feedback,
             wabbajackSource, molagBalSource, poisonSource, strikeSource, rangedWeapon);
         if (!_delivery.TryPrepare(admitted, facts, out DaggerfallPreparedAttack delivered)) return false;
         prepared = delivered;
@@ -216,6 +220,9 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         { facts.Append(new AttackRejectedFact(AttackRejection.Incapacitated, impact.Request.AttackerId)); return true; }
         return _delivery.DeferImpact(impact, facts);
     }
+
+    /// <summary>Names the attack the next player admission carries, from the attack clock.</summary>
+    internal void SelectPlayerAttack(string attack) => _playerAttack = attack;
 
     /// <summary>Whether a blow past its hit frame is still winding up to land on <paramref name="target"/>.</summary>
     internal bool HoldsImpactAt(long target) => _delivery.HoldsImpactAt(target);
@@ -321,7 +328,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         EquipmentRead equipment = _equipment.Read();
         weapon = ReadWeapon(equipment, "right-hand") ?? ReadWeapon(equipment, "left-hand");
         bool bow = weapon is { Weapon.IsBow: true };
-        string? id = requested ?? (bow ? RangedPlayerActionId() : player.Definition.ActionId);
+        string? id = requested ?? (bow && _playerAttack != DaggerfallAttackIds.Kick ? RangedPlayerActionId() : player.Definition.ActionId);
         action = null!;
         if (id is null || !_actions.TryGetValue(id, out var selected)
             || selected.Interpretation is not ("player-equipped-melee" or "player-equipped-ranged")
@@ -365,7 +372,10 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
             facts.Append(new AttackRejectedFact(AttackRejection.NoAttackPolicy));
             return false;
         }
-        int staminaCost = playerAction.StaminaCost!.Value;
+        bool kick = _playerAttack == DaggerfallAttackIds.Kick;
+        int staminaCost = kick ? _attackTuning.KickStaminaCost
+            : _playerAttack == DaggerfallAttackIds.PowerOut ? (int)Math.Round(playerAction.StaminaCost!.Value * _attackTuning.PowerStaminaMultiplier, MidpointRounding.AwayFromZero)
+            : playerAction.StaminaCost!.Value;
         bool ranged = playerAction.Interpretation == "player-equipped-ranged";
         double playerCooldown = ranged
             ? DaggerfallFormulaPolicy.BowCooldownSeconds(ReadStat(player, DaggerfallMechanicsIds.Speed))
@@ -373,7 +383,9 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         // The shot is refused before it is admitted, from the same quiver owner the enemy archer uses,
         // so a player with an empty quiver stops shooting rather than silently missing.
         if (ranged && !TrySpendArrow(PlayerId, facts)) { attack = default!; return false; }
-        attack = equippedWeapon is { } selectedWeapon
+        attack = kick
+            ? new DaggerfallAttackDefinition("hand-to-hand", _attackTuning.KickDamage, _attackTuning.KickDamage, playerCooldown, DamageBonus: playerAction.DamageBonus, Reach: playerAction.Reach)
+            : equippedWeapon is { } selectedWeapon
             ? new DaggerfallAttackDefinition(selectedWeapon.Weapon.Skill, selectedWeapon.Weapon.MinimumDamage, selectedWeapon.Weapon.MaximumDamage,
                 playerCooldown, selectedWeapon.Material, playerAction.DamageBonus)
             : new DaggerfallAttackDefinition(
@@ -383,14 +395,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
                 playerCooldown,
                 DamageBonus: playerAction.DamageBonus);
         SpendPlayerStamina(player, staminaCost);
-        // A swing hands its timing to the strike animation: the tick time it plays at, and whether
-        // its hit frame delivers the impact, where contact decides whom it reaches.
-        bool deferred = request.Delayed;
-        facts.Append(new PlayerAttackStartedFact(generation, simulationStep,
-            deferred ? request.TargetId : null,
-            deferred ? DaggerfallFormulaPolicy.MeleeWeaponAnimationSeconds(ReadStat(player, DaggerfallMechanicsIds.Speed)) : 0d,
-            DaggerfallFormulaPolicy.WeaponHitFrame(ranged),
-            WaitsWithoutTarget: deferred && request.TargetId is null) { Feedback = StrikeFeedback(PlayerId) });
+        facts.Append(new PlayerAttackStartedFact(generation, simulationStep, request.TargetId) { Feedback = StrikeFeedback(PlayerId) });
         return true;
     }
 
@@ -696,7 +701,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
             throw new InvalidOperationException($"Equipped weapon '{item.EntityId}' has no durable item identity.");
         return new(weapon, _itemInstances.RequireUnique(identity.Value).Material);
     }
-    private string PlayerWeaponSkill() => ReadWeapon(_equipment.Read(), "right-hand")?.Weapon.Skill
+    internal string PlayerWeaponSkill() => ReadWeapon(_equipment.Read(), "right-hand")?.Weapon.Skill
         ?? ReadWeapon(_equipment.Read(), "left-hand")?.Weapon.Skill
         ?? DaggerfallMechanicsIds.HandToHand.Value;
 

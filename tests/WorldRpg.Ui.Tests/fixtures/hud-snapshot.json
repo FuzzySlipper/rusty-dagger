@@ -362,6 +362,34 @@
         "buttonFixedReason": null
       },
       {
+        "id": "block",
+        "category": "combat",
+        "label": "Guard",
+        "keys": [
+          "Secondary"
+        ],
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [
+          4
+        ],
+        "buttonFixedReason": null
+      },
+      {
+        "id": "kick",
+        "category": "combat",
+        "label": "Kick",
+        "keys": [
+          "KeyG"
+        ],
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [
+          5
+        ],
+        "buttonFixedReason": null
+      },
+      {
         "id": "interact",
         "category": "combat",
         "label": "Activate",
@@ -1250,6 +1278,7 @@
           "low": false
         },
         "identified": true,
+        "enchanted": false,
         "gridSlot": 0,
         "equippedSlots": [],
         "compatibleSlots": [],
@@ -1282,6 +1311,7 @@
           "low": false
         },
         "identified": true,
+        "enchanted": false,
         "gridSlot": null,
         "equippedSlots": [
           "right-hand"
@@ -1325,6 +1355,7 @@
           "low": false
         },
         "identified": true,
+        "enchanted": false,
         "gridSlot": 1,
         "equippedSlots": [],
         "compatibleSlots": [
@@ -1377,6 +1408,7 @@
           "low": false
         },
         "identified": true,
+        "enchanted": false,
         "gridSlot": null,
         "equippedSlots": [
           "chest-armor"
@@ -1553,6 +1585,138 @@
         "group": "accessories"
       }
     ],
+    "glints": {
+      "magic": {
+        "media": "effect.glint.magic",
+        "width": 459,
+        "height": 39,
+        "frames": [
+          {
+            "x": 0,
+            "y": 0,
+            "width": 51,
+            "height": 39
+          },
+          {
+            "x": 51,
+            "y": 0,
+            "width": 51,
+            "height": 39
+          },
+          {
+            "x": 102,
+            "y": 0,
+            "width": 51,
+            "height": 39
+          },
+          {
+            "x": 153,
+            "y": 0,
+            "width": 51,
+            "height": 39
+          },
+          {
+            "x": 204,
+            "y": 0,
+            "width": 51,
+            "height": 39
+          },
+          {
+            "x": 255,
+            "y": 0,
+            "width": 51,
+            "height": 39
+          },
+          {
+            "x": 306,
+            "y": 0,
+            "width": 51,
+            "height": 39
+          },
+          {
+            "x": 357,
+            "y": 0,
+            "width": 51,
+            "height": 39
+          },
+          {
+            "x": 408,
+            "y": 0,
+            "width": 51,
+            "height": 39
+          }
+        ],
+        "framesPerSecond": 6.666666507720947,
+        "slot": {
+          "x": 0,
+          "y": 0,
+          "width": 1,
+          "height": 1
+        }
+      },
+      "coins": {
+        "media": "effect.glint.coins",
+        "width": 392,
+        "height": 35,
+        "frames": [
+          {
+            "x": 0,
+            "y": 0,
+            "width": 49,
+            "height": 35
+          },
+          {
+            "x": 49,
+            "y": 0,
+            "width": 49,
+            "height": 35
+          },
+          {
+            "x": 98,
+            "y": 0,
+            "width": 49,
+            "height": 35
+          },
+          {
+            "x": 147,
+            "y": 0,
+            "width": 49,
+            "height": 35
+          },
+          {
+            "x": 196,
+            "y": 0,
+            "width": 49,
+            "height": 35
+          },
+          {
+            "x": 245,
+            "y": 0,
+            "width": 49,
+            "height": 35
+          },
+          {
+            "x": 294,
+            "y": 0,
+            "width": 49,
+            "height": 35
+          },
+          {
+            "x": 343,
+            "y": 0,
+            "width": 49,
+            "height": 35
+          }
+        ],
+        "framesPerSecond": 12.5,
+        "slot": {
+          "x": 0,
+          "y": 0,
+          "width": 1,
+          "height": 1
+        }
+      }
+    },
     "categories": [
       {
         "id": "weapons-armor",

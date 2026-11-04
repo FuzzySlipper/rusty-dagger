@@ -84,10 +84,8 @@ public sealed class NewGameBowSessionTests
         Assert.Equal(strike.Sequence ?? Enumerable.Range(strike.FrameStart, strike.FrameCount).ToArray(),
             f.Appearance.PlaybackRequests.Last().Frames.ToArray().Select(frame => (int)frame.FrameId));
 
-        uint releaseFrame = DaggerfallFormulaPolicy.BowWeaponHitFrame;
-        f.Appearance.AdvanceReceiptForAll = WeaponHitReading(
-            f.Appearance.PlaybackRequests.Last().Frames.Span[(int)releaseFrame].FrameId, releaseFrame);
-        f.Advance();
+        // The shot looses when its windup ends: the bow's hit frame of the classic frame time.
+        for (int step = 0; step < 240 && f.Game.State.Actors.Player.Attack.Pending is not null; step++) f.Advance();
         Assert.Null(f.Game.State.Actors.Player.Attack.Pending);
         var arrow = Assert.Single(f.Inputs.ClassicPresentation.WorldVisuals, visual => visual.MediaId == "visual.missile.arrow");
         Assert.Contains(f.Appearance.Snapshots.Last(), fact => ReferenceEquals(fact.Appearance, f.Appearance.StaticMeshByPath[arrow.Path]));
@@ -171,8 +169,7 @@ public sealed class NewGameBowSessionTests
             item => item.Definition.Value == "template-131");
 
         internal void Advance() => Game.Update(new ProductUpdate(OuterUpdate(++step), []));
-        internal void Attack() => Game.Update(new ProductUpdate(OuterUpdate(++step),
-            [Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack")]));
+        internal void Attack() => Game.Update(new ProductUpdate(OuterUpdate(++step), AttackTap));
 
         public void Dispose() { Game.Dispose(); title.Dispose(); }
     }

@@ -210,11 +210,10 @@ internal sealed partial class DaggerfallSession
         if (State.Actors.Player.IsDefeated
             || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d)
             return;
-        // Look and its gesture trail were observed once, in host time, before these world steps;
-        // the attack reads the gesture the player actually drew before pressing it.
         DaggerfallPlayerActs acts = new(
             ToggleWeapon: update.IsRequested(DaggerfallInput.ToggleWeapon),
-            Attack: update.IsRequested(DaggerfallInput.Attack) ? new(generation, simulationStep, update.DeltaSeconds) : null,
+            Attack: update.IsRequested(DaggerfallInput.Attack),
+            Kick: update.IsRequested(DaggerfallInput.Kick),
             Interact: update.IsRequested(DaggerfallInput.Interact),
             Inventory: update.IsRequested(DaggerfallInput.Inventory),
             Character: update.IsRequested(DaggerfallInput.Character),
@@ -237,6 +236,7 @@ internal sealed partial class DaggerfallSession
         {
             ApplyPlayerActs(acts);
         }
+        StepPlayerAttack(update.DeltaSeconds, generation, simulationStep);
         // The guard follows the step's acts, so a swing begun this step keeps the guard down.
         StepGuard(update.DeltaSeconds, generation, simulationStep);
         // Tasks consume the state committed by this admitted step. Clock actions mutate only the
@@ -251,22 +251,19 @@ internal sealed partial class DaggerfallSession
     }
 
     /// <summary>
-    /// The player's own requests from one simulation step: the weapon toggle, a swing, contextual
-    /// interaction and the panel buttons. A swing keeps the step that asked for it, since cooldown is
-    /// measured from there.
+    /// The player's own requests from one simulation step: the weapon toggle, an attack or a kick,
+    /// contextual interaction and the panel buttons.
     /// </summary>
-    private sealed record DaggerfallPlayerActs(bool ToggleWeapon, DaggerfallPlayerSwingRequest? Attack, bool Interact,
+    private sealed record DaggerfallPlayerActs(bool ToggleWeapon, bool Attack, bool Kick, bool Interact,
         bool Inventory, bool Character, bool Menu, bool Map, string[] Shortcuts)
     {
-        internal bool Any => ToggleWeapon || Attack is not null || Interact || Inventory || Character || Menu || Map || Shortcuts.Length != 0;
+        internal bool Any => ToggleWeapon || Attack || Kick || Interact || Inventory || Character || Menu || Map || Shortcuts.Length != 0;
 
-        /// <summary>Folds a later step's requests into acts still waiting; the earliest swing request stands.</summary>
+        /// <summary>Folds a later step's requests into acts still waiting.</summary>
         internal DaggerfallPlayerActs Then(DaggerfallPlayerActs later) => new(
-            ToggleWeapon || later.ToggleWeapon, Attack ?? later.Attack, Interact || later.Interact,
+            ToggleWeapon || later.ToggleWeapon, Attack || later.Attack, Kick || later.Kick, Interact || later.Interact,
             Inventory || later.Inventory, Character || later.Character, Menu || later.Menu, Map || later.Map, Shortcuts.Concat(later.Shortcuts).Distinct(StringComparer.Ordinal).ToArray());
     }
-
-    private readonly record struct DaggerfallPlayerSwingRequest(ulong Generation, ulong SimulationStep, double DeltaSeconds);
 
     /// <summary>Acts waiting for this admitted update's enemy impacts; never carried past the update.</summary>
     private DaggerfallPlayerActs? _deferredPlayerActs;
@@ -275,23 +272,17 @@ internal sealed partial class DaggerfallSession
     {
         foreach (string shortcut in acts.Shortcuts) ApplyShortcut(shortcut);
         // A menu/mode shortcut consumes this slice's attack and activation, just like a UI request.
-        if (acts.Shortcuts.Length != 0) acts = acts with { Attack = null, Interact = false };
+        if (acts.Shortcuts.Length != 0) acts = acts with { Attack = false, Kick = false, Interact = false };
         if (acts.ToggleWeapon) State.WeaponDrawn = !State.WeaponDrawn;
         _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);
         LookReceipt currentLook = _input.ResolveCurrentLook(State.PlayerControl);
         // Interaction owns this slice once requested. Direct semantic input can carry both intents
         // in the same Engine delivery, and it must follow the same no-attack rule as a DOM loot action.
         ActorControlRestrictions restrictions = State.Effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId);
-        if (!restrictions.PhysicalAttacks && !acts.Interact && acts.Attack is { } swing && State.WeaponDrawn && _appearance.CanStartPlayerAttack)
+        if (!restrictions.PhysicalAttacks && !acts.Interact && State.WeaponDrawn)
         {
-            State.Kit.Attacks.TryPlayerMelee(State.PlayerControl, currentLook, swing.Generation, swing.SimulationStep, swing.DeltaSeconds, _facts);
-            // A swing admitted here (deferred acts included) lowers a raised guard before anything resolves against it.
-            StepGuard(0d, swing.Generation, swing.SimulationStep);
-            // WeaponManager sends Attack to an action on the environment after the ordinary hit
-            // query. The safe Engine hit reports a static surface rather than a source id, so the
-            // normalized placement resolver above is the product-side identity join.
-            _ = TryTriggerDungeonActionRay(currentLook.Forward, _tuning.MeleeTargeting.MaximumDistance, DaggerfallDungeonActionEvent.Attack);
-            TryBashDoorWithSwing(currentLook);
+            if (acts.Attack) _attackClock.Press();
+            if (acts.Kick) _attackClock.PressKick();
         }
         if (acts.Interact)
             _ = TryActivateContextual(currentLook);
@@ -308,12 +299,12 @@ internal sealed partial class DaggerfallSession
     }
 
     /// <summary>
-    /// Advances the player's guard by <paramref name="seconds"/>. A swing is in progress from its admission
-    /// until its strike animation completes, past the hit frame that resolves it, and keeps the guard down.
+    /// Advances the player's guard by <paramref name="seconds"/>. An attack keeps the guard down from its
+    /// press until the clock has finished its motion.
     /// </summary>
     private void StepGuard(double seconds, ulong generation, ulong simulationStep) => _guard.Step(seconds,
         canGuard: State.WeaponDrawn && !State.Effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId).PhysicalAttacks && !State.Actors.Player.IsDefeated,
-        swinging: State.Actors.Player.Actor.Get<AttackState>().Pending is not null || !_appearance.CanStartPlayerAttack,
+        swinging: State.Actors.Player.Actor.Get<AttackState>().Pending is not null || _attackClock.Busy,
         generation, simulationStep, _facts);
 
     /// <summary>
@@ -365,8 +356,9 @@ internal sealed partial class DaggerfallSession
             _combat.LandDueImpacts(held, step, _facts);
             DeliverFacts();
         }
-        IReadOnlyList<AttackImpactNotice> impacts = _sites.Appearances.SelectMany(appearance => appearance.TakeAttackImpacts()).ToArray();
-        if (impacts.Count == 0) return;
+        AttackImpactNotice[] impacts = [.. _playerImpacts, .. _sites.Appearances.SelectMany(appearance => appearance.TakeAttackImpacts())];
+        _playerImpacts.Clear();
+        if (impacts.Length == 0) return;
         if (_latestUpdateGeneration is not ulong generation) return;
         State.Kit.AttackExecution.ApplyImpacts(impacts, generation, _facts);
         DeliverFacts();

@@ -16,9 +16,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class PlayerViewmodelTests
 {
     [Theory]
-    [InlineData(false, false)] [InlineData(true, false)]
-    [InlineData(false, true)] [InlineData(true, true)]
-    public void Vampire_voice_waits_for_the_melee_frame_and_retirement_cancels_it(bool targeted, bool retire)
+    [InlineData(false)] [InlineData(true)]
+    public void Vampire_voice_sounds_once_at_the_start_of_the_attack(bool targeted)
     {
         List<string> releases = [];
         var content = MediaContent(releases); content.Add("weapon/dagger.png", Hash);
@@ -32,22 +31,12 @@ public sealed class PlayerViewmodelTests
             DaggerfallTuning.Defaults.PresentationAudio with { VampireAttackChancePercent = 100, VampireBarkChancePercent = 100 });
         presentation.UsePlayerVampireGender(() => false);
         presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
-        presentation.React(new PlayerAttackStartedFact(2, 3, TargetId: targeted ? 12 : null) { Feedback = new(false, "") });
-        Assert.Empty(audio.EmittedSignals);
-        Frame(1, 1);
-        Assert.Empty(audio.EmittedSignals);
-        if (retire) presentation.RetirePendingSwing();
-        Frame(2, 2);
-        Assert.Equal(retire ? 0 : 1, audio.EmittedSignals.Count);
-        Frame(3, 3);
-        Assert.Equal(retire ? 0 : 1, audio.EmittedSignals.Count);
+        PlayerAttackStartedFact started = new(2, 3, TargetId: targeted ? 12 : null) { Feedback = new(false, "") };
 
-        void Frame(ulong step, uint frame)
-        {
-            appearance.AdvanceReceipts.Enqueue(default); // The existing actor playback advances first.
-            appearance.AdvanceReceipts.Enqueue(frame == DaggerfallFormulaPolicy.MeleeWeaponHitFrame ? WeaponHitReading(0, frame) : Reading(0, frame));
-            presentation.Advance(OuterUpdate(step));
-        }
+        presentation.React(started);
+        Assert.Single(audio.EmittedSignals);
+        presentation.React(started);
+        Assert.Single(audio.EmittedSignals);
     }
 
     [Fact]
@@ -90,16 +79,17 @@ public sealed class PlayerViewmodelTests
         presentation.Publish(EmptyActors());
         Assert.Contains(appearance.Snapshots.Last(), fact => fact.Layer == RenderLayer.Viewmodel);
 
-        PlayerAttackStartedFact miss = new(3, 4);
-        presentation.React(miss);
-        presentation.React(miss);
+        presentation.React(new PlayerAttackMotionFact("fastA", new(.2d, .1d, .1d), 3, 4));
         Assert.Equal(3, appearance.PlaybackRequests.Count);
+        Assert.Equal(SpritePlaybackLoopMode.OneShot, appearance.PlaybackRequests.Last().LoopMode);
         appearance.AdvanceReceipts.Enqueue(default);
         appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceResult(default, new SpritePlaybackReadout(0, 0, SpritePlaybackState.Completed, 0D, 0, 1, true), true));
         presentation.Advance(OuterUpdate(1));
         appearance.AdvanceReceipts.Enqueue(default);
         appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceResult(default, new SpritePlaybackReadout(0, 0, SpritePlaybackState.Completed, 0D, 0, 2, true), true));
         presentation.Advance(OuterUpdate(2));
+        Assert.Equal(3, appearance.PlaybackRequests.Count); // A completed strike holds until the rules rest it.
+        presentation.React(new PlayerAttackRestFact(3, 5));
         Assert.Equal(4, appearance.PlaybackRequests.Count);
 
         presentation.UpdateRightHandEquipment(RightHand("iron-longsword"), weaponDrawn: true);
@@ -108,7 +98,7 @@ public sealed class PlayerViewmodelTests
     }
 
     [Fact]
-    public void A_targeted_swing_plays_at_its_published_tick_and_delivers_on_the_classic_hit_frame()
+    public void A_motion_plays_the_strike_rescaled_so_its_hit_frame_comes_as_the_windup_ends_and_delivers_nothing()
     {
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
@@ -118,34 +108,22 @@ public sealed class PlayerViewmodelTests
         presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
 
         presentation.BeginAdmittedUpdate();
-        presentation.React(new PlayerAttackStartedFact(2, 3, TargetId: 12, FrameSeconds: .25d));
+        presentation.React(new PlayerAttackMotionFact("fastA", new(.5d, .2d, .3d), 2, 3));
         presentation.CompleteAdmittedUpdate();
 
-        // The published tick time replaces the authored table rate, so every strike frame lasts it.
+        // A windup of .5 s up to the hit on the classic frame 2: every frame lasts .25 s.
         SpritePlaybackCreateRequest strike = appearance.PlaybackRequests.Last();
         Assert.All(strike.Frames.Span.ToArray(), frame => Assert.Equal(.25d, frame.DurationSeconds, 6));
 
-        // Frames before the classic hit frame decide nothing.
-        appearance.AdvanceReceiptForAll = Reading(1, 1u);
-        presentation.Advance(OuterUpdate(1));
-        Assert.Empty(presentation.TakeAttackImpacts());
-
-        // The hit frame delivers the admitted swing exactly once.
+        // The rules' clock delivers the blow: the playback carries no marker, and any frame it reports delivers nothing.
+        Assert.True(strike.Markers.IsEmpty);
         appearance.AdvanceReceiptForAll = WeaponHitReading(DaggerfallFormulaPolicy.MeleeWeaponHitFrame, (uint)DaggerfallFormulaPolicy.MeleeWeaponHitFrame);
-        presentation.Advance(OuterUpdate(2));
-        AttackImpactNotice impact = Assert.Single(presentation.TakeAttackImpacts());
-        Assert.Equal(DaggerfallActorIdentity.PlayerEntityId, impact.AttackerId);
-        Assert.Equal(12, impact.TargetId);
-        Assert.False(impact.Expired);
-
-        // Later frames of the same swing deliver nothing more.
-        appearance.AdvanceReceiptForAll = Reading(DaggerfallFormulaPolicy.MeleeWeaponHitFrame + 1u, (uint)DaggerfallFormulaPolicy.MeleeWeaponHitFrame);
-        presentation.Advance(OuterUpdate(3));
+        presentation.Advance(OuterUpdate(1));
         Assert.Empty(presentation.TakeAttackImpacts());
     }
 
     [Fact]
-    public void A_completed_player_swing_returns_to_idle_when_one_shot_stops_advancing()
+    public void A_power_attack_plays_the_frames_before_the_hit_its_hold_keeps_them_and_its_release_plays_the_rest()
     {
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
@@ -153,71 +131,53 @@ public sealed class PlayerViewmodelTests
         AppearanceFake appearance = new(releases);
         using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
         presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
-        presentation.React(new PlayerAttackStartedFact(1, 1));
-        Assert.False(presentation.CanStartPlayerAttack);
+        int played = ClassicWeapon().Weapons["weapon.dagger.steel"].Actions[NormalizedClassicWeapon.PlayedStrike].PlayedFrameCount;
+        const int hit = DaggerfallFormulaPolicy.MeleeWeaponHitFrame;
+
+        presentation.BeginAdmittedUpdate();
+        presentation.React(new PlayerAttackMotionFact(DaggerfallAttackIds.PowerIn, new(.5d, 0d, 0d), 2, 3));
+        presentation.CompleteAdmittedUpdate();
+        SpritePlaybackCreateRequest charge = appearance.PlaybackRequests.Last();
+        Assert.Equal(hit, charge.Frames.Length);
+        Assert.All(charge.Frames.Span.ToArray(), frame => Assert.Equal(.25d, frame.DurationSeconds, 6));
+
+        int requests = appearance.PlaybackRequests.Count;
+        presentation.BeginAdmittedUpdate();
+        presentation.React(new PlayerAttackMotionFact(DaggerfallAttackIds.PowerHold, null, 2, 4));
+        presentation.CompleteAdmittedUpdate();
+        Assert.Equal(requests, appearance.PlaybackRequests.Count);
+
+        presentation.BeginAdmittedUpdate();
+        presentation.React(new PlayerAttackMotionFact(DaggerfallAttackIds.PowerOut, new(.1d, .1d, .1d), 2, 5));
+        presentation.CompleteAdmittedUpdate();
+        SpritePlaybackCreateRequest release = appearance.PlaybackRequests.Last();
+        Assert.Equal(played - hit, release.Frames.Length);
+        Assert.All(release.Frames.Span.ToArray(), frame => Assert.Equal(.3d / (played - hit), frame.DurationSeconds, 6));
+    }
+
+    [Fact]
+    public void The_weapon_returns_to_idle_on_the_rules_rest_not_on_the_strikes_completion()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        content.Add("weapon/dagger.png", Hash);
+        AppearanceFake appearance = new(releases);
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
+        presentation.React(new PlayerAttackMotionFact("fastA", new(.2d, .1d, .1d), 1, 1));
+        Assert.True(Viewmodel(presentation).Strike);
 
         var completed = new SpritePlaybackReadout(1, 1, SpritePlaybackState.Completed, 0d, 0, 1, true);
         appearance.AdvanceReceiptForAll = new SpritePlaybackAdvanceResult(default, completed, true);
         presentation.Advance(OuterUpdate(1));
-        Assert.False(presentation.CanStartPlayerAttack); // Preserve the final frame for this update.
         appearance.AdvanceReceiptForAll = new SpritePlaybackAdvanceResult(default, completed, false);
         presentation.Advance(OuterUpdate(2));
-        Assert.True(presentation.CanStartPlayerAttack);
-        presentation.React(new PlayerAttackStartedFact(1, 3));
-        Assert.False(presentation.CanStartPlayerAttack); // A second ordinary attack can start.
-    }
+        Assert.True(Viewmodel(presentation).Strike);
 
-    [Fact]
-    public void A_swing_completion_that_did_not_advance_does_not_end_the_players_swing()
-    {
-        List<string> releases = [];
-        ContentFake content = MediaContent(releases);
-        content.Add("weapon/dagger.png", Hash);
-        AppearanceFake appearance = new(releases);
-        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
-        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
-        presentation.BeginAdmittedUpdate();
-        presentation.React(new PlayerAttackStartedFact(2, 3, TargetId: 12, FrameSeconds: .25d));
-        presentation.CompleteAdmittedUpdate();
-        Assert.Empty(presentation.TakeAttackImpacts());
-
-        // A receipt that reports completion without advancing is not authoritative, so the swing stays
-        // live for the frame that can still deliver its impact.
-        appearance.AdvanceReceiptForAll = new SpritePlaybackAdvanceResult(
-            default, new SpritePlaybackReadout(1, 1, SpritePlaybackState.Completed, 0d, 0, 0, true), false);
-        presentation.Advance(OuterUpdate(1));
-        Assert.Empty(presentation.TakeAttackImpacts());
-
-        appearance.AdvanceReceiptForAll = WeaponHitReading(2, 2);
-        presentation.Advance(OuterUpdate(2));
-
-        AttackImpactNotice impact = Assert.Single(presentation.TakeAttackImpacts());
-        Assert.Equal(12, impact.TargetId);
-        Assert.False(impact.Expired);
-    }
-
-    [Fact]
-    public void A_swing_that_ends_before_its_hit_frame_expires_its_impact_instead_of_landing_late()
-    {
-        List<string> releases = [];
-        ContentFake content = MediaContent(releases);
-        content.Add("weapon/dagger.png", Hash);
-        AppearanceFake appearance = new(releases);
-        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
-        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
-
-        presentation.BeginAdmittedUpdate();
-        presentation.React(new PlayerAttackStartedFact(2, 3, TargetId: 12, FrameSeconds: .25d));
-        presentation.CompleteAdmittedUpdate();
-        Assert.Empty(presentation.TakeAttackImpacts());
-
-        appearance.AdvanceReceiptForAll = new SpritePlaybackAdvanceResult(
-            default, new SpritePlaybackReadout(1, 1, SpritePlaybackState.Completed, 0d, 0, 0, true), true);
-        presentation.Advance(OuterUpdate(1));
-
-        AttackImpactNotice expired = Assert.Single(presentation.TakeAttackImpacts());
-        Assert.Equal(12, expired.TargetId);
-        Assert.True(expired.Expired);
+        presentation.React(new PlayerAttackRestFact(1, 2));
+        Assert.False(Viewmodel(presentation).Strike);
+        presentation.React(new PlayerAttackMotionFact("fastA", new(.2d, .1d, .1d), 1, 3));
+        Assert.True(Viewmodel(presentation).Strike); // A second ordinary attack can start.
     }
 
     [Fact]
@@ -245,11 +205,11 @@ public sealed class PlayerViewmodelTests
         using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: classic));
         presentation.UpdateRightHandEquipment(RightHand("iron-longsword"), weaponDrawn: true);
         Assert.Equal("weapon.longblade", Viewmodel(presentation).Weapon.ResourceId);
-        presentation.React(new PlayerAttackStartedFact(1, 1));
-        Assert.False(presentation.CanStartPlayerAttack);
+        presentation.React(new PlayerAttackMotionFact("fastA", new(.2d, .1d, .1d), 1, 1));
+        Assert.True(Viewmodel(presentation).Strike);
         presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
         Assert.Equal(dagger.ResourceId, Viewmodel(presentation).Weapon.ResourceId);
-        Assert.True(presentation.CanStartPlayerAttack);
+        Assert.False(Viewmodel(presentation).Strike);
         presentation.UpdateRightHandEquipment(RightHand("gold"), weaponDrawn: true);
         Assert.Equal("weapon.unarmed", Viewmodel(presentation).Weapon.ResourceId);
         // The session holds the weapon sheathed: the viewmodel shows no art. Refusing the attack itself
@@ -304,7 +264,7 @@ public sealed class PlayerViewmodelTests
         Assert.Equal(SpriteViewportFit.Stretch, placement.Fit);
         Assert.Equal((Vector2.Zero, Vector2.One), (placement.Minimum, placement.Size));
         // Every action, whatever its alignment and offset, keeps that one placement: a strike at a .4 offset too.
-        presentation.React(new PlayerAttackStartedFact(1, 1, FrameSeconds: .1));
+        presentation.React(new PlayerAttackMotionFact("fastA", new(.2d, .1d, .1d), 1, 1));
         Assert.All(appearance.ViewportRequests, request => Assert.Equal((Vector2.Zero, Vector2.One), (request.Minimum, request.Size)));
         Assert.Equal(Quaternion.Identity, first.Transform.Rotation);
         Assert.All([first.Transform.Translation.X, first.Transform.Translation.Y, first.Transform.Translation.Z], coordinate => Assert.InRange(coordinate, -16F, 16F));
