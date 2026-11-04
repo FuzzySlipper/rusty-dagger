@@ -51,6 +51,8 @@ mesh's footprint, its longest side in metres, so the game draws it at the width 
 The `surfaces` area promotes the walls, floors and ceilings (`surfaces`): each accepted final `texture-AAA-R`, from
 its family's folder under gen-raw/surfaces (tools/surfaces/batch.py), stands in for classic TEXTURE.AAA record R as an
 8-bit RGBA PNG at its own size, and the game draws it on the location materials and terrain that draw that record.
+The `terrain` area does the same into `surfaces` for the ground tiles, from gen-raw/terrain (tools/terrain/ground.py). A
+record has one entry: a ground tile models also draw is marked superseded in the surfaces ledger.
 
 Icons are written at their area's ICON pixels on the longer side and carry no doll rect.
 
@@ -62,7 +64,7 @@ opaque box in the import's published image), from which the game sizes it on the
 Only finals whose ledger/AREA-notes.json status is `accepted` are promoted. Rerunning an area replaces that
 area's entries and files and keeps every other area's.
 
-    promote.py --area paper-doll --area worn --area items --area spells --area effects --area surfaces
+    promote.py --area paper-doll --area worn --area items --area spells --area effects --area surfaces --area terrain
 """
 import argparse, hashlib, io, json, re
 from pathlib import Path
@@ -78,7 +80,7 @@ CONTENT = REPOSITORY / "content"
 MEDIA = "worldrpg/media/refreshed"
 PAYLOAD = CONTENT / "worldrpg/payloads/daggerfall.art-replacements.json"
 QUALITY = 90
-AREAS = ("paper-doll", "worn", "items", "spells", "effects", "surfaces")
+AREAS = ("paper-doll", "worn", "items", "spells", "effects", "surfaces", "terrain")
 SURFACE = re.compile(r"texture-(\d{3})-(\d+)")
 ICON = {"items": 256, "spells": 128}   # pixels on an icon's longer side: an item slot, a spell glyph of about 3rem
 CLASSIC_MANIFEST = REPOSITORY / "local/import/staging/worldrpg/imports/shared/media/classic/manifest.json"
@@ -392,19 +394,19 @@ def classic_size(media):
     return {"width": right - left, "height": bottom - top}
 
 
-def surfaces():
-    """Each accepted surface final's entry, by the classic texture record it replaces."""
-    finals = {path.stem: path for path in (AUTHORING / "gen-raw" / "surfaces").glob("*/texture-*.png") if path.parent.name != "raw"}
+def surfaces(area):
+    """Each accepted final's entry in the area, by the classic texture record it replaces."""
+    finals = {path.stem: path for path in (AUTHORING / "gen-raw" / area).glob("*/texture-*.png") if path.parent.name != "raw"}
     promoted = []
-    for key, note in ledger("surfaces").items():
+    for key, note in ledger(area).items():
         if note.get("status") != "accepted":
             continue
         if key not in finals:
-            raise SystemExit(f"{key} is accepted in ledger/surfaces-notes.json but has no final under gen-raw/surfaces.")
+            raise SystemExit(f"{key} is accepted in ledger/{area}-notes.json but has no final under gen-raw/{area}.")
         archive, record = map(int, SURFACE.fullmatch(key).groups())
         promoted.append({"replaces": {"archive": archive, "record": record},
-                         **world_png(Image.open(finals[key]), f"{MEDIA}/surfaces/{key}.png")})
-    return sorted(promoted, key=lambda entry: (entry["replaces"]["archive"], entry["replaces"]["record"]))
+                         **world_png(Image.open(finals[key]), f"{MEDIA}/{area}/{key}.png")})
+    return promoted
 
 
 def icon_entry(replaces, image, name, world=None):
@@ -445,13 +447,19 @@ def main():
             payload["artReplacements"]["meshes"] = world_meshes()
             print(f"effects: {len(effects)} effects, {sum(entry['byteLength'] for entry in effects) / 1e6:.1f} MB", flush=True)
             continue
-        if area == "surfaces":
-            directory = CONTENT / MEDIA / "surfaces"
+        if area in ("surfaces", "terrain"):
+            directory = CONTENT / MEDIA / area
             directory.mkdir(parents=True, exist_ok=True)
             for old in directory.glob("*.png"):
                 old.unlink()
-            promoted = payload["artReplacements"]["surfaces"] = surfaces()
-            print(f"surfaces: {len(promoted)} finals, {sum(entry['byteLength'] for entry in promoted) / 1e6:.1f} MB", flush=True)
+            promoted = surfaces(area)
+            kept = [entry for entry in payload["artReplacements"].get("surfaces", []) if not entry["path"].startswith(f"{MEDIA}/{area}/")]
+            entries = sorted(kept + promoted, key=lambda entry: (entry["replaces"]["archive"], entry["replaces"]["record"]))
+            records = [(entry["replaces"]["archive"], entry["replaces"]["record"]) for entry in entries]
+            if len(set(records)) != len(records):
+                raise SystemExit(f"Two areas replace one record: {sorted(r for r in set(records) if records.count(r) > 1)}.")
+            payload["artReplacements"]["surfaces"] = entries
+            print(f"{area}: {len(promoted)} finals, {sum(entry['byteLength'] for entry in promoted) / 1e6:.1f} MB", flush=True)
             continue
         notes = ledger(area)
         accepted = sorted(key for key, note in notes.items() if note.get("status") == "accepted")

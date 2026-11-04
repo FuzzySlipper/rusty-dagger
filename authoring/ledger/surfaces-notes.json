@@ -336,8 +336,8 @@
   "note": "Patch accepted the set-01 review sheet on 2026-11-03."
  },
  "texture-004-2": {
-  "status": "accepted",
-  "note": "Patch accepted the set-04 review sheet on 2026-11-03."
+  "status": "superseded",
+  "note": "The ground tile texture-004-2 in ledger/terrain-notes.json stands in for this record: one texture serves the ground and the models that draw it."
  },
  "texture-006-0": {
   "status": "accepted",
@@ -1480,12 +1480,12 @@
   "note": "Patch accepted the set-95 review sheet on 2026-11-03."
  },
  "texture-103-2": {
-  "status": "accepted",
-  "note": "Patch accepted the set-03 review sheet on 2026-11-03."
+  "status": "superseded",
+  "note": "The ground tile texture-103-2 in ledger/terrain-notes.json stands in for this record: one texture serves the ground and the models that draw it."
  },
  "texture-104-2": {
-  "status": "accepted",
-  "note": "Patch accepted the set-04 review sheet on 2026-11-03."
+  "status": "superseded",
+  "note": "The ground tile texture-104-2 in ledger/terrain-notes.json stands in for this record: one texture serves the ground and the models that draw it."
  },
  "texture-107-1": {
   "status": "accepted",
@@ -2496,12 +2496,12 @@
   "note": "Patch accepted the exterior-doors review sheet on 2026-11-03."
  },
  "texture-303-2": {
-  "status": "accepted",
-  "note": "Patch accepted the set-03 review sheet on 2026-11-03."
+  "status": "superseded",
+  "note": "The ground tile texture-303-2 in ledger/terrain-notes.json stands in for this record: one texture serves the ground and the models that draw it."
  },
  "texture-304-2": {
-  "status": "accepted",
-  "note": "Patch accepted the set-04 review sheet on 2026-11-03."
+  "status": "superseded",
+  "note": "The ground tile texture-304-2 in ledger/terrain-notes.json stands in for this record: one texture serves the ground and the models that draw it."
  },
  "texture-307-1": {
   "status": "accepted",
@@ -3508,12 +3508,12 @@
   "note": "Patch accepted the exterior-doors review sheet on 2026-11-03."
  },
  "texture-403-2": {
-  "status": "accepted",
-  "note": "Patch accepted the set-03 review sheet on 2026-11-03."
+  "status": "superseded",
+  "note": "The ground tile texture-403-2 in ledger/terrain-notes.json stands in for this record: one texture serves the ground and the models that draw it."
  },
  "texture-404-2": {
-  "status": "accepted",
-  "note": "Patch accepted the set-04 review sheet on 2026-11-03."
+  "status": "superseded",
+  "note": "The ground tile texture-404-2 in ledger/terrain-notes.json stands in for this record: one texture serves the ground and the models that draw it."
  },
  "texture-407-1": {
   "status": "accepted",
