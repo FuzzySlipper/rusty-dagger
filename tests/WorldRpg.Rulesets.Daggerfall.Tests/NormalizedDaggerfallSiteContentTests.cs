@@ -93,7 +93,7 @@ public sealed class NormalizedDaggerfallSiteContentTests
         DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(TestSessions.Data(GeneratedContent(root)),
             TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
         NormalizedClassicPresentation classic = inputs.ClassicPresentation;
-        Assert.Equal(12, classic.Weapons.Count);
+        Assert.Equal(17, classic.Weapons.Count);
         Assert.Equal("weapon.longblade", classic.CompatibleItemVisuals["iron-longsword"]);
         Assert.Equal("weapon.dagger.steel", classic.CompatibleItemVisuals["iron-dagger"]);
         Assert.Equal("weapon.unarmed", classic.UnarmedVisual);
