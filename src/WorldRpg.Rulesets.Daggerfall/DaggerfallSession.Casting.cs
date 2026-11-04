@@ -201,9 +201,14 @@ internal sealed partial class DaggerfallSession
         }
     }
 
-    /// <summary>The bodies a spell the player released goes through; anyone else's meets everyone.</summary>
+    /// <summary>
+    /// The bodies a spell the player released goes through. Only harm goes through anyone: a helpful spell reaches allies
+    /// and civilians, and a spell with any harm in it counts as harm, since an effect can't be delivered without the rest.
+    /// Anyone else's spell meets everyone.
+    /// </summary>
     private Func<long, bool>? SpellPasses(DaggerfallLiveSpell bundle) =>
-        bundle.CasterId == State.Actors.Player.DurableId ? id => PassesThrough(id, bundle.HarmsCivilians) : null;
+        bundle.CasterId == State.Actors.Player.DurableId && bundle.Spell.Effects.Any(DaggerfallMagicHarm.Harms)
+            ? id => PassesThrough(id, bundle.HarmsCivilians) : null;
 
     /// <summary>Actual ranged flight callers submit their physical swept segment; Engine chooses the first collision.</summary>
     internal DaggerfallCastResult DeliverSpellImpact(DaggerfallLiveSpell bundle, Vector3 from, Vector3 to)
