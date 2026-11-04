@@ -16,7 +16,8 @@ the icon paints as one piece that is two parts, and `cols` the columns; class `a
 round plate `half` metres either side of the centre of the icon's tilted ellipse of it (a tsuba). A `chain` part is
 `links` oval links of `linkLength`, `linkWidth` and `wire` running on from the top of part `on`, ending in a ball of radius
 `ball` with `spikes`. A `string` part is a cord of `radius` from tip to tip. Both take their colour from their piece of
-the icon. A lathe part with `bridge` always joins the run above it, across a gap in the icon. A part's `slot` overrides its material (`any` parts default to `trim`). `spikes` sets cones on its widest ring's sphere: `count`, `length` and `base` in metres,
+the icon. A lathe part with `bridge` always joins the run above it, across a gap in the icon. `reach` runs a flat part on to the named part it joins, and `root` thickens it by `gain` toward the part named `toward`.
+A lathe part's `radius` in metres replaces the icon's width, for an icon drawn fatter than the thing. A part's `slot` overrides its material (`any` parts default to `trim`). `spikes` sets cones on its widest ring's sphere: `count`, `length` and `base` in metres,
 spread evenly. A part's `light` is passed to paint.py.
 
 Writes OUT_DIR/reference.glb (the icon projected flat onto every part, the colour layout `palette_cells.py`
@@ -48,6 +49,10 @@ W, H = icon.size
 pixels = np.array(icon.pixels[:]).reshape(H, W, 4)[::-1]   # row 0 at the top, as the PNG
 METRES = weapon['length'] / H                                # the icon's height is the weapon's length
 COLLAR = 0.5   # a `ball`'s collar, as a share of its radius
+FAIR = 0.03   # the widest neck in a turned run that is closed, in metres
+INK = 0.22    # a pixel darker than this at a seam is the painted line between sections, not the part's colour
+SEAM = 12     # rows either side of a seam whose ink is lifted
+SEAMS, SPANS = [], []   # where turned parts meet, and each run's rows and columns
 INSET = 0.7   # a turned part's colour comes from this share of its width: the side would otherwise take the ink outline
 
 
@@ -150,6 +155,11 @@ def flat(bm, mask, part):
     rise = np.clip(d / ramp, 0, 1)
     rise = np.sqrt(1 - (1 - rise) ** 2) if part.get('profile') == 'round' else rise
     t = half * rise
+    if 'root' in part:   # thicker toward what the part joins, as a blade thickens toward its hilt
+        ys, xs = np.nonzero(masks[part['root']['toward']])
+        yy, xx = np.mgrid[0:m.shape[0], 0:m.shape[1]]
+        away = np.hypot(yy * step - ys.mean(), xx * step - xs.mean())
+        t = t * (1 + part['root']['gain'] * (1 - away / away[m].max()).clip(0, 1))
     h, w = m.shape
     front, back = {}, {}
 
@@ -210,7 +220,7 @@ def turned(chain):
         mine = [s for s in stations if s[3] == part['name']]
         raw, k = [s[2] for s in mine], part.get('smooth', 1)
         for j, s in enumerate(mine):
-            s[2] = float(np.median(raw[max(0, j - k // 2):j + k // 2 + 1]))
+            s[2] = part['radius'] / METRES if 'radius' in part else float(np.median(raw[max(0, j - k // 2):j + k // 2 + 1]))
     segments = max(p.get('segments', 12) for p in chain)
     for part in (p for p in chain if p.get('ball')):
         # A true sphere, the largest that fits the outline (spikes do not widen it), ending where it is as narrow as
@@ -235,10 +245,27 @@ def turned(chain):
         for s in mine:
             s[2] = min(s[2], core)
     above, below = joins([p['name'] for p in chain])
-    if above is not None and above < stations[0][0]:   # reach a flat part just above or below (a guard)
+    # Reach a flat part just above or below (a guard) at full width: the icon's rows beside it are only partly painted.
+    if above is not None and above < stations[0][0]:
+        full = float(np.median([s[2] for s in stations[:12]]))
+        for s in stations[:6]:
+            s[2] = max(s[2], full)
         stations.insert(0, [above] + stations[0][1:])
     if below is not None and below > stations[-1][0]:
+        full = float(np.median([s[2] for s in stations[-12:]]))
+        for s in stations[-6:]:
+            s[2] = max(s[2], full)
         stations.append([below] + stations[-1][1:])
+    # The icon's outline pinches where painted sections meet. Closed, a neck narrower than FAIR metres fills to the
+    # narrower of its two sides, so sections read as one piece; a real shoulder, wide on one side only, stays.
+    widths = [s[2] for s in stations]
+    neck = FAIR / METRES
+    for i, s in enumerate(stations):
+        before = max(w for w, o in zip(widths, stations) if s[0] - neck <= o[0] <= s[0])
+        after = max(w for w, o in zip(widths, stations) if s[0] <= o[0] <= s[0] + neck)
+        s[2] = max(s[2], min(before, after))
+    SEAMS.extend(int(b[0]) for a, b in zip(stations, stations[1:]) if a[3] != b[3])
+    SPANS.append((int(stations[0][0]), int(stations[-1][0]), int(min(s[4] - s[2] for s in stations)), int(max(s[4] + s[2] for s in stations)) + 1))
     # A ring that adds nothing to the profile goes: a straight shaft needs only its ends and each change of part.
     kept = stations[:1]
     for s, after in zip(stations[1:-1], stations[2:]):
@@ -317,6 +344,22 @@ def spikes(bm, centre, r, spec):
         bmesh.ops.translate(bm, verts=verts, vec=centre + direction * (r + spec['length'] / 2 - r * 0.15))
         made += verts
     return made
+
+
+def reach(part):
+    """Runs a flat part on to the part it joins. The icon hides a blade's root behind a tilted guard, and a guard's
+    bow stops where the bell's ellipse starts, so the widest row near that end is carried across the space."""
+    mask = masks[part['name']]
+    ys = np.nonzero(mask)[0]
+    top, bottom = int(ys.min()), int(ys.max())
+    lo, hi = rows_of([part['reach']])
+    widths = mask.sum(axis=1)
+    if lo >= (top + bottom) / 2:
+        row = bottom - 40 + int(np.argmax(widths[bottom - 40:bottom + 1]))
+        mask[row:lo + 5] |= mask[row]
+    else:
+        row = top + int(np.argmax(widths[top:top + 41]))
+        mask[hi - 4:row] |= mask[row]
 
 
 def rows_of(names):
@@ -428,6 +471,9 @@ def material(label, image=None):
 cls = classify()
 SHAPES = {p['name']: p['shape'] for p in weapon['parts']}
 masks = {p['name']: part_mask(cls, p) for p in weapon['parts']}
+for part in weapon['parts']:
+    if 'reach' in part:
+        reach(part)
 grip = weapon['grip']   # the part the hand closes on, and the share of it (from its bottom) the hand covers
 gy, gx = np.nonzero(masks[grip['part']])
 top, bottom = gy.min(), gy.max() + 1
@@ -479,7 +525,32 @@ for part in weapon['parts']:
     obj['slot'] = slot_of(part)
     objects.append(obj)
 
-projected = material('icon', icon)
+def lifted():
+    """The icon with the ink at each seam between turned parts replaced from just beyond the seam, and the rows a run
+    bridges filled, so a painted line or a gap does not read as a space between the pieces. Each part keeps its own
+    colours: only the brightness it is painted by changes here."""
+    icon_out = pixels.copy()
+    for top, bottom, left, right in SPANS:
+        cols = slice(max(left, 0), min(right, W))
+        for seam in (s for s in SEAMS if top <= s <= bottom):
+            for y in range(seam - SEAM, seam + SEAM + 1):
+                source = 2 * (seam - SEAM) - y if y < seam else 2 * (seam + SEAM) - y
+                if 0 <= y < H and 0 <= source < H:
+                    dark = (icon_out[y, cols, :3].max(axis=1) < INK) | (icon_out[y, cols, 3] < 0.5)
+                    icon_out[y, cols][dark] = pixels[source, cols][dark]
+        rows = [y for y in range(top, bottom + 1) if pixels[y, cols, 3].max() > 0.5]
+        for y in range(top, bottom + 1):
+            if pixels[y, cols, 3].max() <= 0.5 and rows:
+                icon_out[y, cols] = pixels[min(rows, key=lambda r: abs(r - y)), cols]
+    image = bpy.data.images.new('icon-lifted', W, H, alpha=True)
+    image.pixels.foreach_set(icon_out[::-1].ravel().astype(np.float32))
+    image.filepath_raw = str(out.resolve() / 'icon-lifted.png')
+    image.file_format = 'PNG'
+    image.save()
+    return image
+
+
+projected = material('icon', lifted())
 for obj in objects:
     obj.data.materials.append(projected)
     for poly in obj.data.polygons:

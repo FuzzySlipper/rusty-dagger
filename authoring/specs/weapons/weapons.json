@@ -13,7 +13,7 @@
    "invent": "The guard is a solid brass bar, thicker at the centre where it meets the blade, its arms rounded in section. The blade is a flattened diamond in section; seen edge-on it is thin with a visible central ridge. The grip is round in section, as long as the visible grip pieces plus the joined middle.",
    "grip": {"part": "grip"},
    "parts": [
-    {"name": "blade", "class": "steel", "shape": "flat", "profile": "ridge", "half": 0.0035, "ramp": 0.012, "faces": 800},
+    {"name": "blade", "class": "steel", "shape": "flat", "profile": "ridge", "half": 0.0045, "ramp": 0.012, "faces": 800, "root": {"toward": "guard", "gain": 0.6}},
     {"name": "guard", "class": "brass", "pick": "top", "shape": "flat", "profile": "round", "half": 0.007, "ramp": 0.004, "faces": 600},
     {"name": "grip", "class": "leather", "shape": "lathe", "segments": 10, "smooth": 5},
     {"name": "pommel", "class": "brass", "pick": "bottom", "shape": "lathe", "segments": 12, "smooth": 3}
@@ -27,7 +27,7 @@
    "invent": "The tsuba is a flat round disc at right angles to the blade. The grip is oval in section. The blade is thick at its back and thin at its edge.",
    "grip": {"part": "grip"},
    "parts": [
-    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.005, "ramp": 0.015, "faces": 700},
+    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.006, "ramp": 0.015, "faces": 700, "root": {"toward": "tsuba", "gain": 0.6}, "reach": "tsuba"},
     {"name": "tsuba", "class": "brass", "pick": "top", "shape": "disc", "half": 0.004},
     {"name": "grip", "class": "leather", "shape": "lathe", "segments": 10, "smooth": 9},
     {"name": "cap", "class": "brass", "rows": [800, 884], "pick": "all", "shape": "lathe", "segments": 10, "smooth": 3}
@@ -41,7 +41,7 @@
    "invent": "The pole is round in section and straight, with the same cap at both ends.",
    "grip": {"part": "haft", "span": [0.4, 0.6]},
    "parts": [
-    {"name": "haft", "class": "leather", "pick": "all", "shape": "lathe", "segments": 10, "smooth": 41}
+    {"name": "haft", "class": "leather", "pick": "all", "shape": "lathe", "segments": 10, "smooth": 41, "radius": 0.017}
    ]
   },
   {
@@ -52,7 +52,7 @@
    "invent": "The guard is a brass bar, thicker at the centre. The blade is a flattened diamond in section. The grip is round in section and continuous from guard to pommel.",
    "grip": {"part": "grip"},
    "parts": [
-    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.0035, "ramp": 0.012, "faces": 800},
+    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.0045, "ramp": 0.012, "faces": 800, "root": {"toward": "guard", "gain": 0.6}},
     {"name": "guard", "class": "brass", "pick": "top", "shape": "flat", "profile": "round", "half": 0.007, "ramp": 0.004, "faces": 500},
     {"name": "grip", "class": "leather", "shape": "lathe", "segments": 10, "smooth": 5},
     {"name": "pommel", "class": "brass", "pick": "bottom", "shape": "lathe", "segments": 12, "smooth": 3}
@@ -66,7 +66,7 @@
    "invent": "The tsuba is a flat round disc at right angles to the blade. The blade is thick at its back and thin at its edge. The grip is oval in section.",
    "grip": {"part": "grip"},
    "parts": [
-    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.0035, "ramp": 0.012, "faces": 800},
+    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.0045, "ramp": 0.012, "faces": 800, "root": {"toward": "tsuba", "gain": 0.6}, "reach": "tsuba"},
     {"name": "tsuba", "class": "brass", "pick": "top", "shape": "disc", "half": 0.004},
     {"name": "grip", "class": "leather", "shape": "lathe", "segments": 10, "smooth": 9},
     {"name": "cap", "class": "brass", "pick": "bottom", "shape": "lathe", "segments": 10, "smooth": 3}
@@ -80,7 +80,7 @@
    "invent": "The guard is a narrow bar, rectangular in section. The blade is a flattened diamond in section. The grip is round in section and continuous from guard to pommel.",
    "grip": {"part": "grip"},
    "parts": [
-    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.003, "ramp": 0.012, "faces": 800},
+    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.004, "ramp": 0.012, "faces": 800, "root": {"toward": "guard", "gain": 0.6}},
     {"name": "guard", "class": "brass", "pick": "top", "shape": "flat", "profile": "round", "half": 0.006, "ramp": 0.004, "faces": 500},
     {"name": "grip", "class": "leather", "shape": "lathe", "segments": 10, "smooth": 5},
     {"name": "pommel", "class": "brass", "pick": "bottom", "shape": "lathe", "segments": 12, "smooth": 3}
@@ -94,9 +94,9 @@
    "invent": "The bell is a shallow round brass cup at right angles to the blade, open toward the grip. The knuckle bow is a thin brass strip on the edge side. The grip is oval in section.",
    "grip": {"part": "grip"},
    "parts": [
-    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.0025, "ramp": 0.01, "faces": 800},
+    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.0035, "ramp": 0.01, "faces": 800, "root": {"toward": "bell", "gain": 0.6}, "reach": "bell"},
     {"name": "bell", "class": "brass", "rows": [0, 735], "shape": "disc", "half": 0.01},
-    {"name": "bow", "class": "brass", "rows": [736, 887], "shape": "flat", "profile": "round", "half": 0.003, "ramp": 0.002, "faces": 300},
+    {"name": "bow", "class": "brass", "rows": [736, 887], "shape": "flat", "profile": "round", "half": 0.003, "ramp": 0.002, "faces": 300, "reach": "bell"},
     {"name": "grip", "class": "leather", "shape": "lathe", "segments": 10, "smooth": 5}
    ]
   },
@@ -108,7 +108,7 @@
    "invent": "The crossguard is a narrow brass bar, rectangular in section, with a small central block where it meets the blade. The blade is a flattened diamond in section with a shallow central ridge; seen edge-on it is thin and straight. The grip is round in section and long enough for one hand, joined continuously from guard to pommel.",
    "grip": {"part": "grip"},
    "parts": [
-    {"name": "blade", "class": "steel", "shape": "flat", "profile": "ridge", "half": 0.003, "ramp": 0.012, "faces": 900},
+    {"name": "blade", "class": "steel", "shape": "flat", "profile": "ridge", "half": 0.004, "ramp": 0.012, "faces": 900, "root": {"toward": "guard", "gain": 0.6}},
     {"name": "guard", "class": "brass", "pick": "top", "shape": "flat", "profile": "round", "half": 0.006, "ramp": 0.004, "faces": 500},
     {"name": "grip", "class": "leather", "shape": "lathe", "segments": 10, "smooth": 5},
     {"name": "pommel", "class": "brass", "pick": "bottom", "shape": "lathe", "segments": 12, "smooth": 3}
@@ -122,7 +122,7 @@
    "invent": "The tsuba is a flat round disc at right angles to the blade. The blade is thick at its back and thin at its edge. The grip is oval in section and long enough for two hands.",
    "grip": {"part": "grip"},
    "parts": [
-    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.0035, "ramp": 0.012, "faces": 800},
+    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.0045, "ramp": 0.012, "faces": 800, "root": {"toward": "tsuba", "gain": 0.6}, "reach": "tsuba"},
     {"name": "tsuba", "class": "brass", "pick": "top", "shape": "disc", "half": 0.004},
     {"name": "grip", "class": "leather", "shape": "lathe", "segments": 10, "smooth": 9},
     {"name": "cap", "class": "brass", "pick": "bottom", "shape": "lathe", "segments": 10, "smooth": 3}
@@ -136,7 +136,7 @@
    "invent": "The guard is a straight thin bar. The lugs are small flat steel points on the blade's edges. The blade is a flattened diamond in section. The grip is round in section and long enough for two hands.",
    "grip": {"part": "grip"},
    "parts": [
-    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.0035, "ramp": 0.012, "faces": 900},
+    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.0045, "ramp": 0.012, "faces": 900, "root": {"toward": "guard", "gain": 0.6}},
     {"name": "guard", "class": "brass", "pick": "all", "rows": [0, 700], "shape": "flat", "profile": "round", "half": 0.006, "ramp": 0.004, "faces": 500},
     {"name": "grip", "class": "leather", "shape": "lathe", "segments": 10, "smooth": 5},
     {"name": "pommel", "class": "brass", "pick": "bottom", "shape": "lathe", "segments": 12, "smooth": 3}
@@ -150,7 +150,7 @@
    "invent": "The tsuba is a flat round disc at right angles to the blade. The blade is thick at its back and thin at its edge. The grip is oval in section and long enough for two hands.",
    "grip": {"part": "grip"},
    "parts": [
-    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.004, "ramp": 0.012, "faces": 800},
+    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.005, "ramp": 0.012, "faces": 800, "root": {"toward": "tsuba", "gain": 0.6}, "reach": "tsuba"},
     {"name": "tsuba", "class": "brass", "pick": "top", "shape": "disc", "half": 0.004},
     {"name": "grip", "class": "leather", "shape": "lathe", "segments": 10, "smooth": 9},
     {"name": "cap", "class": "brass", "pick": "bottom", "shape": "lathe", "segments": 10, "smooth": 3}
@@ -182,9 +182,7 @@
    "parts": [
     {"name": "head", "class": "steel", "pick": "top", "shape": "lathe", "segments": 14, "smooth": 7, "ball": true, "light": 0.5, "spikes": {"count": 18, "length": 0.03, "base": 0.014}},
     {"name": "haft", "class": "leather", "pick": "top", "shape": "lathe", "segments": 10, "smooth": 3},
-    {"name": "ring", "class": "steel", "pick": 1, "shape": "lathe", "segments": 10, "smooth": 1},
     {"name": "grip", "class": "leather", "pick": 1, "shape": "lathe", "segments": 10, "smooth": 3},
-    {"name": "band", "class": "leather", "pick": 2, "shape": "lathe", "segments": 12, "smooth": 1},
     {"name": "butt", "class": "steel", "pick": "bottom", "shape": "lathe", "segments": 12, "smooth": 3}
    ]
   },
@@ -222,7 +220,7 @@
    "invent": "The blade is flat and thin at its edge, thickening toward the socket. The socket is a short steel sleeve around the haft. The haft is round in section.",
    "grip": {"part": "haft", "span": [0, 0.3]},
    "parts": [
-    {"name": "blade", "class": "any", "cols": [81, 416], "rows": [0, 345], "pick": "all", "slot": "metal", "shape": "flat", "profile": "ridge", "half": 0.006, "ramp": 0.03, "faces": 900},
+    {"name": "blade", "class": "any", "cols": [81, 416], "rows": [0, 345], "pick": "all", "slot": "metal", "shape": "flat", "profile": "ridge", "half": 0.009, "ramp": 0.03, "faces": 900, "root": {"toward": "socket", "gain": 0.8}},
     {"name": "socket", "class": "any", "cols": [0, 80], "rows": [0, 340], "pick": "all", "slot": "metal", "shape": "lathe", "segments": 12, "smooth": 9},
     {"name": "haft", "class": "leather", "rows": [341, 859], "shape": "lathe", "segments": 10, "smooth": 41}
    ]
@@ -235,7 +233,7 @@
    "invent": "The blades are flat and thin at their edges, thickening toward the socket. The socket is a short steel sleeve around the haft. The haft is round in section.",
    "grip": {"part": "haft", "span": [0, 0.3]},
    "parts": [
-    {"name": "head", "class": "any", "rows": [0, 165], "pick": "all", "slot": "metal", "shape": "flat", "profile": "ridge", "half": 0.006, "ramp": 0.02, "faces": 900},
+    {"name": "head", "class": "any", "rows": [0, 165], "pick": "all", "slot": "metal", "shape": "flat", "profile": "ridge", "half": 0.008, "ramp": 0.02, "faces": 900, "root": {"toward": "socket", "gain": 0.8}},
     {"name": "socket", "class": "any", "rows": [50, 150], "cols": [111, 144], "pick": "all", "slot": "metal", "shape": "lathe", "segments": 10, "smooth": 9},
     {"name": "haft", "class": "leather", "rows": [170, 651], "shape": "lathe", "segments": 10, "smooth": 41, "bridge": true},
     {"name": "butt", "class": "steel", "pick": "bottom", "shape": "lathe", "segments": 10, "smooth": 3}
@@ -274,8 +272,8 @@
    "invent": "The shaft is round in section. The broadhead is flat and thin at its edges. The feathers stand out from the shaft in three vanes spaced evenly round it.",
    "grip": {"part": "shaft"},
    "parts": [
-    {"name": "head", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.002, "ramp": 0.008, "faces": 300},
-    {"name": "shaft", "class": "any", "rows": [130, 735], "cols": [46, 73], "pick": "all", "shape": "lathe", "segments": 8, "smooth": 41},
+    {"name": "head", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.0035, "ramp": 0.008, "faces": 300, "root": {"toward": "shaft", "gain": 0.8}},
+    {"name": "shaft", "class": "any", "rows": [130, 735], "cols": [46, 73], "pick": "all", "shape": "lathe", "segments": 8, "smooth": 41, "radius": 0.0065},
     {"name": "fletching", "class": "any", "rows": [545, 738], "pick": "all", "slot": "trim", "shape": "flat", "profile": "ridge", "half": 0.0012, "ramp": 0.004, "faces": 500}
    ]
   }
