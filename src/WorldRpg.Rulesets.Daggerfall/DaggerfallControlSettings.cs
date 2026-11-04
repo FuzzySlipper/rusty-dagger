@@ -124,8 +124,9 @@ public sealed class DaggerfallControlSettings
     public static bool IsControllerBindable(string action) =>
         action != MenuAction && DaggerfallInput.Bindings.Any(binding => binding.Action == InputAction(action));
 
-    // Whether an action reads how long its binding stays down, which needs the release as well as the press.
-    private static bool IsHeld(DaggerfallControlAction action) => action.Category == "movement" || action.Id is "attack" or "block";
+    // Whether an action reads how long its binding stays down. A mapping fires on its one edge, so these map the
+    // release as well as the press.
+    private static bool ReadsRelease(string action) => action is "attack" or "block";
 
     private static bool IsDirection(string action) => action.StartsWith("move.", StringComparison.Ordinal);
 
@@ -349,16 +350,19 @@ public sealed class DaggerfallControlSettings
 
     /// <summary>Complete Engine-owned physical mapping set for the declared semantic catalog.</summary>
     public ProductInputMapping[] PhysicalMappings() => Catalog.SelectMany(action =>
-        KeysFor(action.Id).Select((key, index) =>
+        KeysFor(action.Id).SelectMany((key, index) =>
         {
             bool keyboard = Enum.TryParse(key, out KeyboardControl control) && control != KeyboardControl.None;
-            return new ProductInputMapping(
-                Encoding.UTF8.GetBytes($"controls.{action.Id}.{index}"), Encoding.UTF8.GetBytes(action.Id),
+            ProductInputMapping Mapping(string suffix, InputEdge edge) => new(
+                Encoding.UTF8.GetBytes($"controls.{action.Id}.{index}{suffix}"), Encoding.UTF8.GetBytes(action.Id),
                 keyboard ? InputTriggerKind.Key : InputTriggerKind.PointerButton,
-                IsHeld(action) ? InputEdge.Held : InputEdge.Pressed,
+                edge,
                 default, keyboard ? control : default,
                 keyboard ? default : Enum.Parse<PointerButton>(key), default, default, default,
                 new InputContext("gameplay.default"u8.ToArray()));
+            if (action.Category == "movement") return [Mapping("", InputEdge.Held)];
+            return ReadsRelease(action.Id) ? [Mapping("", InputEdge.Pressed), Mapping(".released", InputEdge.Released)]
+                : new[] { Mapping("", InputEdge.Pressed) };
         })).ToArray();
 
     private static Dictionary<string, List<string>> CreateDefaultBindings() =>

@@ -412,7 +412,7 @@ public sealed class ControlsInputSessionTests
         CapturingDaggerfallRuleset ruleset = new();
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.classic"));
         product.Start(); product.Begin();
-        ProductInputMapping Mapping(string intent) => Assert.Single(engine.PhysicalInput.Mappings, value => Encoding.UTF8.GetString(value.Intent.Span) == intent);
+        ProductInputMapping Mapping(string intent) => Assert.Single(engine.PhysicalInput.Mappings, value => Encoding.UTF8.GetString(value.Intent.Span) == intent && value.Edge != InputEdge.Released);
         Assert.Equal(KeyboardControl.KeyW, Mapping("move.forward").Keyboard);
         product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"controls-rebind","item":"move.forward","key":"KeyB"}""")]));
         Assert.Equal(KeyboardControl.KeyB, Mapping("move.forward").Keyboard);
