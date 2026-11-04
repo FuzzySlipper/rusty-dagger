@@ -21,16 +21,28 @@ sampled and matte.
 1. **Design.** Write the weapon's `subject` (what it is, from its icon) and `invent` (what the icon cannot show:
    sections, depths, the grip under the hand) in the spec. A conflict between the icon and the classic first-person
    frame goes to the icon.
-2. **Turnaround.** `python3 authoring/tools/weapons/h3.py prepare NAME r01` stands the icon upright, fills the gap the
-   paper doll leaves where the hand covers the grip, and writes an H3 REF2VA request. Run it on the lab 5090 with
+2. **Turnaround.** The paper doll draws most weapons in pieces, with gaps where the hand holds them. A straight grip's
+   gap can be filled row by row; anything else (a haft, a bow, a chain) goes through
+   `python3 authoring/tools/weapons/h3.py join NAME`, where Qwen rejoins the icon into `joined.png`. Look at it: a join can
+   leave a gap or redraw a fitting. A weapon with no paper-doll layer copies its accepted item icon to `joined.png`.
+   `python3 authoring/tools/weapons/h3.py prepare NAME r01` then stands the icon upright (`axis: haft` stands it by its
+   wood, so a big head does not tilt it) and writes an H3 REF2VA request. Run it on the lab 5090 with
    asset-pipeline's `legacy/experiments/h3-turnaround/run_turnaround.py` inside `asset-resources run --host gpu-lab
    --resource lab-comfy` (two seeds, 25 steps), from the asset-pipeline root. Look at every attempt; a changed prompt
    is a new rev. Copy eight frames of the chosen orbit to `h3-<rev>/views/` for the review sheet. The turnaround is
    the reference for what the icon hides: guard depth, pommel shape, how spikes sit round a head.
 3. **Parts.** Give the weapon its `grip` and `parts` in the spec. `build.py` splits the icon into colour pieces
    (steel, brass, leather) and builds each part as `flat` (blades, guards, axe blades: two sheets meeting at the
-   outline) or `lathe` (grips, pommels, hafts: round in section; `ball` and `spikes` for a spiked head). Its
-   `build.json` lists every piece per class to pick from.
+   outline), `lathe` (grips, pommels, hafts: round in section; `ball` and `spikes` for a spiked head, `flanges` for a
+   flanged one), `disc` (a tsuba or a saber's bell), `chain` (a flail's links and ball) or `string` (a bowstring). Touching
+   lathe parts share one straight axis and one profile; `bridge` joins a part to the run above across a gap in the icon.
+   Turned parts' necks and the ink at their seams are closed, so sections read as one piece; a detail thinner than about
+   a centimetre reads as a crack at this crunch, so leave it to the paint rather than making it a part. `reach` runs a
+   blade or a guard's bow on to the part it joins, which the icon's tilted guard hides. `root` thickens a blade or head
+   toward what holds it, and `radius` gives a pole its real width where the icon is drawn fatter.
+   A head needs something holding it to its haft: give an axe a lathe socket running up into the head. Its `build.json`
+   lists every piece per class to pick from. Build into a new folder for each rev, so a failed build cannot leave an
+   older model to be mistaken for the new one.
 
    ```sh
    blender -b --factory-startup --python authoring/tools/weapons/build.py -- NAME \
@@ -39,7 +51,7 @@ sampled and matte.
 4. **Crunch.** `python3 authoring/tools/weapons/paint.py BUILD_DIR ICON OUT_DIR` repaints each part from its own
    icon colours through asset-pipeline's `tools/texture-edit/palette_cells.py`, at the spec's `crunch`.
 5. **Review.** `python3 authoring/tools/weapons/sheet.py OUT.png --views H3_VIEWS LABEL=MODEL.glb ...` shows the
-   model's eight sides under the turnaround's. Then copy the painted `model.glb` to
+   model's eight sides under the turnaround's. Look at the joints close up, and from the side as well as the front. Then copy the painted `model.glb` to
    `content/worldrpg/first-person/weapons/NAME.glb`, run `rusty asset check` on it, rebuild the container with
    `scripts/fp-arms/build.sh`, and check it in the hand with `scripts/fp-arms/sheet.sh` in a 1920×1080 window run.
 
