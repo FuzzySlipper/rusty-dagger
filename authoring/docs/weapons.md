@@ -36,6 +36,10 @@ sampled and matte.
    outline), `lathe` (grips, pommels, hafts: round in section; `ball` and `spikes` for a spiked head, `flanges` for a
    flanged one), `disc` (a tsuba or a saber's bell), `chain` (a flail's links and ball) or `string` (a bowstring). Touching
    lathe parts share one straight axis and one profile; `bridge` joins a part to the run above across a gap in the icon.
+   Turned parts' necks and the ink at their seams are closed, so sections read as one piece; a detail thinner than about
+   a centimetre reads as a crack at this crunch, so leave it to the paint rather than making it a part. `reach` runs a
+   blade or a guard's bow on to the part it joins, which the icon's tilted guard hides. `root` thickens a blade or head
+   toward what holds it, and `radius` gives a pole its real width where the icon is drawn fatter.
    A head needs something holding it to its haft: give an axe a lathe socket running up into the head. Its `build.json`
    lists every piece per class to pick from. Build into a new folder for each rev, so a failed build cannot leave an
    older model to be mistaken for the new one.
