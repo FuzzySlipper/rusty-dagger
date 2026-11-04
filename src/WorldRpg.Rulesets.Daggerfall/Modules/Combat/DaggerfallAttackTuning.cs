@@ -110,6 +110,69 @@ internal sealed record DaggerfallStaminaTuning(double Base, double PerAttributeP
         ? value : throw new InvalidOperationException($"Stamina tuning '{name}' must be a share below one.");
 }
 
+/// <summary>
+/// What a blow does to the body it lands on: its force against the target's weight sets how it reacts, and heavy blows
+/// have weight on screen. Force and weight are in the classic's weight units, in which a person weighs 240.
+/// </summary>
+/// <param name="FastForce">A fast attack's force, and an arrow's.</param>
+/// <param name="PowerForce">A power attack's force.</param>
+/// <param name="KickForce">A kick's force.</param>
+/// <param name="StrengthPerPointAbove50">The share of its force each point of Strength above average adds, or takes off below it.</param>
+/// <param name="DefaultWeight">The weight of a person, for anyone the content gives none.</param>
+/// <param name="MinimumWeight">The least a body counts as weighing, so a fast attack doesn't fling a rat across the room.</param>
+/// <param name="StaggerImpact">The force over weight that staggers a target, stopping what it was doing.</param>
+/// <param name="KnockdownImpact">The force over weight that knocks a target down, which only a kick or a power attack can.</param>
+/// <param name="StaggerSeconds">How long a stagger holds a target.</param>
+/// <param name="KnockdownSeconds">How long a target stays down.</param>
+/// <param name="PushPerImpact">How fast each point of force over weight throws a target, in metres per second.</param>
+/// <param name="MaximumPush">The fastest a blow throws anything.</param>
+/// <param name="PushDeceleration">How fast a thrown target slows, in metres per second per second.</param>
+/// <param name="HitStopRate">The rate world time runs at through a hit-stop.</param>
+/// <param name="HitStopSteps">How many admitted steps a blow's hit-stop lasts.</param>
+/// <param name="HeavyHitStopSteps">How many a kick's or a power attack's lasts.</param>
+/// <param name="PunchDegrees">How far a landed blow knocks the view.</param>
+/// <param name="HeavyPunchDegrees">How far a kick or a power attack knocks it.</param>
+/// <param name="PunchSettleRate">How fast the view settles back, per second.</param>
+internal sealed record DaggerfallStrikeTuning(double FastForce, double PowerForce, double KickForce, double StrengthPerPointAbove50, int DefaultWeight, int MinimumWeight,
+    double StaggerImpact, double KnockdownImpact, double StaggerSeconds, double KnockdownSeconds, double PushPerImpact, double MaximumPush, double PushDeceleration,
+    double HitStopRate, int HitStopSteps, int HeavyHitStopSteps, double PunchDegrees, double HeavyPunchDegrees, double PunchSettleRate)
+{
+    internal static DaggerfallStrikeTuning Default { get; } = new(400d, 900d, 1600d, .01d, 240, 160, 2.5d, 5d, .5d, 1.6d, 1d, 7d, 9d, .25d, 1, 2, .5d, 1.5d, 14d);
+
+    /// <summary>Whether a player's attack is one of the heavy ones.</summary>
+    internal static bool Heavy(string attack) => attack is DaggerfallAttackIds.Kick or DaggerfallAttackIds.PowerOut;
+
+    /// <summary>What a player's attack does to a target of <paramref name="weight"/>; a weightless target, such as a ghost, is untouched.</summary>
+    internal DaggerfallStrikeReaction React(string attack, int strength, int? weight)
+    {
+        int mass = weight ?? DefaultWeight;
+        if (mass <= 0) return default;
+        bool kick = attack == DaggerfallAttackIds.Kick;
+        double force = kick ? KickForce : attack == DaggerfallAttackIds.PowerOut ? PowerForce : FastForce;
+        double impact = force * (1d + (strength - 50) * StrengthPerPointAbove50) / Math.Max(mass, MinimumWeight);
+        DaggerfallStrikeLevel level = impact >= KnockdownImpact && Heavy(attack) ? DaggerfallStrikeLevel.Knockdown
+            : impact >= StaggerImpact ? DaggerfallStrikeLevel.Stagger : DaggerfallStrikeLevel.Flinch;
+        double push = level != DaggerfallStrikeLevel.Flinch || kick ? Math.Min(MaximumPush, impact * PushPerImpact) : 0d;
+        double hold = level switch { DaggerfallStrikeLevel.Knockdown => KnockdownSeconds, DaggerfallStrikeLevel.Stagger => StaggerSeconds, _ => 0d };
+        return new(level, push, hold);
+    }
+
+    internal static DaggerfallStrikeTuning Read(JsonElement root) => new(
+        Positive(root, "fastForce"), Positive(root, "powerForce"), Positive(root, "kickForce"), Positive(root, "strengthPerPointAbove50"),
+        (int)Positive(root, "defaultWeight"), (int)Positive(root, "minimumWeight"), Positive(root, "staggerImpact"), Positive(root, "knockdownImpact"), Positive(root, "staggerSeconds"), Positive(root, "knockdownSeconds"),
+        Positive(root, "pushPerImpact"), Positive(root, "maximumPush"), Positive(root, "pushDeceleration"), Positive(root, "hitStopRate"),
+        (int)Positive(root, "hitStopSteps"), (int)Positive(root, "heavyHitStopSteps"), Positive(root, "punchDegrees"), Positive(root, "heavyPunchDegrees"), Positive(root, "punchSettleRate"));
+
+    private static double Positive(JsonElement parent, string name) => parent.GetProperty(name).GetDouble() is > 0d and var value && double.IsFinite(value)
+        ? value : throw new InvalidOperationException($"Strike tuning '{name}' must be positive.");
+}
+
+/// <summary>How hard a blow rocked its target.</summary>
+internal enum DaggerfallStrikeLevel { Flinch, Stagger, Knockdown }
+
+/// <summary>What a blow does to its target: how hard it rocks it, how fast it throws it, and how long it holds it.</summary>
+internal readonly record struct DaggerfallStrikeReaction(DaggerfallStrikeLevel Level, double Push, double HoldSeconds);
+
 /// <summary>The player's attack set: its timing per weapon class, and what a power attack and a kick cost and do.</summary>
 internal sealed record DaggerfallAttackTuning(
     double PowerThresholdSeconds, double PowerDamageMultiplier, double PowerStaminaMultiplier,
@@ -120,6 +183,7 @@ internal sealed record DaggerfallAttackTuning(
 {
     internal DaggerfallCombatantTuning Combatant { get; init; } = DaggerfallCombatantTuning.Default;
     internal DaggerfallStaminaTuning Stamina { get; init; } = DaggerfallStaminaTuning.Default;
+    internal DaggerfallStrikeTuning Strike { get; init; } = DaggerfallStrikeTuning.Default;
 
     private static readonly DaggerfallWeaponClassAttacks ShortBlade = new(new(.18d, .12d, .28d), .5d, new(.15d, .12d, .35d), 1.9f);
 
@@ -190,7 +254,7 @@ internal sealed record DaggerfallAttackTuning(
             groups.Add(new(group.GetProperty("templates").EnumerateArray().Select(template => template.GetInt32()).ToHashSet(), ReadPaths(group.GetProperty("paths"))));
         return new(Positive(root, "powerThresholdSeconds"), Positive(root, "powerDamageMultiplier"), Positive(root, "powerStaminaMultiplier"),
             ReadTiming(root.GetProperty("kick")), root.GetProperty("kickStaminaCost").GetInt32(), root.GetProperty("kickDamage").GetInt32(), (float)Positive(root, "kickReach"), classes, ReadPaths(root.GetProperty("paths")), groups)
-        { Combatant = DaggerfallCombatantTuning.Read(root.GetProperty("combatant")), Stamina = DaggerfallStaminaTuning.Read(root.GetProperty("stamina")) };
+        { Combatant = DaggerfallCombatantTuning.Read(root.GetProperty("combatant")), Stamina = DaggerfallStaminaTuning.Read(root.GetProperty("stamina")), Strike = DaggerfallStrikeTuning.Read(root.GetProperty("strike")) };
     }
 
     private static Dictionary<string, DaggerfallAttackPath> ReadPaths(JsonElement value)

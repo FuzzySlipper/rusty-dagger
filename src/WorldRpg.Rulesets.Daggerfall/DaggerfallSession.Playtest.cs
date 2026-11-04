@@ -259,7 +259,7 @@ internal sealed partial class DaggerfallSession
             }
             if (_enemyBehavior.LastEvidence.TryGetValue(actor.DurableId, out var behavior))
             {
-                w.WriteStartObject("enemyBehavior"); w.WriteString("state", behavior.State.ToString());
+                w.WriteStartObject("enemyBehavior"); w.WriteString("state", behavior.State.ToString()); w.WriteBoolean("reacting", _reactions.Holds(behavior.ActorId));
                 if (behavior.Visibility is { } visibility)
                 {
                     var enemyPairs = visibility.Pairs.ToArray();

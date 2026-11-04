@@ -284,6 +284,118 @@ public sealed class ActorNavigationAndCameraTests
         Assert.Equal(new WorldPoint(1f, 3.5f, 3f), system.Viewpoint);
     }
 
+    [Fact]
+    public void Camera_punch_turns_the_view_without_moving_the_aim_and_settles_back()
+    {
+        CameraDouble camera = CameraDouble.Create();
+        PlayerControlState player = new(new WorldPoint(1f, 2f, 3f), 0f, 0f);
+        using FirstPersonCameraSystem system = new(camera.Service, player, new FirstPersonCameraTuning(1.5f, 75d, .1d, 100d));
+
+        system.Punch(-2d, 1d);
+        system.Update(player);
+        Assert.Equal((-2d, 1d), (camera.LastDescriptor.Pose.PitchDegrees, camera.LastDescriptor.Pose.YawDegrees));
+        Assert.Equal((0f, 0f), (player.PitchRadians, player.YawRadians));
+
+        system.SettlePunch(10d, 14d);
+        system.Update(player);
+        Assert.Equal(0d, camera.LastDescriptor.Pose.PitchDegrees, 6);
+    }
+
+    [Fact]
+    public void A_thrown_actor_carries_its_velocity_through_the_engine_until_it_slows_and_its_hold_ends()
+    {
+        using SpatialSession session = new(new SpatialSessionHandle(12), () => { });
+        (ActorReactions reactions, SpatialDouble spatial, ActorsState actors) = Thrown(session);
+        using ActorsState disposable = actors;
+        List<ActorThrowLanding> landings = [];
+
+        reactions.Begin(42, new Vector3(4f, 0f, 0f), .3d, 20f, ActorNavigationMode.Ground);
+        reactions.Step(actors, .1f, landings.Add);
+        reactions.Step(actors, .1f, landings.Add);
+        Assert.True(reactions.Holds(42)); // Stopped, but its hold is still running.
+        Assert.Equal([new Vector3(4f, 0f, 0f), new Vector3(2f, 0f, 0f)], spatial.CharacterRequests.Select(request => request.Motion.ExternalVelocity));
+        reactions.Step(actors, .1f, landings.Add);
+
+        Assert.False(reactions.Holds(42));
+        Assert.Equal(2, spatial.CharacterRequests.Count);
+        Assert.Empty(landings);
+        Assert.Equal(Vector3.Zero, actors.Store.Get(actors.Get(42).Actor.Entity, EngineComponentTypes.CharacterMotion).ExternalVelocity);
+    }
+
+    [Fact]
+    public void A_wall_stops_a_throw_dead()
+    {
+        using SpatialSession session = new(new SpatialSessionHandle(12), () => { });
+        (ActorReactions reactions, SpatialDouble spatial, ActorsState actors) = Thrown(session);
+        using ActorsState disposable = actors;
+        spatial.CharacterDisplacement = Vector3.Zero;
+        spatial.CharacterBlocks = CharacterBlockFlags.Wall;
+
+        reactions.Begin(42, new Vector3(4f, 0f, 0f), .1d, 1f, ActorNavigationMode.Ground);
+        reactions.Step(actors, .1f, _ => { });
+
+        Assert.False(reactions.Holds(42));
+    }
+
+    [Fact]
+    public void A_thrown_actor_held_past_its_hold_keeps_falling_and_reports_how_far_it_fell()
+    {
+        using SpatialSession session = new(new SpatialSessionHandle(12), () => { });
+        (ActorReactions reactions, SpatialDouble spatial, ActorsState actors) = Thrown(session);
+        using ActorsState disposable = actors;
+        List<ActorThrowLanding> landings = [];
+        spatial.CharacterDisplacement = new Vector3(0f, -3f, 0f);
+        spatial.CharacterGrounded = false;
+
+        reactions.Begin(42, new Vector3(1f, 0f, 0f), .1d, 100f, ActorNavigationMode.Ground);
+        reactions.Step(actors, .1f, landings.Add);
+        reactions.Step(actors, .1f, landings.Add);
+        Assert.True(reactions.Holds(42)); // Velocity spent and hold over, but still in the air.
+
+        spatial.CharacterGrounded = true;
+        reactions.Step(actors, .1f, landings.Add);
+
+        Assert.False(reactions.Holds(42));
+        Assert.Equal(42L, Assert.Single(landings).ActorId);
+        Assert.Equal(9f, landings[0].Distance, 3);
+    }
+
+    [Fact]
+    public void A_thrown_flyer_drifts_with_no_gravity_and_a_defeated_or_absent_actor_drops_out()
+    {
+        using SpatialSession session = new(new SpatialSessionHandle(12), () => { });
+        (ActorReactions reactions, SpatialDouble spatial, ActorsState actors) = Thrown(session);
+        using ActorsState disposable = actors;
+
+        reactions.Begin(42, new Vector3(1f, 0f, 0f), .1d, 100f, ActorNavigationMode.Flying);
+        reactions.Step(actors, .1f, _ => { });
+        Assert.Equal((CharacterMovementMode.Flying, 0f), (spatial.CharacterRequests[0].Command.Movement.Mode, spatial.CharacterRequests[0].Command.Movement.GravityScale));
+
+        reactions.Begin(404, Vector3.UnitX, 1d, 1f, ActorNavigationMode.Ground);
+        reactions.Step(actors, .1f, _ => { });
+        Assert.False(reactions.Holds(404));
+    }
+
+    private static (ActorReactions, SpatialDouble, ActorsState) Thrown(SpatialSession session)
+    {
+        SpatialDouble spatial = SpatialDouble.Create();
+        ActorsState actors = new();
+        actors.CreatePlayer(1, new EntityTypeId("player"), Living(), "health");
+        actors.CreateActor(42, new EntityTypeId("test"), Living(), new ActorPose(new WorldPoint(0f, 0f, 0f), 0f), "health");
+        ActorNavigationCoordinator navigation = new(spatial.Service, session, actors.Store, default,
+            _ => new CharacterStepEnvironment(default, ReadOnlyMemory<CharacterObstacle>.Empty, ReadOnlyMemory<CharacterMeshInstance>.Empty, ReadOnlyMemory<CharacterWaterVolume>.Empty));
+        return (new ActorReactions(navigation), spatial, actors);
+    }
+
+    private static StatsComponent Living()
+    {
+        Stat maximum = new(10);
+        StatsComponent stats = new();
+        stats.AddStat(StatId.Parse("health-maximum"), maximum);
+        stats.AddTrack(TrackId.Parse("health"), new Track(maximum, 10d, 0d));
+        return stats;
+    }
+
     private static NavigationStepResult Receipt(NavigationPathOutcome outcome, Vector3 waypoint) => new(
         ReadOnlyMemory<PlanarNavCell>.Empty, ReadOnlyMemory<NavigationPathEdge>.Empty, outcome, waypoint, default, default, 0f, 0, 0, 0, 0, 0, false, default, default);
 
@@ -302,6 +414,8 @@ public sealed class ActorNavigationAndCameraTests
         internal List<CharacterStepRequest> CharacterRequests { get; } = [];
         internal NavigationStepResult Receipt { get; set; }
         internal Vector3 CharacterDisplacement { get; set; } = Vector3.UnitX;
+        internal CharacterBlockFlags CharacterBlocks { get; set; } = CharacterBlockFlags.None;
+        internal bool? CharacterGrounded { get; set; }
         /// <summary>The trigger rows the Engine would hold from the product's last trigger reconcile.</summary>
         internal List<SpatialEntityCollider> TriggerRows { get; } = [];
 
@@ -327,7 +441,11 @@ public sealed class ActorNavigationAndCameraTests
                 CharacterRequests.Add(request);
                 Transform before = new(request.Position, Quaternion.Identity, Vector3.One);
                 Transform after = before with { Translation = before.Translation + CharacterDisplacement };
-                CharacterMotion motion = request.Motion with { LastCommandSequence = request.Command.Sequence };
+                CharacterMotion motion = request.Motion with
+                {
+                    LastCommandSequence = request.Command.Sequence,
+                    Grounded = CharacterGrounded ?? request.Motion.Grounded,
+                };
                 return default(CharacterStepReceipt) with
                 {
                     Generation = 1,
@@ -337,7 +455,7 @@ public sealed class ActorNavigationAndCameraTests
                     Motion = motion,
                     WishVelocity = CharacterDisplacement,
                     Displacement = CharacterDisplacement,
-                    BlockFlags = CharacterBlockFlags.None,
+                    BlockFlags = CharacterBlocks,
                 };
             }
 

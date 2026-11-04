@@ -28,6 +28,22 @@ public sealed class DaggerfallVitalityConsequencesTests
     }
 
     [Fact]
+    public void A_thrown_body_takes_the_players_fall_rule_and_the_fall_is_the_players_doing()
+    {
+        using ActorsState actors = new();
+        PlayerActorState player = actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), Stats(health: 20d, fatigue: 100d), "health", DaggerActorFactory.PlayerCapabilities);
+        ActorState thrown = actors.CreateActor(2, new EntityTypeId("orc"), Stats(health: 20d, fatigue: 0d), new ActorPose(new WorldPoint(0f, 0f, 0f), 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
+        DaggerfallVitalityConsequences consequences = new(new CombatResolution());
+
+        Assert.Null(consequences.ResolveThrownLanding(player.Actor, thrown.Actor, 5f));
+        DamageResult? fall = consequences.ResolveThrownLanding(player.Actor, thrown.Actor, 7f);
+
+        Assert.Equal(10, fall!.Value.CalculatedDamage);
+        Assert.Equal(player.Actor.Entity, fall.Value.Source.Entity);
+        Assert.Equal(10d, thrown.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current);
+    }
+
+    [Fact]
     public void Grace_distance_has_no_health_application()
     {
         using ActorsState actors = new();

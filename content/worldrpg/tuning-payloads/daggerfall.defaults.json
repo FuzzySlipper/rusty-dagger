@@ -439,6 +439,27 @@
       "shrunkScale": 0.4,
       "slowFromFatigue": 0.75,
       "slowedScale": 0.5
+    },
+    "strike": {
+      "fastForce": 400,
+      "powerForce": 900,
+      "kickForce": 1600,
+      "strengthPerPointAbove50": 0.01,
+      "defaultWeight": 240,
+      "minimumWeight": 160,
+      "staggerImpact": 2.5,
+      "knockdownImpact": 5,
+      "staggerSeconds": 0.5,
+      "knockdownSeconds": 1.6,
+      "pushPerImpact": 1,
+      "maximumPush": 7,
+      "pushDeceleration": 9,
+      "hitStopRate": 0.25,
+      "hitStopSteps": 1,
+      "heavyHitStopSteps": 2,
+      "punchDegrees": 0.5,
+      "heavyPunchDegrees": 1.5,
+      "punchSettleRate": 14
     }
   },
   "enemyBehavior": {

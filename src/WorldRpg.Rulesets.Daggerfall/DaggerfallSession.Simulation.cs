@@ -185,6 +185,8 @@ internal sealed partial class DaggerfallSession
             ReconcileTriggers(_sites.CharacterEnvironment(State.PlayerControl.Motion), simulationStep, actionGraph);
         if (movement is not null && alive && _sites.ActivateLocationAtPlayer())
             ReconcileTriggers(_sites.CharacterEnvironment(State.PlayerControl.Motion), simulationStep, null);
+        _camera.SettlePunch(update.DeltaSeconds, _tuning.Attacks.Strike.PunchSettleRate);
+        if (_hitStopSteps > 0) _hitStopSteps--;
         _camera.Update(State.PlayerControl);
         // An unloaded location has already destroyed its own actors (roster UnloadSite), so the
         // steps below see only live actors: wilderness spawns and resident neighbouring locations.
@@ -194,6 +196,7 @@ internal sealed partial class DaggerfallSession
         _ = _encounters.MaterializePending(_activeProfileKey.LogicalId, pending => PlaceEncounter(pending, simulationStep));
         UpdateLaw(update.DeltaSeconds);
         if (LegalModalOpen) return;
+        _reactions.Step(State.Actors, update.DeltaSeconds, ThrownLanding);
         _enemyBehavior.Update(State.PlayerControl, generation, simulationStep, update.DeltaSeconds, _facts);
         // Enemy attack-start facts must reach presentation before the post-enemy actions below.
         // A hit marker is consumed by the outer admitted update after this simulation step; if

@@ -798,6 +798,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
                 hurt.ActualHealthLost, State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Maximum.Value);
             if (hurt.Cause == DaggerfallDamageCause.Fall) _appearance.PlayGameplaySound(91, "fall-damage");
         }
+        if (fact is ActorStruckFact struck) FeelStrike(struck);
         if (fact is AttackHitFact hit)
         {
             ObserveCrimeHit(hit);

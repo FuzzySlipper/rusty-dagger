@@ -42,6 +42,7 @@ public sealed class TuningPayloadSessionTests
         Assert.Equal((expected.Kick, expected.KickStaminaCost, expected.KickDamage, expected.KickReach),
             (loaded.Kick, loaded.KickStaminaCost, loaded.KickDamage, loaded.KickReach));
         Assert.Equal(expected.Stamina, loaded.Stamina);
+        Assert.Equal(expected.Strike, loaded.Strike);
         Assert.Equal(expected.Classes.Keys.Order(), loaded.Classes.Keys.Order());
         foreach (var (skill, attacks) in expected.Classes) Assert.Equal(attacks, loaded.Classes[skill]);
         Assert.Equal(expected.Paths.Keys.Order(), loaded.Paths.Keys.Order());

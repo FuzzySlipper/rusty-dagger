@@ -634,6 +634,10 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 EmitOutcomeCue(negated.Negation == HarmNegation.Deflected ? DaggerfallOutcomeCue.Deflected : DaggerfallOutcomeCue.Absorbed,
                     negatedEvent, negated.AttackerId, negated.TargetId, negated.Feedback.Weapon, actorState);
                 break;
+            case ActorStruckFact { Reaction.HoldSeconds: > 0d } struck when actors.TryGetValue(struck.TargetId, out ActorVisual? struckVisual)
+                && struckVisual.Sprite.States.TryGetValue("hurt", out NormalizedSpriteState? hurt):
+                struckVisual.HurtRepeats = (int)(struck.Reaction.HoldSeconds * hurt.EffectiveFramesPerSecond / Math.Max(1, hurt.SelectOrientation(0).Count));
+                break;
             case AttackWhiffedFact whiff:
                 PresentationEventIdentity whiffEvent = Event(whiff.AttackerId, whiff.TargetId ?? 0, whiff.OriginatingGeneration, whiff.OriginatingSimulationStep, "whiff");
                 if (!appliedImpacts.Add(whiffEvent)) break;
@@ -739,7 +743,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             }
             // Publish the Engine's completed final frame for this outer update.
             // The following admitted update returns to the authored rest state.
-            if (visual.CompletedOuterUpdate) StartState(visual.EntityId, PreferredRestState(visual.Sprite), null);
+            if (visual.CompletedOuterUpdate) StartState(visual.EntityId, visual.HurtRepeats-- > 0 ? "hurt" : PreferredRestState(visual.Sprite), null);
             else if (receipt.Advanced) visual.CompletedOuterUpdate = true;
             visual.LastOuterUpdate = identity;
         }
@@ -1448,7 +1452,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
 
     private void EnsureRestState(long entityId, string requested)
     {
-        if (!actors.TryGetValue(entityId, out ActorVisual? visual) || visual.Defeated || visual.State == requested) return;
+        if (!actors.TryGetValue(entityId, out ActorVisual? visual) || visual.Defeated || visual.State == requested || visual.HurtRepeats > 0) return;
         // Once Kit has no pending attack, a behavior transition may clear its old swing.
         // Without clearing this marker, a later idle playback receipt
         // could be mistaken for the canceled strike and keep the session gated indefinitely.
@@ -1560,6 +1564,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         internal string State { get; set; } = string.Empty;
         internal bool Defeated { get; set; }
         internal bool CompletedOuterUpdate { get; set; }
+        /// <summary>How many more times the hurt frames play, while a blow holds the actor.</summary>
+        internal int HurtRepeats { get; set; }
         internal ulong LastMarkerCrossing { get; set; }
         internal uint LastPlaybackFrameIndex { get; set; }
         internal NormalizedSpriteState? ActiveState { get; set; }

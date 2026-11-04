@@ -232,6 +232,9 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         // shared application credits a blow that lands, so only a negated connect is credited here.
         string? playerSkill = attacker.Id == PlayerId ? admission.Attack.Skill : null;
         void CreditNegatedConnect() { if (playerSkill is not null) ops.RecordPlayerWeaponHit(playerSkill); }
+        // Force doesn't need the blow to hurt: a kick that armour stops still shoves.
+        void Strike() { if (admission.PlayerAttack is { } attack) ops.Strike(request, targetId, attack, facts); }
+        void StrikeKick() { if (admission.PlayerAttack == DaggerfallAttackIds.Kick) Strike(); }
         void Negated(HarmNegation how) => facts.Append(new AttackNegatedFact(attacker.Id, targetId, how, enemy, request.Generation, request.SimulationStep) { Feedback = attack.Feedback });
         ExplicitMeleeRequest key = new(attacker.Id, targetId, request.Generation, request.SimulationStep, request.FixedDeltaSeconds);
         DaggerfallAttackDefinition weapon = admission.Attack;
@@ -246,6 +249,7 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
             CreditNegatedConnect();
             // Immunity is reported by the material refusal above; a deflection is a negation the player sees and hears.
             if (negation.Negation != HarmNegation.Immune) Negated(negation.Negation);
+            StrikeKick();
             return;
         }
 
@@ -271,7 +275,7 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         }
         DamageEvent damage = ops.Rules.Damage(participants, roll);
         MitigationEvent mitigation = ops.Rules.Mitigate(participants, channel, damage.Damage, value => ops.Mitigation.Mitigate(value, harm));
-        if (mitigation.Negation != HarmNegation.None) { CreditNegatedConnect(); Negated(mitigation.Negation); return; }
+        if (mitigation.Negation != HarmNegation.None) { CreditNegatedConnect(); Negated(mitigation.Negation); StrikeKick(); return; }
         if (backstab) ops.RecordSkillUse(new DaggerfallSkillUse("backstabbing", DaggerfallSkillUseReason.BackstabbingOpportunity, DaggerfallSkillUseOutcome.Accepted));
         PreparedPhysicalAttack connected = attack with
         {
@@ -283,6 +287,7 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         };
         ops.ApplyConnectedHarm(request with { TargetId = targetId }, targetId, connected, facts);
         if (weapon.Skill == DaggerfallMechanicsIds.HandToHand.Value && !enemy) ops.DrainFatigue(request, targetId, mitigation.Damage, facts);
+        Strike();
     }
 
     /// <summary>

@@ -142,6 +142,14 @@ internal sealed class DaggerfallVitalityConsequences
     }
 
     /// <summary>Applies only the Engine-reported landing, never an input or a locally integrated trajectory.</summary>
+    /// <summary>A body the player threw lands: the fall hurts it as a fall hurts the player, and the throw is the player's doing.</summary>
+    internal DamageResult? ResolveThrownLanding(Actor player, Actor thrown, float distance)
+    {
+        int damage = DaggerfallFormulaPolicy.FallDamage(distance);
+        if (damage == 0) return null;
+        return _combat.ApplyToHealth(new CombatParticipants(player, thrown, "fall"), damage, thrown.Get<StatsComponent>().GetTrack(HealthTrack)).Result;
+    }
+
     internal DamageResult? ResolveLanding(Actor player, DaggerfallLanding? landing, bool preventsFallDamage)
     {
         if (preventsFallDamage || landing is not { } accepted) return null;

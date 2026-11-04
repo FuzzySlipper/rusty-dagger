@@ -183,7 +183,9 @@ fast attack, and another click during its recovery chains the next one. Holding
 the button charges a power attack, released when you let go. **Right mouse** holds
 a guard and **G** kicks with any weapon. Controls can rebind them all.
 
-Fighting spends Stamina, which refills on its own a moment after you stop. Near
+A kick does little harm but throws what it hits, by its weight: a person goes
+down, a bear hardly notices, and a ledge behind them helps. Fighting spends
+Stamina, which refills on its own a moment after you stop. Near
 empty you're winded: you still swing, slower and weaker, but have no power
 attack, kick or guard until it refills. Fatigue is the slow bar beneath it, which
 rises as you travel, run and fight and only falls with rest or magic. Past half

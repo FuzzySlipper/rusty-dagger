@@ -1,5 +1,7 @@
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
+using WorldRpg.Kit;
+using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Combat;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
@@ -14,6 +16,30 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
 {
     private DaggerfallPlayerAttackClock _attackClock = null!;
     private DaggerfallPlayerStamina _stamina = null!;
+    private ActorReactions _reactions = null!;
+    private int _hitStopSteps;
+
+    /// <summary>Whether a landed blow is catching world time now.</summary>
+    internal bool HitStopped => _hitStopSteps > 0;
+
+    /// <summary>A body the player threw has landed.</summary>
+    private void ThrownLanding(ActorThrowLanding landing)
+    {
+        if (State.Actors.TryGet(landing.ActorId, out ActorState thrown)
+            && _vitality.ResolveThrownLanding(State.Actors.Player.Actor, thrown.Actor, landing.Distance) is { } fall)
+            AppendDamage(fall, DaggerfallDamageCause.Fall, 0);
+    }
+
+    /// <summary>
+    /// The blow's weight on screen: the view knocks and world time catches for an instant. A world some other owner has
+    /// slowed or held, such as a playtest's, is left alone.
+    /// </summary>
+    private void FeelStrike(ActorStruckFact struck)
+    {
+        DaggerfallStrikeTuning tuning = _tuning.Attacks.Strike;
+        _camera.Punch(-(struck.Heavy ? tuning.HeavyPunchDegrees : tuning.PunchDegrees), 0d);
+        if (_engine.GameplayTime.Read().Rate == 1d) _hitStopSteps = struck.Heavy ? tuning.HeavyHitStopSteps : tuning.HitStopSteps;
+    }
     private readonly List<AttackImpactNotice> _playerImpacts = [];
     private (ulong Generation, ulong SimulationStep, double Seconds) _attackStep;
     private string? _attack;

@@ -64,7 +64,9 @@ A track shares its maximum Stat; changing that stat reconciles the live track.
 Player progression is attached, while Dagger retains XP and level-up policy.
 `PassiveTrackRecovery` in Kit implements rate, quiet delay and fractional carry
 for a ruleset that wants real-time recovery; Daggerfall uses it for combat
-Stamina alone (`DaggerfallPlayerStamina`). Fatigue never recovers on its own: it
+Stamina alone (`DaggerfallPlayerStamina`). `ActorReactions` in Kit holds an actor a
+blow has staggered or thrown, stepping it through the Engine character controller while
+its own movement waits. Fatigue never recovers on its own: it
 returns only through rest, travel, magic and the exhaustion collapse's recovery
 hour, and an emptied pool collapses the player once (`DaggerfallSession.Exhaustion.cs`). The active-effect lifecycle is described below; individual spell and
 effect families remain separate gameplay work. Attribute drains keep one permanent, target-owned
