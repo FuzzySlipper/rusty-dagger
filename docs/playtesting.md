@@ -131,7 +131,7 @@ The motion viewer draws the 3D first-person art (`viewmodel.style` `held` or
 `heldRetro`, with `local/first-person.rpak` installed; `scripts/fp-arms/README.md`)
 through the game's own held viewmodel. A
 look is a classic weapon visual the art draws (`weapon.dagger.steel`), shown by the
-family that draws it, and an action one of its classic strikes with a clip
+family that draws it, and an action one of its attacks with a clip
 (`fastA`). It shows the family's arms whatever the hands wield. An attack is timed as
 play times it, by the attack tuning for the family's weapon class, with the hit where
 the windup ends, where the clip's strike mark plays.
@@ -139,15 +139,15 @@ The keys are the clip's four marks: 0 start, 1 strike, 2 recover, 3 end.
 
 | Command | What it does |
 |---|---|
-| `held.motion LOOK ACTION` | Shows the look's family at rest with the strike, and lists its clip, timing and marks. A look is a classic visual, or `item.N` for an item template the definition lists. |
-| `held.motion.key N` | Holds the strike at mark N (-1 is rest). |
+| `held.motion LOOK ACTION` | Shows the look's family at rest with the attack, and lists its clip, timing and marks. A look is a classic visual, or `item.N` for an item template the definition lists. |
+| `held.motion.key N` | Holds the attack at mark N (-1 is rest). |
 | `held.motion.next` / `held.motion.prev` | Holds the next or previous mark, through rest. |
-| `held.motion.play SPEED` | Plays the strike from rest at SPEED (1 as in play, 0.25 a quarter; 0.01 to 4). |
-| `held.motion.at SECONDS` | Shows the strike paused SECONDS after its start, with the clip time it plays there (`heldRetro` holds each frame's sample). |
+| `held.motion.play SPEED` | Plays the attack from rest at SPEED (1 as in play, 0.25 a quarter; 0.01 to 4). |
+| `held.motion.at SECONDS` | Shows the attack paused SECONDS after its start, with the clip time it plays there (`heldRetro` holds each frame's sample). |
 | `held.clip` | What the drawn arms play now, in play or in the viewer: the clip, its time and phase, what fades out under it. |
 | `held.motion.off` | Gives the hands back what they wield. Closing the developer tools does this too. |
 
-`scripts/fp-arms/sheet.sh` drives these over a running host and writes a contact sheet per strike, its hit outlined.
+`scripts/fp-arms/sheet.sh` drives these over a running host and writes a contact sheet per attack, its hit outlined.
 
 Without the container, or under `classic`, each command answers why and how to fix it.
 

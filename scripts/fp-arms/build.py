@@ -4,7 +4,7 @@
 usage: blender -b --factory-startup --python scripts/fp-arms/build.py -- SOURCES DEFINITION OUT_DIR
 
 SOURCES is local/fp-melee (scripts/fp-arms/copy-sources.sh). DEFINITION is the held definition, which names every clip
-the game plays: the rig's own clip and each family's idle and strike clips, by their FBX file stems. Writes into OUT_DIR:
+the game plays: the rig's own clip and each family's idle, power hold and attack clips, by their FBX file stems. Writes into OUT_DIR:
 
 - first-person/arms.glb: the male leather armour arms (mesh, skeleton, colour and normal maps) with every clip the
   definition names, and first-person/arms-retro.glb, the same with its colour map alone, small and drawn nearest, which
@@ -13,7 +13,7 @@ the game plays: the rig's own clip and each family's idle and strike clips, by t
   viewmodel) could not associate its packs again.
 - measure.json: what the definition is fitted with, measured on the clips: where the right upper arm sits from the eye
   at the start of the rig's clip (arms.shoulder), where the dagger family's weapon bone sits in the hand (rig.palm),
-  each family's look grip and hold at that palm, and each strike clip's frames with the weapon's speed per frame.
+  each family's look grip and hold at that palm, and each attack clip's frames with the weapon's speed per frame.
 
 Each clip is baked as the clip's own camera bone sees it: every frame, the whole body is moved so the camera bone sits
 at the origin looking down the view (+Y here, -Z once exported Y-up), so the clip carries only what moves in view and
@@ -230,13 +230,17 @@ def degrees(turn):
     return [round(math.degrees(a), 2) for a in (math.asin(max(-1, min(1, -cz.y))), math.atan2(cz.x, cz.z), math.atan2(cx.y, cy.y))]
 
 
+# The commit's share of the time after the hit, which is close to this in every weapon class's tuning.
+COMMIT_SHARE = 0.3
+
+
 def marks(tips, speeds):
     """
     Suggested marks from a point 30 cm along the blade, per frame (camera space): the strike where the swing meets what
     is in front, the frame of its fastest burst (the frames around its top speed at a third of it or more) whose point
     lies nearest the centre of the view; the end where the clip has come back (the point stays within 3 cm of where the clip leaves it); and the
-    recovery two thirds of the way between, so the clip plays after the hit at one pace over the classic commit and
-    recovery (two frames and one).
+    recovery COMMIT_SHARE of the way between, so the clip plays after the hit at one pace over the rules' commit and
+    recovery.
     """
     peak = max(range(len(speeds)), key=lambda i: speeds[i])
     first, last_fast = peak, peak
@@ -247,7 +251,7 @@ def marks(tips, speeds):
     strike = min(range(first, last_fast + 1), key=lambda i: tips[i].angle(Vector((0, 0, -1))))
     last = len(tips) - 1
     end = next(i for i in range(strike, last + 1) if all((tips[j] - tips[-1]).length < 0.03 for j in range(i, last + 1)))
-    return {"start": 0, "strike": round(strike / last, 3), "recover": round((strike + (end - strike) * 2 / 3) / last, 3), "end": round(end / last, 3)}
+    return {"start": 0, "strike": round(strike / last, 3), "recover": round((strike + (end - strike) * COMMIT_SHARE) / last, 3), "end": round(end / last, 3)}
 
 
 def rounded(v, places=4):
@@ -256,7 +260,7 @@ def rounded(v, places=4):
 
 rig_clip = definition["rig"]["clip"]
 families = definition["families"]
-stems = [rig_clip, *(stem for family in families.values() for stem in (family["idle"]["clip"], *(clip["clip"] for clip in family["strikes"].values())))]
+stems = [rig_clip, *(stem for family in families.values() for stem in (family["idle"]["clip"], family["powerHold"]["clip"], *(clip["clip"] for clip in family["strikes"].values())))]
 rig = arms()
 samples = {stem: bake(rig, stem) for stem in dict.fromkeys(stems)}
 export(out / "first-person/arms.glb", list(samples))
@@ -279,6 +283,7 @@ for name, family in families.items():
                            "marks": marks(tips, speeds), "tipSpeed": speeds}
     measure["families"][name] = {
         "idleSeconds": round((len(samples[family["idle"]["clip"]]) - 1) / 60, 4),
+        "powerHoldSeconds": round((len(samples[family["powerHold"]["clip"]]) - 1) / 60, 4),
         "grip": rounded(look.transposed() @ (palm - at)),
         "hold": degrees(look.transposed()),
         "strikes": strikes,
