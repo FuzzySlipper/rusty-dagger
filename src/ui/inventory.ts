@@ -1,5 +1,5 @@
 import { drawArt, heldDemandedRevision, heldRevision, image, type ArtTint } from './art.js';
-import { glint } from './glint.js';
+import { glint, type Glints } from './glint.js';
 import type { PaperDoll, PaperDollLayer } from './character.js';
 import { mountDrag, type Drag } from './drag.js';
 import type { NavigationSurface } from './navigation.js';
@@ -18,8 +18,8 @@ export interface InventoryProjection {
   readonly bank?: BankProjection | null;
   /** The pack's tabs, in the order the ruleset gives them. */
   readonly categories?: readonly InventoryCategory[];
-  /** The item glints in the art drawn (checked with `isGlints` where they are shown). */
-  readonly glints?: unknown;
+  /** The item glints in the art drawn, or null without them. */
+  readonly glints?: Glints | null;
 }
 
 export interface InventoryCategory { readonly id: string; readonly label: string }
