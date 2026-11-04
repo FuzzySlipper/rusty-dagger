@@ -5,16 +5,15 @@ using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Facts;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
-using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using Combatant = WorldRpg.Rulesets.Daggerfall.Modules.Combat.DaggerCombatRules.Combatant;
 using PreparedPhysicalAttack = WorldRpg.Rulesets.Daggerfall.Modules.Combat.DaggerCombatRules.DaggerfallPreparedAttack;
 
-namespace WorldRpg.Rulesets.Daggerfall.Variants;
+namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 /// <summary>
-/// Physical delivery under the contact + mitigation variant. There is no to-hit roll: a blow that
-/// physically connects has hit, and the target's mitigation decides what it takes.
+/// Physical delivery by contact. There is no to-hit roll: a blow that physically connects has hit, and the
+/// target's mitigation decides what it takes.
 /// <list type="bullet">
 /// <item>A melee swing, targeted or not, waits for its hit frame and reaches every actor body its swing
 /// volume touches there, which may be an actor it was not aimed at, or several.</item>
@@ -23,23 +22,20 @@ namespace WorldRpg.Rulesets.Daggerfall.Variants;
 /// another body or the world would stop.</item>
 /// <item>An enemy swing's damage lands no sooner than its published wind-up.</item>
 /// </list>
-/// What the classic miss carried has a defined meaning here: Dodging is deflection and records a use on each
-/// blow that connects with the player; Critical Strike, with a held enchantment's attack-chance shift, is a
+/// Dodging is deflection and records a use on each blow that connects with the player; Critical Strike, with a held enchantment's attack-chance shift, is a
 /// chance of bonus damage; backstab keeps its chance of tripled damage from behind; a monster's natural
-/// attack lands the slots that clear the player's reflexes; armour absorbs; and a whiff runs no Strikes payload.
+/// attack lands the slots that clear the player's reflexes; armour absorbs; and a whiff or a negated blow runs no
+/// Strikes payload.
 /// </summary>
 internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperations ops, DaggerfallContactTuning tuning) : IDaggerfallPhysicalDelivery
 {
     private const long PlayerId = DaggerfallActorIdentity.PlayerEntityId;
-    /// <summary>The variant's own critical-strike draw, keyed beside classic's combat salts without sharing one.</summary>
+    /// <summary>The critical-strike draw's salt.</summary>
     internal const int CriticalSalt = 70;
     private readonly List<DeferredAttackImpact> _released = [];
     private readonly List<Shot> _shots = [];
     // Enemy blows whose hit frame came before their wind-up ended, each with the step it may land on.
     private readonly List<(DeferredAttackImpact Impact, ulong DueStep)> _windingUp = [];
-
-    public bool UntargetedSwingsWaitForImpact => true;
-    public bool ImpactsOutliveTheirTarget => true;
 
     public bool HasPlayerFlight => _released.Any(shot => shot.Request.AttackerId == PlayerId) || _shots.Any(shot => shot.Release.Request.AttackerId == PlayerId);
 
@@ -106,11 +102,10 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         return true;
     }
 
-    /// <summary>Launches this step's releases from the shooter's current eye, then flies every arrow one step.</summary>
-    public void AdvanceFlight(ulong generation, ulong simulationStep, double fixedDeltaSeconds,
-        IReadOnlyDictionary<long, WorldPoint> positions, FactBuffer<IProductFact> facts)
+    public bool HoldsImpactAt(long target) => _windingUp.Any(held => held.Impact.Request.TargetId == target);
+
+    public void LandDueImpacts(ulong generation, ulong simulationStep, FactBuffer<IProductFact> facts)
     {
-        if (!double.IsFinite(fixedDeltaSeconds) || fixedDeltaSeconds <= 0d) throw new ArgumentOutOfRangeException(nameof(fixedDeltaSeconds));
         foreach ((DeferredAttackImpact impact, ulong due) in _windingUp.ToArray())
         {
             if (impact.Request.Generation == generation && due > simulationStep) continue;
@@ -118,10 +113,17 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
             if (impact.Request.Generation == generation && ops.IsLiveCombatant(impact.Request.AttackerId))
                 ops.Execution.ApplyDeferredImpact(impact, facts);
         }
+    }
+
+    /// <summary>Launches this update's releases from the shooter's current eye, then flies every arrow on by the elapsed time.</summary>
+    public void AdvanceFlight(ulong generation, ulong simulationStep, double elapsedSeconds,
+        IReadOnlyDictionary<long, WorldPoint> positions, FactBuffer<IProductFact> facts)
+    {
+        if (!double.IsFinite(elapsedSeconds) || elapsedSeconds <= 0d) throw new ArgumentOutOfRangeException(nameof(elapsedSeconds));
         foreach (DeferredAttackImpact release in _released)
             if (release.Request.Generation == generation && Launch(release, simulationStep) is Shot shot) _shots.Add(shot);
         _released.Clear();
-        double step = tuning.ProjectileSpeed * fixedDeltaSeconds;
+        double step = tuning.ProjectileSpeed * elapsedSeconds;
         foreach (Shot shot in _shots.ToArray())
         {
             if (shot.Release.Request.Generation != generation) { _shots.Remove(shot); continue; }
@@ -209,7 +211,7 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         DaggerfallAdmittedAttack admission = attack.Admission!;
         if (!ops.TryResolve(request.AttackerId, out Combatant attacker) || !ops.TryResolve(targetId, out Combatant target)) return;
         bool enemy = admission.EnemyAttack;
-        // Dodging is the player's deflection under contact, so every enemy blow that reaches the player uses it.
+        // Dodging is the player's deflection, so every enemy blow that reaches the player uses it.
         if (enemy && targetId == PlayerId)
             ops.RecordSkillUse(new DaggerfallSkillUse(DaggerfallMechanicsIds.Dodging.Value, DaggerfallSkillUseReason.DodgingEnemyAttack, DaggerfallSkillUseOutcome.Attempted));
         CombatParticipants participants = ops.Participants(attacker.Id, targetId, admission.Action ?? attacker.Definition.ActionId ?? "attack");
@@ -248,7 +250,7 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
             if (backstab)
                 ops.RecordSkillUse(new DaggerfallSkillUse("backstabbing", DaggerfallSkillUseReason.BackstabbingOpportunity, DaggerfallSkillUseOutcome.Accepted));
             int backstabChance = DaggerfallFormulaPolicy.CalculateBackstabChance(DaggerCombatRules.ReadStat(attacker, new DaggerfallStatId("backstabbing")), backstab);
-            int damageModifier = attacker.Id == PlayerId ? ops.PlayerAttackModifiers(weapon, admission.Gesture).Damage : 0;
+            int damageModifier = attacker.Id == PlayerId ? ops.PlayerDamageModifier(weapon) : 0;
             Action<DamageEvent> rolled = ops.DamageRoll(key, attacker, target, weapon, enemy, damageModifier, backstabChance);
             roll = value =>
             {
@@ -263,10 +265,9 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         PreparedPhysicalAttack connected = attack with
         {
             Outcome = new AttackOutcome(Hit: true, Allowed: true, Damage: mitigation.Damage),
-            Detail = new DaggerCombatRules.DaggerfallAttackDetail(body, 0, 0),
+            Body = body,
             MonsterHits = slots,
             WeaponPoison = admission.WeaponPoison,
-            Harm = harm,
             Mitigated = new DaggerfallHarmMitigation(mitigation.Deflected, mitigation.Absorbed),
         };
         ops.ApplyConnectedHarm(request with { TargetId = targetId }, targetId, connected, facts);
@@ -281,8 +282,8 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         + (attacker.Id == PlayerId ? ops.AttackChanceModifier() * tuning.CriticalChancePerAttackChancePoint : 0d);
 
     /// <summary>
-    /// A monster's natural attack under contact: each authored slot lands when it clears the player's
-    /// reflexes (the defender's reaction, kept from classic), with its own damage, the career's enemy-type
+    /// A monster's natural attack: each authored slot lands when it clears the player's
+    /// reflexes (the defender's reaction), with its own damage, the career's enemy-type
     /// bonus on a positive slot, and the slot's consequence, in classic's per-slot draw order.
     /// </summary>
     private (int Total, DaggerfallMonsterHit[] Slots) MonsterSlots(ExplicitMeleeRequest key, Combatant attacker, Combatant target, bool enemy)

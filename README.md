@@ -165,8 +165,7 @@ rusty dev --project ./src/WorldRpg.Host/WorldRpg.Host.csproj
 ```
 
 The title screen's **Game** selector chooses the game bundle a new run starts
-under (classic Daggerfall, or a rules variant such as contact + mitigation),
-and the choice is remembered for the next start. A save loads only under the
+under, and the choice is remembered for the next start. A save loads only under the
 game it was made in. Character creation's **Quick start** begins a new game at
 once from the draft's choices. For playing and capturing town services, the
 developer game **Developer: Charing town start** begins in Charing's streets at

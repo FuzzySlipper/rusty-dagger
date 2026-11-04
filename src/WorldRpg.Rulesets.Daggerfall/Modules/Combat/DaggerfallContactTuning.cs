@@ -1,14 +1,14 @@
 using System.Text.Json;
 using WorldRpg.Kit.Combat;
 
-namespace WorldRpg.Rulesets.Daggerfall.Variants;
+namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 /// <summary>Whether deflection on a channel turns the whole blow aside or only part of it.</summary>
 internal enum DaggerfallDeflectionMode { Full, Partial }
 
 internal sealed record DaggerfallChannelDeflection(DaggerfallDeflectionMode Mode, double Fraction);
 
-/// <summary>The contact + mitigation variant's own tuning profile.</summary>
+/// <summary>The contact rules' tuning: swing and touch volumes, flight, criticals, deflection, absorption, the guard and engagement.</summary>
 internal sealed record DaggerfallContactTuning(
     double SwingWidth, double SwingHeight, double SwingDrop, double DefaultReach,
     double ProjectileSpeed, double DefaultRange,
@@ -21,13 +21,23 @@ internal sealed record DaggerfallContactTuning(
     double TouchReach, double TouchWidth, double TouchHeight, double TouchDrop,
     double EngageReachFraction, double EnemyWindUpSeconds, double ArcherLeadFraction)
 {
+    internal static DaggerfallContactTuning Default { get; } = new(1.2d, 1.2d, .5d, 2.25d, 25d, 51.2d, .3d, 1d, 1.5d, 5d, .3d, .2d, 60d,
+        new Dictionary<HarmChannelId, DaggerfallChannelDeflection>
+        {
+            [new("edged")] = new(DaggerfallDeflectionMode.Full, 1d),
+            [new("piercing")] = new(DaggerfallDeflectionMode.Full, 1d),
+            [new("blunt")] = new(DaggerfallDeflectionMode.Partial, .5d),
+            [new("physical")] = new(DaggerfallDeflectionMode.Full, 1d),
+        },
+        .4d, .4d, .2d, 10d, .5d,
+        new Dictionary<HarmChannelId, double> { [new("edged")] = 1d, [new("piercing")] = .8d, [new("blunt")] = .6d, [new("physical")] = .8d },
+        4d, 25d, 15d, 85d, 2d, .8d, 1d, .3d, .75d, .4d, 1d);
+
     internal DaggerfallChannelDeflection? DeflectionFor(HarmChannelId channel) => Deflection.GetValueOrDefault(channel);
     internal double AbsorptionMultiplier(HarmChannelId channel) => AbsorptionMultipliers.GetValueOrDefault(channel);
 
-    internal static DaggerfallContactTuning Read(ReadOnlySpan<byte> payload)
+    internal static DaggerfallContactTuning Read(JsonElement root)
     {
-        using JsonDocument document = JsonDocument.Parse(payload.ToArray());
-        JsonElement root = document.RootElement;
         JsonElement melee = root.GetProperty("melee"), projectile = root.GetProperty("projectile"), critical = root.GetProperty("critical"),
             deflection = root.GetProperty("deflection"), absorption = root.GetProperty("absorption"), guard = root.GetProperty("guard"),
             touch = root.GetProperty("touch"), engagement = root.GetProperty("engagement");

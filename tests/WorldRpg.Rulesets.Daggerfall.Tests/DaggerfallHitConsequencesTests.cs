@@ -53,6 +53,7 @@ public sealed class DaggerfallHitConsequencesTests
         using ConditionSessionFixture f = new();
         var s = f.Session;
         long enemy = Spawn(s, mobile);
+        s.Touches(1);
         var facts = Facts(s);
         Assert.True(s.State.Kit.AttackExecution.Start(new(enemy, 1, 7, 13, .125, true), facts));
         Assert.Empty(s.State.Effects.Active);
@@ -79,6 +80,7 @@ public sealed class DaggerfallHitConsequencesTests
         var s = f.Session;
         s.State.Actors.Player.Progression.AdvanceTo(0, 5);
         long enemy = Spawn(s, mobile);
+        s.Touches(1);
         Assert.True(s.State.Kit.AttackExecution.Start(new(enemy, 1, 7, 13, .125, true), Facts(s)));
         Impact(s, enemy);
         Assert.NotEmpty(s.State.Effects.Active);
@@ -99,6 +101,7 @@ public sealed class DaggerfallHitConsequencesTests
         var s = f.Session;
         long enemy = Spawn(s, mobile);
         double magicka = s.State.Actors.Get(enemy).Stats.GetTrack(TrackId.Parse("magicka")).Current;
+        s.Touches(1);
         Assert.True(s.State.Kit.AttackExecution.Start(new(enemy, 1, 7, 13, .125, true), Facts(s)));
         Impact(s, enemy);
         var paralysis = Assert.Single(s.State.Effects.Active);
@@ -108,7 +111,7 @@ public sealed class DaggerfallHitConsequencesTests
         Assert.Equal(magicka, s.State.Actors.Get(enemy).Stats.GetTrack(TrackId.Parse("magicka")).Current);
         int sequence = checked((int)s.Casting.NextSequence);
         s.State.Kit.AttackExecution.Start(new(enemy, 1, 7, 30, .125, true), Facts(s));
-        s.State.Kit.AttackExecution.ApplyImpacts([new(enemy, 1, 7, 30, false)], 7, Facts(s));
+        Impact(s, enemy, step: 30);
         Assert.Equal(sequence, s.Casting.NextSequence);
         Assert.Single(s.State.Effects.Active);
         s.State.Effects.Cancel(paralysis.Context.Instance);
@@ -121,7 +124,7 @@ public sealed class DaggerfallHitConsequencesTests
     [Fact]
     public void Delayed_poison_spends_the_admitted_durable_weapon_even_after_swap_and_health_absorption()
     {
-        using ConditionSessionFixture f = new();
+        using ConditionSessionFixture f = new(random: HitRandom.Create());
         var s = f.Session;
         var equipment = s.State.Kit.Equipment;
         Assert.True(equipment.Read().TryGet(new("right-hand"), out var weapon));
@@ -131,10 +134,10 @@ public sealed class DaggerfallHitConsequencesTests
         long target = Spawn(s, 0);
         var shield = new AbsorbHealth();
         s.State.Actors.Get(target).Actor.Get<CombatContributions>().Rules.Add(shield);
+        s.Touches(target);
         Assert.True(s.State.Kit.AttackExecution.Start(new(1, target, 7, 13, .125, true), Facts(s)));
         var prepared = Assert.IsType<DaggerCombatRules.DaggerfallPreparedAttack>(s.State.Actors.Player.Actor.Get<AttackState>().Pending!.Value.Attack);
-        Assert.Equal(id, prepared.WeaponPoison!.ItemId);
-        Assert.True(prepared.Outcome.Damage > 0);
+        Assert.Equal(id, prepared.Admission!.WeaponPoison!.ItemId);
         equipment.Unequip(weapon);
         var spare = equipment.Materialize(new(DurableIdentityKind.Item, 9001), new InventoryItemId("iron-longsword"));
         s.State.ItemInstances.RegisterUnique(9001, DaggerfallItemInstanceMetadata.Default(f.Definitions.RequireItem(new("iron-longsword")), DaggerfallItemOwner.Player) with { PoisonVariant = 131 });
@@ -147,10 +150,10 @@ public sealed class DaggerfallHitConsequencesTests
     }
 
     [Theory]
-    [InlineData("miss")] [InlineData("zero")] [InlineData("material-refusal")]
-    public void Refused_missed_and_zero_weapon_hits_keep_their_coating(string refusal)
+    [InlineData("whiff")] [InlineData("deflect")] [InlineData("zero")] [InlineData("material-refusal")]
+    public void Refused_whiffed_deflected_and_zero_weapon_hits_keep_their_coating(string refusal)
     {
-        using ConditionSessionFixture f = new();
+        using ConditionSessionFixture f = new(random: refusal == "deflect" ? RandomMinimum.Create() : HitRandom.Create());
         var s = f.Session;
         var equipment = s.State.Kit.Equipment;
         Assert.True(equipment.Read().TryGet(new("right-hand"), out var weapon));
@@ -159,6 +162,7 @@ public sealed class DaggerfallHitConsequencesTests
         s.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 80;
         long target = Spawn(s, 0);
         s.State.Actors.Player.Actor.Get<CombatContributions>().Rules.Add(new RefusePhysical(refusal));
+        if (refusal != "whiff") s.Touches(target);
         Assert.True(s.State.Kit.AttackExecution.Start(new(1, target, 7, 13, .125, true), Facts(s)));
         s.State.Kit.AttackExecution.ApplyImpacts([new(1, target, 7, 13, false)], 7, Facts(s));
         Assert.Equal(128, s.State.ItemInstances.RequireUnique(id).PoisonVariant);
@@ -171,9 +175,8 @@ public sealed class DaggerfallHitConsequencesTests
         var request = new AttackRequest(2, 1, 7, 13, .125, true);
         var prepared = new DaggerCombatRules.DaggerfallPreparedAttack(.5,
             new(true, true, 5), DaggerfallStrikeFeedback.Unarmed,
-            MonsterHits: [new(0, 2, DaggerfallMonsterHitConsequence.Fatigue), new(1, 3, DaggerfallMonsterHitConsequence.Fatigue)],
-            Detail: new(0, 1, 100));
-        f.Rules.Apply(request, prepared, f.Facts);
+            MonsterHits: [new(0, 2, DaggerfallMonsterHitConsequence.Fatigue), new(1, 3, DaggerfallMonsterHitConsequence.Fatigue)]);
+        f.ApplyConnected(request, prepared);
         var facts = f.Deliver();
         Assert.Equal(new[] { 256, 384 }, facts.OfType<FatigueAppliedFact>().Select(value => value.CalculatedFatigueLoss));
         Assert.Equal(360, f.Stamina);
@@ -210,10 +213,10 @@ public sealed class DaggerfallHitConsequencesTests
         Assert.Equal(s.State.ItemInstances.RequireUnique(id).PoisonVariant, restored.State.ItemInstances.RequireUnique(id).PoisonVariant);
         if (poisoned)
         {
+            restored.Touches(1);
             Assert.True(restored.State.Kit.AttackExecution.Start(new(actor, 1, 7, 13, .125, true), Facts(restored)));
             var prepared = Assert.IsType<DaggerCombatRules.DaggerfallPreparedAttack>(restored.State.Actors.Get(actor).Actor.Get<AttackState>().Pending!.Value.Attack);
-            Assert.Equal(new DaggerfallWeaponPoisonSource(id, 135), prepared.WeaponPoison);
-            Assert.True(prepared.Outcome.Damage > 0);
+            Assert.Equal(new DaggerfallWeaponPoisonSource(id, 135), prepared.Admission!.WeaponPoison);
             Impact(restored, actor);
             Assert.Null(restored.State.ItemInstances.RequireUnique(id).PoisonVariant);
         }
@@ -230,6 +233,7 @@ public sealed class DaggerfallHitConsequencesTests
         Assert.True(equipment.Read().TryGet(new("right-hand"), out var weapon));
         ulong id = equipment.GetDurableItemId(new EntityId(weapon.EntityId)).Value;
         s.State.Actors.Player.Actor.Get<CombatContributions>().Rules.Add(new AbsorbHealth());
+        s.Touches(1);
         Assert.True(s.State.Kit.AttackExecution.Start(new(actor, 1, 7, 13, .125, true), Facts(s)));
         Impact(s, actor);
         Assert.True(s.State.Poisons.IsAfflicted(s.State.Actors.Player.Actor));
@@ -283,9 +287,10 @@ public sealed class DaggerfallHitConsequencesTests
         ulong id = equipment.GetDurableItemId(new EntityId(weapon.EntityId)).Value;
         Assert.Equal(135, s.State.ItemInstances.RequireUnique(id).PoisonVariant);
         s.State.Actors.Player.Actor.Get<CombatContributions>().Rules.Add(new AbsorbHealth());
+        s.Touches(1);
         Assert.True(s.State.Kit.AttackExecution.Start(new(orc, 1, 7, 13, .125, true), Facts(s)));
         var attack = Assert.IsType<DaggerCombatRules.DaggerfallPreparedAttack>(s.State.Actors.Get(orc).Actor.Get<AttackState>().Pending!.Value.Attack);
-        Assert.Equal(new DaggerfallWeaponPoisonSource(id, 135), attack.WeaponPoison);
+        Assert.Equal(new DaggerfallWeaponPoisonSource(id, 135), attack.Admission!.WeaponPoison);
         Impact(s, orc);
         Assert.Null(s.State.ItemInstances.RequireUnique(id).PoisonVariant);
         using var restored = DaggerfallSession.Restore(engine.Context, composition, s.CaptureSave());
@@ -326,6 +331,7 @@ public sealed class DaggerfallHitConsequencesTests
         void Strike(DaggerfallSession session, ulong step)
         {
             session.State.ItemInstances.ReplaceUnique(id, session.State.ItemInstances.RequireUnique(id) with { PoisonVariant = 128 });
+            session.Touches(target);
             Assert.True(session.State.Kit.AttackExecution.Start(new(1, target, 7, step, .125, true), Facts(session)));
             session.State.Kit.AttackExecution.ApplyImpacts([new(1, target, 7, step, false)], 7, Facts(session));
             Assert.Null(session.State.ItemInstances.RequireUnique(id).PoisonVariant);
@@ -348,7 +354,9 @@ public sealed class DaggerfallHitConsequencesTests
         long rat = Spawn(f.Session, 0);
         var proxy = (HitRandom)(object)random;
         proxy.Requests.Clear();
+        f.Session.Touches(1);
         Assert.True(f.Session.State.Kit.AttackExecution.Start(new(rat, 1, 7, 13, .125, true), Facts(f.Session)));
+        Impact(f.Session, rat);
         foreach (int salt in Enumerable.Range(CombatRandomKey.MonsterReflexSaltBase, 3))
             Assert.Contains(proxy.Requests, request => request.Key == CombatRandomKey.For(7, 13, rat, 1, salt));
         foreach (int slot in new[] { 1, 2 })
@@ -357,10 +365,13 @@ public sealed class DaggerfallHitConsequencesTests
 
     private static long Spawn(DaggerfallSession s, int mobile) => s.SpawnActor(TestPayload.Definitions.Mobiles.Mobiles[mobile].Actor!, new(new(10, 0, 10), 0));
     private static FactBuffer<IProductFact> Facts(DaggerfallSession s) => (FactBuffer<IProductFact>)typeof(DaggerfallSession).GetField("_facts", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(s)!;
-    private static void Impact(DaggerfallSession s, long enemy) => s.State.Kit.AttackExecution.ApplyImpacts([new(enemy, 1, 7, 13, false)], 7, Facts(s));
+    private static void Impact(DaggerfallSession s, long enemy, ulong step = 13)
+    {
+        s.State.Kit.AttackExecution.ApplyImpacts([new(enemy, 1, 7, step, false)], 7, Facts(s));
+        CombatCollaborators.LandWindUps(s, 7, step);
+    }
     private sealed class RefusePhysical(string reason) : ICombatContribution
     {
-        public void Hit(TryHitEvent value) { if (reason == "miss") value.Hit = false; }
         public void Negate(NegationEvent value) { if (reason == "material-refusal") value.Negation = HarmNegation.Immune; }
         public void Damage(DamageEvent value) { if (reason == "zero") value.Damage = 0; }
     }
@@ -383,7 +394,8 @@ public sealed class DaggerfallHitConsequencesTests
             var request = (KeyedRngRequest)args![0]!;
             Requests.Add(request);
             long roll = request.Minimum;
-            if (request.Key.EndsWith("poison-chance")) roll = _poisonRoll;
+            if (request.Key.EndsWith($":salt:{DaggerfallContactMitigation.DeflectionSalt}")) roll = request.Maximum;
+            else if (request.Key.EndsWith("poison-chance")) roll = _poisonRoll;
             else if (request.Key.EndsWith("poison-variant")) roll = _poisonVariant;
             else if (request.Scope == DaggerfallPoisonRandomKey.Scope || request.Scope == "dagger.disease.v1" && request.Key.StartsWith("resist:")
                 || request.Scope == "daggerfall.casting.v1" && request.Key.EndsWith(":draw:2")) roll = request.Maximum;

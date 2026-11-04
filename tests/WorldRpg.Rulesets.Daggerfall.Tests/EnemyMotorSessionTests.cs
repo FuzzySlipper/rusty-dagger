@@ -71,7 +71,7 @@ public sealed class EnemyMotorSessionTests
     }
 }
 
-internal class MotorRandom : RandomMinimum
+internal class MotorRandom : SessionRandom
 {
     private bool _strafe;
     internal static IRandomService Create(bool strafe)

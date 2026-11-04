@@ -32,20 +32,3 @@ internal interface IDaggerfallTouchDelivery
 {
     DaggerfallTouchReach Reach(DaggerfallTouchCast cast);
 }
-
-/// <summary>
-/// Classic touch delivery: an aimed cast picks the first thing a short capsule meets, and is not released
-/// (nor paid for) when that is not an actor; an enemy's touch reaches the target its behavior admitted.
-/// </summary>
-internal sealed class DaggerfallClassicTouchDelivery(DaggerfallTouchOperations ops) : IDaggerfallTouchDelivery
-{
-    private const float PickReach = 3f;
-    private const double PickRadius = .25d;
-
-    public DaggerfallTouchReach Reach(DaggerfallTouchCast cast)
-    {
-        if (cast.Admitted is long admitted) return new(true, [admitted]);
-        SpatialHit hit = ops.Spatial.CastCapsule(cast.Eye, 0d, PickRadius, cast.Forward * PickReach, ops.Contact.Colliders(cast.CasterId), ops.Environment());
-        return ops.Contact.ActorFor(hit) is long touched ? new(true, [touched]) : DaggerfallTouchReach.Refused;
-    }
-}

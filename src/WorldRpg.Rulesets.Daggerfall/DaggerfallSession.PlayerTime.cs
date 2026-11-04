@@ -33,7 +33,6 @@ internal sealed partial class DaggerfallSession
         foreach (var action in firstStep.RequestedActions) _input.Request(action);
         _locomotion.Observe(input);
         _guard.Observe(input);
-        _playerSwings.Observe(lookSeconds, State.PlayerControl.YawRadians, State.PlayerControl.PitchRadians);
     }
 
     // Opening a panel or preparing a spell must work without spending a world step. Physical

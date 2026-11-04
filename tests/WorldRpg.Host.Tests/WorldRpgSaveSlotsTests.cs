@@ -44,7 +44,7 @@ public sealed class WorldRpgSaveSlotsTests
     {
         InMemoryPersistenceService persistence = new();
         using WorldRpgSaveSlots slots = new(Engine(persistence), "worldrpg-test");
-        RulesVariantId contact = new("daggerfall.contact"), armor = new("daggerfall.armor");
+        RulesVariantId contact = new("test.contact"), armor = new("test.armor");
         slots.SaveSlot("slot-v", "Variant", new GameSaveEnvelope(new RulesetSavePayload(new RulesetId("daggerfall"), [1]), [contact, armor]));
         slots.SaveSlot("slot-c", "Classic", Envelope("daggerfall"));
 
@@ -55,7 +55,7 @@ public sealed class WorldRpgSaveSlotsTests
         (GameSaveEnvelope? underClassic, WorldRpgSlotLoadDiagnostic? classicDiagnostic) = slots.LoadSlot("slot-v", "daggerfall", []);
         Assert.Null(underClassic);
         Assert.Equal("incompatible", classicDiagnostic!.Kind);
-        Assert.Contains("[daggerfall.armor, daggerfall.contact]", classicDiagnostic.Message, StringComparison.Ordinal);
+        Assert.Contains("[test.armor, test.contact]", classicDiagnostic.Message, StringComparison.Ordinal);
         Assert.Contains("none (the ruleset's own rules)", classicDiagnostic.Message, StringComparison.Ordinal);
 
         Assert.Equal("incompatible", slots.LoadSlot("slot-c", "daggerfall", [contact]).Diagnostic!.Kind);

@@ -142,18 +142,21 @@ public sealed class SanguineRoseSessionTests
         senses.Pacified = false; senses.ForcedHostile = true;
         f.Perception.Responder = request => f.Respond(request, combat: true);
         f.Session.State.Kit.Rules.RegisterAction(f.Session.DefinitionsByActor[ally].ActionId!, new ForceHit());
+        f.Session.Touches(f.Enemy);
         double playerHealth = Health(f.Session.State.Actors.Player.Actor);
         double enemyHealth = Health(f.Session.State.Actors.Get(f.Enemy).Actor);
         // EnemyBasics Daedroth alternate 2 is [4,-1,5,0]; the minimum draw selects its 33% branch.
         Assert.Equal(new[] { 4, -1, 5, 0 }, f.Inputs.MobileSprites[27].AttackSequences[1].SourceFrames);
         f.Appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: 2);
         f.Update();
+        Assert.Equal(EnemyBehaviorState.Attack, f.Session.LastEnemyBehavior[ally].State);
+        f.Appearance.AdvanceReceiptForAll = null;
+        for (ulong step = 0; step < WindUpEnd(0); step++) f.Update(); // The blow lands when its wind-up ends.
         double after = Health(f.Session.State.Actors.Get(f.Enemy).Actor);
         f.Update();
         Assert.Equal(after, Health(f.Session.State.Actors.Get(f.Enemy).Actor));
         Assert.Equal(playerHealth, Health(f.Session.State.Actors.Player.Actor));
         Assert.True(after < enemyHealth);
-        Assert.Equal(EnemyBehaviorState.Attack, f.Session.LastEnemyBehavior[ally].State);
         Assert.Contains(f.Perception.Requests, request => request.Observers.Span[0].Entity == (ulong)ally
             && request.Targets.ToArray().Any(target => target.Entity == (ulong)f.Enemy));
         Assert.DoesNotContain(f.Perception.Requests, request => request.Observers.Span[0].Entity == (ulong)ally
@@ -221,8 +224,7 @@ public sealed class SanguineRoseSessionTests
         Assert.Equal(EquipmentMoveOutcome.Applied,
             f.Session.EquipmentMoves.MoveToSlot(weapon, new WorldRpg.Kit.Inventory.EquipmentSlotId("right-hand")).Outcome);
         FinishEquipmentDelay(f.Session);
-        f.Session.State.Kit.Rules.RegisterAction(f.Session.DefinitionsByActor[1].ActionId!, new ContactMiss());
-        f.Session.ResolveExplicitMelee(new(1, ally, 1, 10000, .125));
+        f.Session.Strike(new(1, ally, 1, 10000, .125));
         Assert.NotNull(DaggerfallWabbajack.DefinitionOf(f.Session.State.Actors.Get(ally).Actor));
         Assert.Equal("player-ally", f.Session.DefinitionsByActor[ally].Team);
         using var restored = f.Restore();
@@ -230,16 +232,10 @@ public sealed class SanguineRoseSessionTests
         Assert.Equal(f.Session.DefinitionsByActor[ally].Id, restored.DefinitionsByActor[ally].Id);
     }
 
-    private sealed class ContactMiss : ICombatContribution
-    {
-        public void Hit(TryHitEvent value) => value.Hit = false;
-    }
-
     private static double Health(Rusty.Engine.Entities.Actor actor) => actor.Get<StatsComponent>().GetTrack(TrackId.Parse("health")).Current;
     private sealed class ForceHit : ICombatContribution
     {
-        public void Hit(TryHitEvent value) => value.Hit = true;
-        public void Damage(DamageEvent value) => value.Damage = 1;
+        public void Damage(DamageEvent value) => value.Damage = 20;
     }
 
     internal sealed class Fixture : IDisposable

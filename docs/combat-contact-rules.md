@@ -1,0 +1,34 @@
+# Contact rules
+
+Rusty Dagger's combat is decided by physical contact, not a to-hit roll (DEC-12
+in [daggerfall-task-preparation.md](daggerfall-task-preparation.md)): a blow hits
+whatever its body physically meets, and the target's mitigation decides what it
+takes. [combat-behavior-baseline.md](combat-behavior-baseline.md) records the
+timing around these rules.
+
+The owners live in `src/WorldRpg.Rulesets.Daggerfall/Modules/Combat/`
+(`DaggerfallContact*`), behind the seams in
+`src/WorldRpg.Rulesets.Daggerfall/Variation/`, and every value below is in the
+`contact` group of `content/worldrpg/tuning-payloads/daggerfall.defaults.json`.
+
+## The rules
+
+| Concern | Rule | Owner |
+| --- | --- | --- |
+| Melee delivery | A swing, targeted or not, waits for its hit frame and reaches every actor body its swing volume (a tuned box ahead of the attacker's eye, as deep as the attack's reach) touches there, through `ActorContact.Volume` with world occlusion. It may reach an actor it was not aimed at, several, or none, and it still resolves if its aimed target fell first. | `DaggerfallContactDelivery` (physical delivery seam) |
+| Ranged delivery | An arrow flies segment by segment each admitted step from the shooter's eye and harms the first actor body it meets; the world stops it. | `DaggerfallContactDelivery` |
+| Mitigation | The weapon-material requirement still makes a target immune. Deflection is the target's chance (base, Dodging, Agility above average): on a channel tuned full it negates the blow before damage is rolled, on a partial channel it turns aside a share. Absorption is the armour or shield over the struck body part, a monster's natural armour, and the player's worn armour enchantments, scaled per channel. | `DaggerfallContactMitigation` (physical mitigation seam) |
+| Skills | Dodging is deflection and records a use on every enemy blow that connects with the player. Critical Strike (with a held enchantment's attack-chance shift) is a chance of bonus damage. A weapon skill records a use on every connect, deflected or not. Backstab keeps its chance of tripled damage from behind; a monster's natural attack lands the slots that clear the player's reflexes; a whiff or a negated blow runs no Strikes payload. | `DaggerfallContactDelivery`, `DaggerfallContactMitigation` |
+| Block | Holding the product's `block` intent raises the player's guard while a weapon is drawn and the player is free to act. It costs stamina each second, adds a deflection bonus (more behind a shield), stays down for a swing's whole strike, and keeps action-driven time running while it rises, holds or settles. The guard is transient and not saved. Enemies do not block. | `DaggerfallContactGuard` (player guard seam) |
+| Spells | Missiles fly and land on contact. A touch spell reaches every actor its touch volume contacts at the cast frame; a touch that meets no one is still released and paid for, and misses. Spell channels are elemental and keep their resistance. | `DaggerfallContactTouch` (touch delivery seam) |
+| Presentation | A whiff (`AttackWhiffedFact`) sounds the swing alone; a deflection (`AttackNegatedFact`) sounds the donor parry family; a blow the armour took whole is an unpitched hit with no hurt state; a landed blow names its damage, with what was deflected and absorbed (`AttackHitFact.Mitigated`) appended to its line. A reflected spell effect sounds as a deflection and an absorbed one as harm taken whole; a spell that met no one and an applied effect keep their own presentation. | `DaggerfallSiteAppearance`, `DaggerfallOutcomePresentation`, `DaggerfallContactHarmPresentation` (harm presentation seam) |
+| Enemy AI | A melee enemy closes to a tuned fraction of its reach before it swings and spaces its maneuvers around that distance. Each enemy swing publishes its wind-up (`EnemyAttackTelegraphFact`) and its damage lands no sooner, however early the strike's frame comes; an attack interrupted during its wind-up never lands. An archer leads a moving target by the arrow's flight time and holds a shot another body or the world would stop, before spending an arrow. | `DaggerfallContactEngagement` (enemy engagement seam), `DaggerfallContactDelivery` |
+
+## Tuning
+
+The `contact` group holds its values by concern: `melee` (swing volume and
+default reach), `projectile` (arrow speed and default range), `critical`,
+`deflection` (chances and the full or partial mode per channel), `absorption`
+(per armour, shield and armour-value point, monster baseline, per-channel
+multipliers), `guard`, `touch` (touch volume) and `engagement` (melee engage
+fraction, enemy wind-up, archer lead).

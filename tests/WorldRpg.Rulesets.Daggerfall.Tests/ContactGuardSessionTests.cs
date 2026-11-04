@@ -6,7 +6,7 @@ using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
-/// <summary>The contact variant's active block through the live session: time admission, the swing lifetime and deferred acts.</summary>
+/// <summary>The active block through the live session: time admission, the swing lifetime and deferred acts.</summary>
 public sealed class ContactGuardSessionTests
 {
     private static readonly ProductInputEvent HoldBlock = Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "block");
@@ -15,7 +15,7 @@ public sealed class ContactGuardSessionTests
     [Fact]
     public void Holding_block_while_action_driven_time_is_idle_runs_time_to_raise_the_guard_spend_stamina_and_settle_its_release()
     {
-        using Fixture f = new(contact: true);
+        using Fixture f = new();
         f.Step();
         f.Session.State.WeaponDrawn = true;
         f.Observe(Ui("""{"action":"action-driven-time","enabled":true}"""));
@@ -43,21 +43,9 @@ public sealed class ContactGuardSessionTests
     }
 
     [Fact]
-    public void Classic_reads_no_block_and_keeps_idle_time_held()
-    {
-        using Fixture f = new(contact: false);
-        f.Step();
-        f.Session.State.WeaponDrawn = true;
-        f.Observe(Ui("""{"action":"action-driven-time","enabled":true}"""));
-        f.Observe(HoldBlock);
-        Assert.True(f.Session.PlayerTimeHeld);
-        Assert.False(f.Session.PlayerGuardRaised);
-    }
-
-    [Fact]
     public void A_swing_keeps_the_guard_down_past_its_hit_frame_until_its_strike_completes()
     {
-        using Fixture f = new(contact: true);
+        using Fixture f = new();
         f.Step();
         f.Session.State.WeaponDrawn = true;
         f.Observe(HoldBlock);
@@ -86,7 +74,7 @@ public sealed class ContactGuardSessionTests
     public void A_swing_deferred_behind_an_enemy_hit_lowers_the_guard_when_it_is_admitted()
     {
         List<string> releases = [];
-        (DaggerfallSession session, AppearanceFake _, _) = VisibleEnemySession(releases, contact: true);
+        (DaggerfallSession session, AppearanceFake _, _) = VisibleEnemySession(releases);
         using DaggerfallSession disposable = session;
         session.State.WeaponDrawn = true;
         ProductInputEvent block = Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "block");
@@ -107,7 +95,7 @@ public sealed class ContactGuardSessionTests
         internal readonly EngineContextFake Engine;
         internal readonly DaggerfallSession Session;
         private ulong _step = 1;
-        internal Fixture(bool contact)
+        internal Fixture()
         {
             var inputs = ReadInputs(TestData.RepositoryRoot);
             List<string> releases = [];
@@ -115,7 +103,7 @@ public sealed class ContactGuardSessionTests
             SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
             Appearance = new(releases);
             Engine = EngineContextFake.Create(content, spatial.Service, Appearance);
-            Session = DaggerfallSession.StartNew(Engine.Context, contact ? ContactComposition(inputs) : new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
+            Session = DaggerfallSession.StartNew(Engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
         }
         internal double Stamina => Session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current;
         internal void Observe(params ProductInputEvent[] input) => Session.Update(new ProductUpdate(

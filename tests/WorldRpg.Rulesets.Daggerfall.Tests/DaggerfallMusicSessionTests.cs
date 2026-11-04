@@ -235,6 +235,7 @@ public sealed class DaggerfallMusicSessionTests
         var engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         using var session = DaggerfallSession.StartNew(engine.Context,
             new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults) { Music = bundle });
+        session.Touches(2000);
         session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d),
             [Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack")]));
         appearance.AdvanceReceiptForAll = WeaponHitReading(2, 2);

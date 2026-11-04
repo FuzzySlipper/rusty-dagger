@@ -31,7 +31,7 @@ public sealed class NamiraSessionTests
             spatial.KeepPosition = true;
             appearance = new(releases);
             perception = PerceptionFake.Create();
-            return EngineContextFake.Create(content, spatial.Service, appearance, perception.Service, random: RandomMinimum.Create());
+            return EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         }
         var identity = TestSessions.Resolve(FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         DaggerfallSessionComposition composition = new(definitions, inputs, DaggerfallTuning.Defaults, identity);
@@ -58,9 +58,10 @@ public sealed class NamiraSessionTests
         var alternate = inputs.ActorSprites[enemy].AttackSequences[1];
         Assert.True(alternate.Chance > 0);
         ulong marker = checked((ulong)alternate.SourceFrames.ToList().IndexOf(-1) + 1);
+        restored.Touches(DaggerfallActorIdentity.PlayerEntityId);
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: marker);
         restored.Update(new ProductUpdate(OuterUpdate(1), []));
-        restored.Update(new ProductUpdate(OuterUpdate(2), []));
+        RunWindUp(restored, 2, 1);
         Assert.True(restored.State.Actors.Get(enemy).IsDefeated, $"Enemy {enemy}, behavior {restored.LastEnemyBehavior[enemy].State}, condition {restored.State.ItemInstances.RequireUnique(durable).CurrentCondition}, outcome {restored.Presentation.LastOutcome}");
         Assert.True(restored.Corpses.ContainsKey(enemy));
         Assert.Equal(initial, restored.State.ItemInstances.RequireUnique(durable).CurrentCondition);
@@ -74,7 +75,6 @@ public sealed class NamiraSessionTests
 
     private sealed class CertainStrike : ICombatContribution
     {
-        public void Hit(TryHitEvent hit) => hit.Hit = true;
         public void Damage(DamageEvent damage) => damage.Damage = 13;
     }
 }

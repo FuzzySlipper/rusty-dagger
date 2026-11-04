@@ -95,7 +95,7 @@ public sealed class QuestFoeRelationTests
         Assert.Equal(2, ids.Length);
         Assert.All(ids, id => Assert.True(f.Session.State.Quests.IsFoeRestrained(id)));
         f.Session.State.Kit.Rules.RegisterAction(f.Session.DefinitionsByActor[1].ActionId!, new OneDamage());
-        f.Session.ResolveExplicitMelee(new(1, ids[0], 1, 10000, .125));
+        f.Session.Strike(new(1, ids[0], 1, 10000, .125));
         Assert.False(f.Session.State.Quests.IsFoeRestrained(ids[0]));
         Assert.True(f.Session.State.Quests.IsFoeRestrained(ids[1]));
         using var restored = f.Restore();
@@ -143,7 +143,6 @@ public sealed class QuestFoeRelationTests
 
     private sealed class OneDamage : ICombatContribution
     {
-        public void Hit(TryHitEvent value) => value.Hit = true;
         public void Damage(DamageEvent value) => value.Damage = 1;
     }
 

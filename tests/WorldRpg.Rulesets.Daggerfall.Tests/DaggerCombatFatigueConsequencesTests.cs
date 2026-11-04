@@ -20,7 +20,7 @@ public sealed class DaggerCombatFatigueConsequencesTests
     {
         using DaggerCombatFixture fixture = new(sourceId);
 
-        fixture.Rules.Apply(Attack(), Prepared(), fixture.Facts);
+        fixture.ApplyConnected(Attack(), Prepared());
 
         List<IProductFact> delivered = fixture.Deliver();
         FatigueAppliedFact fatigue = Assert.Single(delivered.OfType<FatigueAppliedFact>());
@@ -41,7 +41,7 @@ public sealed class DaggerCombatFatigueConsequencesTests
     {
         using DaggerCombatFixture fixture = new("nymph", playerStamina: 20d);
 
-        fixture.Rules.Apply(Attack(), Prepared(), fixture.Facts);
+        fixture.ApplyConnected(Attack(), Prepared());
 
         FatigueAppliedFact fatigue = Assert.Single(fixture.Deliver().OfType<FatigueAppliedFact>());
         Assert.Equal((256, 20d), (fatigue.CalculatedFatigueLoss, fatigue.ActualFatigueLost));
@@ -51,9 +51,8 @@ public sealed class DaggerCombatFatigueConsequencesTests
     private static AttackRequest Attack() =>
         new(2, DaggerfallActorIdentity.PlayerEntityId, 7, 13, .125d, Delayed: true);
 
-    private static PreparedAttack Prepared() =>
+    private static DaggerCombatRules.DaggerfallPreparedAttack Prepared() =>
         new DaggerCombatRules.DaggerfallPreparedAttack(.5d,
             new AttackOutcome(Hit: true, Allowed: true, Damage: 2),
-            DaggerfallStrikeFeedback.Unarmed, MonsterHits: [new(0, 2, DaggerfallMonsterHitConsequence.Fatigue)],
-            Detail: new(Body: 0, Roll: 1, Chance: 100));
+            DaggerfallStrikeFeedback.Unarmed, MonsterHits: [new(0, 2, DaggerfallMonsterHitConsequence.Fatigue)]);
 }

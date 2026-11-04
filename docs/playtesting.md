@@ -32,7 +32,7 @@ Only stop browser sessions and hosts the tester owns.
    Complete entry/cinematics through ordinary UI before expecting movement.
 2. Set action-driven time. An `act` call delivers the current physical binding,
    advances the requested bounded window, then holds simulation. Look does not
-   advance time and does not add a weapon-swing gesture.
+   advance time.
 3. Choose a nearby named target. Compare actual XYZ movement after short inputs.
    Use free look and a 4/8-view survey when facing a wall or losing orientation.
 4. Check alive, hostile, attack eligibility, aim, reach and current refusal facts.
@@ -130,7 +130,7 @@ For example, to reach the Temple of Kynareth's trainer from anywhere:
 
 The motion viewer draws the 3D first-person art (`viewmodel.style` `held` or
 `heldRetro`, with `local/first-person.rpak` installed; `scripts/fp-arms/README.md`)
-through the game's own held viewmodel, without the click attack's random strike. A
+through the game's own held viewmodel. A
 look is a classic weapon visual the art draws (`weapon.dagger.steel`), shown by the
 family that draws it, and an action one of its classic strikes with a clip
 (`strikeDown`). It shows the family's arms whatever the hands wield; swings still land

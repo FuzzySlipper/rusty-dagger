@@ -70,8 +70,11 @@ public sealed class AzurasStarSessionTests
         s.State.Actors.Get(ally).ApplyPose(new(new(0, 0, -5.9f), 0));
         s.State.Actors.Get(f.Enemy).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1);
         f.Perception.Responder = request => f.Respond(request, combat: true);
+        s.Touches(f.Enemy);
         f.Appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: 2);
-        f.Update(); f.Update();
+        f.Update();
+        f.Appearance.AdvanceReceiptForAll = null;
+        for (ulong step = 0; step < WindUpEnd(0); step++) f.Update(); // The ally's blow lands when its wind-up ends.
         Assert.True(s.State.Actors.Get(f.Enemy).IsDefeated);
         Assert.Null(s.State.ItemInstances.RequireUnique(f.Source).CapturedSoulMobileId);
     }
@@ -112,7 +115,7 @@ public sealed class AzurasStarSessionTests
         var health = s.State.Actors.Get(f.Enemy).Stats.GetTrack(TrackId.Parse("health"));
         health.Maximum.BaseValue = 30;
         health.SetCurrent(30);
-        s.ResolveExplicitMelee(new(1, f.Enemy, 1, 10000, .125)); f.Update();
+        s.Strike(new(1, f.Enemy, 1, 10000, .125)); f.Update();
         Assert.False(s.State.Actors.Get(f.Enemy).IsDefeated);
         Assert.Equal(1d, s.State.Actors.Get(f.Enemy).Stats.GetTrack(TrackId.Parse("health")).Current);
         Assert.Equal(0, s.State.ItemInstances.RequireUnique(f.Source).CapturedSoulMobileId);
@@ -210,12 +213,11 @@ public sealed class AzurasStarSessionTests
     {
         var s = f.Session;
         s.State.Actors.Get(target).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1);
-        s.ResolveExplicitMelee(new(attacker, target, 1, step, .125)); f.Update();
+        s.Strike(new(attacker, target, 1, step, .125)); f.Update();
         Assert.True(s.State.Actors.Get(target).IsDefeated);
     }
     private sealed class LethalStrike : ICombatContribution
     {
-        public void Hit(TryHitEvent hit) { hit.Hit = true; hit.Chance = 100; hit.Roll = 1; }
         public void Damage(DamageEvent damage) { damage.Damage = 1000; }
     }
 }

@@ -1,5 +1,8 @@
 {
-  "questOffers": { "socialProviderChancePercent": 25, "castleProviderChancePercent": 25 },
+  "questOffers": {
+    "socialProviderChancePercent": 25,
+    "castleProviderChancePercent": 25
+  },
   "questRewards": {
     "minimumDeliveryHour": 7,
     "maximumDeliveryHour": 18,
@@ -26,8 +29,17 @@
     "maximumArrivalDistance": 51.2,
     "arrestReach": 3.2
   },
-  "normalLight": { "distance": 1.4, "heightFraction": 0.25, "range": 15, "intensity": 1 },
-  "vampirism": { "attributeBonus": 20, "skillBonus": 30, "satiationMinutes": 1440 },
+  "normalLight": {
+    "distance": 1.4,
+    "heightFraction": 0.25,
+    "range": 15,
+    "intensity": 1
+  },
+  "vampirism": {
+    "attributeBonus": 20,
+    "skillBonus": 30,
+    "satiationMinutes": 1440
+  },
   "lycanthropy": {
     "attributeBonus": 40,
     "skillBonus": 30,
@@ -162,8 +174,75 @@
   },
   "meleeTargeting": {
     "maximumDistance": 2.25,
-    "minimumFacingCosine": 0.5,
-    "minimumSwingGestureRadians": 0.35
+    "minimumFacingCosine": 0.5
+  },
+  "contact": {
+    "melee": {
+      "swingWidth": 1.2,
+      "swingHeight": 1.2,
+      "swingDrop": 0.5,
+      "defaultReach": 2.25
+    },
+    "projectile": {
+      "speedMetersPerSecond": 25,
+      "defaultRange": 51.2
+    },
+    "critical": {
+      "chancePerSkillPoint": 0.3,
+      "chancePerAttackChancePoint": 1.0,
+      "damageMultiplier": 1.5
+    },
+    "deflection": {
+      "baseChance": 5,
+      "dodgingPerPoint": 0.3,
+      "agilityPerPointAbove50": 0.2,
+      "maximumChance": 60,
+      "channels": {
+        "edged": {
+          "mode": "full"
+        },
+        "piercing": {
+          "mode": "full"
+        },
+        "blunt": {
+          "mode": "partial",
+          "fraction": 0.5
+        },
+        "physical": {
+          "mode": "full"
+        }
+      }
+    },
+    "absorption": {
+      "perArmorPoint": 0.4,
+      "perShieldPoint": 0.4,
+      "perArmorValueShift": 0.2,
+      "monsterArmorBaseline": 10,
+      "monsterAbsorbPerPoint": 0.5,
+      "channelMultipliers": {
+        "edged": 1.0,
+        "piercing": 0.8,
+        "blunt": 0.6,
+        "physical": 0.8
+      }
+    },
+    "guard": {
+      "staminaPerSecond": 4,
+      "deflectionBonus": 25,
+      "shieldDeflectionBonus": 15,
+      "maximumChance": 85
+    },
+    "touch": {
+      "reach": 2.0,
+      "width": 0.8,
+      "height": 1.0,
+      "drop": 0.3
+    },
+    "engagement": {
+      "meleeReachFraction": 0.75,
+      "enemyWindUpSeconds": 0.4,
+      "archerLeadFraction": 1.0
+    }
   },
   "enemyBehavior": {
     "detectionDistance": 12.0,

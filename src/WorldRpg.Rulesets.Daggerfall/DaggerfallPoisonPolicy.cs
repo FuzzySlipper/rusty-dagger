@@ -69,6 +69,8 @@ internal enum DaggerfallPoisonAdmission
 {
     /// <summary>The poison takes hold and its effect is started.</summary>
     Admitted,
+    /// <summary>The target's running poison outlasts this one, which starts nothing.</summary>
+    Outlasted,
 
     /// <summary>The target's saving throw against the shared DiseaseOrPoison element held.</summary>
     Resisted,
@@ -245,14 +247,11 @@ internal static class DaggerfallPoisonPolicy
             return DaggerfallPoisonAdmission.Immune;
         if (negation.Negated) return DaggerfallPoisonAdmission.Resisted;
 
-        if (!poisons.Afflict(target, variant, itemId))
-        {
-            // Admission and the effect it starts are one step: a variant no archetype answers cannot come
-            // back as a quietly successful poisoning.
+        // Admission and the effect it starts are one step: a variant no archetype answers cannot come back
+        // as a quietly successful poisoning.
+        if (!DaggerfallPoisonArchetypes.TryResolve(variant, out _))
             throw new ArgumentException($"Admitted poison variant {variant} is not one of the twelve archetypes.", nameof(variant));
-        }
-
-        return DaggerfallPoisonAdmission.Admitted;
+        return poisons.Afflict(target, variant, itemId) ? DaggerfallPoisonAdmission.Admitted : DaggerfallPoisonAdmission.Outlasted;
     }
 
     /// <summary>

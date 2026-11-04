@@ -20,17 +20,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// <summary>Ranged combat: cover, arrow flight and meshes, quivers and in-flight shots across saves.</summary>
 public sealed class RangedCombatSessionTests
 {
-    /// <summary>
-    /// The archer's ranged policy: it damages the player from further than any melee reaches, without ever
-    /// closing, and stops when the player is out of its own attack's range.
-    /// </summary>
-    /// <remarks>
-    /// This is the capability the archer erratum recorded as missing. The distance the Engine classifies is
-    /// the fixture's, set well past melee reach and inside the archer's own authored reach; the archer's
-    /// state and the damage that lands are the ruleset's answer to it.
-    /// </remarks>
     [Fact]
-    public void Static_cover_between_the_archer_and_the_player_stops_the_shot()
+    public void An_archer_holds_a_shot_static_cover_would_stop_and_spends_no_arrow()
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
@@ -53,36 +44,49 @@ public sealed class RangedCombatSessionTests
         const long archer = 2004;
         double separation = definitions.EnemyRanged.MinimumDistance + 2d;
         perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 1d, PerceptionPairKind.Visible, 1d));
-
+        WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator quiver = Assert.IsType<WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator>(session.State.ActorInventories.InventoryFor(archer));
         double beforeHealth = PlayerHealth(session);
+
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredRangedMarker(archer));
+        for (ulong step = 1; step <= 30; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
+
+        Assert.Equal(beforeHealth, PlayerHealth(session));
+        Assert.Null(session.State.Actors.Get(archer).Attack.Pending);
+        Assert.Equal(12UL, quiver.Read().Stacks.Single(stack => stack.Definition.Value == "arrow").Quantity);
+    }
+
+    [Fact]
+    public void An_arrow_that_meets_a_wall_in_flight_lands_nothing_and_says_the_world_stopped_it()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        spatial.KeepPosition = true;
+        PerceptionFake perception = PerceptionFake.Create();
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
+        PlaceArcherInRangedBand(session);
+        const long archer = 2004;
+        double separation = definitions.EnemyRanged.MinimumDistance + 2d;
+        perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 1d, PerceptionPairKind.Visible, 1d));
+        double beforeHealth = PlayerHealth(session);
+
+        // The line is clear at release; the wall is only there for the arrow already flying.
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredRangedMarker(archer));
         session.Update(new ProductUpdate(OuterUpdate(1), []));
-        for (ulong step = 2; step <= 120 && session.Presentation.LastOutcome is null; step++)
-            session.Update(new ProductUpdate(OuterUpdate(step), []));
+        appearance.AdvanceReceiptForAll = null;
+        spatial.FloorHit = request => request.Direction.Y < -.5f
+            ? default
+            : default(SpatialHit) with { Present = true, Kind = SpatialHitKind.StaticMesh };
+        session.Update(new ProductUpdate(OuterUpdate(2), []));
 
-        // The release happened and the line was obstructed, so the shot died on the cover: no damage,
-        // and the line tells the player the world was in the way rather than that they were missed.
         Assert.Equal(beforeHealth, PlayerHealth(session));
         Assert.Contains("blocked by cover", session.Presentation.LastOutcome ?? string.Empty);
-
-        // The Engine answered exactly one query, and it was the shot's own line: it runs at the
-        // player, and it starts clear of the muzzle so a shooter standing against geometry is not
-        // read as its own cover.
-        float eye = DaggerfallTuning.Defaults.Camera.EyeHeight;
-        Vector3 shooter = session.State.Actors.Get(archer).Position.ToVector() + Vector3.UnitY * eye;
-        Vector3 aim = session.State.PlayerControl.Position!.Value.ToVector() + Vector3.UnitY * eye;
-        Vector3 line = Vector3.Normalize(aim - shooter);
-        SpatialRaycastRequest cast = Assert.Single(spatial.FloorProbes.Where(request =>
-            MathF.Abs((float)(request.MaxDistance - (Vector3.Distance(shooter, aim) - .3f))) < .05f));
-        Assert.Equal(line.X, cast.Direction.X, 2);
-        Assert.Equal(line.Y, cast.Direction.Y, 2);
-        Assert.Equal(line.Z, cast.Direction.Z, 2);
-        Assert.Equal(shooter.X + line.X * .3f, cast.Origin.X, 2);
-        Assert.Equal(shooter.Z + line.Z * .3f, cast.Origin.Z, 2);
-        DaggerfallMissileVisual arrow = Assert.Single(inputs.ClassicPresentation.WorldVisuals,
-            visual => visual.MediaId == "visual.missile.arrow");
-        Assert.DoesNotContain(appearance.Snapshots.Last(), fact =>
-            ReferenceEquals(fact.Appearance, appearance.StaticMeshByPath[arrow.Path]));
     }
 
     [Fact]
@@ -107,8 +111,6 @@ public sealed class RangedCombatSessionTests
         AppearanceFact released = Assert.Single(appearance.Snapshots.Last(), fact =>
             ReferenceEquals(fact.Appearance, mesh));
         Assert.Equal(RenderLayer.Scene, released.Layer);
-        Assert.Equal(session.State.Actors.Get(archer).Position.Y + DaggerfallTuning.Defaults.Camera.EyeHeight,
-            released.Transform.Translation.Y, 2);
 
         // The shot owns one stable visual identity while its released line advances; stopping later
         // enemy decisions does not cancel a missile already in flight.
@@ -123,41 +125,11 @@ public sealed class RangedCombatSessionTests
 
         for (ulong step = 3; step <= 120; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
         Assert.DoesNotContain(appearance.Snapshots.Last(), fact => ReferenceEquals(fact.Appearance, mesh));
-    }
 
-    [Fact]
-    public void An_actor_between_the_archer_and_the_player_does_not_stop_the_shot()
-    {
-        // The shot stops at admitted world geometry, not at a body: an intervening actor is not cover,
-        // which is what keeps the StaticMesh answer the only blocking one.
-        string root = TestData.RepositoryRoot;
-        DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile inputs = ReadInputs(root);
-        List<string> releases = [];
-        ContentFake content = new(releases);
-        PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
-        spatial.KeepPosition = true;
-        spatial.FloorHit = request => request.Direction.Y < -.5f
-            ? default
-            : default(SpatialHit) with { Present = true, Kind = SpatialHitKind.Entity };
-        PerceptionFake perception = PerceptionFake.Create();
-        AppearanceFake appearance = new(releases);
-        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
-        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
-        PlaceArcherInRangedBand(session);
-        const long archer = 2004;
-        double separation = definitions.EnemyRanged.MinimumDistance + 2d;
-        perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 1d, PerceptionPairKind.Visible, 1d));
-
-        double beforeHealth = PlayerHealth(session);
-        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredRangedMarker(archer));
-        session.Update(new ProductUpdate(OuterUpdate(1), []));
-        for (ulong step = 2; step <= 240 && PlayerHealth(session) == beforeHealth; step++)
-            session.Update(new ProductUpdate(OuterUpdate(step), []));
-
-        Assert.True(PlayerHealth(session) < beforeHealth, "an actor in the way is not cover, so the arrow still lands");
-        Assert.DoesNotContain("blocked by cover", session.Presentation.LastOutcome ?? string.Empty);
+        // The mesh is drawn on the arrow's own line: it leaves the archer's eye, one step along by the
+        // time it is first drawn, and falls toward the player's lower eye.
+        float eye = session.State.Actors.Get(archer).Position.Y + DaggerfallSession.ActorContactBody.Height * .9f;
+        Assert.InRange(released.Transform.Translation.Y, eye - .1f, eye);
     }
 
     [Fact]
@@ -185,6 +157,7 @@ public sealed class RangedCombatSessionTests
         // Past every melee reach this corpus authors, and inside the archer's own.
         double separation = definitions.EnemyRanged.MinimumDistance + 2d;
         Assert.True(separation < shotReach, "the fixture's separation must sit between melee reach and the archer's shot");
+        ArrowsMeetThePlayer(spatial, session);
 
         double healthBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
         // The archer sees the player at that separation, facing them, with the line clear.
@@ -250,8 +223,7 @@ public sealed class RangedCombatSessionTests
         double healthBefore = PlayerHealth(session);
 
         // Release on the outer boundary after three admitted simulation steps. Every later update
-        // catches up three steps, but the combat owner still derives the 25 m/s arrival from one
-        // fixed step rather than treating the whole batch as one oversized step.
+        // catches up three steps, and the arrow keeps its 25 m/s across each batch.
         session.Update(new ProductUpdate(OuterUpdate(1) with { SimulationStep = 1, AdmittedStepCount = 3 }, []));
         appearance.AdvanceReceiptForAll = null;
         perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 0d,
@@ -261,9 +233,9 @@ public sealed class RangedCombatSessionTests
         Assert.Contains(appearance.Snapshots.Last(), fact =>
             ReferenceEquals(fact.Appearance, appearance.StaticMeshByPath[arrow.Path]));
 
-        // The historical aggregate-duration bug arrives this shot during this window. A correct
-        // one-step flight is still travelling after thirty admitted simulation steps.
-        for (ulong start = 4; start <= 19; start += 3)
+        // Each update carries the arrow three steps' flight at 25 m/s: the shot is still travelling after
+        // fifteen admitted steps, and a flight that counted one step per update would still be well short.
+        for (ulong start = 4; start <= 13; start += 3)
             session.Update(new ProductUpdate(OuterUpdate(start) with
             {
                 SimulationStep = start,
@@ -274,7 +246,7 @@ public sealed class RangedCombatSessionTests
             ReferenceEquals(fact.Appearance, appearance.StaticMeshByPath[arrow.Path]));
 
         ulong arrivalStep = 0;
-        for (ulong start = 22; start <= 100; start += 3)
+        for (ulong start = 16; start <= 100; start += 3)
         {
             session.Update(new ProductUpdate(OuterUpdate(start) with
             {
@@ -288,7 +260,7 @@ public sealed class RangedCombatSessionTests
             }
         }
 
-        Assert.InRange(arrivalStep, 22UL, 25UL);
+        Assert.InRange(arrivalStep, 18UL, 21UL);
         // One further admitted boundary gives the appearance owner a completed flight receipt and
         // retires the world mesh with that flight's identity.
         ulong afterArrival = checked(arrivalStep + 3);
@@ -334,6 +306,7 @@ public sealed class RangedCombatSessionTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         PlaceArcherInRangedBand(session);
+        ArrowsMeetThePlayer(spatial, session);
         const long archer = 2004;
         double separation = definitions.EnemyRanged.MinimumDistance + 2d;
         perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 1d, PerceptionPairKind.Visible, 1d));
@@ -348,7 +321,7 @@ public sealed class RangedCombatSessionTests
         for (ulong step = 2; step <= 240; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
 
         Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
-        Assert.Contains("missed", engine.PublishedField("lastOutcome"), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("misses you", engine.PublishedField("lastOutcome"), StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
@@ -373,7 +346,7 @@ public sealed class RangedCombatSessionTests
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
         TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors,
             new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
-        DaggerCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting,
+        DaggerCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting, targetingSpatial,
             physicalAttacksBlocked: id => session.State.Effects.ControlsFor(id).PhysicalAttacks, actorGameplayActive: _ => true);
         const long archer = 2004;
         const ulong generation = 77;
@@ -393,6 +366,7 @@ public sealed class RangedCombatSessionTests
         {
             Assert.Single(combat.ReadRangedFlights(generation, releaseStep));
             DaggerfallParalysisEffectsTests.Start(session, "after-release", 1, archer, 1000);
+            MeetThePlayerNow(spatial, session);
         }
         else Assert.Empty(combat.ReadRangedFlights(generation, releaseStep));
         combat.AdvanceRangedFlight(generation, releaseStep + 100, .125, positions, facts);
@@ -425,7 +399,7 @@ public sealed class RangedCombatSessionTests
         TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors,
             new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
         bool gameplayActive = true;
-        DaggerCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting,
+        DaggerCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting, targetingSpatial,
             physicalAttacksBlocked: _ => false, actorGameplayActive: _ => gameplayActive);
         const long archer = 2004;
         const ulong generation = 77;
@@ -469,6 +443,7 @@ public sealed class RangedCombatSessionTests
             Assert.True(session.State.Actors.TryGet(archer, out _));
         }
         else session.State.Actors.Entities.Destroy(ActorsState.Identity(archer));
+        MeetThePlayerNow(spatial, session);
         combat.AdvanceRangedFlight(nextGeneration, nextReleaseStep + 100, .125, positions, facts);
         Assert.Empty(combat.ReadRangedFlights(nextGeneration, nextReleaseStep + 100));
         Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
@@ -536,7 +511,7 @@ public sealed class RangedCombatSessionTests
             placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
         TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
-        DaggerCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting,
+        DaggerCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting, targetingSpatial,
             physicalAttacksBlocked: _ => false, actorGameplayActive: _ => true);
         FactBuffer<IProductFact> facts = new();
         long archer = Assert.Single(inputs.Project.Actors.Values, placement => placement.ActorId == new DaggerfallActorId("archer")).EntityId;
@@ -575,7 +550,7 @@ public sealed class RangedCombatSessionTests
             placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
         TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
-        DaggerCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting,
+        DaggerCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting, targetingSpatial,
             physicalAttacksBlocked: _ => false, actorGameplayActive: _ => true);
         FactBuffer<IProductFact> facts = new();
         long archer = Assert.Single(inputs.Project.Actors.Values, placement => placement.ActorId == new DaggerfallActorId("archer")).EntityId;
@@ -641,6 +616,7 @@ public sealed class RangedCombatSessionTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         var session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         PlaceArcherInRangedBand(session);
+        ArrowsMeetThePlayer(spatial, session);
         return session;
     }
 
@@ -698,6 +674,33 @@ public sealed class RangedCombatSessionTests
         session.State.Actors.Get(2004).ApplyPose(new(new(0, 0, -8), MathF.PI));
         session.State.Actors.Get(2004).Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(true);
     }
+
+    /// <summary>
+    /// Arrow segments meet the player's body where they pass close to the player's eye, so a shot takes its
+    /// real flight time to arrive and one the player left behind flies past; straight-down probes meet nothing.
+    /// </summary>
+    private static void ArrowsMeetThePlayer(SpatialFake spatial, DaggerfallSession session)
+    {
+        ulong player = session.State.Actors.Player.Actor.Entity.Value;
+        spatial.FloorHit = request =>
+        {
+            if (MathF.Abs(request.Direction.Y) > .5f) return default;
+            Vector3 toEye = session.State.PlayerControl.Position!.Value.ToVector() + Vector3.UnitY * DaggerfallTuning.Defaults.Camera.EyeHeight - request.Origin;
+            float along = Vector3.Dot(toEye, request.Direction);
+            bool meets = along >= 0f && along <= request.MaxDistance + .01d && (toEye - request.Direction * along).Length() < .3f;
+            return meets ? PlayerBody(player, request, along) : default;
+        };
+    }
+
+    /// <summary>The next arrow segment meets the player's body wherever it flies.</summary>
+    private static void MeetThePlayerNow(SpatialFake spatial, DaggerfallSession session)
+    {
+        ulong player = session.State.Actors.Player.Actor.Entity.Value;
+        spatial.FloorHit = request => PlayerBody(player, request, .1f);
+    }
+
+    private static SpatialHit PlayerBody(ulong player, SpatialRaycastRequest request, float distance) => new(true, SpatialHitKind.Entity, player, 0, 0, 0, 0, 0, 0, default,
+        request.Origin + request.Direction * distance, -request.Direction, distance, 0d, 0d, false, true);
 
     /// <summary>The damage marker the placed archer's authored ranged sequence publishes.</summary>
     private static ulong AuthoredRangedMarker(long placedEntityId) => AuthoredMarker(placedEntityId, "rangedFrames");

@@ -115,6 +115,7 @@ public sealed class MolagBalSessionTests
         FinishEquipmentDelay(s);
         FactBuffer<IProductFact> facts = new();
         s.State.Kit.AttackExecution.ObserveTimeline(1, 1);
+        s.Touches(f.Enemy);
         Assert.True(s.State.Kit.AttackExecution.Start(new(1, f.Enemy, 1, 1, .125, true), facts));
         if (equipAfter) Assert.Equal(EquipmentMoveOutcome.Applied,
             s.EquipmentMoves.MoveToSlot(f.Weapon, new EquipmentSlotId("right-hand")).Outcome);
@@ -227,7 +228,11 @@ public sealed class MolagBalSessionTests
                 new UniqueInventoryItem(item.Entity.Value, new InventoryItemId(item.Definition.Value)), new EquipmentSlotId("right-hand"));
             Assert.True(result.Outcome == EquipmentMoveOutcome.Applied, result.Detail);
         }
-        internal void Strike(DaggerfallSession session, ulong step = 1) => session.ResolveExplicitMelee(new(1, Enemy, 1, step, .125));
+        internal void Strike(DaggerfallSession session, ulong step = 1)
+        {
+            if (Attack.Hits) session.Strike(new(1, Enemy, 1, step, .125));
+            else session.ResolveExplicitMelee(new(1, Enemy, 1, step, .125));
+        }
         internal DaggerfallSession Restore(RulesetSavePayload save) => DaggerfallSession.Restore(Engine().Context, _composition, save);
         public void Dispose() => Session.Dispose();
     }
@@ -235,7 +240,6 @@ public sealed class MolagBalSessionTests
     {
         internal bool Hits { get; set; } = true;
         internal int Applications { get; private set; }
-        public void Hit(TryHitEvent interaction) => interaction.Hit = Hits;
         public void Damage(DamageEvent interaction) => interaction.Damage = 13;
         public void Applying(ApplyHitEvent interaction) => Applications++;
     }

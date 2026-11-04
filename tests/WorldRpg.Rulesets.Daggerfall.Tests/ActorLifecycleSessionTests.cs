@@ -137,7 +137,7 @@ public sealed class ActorLifecycleSessionTests
         // its normalized T loot table is populated through the canonical corpse coordinator.
         session.State.Actors.Get(actorId).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
-        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, actorId, 1, 1, .125));
+        session.Strike(new ExplicitMeleeRequest(1, actorId, 1, 1, .125));
         Assert.True(session.State.Actors.Get(actorId).IsDefeated);
         Assert.True(session.Corpses.TryGetValue(actorId, out CorpseContainer? corpse));
         Assert.NotNull(corpse);
@@ -172,7 +172,7 @@ public sealed class ActorLifecycleSessionTests
         Assert.NotEmpty(carried.UniqueItems);
         session.State.Actors.Get(actorId).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
-        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, actorId, 1, 1, .125));
+        session.Strike(new ExplicitMeleeRequest(1, actorId, 1, 1, .125));
         Assert.True(session.State.Actors.Get(actorId).IsDefeated);
         Assert.True(session.Corpses.TryGetValue(actorId, out CorpseContainer? corpse));
         Assert.NotNull(corpse);
@@ -229,7 +229,7 @@ public sealed class ActorLifecycleSessionTests
         long spawned = session.SpawnActor("rat", new ActorPose(playerPosition, 0f));
         session.State.Actors.Get(spawned).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
-        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, spawned, 1, 1, .125));
+        session.Strike(new ExplicitMeleeRequest(1, spawned, 1, 1, .125));
         Assert.True(session.State.Actors.Get(spawned).IsDefeated);
         Assert.True(session.Corpses.ContainsKey(spawned));
         AimActivationAt(session, spawned);

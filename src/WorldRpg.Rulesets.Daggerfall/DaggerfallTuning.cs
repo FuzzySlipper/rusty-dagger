@@ -1,3 +1,4 @@
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using Rusty.Engine;
@@ -40,6 +41,7 @@ internal sealed record DaggerfallTuning(
     internal DaggerfallSwimmingTuning Swimming { get; init; } = DaggerfallSwimmingTuning.Classic;
     internal DaggerfallWeatherTuning Weather { get; init; } = DaggerfallWeatherTuning.Classic;
     internal DaggerfallAmbientTuning Ambient { get; init; } = DaggerfallAmbientTuning.Classic;
+    internal DaggerfallContactTuning Contact { get; init; } = DaggerfallContactTuning.Default;
 
     internal static DaggerfallTuning Defaults { get; } = new(
         // Screen-space mouse Y increases downward; Engine camera pitch increases upward.
@@ -61,7 +63,7 @@ internal sealed record DaggerfallTuning(
             MaximumStepHeight: .75f)),
         DaggerfallLocomotionTuning.Classic,
         new FirstPersonCameraTuning(.75f, 65d, .1d, 100d),
-        new DaggerfallMeleeTargetingTuning(2.25d, .5d, .35d),
+        new DaggerfallMeleeTargetingTuning(2.25d, .5d),
         new DaggerfallEnemyBehaviorTuning(12d, 3f, 1024),
         new DaggerfallLootInteractionTuning(2.25d, .5d),
         new DaggerfallTimeTuning(12d),
@@ -191,8 +193,7 @@ internal sealed record DaggerfallTuning(
                 camera.GetProperty("farPlane").GetDouble()),
             new DaggerfallMeleeTargetingTuning(
                 meleeTargeting.GetProperty("maximumDistance").GetDouble(),
-                meleeTargeting.GetProperty("minimumFacingCosine").GetDouble(),
-                meleeTargeting.GetProperty("minimumSwingGestureRadians").GetDouble()),
+                meleeTargeting.GetProperty("minimumFacingCosine").GetDouble()),
             new DaggerfallEnemyBehaviorTuning(
                 enemyBehavior.GetProperty("detectionDistance").GetDouble(),
                 enemyBehavior.GetProperty("chaseSpeedUnitsPerSecond").GetSingle(),
@@ -329,6 +330,7 @@ internal sealed record DaggerfallTuning(
                 : DaggerfallSwimmingTuning.Classic,
             Weather = DaggerfallWeatherTuning.Read(root.GetProperty("weather")),
             Ambient = DaggerfallAmbientTuning.Read(root.GetProperty("ambient")),
+            Contact = DaggerfallContactTuning.Read(root.GetProperty("contact")),
         }.Validate();
     }
 
@@ -531,13 +533,12 @@ internal sealed record DaggerfallCivilianWanderTuning(float MovementSpeedUnitsPe
 }
 
 /// <summary>Ruleset-tunable query bounds for ordinary Daggerfall player melee.</summary>
-internal sealed record DaggerfallMeleeTargetingTuning(double MaximumDistance, double MinimumFacingCosine, double MinimumSwingGestureRadians)
+internal sealed record DaggerfallMeleeTargetingTuning(double MaximumDistance, double MinimumFacingCosine)
 {
     internal DaggerfallMeleeTargetingTuning Validate()
     {
         if (!double.IsFinite(MaximumDistance) || MaximumDistance <= 0d) throw new ArgumentOutOfRangeException(nameof(MaximumDistance));
         if (!double.IsFinite(MinimumFacingCosine) || MinimumFacingCosine is < -1d or > 1d) throw new ArgumentOutOfRangeException(nameof(MinimumFacingCosine));
-        if (!double.IsFinite(MinimumSwingGestureRadians) || MinimumSwingGestureRadians <= 0d) throw new ArgumentOutOfRangeException(nameof(MinimumSwingGestureRadians));
         return this;
     }
 }

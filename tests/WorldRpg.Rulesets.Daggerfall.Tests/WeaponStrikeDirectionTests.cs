@@ -1,9 +1,7 @@
-using System.Reflection;
 using Rusty.Engine;
 using WorldRpg.Kit.Combat;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
-using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
@@ -12,26 +10,24 @@ using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
-/// The viewmodel plays the strike the rules chose for a swing, so every admitted swing reaches the hit
+/// The viewmodel plays the one fixed strike for every attack, so every admitted swing reaches the hit
 /// frame that delivers its impact.
 /// </summary>
 public sealed class WeaponStrikeDirectionTests
 {
     /// <summary>
     /// The reproduction of #9700: the presentation used to draw any of the six strikes for a bow, and
-    /// the bow's four-frame up strike (draw 5) carried no marker for the bow hit frame, so the shot's
-    /// arrow and stamina were spent and its impact retired unreported. The bow now always plays the
-    /// strike the rules publish, whatever the presentation's draw would have chosen.
+    /// the bow's four-frame up strike carried no marker for the bow hit frame, so the shot's arrow and
+    /// stamina were spent and its impact retired unreported. Every shot now plays the one fixed strike.
     /// </summary>
-    [Theory]
-    [InlineData(0)] [InlineData(1)] [InlineData(2)] [InlineData(3)] [InlineData(4)] [InlineData(5)]
-    public void Every_bow_shot_reaches_the_bow_hit_frame_and_delivers_its_impact(long draw)
+    [Fact]
+    public void A_bow_shot_reaches_the_bow_hit_frame_and_delivers_its_impact()
     {
-        using Stage stage = new(BowWeapon(), "short-bow", draw);
+        using Stage stage = new(BowWeapon(), "short-bow");
 
         stage.Presentation.BeginAdmittedUpdate();
         stage.Presentation.React(new PlayerAttackStartedFact(2, 3, TargetId: 12, FrameSeconds: .25d,
-            HitFrame: DaggerfallFormulaPolicy.BowWeaponHitFrame, Swing: DaggerfallFormulaPolicy.BowSwing));
+            HitFrame: DaggerfallFormulaPolicy.BowWeaponHitFrame));
         stage.Presentation.CompleteAdmittedUpdate();
 
         SpritePlaybackCreateRequest strike = stage.Appearance.PlaybackRequests.Last();
@@ -46,33 +42,16 @@ public sealed class WeaponStrikeDirectionTests
         Assert.False(impact.Expired);
     }
 
-    [Theory]
-    [InlineData("StrikeDown", 3)] [InlineData("StrikeDownLeft", 4)] [InlineData("StrikeLeft", 5)]
-    [InlineData("StrikeRight", 6)] [InlineData("StrikeDownRight", 7)] [InlineData("StrikeUp", 8)]
-    public void A_drawn_swing_plays_the_strike_its_direction_names(string direction, int frames)
+    [Fact]
+    public void A_swing_plays_the_one_fixed_strike_with_its_hit_frame_marked()
     {
-        // Every draw would pick the first strike; a drawn direction ignores the draw.
-        using Stage stage = new(DistinctStrikes(), "iron-dagger", draw: 0);
+        using Stage stage = new(DistinctStrikes(), "iron-dagger");
 
-        stage.Presentation.React(new PlayerAttackStartedFact(2, 3, TargetId: 12,
-            Swing: Enum.Parse<DaggerfallSwingDirection>(direction)));
+        stage.Presentation.React(new PlayerAttackStartedFact(2, 3, TargetId: 12));
 
         SpritePlaybackCreateRequest strike = stage.Appearance.PlaybackRequests.Last();
-        Assert.Equal(frames, strike.Frames.Length);
+        Assert.Equal(NormalizedClassicWeapon.StrikeActions.ToList().IndexOf(NormalizedClassicWeapon.PlayedStrike) + 3, strike.Frames.Length);
         Assert.Equal((uint)DaggerfallFormulaPolicy.MeleeWeaponHitFrame, Assert.Single(strike.Markers.Span.ToArray()).FrameIndex);
-    }
-
-    [Theory]
-    [InlineData(0)] [InlineData(1)] [InlineData(2)] [InlineData(3)] [InlineData(4)] [InlineData(5)]
-    public void A_swing_without_a_gesture_plays_the_donors_click_attack_choice_among_the_six_strikes(long draw)
-    {
-        // WeaponManager's click attack draws uniformly among UpRight..DownRight, which FPSWeapon plays as
-        // the six strike states.
-        using Stage stage = new(DistinctStrikes(), "iron-dagger", draw);
-
-        stage.Presentation.React(new PlayerAttackStartedFact(2, 3));
-
-        Assert.Equal(checked((int)draw) + 3, stage.Appearance.PlaybackRequests.Last().Frames.Length);
     }
 
     [Fact]
@@ -80,24 +59,23 @@ public sealed class WeaponStrikeDirectionTests
     {
         // Admission refuses such art; a composition that still reaches here names the broken strike
         // rather than spending the swing and retiring its impact unreported.
-        using Stage stage = new(BowWeapon(), "short-bow", draw: 0);
+        using Stage stage = new(ShortStrike(), "short-bow");
 
         InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => stage.Presentation.React(
-            new PlayerAttackStartedFact(2, 3, TargetId: 12, HitFrame: DaggerfallFormulaPolicy.BowWeaponHitFrame,
-                Swing: DaggerfallSwingDirection.StrikeUp)));
-        Assert.Contains("'weapon.bow' strike 'strikeUp' plays 4 frames", failure.Message, StringComparison.Ordinal);
+            new PlayerAttackStartedFact(2, 3, TargetId: 12, HitFrame: DaggerfallFormulaPolicy.BowWeaponHitFrame)));
+        Assert.Contains("'weapon.bow' strike 'strikeDown' plays 4 frames", failure.Message, StringComparison.Ordinal);
         Assert.Empty(stage.Presentation.TakeAttackImpacts());
     }
 
     private sealed class Stage : IDisposable
     {
-        internal Stage(NormalizedClassicPresentation classic, string item, long draw)
+        internal Stage(NormalizedClassicPresentation classic, string item)
         {
             List<string> releases = [];
             ContentFake content = MediaContent(releases);
             foreach (NormalizedClassicWeapon weapon in classic.Weapons.Values) content.Add(weapon.TexturePath, Hash);
             Appearance = new(releases);
-            Presentation = new(content, Appearance, MediaInputs(classic: classic), random: StrikeRandom.Create(draw));
+            Presentation = new(content, Appearance, MediaInputs(classic: classic));
             Presentation.UpdateRightHandEquipment(RightHand(item), weaponDrawn: true);
         }
 
@@ -109,6 +87,10 @@ public sealed class WeaponStrikeDirectionTests
     /// <summary>The classic bow's shape: a four-frame up strike and seven-frame others.</summary>
     private static NormalizedClassicPresentation BowWeapon() =>
         Weapon("weapon.bow", "weapon/bow.png", "short-bow", name => name == "strikeUp" ? 4 : 7);
+
+    /// <summary>A bow whose played strike ends before the bow hit frame.</summary>
+    private static NormalizedClassicPresentation ShortStrike() =>
+        Weapon("weapon.bow", "weapon/bow.png", "short-bow", name => name == NormalizedClassicWeapon.PlayedStrike ? 4 : 7);
 
     /// <summary>A weapon whose strikes each play a different length, so a playback names its strike.</summary>
     private static NormalizedClassicPresentation DistinctStrikes() =>
@@ -130,24 +112,5 @@ public sealed class WeaponStrikeDirectionTests
             CompatibleItemVisuals = new Dictionary<string, string> { [item] = resource },
             Viewmodel = new ClassicViewmodelStyle(0),
         };
-    }
-
-    internal class StrikeRandom : DispatchProxy
-    {
-        private long _value;
-
-        internal static IRandomService Create(long value)
-        {
-            IRandomService service = DispatchProxy.Create<IRandomService, StrikeRandom>();
-            ((StrikeRandom)(object)service)._value = value;
-            return service;
-        }
-
-        protected override object? Invoke(MethodInfo? method, object?[]? arguments)
-        {
-            if (method?.Name != nameof(IRandomService.DrawKeyed)) throw new NotSupportedException(method?.Name);
-            KeyedRngRequest request = (KeyedRngRequest)arguments![0]!;
-            return new KeyedRngReceipt(Math.Clamp(_value, request.Minimum, request.Maximum));
-        }
     }
 }

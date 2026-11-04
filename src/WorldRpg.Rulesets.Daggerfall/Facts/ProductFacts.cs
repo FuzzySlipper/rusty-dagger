@@ -45,22 +45,19 @@ internal sealed record SpellPointsAppliedFact(long SourceActorId, long TargetAct
 /// <summary>One accepted dungeon action magicka drain on a canonical actor track.</summary>
 internal sealed record DungeonMagickaDrainedFact(long TargetActorId, string ActionId, double ActualMagickaLost,
     ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
-internal enum AttackRejection { MissingPlayerPosition, NoTargetInReach, UnknownExplicitCombatant, TargetDefeated, Equipping, Cooldown, AttackInProgress, NoAttackPolicy, InsufficientWeaponMaterial, EmptyQuiver, Incapacitated }
+internal enum AttackRejection { MissingPlayerPosition, UnknownExplicitCombatant, TargetDefeated, Equipping, Cooldown, AttackInProgress, NoAttackPolicy, InsufficientWeaponMaterial, EmptyQuiver, Incapacitated }
 internal sealed record AttackRejectedFact(AttackRejection Reason, long? ActorId = null) : IProductFact;
 /// <summary>
 /// One player melee swing passed cooldown and stamina admission, independently of its target outcome.
-/// A swing with a target delivers its impact when the strike animation reaches the classic hit frame,
-/// so <paramref name="FrameSeconds"/> carries that animation's tick time and <paramref name="TargetId"/>
-/// its admitted target. An admitted swing with neither resolves inside its own update.
-/// <paramref name="Swing"/> is the strike the rules chose: the bow's fixed strike, or the direction the
-/// player drew a melee swing in, which is also the direction its swing modifiers read. None means the
-/// player attacked without a gesture, and the presentation plays the donor's click-attack choice.
+/// A swing delivers its impact when the strike animation reaches its hit frame, so
+/// <paramref name="FrameSeconds"/> carries that animation's tick time and <paramref name="TargetId"/> the
+/// target it was aimed at, if any. An admitted swing with neither resolves inside its own update.
 /// </summary>
 /// <summary>The player's guard went up or came down; presentation raises or lowers the held weapon.</summary>
 internal sealed record PlayerGuardChangedFact(bool Raised, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
 internal sealed record PlayerAttackStartedFact(ulong OriginatingGeneration, ulong OriginatingSimulationStep,
     long? TargetId = null, double FrameSeconds = 0d, int HitFrame = DaggerfallFormulaPolicy.MeleeWeaponHitFrame,
-    DaggerfallSwingDirection Swing = DaggerfallSwingDirection.None, bool WaitsWithoutTarget = false) : IProductFact
+    bool WaitsWithoutTarget = false) : IProductFact
 { internal DaggerfallStrikeFeedback Feedback { get; init; } = DaggerfallStrikeFeedback.Unarmed; }
 /// <summary>
 /// An enemy's swing at <paramref name="TargetId"/> began a wind-up its damage cannot land before:
@@ -77,12 +74,9 @@ internal sealed record EnemyAttackStartedFact(long AttackerId, long TargetId, bo
 { internal bool Ranged { get; init; }
   internal DaggerfallStrikeFeedback Feedback { get; init; } = DaggerfallStrikeFeedback.Unarmed; }
 /// <summary>
-/// A released shot met admitted static geometry before its aim. The missile died on the cover, so
-/// nothing about the target's dodge or the shooter's roll decided anything.
+/// A released shot met world geometry before it met an actor. The missile died on the cover.
 /// </summary>
 internal sealed record RangedShotBlockedFact(long AttackerId, long TargetId, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
-internal sealed record AttackMissedFact(long AttackerId, long TargetId, int Roll, int Chance, bool EnemyAttack, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact
-{ internal DaggerfallStrikeFeedback Feedback { get; init; } = DaggerfallStrikeFeedback.Unarmed; }
 /// <summary>Physical contact is distinct from accepted health loss; body follows the donor table.</summary>
 internal sealed record AttackHitFact(long AttackerId, long TargetId, int CalculatedDamage, double ActualHealthLost,
     int StruckBody, bool EnemyAttack, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact

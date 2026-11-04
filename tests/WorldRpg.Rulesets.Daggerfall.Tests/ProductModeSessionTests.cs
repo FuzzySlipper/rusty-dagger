@@ -409,7 +409,7 @@ public sealed class ProductModeSessionTests
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
-        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
+        session.Strike(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
         AimActivationAt(session, 2000);
         CorpseContainer corpse = session.Corpses[2000];
         Assert.True(corpse.IsRegistered);

@@ -437,8 +437,8 @@ public sealed class SiteAppearanceLifecycleTests
         presentation.BeginAdmittedUpdate();
         presentation.React(new PlayerAttackStartedFact(2, 3));
         presentation.React(new EnemyAttackStartedFact(11, 12, true, 2, 3));
-        presentation.React(new AttackMissedFact(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 1, false, 2, 3));
-        presentation.React(new AttackMissedFact(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 2, false, 2, 3));
+        presentation.React(new AttackWhiffedFact(DaggerfallActorIdentity.PlayerEntityId, 12, false, 2, 3));
+        presentation.React(new AttackWhiffedFact(DaggerfallActorIdentity.PlayerEntityId, 12, false, 2, 3));
         using ActorsState actors = ActorsAt(new WorldPoint(2F, 0F, 3F));
         presentation.React(new AttackHitFact(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 1d, 3, false, 2, 3), actors);
         presentation.React(new AttackHitFact(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 1d, 4, false, 2, 3), actors);

@@ -304,7 +304,7 @@ public sealed class PlayerViewmodelTests
         Assert.Equal(SpriteViewportFit.Stretch, placement.Fit);
         Assert.Equal((Vector2.Zero, Vector2.One), (placement.Minimum, placement.Size));
         // Every action, whatever its alignment and offset, keeps that one placement: a strike at a .4 offset too.
-        presentation.React(new PlayerAttackStartedFact(1, 1, FrameSeconds: .1, Swing: DaggerfallSwingDirection.StrikeDown));
+        presentation.React(new PlayerAttackStartedFact(1, 1, FrameSeconds: .1));
         Assert.All(appearance.ViewportRequests, request => Assert.Equal((Vector2.Zero, Vector2.One), (request.Minimum, request.Size)));
         Assert.Equal(Quaternion.Identity, first.Transform.Rotation);
         Assert.All([first.Transform.Translation.X, first.Transform.Translation.Y, first.Transform.Translation.Z], coordinate => Assert.InRange(coordinate, -16F, 16F));

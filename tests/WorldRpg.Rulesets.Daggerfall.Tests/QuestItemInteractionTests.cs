@@ -251,7 +251,7 @@ public sealed class QuestItemInteractionTests
         Start(f, definitions); Advance(f.Session);
         long foe = Quest(f.Session).Resources.Single(r => r.Symbol == "enemy").Binding.ActorIds.Single();
         f.Session.State.Kit.Rules.RegisterAction(f.Session.DefinitionsByActor[1].ActionId!, new Kill());
-        f.Session.ResolveExplicitMelee(new(1, foe, 1, 10000, .125));
+        f.Session.Strike(new(1, foe, 1, 10000, .125));
         Assert.True(f.Session.Corpses.ContainsKey(foe));
         Advance(f.Session);
         ulong gift = f.Session.State.ItemInstances.UniqueItems.Single(i => i.Value.QuestId == "interactions").Key;
@@ -274,7 +274,6 @@ public sealed class QuestItemInteractionTests
 
     private sealed class Kill : ICombatContribution
     {
-        public void Hit(TryHitEvent value) => value.Hit = true;
         public void Damage(DamageEvent value) => value.Damage = 10000;
     }
 

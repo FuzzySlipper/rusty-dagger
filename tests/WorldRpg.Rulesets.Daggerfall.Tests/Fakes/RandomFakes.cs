@@ -1,5 +1,6 @@
 using System.Reflection;
 using Rusty.Engine;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
@@ -45,6 +46,19 @@ internal class QuestPlaceRandomMinimum : RandomMinimum
         method?.Name == nameof(IRandomService.DrawKeyed) && arguments![0] is KeyedRngRequest request
             && request.ToString().Contains("daggerfall.quest.place", StringComparison.Ordinal)
             ? _places.DrawKeyed(request) : base.Invoke(method, arguments);
+}
+
+/// <summary>
+/// The session default: minimum rolls, whose lowest percentile would deflect every full-channel blow, so the
+/// deflection draw alone answers its maximum and a blow lands unless a fact asks otherwise.
+/// </summary>
+internal class SessionRandom : QuestPlaceRandomMinimum
+{
+    internal new static IRandomService Create() => DispatchProxy.Create<IRandomService, SessionRandom>();
+    protected override object? Invoke(MethodInfo? method, object?[]? arguments) =>
+        method?.Name == nameof(IRandomService.DrawKeyed) && arguments![0] is KeyedRngRequest request
+            && request.Key.EndsWith($":salt:{DaggerfallContactMitigation.DeflectionSalt}", StringComparison.Ordinal)
+            ? new KeyedRngReceipt(request.Maximum) : base.Invoke(method, arguments);
 }
 
 internal class KeyedRandomFake : DispatchProxy

@@ -45,40 +45,19 @@ public sealed class DaggerfallFormulaPolicyTests
     }
 
     [Fact]
-    public void CombatFormulaUsesTruncatingAttributeTermsAndClassicBodyTable()
+    public void CombatUsesTheClassicBodyTable()
     {
-        Assert.Equal(10, DaggerfallFormulaPolicy.CalculateHitChance(60, 0, 45, 50, 45, 50, 0));
-        Assert.Equal(3, DaggerfallFormulaPolicy.CalculateHitChance(0, -100, 0, 100, 0, 100, 100));
-        Assert.Equal(97, DaggerfallFormulaPolicy.CalculateHitChance(100, 100, 100, 0, 100, 0, 0));
         Assert.Equal(0, DaggerfallFormulaPolicy.StruckBodyPart(0));
         Assert.Equal(6, DaggerfallFormulaPolicy.StruckBodyPart(19));
     }
 
     [Fact]
-    public void Complete_hit_pipeline_keeps_body_weapon_armor_stats_skills_adrenaline_and_adjustments_in_donor_order()
+    public void Backstab_chance_is_the_skill_from_behind_and_nothing_otherwise()
     {
-        Assert.Equal(-10, DaggerfallFormulaPolicy.CalculateWeaponToHit("iron", DaggerfallFormulaPolicy.ClassicWeaponMaterialModifiers));
-        Assert.Equal(0, DaggerfallFormulaPolicy.CalculateWeaponToHit("steel", DaggerfallFormulaPolicy.ClassicWeaponMaterialModifiers));
-        Assert.Equal(30, DaggerfallFormulaPolicy.CalculateWeaponToHit("mithril"));
-        Assert.Equal(30, DaggerfallFormulaPolicy.CalculateWeaponToHit("adamantium"));
-        Assert.Equal(40, DaggerfallFormulaPolicy.CalculateWeaponToHit("ebony"));
-        Assert.Equal(50, DaggerfallFormulaPolicy.CalculateWeaponToHit("orcish", DaggerfallFormulaPolicy.ClassicWeaponMaterialModifiers));
-        Assert.Equal(0, DaggerfallFormulaPolicy.CalculateWeaponToHit(null, DaggerfallFormulaPolicy.ClassicWeaponMaterialModifiers));
-        Assert.Equal(5, DaggerfallFormulaPolicy.CalculateAdrenalineRushToHit(true, false, 11.99d, 100d, false, false, 100d, 100d));
-        Assert.Equal(0, DaggerfallFormulaPolicy.CalculateAdrenalineRushToHit(true, false, 12d, 100d, false, false, 100d, 100d));
-        Assert.Equal(-8, DaggerfallFormulaPolicy.CalculateAdrenalineRushToHit(false, false, 100d, 100d, true, true, 11.99d, 100d));
         Assert.Equal(37, DaggerfallFormulaPolicy.BackstabChance(37, true));
         Assert.Equal(37, DaggerfallFormulaPolicy.CalculateBackstabChance(37, true));
         Assert.Equal(0, DaggerfallFormulaPolicy.BackstabChance(37, false));
         Assert.Equal(0, DaggerfallFormulaPolicy.BackstabChance(-1, true));
-        Assert.Equal(0, DaggerfallFormulaPolicy.CalculateStatsToHit(45, 50, 45, 50));
-        Assert.Equal(1, DaggerfallFormulaPolicy.CalculateStatsToHit(65, 50, 45, 50));
-        Assert.Equal(-5, DaggerfallFormulaPolicy.CalculateSkillsToHit(20, 39, false));
-        Assert.Equal(-2, DaggerfallFormulaPolicy.CalculateSkillsToHit(20, 39, true));
-        Assert.Equal(-10, DaggerfallFormulaPolicy.CalculateAdjustmentsToHit(true, 0));
-        Assert.Equal(97, DaggerfallFormulaPolicy.CalculateSuccessfulHitChance(80, 65, 5, -1, -2, -10));
-        Assert.True(DaggerfallFormulaPolicy.CalculateSuccessfulHit(80, 65, 5, -1, -2, -10, 97));
-        Assert.False(DaggerfallFormulaPolicy.CalculateSuccessfulHit(0, -100, 0, -20, -20, -50, 4));
     }
 
     [Fact]
@@ -285,27 +264,20 @@ public sealed class DaggerfallFormulaPolicyTests
     private static DaggerfallDefinitions LoadDefinitions() => TestPayload.Definitions;
 
     [Fact]
-    public void Swing_proficiency_and_racial_attack_modifiers_follow_the_donor_tables()
+    public void Proficiency_and_racial_damage_follow_the_donor_tables()
     {
-        Assert.Equal((0, 0), DaggerfallFormulaPolicy.CalculateSwingModifiers(DaggerfallSwingDirection.None));
-        Assert.Equal((10, -4), DaggerfallFormulaPolicy.CalculateSwingModifiers(DaggerfallSwingDirection.StrikeUp));
-        Assert.Equal((5, -2), DaggerfallFormulaPolicy.CalculateSwingModifiers(DaggerfallSwingDirection.StrikeDownRight));
-        Assert.Equal((-5, 2), DaggerfallFormulaPolicy.CalculateSwingModifiers(DaggerfallSwingDirection.StrikeDownLeft));
-        Assert.Equal((-10, 4), DaggerfallFormulaPolicy.CalculateSwingModifiers(DaggerfallSwingDirection.StrikeDown));
-        Assert.Equal((0, 0), DaggerfallFormulaPolicy.CalculateSwingModifiers(DaggerfallSwingDirection.StrikeLeft));
-
-        Assert.Equal((0, 0), DaggerfallFormulaPolicy.CalculateProficiencyModifiers(expertProficiency: false, attackerLevel: 7));
-        Assert.Equal((7, 3), DaggerfallFormulaPolicy.CalculateProficiencyModifiers(expertProficiency: true, attackerLevel: 7));
-        Assert.Equal((1, 1), DaggerfallFormulaPolicy.CalculateProficiencyModifiers(expertProficiency: true, attackerLevel: 1));
+        Assert.Equal(0, DaggerfallFormulaPolicy.CalculateProficiencyDamage(expertProficiency: false, attackerLevel: 7));
+        Assert.Equal(3, DaggerfallFormulaPolicy.CalculateProficiencyDamage(expertProficiency: true, attackerLevel: 7));
+        Assert.Equal(1, DaggerfallFormulaPolicy.CalculateProficiencyDamage(expertProficiency: true, attackerLevel: 1));
 
         // Dark Elf (4) with any weapon, Wood Elf (6) only with a bow, Redguard (2) with anything but a bow.
-        Assert.Equal((2, 2), DaggerfallFormulaPolicy.CalculateRacialModifiers(donorRaceId: 4, isArcheryWeapon: false, attackerLevel: 9));
-        Assert.Equal((2, 2), DaggerfallFormulaPolicy.CalculateRacialModifiers(donorRaceId: 4, isArcheryWeapon: true, attackerLevel: 9));
-        Assert.Equal((3, 3), DaggerfallFormulaPolicy.CalculateRacialModifiers(donorRaceId: 6, isArcheryWeapon: true, attackerLevel: 9));
-        Assert.Equal((0, 0), DaggerfallFormulaPolicy.CalculateRacialModifiers(donorRaceId: 6, isArcheryWeapon: false, attackerLevel: 9));
-        Assert.Equal((3, 3), DaggerfallFormulaPolicy.CalculateRacialModifiers(donorRaceId: 2, isArcheryWeapon: false, attackerLevel: 9));
-        Assert.Equal((0, 0), DaggerfallFormulaPolicy.CalculateRacialModifiers(donorRaceId: 2, isArcheryWeapon: true, attackerLevel: 9));
-        Assert.Equal((0, 0), DaggerfallFormulaPolicy.CalculateRacialModifiers(donorRaceId: 0, isArcheryWeapon: false, attackerLevel: 9));
+        Assert.Equal(2, DaggerfallFormulaPolicy.CalculateRacialDamage(donorRaceId: 4, isArcheryWeapon: false, attackerLevel: 9));
+        Assert.Equal(2, DaggerfallFormulaPolicy.CalculateRacialDamage(donorRaceId: 4, isArcheryWeapon: true, attackerLevel: 9));
+        Assert.Equal(3, DaggerfallFormulaPolicy.CalculateRacialDamage(donorRaceId: 6, isArcheryWeapon: true, attackerLevel: 9));
+        Assert.Equal(0, DaggerfallFormulaPolicy.CalculateRacialDamage(donorRaceId: 6, isArcheryWeapon: false, attackerLevel: 9));
+        Assert.Equal(3, DaggerfallFormulaPolicy.CalculateRacialDamage(donorRaceId: 2, isArcheryWeapon: false, attackerLevel: 9));
+        Assert.Equal(0, DaggerfallFormulaPolicy.CalculateRacialDamage(donorRaceId: 2, isArcheryWeapon: true, attackerLevel: 9));
+        Assert.Equal(0, DaggerfallFormulaPolicy.CalculateRacialDamage(donorRaceId: 0, isArcheryWeapon: false, attackerLevel: 9));
     }
 
     [Fact]

@@ -1,8 +1,9 @@
+using System.Text;
+using System.Text.Json.Nodes;
 using Rusty.Engine;
 using WorldRpg.Host;
 using WorldRpg.Kit;
 using WorldRpg.Rulesets.Daggerfall.Content;
-using WorldRpg.Rulesets.Daggerfall.Variants;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
@@ -12,7 +13,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class BundleChoiceSessionTests
 {
     [Fact]
-    public void The_title_screen_switches_to_the_contact_game_and_a_quick_started_game_runs_under_it()
+    public void The_title_screen_switches_to_another_game_and_a_quick_started_game_runs_under_it()
     {
         string root = TestData.RepositoryRoot;
         DaggerfallSiteProfile inputs = ReadInputs(root);
@@ -22,24 +23,24 @@ public sealed class BundleChoiceSessionTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
-        CapturingDaggerfallRuleset ruleset = new(variants: DaggerfallVariants.All);
-        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.classic"));
+        CapturingDaggerfallRuleset ruleset = new();
+        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, WithSecondGame(root), input), ruleset, new GameBundleId("daggerfall.classic"));
         product.Start();
         DaggerfallSession classic = ruleset.RequireSession();
 
         // The entry screen offers every committed game by its authored title.
         Assert.Equal("daggerfall.classic", engine.PublishedNested("bundles", "current"));
         Assert.Equal("Classic Daggerfall", Option(engine, 0));
-        Assert.Equal("Contact + mitigation", Option(engine, 1));
-        Assert.Equal("Developer: Charing town start", Option(engine, 2));
+        Assert.Equal("Developer: Charing town start", Option(engine, 1));
+        Assert.Equal("Second game", Option(engine, 2));
 
-        product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"bundle-select","key":"daggerfall.contact"}""")]));
+        product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"bundle-select","key":"test.second"}""")]));
         FinishLoading(product, 1);
 
-        DaggerfallSession contact = ruleset.RequireSession();
-        Assert.NotSame(classic, contact);
+        DaggerfallSession second = ruleset.RequireSession();
+        Assert.NotSame(classic, second);
         Assert.Equal(ProductMode.Title, product.Mode);
-        Assert.Equal("daggerfall.contact", engine.PublishedNested("bundles", "current"));
+        Assert.Equal("test.second", engine.PublishedNested("bundles", "current"));
 
         product.Update(new ProductUpdate(OuterUpdate(2), [Ui("""{"action":"character-quick-start","name":"","race":"breton","gender":"male","faceIndex":0,"reflexes":2,"career":"class16"}""")]));
         FinishLoading(product, 2);
@@ -47,7 +48,7 @@ public sealed class BundleChoiceSessionTests
         Assert.NotEqual(ProductMode.Title, product.Mode);
         // A game begun from the title no longer offers a choice of game.
         Assert.Null(engine.PublishedNested("bundles", "current"));
-        // The contact variant's owners are live: a held block raises the guard classic does not have.
+        // The game is live: a held block raises the guard.
         game.State.WeaponDrawn = true;
         product.Update(new ProductUpdate(OuterUpdate(3), [Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "block")]));
         Assert.True(game.PlayerGuardRaised);
@@ -69,24 +70,38 @@ public sealed class BundleChoiceSessionTests
         }
 
         EngineContextFake first = Engine();
-        using (WorldRpgProduct product = new(new ProductCreateContext(first.Context, FullContent(root), input), new CapturingDaggerfallRuleset(variants: DaggerfallVariants.All), new GameBundleId("daggerfall.classic")))
+        using (WorldRpgProduct product = new(new ProductCreateContext(first.Context, WithSecondGame(root), input), new CapturingDaggerfallRuleset(), new GameBundleId("daggerfall.classic")))
         {
             product.Start();
-            product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"bundle-select","key":"daggerfall.contact"}""")]));
+            product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"bundle-select","key":"test.second"}""")]));
             FinishLoading(product, 1);
-            Assert.Equal("daggerfall.contact", first.PublishedNested("bundles", "current"));
+            Assert.Equal("test.second", first.PublishedNested("bundles", "current"));
         }
 
-        // A build that no longer compiles the contact variant cannot start the remembered game.
+        // A build whose bundle now selects a variant it does not compile cannot start the remembered game.
+        ProductContent withdrawn = WithSecondGame(root, "test.withdrawn");
         EngineContextFake second = Engine();
-        using WorldRpgProduct restarted = new(new ProductCreateContext(second.Context, FullContent(root), input), new CapturingDaggerfallRuleset(), new GameBundleId("daggerfall.classic"));
+        using WorldRpgProduct restarted = new(new ProductCreateContext(second.Context, withdrawn, input), new CapturingDaggerfallRuleset(), new GameBundleId("daggerfall.classic"));
         restarted.Start();
         Assert.Equal(ProductMode.Title, restarted.Mode);
         Assert.Equal("daggerfall.classic", second.PublishedNested("bundles", "current"));
-        const string notice = "The remembered game 'daggerfall.contact' is unavailable; the default is active.";
+        const string notice = "The remembered game 'test.second' is unavailable; the default is active.";
         Assert.Contains(notice, second.PublishedField("lastOutcome"), StringComparison.Ordinal);
         restarted.Attach();
         Assert.Contains(notice, second.PublishedField("lastOutcome"), StringComparison.Ordinal);
+    }
+
+    /// <summary>The committed content with a second game over the classic bundle's packs, selecting the given variants.</summary>
+    private static ProductContent WithSecondGame(string root, params string[] variants)
+    {
+        ProductContent full = StagedContent(root, out BundleContentFake bundles);
+        JsonObject bundle = JsonNode.Parse(full.ReadBytes("worldrpg/bundles/daggerfall.classic.bundle.json").Span)!.AsObject();
+        bundle["id"] = "test.second";
+        bundle["title"] = "Second game";
+        if (variants.Length != 0) bundle["variants"] = new JsonArray([.. variants.Select(variant => JsonValue.Create(variant))]);
+        ProductContentFile[] files = [.. full.Files.ToArray(),
+            new(Encoding.UTF8.GetBytes("worldrpg/bundles/test.second.bundle.json"), Encoding.UTF8.GetBytes(bundle.ToJsonString()))];
+        return new ProductContent(files, bundles);
     }
 
     /// <summary>One offered game's title, read from the decoded snapshot.</summary>

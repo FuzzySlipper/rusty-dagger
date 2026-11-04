@@ -86,7 +86,7 @@ public sealed class DaggerfallParalysisEffectsTests
         Assert.Equal(Vector2.Zero, proposal.Command.PlanarIntent); Assert.False(proposal.Command.JumpPressed);
         Assert.True(proposal.Config.Vertical.Gravity > 0); Assert.NotEqual(yaw, s.State.PlayerControl.YawRadians);
         var before = s.State.Actors.All.First().Stats.GetTrack(TrackId.Parse("health")).Current;
-        s.ResolveExplicitMelee(new(1, s.State.Actors.All.First().DurableId, 1, 1000, .125));
+        s.Strike(new(1, s.State.Actors.All.First().DurableId, 1, 1000, .125));
         Assert.Equal(before, s.State.Actors.All.First().Stats.GetTrack(TrackId.Parse("health")).Current);
         DaggerfallParalysisEffects.Cure(s.State.Effects, 1);
         s.Update(new ProductUpdate(OuterUpdate(2), []));
@@ -97,7 +97,6 @@ public sealed class DaggerfallParalysisEffectsTests
     public void Enemy_pursuit_and_accepted_delayed_melee_stop_without_cancelling_another_actor()
     {
         using Fixture f = new(); var s = f.Session; long enemy = s.State.Actors.All.First().DurableId;
-        s.State.Kit.Rules.RegisterAction(s.DefinitionsByActor[1].ActionId!, new CertainStrike());
         FactBuffer<IProductFact> facts = new();
         Assert.True(s.State.Kit.AttackExecution.Start(new(1,enemy,1,1,.125,true),facts));
         double health = s.State.Actors.Get(enemy).Stats.GetTrack(TrackId.Parse("health")).Current;
@@ -210,7 +209,6 @@ public sealed class DaggerfallParalysisEffectsTests
         return new(catalog,s.State.Effects,id=>id==1?s.State.Actors.Player.Actor:s.State.Actors.TryGet(id,out var actor)?actor.Actor:null,
             _=>profile,_=>true,_=>{},_=>{},DaggerfallCastingTests.SaveDice.Create(save),1,playerKnowsSpell:_=>true);
     }
-    private sealed class CertainStrike : ICombatContribution { public void Hit(TryHitEvent interaction)=>interaction.Hit=true; }
     private sealed class Fixture : IDisposable
     {
         private readonly DaggerfallSessionComposition _composition=new(TestPayload.Definitions,ReadInputs(TestData.RepositoryRoot),DaggerfallTuning.Defaults);

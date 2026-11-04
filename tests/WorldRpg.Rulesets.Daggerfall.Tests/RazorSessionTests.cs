@@ -47,7 +47,7 @@ public sealed class RazorSessionTests
         Assert.Equal(100, Assert.Single(restored.MagicProfile(enemy).ActiveResistances).Chance);
         FinishEquipmentDelay(restored);
         restored.State.Kit.Rules.RegisterAction(definitions.RequireActor(new DaggerfallActorId("player")).ActionId!, new CertainStrike());
-        restored.ResolveExplicitMelee(new(1, enemy, 1, 1, .125));
+        restored.Strike(new(1, enemy, 1, 1, .125));
         Assert.False(restored.State.Actors.Get(enemy).IsDefeated);
         Assert.True(restored.State.ItemInstances.RequireUnique(identity.Value).CurrentCondition > 1300);
         if (removeItem)
@@ -62,7 +62,7 @@ public sealed class RazorSessionTests
         using var unprotected = DaggerfallSession.Restore(Engine().Context, composition, restored.CaptureSave());
         unprotected.State.Kit.Rules.RegisterAction(definitions.RequireActor(new DaggerfallActorId("player")).ActionId!, new CertainStrike());
         unprotected.State.Kit.AttackExecution.ObserveTimeline(1, 1);
-        unprotected.ResolveExplicitMelee(new(1, enemy, 1, 1000, .125));
+        unprotected.Strike(new(1, enemy, 1, 1000, .125));
         Assert.True(unprotected.State.Actors.Get(enemy).IsDefeated);
         Assert.True(unprotected.State.ItemInstances.RequireUnique(identity.Value).CurrentCondition < 1300);
     }
@@ -103,7 +103,7 @@ public sealed class RazorSessionTests
         FinishEquipmentDelay(restored);
         restored.State.Kit.Rules.RegisterAction(definitions.RequireActor(new DaggerfallActorId("player")).ActionId!, new CertainStrike());
         var before = restored.State.Progression.Experience;
-        restored.ResolveExplicitMelee(new ExplicitMeleeRequest(1, enemy, 1, 1, .125));
+        restored.Strike(new ExplicitMeleeRequest(1, enemy, 1, 1, .125));
         Assert.True(restored.State.Actors.Get(enemy).IsDefeated);
         Assert.True(restored.Corpses.ContainsKey(enemy));
         Assert.Equal(experimentalKillExperience, restored.State.Progression.Experience > before);
@@ -120,7 +120,6 @@ public sealed class RazorSessionTests
 
     private sealed class CertainStrike : ICombatContribution
     {
-        public void Hit(TryHitEvent hit) => hit.Hit = true;
         public void Damage(DamageEvent damage) => damage.Damage = 13;
     }
 }

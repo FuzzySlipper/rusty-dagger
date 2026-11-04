@@ -368,7 +368,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// <summary>Publishes the active ground-container projection through the same Engine snapshot as actors.</summary>
     /// <param name="groundLook">How a ground pile of one kind of item stands as that item, or null for the treasure pile.</param>
     internal void Publish(ActorsState actors, IReadOnlyDictionary<long, DaggerfallGroundContainer> groundContainers,
-        IReadOnlyList<DaggerfallRangedFlightView>? rangedFlights = null, float arrowHeight = 0f,
+        IReadOnlyList<DaggerfallRangedFlightView>? rangedFlights = null,
         Func<long, DaggerfallPerceptionEffectState>? perception = null, IReadOnlyList<DaggerfallNpcView>? npcs = null,
         IReadOnlyList<DaggerfallDungeonSpellFlightView>? dungeonSpellFlights = null, Func<long, bool>? actorActive = null,
         Func<long, DaggerfallGroundItemLook?>? groundLook = null)
@@ -411,7 +411,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 Quaternion rotation = Quaternion.CreateFromRotationMatrix(
                     Matrix4x4.CreateWorld(Vector3.Zero, direction, up));
                 facts.Add(new AppearanceFact(visualId, false, 0,
-                    new Transform(flight.Position.ToVector() + Vector3.UnitY * arrowHeight,
+                    new Transform(flight.Position.ToVector(),
                         rotation, Vector3.One), arrowVisual, true, RenderLayer.Scene));
             }
         }
@@ -595,7 +595,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 // frame is what delivers the admitted impact. A viewmodel that cannot play the
                 // authored strike has no frame to wait for, so the impact lands in this update
                 // rather than being withheld by a presentation the composition does not have.
-                if (!StartWeaponStrike(swing, started.Swing, started.FrameSeconds, started.WaitsWithoutTarget, started.TargetId, started.HitFrame))
+                if (!StartWeaponStrike(swing, started.FrameSeconds, started.WaitsWithoutTarget, started.TargetId, started.HitFrame))
                 {
                     attackImpacts.Add(new AttackImpactNotice(DaggerfallActorIdentity.PlayerEntityId, started.TargetId ?? 0,
                         started.OriginatingGeneration, started.OriginatingSimulationStep, Expired: false));
@@ -656,13 +656,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 // any loosed shot already sounded at their start, so only an enemy's melee swing sounds here.
                 if (whiff.AttackerId != DaggerfallActorIdentity.PlayerEntityId && whiff.Feedback.SwingCue != "sound.3")
                     EmitAtActor(whiff.Feedback.SwingCue, whiffEvent, whiff.AttackerId, actorState);
-                break;
-            case AttackMissedFact miss:
-                PresentationEventIdentity missEvent = Event(miss.AttackerId, miss.TargetId, miss.OriginatingGeneration, miss.OriginatingSimulationStep, "miss");
-                if (!appliedImpacts.Add(missEvent)) break;
-                EmitMiss(miss.Feedback, missEvent, actorState);
-                if (miss.AttackerId == DaggerfallActorIdentity.PlayerEntityId && deliveredEvents.Add(missEvent))
-                    StartAttack(miss.AttackerId, miss.TargetId, miss.OriginatingGeneration, miss.OriginatingSimulationStep, missEvent);
                 break;
             case ActorDiedFact died:
                 TransitionToCorpse(died.ActorId);
@@ -1272,20 +1265,15 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     }
 
     /// <summary>
-    /// Plays the swing the player's admitted attack chose. Answers whether a strike animation started:
+    /// Plays the player's admitted attack. Answers whether a strike animation started:
     /// a viewmodel-less or action-less composition reports false so the caller can land the impact in
     /// the update that admitted it instead of waiting for a frame nothing will play.
     /// </summary>
-    private bool StartWeaponStrike(PresentationEventIdentity identity, DaggerfallSwingDirection swing, double frameSeconds = 0d,
+    private bool StartWeaponStrike(PresentationEventIdentity identity, double frameSeconds = 0d,
         bool waitsWithoutTarget = false, long? target = null, int hitFrame = DaggerfallFormulaPolicy.MeleeWeaponHitFrame)
     {
         if (viewmodel is null) return false;
-        // The rules chose the swing: the bow's fixed strike or the direction the player drew. A swing
-        // drawn without a gesture is the donor's click attack, which picks uniformly among the six
-        // directions UpRight..DownRight, i.e. among the six strike states.
-        IReadOnlyList<string> choices = NormalizedClassicWeapon.StrikeActions;
-        string name = swing != DaggerfallSwingDirection.None ? NormalizedClassicWeapon.StrikeAction(swing)
-            : choices[random is null ? 0 : checked((int)random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, "daggerfall.media.weapon-strike.v1", CombatRandomKey.For(identity.Generation, identity.SimulationStep, identity.Attacker, identity.Target, 44), 0, choices.Count - 1)).Value)];
+        const string name = NormalizedClassicWeapon.PlayedStrike;
         if (!viewmodel.Weapon.Actions.TryGetValue(name, out NormalizedClassicWeaponAction? strike)) return false;
         // Admission refuses art whose strikes end before the hit frame the rules use, so a strike that
         // cannot reach it is a broken composition: playing it would spend the swing (and a bow's arrow)

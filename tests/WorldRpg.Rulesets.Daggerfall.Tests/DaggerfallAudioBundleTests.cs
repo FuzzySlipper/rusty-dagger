@@ -134,12 +134,12 @@ public sealed class DaggerfallAudioBundleTests
         try
         {
             // No target or damaging outcome is needed; a composition without a viewmodel admits
-            // its attack frame immediately. Re-delivery and later miss/contact cannot duplicate it.
+            // its attack frame immediately. Re-delivery and a later whiff or contact cannot duplicate it.
             appearance.React(started);
             appearance.React(started);
             int expectedEmissions = bow || voiceChance > 0 ? 1 : 0;
             Assert.Equal(expectedEmissions, audio.Emitted);
-            appearance.React(new AttackMissedFact(1, 2, 100, 10, false, 7, 11) { Feedback = new(false, "") });
+            appearance.React(new AttackWhiffedFact(1, 2, false, 7, 11) { Feedback = new(false, "") });
             appearance.React(new AttackHitFact(1, 2, 1, 0, 0, false, 7, 11) { Feedback = new(false, "") });
             Assert.Equal(expectedEmissions, audio.Emitted);
         }

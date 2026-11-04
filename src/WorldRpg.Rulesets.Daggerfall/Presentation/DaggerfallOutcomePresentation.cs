@@ -118,11 +118,6 @@ internal sealed class DaggerfallOutcomePresentation(
                     _ => "Wabbajack cannot transform this target",
                 });
                 break;
-            // A swing that reaches its hit frame with nothing in reach is a whiff, and the donor's
-            // WeaponManager shows no text for one: the swing itself is the feedback. The fact stays for
-            // the playtest diagnostics, but the player's line is left to what actually happened.
-            case AttackRejectedFact { Reason: AttackRejection.NoTargetInReach }:
-                break;
             case AttackRejectedFact rejected:
                 // A rejection is about an action that did not happen, and a held attack button produces
                 // one every update. It therefore yields to a result that is still fresh: the line the
@@ -158,15 +153,6 @@ internal sealed class DaggerfallOutcomePresentation(
                 presentation.SetOutcome(blocked.AttackerId == DaggerfallActorIdentity.PlayerEntityId
                     ? "Shot blocked by cover"
                     : $"{Name(blocked.AttackerId)}'s shot is blocked by cover");
-                break;
-            // The donor names no roll or chance for a miss; those stay on the fact for diagnostics.
-            case AttackMissedFact missed when Actor(missed.EnemyAttack ? missed.AttackerId : missed.TargetId, out DaggerfallActorDefinition definition):
-                _lineIsResult = true;
-                presentation.SetOutcome(missed.EnemyAttack && missed.TargetId != DaggerfallActorIdentity.PlayerEntityId
-                    ? $"{Name(missed.AttackerId)} missed {Name(missed.TargetId)}"
-                    : missed.EnemyAttack
-                    ? $"{DisplayName(definition)} missed you"
-                    : $"Missed {DisplayName(definition)}");
                 break;
             // A contact blow names what the target did with it: turned it aside, took it on armour, or met nothing.
             case AttackNegatedFact negated:

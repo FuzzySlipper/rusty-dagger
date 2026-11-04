@@ -263,41 +263,26 @@ internal static class DaggerfallFormulaPolicy
         backstabbingLevel > 1 && rollSucceeded ? checked(damage * 3) : damage;
 
     /// <summary>
-    /// Donor <c>FormulaHelper.CalculateSwingModifiers</c> over the weapon states of the player's
-    /// on-screen weapon. The donor reaches this only for the player, and only the drawn weapon can
-    /// carry a state, so the caller passes <see cref="DaggerfallSwingDirection.None"/> for
-    /// hand-to-hand attacks and for every non-player attacker.
+    /// The damage half of donor <c>FormulaHelper.CalculateProficiencyModifiers</c>: an expert proficiency
+    /// in the skill the attack uses adds <c>level / 3 + 1</c>. The donor's second arm grants the
+    /// hand-to-hand expert the same while unarmed; its own comment notes classic never applied unarmed
+    /// proficiency, and the provisional donor baseline (DEC-11) keeps the live code, so callers pass
+    /// whether the attack's skill is expert.
     /// </summary>
-    internal static (int ToHit, int Damage) CalculateSwingModifiers(DaggerfallSwingDirection swing) => swing switch
-    {
-        DaggerfallSwingDirection.StrikeUp => (10, -4),
-        DaggerfallSwingDirection.StrikeDownRight => (5, -2),
-        DaggerfallSwingDirection.StrikeDownLeft => (-5, 2),
-        DaggerfallSwingDirection.StrikeDown => (-10, 4),
-        _ => (0, 0),
-    };
+    internal static int CalculateProficiencyDamage(bool expertProficiency, int attackerLevel) =>
+        expertProficiency ? checked(attackerLevel / 3 + 1) : 0;
 
     /// <summary>
-    /// Donor <c>FormulaHelper.CalculateProficiencyModifiers</c>: an expert proficiency in the skill
-    /// the attack uses adds the attacker's level to chance and <c>level / 3 + 1</c> to damage. The
-    /// donor's second arm grants the hand-to-hand expert the same modifiers while unarmed; its own
-    /// comment notes classic never applied unarmed proficiency, and the provisional donor baseline
-    /// (DEC-11) keeps the live code, so callers pass whether the attack's skill is expert.
+    /// The damage half of donor <c>FormulaHelper.CalculateRacialModifiers</c>, entirely guarded by the
+    /// donor's weapon check: a Dark Elf adds <c>level / 4</c> with any weapon, a Wood Elf adds
+    /// <c>level / 3</c> with a bow, and a Redguard adds <c>level / 3</c> with any other weapon. The caller
+    /// passes zero when the attack carries no weapon.
     /// </summary>
-    internal static (int ToHit, int Damage) CalculateProficiencyModifiers(bool expertProficiency, int attackerLevel) =>
-        expertProficiency ? (attackerLevel, checked(attackerLevel / 3 + 1)) : (0, 0);
-
-    /// <summary>
-    /// Donor <c>FormulaHelper.CalculateRacialModifiers</c>, entirely guarded by the donor's weapon
-    /// check: a Dark Elf adds <c>level / 4</c> to chance and damage with any weapon, a Wood Elf adds
-    /// <c>level / 3</c> with a bow, and a Redguard adds <c>level / 3</c> with any other non-bow
-    /// weapon. The caller passes zero modifiers when the attack carries no weapon.
-    /// </summary>
-    internal static (int ToHit, int Damage) CalculateRacialModifiers(int donorRaceId, bool isArcheryWeapon, int attackerLevel)
+    internal static int CalculateRacialDamage(int donorRaceId, bool isArcheryWeapon, int attackerLevel)
     {
-        if (donorRaceId == DonorRaceDarkElf) return (attackerLevel / 4, attackerLevel / 4);
-        if (isArcheryWeapon) return donorRaceId == DonorRaceWoodElf ? (attackerLevel / 3, attackerLevel / 3) : (0, 0);
-        return donorRaceId == DonorRaceRedguard ? (attackerLevel / 3, attackerLevel / 3) : (0, 0);
+        if (donorRaceId == DonorRaceDarkElf) return attackerLevel / 4;
+        if (isArcheryWeapon) return donorRaceId == DonorRaceWoodElf ? attackerLevel / 3 : 0;
+        return donorRaceId == DonorRaceRedguard ? attackerLevel / 3 : 0;
     }
 
     private const int DonorRaceDarkElf = 4;
@@ -463,26 +448,8 @@ internal static class DaggerfallFormulaPolicy
     }
 
     /// <summary>
-    /// Donor <c>CalculateWeaponToHit</c>: the weapon's material modifier is a
-    /// separate table from the minimum-metal rank used by material eligibility.
-    /// </summary>
-    internal static int CalculateWeaponToHit(string? weaponMaterial) => CalculateWeaponToHit(weaponMaterial, ClassicWeaponMaterialModifiers);
-
-    internal static int CalculateWeaponToHit(string? weaponMaterial, IReadOnlyDictionary<string, int> weaponMaterialModifiers)
-    {
-        ArgumentNullException.ThrowIfNull(weaponMaterialModifiers);
-        if (weaponMaterial is null) return 0;
-        // DFU's GetWeaponMaterialModifier returns zero for an unknown material;
-        // retain that donor fallback while authored content validation catches
-        // an invalid material at its source boundary.
-        return weaponMaterialModifiers.TryGetValue(weaponMaterial, out int modifier)
-            ? checked(modifier * 10)
-            : 0;
-    }
-
-    /// <summary>
     /// The same donor <c>GetWeaponMaterialModifier</c> table enters
-    /// <c>CalculateWeaponAttackDamage</c> unscaled, unlike the ten-fold to-hit use:
+    /// <c>CalculateWeaponAttackDamage</c> unscaled:
     /// the donor's comment notes the in-game display that suggests otherwise is wrong.
     /// </summary>
     internal static int WeaponMaterialDamageModifier(string? weaponMaterial, IReadOnlyDictionary<string, int> weaponMaterialModifiers)
@@ -490,55 +457,6 @@ internal static class DaggerfallFormulaPolicy
         ArgumentNullException.ThrowIfNull(weaponMaterialModifiers);
         return weaponMaterial is null || !weaponMaterialModifiers.TryGetValue(weaponMaterial, out int modifier) ? 0 : modifier;
     }
-
-    /// <summary>Donor <c>CalculateArmorToHit</c>: the selected body part's already-composed live armor value.</summary>
-    internal static int CalculateArmorToHit(int struckArmor) => struckArmor;
-
-    /// <summary>Donor <c>CalculateAdrenalineRushToHit</c>, including the strict one-eighth health boundary.</summary>
-    internal static int CalculateAdrenalineRushToHit(bool attackerHasRush, bool attackerImprovedRush, double attackerHealth, double attackerMaximum,
-        bool targetHasRush, bool targetImprovedRush, double targetHealth, double targetMaximum)
-    {
-        // FormulaHelper compares integer health values against integer division
-        // (MaxHealth / 8). Engine tracks are double-backed, so truncate the
-        // authored/current values at this classic integer boundary.
-        static bool Active(bool hasRush, double health, double maximum) => hasRush
-            && Math.Truncate(health) < Math.Truncate(Math.Truncate(maximum) / 8d);
-        if (!double.IsFinite(attackerHealth) || !double.IsFinite(attackerMaximum) || attackerMaximum < 0d
-            || !double.IsFinite(targetHealth) || !double.IsFinite(targetMaximum) || targetMaximum < 0d)
-            throw new ArgumentOutOfRangeException(nameof(attackerHealth));
-        int result = Active(attackerHasRush, attackerHealth, attackerMaximum) ? attackerImprovedRush ? 8 : 5 : 0;
-        return checked(result - (Active(targetHasRush, targetHealth, targetMaximum) ? targetImprovedRush ? 8 : 5 : 0));
-    }
-
-    /// <summary>Donor <c>CalculateStatsToHit</c>, preserving C# integer truncation toward zero for negative differentials.</summary>
-    internal static int CalculateStatsToHit(int attackerLuck, int targetLuck, int attackerAgility, int targetAgility) =>
-        checked(TruncateDivide(attackerLuck - targetLuck, 10) + TruncateDivide(attackerAgility - targetAgility, 10));
-
-    /// <summary>Donor <c>CalculateSkillsToHit</c>: target dodging always applies; a separately keyed critical-strike success supplies its bonus.</summary>
-    internal static int CalculateSkillsToHit(int targetDodging, int attackerCriticalStrike, bool criticalStrikeSucceeded) =>
-        checked(-FloorDivide(targetDodging, 4) + (criticalStrikeSucceeded ? FloorDivide(attackerCriticalStrike, 10) : 0));
-
-    /// <summary>Donor <c>CalculateAdjustmentsToHit</c>: biography avoidance, the monster bonus, then the classic -50 baseline.</summary>
-    internal static int CalculateAdjustmentsToHit(bool targetIsMonster, int targetBiographyAvoidHit) =>
-        checked((targetIsMonster ? 40 : 0) - targetBiographyAvoidHit - 50);
-
-    /// <summary>One complete donor hit pipeline before its caller compares the independently drawn 1..100 roll; the donor clamps to [3, 97].</summary>
-    internal static int CalculateSuccessfulHitChance(int chanceToHitModifier, int struckArmor, int adrenalineRush, int stats, int skills, int adjustments) =>
-        Math.Clamp(checked(chanceToHitModifier + CalculateArmorToHit(struckArmor) + adrenalineRush + stats + skills + adjustments), 3, 97);
-
-    /// <summary>Boolean donor-shaped overload retained for callers that already own their actual Engine random roll.</summary>
-    internal static bool CalculateSuccessfulHit(int chanceToHitModifier, int struckArmor, int adrenalineRush, int stats, int skills, int adjustments, int roll)
-    {
-        if (roll is < 1 or > 100) throw new ArgumentOutOfRangeException(nameof(roll));
-        return roll <= CalculateSuccessfulHitChance(chanceToHitModifier, struckArmor, adrenalineRush, stats, skills, adjustments);
-    }
-
-    /// <summary>Compatibility read for existing callers that do not own weapon, adrenaline, or critical-strike inputs.</summary>
-    internal static int CalculateHitChance(int skill, int struckArmor, int attackerLuck, int targetLuck, int attackerAgility, int targetAgility, int targetDodging, int targetBiographyAvoidHit = 0) =>
-        CalculateSuccessfulHitChance(skill, struckArmor, 0,
-            CalculateStatsToHit(attackerLuck, targetLuck, attackerAgility, targetAgility),
-            CalculateSkillsToHit(targetDodging, 0, false),
-            CalculateAdjustmentsToHit(false, targetBiographyAvoidHit));
 
     /// <summary>Classic material gate: a weapon must meet the target's minimum material.</summary>
     internal static bool CanHitMaterial(string? weaponMaterial, string? targetMinimumMaterial, IReadOnlyDictionary<string, int> weaponMaterialRanks)
@@ -787,13 +705,6 @@ internal static class DaggerfallFormulaPolicy
 
     /// <summary>The classic animation frame a player attack's impact leaves on, by whether a bow looses it.</summary>
     internal static int WeaponHitFrame(bool bow) => bow ? BowWeaponHitFrame : MeleeWeaponHitFrame;
-
-    /// <summary>
-    /// The strike a bow always plays. The donor's WeaponManager forces a bow's attack direction to Down
-    /// (its optional draw-back mode is off by default), which FPSWeapon plays as StrikeDown; a bow's
-    /// other strikes are never played by an attack.
-    /// </summary>
-    internal const DaggerfallSwingDirection BowSwing = DaggerfallSwingDirection.StrikeDown;
 
     /// <summary>
     /// The donor's item-condition display unit. Items without condition use are complete rather than

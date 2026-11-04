@@ -76,47 +76,21 @@ internal static class DaggerfallHarmChannels
             : Unaligned;
 }
 
-internal readonly record struct DaggerfallAdrenalineRush(bool Enabled, bool Improved);
-
-/// <summary>
-/// The swing state of the player's weapon at the moment an attack is admitted, the classic
-/// WeaponStates the donor reads off the on-screen FPSWeapon. Classic steers these states from the
-/// mouse: vertical motion strikes up or down, horizontal motion angles the down strike left or
-/// right, and the last direction holds until the next deliberate movement, which the session's
-/// look tracker reproduces. The same direction names the strike animation the viewmodel plays.
-/// None is an attack without a gesture (the presentation then plays the donor's click-attack
-/// choice); the swing modifiers additionally require a weapon, as the donor's guard does.
-/// </summary>
-internal enum DaggerfallSwingDirection
-{
-    None,
-    StrikeUp,
-    StrikeDown,
-    StrikeDownLeft,
-    StrikeDownRight,
-    StrikeLeft,
-    StrikeRight,
-}
-
 internal static class CombatRandomKey
 {
     internal const ulong Seed = 0;
     internal const string PlayerScope = "dagger.combat.v1";
     internal const string EnemyScope = "dagger.combat.ai.v1";
-    internal const int HitSalt = 1;
     internal const int DamageSalt = 2;
     internal const int BodySalt = 3;
     internal const int WeaponConditionSalt = 4;
     internal const int ArmorConditionSalt = 5;
-    internal const int CriticalStrikeSalt = 6;
     internal const int BackstabRollSalt = 7;
     // A monster works its authored attack slots in order, and each slot gates itself on a reflex
-    // roll, a critical/hit roll, and its own damage roll. Each draw takes its slot number as
+    // roll and its own damage roll. Each draw takes its slot number as
     // an offset from the kind base so slot rolls stay keyed independently.
     internal const int MonsterReflexSaltBase = 10;
-    internal const int MonsterHitSaltBase = 20;
     internal const int MonsterDamageSaltBase = 30;
-    internal const int MonsterCriticalSaltBase = 50;
     internal const int MonsterConsequenceSaltBase = 60;
     internal const string MediaAttackAlternateScope = "daggerfall.media.attack-alternate.v1";
     internal const int MediaAttackAlternateSalt = 41;

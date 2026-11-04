@@ -13,9 +13,9 @@ public sealed partial class DaggerfallEquipmentWearTests
         fixture.EquipEnemyMace(9510, 10);
         fixture.CombatRules.RegisterAction("enemy-class-equipped-melee", new AcceptedMaceDamage());
         int armor = fixture.Condition(1003);
-        fixture.Script(body: 9, critical: 50, hit: 1, damage: 6, razorSave: 100);
+        fixture.Script(body: 9, damage: 6, razorSave: 100);
         var facts = fixture.RunEnemyAttack().ToList();
-        Assert.Equal(13, AppliedDamage(facts)); Assert.Equal(armor - 1, fixture.Condition(1003));
+        Assert.Equal(10, AppliedDamage(facts)); Assert.Equal(armor - 1, fixture.Condition(1003)); // The cuirass absorbs 3 of the 13.
         Assert.Equal(0, fixture.Condition(9510));
         Assert.Single(facts.OfType<AttackHitFact>());
         var transfer = Assert.Single(facts.OfType<ArtifactResourceTransferredFact>());

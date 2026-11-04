@@ -88,7 +88,7 @@ public sealed class DaggerfallRulesVariant
     }
 }
 
-/// <summary>The owner composed for every Daggerfall seam in one session: each selected variant's, otherwise classic's.</summary>
+/// <summary>The owner composed for every Daggerfall seam in one session: each selected variant's, otherwise the ruleset's default.</summary>
 internal sealed record DaggerfallComposedSeams(
     IDaggerfallPhysicalMitigation PhysicalMitigation,
     Func<IDaggerfallPhysicalHarmOperations, IDaggerfallPhysicalDelivery> PhysicalDelivery,
@@ -99,7 +99,7 @@ internal sealed record DaggerfallComposedSeams(
 
 /// <summary>
 /// Which variant owns each Daggerfall seam: a selected variant's when it claims the seam, otherwise
-/// classic's. Session composition builds every owner through this one selection.
+/// the ruleset's default. Session composition builds every owner through this one selection.
 /// </summary>
 internal sealed class DaggerfallSeamSelection
 {
@@ -112,24 +112,24 @@ internal sealed class DaggerfallSeamSelection
         _owners = owners;
     }
 
-    internal static DaggerfallSeamSelection Classic { get; } = new([], new Dictionary<RulesSeamId, RulesVariantId>());
+    internal static DaggerfallSeamSelection Default { get; } = new([], new Dictionary<RulesSeamId, RulesVariantId>());
 
-    /// <summary>The variant that owns physical mitigation, or none for classic.</summary>
+    /// <summary>The variant that owns physical mitigation, or none for the default owner.</summary>
     internal RulesVariantId? PhysicalMitigationVariant => Owner(DaggerfallRulesSeams.PhysicalMitigation);
 
-    /// <summary>The variant that owns physical delivery, or none for classic.</summary>
+    /// <summary>The variant that owns physical delivery, or none for the default owner.</summary>
     internal RulesVariantId? PhysicalDeliveryVariant => Owner(DaggerfallRulesSeams.PhysicalDelivery);
 
-    /// <summary>The variant that owns the player's guard, or none for classic, which has no guard.</summary>
+    /// <summary>The variant that owns the player's guard, or none for the default owner.</summary>
     internal RulesVariantId? PlayerGuardVariant => Owner(DaggerfallRulesSeams.PlayerGuard);
 
-    /// <summary>The variant that owns touch delivery, or none for classic.</summary>
+    /// <summary>The variant that owns touch delivery, or none for the default owner.</summary>
     internal RulesVariantId? TouchDeliveryVariant => Owner(DaggerfallRulesSeams.TouchDelivery);
 
-    /// <summary>The variant that owns enemy engagement, or none for classic.</summary>
+    /// <summary>The variant that owns enemy engagement, or none for the default owner.</summary>
     internal RulesVariantId? EnemyEngagementVariant => Owner(DaggerfallRulesSeams.EnemyEngagement);
 
-    /// <summary>The variant that owns harm presentation, or none for classic.</summary>
+    /// <summary>The variant that owns harm presentation, or none for the default owner.</summary>
     internal RulesVariantId? HarmPresentationVariant => Owner(DaggerfallRulesSeams.HarmPresentation);
 
     private RulesVariantId? Owner(RulesSeamId seam) => _owners.TryGetValue(seam, out RulesVariantId owner) ? owner : null;
@@ -153,8 +153,8 @@ internal sealed class DaggerfallSeamSelection
         return new(variants, owners);
     }
 
-    /// <summary>Composes every selected variant once over the session's reads, then fills each unclaimed seam with classic's owner.</summary>
-    internal DaggerfallComposedSeams Build(DaggerfallSeamInputs session)
+    /// <summary>Composes every selected variant once over the session's reads, then fills each unclaimed seam with the default owner.</summary>
+    internal DaggerfallComposedSeams Build(DaggerfallSeamInputs session, DaggerfallContactTuning contact)
     {
         IDaggerfallPhysicalMitigation? mitigation = null;
         Func<IDaggerfallPhysicalHarmOperations, IDaggerfallPhysicalDelivery>? delivery = null;
@@ -172,11 +172,12 @@ internal sealed class DaggerfallSeamSelection
             engagement ??= owners.EnemyEngagement;
             presentation ??= owners.HarmPresentation;
         }
-        return new(mitigation ?? new DaggerfallClassicPhysicalMitigation(session.Character),
-            delivery ?? (ops => new DaggerfallClassicPhysicalDelivery(ops)),
-            guard ?? DaggerfallNoPlayerGuard.Instance,
-            touch ?? (ops => new DaggerfallClassicTouchDelivery(ops)),
-            engagement ?? DaggerfallClassicEnemyEngagement.Instance,
-            presentation ?? DaggerfallClassicHarmPresentation.Instance);
+        guard ??= new DaggerfallContactGuard(session, contact);
+        return new(mitigation ?? new DaggerfallContactMitigation(session, contact, guard),
+            delivery ?? (ops => new DaggerfallContactDelivery(ops, contact)),
+            guard,
+            touch ?? (ops => new DaggerfallContactTouch(ops, contact)),
+            engagement ?? new DaggerfallContactEngagement(contact),
+            presentation ?? new DaggerfallContactHarmPresentation());
     }
 }

@@ -13,7 +13,7 @@ public sealed class GeneratedRangedEnemySessionTests
     [InlineData(20, true)]
     [InlineData(6, false)]
     [InlineData(51.2f, false)]
-    [InlineData(2, false)]
+    [InlineData(1.5f, false)]
     public void Generated_archer_uses_real_bow_and_quiver_only_inside_the_range_band(float distance, bool shoots)
     {
         using var f = new SanguineRoseSessionTests.Fixture();
@@ -45,7 +45,7 @@ public sealed class GeneratedRangedEnemySessionTests
         }
         f.Update();
         Assert.Equal(EnemyBehaviorState.Chase, f.Session.LastEnemyBehavior[id].State);
-        Place(f, id, 2);
+        Place(f, id, 1.5f);
         int before = f.Appearance.PlaybackRequests.Count;
         f.Update();
         Assert.Equal(EnemyBehaviorState.Attack, f.Session.LastEnemyBehavior[id].State);
@@ -79,6 +79,8 @@ public sealed class GeneratedRangedEnemySessionTests
         long id = f.Session.SpawnActor("archer", new(new(0, 0, -distance), 0), level: 5);
         f.Session.State.Actors.Get(id).Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(true);
         f.Session.State.WeaponDrawn = true;
+        // The fixture's floor would stand in every downward line of fire, and an archer holds a blocked shot.
+        f.Spatial.FloorHit = _ => default;
         Place(f, id, distance);
         return id;
     }

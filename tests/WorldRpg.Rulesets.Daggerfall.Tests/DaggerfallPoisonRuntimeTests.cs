@@ -326,6 +326,11 @@ public sealed class DaggerfallPoisonRuntimeTests
         Assert.Equal(0, drawn);
         Assert.Equal(130, poison.Affliction(player)!.Archetype.Variant);
 
+        // A running poison this one doesn't supersede keeps its course: the second dose starts nothing.
+        Assert.Equal(DaggerfallPoisonAdmission.Outlasted, DaggerfallPoisonPolicy.InflictPoison(poison, fixture.Actors, exposure, 130, Roll));
+        Assert.Equal(130, poison.Affliction(player)!.Archetype.Variant);
+        Assert.Throws<ArgumentException>(() => DaggerfallPoisonPolicy.InflictPoison(poison, fixture.Actors, exposure, 1, Roll));
+
         // The same attempt without the bypass is left to the throw: the donor's amount is non-zero for a
         // roll that fails to resist, and zero for one that throws the poison off, which starts nothing.
         using DaggerCombatFixture second = new("nymph", playerHealth: 200d);
