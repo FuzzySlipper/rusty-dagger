@@ -71,7 +71,7 @@ public sealed class DaggerfallControlSettings
         ["spell"] = "Spellbook", ["rest"] = "Rest", ["map"] = "Map", ["transport"] = "Travel and transport",
         ["activation.steal"] = "Steal mode", ["activation.grab"] = "Grab mode", ["activation.info"] = "Information mode", ["activation.talk"] = "Talk mode",
         ["quick-save"] = "Quick save", ["quick-load"] = "Quick load", ["logbook"] = "Logbook", ["notebook"] = "Notebook",
-        ["travel-map"] = "Travel map", ["use-magic-item"] = "Use magic item", ["recast"] = "Recast last spell", ["abort-spell"] = "Abort spell",
+        ["travel-map"] = "Travel map", ["use-magic-item"] = "Use magic item", ["recast"] = "Cast ready or last spell", ["abort-spell"] = "Abort spell",
     };
 
     /// <summary>The categories in the order the controls screen groups them, with their headings.</summary>

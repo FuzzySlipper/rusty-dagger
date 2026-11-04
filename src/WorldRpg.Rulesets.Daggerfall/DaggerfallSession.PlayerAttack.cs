@@ -54,7 +54,7 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
     private void StepPlayerAttack(double seconds, ulong generation, ulong simulationStep)
     {
         _attackStep = (generation, simulationStep, seconds);
-        if (State.WeaponDrawn && !State.Effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId).PhysicalAttacks && !State.Actors.Player.IsDefeated)
+        if ((State.WeaponDrawn || _attackClock.Casting) && !State.Effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId).PhysicalAttacks && !State.Actors.Player.IsDefeated)
             _attackClock.Step(seconds);
         else RetirePlayerAttack(generation);
     }
@@ -77,8 +77,8 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
         DaggerfallCombatantTuning tuning = _tuning.Attacks.Combatant;
         // A bow's shot already runs on the classic frame time, which Speed sets.
         double speed = attack == DaggerfallAttackIds.Shot ? 0d : tuning.SpeedPerPointAbove50 * (PlayerStat(DaggerfallMechanicsIds.Speed.Value) - 50);
-        double scale = 1d - speed
-            - tuning.SkillAt100 * Math.Clamp(PlayerStat(_combat.PlayerWeaponSkill()), 0, 100) / 100d;
+        double skill = attack == DaggerfallAttackIds.Cast ? 0d : tuning.SkillAt100 * Math.Clamp(PlayerStat(_combat.PlayerWeaponSkill()), 0, 100) / 100d;
+        double scale = 1d - speed - skill;
         if (attack == DaggerfallAttackIds.PowerIn) scale -= tuning.StrengthPerPointAbove50 * (PlayerStat(DaggerfallMechanicsIds.Strength.Value) - 50);
         if (_combat.PlayerWinded) scale *= tuning.WindedTimeScale;
         scale *= _combat.PlayerRushTimeScale;
@@ -100,6 +100,13 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
     bool IDaggerfallPlayerAttacks.Start(string attack)
     {
         var (generation, simulationStep, seconds) = _attackStep;
+        if (attack == DaggerfallAttackIds.Cast)
+        {
+            if (!ReadyCast()) return false;
+            _attack = attack;
+            StepGuard(0d, generation, simulationStep);
+            return true;
+        }
         LookReceipt look = _input.ResolveCurrentLook(State.PlayerControl);
         int chain = _tuning.Attacks.Combatant.ChainLength(PlayerStat(_combat.PlayerWeaponSkill()));
         _combat.SelectPlayerAttack(attack, finisher: attack == DaggerfallAttackIds.Fast[chain - 1]);
@@ -119,8 +126,8 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
 
     bool IDaggerfallPlayerAttacks.Sweep(double cycle)
     {
-        // A shot's flight decides what it meets, and a player with no pose has nothing to sweep from.
-        if (_attack == DaggerfallAttackIds.Shot || StrikePose(DaggerfallActorIdentity.PlayerEntityId) is not { } pose) return true;
+        // A shot's flight decides what it meets, a cast meets nothing, and a player with no pose has nothing to sweep from.
+        if (_attack is DaggerfallAttackIds.Shot or DaggerfallAttackIds.Cast || StrikePose(DaggerfallActorIdentity.PlayerEntityId) is not { } pose) return true;
         _lastSwing = _swing ??= new SwingSweep(_contact, DaggerfallActorIdentity.PlayerEntityId, _tuning.Attacks.Arc(_attack!, _combat.PlayerWeaponSkill(), _combat.PlayerWeaponTemplate()));
         if (_swing.Advance(pose.Eye, pose.Forward, (float)cycle, _sites?.CharacterEnvironment(State.PlayerControl.Motion)) is not long struck) return false;
         _combat.SetSweptTarget(struck);
@@ -129,13 +136,18 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
 
     void IDaggerfallPlayerAttacks.Impact()
     {
+        if (_attack == DaggerfallAttackIds.Cast) { ReleaseCast(); return; }
         if (State.Actors.Player.Actor.Get<AttackState>().Pending is not { } pending) return;
         _playerImpacts.Add(new AttackImpactNotice(DaggerfallActorIdentity.PlayerEntityId, pending.Request.TargetId ?? 0,
             pending.Request.Generation, pending.Request.SimulationStep, Expired: false));
     }
 
-    void IDaggerfallPlayerAttacks.Motion(string attack, DaggerfallAttackTiming? timing) =>
-        _facts.Append(new PlayerAttackMotionFact(attack, timing, _attackStep.Generation, _attackStep.SimulationStep));
+    void IDaggerfallPlayerAttacks.Motion(string attack, DaggerfallAttackTiming? timing)
+    {
+        if (attack != DaggerfallAttackIds.Cast) _facts.Append(new PlayerAttackMotionFact(attack, timing, _attackStep.Generation, _attackStep.SimulationStep));
+        else if (Casting.ReadyFor(DaggerfallActorIdentity.PlayerEntityId) is { } ready)
+            _facts.Append(new PlayerCastMotionFact(_definitions.Magic.Spells[ready.SpellKey].Element, timing!.Value, _attackStep.Generation, _attackStep.SimulationStep));
+    }
 
     void IDaggerfallPlayerAttacks.Rest() =>
         _facts.Append(new PlayerAttackRestFact(_attackStep.Generation, _attackStep.SimulationStep));

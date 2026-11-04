@@ -24,6 +24,8 @@ internal sealed partial class DaggerfallSession
         return Casting.Ready(State.Actors.Player.DurableId, key);
     }
 
+    private const int SpellbookTemplateIndex = 132;
+
     private string _spellResult="";
     private string? _lastPlayerSpell;
     internal DaggerfallSpellbookView ReadSpells() => new(
@@ -43,12 +45,39 @@ internal sealed partial class DaggerfallSession
         var result=action.Kind switch
         {
             WorldRpg.Rulesets.Daggerfall.Presentation.DaggerfallUiActionKind.SpellReady=>ReadyPlayerSpell(action.Key!),
-            WorldRpg.Rulesets.Daggerfall.Presentation.DaggerfallUiActionKind.SpellUnready=>Casting.Cancel(State.Actors.Player.DurableId),
-            _=>ReleaseReadySpell(State.Actors.Player.DurableId,_input.ResolveCurrentLook(State.PlayerControl).Forward),
+            _=>Casting.Cancel(State.Actors.Player.DurableId),
         };
-        _spellResult=CastOutcomeText(result.Outcome);
+        ReportCast(result.Outcome);
+    }
+
+    private void ReportCast(DaggerfallCastOutcome outcome)
+    {
+        _spellResult=CastOutcomeText(outcome);
         Presentation.SetOutcome(_spellResult);
     }
+
+    /// <summary>Readies the spell a cast will release: the one ready, or else the last one cast, which a spellbook recalls.</summary>
+    private bool ReadyCast()
+    {
+        long player = State.Actors.Player.DurableId;
+        if (Casting.ReadyFor(player) is null)
+        {
+            if (_lastPlayerSpell is null) { Presentation.SetOutcome("You have not cast a spell yet."); return false; }
+            if (!State.Inventory.Read().UniqueItems.Any(item => _definitions.SourceTemplateFor(_definitions.RequireItem(new(item.Definition.Value)))?.Index == SpellbookTemplateIndex))
+            {
+                Presentation.SetOutcome("You need a spellbook to recast a spell.");
+                return false;
+            }
+            if (ReadyPlayerSpell(_lastPlayerSpell).Outcome is var readied && readied != DaggerfallCastOutcome.Ready) { ReportCast(readied); return false; }
+        }
+        if (Casting.ReleaseRefusal(player) is not { } refusal) return true;
+        ReportCast(refusal);
+        return false;
+    }
+
+    /// <summary>The cast's windup is over: the ready spell leaves the left hand along the view.</summary>
+    private void ReleaseCast() =>
+        ReportCast(ReleaseReadySpell(State.Actors.Player.DurableId, _input.ResolveCurrentLook(State.PlayerControl).Forward).Outcome);
 
     /// <summary>Player wording for the result of readying, cancelling or releasing the player's spell.</summary>
     internal static string CastOutcomeText(DaggerfallCastOutcome outcome) => outcome switch

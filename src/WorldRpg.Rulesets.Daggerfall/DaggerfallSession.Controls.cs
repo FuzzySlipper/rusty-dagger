@@ -119,10 +119,7 @@ internal sealed partial class DaggerfallSession
             case "use-magic-item": RequestPanel("magic-items"); break;
             case "abort-spell": ChangeSpell(new("spell-unready")); break;
             case "recast":
-                if (_lastPlayerSpell is null) Presentation.SetOutcome("You have not cast a spell yet.");
-                else if (!State.Inventory.Read().UniqueItems.Any(item => _definitions.SourceTemplateFor(_definitions.RequireItem(new(item.Definition.Value)))?.Index == 132))
-                    Presentation.SetOutcome("You need a spellbook to recast a spell.");
-                else ChangeSpell(new("spell-ready", Key: _lastPlayerSpell));
+                _attackClock.PressCast();
                 break;
         }
     }

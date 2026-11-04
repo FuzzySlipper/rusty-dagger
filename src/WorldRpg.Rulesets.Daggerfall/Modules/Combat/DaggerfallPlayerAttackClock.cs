@@ -11,11 +11,12 @@ internal static class DaggerfallAttackIds
     internal const string PowerOut = "powerOut";
     internal const string Kick = "kick";
     internal const string Shot = "shot";
+    internal const string Cast = "cast";
 
     /// <summary>The fast attacks a chain cycles through.</summary>
     internal static IReadOnlyList<string> Fast { get; } = ["fastA", "fastB", "fastC", "fastD"];
 
-    /// <summary>Every motion a weapon can play.</summary>
+    /// <summary>Every motion a weapon can play. A cast isn't one: the left hand plays it and the weapon rests.</summary>
     internal static IReadOnlyList<string> All { get; } = [.. Fast, PowerIn, PowerHold, PowerOut, Kick, Shot];
 }
 
@@ -58,8 +59,10 @@ internal interface IDaggerfallPlayerAttacks
 /// held past it charges a power attack, which holds until release. A press during a recovery chains the next fast
 /// attack at once, and one made earlier in a swing waits for the recovery; a swing that runs out resets the chain.
 /// The hit window opens as the windup ends and the attack sweeps through it, with or without anything drawing it, and
-/// the blow resolves when it meets something or the window closes. The clock is advanced by admitted
-/// steps only, so held time holds it, and it is transient: a save or a site change retires what is in progress.
+/// the blow resolves when it meets something or the window closes. A cast is a commitment: it can start from a swing's
+/// recovery, as the next fast attack can, its spell releases as its windup ends, and no attack starts until it has
+/// recovered. The clock is advanced by admitted steps only, so held time holds it, and it is transient: a save or a
+/// site change retires what is in progress.
 /// </summary>
 internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning, IDaggerfallPlayerAttacks attacks)
 {
@@ -79,6 +82,7 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
     // A press that became a power attack: repeats of the held button are the same press.
     private bool _pressSpent;
     private bool _kick;
+    private bool _cast;
     private int _chain;
     // A motion ended with a press about to follow, so the rest it owed waits on whether that press starts.
     private bool _restOwed;
@@ -86,10 +90,13 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
     private DaggerfallWeaponClassAttacks? _power;
 
     /// <summary>Whether a motion is playing or a press is waiting to become one.</summary>
-    internal bool Busy => _playing is not null || _press is not null || _kick;
+    internal bool Busy => _playing is not null || _press is not null || _kick || _cast;
+
+    /// <summary>Whether a cast is playing or waiting to start, which needs no weapon drawn.</summary>
+    internal bool Casting => _cast || _playing is { Attack: DaggerfallAttackIds.Cast };
 
     /// <summary>Whether a new attack could start this step.</summary>
-    internal bool Free => _playing is null or { InRecovery: true, Attack: not DaggerfallAttackIds.Shot };
+    internal bool Free => _playing is null or { InRecovery: true, Attack: not (DaggerfallAttackIds.Shot or DaggerfallAttackIds.Cast) };
 
     /// <summary>Reads one update's input for whether the attack button, or a pad button for it, is down.</summary>
     internal void Observe(ReadOnlySpan<ProductInputEvent> inputs, IReadOnlyList<ControllerActionBinding> pad)
@@ -133,6 +140,9 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
     /// <summary>The kick was requested this step.</summary>
     internal void PressKick() => _kick = true;
 
+    /// <summary>A cast was requested this step.</summary>
+    internal void PressCast() => _cast = true;
+
     /// <summary>Advances one admitted step: the motion in progress, then whatever the input now starts.</summary>
     internal void Step(double seconds)
     {
@@ -168,12 +178,19 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
         if (_press is double down && _held) _press = down + seconds;
         // A blow resolves at the head of the next update, and the rules admit nothing until it has.
         if (!Free || struck) return;
-        if (_kick) StartKick();
+        if (_cast) StartCast();
+        else if (_kick) StartKick();
         else if (_press is double press && (!_held || press >= tuning.PowerThresholdSeconds && !attacks.Winded || attacks.ShotTiming is not null)) StartPressed(!_held);
     }
 
     /// <summary>Whether a press or kick is about to start a motion, so the rest between them is skipped.</summary>
-    private bool Waiting => _kick || _press is not null && !_held;
+    private bool Waiting => _cast || _kick || _press is not null && !_held;
+
+    private void StartCast()
+    {
+        _cast = false;
+        Begin(DaggerfallAttackIds.Cast, tuning.Cast, delivers: true);
+    }
 
     private void StartKick()
     {
@@ -246,6 +263,7 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
         _restOwed = false;
         _press = null;
         _kick = false;
+        _cast = false;
         _chain = 0;
         if (playing) attacks.Rest();
     }

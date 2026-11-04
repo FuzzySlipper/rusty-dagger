@@ -264,6 +264,11 @@
       "recovery": 0.4
     },
     "kickStaminaCost": 10,
+    "cast": {
+      "windup": 0.3,
+      "commit": 0.02,
+      "recovery": 0.3
+    },
     "kickDamage": 1,
     "classes": {
       "short-blade": {

@@ -181,7 +181,8 @@ Use WASD to move and the mouse to look. **Z** draws or sheathes the equipped
 weapon; empty hands use unarmed art. While drawn, a click of **left mouse** is a
 fast attack, and another click during its recovery chains the next one. Holding
 the button charges a power attack, released when you let go. **Right mouse** holds
-a guard and **G** kicks with any weapon. Controls can rebind them all.
+a guard, **G** kicks with any weapon and **Q** casts the ready spell with the left
+hand, weapon in the right. Controls can rebind them all.
 
 A kick does little harm but throws what it hits, by its weight: a person goes
 down, a bear hardly notices, and a ledge behind them helps. Fighting spends

@@ -123,8 +123,10 @@ public sealed class ContactRulesAcceptanceTests
 
         session.Update(new ProductUpdate(OuterUpdate(1), [Ui($$"""{"action":"spell-ready","key":"{{spell}}"}""")]));
         session.Update(new ProductUpdate(OuterUpdate(2), [Ui("""{"action":"spell-cast"}""")]));
+        ulong released = 3;
+        for (; released <= 40 && magicka.Current == 1000; released++) session.Update(new ProductUpdate(OuterUpdate(released), []));
         Assert.True(magicka.Current < 1000);
-        for (ulong step = 3; step <= 60 && session.Casting.PendingRangedFlights.Count != 0; step++)
+        for (ulong step = released; step <= 90 && session.Casting.PendingRangedFlights.Count != 0; step++)
             session.Update(new ProductUpdate(OuterUpdate(step), []));
 
         Assert.Empty(session.Casting.PendingRangedFlights);
@@ -149,6 +151,7 @@ public sealed class ContactRulesAcceptanceTests
 
         session.Update(new ProductUpdate(OuterUpdate(1), [Ui($$"""{"action":"spell-ready","key":"{{spell}}"}""")]));
         session.Update(new ProductUpdate(OuterUpdate(2), [Ui("""{"action":"spell-cast"}""")]));
+        for (ulong step = 3; step <= 40 && magicka.Current == 1000; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
 
         Assert.True(magicka.Current < 1000);
         Assert.Contains(spatial.OverlapContactsRequests, request => request.Shape.Kind == SpatialShapeKind.Box);
