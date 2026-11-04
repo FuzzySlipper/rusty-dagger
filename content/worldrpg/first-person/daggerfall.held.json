@@ -636,33 +636,78 @@
   },
   "items": {
     "114": {
-      "family": "dagger"
+      "family": "dagger",
+      "model": "first-person/weapons/tanto.glb"
+    },
+    "115": {
+      "family": "halberd",
+      "model": "first-person/weapons/staff.glb"
     },
     "116": {
-      "family": "sns"
+      "family": "sns",
+      "model": "first-person/weapons/shortsword.glb"
     },
     "117": {
-      "family": "sns"
+      "family": "sns",
+      "model": "first-person/weapons/wakizashi.glb"
     },
     "118": {
-      "family": "sns"
+      "family": "sns",
+      "model": "first-person/weapons/broadsword.glb"
     },
     "119": {
-      "family": "sns"
+      "family": "sns",
+      "model": "first-person/weapons/saber.glb"
     },
     "120": {
       "family": "sns",
       "model": "first-person/weapons/longsword.glb"
     },
     "121": {
-      "family": "sns"
+      "family": "sns",
+      "model": "first-person/weapons/katana.glb"
+    },
+    "122": {
+      "family": "longsword",
+      "model": "first-person/weapons/claymore.glb"
+    },
+    "123": {
+      "family": "longsword",
+      "model": "first-person/weapons/dai-katana.glb"
     },
     "124": {
       "family": "sns",
       "model": "first-person/weapons/mace.glb"
     },
+    "125": {
+      "family": "longsword",
+      "model": "first-person/weapons/flail.glb",
+      "chain": {
+        "handle": "handle",
+        "links": ["link0", "link1", "link2", "link3", "link4"],
+        "weight": "ball",
+        "linkRadius": 0.01,
+        "linkMass": 0.15,
+        "weightLength": 0.098,
+        "weightRadius": 0.05,
+        "weightMass": 0.6,
+        "swing": 1.0,
+        "twist": 0.3,
+        "linearDamping": 0.6,
+        "angularDamping": 3
+      }
+      },
+    "126": {
+      "family": "longsword",
+      "model": "first-person/weapons/warhammer.glb"
+    },
     "127": {
-      "family": "sns"
+      "family": "sns",
+      "model": "first-person/weapons/battle-axe.glb"
+    },
+    "128": {
+      "family": "longsword",
+      "model": "first-person/weapons/war-axe.glb"
     },
     "288": {
       "family": "sns",

@@ -17,8 +17,8 @@ round plate `half` metres either side of the centre of the icon's tilted ellipse
 `links` oval links of `linkLength`, `linkWidth` and `wire` running on from the top of part `on`, ending in a ball of radius
 `ball` with `spikes`. A `string` part is a cord of `radius` from tip to tip. Both take their colour from their piece of
 the icon. A lathe part with `bridge` always joins the run above it, across a gap in the icon. `reach` runs a flat part on to the named part it joins, and `root` thickens it by `gain` toward the part named `toward`.
-A lathe part's `radius` in metres replaces the icon's width, for an icon drawn fatter than the thing. A part's `slot` overrides its material (`any` parts default to `trim`). `spikes` sets cones on its widest ring's sphere: `count`, `length` and `base` in metres,
-spread evenly. A part's `light` is passed to paint.py.
+A lathe part's `radius` in metres replaces the icon's width, for an icon drawn fatter than the thing. A chain skins the model to joints that can swing it: see rigged(). A part's `slot` overrides its material (`any` parts default to `trim`). `spikes` sets cones on its widest ring's sphere: `count`, `length` and `base` in metres,
+spread evenly. A part's `light` and `shade` are passed to paint.py.
 
 Writes OUT_DIR/reference.glb (the icon projected flat onto every part, the colour layout `palette_cells.py`
 classifies) and OUT_DIR/model.glb (the same mesh with unwrapped UVs and blank textures for it to paint). Both are
@@ -53,6 +53,7 @@ FAIR = 0.03   # the widest neck in a turned run that is closed, in metres
 INK = 0.22    # a pixel darker than this at a seam is the painted line between sections, not the part's colour
 SEAM = 12     # rows either side of a seam whose ink is lifted
 SEAMS, SPANS = [], []   # where turned parts meet, and each run's rows and columns
+RIG = []   # a chain's joints in order, each where it turns, and the point its last joint ends at
 INSET = 0.7   # a turned part's colour comes from this share of its width: the side would otherwise take the ink outline
 
 
@@ -392,11 +393,15 @@ def tube(bm, path, radius, sides, closed):
     if not closed:
         bm.faces.new(rings[0][::-1])
         bm.faces.new(rings[-1])
+    return [v for ring in rings for v in ring]
 
 
 def chain(bm, part):
     """Oval links, each turned a quarter from the last, running on from the top of the part it hangs from, and a spiked
-    ball at the end. Links and ball are straight along the weapon's length, the flail swung out."""
+    ball at the end. Links and ball are straight along the weapon's length, the flail swung out. Each link and the ball
+    weigh wholly on its own joint, so the links stay rigid as they turn about the points where they hook; RIG keeps
+    where those joints go, for the armature."""
+    joint = bm.verts.layers.int.new('joint')
     rows = np.nonzero(masks[part['on']])[0]
     top = int(rows.min())
     xs = np.nonzero(masks[part['on']][top + 3])[0]
@@ -409,12 +414,17 @@ def chain(bm, part):
             a = 2 * math.pi * k / 10
             x, y = width / 2 * math.cos(a), length / 2 * math.sin(a)
             oval.append(centre + (Vector((x, y, 0)) if n % 2 else Vector((0, y, x))))
-        tube(bm, oval, wire, 4, True)
+        for v in tube(bm, oval, wire, 4, True):
+            v[joint] = n
+        RIG.append((f'link{n}', at + Vector((0, length * 0.8 * n + length * 0.08, 0))))
     r = part['ball']
     centre = at + Vector((0, length * 0.8 * (part['links'] + 0.3) + r * 0.8, 0))
     sphere = bmesh.ops.create_icosphere(bm, subdivisions=2, radius=r)
     bmesh.ops.translate(bm, verts=sphere['verts'], vec=centre)
-    spikes(bm, centre, r, part['spikes'])
+    for v in sphere['verts'] + spikes(bm, centre, r, part['spikes']):
+        v[joint] = part['links']
+    RIG.append(('ball', at + Vector((0, length * 0.8 * part['links'] + length * 0.08, 0))))
+    RIG.append(('end', centre + Vector((0, r, 0))))
 
 
 def string(bm, part):
@@ -506,7 +516,9 @@ for part in weapon['parts']:
     painted = None
     if part['shape'] in ('chain', 'string'):
         ys, xs = np.nonzero(masks[part['name']])
-        painted = (float(np.median(xs)), float(np.median(ys)))
+        light = pixels[ys, xs, :3].max(axis=1)   # a lit pixel of it, not the ink a median can land on
+        at = int(np.argsort(light)[int(len(light) * 0.85)])
+        painted = (float(xs[at]), float(ys[at]))
     for face in bm.faces:
         for loop in face.loops:   # project the icon flat: front and back both show it, as on the paper doll
             p = loop.vert.co
@@ -558,6 +570,42 @@ for obj in objects:
 bpy.ops.object.select_all(action='SELECT')
 bpy.ops.export_scene.gltf(filepath=str(out / 'reference.glb'), export_format='GLB', use_selection=True)
 
+def rigged():
+    """Skins the model to a chain's joints: `handle`, which everything but the chain weighs on and which spans the
+    weapon from the grip to where the chain hangs, then one joint per link and the ball, each pointing along the
+    chain (a joint's +Y). A weapon with no chain stays unskinned."""
+    if not RIG:
+        return
+    armature = bpy.data.objects.new('rig', bpy.data.armatures.new('rig'))
+    bpy.context.scene.collection.objects.link(armature)
+    bpy.ops.object.select_all(action='DESELECT')
+    armature.select_set(True)
+    bpy.context.view_layer.objects.active = armature
+    bpy.ops.object.mode_set(mode='EDIT')
+    parent = armature.data.edit_bones.new('handle')
+    parent.head, parent.tail = Vector(), RIG[0][1]
+    for (joint, at), (_, end) in zip(RIG, RIG[1:]):
+        bone = armature.data.edit_bones.new(joint)
+        bone.head, bone.tail, bone.parent = at, end, parent
+        parent = bone
+    bpy.ops.object.mode_set(mode='OBJECT')
+    for obj in objects:
+        if obj.name == 'chain':
+            owners = [v.value for v in obj.data.attributes['joint'].data]
+            for n, (joint, _) in enumerate(RIG[:-1]):
+                obj.vertex_groups.new(name=joint).add([i for i, owner in enumerate(owners) if owner == n], 1, 'REPLACE')
+        else:
+            obj.vertex_groups.new(name='handle').add(range(len(obj.data.vertices)), 1, 'REPLACE')
+        obj.modifiers.new('rig', 'ARMATURE').object = armature
+        obj.parent = armature
+    # The Engine admits a skin only through its animated import, which a GLB takes by having a clip: one that holds rest.
+    armature.animation_data_create().action = bpy.data.actions.new('rest')
+    for frame in (1, 2):
+        armature.pose.bones['handle'].keyframe_insert('location', frame=frame)
+
+
+rigged()
+
 # The painted model: the same part objects, each slot's parts sharing one material and one unwrapped UV layout
 # (so palette_cells can name regions by part), with a blank texture per slot for it to fill.
 for slot in ('metal', 'trim'):
@@ -592,7 +640,7 @@ def pieces(want):
 report = {'weapon': name, 'metresPerPixel': METRES, 'origin': ORIGIN,
           'pieces': {c: pieces(i) for c, i in (('steel', 1), ('brass', 2), ('leather', 3))},   # rows and pixels, top first
           'parts': {p['name']: {'slot': slot_of(p), 'seeds': seeds(masks[p['name']]),
-                                **({'light': p['light']} if 'light' in p else {})} for p in weapon['parts']},
+                                **{key: p[key] for key in ('light', 'shade') if key in p}} for p in weapon['parts']},
           'triangles': {o.name: sum(len(p.vertices) - 2 for p in o.data.polygons) for o in objects}}
 (out / 'build.json').write_text(json.dumps(report, indent=1) + '\n')
 print('BUILT', json.dumps(report))

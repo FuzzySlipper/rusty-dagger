@@ -9,7 +9,7 @@ constrained to its own object and harvesting a ramp of `--steps` colours from it
 --cell metres across takes one flat colour from that ramp by the icon's brightness there, a soft light and an
 ordered dither. The defaults are the set's `crunch` in authoring/specs/weapons/weapons.json (Patch chose 2 mm
 cells); the options exist to compare treatments. A part's `light` in the spec overrides --light: a round part the
-flat icon says little about (a club's ball) takes more of the soft light. Writes OUT_DIR/model.glb (build.py's
+flat icon says little about (a club's ball) takes more of the soft light, and its `shade` keeps that share of its ramp. Writes OUT_DIR/model.glb (build.py's
 model with the painted `metal` and `trim` textures, sampled nearest, matte) and palette_cells' report.
 """
 import argparse
@@ -45,7 +45,8 @@ def main():
         'cell_size': args.cell,
         'targets': {slot: {'size': args.size, 'out': f'{slot}.png'} for slot in {p['slot'] for p in parts.values()}},
         'regions': [{'name': name, 'objects': [name], 'generator': p['seeds'], 'sprite': p['seeds'], 'steps': args.steps,
-                     'light': {'weight': light(name), 'generator_weight': 1 - light(name), 'dither': args.dither}}
+                     'light': {'weight': light(name), 'generator_weight': 1 - light(name), 'dither': args.dither},
+                     **({'shade': p['shade']} if 'shade' in p else {})}
                     for name, p in parts.items()],
         # The broad face (+X after import) lit from a little toward the tip (+Y) and the up edge (+Z).
         'light': {'direction': [1, 0.3, 0.6], 'weight': args.light, 'generator_weight': 1 - args.light,
