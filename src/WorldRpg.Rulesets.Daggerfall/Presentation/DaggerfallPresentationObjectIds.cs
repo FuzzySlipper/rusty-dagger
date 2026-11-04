@@ -23,7 +23,14 @@ internal static class DaggerfallPresentationObjectIds
     private const ulong TerrainBase = 1UL << 48;
     private const ulong NatureBase = 1UL << 49;
     private const ulong LocationBase = 1UL << 50;
-    internal const ulong TransientVisualFloor = 1UL << 52;
+    internal const ulong TransientVisualFloor = 3UL << 51;
+    /// <summary>
+    /// The held arms and what they carry, numbered once for the whole product rather than by each site's appearance: the
+    /// Engine keeps one animation instance per object, and one site's or session's arms are still retiring when the next's
+    /// are drawn.
+    /// </summary>
+    internal const ulong HeldVisualFloor = 1UL << 52;
+    private static ulong nextHeld = TransientVisualFloor - 1;
     internal const ulong TransientVisualFirst = Maximum;
 
     /// <summary>Map pixel coordinates, wider than the world map, that terrain and nature identities carry.</summary>
@@ -82,6 +89,9 @@ internal static class DaggerfallPresentationObjectIds
     }
 
     /// <summary>The next identity counted down from <paramref name="next"/> without passing <paramref name="floor"/>.</summary>
+    /// <summary>The next held object.</summary>
+    internal static ulong TakeHeld() => Take(ref nextHeld, HeldVisualFloor, "held visual");
+
     internal static ulong Take(ref ulong next, ulong floor, string band)
     {
         if (next < floor) throw new InvalidOperationException($"Presentation {band} identities are exhausted.");

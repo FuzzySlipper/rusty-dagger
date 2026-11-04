@@ -80,6 +80,7 @@ internal sealed partial class DaggerfallSiteAppearance
 
     private void CreateHeld(NormalizedClassicWeapon weapon)
     {
+        RetireCastArms();
         if (heldViewed || Drawing(weapon) is not { } drawing) return;
         held = NewHeld(drawing);
         heldShowing = true;
@@ -89,7 +90,8 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         var chosen = heldArt!.Value;
         return new DaggerfallHeldViewmodel(chosen.Engine, chosen.Art, drawing, chosen.Metals.GetValueOrDefault(drawing.Metal),
-            drawing.ShieldMetal is { } metal ? chosen.Metals.GetValueOrDefault(metal) : null, chosen.Style, NextVisualEntityId(), NextVisualEntityId(), NextVisualEntityId());
+            drawing.ShieldMetal is { } metal ? chosen.Metals.GetValueOrDefault(metal) : null, chosen.Style,
+            DaggerfallPresentationObjectIds.TakeHeld(), DaggerfallPresentationObjectIds.TakeHeld(), DaggerfallPresentationObjectIds.TakeHeld());
     }
 
     // What draws the wielded weapon: the item the hands hold chooses, its classic visual otherwise.

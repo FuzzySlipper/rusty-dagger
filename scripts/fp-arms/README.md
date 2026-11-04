@@ -54,20 +54,24 @@ chained attack is a new clip fading in over the recovery. An attack a family has
 | `longsword` | `weapon.longblade`, `weapon.axe`, `weapon.flail`, `weapon.warhammer` | `FPP_Longsword`: Attack_R, _L, _D, _F | AttackHeavy_D | Magic | both |
 | `sns` | `weapon.mace` | `FPP_SnS` (sword and shield; the shield hand rests out of view): Attack_RD, _LU, _RU, _F | AttackHeavyU | Magic1 | one |
 | `halberd` | `weapon.staff` | `FPP_Halberd`: Attack_R, _LD, _D, _F | AttackHeavy_R | Magic | both |
+| `unarmed` | `weapon.unarmed` | `CHANM_FPArms_Unarmed_Punch`, then the same `.mirrored`, turn about | the punch, held drawn back | `FPP_sns_Magic1` | both |
 
 `fastA` to `fastD` are the four fast attacks in the order a chain cycles them, so a cut from one side is followed by one
 from the other, then a downward blow and a thrust. Every plain clip starts and ends at its family's idle, so any can
 follow any. A chain cuts a clip's long tail at its recovery. `powerIn` plays a heavy clip's Start, `powerHold` holds it and
 `powerOut` plays its End; each family's heavy clip was chosen for meeting its own hold. The dagger's Start ends far from
 its hold clip, a plain idle, so its hold stays on Start's last frame. The halberd's End waits still for over a second
-before it swings, so its `start` mark skips the wait. `kick` plays the family's Kick, whose strike mark is half way along
-the arms' path; the clips move only the arms. The bow and the werecreature have no fitting clip and keep their sprites.
+before it swings, so its `start` mark skips the wait. `kick` plays the family's Kick, whose strike mark is where a foot reaches furthest. The bow and the werecreature have no
+fitting clip and keep their sprites.
+
+The pack has one punch, so a clip name ending `.mirrored` bakes it the other way round for the second fist. The bare hands
+borrow the sword-and-shield set's guard, kick and cast.
 
 `cast` is the left hand's, so every family lists it in `leftHand` and the weapon stays in the right hand. The rules time
 it, and the spell leaves at the clip's strike mark, the palm thrown forward. Until then the element's missile burns on the
 palm: `DaggerfallSiteAppearance` draws the same sprite the spell flies as, in the art chosen, on the viewmodel layer where
-`DaggerfallHeldViewmodel.CastPalm` samples the left hand in the clip. With no family drawn (bare hands, or the weapon
-sheathed) the element's classic casting hand draws instead.
+`DaggerfallHeldViewmodel.CastPalm` samples the left hand in the clip. With the weapon sheathed the `unarmed` arms come up
+for the cast and go again. With no family drawn (a bow, a beast's claws) the element's classic casting hand draws instead.
 
 A shield goes on the left hand with an Engine joint attachment, so the renderer carries it and nothing polls the joint.
 The arms skeleton's root is scaled 0.01 and its joints are in centimetres, so a `seat` is in centimetres with `scale` 100.
@@ -100,9 +104,12 @@ scripts/fp-arms/build.sh
 `rusty asset check` and packs `local/first-person.rpak`. A clip is named by its FBX file stem; add one to the definition
 and build again. `build.py`:
 
+- grows a low leg and boot on each of the skeleton's legs and joins them to the arms' mesh: the pack has arms only, and a
+  kick needs something to kick with. Rings run down the bones with small plain textures, so none of it is the pack's art;
 - imports the male leather arms (LOD0) with their medium colour and normal maps at 1024 px; the retro arms carry the
   colour map alone at 256 px, drawn nearest, as Daggerfall draws its world;
-- bakes each clip as its own camera bone sees it: every frame the whole body is moved so the camera bone sits at the
+- bakes each clip as its own camera bone sees it (the pack's own clips have only `camera_mount`, with other axes, and take
+  the arms' skeleton as it is): every frame the whole body is moved so the camera bone sits at the
   origin looking down the view, so the arms are placed with their origin at the game's eye and the clip carries only
   what moves in view. The clips' skeleton (root, camera and weapon bones) differs from the arms' (no root,
   `camera_mount`, `weapon_mount`) but shares its rest joints, so each bone takes the clip's motion from its own rest;
@@ -135,7 +142,6 @@ place marks.
 - The other arm sets (female leather, male and female cloth, male chainmail) are not built: a set chosen by the
   player's gender and armour needs its own bake where its skeleton's rest differs.
 - The bows draw their sprites: there are no clips for them yet, so their models wait for those.
-- Casting with bare hands or a sheathed weapon draws the classic hand: no family draws them yet (#10585).
 
 ## Weapon models
 

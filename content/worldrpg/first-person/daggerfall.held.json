@@ -479,8 +479,8 @@
           "clip": "FPP_Longs_Kick",
           "marks": {
             "start": 0,
-            "strike": 0.181,
-            "recover": 0.395,
+            "strike": 0.234,
+            "recover": 0.432,
             "end": 0.894
           },
           "fade": 0.1
@@ -605,8 +605,8 @@
           "clip": "FPP_sns_Kick",
           "marks": {
             "start": 0,
-            "strike": 0.301,
-            "recover": 0.472,
+            "strike": 0.269,
+            "recover": 0.45,
             "end": 0.871
           },
           "fade": 0.1
@@ -732,14 +732,90 @@
           "clip": "FPP_Halb_Kick",
           "marks": {
             "start": 0,
-            "strike": 0.385,
-            "recover": 0.538,
+            "strike": 0.281,
+            "recover": 0.466,
             "end": 0.896
           },
           "fade": 0.1
         }
       },
       "class": "blunt-weapon"
+    },
+    "unarmed": {
+      "weapons": [
+        "weapon.unarmed"
+      ],
+      "twoHanded": true,
+      "class": "hand-to-hand",
+      "look": {
+        "model": null,
+        "grip": [0, 0, 0],
+        "hold": [6.98, -87.91, 35.78]
+      },
+      "idle": {
+        "clip": "CHANM_FPArms_Unarmed_Idle",
+        "seconds": 2.8167
+      },
+      "powerHold": {
+        "clip": "CHANM_FPArms_Unarmed_Punch",
+        "at": 0.13
+      },
+      "guard": {
+        "raise": {
+          "clip": "FPP_sns_SwordBlockStart",
+          "seconds": 0.3
+        },
+        "hold": {
+          "clip": "FPP_sns_SwordBlockLoop",
+          "seconds": 4.6333
+        },
+        "lower": {
+          "clip": "FPP_sns_SwordBlockStop",
+          "seconds": 0.35
+        }
+      },
+      "strikes": {
+        "fastA": {
+          "clip": "CHANM_FPArms_Unarmed_Punch",
+          "marks": { "start": 0, "strike": 0.203, "recover": 0.416, "end": 0.913 },
+          "fade": 0.1
+        },
+        "fastB": {
+          "clip": "CHANM_FPArms_Unarmed_Punch.mirrored",
+          "marks": { "start": 0, "strike": 0.203, "recover": 0.416, "end": 0.913 },
+          "fade": 0.1
+        },
+        "fastC": {
+          "clip": "CHANM_FPArms_Unarmed_Punch",
+          "marks": { "start": 0, "strike": 0.203, "recover": 0.416, "end": 0.913 },
+          "fade": 0.1
+        },
+        "fastD": {
+          "clip": "CHANM_FPArms_Unarmed_Punch.mirrored",
+          "marks": { "start": 0, "strike": 0.203, "recover": 0.416, "end": 0.913 },
+          "fade": 0.1
+        },
+        "powerIn": {
+          "clip": "CHANM_FPArms_Unarmed_Punch",
+          "marks": { "start": 0, "strike": 0.13, "recover": 0.13, "end": 0.13 },
+          "fade": 0.1
+        },
+        "powerOut": {
+          "clip": "CHANM_FPArms_Unarmed_Punch",
+          "marks": { "start": 0.13, "strike": 0.203, "recover": 0.416, "end": 0.913 },
+          "fade": 0.1
+        },
+        "kick": {
+          "clip": "FPP_sns_Kick",
+          "marks": { "start": 0, "strike": 0.269, "recover": 0.453, "end": 0.882 },
+          "fade": 0.1
+        },
+        "cast": {
+          "clip": "FPP_sns_Magic1",
+          "marks": { "start": 0, "strike": 0.138, "recover": 0.182, "end": 0.872 },
+          "fade": 0.1
+        }
+      }
     }
   },
   "shield": {
