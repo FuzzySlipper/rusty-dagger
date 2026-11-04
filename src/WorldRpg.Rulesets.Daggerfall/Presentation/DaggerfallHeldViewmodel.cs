@@ -192,6 +192,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     private void StepChain(float seconds)
     {
         if (chain is null) return;
+        chain.Swing(strike is { } playing && playing.Seconds <= playing.Timing.Duration);
         chainSeconds += seconds;
         if (retro && !handMoved && chainSeconds < RetroChainSeconds)
         {

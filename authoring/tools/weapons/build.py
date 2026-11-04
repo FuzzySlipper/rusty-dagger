@@ -423,7 +423,7 @@ def chain(bm, part):
     bmesh.ops.translate(bm, verts=sphere['verts'], vec=centre)
     for v in sphere['verts'] + spikes(bm, centre, r, part['spikes']):
         v[joint] = part['links']
-    RIG.append(('ball', at + Vector((0, length * 0.8 * part['links'] + length * 0.08, 0))))
+    RIG.append(('ball', centre))   # at its centre, so a sphere on the joint collides as the ball does
     RIG.append(('end', centre + Vector((0, r, 0))))
 
 
@@ -582,8 +582,9 @@ def rigged():
     armature.select_set(True)
     bpy.context.view_layer.objects.active = armature
     bpy.ops.object.mode_set(mode='EDIT')
-    parent = armature.data.edit_bones.new('handle')
-    parent.head, parent.tail = Vector(), RIG[0][1]
+    parent = armature.data.edit_bones.new('handle')   # spans the whole haft, which the ball collides with
+    butt = max(rows_of([p['name']])[1] for p in weapon['parts'] if p['shape'] == 'lathe')
+    parent.head, parent.tail = place(ORIGIN[0], butt, 0), RIG[0][1]
     for (joint, at), (_, end) in zip(RIG, RIG[1:]):
         bone = armature.data.edit_bones.new(joint)
         bone.head, bone.tail, bone.parent = at, end, parent
