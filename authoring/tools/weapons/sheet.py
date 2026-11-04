@@ -101,7 +101,7 @@ for i, frame in enumerate((1, 13, 25)):
     bone = rig.pose.bones['nock']
     # The rest the arrow lies on, from the joint's direction when it was built: it points from the string to the rest.
     head = rig.matrix_world @ bone.head
-    aim = (Vector((-0.016, head.y, 0)) - head).normalized()
+    aim = (Vector((math.copysign(0.016, -head.z), head.y, 0)) - head).normalized()
     for root in roots:
         root.rotation_mode = 'QUATERNION'
         root.rotation_quaternion = Vector((0, 1, 0)).rotation_difference(aim)
