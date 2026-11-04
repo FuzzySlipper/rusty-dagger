@@ -1,5 +1,6 @@
 using System.Numerics;
 using Rusty.Engine;
+using WorldRpg.Kit.Inventory;
 using Rusty.Engine.Entities;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
@@ -25,6 +26,14 @@ internal sealed partial class DaggerfallSession
     private readonly DaggerfallActivationPresentation _activationPresentation = new();
     private DaggerfallDialogueService? _dialogue;
 
+    // A wielded item's template and metal, which choose how the 3D first-person art draws it.
+    private (int? Template, string Metal) HeldItem(UniqueInventoryItem item)
+    {
+        DaggerfallItemDefinition definition = _definitions.RequireItem(new DaggerfallItemId(item.Definition.Value));
+        return (_definitions.SourceTemplateFor(definition)?.Index,
+            _inventoryUi.EquippedMetadata(item.EntityId)?.Material ?? definition.Weapon?.Material ?? DaggerfallHeldDrawing.Steel);
+    }
+
     /// <summary>Binds live session policy once whenever a site appearance is created.</summary>
     private void ConfigureSiteAppearance(DaggerfallSiteAppearance appearance)
     {
@@ -32,7 +41,7 @@ internal sealed partial class DaggerfallSession
         appearance.UsePlayerVampireGender(() => State.RacialOverrides.Current?.IsVampire == true ? State.Character.Identity.Gender == DaggerfallCharacterGender.Female : null);
         appearance.UsePlayerBeastForm(() => State.RacialOverrides.Current is { State.BeastForm: true } form ? form.State.Kind : null);
         if (_tuning.Viewmodel.Style != DaggerfallViewmodelStyle.Classic && _composition.HeldArt is { } art)
-            appearance.UseHeldArt(_engine, art, _tuning.Viewmodel.Style);
+            appearance.UseHeldArt(_engine, art, _tuning.Viewmodel.Style, _composition.ArtReplacements?.Tints ?? new Dictionary<string, DaggerfallDyeTint>(), HeldItem);
         if (_composition.ArtReplacements is { } refreshed)
             appearance.UseEffectArt(_engine.Presentation, _engine.Animation, refreshed, () => DrawnArt is not null);
     }
