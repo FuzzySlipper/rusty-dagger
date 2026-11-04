@@ -268,17 +268,20 @@ def flanges(bm, vert, rows, spec):
     for k in range(spec['count']):
         a = 2 * math.pi * (k + 0.5) / spec['count']
         c, n = math.cos(a), math.sin(a)
-        faces = []
-        for side in (half, -half):
-            outer = [vert(y, cx, r * c - side * n, r * n + side * c, painted) for y, cx, r, _, painted in rows]
-            inner = [vert(y, cx, core * 0.9 * c - side * n, core * 0.9 * n + side * c, painted)
-                     for y, cx, _, _, painted in (rows[-1], rows[0])]
-            faces.append(outer + inner)
-        bm.faces.new(faces[0])
-        bm.faces.new(faces[1][::-1])
-        for i in range(len(faces[0])):
-            j = (i + 1) % len(faces[0])
-            bm.faces.new([faces[0][j], faces[0][i], faces[1][i], faces[1][j]])
+        sides = []
+        for side in (half, -half):   # a strip of quads per face: one polygon's straight edges triangulate degenerate
+            sides.append([(vert(y, cx, r * c - side * n, r * n + side * c, painted),
+                           vert(y, cx, core * 0.9 * c - side * n, core * 0.9 * n + side * c, painted))
+                          for y, cx, r, _, painted in rows])
+        front, back = sides
+        for (a0, b0), (a1, b1) in zip(front, front[1:]):
+            bm.faces.new([a0, a1, b1, b0])
+        for (a0, b0), (a1, b1) in zip(back, back[1:]):
+            bm.faces.new([b0, b1, a1, a0])
+        for (f0, _), (f1, _), (k0, _), (k1, _) in zip(front, front[1:], back, back[1:]):
+            bm.faces.new([f1, f0, k0, k1])   # the outer edge
+        bm.faces.new([front[0][0], front[0][1], back[0][1], back[0][0]])
+        bm.faces.new([back[-1][0], back[-1][1], front[-1][1], front[-1][0]])
 
 
 def spikes(bm, centre, r, spec):
