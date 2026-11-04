@@ -216,6 +216,7 @@
       "weapons": [
         "weapon.longblade",
         "weapon.axe",
+        "weapon.flail",
         "weapon.warhammer"
       ],
       "look": {
@@ -293,8 +294,7 @@
     },
     "sns": {
       "weapons": [
-        "weapon.mace",
-        "weapon.flail"
+        "weapon.mace"
       ],
       "look": {
         "model": null,

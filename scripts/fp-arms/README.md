@@ -44,15 +44,15 @@ phases on the world time the sprite reads. A strike a family has no clip for sho
 | Family | Weapons | Clips | Hands |
 |---|---|---|---|
 | `dagger` | `weapon.dagger.steel` | `FPP_Dagger`: strikeDown AttackD, strikeDownLeft AttackL, strikeLeft AttackR, strikeRight AttackLSlash, strikeDownRight AttackDHook, strikeUp AttackF; idle `FPP_Dag_Idle` | one |
-| `longsword` | `weapon.longblade`, `weapon.axe`, `weapon.warhammer` | `FPP_Longsword`: Attack_D, _RD, _R, _L, _LD, _F; idle Longs_Idle | both |
-| `sns` | `weapon.mace`, `weapon.flail` | `FPP_SnS` (sword and shield; the shield hand rests out of view): AttackHeavyU, Attack_RD, _RU, _LU, AttackHeavyL, Attack_F; idle sns_Idle | one |
+| `longsword` | `weapon.longblade`, `weapon.axe`, `weapon.flail`, `weapon.warhammer` | `FPP_Longsword`: Attack_D, _RD, _R, _L, _LD, _F; idle Longs_Idle | both |
+| `sns` | `weapon.mace` | `FPP_SnS` (sword and shield; the shield hand rests out of view): AttackHeavyU, Attack_RD, _RU, _LU, AttackHeavyL, Attack_F; idle sns_Idle | one |
 | `halberd` | `weapon.staff` | `FPP_Halberd`: Attack_D, _RDfast, _R, AttackHeavy_L, Attack_LD, _F; idle Halb_Idle | both |
 
 A strike's clip was chosen by which way its blade moves where it is fastest: a classic `strikeLeft` swings toward the
 left, so it plays the clip that cuts from the right. The bow, hand-to-hand and the werecreature have no fitting clip and
-keep their sprites (the pack's unarmed punch may serve the fist later). The mace and flail are one-handed in
-Daggerfall, so they swing the sword-and-shield clips; the axe and warhammer visuals also draw the two-handed battle axe
-and warhammer, so they keep the longsword's. The sword-and-shield idle holds the weapon upright beside the face, so a
+keep their sprites (the pack's unarmed punch may serve the fist later). The mace is one-handed in Daggerfall, so it
+swings the sword-and-shield clips; the flail and warhammer are two-handed and keep the longsword's, as does the axe,
+whose visual draws the two-handed war axe too. The sword-and-shield idle holds the weapon upright beside the face, so a
 mace's head sits above the frame at rest and comes into view as it swings.
 
 ## Building it
