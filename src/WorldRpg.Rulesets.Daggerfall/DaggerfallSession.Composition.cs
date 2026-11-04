@@ -339,6 +339,9 @@ internal sealed partial class DaggerfallSession
             _stamina.Refresh(actors.Player.Stats);
             _harmPresentation = seams.HarmPresentation;
             _touch = seams.TouchDelivery(new(_contact, _spatial, () => _sites?.CharacterEnvironment(assembled.PlayerControl.Motion)));
+            ActorNavigationCoordinator navigation = new(engine.Spatial, _spatial.Session, actors.Store, _spatial.CurrentController,
+                actor => _sites.CharacterEnvironment(actor.Actor.Store.Get(actor.Actor.Entity, EngineComponentTypes.CharacterMotion)));
+            _reactions = new ActorReactions(navigation);
             _combat = new DaggerCombatRules(_random, actors, equipmentCoordinator, actorInventories.InventoryFor, itemInstances, definitions, authored, targeting, use => skillUses.Record(use),
                 actorInventories.EquipmentFor, _itemCondition, combatRules,
                 () => assembled.PlayerControl.Position, () => character, DeliverWeaponPoison, () => _heldEnchantments.AttackChanceModifier, TransformWithWabbajack, effects.MagicDefenseFor,
@@ -353,7 +356,9 @@ internal sealed partial class DaggerfallSession
                     ? new DaggerfallAdrenalineRush(_heldEnchantments.Talents.AdrenalineRush) : null,
                 _contact, StrikePose, () => _sites?.CharacterEnvironment(assembled.PlayerControl.Motion),
                 // Only the player's own controller reports a velocity; site actors step between poses.
-                actor => actor == actors.Player.DurableId ? assembled.PlayerControl.Motion.ControlledVelocity : Vector3.Zero);
+                actor => actor == actors.Player.DurableId ? assembled.PlayerControl.Motion.ControlledVelocity : Vector3.Zero,
+                new DaggerfallStrikes(_tuning.Attacks.Strike, actors, _reactions, () => assembled.PlayerControl.Position,
+                    id => DefinitionsByActor.TryGetValue(id, out DaggerfallActorDefinition? struck) ? struck.Weight : null, id => EnemyBehavior.NavigationMode(id)));
             DaggerfallSeamInputs SeamInputs() => new(definitions, () => character, _random,
                 id => id == actors.Player.DurableId ? equipmentCoordinator.Read() : actorInventories.EquipmentFor(id).Read(),
                 id => id == actors.Player.DurableId ? actors.Player.Stats : actors.TryGet(id, out ActorState actor) ? actor.Stats : null,
@@ -363,13 +368,7 @@ internal sealed partial class DaggerfallSession
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
                 engine.Perception,
                 _spatial,
-                new ActorNavigationCoordinator(
-                    engine.Spatial,
-                    _spatial.Session,
-                    actors.Store,
-                    _spatial.CurrentController,
-                    actor => _sites.CharacterEnvironment(
-                        actor.Actor.Store.Get(actor.Actor.Entity, EngineComponentTypes.CharacterMotion))),
+                navigation,
                 actors,
                 kit.Attacks,
                 tuning.EnemyBehavior,
@@ -377,7 +376,7 @@ internal sealed partial class DaggerfallSession
                 recordSkillUse: use => skillUses.Record(use),
                 random: _random, motorContext: BuildEnemyMotorContext,
                 isPlayerAllied: id => EffectiveFoeTeam(id) == "player-ally",
-                selectAllyTarget: SelectAllyTarget, controlRestrictions: effects.ControlsFor,
+                selectAllyTarget: SelectAllyTarget, controlRestrictions: effects.ControlsFor, reactions: _reactions,
                 movementPolicy: id => DaggerfallEnemyBehaviorModule.PolicyFor(
                     id,
                     authored,

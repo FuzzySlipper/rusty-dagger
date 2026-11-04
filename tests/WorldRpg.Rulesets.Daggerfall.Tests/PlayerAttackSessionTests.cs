@@ -765,6 +765,33 @@ public sealed class PlayerAttackSessionTests
         Assert.Null(session.State.Actors.Player.Attack.Pending);
     }
 
+    [Fact]
+    public void A_landed_blow_catches_world_time_for_a_step_then_lets_it_run()
+    {
+        List<string> releases = [];
+        (DaggerfallSession session, AppearanceFake _, PerceptionFake _) = VisibleEnemySession(releases, distance: 5d);
+        using DaggerfallSession disposable = session;
+        session.State.WeaponDrawn = true;
+        session.Touches(2000);
+        session.State.Kit.Rules.RegisterAction(session.DefinitionsByActor[1].ActionId!, new TheBlowItself());
+        Track health = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health"));
+        health.Maximum.BaseValue = 1000;
+        health.SetCurrent(1000);
+
+        ulong step = 1;
+        session.Update(new ProductUpdate(OuterUpdate(step++), AttackTap));
+        int stopped = 0;
+        for (int index = 0; index < 90; index++)
+        {
+            session.Update(new ProductUpdate(OuterUpdate(step++), []));
+            if (session.HitStopped) stopped++;
+        }
+
+        Assert.True(health.Current < 1000);
+        Assert.Equal(DaggerfallTuning.Defaults.Attacks.Strike.HitStopSteps, stopped);
+        Assert.False(session.HitStopped);
+    }
+
     /// <summary>A real click or a real hold of one blow on the enemy: what it took off the enemy and the player's stamina.</summary>
     private static (double Damage, double Stamina) MeasuredBlow(bool power)
     {

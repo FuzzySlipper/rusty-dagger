@@ -181,11 +181,7 @@ public sealed class ActorNavigationCoordinator
             ExternalImpulse: Vector3.Zero,
             request.StepSeconds,
             checked(motion.LastCommandSequence + 1));
-        // Navigation/actor poses are feet; the Engine character proposal takes a capsule center.
-        // Keep that projection local so switching movement medium never changes the actor's origin.
-        CharacterShapeConfig shape = _characterControllerConfig.Shape;
-        float height = motion.Stance == CharacterStance.Crouched ? shape.CrouchedHeight : shape.StandingHeight;
-        Vector3 centerOffset = Vector3.UnitY * (height * .5f + shape.ContactSkin + shape.ClearancePadding);
+        Vector3 centerOffset = CenterOffset(motion);
         CharacterStepReceipt accepted;
         try
         {
@@ -215,6 +211,60 @@ public sealed class ActorNavigationCoordinator
             ? NavigationPathOutcome.StartBlocked
             : NavigationPathOutcome.NoPath;
         return CharacterReceipt(outcome, position, 0);
+    }
+
+    /// <summary>
+    /// One step of an actor thrown at <paramref name="velocity"/>, or falling once it stops. The Engine
+    /// character controller owns collision and gravity; a flying actor drifts without falling. Null when
+    /// the actor is wedged and cannot move.
+    /// </summary>
+    public CharacterStepReceipt? Throw(ActorState actor, Vector3 velocity, ActorNavigationMode mode, float stepSeconds)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        if (_environmentProvider is null)
+            throw new InvalidOperationException("A thrown actor requires an admitted environment provider.");
+        CharacterStepEnvironment environment = _environmentProvider(actor);
+        ActorPose before = actor.Pose;
+        CharacterMotion motion = actor.Actor.Store.Get(actor.Actor.Entity, EngineComponentTypes.CharacterMotion) with { ExternalVelocity = velocity };
+        CharacterMovementRequest movement = mode == ActorNavigationMode.Flying
+            ? new(CharacterMovementMode.Flying, 0f, 1f, 1f, Drag: 0f, Minimum: Vector3.Zero, Maximum: Vector3.Zero, GravityScale: 0f, Buoyancy: 0f, ClimbReach: 0f)
+            : default;
+        CharacterControllerCommand command = new(movement, Vector2.Zero, before.HeadingYawRadians, JumpPressed: false, JumpHeld: false,
+            CrouchRequested: false, ExternalVelocity: Vector3.Zero, ExternalImpulse: Vector3.Zero, stepSeconds, checked(motion.LastCommandSequence + 1));
+        Vector3 centerOffset = CenterOffset(motion);
+        CharacterStepReceipt accepted;
+        try
+        {
+            accepted = _spatial.ProposeCharacterStep(new CharacterStepRequest(
+                _session, before.Position.ToVector() + centerOffset, motion, environment.Support,
+                environment.Obstacles, environment.MeshInstances, _characterControllerConfig, command));
+        }
+        catch (EngineCallException failure) when (IsUnresolvedPenetration(failure))
+        {
+            if (_reportedPenetrations.Add(actor.Actor.Entity))
+                Console.Error.WriteLine($"Actor {actor.DurableId} stays at {before.Position}: {failure.Message}");
+            return null;
+        }
+        actor.Actor.Store.Set(actor.Actor.Entity, EngineComponentTypes.CharacterMotion, accepted.Motion);
+        actor.ApplyPose(new ActorPose(WorldPoint.From(accepted.Transform.Translation - centerOffset), before.HeadingYawRadians));
+        return accepted;
+    }
+
+    /// <summary>Ends a throw: what the blow gave the actor stops carrying it.</summary>
+    public void Settle(ActorState actor)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        CharacterMotion motion = actor.Actor.Store.Get(actor.Actor.Entity, EngineComponentTypes.CharacterMotion);
+        actor.Actor.Store.Set(actor.Actor.Entity, EngineComponentTypes.CharacterMotion, motion with { ExternalVelocity = Vector3.Zero, ControlledVelocity = Vector3.Zero });
+    }
+
+    // Navigation/actor poses are feet; the Engine character proposal takes a capsule center.
+    // Keep that projection local so switching movement medium never changes the actor's origin.
+    private Vector3 CenterOffset(CharacterMotion motion)
+    {
+        CharacterShapeConfig shape = _characterControllerConfig.Shape;
+        float height = motion.Stance == CharacterStance.Crouched ? shape.CrouchedHeight : shape.StandingHeight;
+        return Vector3.UnitY * (height * .5f + shape.ContactSkin + shape.ClearancePadding);
     }
 
     private static bool IsUnresolvedPenetration(EngineCallException failure)

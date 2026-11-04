@@ -20,6 +20,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 /// </summary>
 internal sealed class DaggerfallEnemyBehaviorModule
 {
+    private readonly ActorReactions? _reactions;
     private readonly Func<long, PursuitTarget?>? _selectTarget;
     private readonly Func<long, bool> _questRestrained;
     private readonly ActorsState _actors;
@@ -69,8 +70,9 @@ internal sealed class DaggerfallEnemyBehaviorModule
         Func<long, PursuitPolicy>? movementPolicy = null,
         Func<long, bool>? canOpenDoors = null,
         Func<ActorState, bool>? openBlockedDoor = null, Func<long, PursuitTarget?>? selectTarget = null, Func<long, bool>? questRestrained = null, Func<long, long, double, (double Reach, bool Ranged)?>? attackAtDistance = null,
-        IDaggerfallEnemyEngagement? engagement = null)
+        IDaggerfallEnemyEngagement? engagement = null, ActorReactions? reactions = null)
     {
+        _reactions = reactions;
         _engagement = engagement ?? new DaggerfallContactEngagement(DaggerfallContactTuning.Default);
         _random = random;
         _motorContext = motorContext;
@@ -176,6 +178,9 @@ internal sealed class DaggerfallEnemyBehaviorModule
     /// policy mutates. The session uses this to feed the next admitted context;
     /// it does not keep a second hostility cache.
     /// </summary>
+    /// <summary>How an actor moves, which is how a blow throws it.</summary>
+    internal ActorNavigationMode NavigationMode(long actorId) => _movementPolicy(actorId).NavigationMode;
+
     internal bool IsPacified(long actorId) =>
         _actors.TryGet(actorId, out ActorState actor) && (Senses(actor).Pacified || _questRestrained(actorId));
 
@@ -260,7 +265,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
                 _lastSources.Remove(actor.DurableId);
                 continue;
             }
-            if (!actor.IsDefeated && _controlRestrictions(actor.DurableId).Movement)
+            if (!actor.IsDefeated && (_controlRestrictions(actor.DurableId).Movement || _reactions?.Holds(actor.DurableId) == true))
             {
                 var restrictedPrevious = actor.Pursuit.TransitionTo(PursuitState.Idle);
                 _combat.InterruptPendingAttack(actor.DurableId, generation);

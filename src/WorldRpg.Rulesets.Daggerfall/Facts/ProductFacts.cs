@@ -91,6 +91,8 @@ internal sealed record AttackHitFact(long AttackerId, long TargetId, int Calcula
     /// <summary>The target's protection took the whole blow: it connected but cost no health.</summary>
     internal bool FullyAbsorbed => Mitigated.Absorbed > 0 && ActualHealthLost <= 0d;
 }
+/// <summary>A player's blow landed on a body: what it did to it, and whether it was one of the heavy ones.</summary>
+internal sealed record ActorStruckFact(long TargetId, DaggerfallStrikeReaction Reaction, bool Heavy, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
 /// <summary>The damage a target's mitigation took off one connected blow: deflected aside and absorbed by its protection.</summary>
 internal readonly record struct DaggerfallHarmMitigation(int Deflected, int Absorbed);
 /// <summary>

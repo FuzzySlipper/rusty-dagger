@@ -15,10 +15,13 @@ public sealed class ActionDrivenTime(IGameplayTimeService time)
 
     public void Select(bool enabled) => Enabled = enabled;
 
-    /// <summary>The product decides whether movement, a live action, or presentation needs time.</summary>
-    public void Update(bool active)
+    /// <summary>
+    /// The product decides whether movement, a live action, or presentation needs time, and whether
+    /// that time runs slowed, as a heavy blow slows it for an instant.
+    /// </summary>
+    public void Update(bool active, double slowedTo = 1d)
     {
-        double rate = !Enabled || active ? 1d : 0d;
+        double rate = !Enabled || active ? slowedTo : 0d;
         if (_selectedRate == rate) return;
         time.SetRate(rate);
         _selectedRate = rate;

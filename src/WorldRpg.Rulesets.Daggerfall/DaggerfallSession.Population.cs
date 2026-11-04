@@ -185,6 +185,7 @@ internal sealed partial class DaggerfallSession
             }
 
             actor.Wander.MarkLoaded();
+            if (_reactions.Holds(actor.DurableId)) continue;
             _ = _enemyBehavior.UpdateCivilian(actor, PopulationWanderPolicy, simulationStep, deltaSeconds);
         }
     }

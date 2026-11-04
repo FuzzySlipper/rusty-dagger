@@ -38,6 +38,8 @@ public sealed class FirstPersonCameraSystem : IDisposable
     private readonly PlayerControlState _player;
     private readonly FirstPersonCameraTuning _tuning;
     private bool _disposed;
+    private double _punchPitchDegrees;
+    private double _punchYawDegrees;
 
     public FirstPersonCameraSystem(
         ICameraViewService cameraView,
@@ -79,6 +81,21 @@ public sealed class FirstPersonCameraSystem : IDisposable
         _cameraView.UpdateCamera(new CameraUpdateRequest(_camera, Descriptor(_player, eyeHeightOffset)));
     }
 
+    /// <summary>Knocks the view by these angles, on top of the look. The player's aim never moves.</summary>
+    public void Punch(double pitchDegrees, double yawDegrees)
+    {
+        _punchPitchDegrees += pitchDegrees;
+        _punchYawDegrees += yawDegrees;
+    }
+
+    /// <summary>Lets a punch ease back at <paramref name="ratePerSecond"/>, over admitted time.</summary>
+    public void SettlePunch(double seconds, double ratePerSecond)
+    {
+        double remaining = Math.Exp(-ratePerSecond * seconds);
+        _punchPitchDegrees *= remaining;
+        _punchYawDegrees *= remaining;
+    }
+
     /// <summary>The derived eye point submitted to the Engine camera descriptor.</summary>
     public WorldPoint Viewpoint => ViewpointFor(_player);
 
@@ -98,8 +115,8 @@ public sealed class FirstPersonCameraSystem : IDisposable
         return new CameraDescriptor(
             new CameraPose(
                 viewpoint.ToVector(),
-                player.PitchRadians * RadiansToDegrees,
-                player.YawRadians * RadiansToDegrees),
+                player.PitchRadians * RadiansToDegrees + _punchPitchDegrees,
+                player.YawRadians * RadiansToDegrees + _punchYawDegrees),
             CameraBasisMode.Derived,
             default,
             new CameraProjection(

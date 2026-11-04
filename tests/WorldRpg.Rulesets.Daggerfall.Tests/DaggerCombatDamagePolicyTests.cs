@@ -60,7 +60,8 @@ public sealed class DaggerCombatDamagePolicyTests
         fixture.EquipNpcWeapon(2, "iron-longsword", 9001);
         fixture.Script(body: BareFeet, deflect: null, damage: 7);
 
-        BlowResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+        BlowResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true), out IReadOnlyList<IProductFact> published);
+        Assert.DoesNotContain(published, fact => fact is ActorStruckFact); // Only the player's blows rock a body.
 
         Assert.Equal((true, true, 4), (result.Outcome.Hit, result.Outcome.Allowed, result.Outcome.Damage));
         DaggerfallPhysicalHarm harm = Assert.Single(absorbing.Mitigated);
@@ -762,6 +763,25 @@ public sealed class DaggerCombatDamagePolicyTests
     }
 
     [Fact]
+    public void A_kick_a_target_deflects_still_throws_it_and_a_deflected_sword_does_not()
+    {
+        using DamagePolicyFixture sword = new();
+        sword.Script(body: 0, deflect: 1);
+        _ = sword.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false), out IReadOnlyList<IProductFact> parried);
+        Assert.Contains(parried, fact => fact is AttackNegatedFact);
+        Assert.DoesNotContain(parried, fact => fact is ActorStruckFact);
+        Assert.False(sword.Reactions.Holds(2));
+
+        using DamagePolicyFixture kick = new();
+        kick.SelectPlayerAttack(DaggerfallAttackIds.Kick);
+        kick.Script(body: 0, deflect: null, damage: DaggerfallAttackTuning.Default.KickDamage, afterDamage: 1);
+        _ = kick.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false), out IReadOnlyList<IProductFact> shoved);
+
+        Assert.True(Assert.Single(shoved.OfType<ActorStruckFact>()).Heavy);
+        Assert.True(kick.Reactions.Holds(2));
+    }
+
+    [Fact]
     public void A_kick_is_a_blunt_hand_to_hand_blow_of_its_own_damage_and_cost_whatever_the_weapon()
     {
         using DamagePolicyFixture fixture = new();
@@ -904,6 +924,9 @@ public sealed class DaggerCombatDamagePolicyTests
                 attackTuning: DaggerfallAttackTuning.Default,
                 targetUnaware: Unaware.Contains, alertTarget: id => { Alerted.Add(id); Unaware.Remove(id); }, playerRush: () => Rush,
                 contact: Contact = CombatCollaborators.Contact(_actors, _spatial, () => _playerPosition),
+                strikes: new DaggerfallStrikes(DaggerfallStrikeTuning.Default, _actors,
+                    Reactions = new ActorReactions(new ActorNavigationCoordinator(spatialFake.Service, _spatial.Session)),
+                    () => _playerPosition, _ => null, _ => ActorNavigationMode.Ground),
                 strikePose: actor => CombatCollaborators.StrikePose(_actors, actor, _playerPosition),
                 actorVelocity: id => id == DaggerfallActorIdentity.PlayerEntityId ? PlayerVelocity : Vector3.Zero);
             Spatial = spatialFake;
@@ -1042,6 +1065,7 @@ public sealed class DaggerCombatDamagePolicyTests
 
         /// <summary>The spatial fake answering contact queries.</summary>
         internal SpatialFake Spatial { get; }
+        internal ActorReactions Reactions { get; private set; } = null!;
 
         /// <summary>Actor contact over the fixture's actor bodies and spatial fake.</summary>
         internal ActorContact Contact { get; private set; }

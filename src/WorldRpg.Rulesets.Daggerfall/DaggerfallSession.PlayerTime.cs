@@ -83,7 +83,7 @@ internal sealed partial class DaggerfallSession
             || Casting.PendingRangedFlights.Any(flight => flight.CasterId == DaggerfallActorIdentity.PlayerEntityId)
             || _doors.All.Any(door => door.Motion is DaggerfallDoorMotion.Opening or DaggerfallDoorMotion.Closing)
             || _sites.Projection.Motion.IsMoving;
-        PlayerTime.Update(presentation || playing && (movement || action));
+        PlayerTime.Update(presentation || playing && (movement || action), _hitStopSteps > 0 ? _tuning.Attacks.Strike.HitStopRate : 1d);
         if (wasHeld != PlayerTime.Held) PublishPresentation();
     }
 }
