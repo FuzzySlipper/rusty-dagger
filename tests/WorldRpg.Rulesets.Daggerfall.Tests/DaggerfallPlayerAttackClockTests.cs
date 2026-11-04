@@ -17,7 +17,7 @@ public sealed class DaggerfallPlayerAttackClockTests
     private static readonly DaggerfallAttackTiming Kick = new(.25d, .125d, .25d);
     private static readonly DaggerfallAttackTuning Tuning = new(.25d, 2d, 2d, Kick, 6, 1, 1.7f,
         new Dictionary<string, DaggerfallWeaponClassAttacks> { ["short-blade"] = new(Fast, .5d, Release, 2f) },
-        new Dictionary<string, DaggerfallAttackPath>());
+        new Dictionary<string, DaggerfallAttackPath>(), []);
 
     [Fact]
     public void A_tap_starts_fastA_in_its_own_step()

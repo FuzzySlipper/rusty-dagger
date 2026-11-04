@@ -222,6 +222,10 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         return _delivery.DeferImpact(impact, facts);
     }
 
+    /// <summary>The item template of the weapon the player holds, or null for bare hands.</summary>
+    internal int? PlayerWeaponTemplate() => EquippedWeapon(PlayerId) is { } weapon
+        ? _catalog.SourceTemplateFor(_catalog.RequireItem(new DaggerfallItemId(weapon.Definition.Value)))?.Index : null;
+
     /// <summary>Records whom the player's sweep met, which the blow's impact takes.</summary>
     internal void SetSweptTarget(long target) => _sweptTarget = target;
 

@@ -71,7 +71,7 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
     {
         // A shot's flight decides what it meets, and a player with no pose has nothing to sweep from.
         if (_attack == DaggerfallAttackIds.Shot || StrikePose(DaggerfallActorIdentity.PlayerEntityId) is not { } pose) return true;
-        _lastSwing = _swing ??= new SwingSweep(_contact, DaggerfallActorIdentity.PlayerEntityId, _tuning.Attacks.Arc(_attack!, _combat.PlayerWeaponSkill()));
+        _lastSwing = _swing ??= new SwingSweep(_contact, DaggerfallActorIdentity.PlayerEntityId, _tuning.Attacks.Arc(_attack!, _combat.PlayerWeaponSkill(), _combat.PlayerWeaponTemplate()));
         if (_swing.Advance(pose.Eye, pose.Forward, (float)cycle, _sites?.CharacterEnvironment(State.PlayerControl.Motion)) is not long struck) return false;
         _combat.SetSweptTarget(struck);
         return true;
