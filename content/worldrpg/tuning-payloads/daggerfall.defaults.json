@@ -468,6 +468,31 @@
       "punchSettleRate": 14
     }
   },
+  "hazards": {
+    "burningFlats": [
+      [
+        210,
+        0
+      ],
+      [
+        210,
+        1
+      ],
+      [
+        210,
+        19
+      ]
+    ],
+    "fireRadius": 0.7,
+    "fireHeight": 2,
+    "bodyBurnPerSecond": 5,
+    "bodyBurnSeconds": 3,
+    "playerBurnStart": 0.5,
+    "playerBurnRamp": 2,
+    "playerBurnMaximum": 10,
+    "playerCoolRate": 2,
+    "trapRadius": 3
+  },
   "enemyBehavior": {
     "detectionDistance": 12.0,
     "chaseSpeedUnitsPerSecond": 3.0,

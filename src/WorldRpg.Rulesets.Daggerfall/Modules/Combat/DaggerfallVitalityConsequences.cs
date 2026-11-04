@@ -150,6 +150,10 @@ internal sealed class DaggerfallVitalityConsequences
         return _combat.ApplyToHealth(new CombatParticipants(player, thrown, "fall"), damage, thrown.Get<StatsComponent>().GetTrack(HealthTrack)).Result;
     }
 
+    /// <summary>A fire takes what it takes; a body the player threw in burns by the player's doing.</summary>
+    internal DamageResult ResolveBurn(Actor player, Actor target, int damage) =>
+        _combat.ApplyToHealth(new CombatParticipants(player, target, "fire"), damage, target.Get<StatsComponent>().GetTrack(HealthTrack)).Result;
+
     internal DamageResult? ResolveLanding(Actor player, DaggerfallLanding? landing, bool preventsFallDamage)
     {
         if (preventsFallDamage || landing is not { } accepted) return null;

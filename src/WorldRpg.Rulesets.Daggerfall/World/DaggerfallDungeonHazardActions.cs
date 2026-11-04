@@ -62,6 +62,11 @@ internal static class DaggerfallDungeonHazardActions
     private const ulong RandomSeed = 0;
     private const string RandomScope = "daggerfall.dungeon-hazard.v1";
 
+    /// <summary>Whether an action harms health, and so can catch a body besides the one that set it off.</summary>
+    internal static bool Hurts(DaggerfallDungeonActionDefinition action) => (DaggerfallDungeonActionFlag)action.ActionFlag
+        is DaggerfallDungeonActionFlag.Hurt21 or DaggerfallDungeonActionFlag.Hurt22 or DaggerfallDungeonActionFlag.Hurt23
+        or DaggerfallDungeonActionFlag.Hurt24 or DaggerfallDungeonActionFlag.Hurt25;
+
     /// <summary>
     /// Executes one retained hazard action. A null result means the action flag belongs to
     /// another family owner. A non-null rejected result means this family recognized the flag

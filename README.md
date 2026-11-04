@@ -185,7 +185,7 @@ a guard, **G** kicks with any weapon and **Q** casts the ready spell with the le
 hand, weapon in the right. Controls can rebind them all.
 
 A kick does little harm but throws what it hits, by its weight: a person goes
-down, a bear hardly notices, and a ledge behind them helps. Fighting spends
+down, a bear hardly notices, and a ledge or a fire behind them helps. Fighting spends
 Stamina, which refills on its own a moment after you stop. Near
 empty you're winded: you still swing, slower and weaker, but have no power
 attack, kick or guard until it refills. Fatigue is the slow bar beneath it, which

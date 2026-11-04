@@ -43,6 +43,7 @@ internal sealed record DaggerfallTuning(
     internal DaggerfallAmbientTuning Ambient { get; init; } = DaggerfallAmbientTuning.Classic;
     internal DaggerfallContactTuning Contact { get; init; } = DaggerfallContactTuning.Default;
     internal DaggerfallAttackTuning Attacks { get; init; } = DaggerfallAttackTuning.Default;
+    internal DaggerfallHazardTuning Hazards { get; init; } = DaggerfallHazardTuning.Default;
 
     internal static DaggerfallTuning Defaults { get; } = new(
         // Screen-space mouse Y increases downward; Engine camera pitch increases upward.
@@ -333,6 +334,7 @@ internal sealed record DaggerfallTuning(
             Ambient = DaggerfallAmbientTuning.Read(root.GetProperty("ambient")),
             Contact = DaggerfallContactTuning.Read(root.GetProperty("contact")),
             Attacks = DaggerfallAttackTuning.Read(root.GetProperty("attacks")),
+            Hazards = DaggerfallHazardTuning.Read(root.GetProperty("hazards")),
         }.Validate();
     }
 

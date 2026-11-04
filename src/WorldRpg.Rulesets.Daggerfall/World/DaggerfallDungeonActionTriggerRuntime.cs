@@ -187,6 +187,16 @@ internal sealed class DaggerfallDungeonActionTriggerRuntime : IDisposable
         return profile.Triggers.Where(trigger => trigger.ContactEvent is not null).Select(Project).ToArray();
     }
 
+    /// <summary>The actions whose contact volumes hold a point of the active profile.</summary>
+    internal IEnumerable<DaggerfallDungeonActionDefinition> ContactActionsAt(Vector3 point)
+    {
+        ThrowIfDisposed();
+        return _profiles.TryGetValue(_activeProfile, out ProfileRuntime? profile)
+            ? profile.Triggers.Where(trigger => trigger.ContactEvent is not null && Vector3.Clamp(point, trigger.Bounds.Min, trigger.Bounds.Max) == point)
+                .Select(trigger => trigger.Action)
+            : [];
+    }
+
     /// <summary>
     /// Dispatches only Engine-reported enter facts for the player into the action graph. Exit and
     /// continued facts remain Engine state and do not get mirrored into the graph; facts for other

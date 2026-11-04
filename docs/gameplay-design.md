@@ -145,7 +145,8 @@ costs stamina and adds deflection, stays down for a swing's whole strike, and
 keeps action-driven time running while it rises, holds or settles. Speed,
 weapon skill and Strength set an attack's pace. A blow's force against a target's
 weight makes it flinch, stagger or fall, and a kick throws it, off a ledge if one
-is there. Fighting beside civilians is safe: an attack only harms them if it
+is there, or into a campfire or brazier, which burns the player too, slowly at first.
+A hurt trap the player sets off catches everyone close by. Fighting beside civilians is safe: an attack only harms them if it
 started aimed at one, and then it harms any it meets. Spells leave the left hand with the weapon kept in the right; a cast can
 follow a swing's recovery, and no attack starts until it has recovered. Fighting spends Stamina, which
 refills on its own, and a winded character loses the power attack, kick and guard
