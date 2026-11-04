@@ -2218,6 +2218,18 @@
       ]
     }
   ],
+  "authoredItemTemplates": [
+    {
+      "index": 124,
+      "baseWeight": 3.0,
+      "refreshedArt": "mace"
+    },
+    {
+      "index": 288,
+      "basedOn": 124,
+      "name": "Club"
+    }
+  ],
   "items": [
     {
       "id": "iron-dagger",
@@ -2389,6 +2401,27 @@
     },
     {
       "id": "iron-mace",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 12,
+      "value": 10,
+      "weapon": {
+        "minimumDamage": 4,
+        "maximumDamage": 10,
+        "material": "iron",
+        "skill": "blunt-weapon",
+        "handedness": "either"
+      },
+      "equipment": {
+        "classifications": [
+          "weapon-one-hand"
+        ],
+        "requiredSlots": 1,
+        "exclusiveGroup": "hands"
+      }
+    },
+    {
+      "id": "iron-club",
       "maximumQuantity": 1,
       "kind": "unique",
       "weight": 18,

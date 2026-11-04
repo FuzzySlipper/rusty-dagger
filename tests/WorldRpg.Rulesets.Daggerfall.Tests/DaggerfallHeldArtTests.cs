@@ -5,6 +5,7 @@ using WorldRpg.Kit;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
@@ -83,6 +84,75 @@ public sealed class DaggerfallHeldArtTests
         Assert.Contains(field, refusal.Message, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(116, "weapon.longblade", "sns")] // shortsword, one-handed
+    [InlineData(121, "weapon.longblade", "sns")] // katana, one-handed
+    [InlineData(127, "weapon.axe", "sns")] // battle axe, one-handed
+    [InlineData(114, "weapon.longblade", "dagger")] // tanto
+    [InlineData(122, "weapon.longblade", "longsword")] // claymore, two-handed
+    [InlineData(123, "weapon.longblade", "longsword")] // dai-katana, two-handed
+    [InlineData(128, "weapon.axe", "longsword")] // war axe, two-handed
+    public void An_item_plays_the_family_its_hands_call_for_whatever_its_classic_visual(int template, string visual, string family)
+    {
+        DaggerfallHeldDrawing drawing = Read(Document()).Drawing(visual, template, "ebony")!;
+
+        Assert.Equal(family, drawing.Family);
+        Assert.Equal("ebony", drawing.Metal);
+    }
+
+    [Fact]
+    public void An_item_draws_its_own_model_and_a_weapon_without_an_entry_draws_its_familys()
+    {
+        DaggerfallHeldArt art = Read(Document());
+        DaggerfallHeldDrawing longsword = art.Drawing("weapon.longblade", 120, "steel")!, dagger = art.Drawing("weapon.dagger.steel", 113, "steel")!;
+
+        Assert.Equal(120, longsword.Item);
+        Assert.Equal("first-person/weapons/longsword.glb", art.Document.Items[120].Model);
+        Assert.Null(dagger.Item);
+        Assert.Equal("first-person/weapons/dagger.glb", art.Document.Families[dagger.Family].Look.Model);
+        Assert.NotEqual(art.Drawing("weapon.longblade", 120, "ebony"), longsword);
+        Assert.Null(art.Drawing("weapon.bow", 129, "steel"));
+    }
+
+    [Theory]
+    [InlineData("family", "items.120.family: names no family")]
+    [InlineData("clip", "items.120.family: sns has no clip for strikeUp")]
+    [InlineData("model", "'first-person/weapons/lost.glb' is not in first-person.rpak")]
+    public void An_item_that_cannot_be_drawn_is_refused_by_field(string broken, string field)
+    {
+        JsonObject document = Document();
+        switch (broken)
+        {
+            case "family": document["items"]!["120"]!["family"] = "greatsword"; break;
+            case "clip": document["families"]!["sns"]!["strikes"]!.AsObject().Remove("strikeUp"); break;
+            case "model": document["items"]!["120"]!["model"] = "first-person/weapons/lost.glb"; break;
+        }
+
+        Assert.Contains(field, Assert.Throws<InvalidDataException>(() => Read(document)).Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_models_metal_slot_is_found_by_name_and_a_tint_brightens_as_the_paper_doll_does()
+    {
+        string weapons = Path.Combine(TestData.RepositoryRoot, "content/worldrpg/first-person/weapons");
+        BundleContentFake service = new();
+        service.Container(DaggerfallHeldArt.ContainerName);
+        foreach (string file in Directory.GetFiles(weapons, "*.glb")) service.Add(DaggerfallHeldArt.ContainerName, $"first-person/weapons/{Path.GetFileName(file)}", File.ReadAllBytes(file));
+        service.Add(DaggerfallHeldArt.ContainerName, "first-person/arms.glb", [7]);
+        service.Add(DaggerfallHeldArt.ContainerName, "first-person/arms-retro.glb", [7]);
+        ProductContentBundle container = new ProductContent(Array.Empty<ProductContentFile>(), service).OpenContainer(DaggerfallHeldArt.ContainerName);
+        DaggerfallHeldArt art = DaggerfallHeldArt.Read(container, System.Text.Encoding.UTF8.GetBytes(Document().ToJsonString()));
+
+        Assert.Equal(0u, art.MetalSlot("first-person/weapons/dagger.glb"));
+        Assert.Equal(1u, art.MetalSlot("first-person/weapons/club.glb"));
+
+        Color white = DaggerfallHeldArt.MetalColor(new("#ffffff", 1));
+        Color bright = DaggerfallHeldArt.MetalColor(new("#808080", 1.5));
+        Assert.Equal(1F, white.R, 4);
+        Assert.Equal(1F, white.A, 4);
+        Assert.InRange(bright.R, .5F, .55F);
+    }
+
     [Fact]
     public void An_unknown_member_is_refused_rather_than_ignored()
     {
@@ -102,7 +172,7 @@ public sealed class DaggerfallHeldArtTests
 
         Assert.Contains("'first-person/arms.glb' is not in first-person.rpak", Assert.Throws<InvalidDataException>(() => Read(Document(), models: [])).Message, StringComparison.Ordinal);
         Assert.Contains("'first-person/dagger.glb' is not in first-person.rpak", Assert.Throws<InvalidDataException>(() => Read(document)).Message, StringComparison.Ordinal);
-        Assert.Equal("first-person/dagger.glb", Read(document, models: ["first-person/arms.glb", "first-person/arms-retro.glb", "first-person/dagger.glb"]).Document.Families["dagger"].Look.Model);
+        Assert.Equal("first-person/dagger.glb", Read(document, models: ["first-person/arms.glb", "first-person/arms-retro.glb", "first-person/dagger.glb", "first-person/weapons/longsword.glb", "first-person/weapons/club.glb", "first-person/weapons/mace.glb"]).Document.Families["dagger"].Look.Model);
     }
 
     [Fact]
@@ -131,6 +201,80 @@ public sealed class DaggerfallHeldArtTests
             tuning["viewmodel"]!["style"] = style;
             return System.Text.Encoding.UTF8.GetBytes(tuning.ToJsonString());
         }
+    }
+
+    [Fact]
+    public void Leaving_the_workbench_with_the_weapon_sheathed_draws_nothing_and_releases_the_preview()
+    {
+        List<string> releases = [];
+        (DaggerfallSiteAppearance presentation, AppearanceFake appearance, EngineContextFake engine) = Viewing(releases);
+        using (presentation)
+        {
+            presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: false);
+            presentation.ViewHeld(new("sns", 120, DaggerfallHeldDrawing.Steel));
+
+            presentation.EndHeldView();
+
+            Assert.Null(presentation.DrawnHeld);
+            presentation.Publish(EmptyActors());
+            Assert.DoesNotContain(appearance.Snapshots.Last(), fact => fact.Layer == RenderLayer.Viewmodel);
+            presentation.BeginAdmittedUpdate();
+            Assert.Equal(2, engine.Animation.ReleasedAppearances); // The arms and the look.
+        }
+    }
+
+    [Fact]
+    public void Leaving_the_workbench_with_a_weapon_drawn_gives_the_hands_back_what_they_wield()
+    {
+        List<string> releases = [];
+        (DaggerfallSiteAppearance presentation, _, _) = Viewing(releases);
+        using (presentation)
+        {
+            presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
+            DaggerfallHeldDrawing wielded = presentation.DrawnHeld!.Drawing;
+            Assert.Equal(new DaggerfallHeldDrawing("sns", 120, DaggerfallHeldDrawing.Steel), wielded);
+            presentation.ViewHeld(new("longsword", null, DaggerfallHeldDrawing.Steel));
+
+            presentation.EndHeldView();
+
+            Assert.Equal(wielded, presentation.DrawnHeld!.Drawing);
+        }
+    }
+
+    // A site drawing the authored art through arms whose model has the rig's joints and every clip, whatever the hands
+    // wield standing for a longsword (template 120).
+    private static (DaggerfallSiteAppearance Presentation, AppearanceFake Appearance, EngineContextFake Engine) Viewing(List<string> releases)
+    {
+        ContentFake content = MediaContent(releases);
+        content.Add("weapon/dagger.png", Hash);
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(Hash, releases).Service, appearance, PerceptionFake.Create().Service);
+        DaggerfallHeldArt art = Read(Document());
+        engine.Animation.Joints = Joints(art.Document.Rig);
+        engine.Animation.Clips = [.. art.Document.Families.Values.SelectMany(family => family.Strikes.Values.Select(clip => clip.Clip).Append(family.Idle.Clip)).Distinct()
+            .Select(clip => new AnimationClipInfo(clip, clip, 1, true, 0))];
+        DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
+        presentation.UseHeldArt(engine.Context, art, DaggerfallViewmodelStyle.Held, new Dictionary<string, DaggerfallDyeTint>(), _ => (120, DaggerfallHeldDrawing.Steel));
+        return (presentation, appearance, engine);
+    }
+
+    // Both arms' joints under one root: the upper arm, the forearm and its twist, the hand and its digits.
+    private static AnimationJointInfo[] Joints(ArmRig rig)
+    {
+        List<AnimationJointInfo> joints = [new("root", uint.MaxValue)];
+        uint Add(string name, uint parent)
+        {
+            joints.Add(new(name, parent));
+            return (uint)joints.Count - 1;
+        }
+        foreach (ArmJoints arm in new[] { rig.Main, rig.Off })
+        {
+            uint lower = Add(arm.Lower, Add(arm.Upper, 0));
+            foreach (var twist in arm.Twist) Add(twist.Joint, lower);
+            uint hand = Add(arm.Hand, lower);
+            foreach (string[] digit in arm.Fingers.Append(arm.Thumb)) digit.Aggregate(hand, (parent, joint) => Add(joint, parent));
+        }
+        return [.. joints];
     }
 
     // The authored held definition.

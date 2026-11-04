@@ -1,0 +1,4350 @@
+{
+ "texture-000-40": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-42": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-43": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-44": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-45": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-46": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-47": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-50": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-55": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-57": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-59": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-61": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-62": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-71": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-72": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-73": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-74": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-75": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-76": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-77": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-78": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-79": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-80": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-81": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-82": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-83": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-86": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-87": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-89": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-90": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-91": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-92": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-93": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-94": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-95": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-96": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-97": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-98": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-99": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-100": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-101": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-102": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-103": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-104": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-105": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-106": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-107": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-109": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-111": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-113": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-114": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-115": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-116": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-117": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-118": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-120": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-121": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-122": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-123": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-000-124": {
+  "status": "accepted",
+  "note": "Patch accepted the set-00 review sheet on 2026-11-03."
+ },
+ "texture-001-18": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-001-19": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-001-20": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-001-21": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-001-22": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-001-23": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-001-24": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-001-25": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-001-26": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-001-28": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-001-31": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-001-38": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-001-39": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-001-40": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-001-41": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-001-42": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-001-57": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-001-58": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-001-60": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-001-61": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-001-88": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-001-89": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-001-118": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-001-121": {
+  "status": "accepted",
+  "note": "Patch accepted the set-01 review sheet on 2026-11-03."
+ },
+ "texture-004-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-04 review sheet on 2026-11-03."
+ },
+ "texture-006-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-06 review sheet on 2026-11-03."
+ },
+ "texture-006-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-06 review sheet on 2026-11-03."
+ },
+ "texture-006-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-06 review sheet on 2026-11-03."
+ },
+ "texture-006-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-06 review sheet on 2026-11-03."
+ },
+ "texture-006-4": {
+  "status": "accepted",
+  "note": "Patch accepted the set-06 review sheet on 2026-11-03."
+ },
+ "texture-007-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-ruins review sheet on 2026-11-03."
+ },
+ "texture-007-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-ruins review sheet on 2026-11-03."
+ },
+ "texture-009-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-009-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-009-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-009-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-009-4": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-012-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-012-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-012-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-012-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-014-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-b review sheet on 2026-11-03."
+ },
+ "texture-014-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-b review sheet on 2026-11-03."
+ },
+ "texture-014-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-b review sheet on 2026-11-03."
+ },
+ "texture-016-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-city review sheet on 2026-11-03."
+ },
+ "texture-016-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-city review sheet on 2026-11-03."
+ },
+ "texture-016-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-city review sheet on 2026-11-03."
+ },
+ "texture-016-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-city review sheet on 2026-11-03."
+ },
+ "texture-016-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-city review sheet on 2026-11-03."
+ },
+ "texture-017-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-walls review sheet on 2026-11-03."
+ },
+ "texture-017-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-walls review sheet on 2026-11-03."
+ },
+ "texture-017-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-walls review sheet on 2026-11-03."
+ },
+ "texture-019-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03."
+ },
+ "texture-019-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03."
+ },
+ "texture-019-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03."
+ },
+ "texture-019-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03."
+ },
+ "texture-019-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03."
+ },
+ "texture-020-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-b review sheet on 2026-11-03."
+ },
+ "texture-020-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-b review sheet on 2026-11-03."
+ },
+ "texture-020-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-b review sheet on 2026-11-03."
+ },
+ "texture-020-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-b review sheet on 2026-11-03."
+ },
+ "texture-020-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-b review sheet on 2026-11-03."
+ },
+ "texture-022-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-a review sheet on 2026-11-03."
+ },
+ "texture-022-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-a review sheet on 2026-11-03."
+ },
+ "texture-022-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-a review sheet on 2026-11-03."
+ },
+ "texture-022-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-a review sheet on 2026-11-03."
+ },
+ "texture-022-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-a review sheet on 2026-11-03."
+ },
+ "texture-023-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03."
+ },
+ "texture-023-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03."
+ },
+ "texture-023-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03."
+ },
+ "texture-023-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03."
+ },
+ "texture-023-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03."
+ },
+ "texture-024-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-c review sheet on 2026-11-03."
+ },
+ "texture-024-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-c review sheet on 2026-11-03."
+ },
+ "texture-024-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-c review sheet on 2026-11-03."
+ },
+ "texture-024-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-c review sheet on 2026-11-03."
+ },
+ "texture-026-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-026-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-026-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-026-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-028-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-farm review sheet on 2026-11-03."
+ },
+ "texture-028-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-farm review sheet on 2026-11-03."
+ },
+ "texture-028-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-farm review sheet on 2026-11-03."
+ },
+ "texture-028-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-farm review sheet on 2026-11-03."
+ },
+ "texture-028-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-farm review sheet on 2026-11-03."
+ },
+ "texture-029-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+ },
+ "texture-029-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+ },
+ "texture-029-4": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+ },
+ "texture-033-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-035-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-035-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-035-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-035-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-037-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-037-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-037-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-037-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-037-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-038-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-038-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-038-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-038-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-040-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-manor review sheet on 2026-11-03."
+ },
+ "texture-040-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-manor review sheet on 2026-11-03."
+ },
+ "texture-040-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-manor review sheet on 2026-11-03."
+ },
+ "texture-040-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-manor review sheet on 2026-11-03."
+ },
+ "texture-040-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-manor review sheet on 2026-11-03."
+ },
+ "texture-041-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-marble-floors review sheet on 2026-11-03."
+ },
+ "texture-041-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-marble-floors review sheet on 2026-11-03."
+ },
+ "texture-041-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-marble-floors review sheet on 2026-11-03."
+ },
+ "texture-041-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-marble-floors review sheet on 2026-11-03."
+ },
+ "texture-042-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-042-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-042-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-042-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-044-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-044-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-044-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-044-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-044-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-046-1": {
+  "status": "accepted",
+  "note": "Patch accepted the misc review sheet on 2026-11-03."
+ },
+ "texture-046-2": {
+  "status": "accepted",
+  "note": "Patch accepted the misc review sheet on 2026-11-03."
+ },
+ "texture-047-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-caves review sheet on 2026-11-03."
+ },
+ "texture-047-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-caves review sheet on 2026-11-03."
+ },
+ "texture-047-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-caves review sheet on 2026-11-03."
+ },
+ "texture-047-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-caves review sheet on 2026-11-03."
+ },
+ "texture-048-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-paintings review sheet on 2026-11-03."
+ },
+ "texture-048-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-paintings review sheet on 2026-11-03."
+ },
+ "texture-048-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-paintings review sheet on 2026-11-03."
+ },
+ "texture-048-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-paintings review sheet on 2026-11-03."
+ },
+ "texture-048-5": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-paintings review sheet on 2026-11-03."
+ },
+ "texture-049-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-49 review sheet on 2026-11-03."
+ },
+ "texture-049-4": {
+  "status": "accepted",
+  "note": "Patch accepted the set-49 review sheet on 2026-11-03."
+ },
+ "texture-049-6": {
+  "status": "accepted",
+  "note": "Patch accepted the set-49 review sheet on 2026-11-03."
+ },
+ "texture-049-9": {
+  "status": "accepted",
+  "note": "Patch accepted the set-49 review sheet on 2026-11-03."
+ },
+ "texture-049-10": {
+  "status": "accepted",
+  "note": "Patch accepted the set-49 review sheet on 2026-11-03."
+ },
+ "texture-050-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-050-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-050-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-050-6": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-050-7": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-055-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-55 review sheet on 2026-11-03."
+ },
+ "texture-055-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-55 review sheet on 2026-11-03."
+ },
+ "texture-055-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-55 review sheet on 2026-11-03."
+ },
+ "texture-055-4": {
+  "status": "accepted",
+  "note": "Patch accepted the set-55 review sheet on 2026-11-03."
+ },
+ "texture-055-7": {
+  "status": "accepted",
+  "note": "Patch accepted the set-55 review sheet on 2026-11-03."
+ },
+ "texture-056-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-56 review sheet on 2026-11-03."
+ },
+ "texture-056-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-56 review sheet on 2026-11-03."
+ },
+ "texture-056-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-56 review sheet on 2026-11-03."
+ },
+ "texture-056-6": {
+  "status": "accepted",
+  "note": "Patch accepted the set-56 review sheet on 2026-11-03."
+ },
+ "texture-056-7": {
+  "status": "accepted",
+  "note": "Patch accepted the set-56 review sheet on 2026-11-03."
+ },
+ "texture-057-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-57 review sheet on 2026-11-03."
+ },
+ "texture-057-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-57 review sheet on 2026-11-03."
+ },
+ "texture-057-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-57 review sheet on 2026-11-03."
+ },
+ "texture-057-4": {
+  "status": "accepted",
+  "note": "Patch accepted the set-57 review sheet on 2026-11-03."
+ },
+ "texture-057-7": {
+  "status": "accepted",
+  "note": "Patch accepted the set-57 review sheet on 2026-11-03."
+ },
+ "texture-058-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-058-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-058-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-058-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-060-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03."
+ },
+ "texture-060-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03."
+ },
+ "texture-060-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03."
+ },
+ "texture-060-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03."
+ },
+ "texture-060-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03."
+ },
+ "texture-061-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-temple review sheet on 2026-11-03."
+ },
+ "texture-061-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-temple review sheet on 2026-11-03."
+ },
+ "texture-061-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-temple review sheet on 2026-11-03."
+ },
+ "texture-063-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+ },
+ "texture-063-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+ },
+ "texture-063-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+ },
+ "texture-063-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+ },
+ "texture-063-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+ },
+ "texture-064-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-village review sheet on 2026-11-03."
+ },
+ "texture-064-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-village review sheet on 2026-11-03."
+ },
+ "texture-064-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-village review sheet on 2026-11-03."
+ },
+ "texture-066-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-village review sheet on 2026-11-03."
+ },
+ "texture-066-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-village review sheet on 2026-11-03."
+ },
+ "texture-066-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-village review sheet on 2026-11-03."
+ },
+ "texture-066-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-village review sheet on 2026-11-03."
+ },
+ "texture-066-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-village review sheet on 2026-11-03."
+ },
+ "texture-067-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-067-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-067-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-067-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-067-4": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-067-5": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-067-6": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-067-7": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-067-8": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-067-9": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-067-10": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-067-11": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-067-12": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-067-13": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-067-14": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-067-15": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-068-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-068-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-068-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-068-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-068-5": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-068-6": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-068-8": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-068-9": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-069-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-069-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-069-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-069-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-071-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-071-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-071-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-071-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-072-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-072-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-072-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-073-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-73 review sheet on 2026-11-03."
+ },
+ "texture-073-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-73 review sheet on 2026-11-03."
+ },
+ "texture-073-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-73 review sheet on 2026-11-03."
+ },
+ "texture-073-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-73 review sheet on 2026-11-03."
+ },
+ "texture-074-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-doors review sheet on 2026-11-03."
+ },
+ "texture-074-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-doors review sheet on 2026-11-03."
+ },
+ "texture-074-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-doors review sheet on 2026-11-03."
+ },
+ "texture-075-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-75 review sheet on 2026-11-03."
+ },
+ "texture-077-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-77 review sheet on 2026-11-03."
+ },
+ "texture-079-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-spec review sheet on 2026-11-03."
+ },
+ "texture-079-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-spec review sheet on 2026-11-03."
+ },
+ "texture-079-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-spec review sheet on 2026-11-03."
+ },
+ "texture-079-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-spec review sheet on 2026-11-03."
+ },
+ "texture-080-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-spec review sheet on 2026-11-03."
+ },
+ "texture-080-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-spec review sheet on 2026-11-03."
+ },
+ "texture-080-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-spec review sheet on 2026-11-03."
+ },
+ "texture-080-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-spec review sheet on 2026-11-03."
+ },
+ "texture-081-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-81 review sheet on 2026-11-03."
+ },
+ "texture-081-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-81 review sheet on 2026-11-03."
+ },
+ "texture-082-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-spec-b review sheet on 2026-11-03."
+ },
+ "texture-082-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-spec-b review sheet on 2026-11-03."
+ },
+ "texture-082-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-spec-b review sheet on 2026-11-03."
+ },
+ "texture-082-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-spec-b review sheet on 2026-11-03."
+ },
+ "texture-082-4": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-spec-b review sheet on 2026-11-03."
+ },
+ "texture-083-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-spec-b review sheet on 2026-11-03."
+ },
+ "texture-083-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-spec-b review sheet on 2026-11-03."
+ },
+ "texture-085-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-base-textures review sheet on 2026-11-03."
+ },
+ "texture-085-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-base-textures review sheet on 2026-11-03."
+ },
+ "texture-085-5": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-base-textures review sheet on 2026-11-03."
+ },
+ "texture-085-6": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-base-textures review sheet on 2026-11-03."
+ },
+ "texture-085-7": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-base-textures review sheet on 2026-11-03."
+ },
+ "texture-086-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-86 review sheet on 2026-11-03."
+ },
+ "texture-086-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-86 review sheet on 2026-11-03."
+ },
+ "texture-086-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-86 review sheet on 2026-11-03."
+ },
+ "texture-086-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-86 review sheet on 2026-11-03."
+ },
+ "texture-086-4": {
+  "status": "accepted",
+  "note": "Patch accepted the set-86 review sheet on 2026-11-03."
+ },
+ "texture-087-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-87 review sheet on 2026-11-03."
+ },
+ "texture-087-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-87 review sheet on 2026-11-03."
+ },
+ "texture-087-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-87 review sheet on 2026-11-03."
+ },
+ "texture-087-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-87 review sheet on 2026-11-03."
+ },
+ "texture-087-4": {
+  "status": "accepted",
+  "note": "Patch accepted the set-87 review sheet on 2026-11-03."
+ },
+ "texture-087-5": {
+  "status": "accepted",
+  "note": "Patch accepted the set-87 review sheet on 2026-11-03."
+ },
+ "texture-087-6": {
+  "status": "accepted",
+  "note": "Patch accepted the set-87 review sheet on 2026-11-03."
+ },
+ "texture-087-7": {
+  "status": "accepted",
+  "note": "Patch accepted the set-87 review sheet on 2026-11-03."
+ },
+ "texture-087-8": {
+  "status": "accepted",
+  "note": "Patch accepted the set-87 review sheet on 2026-11-03."
+ },
+ "texture-088-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-wagon review sheet on 2026-11-03."
+ },
+ "texture-088-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-wagon review sheet on 2026-11-03."
+ },
+ "texture-088-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-wagon review sheet on 2026-11-03."
+ },
+ "texture-088-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-wagon review sheet on 2026-11-03."
+ },
+ "texture-089-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-89 review sheet on 2026-11-03."
+ },
+ "texture-089-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-89 review sheet on 2026-11-03."
+ },
+ "texture-089-4": {
+  "status": "accepted",
+  "note": "Patch accepted the set-89 review sheet on 2026-11-03."
+ },
+ "texture-090-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-misc-furniture review sheet on 2026-11-03."
+ },
+ "texture-090-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-misc-furniture review sheet on 2026-11-03."
+ },
+ "texture-090-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-misc-furniture review sheet on 2026-11-03."
+ },
+ "texture-090-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-misc-furniture review sheet on 2026-11-03."
+ },
+ "texture-090-5": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-misc-furniture review sheet on 2026-11-03."
+ },
+ "texture-090-6": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-misc-furniture review sheet on 2026-11-03."
+ },
+ "texture-090-7": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-misc-furniture review sheet on 2026-11-03."
+ },
+ "texture-090-8": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-misc-furniture review sheet on 2026-11-03."
+ },
+ "texture-090-9": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-misc-furniture review sheet on 2026-11-03."
+ },
+ "texture-090-10": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-misc-furniture review sheet on 2026-11-03."
+ },
+ "texture-090-11": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-misc-furniture review sheet on 2026-11-03."
+ },
+ "texture-090-12": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-misc-furniture review sheet on 2026-11-03."
+ },
+ "texture-090-13": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-misc-furniture review sheet on 2026-11-03."
+ },
+ "texture-090-14": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-misc-furniture review sheet on 2026-11-03."
+ },
+ "texture-092-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-92 review sheet on 2026-11-03."
+ },
+ "texture-092-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-92 review sheet on 2026-11-03."
+ },
+ "texture-092-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-92 review sheet on 2026-11-03."
+ },
+ "texture-092-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-92 review sheet on 2026-11-03."
+ },
+ "texture-092-4": {
+  "status": "accepted",
+  "note": "Patch accepted the set-92 review sheet on 2026-11-03."
+ },
+ "texture-092-5": {
+  "status": "accepted",
+  "note": "Patch accepted the set-92 review sheet on 2026-11-03."
+ },
+ "texture-092-6": {
+  "status": "accepted",
+  "note": "Patch accepted the set-92 review sheet on 2026-11-03."
+ },
+ "texture-092-7": {
+  "status": "accepted",
+  "note": "Patch accepted the set-92 review sheet on 2026-11-03."
+ },
+ "texture-092-8": {
+  "status": "accepted",
+  "note": "Patch accepted the set-92 review sheet on 2026-11-03."
+ },
+ "texture-092-9": {
+  "status": "accepted",
+  "note": "Patch accepted the set-92 review sheet on 2026-11-03."
+ },
+ "texture-092-10": {
+  "status": "accepted",
+  "note": "Patch accepted the set-92 review sheet on 2026-11-03."
+ },
+ "texture-092-11": {
+  "status": "accepted",
+  "note": "Patch accepted the set-92 review sheet on 2026-11-03."
+ },
+ "texture-092-12": {
+  "status": "accepted",
+  "note": "Patch accepted the set-92 review sheet on 2026-11-03."
+ },
+ "texture-093-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-93 review sheet on 2026-11-03."
+ },
+ "texture-093-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-93 review sheet on 2026-11-03."
+ },
+ "texture-093-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-93 review sheet on 2026-11-03."
+ },
+ "texture-093-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-93 review sheet on 2026-11-03."
+ },
+ "texture-093-4": {
+  "status": "accepted",
+  "note": "Patch accepted the set-93 review sheet on 2026-11-03."
+ },
+ "texture-093-5": {
+  "status": "accepted",
+  "note": "Patch accepted the set-93 review sheet on 2026-11-03."
+ },
+ "texture-093-6": {
+  "status": "accepted",
+  "note": "Patch accepted the set-93 review sheet on 2026-11-03."
+ },
+ "texture-093-7": {
+  "status": "accepted",
+  "note": "Patch accepted the set-93 review sheet on 2026-11-03."
+ },
+ "texture-093-8": {
+  "status": "accepted",
+  "note": "Patch accepted the set-93 review sheet on 2026-11-03."
+ },
+ "texture-093-9": {
+  "status": "accepted",
+  "note": "Patch accepted the set-93 review sheet on 2026-11-03."
+ },
+ "texture-093-10": {
+  "status": "accepted",
+  "note": "Patch accepted the set-93 review sheet on 2026-11-03."
+ },
+ "texture-094-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-94 review sheet on 2026-11-03."
+ },
+ "texture-094-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-94 review sheet on 2026-11-03."
+ },
+ "texture-094-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-94 review sheet on 2026-11-03."
+ },
+ "texture-095-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-95 review sheet on 2026-11-03."
+ },
+ "texture-103-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-03 review sheet on 2026-11-03."
+ },
+ "texture-104-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-04 review sheet on 2026-11-03."
+ },
+ "texture-107-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-ruins review sheet on 2026-11-03."
+ },
+ "texture-107-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-ruins review sheet on 2026-11-03."
+ },
+ "texture-108-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-ruins-2 review sheet on 2026-11-03."
+ },
+ "texture-108-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-ruins-2 review sheet on 2026-11-03."
+ },
+ "texture-109-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-109-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-109-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-109-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-109-4": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-110-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-110-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-110-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-110-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-112-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-112-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-112-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-112-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-113-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-113-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-113-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-113-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-114-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-b review sheet on 2026-11-03."
+ },
+ "texture-114-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-b review sheet on 2026-11-03."
+ },
+ "texture-114-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-b review sheet on 2026-11-03."
+ },
+ "texture-115-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-b review sheet on 2026-11-03."
+ },
+ "texture-115-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-b review sheet on 2026-11-03."
+ },
+ "texture-115-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-b review sheet on 2026-11-03."
+ },
+ "texture-116-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-city review sheet on 2026-11-03."
+ },
+ "texture-116-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-city review sheet on 2026-11-03."
+ },
+ "texture-116-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-city review sheet on 2026-11-03."
+ },
+ "texture-116-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-city review sheet on 2026-11-03."
+ },
+ "texture-116-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-city review sheet on 2026-11-03."
+ },
+ "texture-117-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-walls review sheet on 2026-11-03."
+ },
+ "texture-117-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-walls review sheet on 2026-11-03."
+ },
+ "texture-117-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-walls review sheet on 2026-11-03."
+ },
+ "texture-118-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-walls review sheet on 2026-11-03."
+ },
+ "texture-118-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-walls review sheet on 2026-11-03."
+ },
+ "texture-118-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-walls review sheet on 2026-11-03."
+ },
+ "texture-119-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03."
+ },
+ "texture-119-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03."
+ },
+ "texture-119-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03."
+ },
+ "texture-119-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03."
+ },
+ "texture-119-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03."
+ },
+ "texture-120-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-b review sheet on 2026-11-03."
+ },
+ "texture-120-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-b review sheet on 2026-11-03."
+ },
+ "texture-120-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-b review sheet on 2026-11-03."
+ },
+ "texture-120-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-b review sheet on 2026-11-03."
+ },
+ "texture-120-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-b review sheet on 2026-11-03."
+ },
+ "texture-121-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-21 review sheet on 2026-11-03."
+ },
+ "texture-121-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-21 review sheet on 2026-11-03."
+ },
+ "texture-121-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-21 review sheet on 2026-11-03."
+ },
+ "texture-121-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-21 review sheet on 2026-11-03."
+ },
+ "texture-122-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-a review sheet on 2026-11-03."
+ },
+ "texture-122-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-a review sheet on 2026-11-03."
+ },
+ "texture-122-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-a review sheet on 2026-11-03."
+ },
+ "texture-122-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-a review sheet on 2026-11-03."
+ },
+ "texture-122-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-a review sheet on 2026-11-03."
+ },
+ "texture-123-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03."
+ },
+ "texture-123-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03."
+ },
+ "texture-123-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03."
+ },
+ "texture-123-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03."
+ },
+ "texture-123-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03."
+ },
+ "texture-124-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-c review sheet on 2026-11-03."
+ },
+ "texture-124-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-c review sheet on 2026-11-03."
+ },
+ "texture-124-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-c review sheet on 2026-11-03."
+ },
+ "texture-124-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-c review sheet on 2026-11-03."
+ },
+ "texture-125-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-new-cs review sheet on 2026-11-03."
+ },
+ "texture-126-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-126-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-126-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-126-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-127-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-127-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-127-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-127-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-128-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-farm review sheet on 2026-11-03."
+ },
+ "texture-128-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-farm review sheet on 2026-11-03."
+ },
+ "texture-128-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-farm review sheet on 2026-11-03."
+ },
+ "texture-128-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-farm review sheet on 2026-11-03."
+ },
+ "texture-128-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-farm review sheet on 2026-11-03."
+ },
+ "texture-129-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+ },
+ "texture-129-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+ },
+ "texture-129-4": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+ },
+ "texture-130-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+ },
+ "texture-130-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+ },
+ "texture-130-4": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+ },
+ "texture-131-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-31 review sheet on 2026-11-03."
+ },
+ "texture-131-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-31 review sheet on 2026-11-03."
+ },
+ "texture-131-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-31 review sheet on 2026-11-03."
+ },
+ "texture-131-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-31 review sheet on 2026-11-03."
+ },
+ "texture-132-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-32 review sheet on 2026-11-03."
+ },
+ "texture-132-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-32 review sheet on 2026-11-03."
+ },
+ "texture-132-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-32 review sheet on 2026-11-03."
+ },
+ "texture-132-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-32 review sheet on 2026-11-03."
+ },
+ "texture-132-4": {
+  "status": "accepted",
+  "note": "Patch accepted the set-32 review sheet on 2026-11-03."
+ },
+ "texture-133-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-133-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-133-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-133-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-134-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-34 review sheet on 2026-11-03."
+ },
+ "texture-134-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-34 review sheet on 2026-11-03."
+ },
+ "texture-134-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-34 review sheet on 2026-11-03."
+ },
+ "texture-135-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-135-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-135-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-135-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-136-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-136-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-136-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-136-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-137-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-137-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-137-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-137-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-137-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-138-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-138-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-138-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-138-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-139-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-139-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-139-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-139-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-140-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-manor review sheet on 2026-11-03."
+ },
+ "texture-140-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-manor review sheet on 2026-11-03."
+ },
+ "texture-140-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-manor review sheet on 2026-11-03."
+ },
+ "texture-140-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-manor review sheet on 2026-11-03."
+ },
+ "texture-140-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-manor review sheet on 2026-11-03."
+ },
+ "texture-141-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-marble-floors review sheet on 2026-11-03."
+ },
+ "texture-141-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-marble-floors review sheet on 2026-11-03."
+ },
+ "texture-141-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-marble-floors review sheet on 2026-11-03."
+ },
+ "texture-141-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-marble-floors review sheet on 2026-11-03."
+ },
+ "texture-142-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-142-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-142-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-142-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-143-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-143-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-143-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-143-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-144-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-144-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-144-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-144-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-144-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-146-0": {
+  "status": "accepted",
+  "note": "Patch accepted the misc review sheet on 2026-11-03."
+ },
+ "texture-146-1": {
+  "status": "accepted",
+  "note": "Patch accepted the misc review sheet on 2026-11-03."
+ },
+ "texture-146-2": {
+  "status": "accepted",
+  "note": "Patch accepted the misc review sheet on 2026-11-03."
+ },
+ "texture-146-3": {
+  "status": "accepted",
+  "note": "Patch accepted the misc review sheet on 2026-11-03."
+ },
+ "texture-147-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-caves review sheet on 2026-11-03."
+ },
+ "texture-147-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-caves review sheet on 2026-11-03."
+ },
+ "texture-147-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-caves review sheet on 2026-11-03."
+ },
+ "texture-147-5": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-caves review sheet on 2026-11-03."
+ },
+ "texture-147-6": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-caves review sheet on 2026-11-03."
+ },
+ "texture-148-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-paintings review sheet on 2026-11-03."
+ },
+ "texture-148-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-paintings review sheet on 2026-11-03."
+ },
+ "texture-148-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-paintings review sheet on 2026-11-03."
+ },
+ "texture-148-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-paintings review sheet on 2026-11-03."
+ },
+ "texture-148-5": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-paintings review sheet on 2026-11-03."
+ },
+ "texture-149-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-49 review sheet on 2026-11-03."
+ },
+ "texture-149-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-49 review sheet on 2026-11-03."
+ },
+ "texture-149-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-49 review sheet on 2026-11-03."
+ },
+ "texture-150-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-150-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-150-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-150-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-151-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-51 review sheet on 2026-11-03."
+ },
+ "texture-151-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-51 review sheet on 2026-11-03."
+ },
+ "texture-151-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-51 review sheet on 2026-11-03."
+ },
+ "texture-151-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-51 review sheet on 2026-11-03."
+ },
+ "texture-152-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-52 review sheet on 2026-11-03."
+ },
+ "texture-152-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-52 review sheet on 2026-11-03."
+ },
+ "texture-152-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-52 review sheet on 2026-11-03."
+ },
+ "texture-153-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-53 review sheet on 2026-11-03."
+ },
+ "texture-153-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-53 review sheet on 2026-11-03."
+ },
+ "texture-153-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-53 review sheet on 2026-11-03."
+ },
+ "texture-153-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-53 review sheet on 2026-11-03."
+ },
+ "texture-154-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-54 review sheet on 2026-11-03."
+ },
+ "texture-154-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-54 review sheet on 2026-11-03."
+ },
+ "texture-154-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-54 review sheet on 2026-11-03."
+ },
+ "texture-154-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-54 review sheet on 2026-11-03."
+ },
+ "texture-155-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-55 review sheet on 2026-11-03."
+ },
+ "texture-155-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-55 review sheet on 2026-11-03."
+ },
+ "texture-155-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-55 review sheet on 2026-11-03."
+ },
+ "texture-156-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-56 review sheet on 2026-11-03."
+ },
+ "texture-156-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-56 review sheet on 2026-11-03."
+ },
+ "texture-158-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-158-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-158-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-158-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-159-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-159-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-159-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-159-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-160-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03."
+ },
+ "texture-160-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03."
+ },
+ "texture-160-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03."
+ },
+ "texture-160-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03."
+ },
+ "texture-160-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03."
+ },
+ "texture-161-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-temple review sheet on 2026-11-03."
+ },
+ "texture-161-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-temple review sheet on 2026-11-03."
+ },
+ "texture-161-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-temple review sheet on 2026-11-03."
+ },
+ "texture-162-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-temple review sheet on 2026-11-03."
+ },
+ "texture-162-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-temple review sheet on 2026-11-03."
+ },
+ "texture-162-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-temple review sheet on 2026-11-03."
+ },
+ "texture-163-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+ },
+ "texture-163-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+ },
+ "texture-163-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+ },
+ "texture-163-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+ },
+ "texture-163-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+ },
+ "texture-164-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-village review sheet on 2026-11-03."
+ },
+ "texture-164-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-village review sheet on 2026-11-03."
+ },
+ "texture-164-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-village review sheet on 2026-11-03."
+ },
+ "texture-165-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-village review sheet on 2026-11-03."
+ },
+ "texture-165-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-village review sheet on 2026-11-03."
+ },
+ "texture-165-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-village review sheet on 2026-11-03."
+ },
+ "texture-166-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-village review sheet on 2026-11-03."
+ },
+ "texture-166-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-village review sheet on 2026-11-03."
+ },
+ "texture-166-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-village review sheet on 2026-11-03."
+ },
+ "texture-166-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-village review sheet on 2026-11-03."
+ },
+ "texture-166-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-village review sheet on 2026-11-03."
+ },
+ "texture-167-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-167-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-167-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-167-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-168-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-168-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-168-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-168-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-168-5": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-168-6": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-168-8": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-168-9": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-169-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-169-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-169-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-169-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-170-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-170-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-170-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-170-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-171-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-171-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-171-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-171-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-171-4": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-172-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-172-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-172-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-174-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-doors review sheet on 2026-11-03."
+ },
+ "texture-174-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-doors review sheet on 2026-11-03."
+ },
+ "texture-174-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-doors review sheet on 2026-11-03."
+ },
+ "texture-303-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-03 review sheet on 2026-11-03."
+ },
+ "texture-304-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-04 review sheet on 2026-11-03."
+ },
+ "texture-307-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-ruins review sheet on 2026-11-03."
+ },
+ "texture-307-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-ruins review sheet on 2026-11-03."
+ },
+ "texture-308-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-ruins-2 review sheet on 2026-11-03."
+ },
+ "texture-308-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-ruins-2 review sheet on 2026-11-03."
+ },
+ "texture-308-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-ruins-2 review sheet on 2026-11-03."
+ },
+ "texture-309-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-309-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-309-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-309-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-309-4": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-310-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-310-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-310-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-310-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-312-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-312-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-312-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-312-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-313-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-313-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-313-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-313-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-314-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-b review sheet on 2026-11-03."
+ },
+ "texture-314-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-b review sheet on 2026-11-03."
+ },
+ "texture-314-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-b review sheet on 2026-11-03."
+ },
+ "texture-315-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-b review sheet on 2026-11-03."
+ },
+ "texture-315-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-b review sheet on 2026-11-03."
+ },
+ "texture-315-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-b review sheet on 2026-11-03."
+ },
+ "texture-316-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-city review sheet on 2026-11-03."
+ },
+ "texture-316-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-city review sheet on 2026-11-03."
+ },
+ "texture-316-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-city review sheet on 2026-11-03."
+ },
+ "texture-316-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-city review sheet on 2026-11-03."
+ },
+ "texture-316-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-city review sheet on 2026-11-03."
+ },
+ "texture-317-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-walls review sheet on 2026-11-03."
+ },
+ "texture-317-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-walls review sheet on 2026-11-03."
+ },
+ "texture-317-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-walls review sheet on 2026-11-03."
+ },
+ "texture-318-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-walls review sheet on 2026-11-03."
+ },
+ "texture-318-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-walls review sheet on 2026-11-03."
+ },
+ "texture-318-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-walls review sheet on 2026-11-03."
+ },
+ "texture-319-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03."
+ },
+ "texture-319-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03."
+ },
+ "texture-319-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03."
+ },
+ "texture-319-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03."
+ },
+ "texture-319-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03."
+ },
+ "texture-320-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-b review sheet on 2026-11-03."
+ },
+ "texture-320-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-b review sheet on 2026-11-03."
+ },
+ "texture-320-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-b review sheet on 2026-11-03."
+ },
+ "texture-320-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-b review sheet on 2026-11-03."
+ },
+ "texture-320-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-b review sheet on 2026-11-03."
+ },
+ "texture-321-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-21 review sheet on 2026-11-03."
+ },
+ "texture-321-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-21 review sheet on 2026-11-03."
+ },
+ "texture-321-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-21 review sheet on 2026-11-03."
+ },
+ "texture-321-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-21 review sheet on 2026-11-03."
+ },
+ "texture-321-4": {
+  "status": "accepted",
+  "note": "Patch accepted the set-21 review sheet on 2026-11-03."
+ },
+ "texture-321-5": {
+  "status": "accepted",
+  "note": "Patch accepted the set-21 review sheet on 2026-11-03."
+ },
+ "texture-321-6": {
+  "status": "accepted",
+  "note": "Patch accepted the set-21 review sheet on 2026-11-03."
+ },
+ "texture-321-7": {
+  "status": "accepted",
+  "note": "Patch accepted the set-21 review sheet on 2026-11-03."
+ },
+ "texture-321-8": {
+  "status": "accepted",
+  "note": "Patch accepted the set-21 review sheet on 2026-11-03."
+ },
+ "texture-321-9": {
+  "status": "accepted",
+  "note": "Patch accepted the set-21 review sheet on 2026-11-03."
+ },
+ "texture-322-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-a review sheet on 2026-11-03."
+ },
+ "texture-322-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-a review sheet on 2026-11-03."
+ },
+ "texture-322-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-a review sheet on 2026-11-03."
+ },
+ "texture-322-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-a review sheet on 2026-11-03."
+ },
+ "texture-322-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-a review sheet on 2026-11-03."
+ },
+ "texture-323-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03."
+ },
+ "texture-323-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03."
+ },
+ "texture-323-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03."
+ },
+ "texture-323-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03."
+ },
+ "texture-323-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03."
+ },
+ "texture-324-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-c review sheet on 2026-11-03."
+ },
+ "texture-324-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-c review sheet on 2026-11-03."
+ },
+ "texture-324-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-c review sheet on 2026-11-03."
+ },
+ "texture-324-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-c review sheet on 2026-11-03."
+ },
+ "texture-326-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-326-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-326-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-326-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-327-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-327-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-327-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-327-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-328-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-farm review sheet on 2026-11-03."
+ },
+ "texture-328-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-farm review sheet on 2026-11-03."
+ },
+ "texture-328-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-farm review sheet on 2026-11-03."
+ },
+ "texture-328-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-farm review sheet on 2026-11-03."
+ },
+ "texture-328-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-farm review sheet on 2026-11-03."
+ },
+ "texture-329-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+ },
+ "texture-329-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+ },
+ "texture-329-4": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+ },
+ "texture-330-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+ },
+ "texture-330-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+ },
+ "texture-330-4": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+ },
+ "texture-331-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-31 review sheet on 2026-11-03."
+ },
+ "texture-331-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-31 review sheet on 2026-11-03."
+ },
+ "texture-331-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-31 review sheet on 2026-11-03."
+ },
+ "texture-333-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-333-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-333-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-333-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-333-4": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-333-5": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-333-6": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-333-7": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-333-8": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-333-9": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-333-10": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-333-11": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-333-12": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-333-13": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-333-14": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-333-15": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-333-16": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-333-17": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-333-18": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-hedges review sheet on 2026-11-03."
+ },
+ "texture-335-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-335-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-335-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-335-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-336-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-336-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-336-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-336-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-337-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-337-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-337-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-337-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-337-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-338-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-338-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-338-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-338-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-339-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-339-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-339-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-339-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-340-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-manor review sheet on 2026-11-03."
+ },
+ "texture-340-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-manor review sheet on 2026-11-03."
+ },
+ "texture-340-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-manor review sheet on 2026-11-03."
+ },
+ "texture-340-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-manor review sheet on 2026-11-03."
+ },
+ "texture-340-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-manor review sheet on 2026-11-03."
+ },
+ "texture-341-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-marble-floors review sheet on 2026-11-03."
+ },
+ "texture-341-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-marble-floors review sheet on 2026-11-03."
+ },
+ "texture-341-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-marble-floors review sheet on 2026-11-03."
+ },
+ "texture-341-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-marble-floors review sheet on 2026-11-03."
+ },
+ "texture-342-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-342-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-342-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-342-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-343-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-343-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-343-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-343-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-344-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-344-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-344-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-344-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-344-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-348-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-paintings review sheet on 2026-11-03."
+ },
+ "texture-348-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-paintings review sheet on 2026-11-03."
+ },
+ "texture-348-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-paintings review sheet on 2026-11-03."
+ },
+ "texture-348-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-paintings review sheet on 2026-11-03."
+ },
+ "texture-348-5": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-paintings review sheet on 2026-11-03."
+ },
+ "texture-349-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-49 review sheet on 2026-11-03."
+ },
+ "texture-349-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-49 review sheet on 2026-11-03."
+ },
+ "texture-349-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-49 review sheet on 2026-11-03."
+ },
+ "texture-349-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-49 review sheet on 2026-11-03."
+ },
+ "texture-350-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-350-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-350-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-351-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-51 review sheet on 2026-11-03."
+ },
+ "texture-351-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-51 review sheet on 2026-11-03."
+ },
+ "texture-351-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-51 review sheet on 2026-11-03."
+ },
+ "texture-352-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-52 review sheet on 2026-11-03."
+ },
+ "texture-352-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-52 review sheet on 2026-11-03."
+ },
+ "texture-352-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-52 review sheet on 2026-11-03."
+ },
+ "texture-354-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-54 review sheet on 2026-11-03."
+ },
+ "texture-354-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-54 review sheet on 2026-11-03."
+ },
+ "texture-354-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-54 review sheet on 2026-11-03."
+ },
+ "texture-354-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-54 review sheet on 2026-11-03."
+ },
+ "texture-355-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-55 review sheet on 2026-11-03."
+ },
+ "texture-355-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-55 review sheet on 2026-11-03."
+ },
+ "texture-355-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-55 review sheet on 2026-11-03."
+ },
+ "texture-356-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-56 review sheet on 2026-11-03."
+ },
+ "texture-356-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-56 review sheet on 2026-11-03."
+ },
+ "texture-356-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-56 review sheet on 2026-11-03."
+ },
+ "texture-358-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-358-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-358-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-358-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-359-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-359-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-359-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-359-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-360-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03."
+ },
+ "texture-360-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03."
+ },
+ "texture-360-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03."
+ },
+ "texture-360-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03."
+ },
+ "texture-360-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03."
+ },
+ "texture-361-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-temple review sheet on 2026-11-03."
+ },
+ "texture-361-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-temple review sheet on 2026-11-03."
+ },
+ "texture-361-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-temple review sheet on 2026-11-03."
+ },
+ "texture-362-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-temple review sheet on 2026-11-03."
+ },
+ "texture-362-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-temple review sheet on 2026-11-03."
+ },
+ "texture-362-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-temple review sheet on 2026-11-03."
+ },
+ "texture-363-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+ },
+ "texture-363-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+ },
+ "texture-363-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+ },
+ "texture-363-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+ },
+ "texture-363-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+ },
+ "texture-364-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-village review sheet on 2026-11-03."
+ },
+ "texture-364-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-village review sheet on 2026-11-03."
+ },
+ "texture-364-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-village review sheet on 2026-11-03."
+ },
+ "texture-365-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-village review sheet on 2026-11-03."
+ },
+ "texture-365-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-village review sheet on 2026-11-03."
+ },
+ "texture-365-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-village review sheet on 2026-11-03."
+ },
+ "texture-366-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-village review sheet on 2026-11-03."
+ },
+ "texture-366-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-village review sheet on 2026-11-03."
+ },
+ "texture-366-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-village review sheet on 2026-11-03."
+ },
+ "texture-366-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-village review sheet on 2026-11-03."
+ },
+ "texture-366-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-village review sheet on 2026-11-03."
+ },
+ "texture-368-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-368-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-368-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-368-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-368-5": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-368-6": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-368-8": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-368-9": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-369-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-369-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-369-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-369-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-370-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-370-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-370-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-370-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-371-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-371-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-371-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-371-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-371-4": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-371-10": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-372-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-372-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-372-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-372-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-372-4": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+ },
+ "texture-374-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-doors review sheet on 2026-11-03."
+ },
+ "texture-374-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-doors review sheet on 2026-11-03."
+ },
+ "texture-374-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-doors review sheet on 2026-11-03."
+ },
+ "texture-374-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-doors review sheet on 2026-11-03."
+ },
+ "texture-403-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-03 review sheet on 2026-11-03."
+ },
+ "texture-404-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-04 review sheet on 2026-11-03."
+ },
+ "texture-407-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-ruins review sheet on 2026-11-03."
+ },
+ "texture-407-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-ruins review sheet on 2026-11-03."
+ },
+ "texture-408-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-ruins-2 review sheet on 2026-11-03."
+ },
+ "texture-408-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-ruins-2 review sheet on 2026-11-03."
+ },
+ "texture-409-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-409-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-409-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-409-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-409-4": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-410-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-410-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-410-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-410-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+ },
+ "texture-412-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-412-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-412-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-412-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-413-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-413-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-413-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-413-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+ },
+ "texture-414-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-b review sheet on 2026-11-03."
+ },
+ "texture-414-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-b review sheet on 2026-11-03."
+ },
+ "texture-414-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-b review sheet on 2026-11-03."
+ },
+ "texture-415-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-b review sheet on 2026-11-03."
+ },
+ "texture-415-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-b review sheet on 2026-11-03."
+ },
+ "texture-415-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-b review sheet on 2026-11-03."
+ },
+ "texture-416-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-city review sheet on 2026-11-03."
+ },
+ "texture-416-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-city review sheet on 2026-11-03."
+ },
+ "texture-416-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-city review sheet on 2026-11-03."
+ },
+ "texture-416-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-city review sheet on 2026-11-03."
+ },
+ "texture-416-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-city review sheet on 2026-11-03."
+ },
+ "texture-417-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-walls review sheet on 2026-11-03."
+ },
+ "texture-417-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-walls review sheet on 2026-11-03."
+ },
+ "texture-417-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-walls review sheet on 2026-11-03."
+ },
+ "texture-418-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-walls review sheet on 2026-11-03."
+ },
+ "texture-418-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-walls review sheet on 2026-11-03."
+ },
+ "texture-418-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-city-walls review sheet on 2026-11-03."
+ },
+ "texture-419-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03."
+ },
+ "texture-419-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03."
+ },
+ "texture-419-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03."
+ },
+ "texture-419-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03."
+ },
+ "texture-419-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03."
+ },
+ "texture-420-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-b review sheet on 2026-11-03."
+ },
+ "texture-420-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-b review sheet on 2026-11-03."
+ },
+ "texture-420-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-b review sheet on 2026-11-03."
+ },
+ "texture-420-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-b review sheet on 2026-11-03."
+ },
+ "texture-420-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-crypt-b review sheet on 2026-11-03."
+ },
+ "texture-422-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-a review sheet on 2026-11-03."
+ },
+ "texture-422-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-a review sheet on 2026-11-03."
+ },
+ "texture-422-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-a review sheet on 2026-11-03."
+ },
+ "texture-422-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-a review sheet on 2026-11-03."
+ },
+ "texture-422-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-a review sheet on 2026-11-03."
+ },
+ "texture-423-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03."
+ },
+ "texture-423-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03."
+ },
+ "texture-423-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03."
+ },
+ "texture-423-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03."
+ },
+ "texture-423-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03."
+ },
+ "texture-424-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-c review sheet on 2026-11-03."
+ },
+ "texture-424-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-c review sheet on 2026-11-03."
+ },
+ "texture-424-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-c review sheet on 2026-11-03."
+ },
+ "texture-424-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-dungeons-c review sheet on 2026-11-03."
+ },
+ "texture-426-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-426-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-426-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-426-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-427-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-427-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-427-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-427-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-farm review sheet on 2026-11-03."
+ },
+ "texture-428-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-farm review sheet on 2026-11-03."
+ },
+ "texture-428-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-farm review sheet on 2026-11-03."
+ },
+ "texture-428-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-farm review sheet on 2026-11-03."
+ },
+ "texture-428-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-farm review sheet on 2026-11-03."
+ },
+ "texture-428-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-farm review sheet on 2026-11-03."
+ },
+ "texture-429-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+ },
+ "texture-429-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+ },
+ "texture-429-4": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+ },
+ "texture-430-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+ },
+ "texture-430-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+ },
+ "texture-430-4": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+ },
+ "texture-431-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-31 review sheet on 2026-11-03."
+ },
+ "texture-431-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-31 review sheet on 2026-11-03."
+ },
+ "texture-431-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-31 review sheet on 2026-11-03."
+ },
+ "texture-431-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-31 review sheet on 2026-11-03."
+ },
+ "texture-431-4": {
+  "status": "accepted",
+  "note": "Patch accepted the set-31 review sheet on 2026-11-03."
+ },
+ "texture-431-5": {
+  "status": "accepted",
+  "note": "Patch accepted the set-31 review sheet on 2026-11-03."
+ },
+ "texture-431-6": {
+  "status": "accepted",
+  "note": "Patch accepted the set-31 review sheet on 2026-11-03."
+ },
+ "texture-431-7": {
+  "status": "accepted",
+  "note": "Patch accepted the set-31 review sheet on 2026-11-03."
+ },
+ "texture-431-8": {
+  "status": "accepted",
+  "note": "Patch accepted the set-31 review sheet on 2026-11-03."
+ },
+ "texture-431-9": {
+  "status": "accepted",
+  "note": "Patch accepted the set-31 review sheet on 2026-11-03."
+ },
+ "texture-435-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-435-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-435-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-435-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-437-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-437-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-437-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-437-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-437-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-mages-guild review sheet on 2026-11-03."
+ },
+ "texture-438-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-438-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-438-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-438-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-439-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-439-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-439-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-439-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+ },
+ "texture-440-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-manor review sheet on 2026-11-03."
+ },
+ "texture-440-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-manor review sheet on 2026-11-03."
+ },
+ "texture-440-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-manor review sheet on 2026-11-03."
+ },
+ "texture-440-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-manor review sheet on 2026-11-03."
+ },
+ "texture-440-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-manor review sheet on 2026-11-03."
+ },
+ "texture-442-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-442-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-442-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-442-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-443-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-443-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-443-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-443-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-444-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-444-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-444-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-444-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-444-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-merchant-homes review sheet on 2026-11-03."
+ },
+ "texture-448-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-paintings review sheet on 2026-11-03."
+ },
+ "texture-448-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-paintings review sheet on 2026-11-03."
+ },
+ "texture-448-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-paintings review sheet on 2026-11-03."
+ },
+ "texture-448-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-paintings review sheet on 2026-11-03."
+ },
+ "texture-448-5": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-paintings review sheet on 2026-11-03."
+ },
+ "texture-449-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-49 review sheet on 2026-11-03."
+ },
+ "texture-449-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-49 review sheet on 2026-11-03."
+ },
+ "texture-449-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-49 review sheet on 2026-11-03."
+ },
+ "texture-449-3": {
+  "status": "accepted",
+  "note": "Patch accepted the set-49 review sheet on 2026-11-03."
+ },
+ "texture-450-0": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-450-1": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-450-2": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-450-5": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-450-6": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-450-7": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-450-8": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-450-9": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-450-10": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-450-11": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-450-12": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-450-14": {
+  "status": "accepted",
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+ },
+ "texture-458-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-458-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-458-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-458-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-459-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-459-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-459-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-459-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+ },
+ "texture-460-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03."
+ },
+ "texture-460-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03."
+ },
+ "texture-460-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03."
+ },
+ "texture-460-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03."
+ },
+ "texture-460-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03."
+ },
+ "texture-461-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-temple review sheet on 2026-11-03."
+ },
+ "texture-461-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-temple review sheet on 2026-11-03."
+ },
+ "texture-461-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-temple review sheet on 2026-11-03."
+ },
+ "texture-462-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-temple review sheet on 2026-11-03."
+ },
+ "texture-462-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-temple review sheet on 2026-11-03."
+ },
+ "texture-462-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-temple review sheet on 2026-11-03."
+ },
+ "texture-463-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+ },
+ "texture-463-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+ },
+ "texture-463-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+ },
+ "texture-463-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+ },
+ "texture-463-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+ },
+ "texture-464-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-village review sheet on 2026-11-03."
+ },
+ "texture-464-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-village review sheet on 2026-11-03."
+ },
+ "texture-464-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-village review sheet on 2026-11-03."
+ },
+ "texture-465-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-village review sheet on 2026-11-03."
+ },
+ "texture-465-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-village review sheet on 2026-11-03."
+ },
+ "texture-465-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-village review sheet on 2026-11-03."
+ },
+ "texture-466-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-village review sheet on 2026-11-03."
+ },
+ "texture-466-1": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-village review sheet on 2026-11-03."
+ },
+ "texture-466-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-village review sheet on 2026-11-03."
+ },
+ "texture-466-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-village review sheet on 2026-11-03."
+ },
+ "texture-466-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-village review sheet on 2026-11-03."
+ },
+ "texture-467-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-467-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-467-4": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-467-5": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-467-6": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-467-7": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-misc-wood-planks review sheet on 2026-11-03."
+ },
+ "texture-468-0": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-468-2": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-468-3": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-468-4": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-468-5": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-468-6": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-468-8": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-468-9": {
+  "status": "accepted",
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+ },
+ "texture-469-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-469-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-469-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-469-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-470-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-470-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-470-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-470-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-roofs review sheet on 2026-11-03."
+ },
+ "texture-474-0": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-doors review sheet on 2026-11-03."
+ },
+ "texture-474-1": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-doors review sheet on 2026-11-03."
+ },
+ "texture-474-2": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-doors review sheet on 2026-11-03."
+ },
+ "texture-474-3": {
+  "status": "accepted",
+  "note": "Patch accepted the exterior-doors review sheet on 2026-11-03."
+ }
+}

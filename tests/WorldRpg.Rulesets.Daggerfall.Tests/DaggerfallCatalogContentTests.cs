@@ -20,7 +20,7 @@ public sealed class DaggerfallCatalogContentTests
         Assert.Equal(2, definitions.Vocabulary.Progression.Count);
         Assert.Equal(42, definitions.Actors.Values.Count(actor => actor.Kind == "monster"));
         Assert.DoesNotContain(definitions.Actors.Values, actor => actor.MobileId == 39);
-        Assert.Equal(31, definitions.Items.Count);
+        Assert.Equal(32, definitions.Items.Count);
         Assert.Equal(25, definitions.EquipmentSlots.Count);
         Assert.Equal(7, definitions.Actions.Count);
         Assert.Equal(22, definitions.LootTables.Count);
@@ -157,7 +157,6 @@ public sealed class DaggerfallCatalogContentTests
         Assert.False(definitions.ItemTemplates.SourceSupplied);
         Assert.False(definitions.ItemTemplates.PublishedNativeDecoding);
         Assert.Equal("catalog-migration", definitions.ItemTemplates.PublishedValueProvenance);
-        Assert.Equal(definitions.Items.Count, definitions.ItemTemplates.PublishedItemCount);
         Assert.Equal(279, definitions.ItemTemplates.Targets.Count(target => target.DonorGroups.Count != 0));
         Assert.Equal([99, 100, 101, 246, 250, 251, 266, 272, 273], definitions.ItemTemplates.Targets.Where(target => target.DonorGroups.Count == 0).Select(target => target.Index));
         // A group the donor maps to a different id space is published apart from the

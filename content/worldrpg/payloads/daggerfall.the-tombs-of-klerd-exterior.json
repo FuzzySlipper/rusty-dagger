@@ -39,6 +39,10 @@
         "resource": "weapon.mace"
       },
       {
+        "itemId": "iron-club",
+        "resource": "weapon.mace"
+      },
+      {
         "itemId": "iron-battle-axe",
         "resource": "weapon.axe"
       },

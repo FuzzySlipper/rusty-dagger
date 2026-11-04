@@ -583,8 +583,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         if (ranged ?? IsRangedAction(owner)) return new(true, "sound.3");
         if (EquippedWeapon(owner) is not { } weapon) return DaggerfallStrikeFeedback.Unarmed;
         DaggerfallItemDefinition definition = _catalog.RequireItem(new DaggerfallItemId(weapon.Definition.Value));
-        int? template = DaggerfallTemplateItemDefinitions.TemplateIndexForAuthoredItem(definition.Id) ?? definition.Template?.Index;
-        return DaggerfallCombatFeedbackPolicy.ForWeaponTemplate(template);
+        return DaggerfallCombatFeedbackPolicy.ForWeaponTemplate(_catalog.SourceTemplateFor(definition)?.ClassicIndex);
     }
 
     private WorldRpg.Kit.Inventory.UniqueInventoryItem? EquippedWeapon(long owner)

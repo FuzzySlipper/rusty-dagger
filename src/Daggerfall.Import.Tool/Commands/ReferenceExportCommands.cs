@@ -43,6 +43,13 @@ internal static class ReferenceExportCommands
         return 0;
     });
 
+    public static ToolCommand Terrain { get; } = new("export-terrain", [Arena2, Output], args =>
+    {
+        TerrainReferenceExport.Run(args.Optional("--arena2") ?? "local/arena2",
+            args.Optional("--output") ?? "authoring/df-raw/terrain");
+        return 0;
+    });
+
     public static ToolCommand Effects { get; } = new("export-effects", [Arena2, Output], args =>
     {
         MediaReferenceExport.RunEffects(args.Optional("--arena2") ?? "local/arena2",
