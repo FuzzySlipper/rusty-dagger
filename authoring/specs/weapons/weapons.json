@@ -1,5 +1,5 @@
 {
- "about": "3D weapon models (#10511). Each weapon's identity is its accepted refreshed paper-doll layer (authoring/gen-raw/worn/texture-234-record-NNN, `icon`); classic first-person frames add construction detail only where firstPerson.use says so. Lengths are overall, in metres. subject and invent are the H3 turnaround request (authoring/tools/weapons/h3.py); grip and parts are how build.py builds the model from the icon. secondGrip is where the off hand closes on a weapon held in both hands: a point in the held-look frame (metres; origin at the grip, +Z toward the pommel or butt), measured as hand_l from hand_r along the weapon_r bone in the idle clip of the family that draws it (0.142 FPP_Longs_Idle, 0.508 FPP_Halb_Idle).",
+ "about": "3D weapon models (#10511). Each weapon's identity is its accepted refreshed paper-doll layer (authoring/gen-raw/worn/texture-234-record-NNN, `icon`); classic first-person frames add construction detail only where firstPerson.use says so (`compared`: checked against them, and nothing taken). Lengths are overall, in metres. subject and invent are the H3 turnaround request (authoring/tools/weapons/h3.py); grip and parts are how build.py builds the model from the icon. secondGrip is where the off hand closes on a weapon held in both hands: a point in the held-look frame (metres; origin at the grip, +Z toward the pommel or butt), measured as hand_l from hand_r along the weapon_r bone in the idle clip of the family that draws it (0.142 FPP_Longs_Idle, 0.508 FPP_Halb_Idle).",
  "style": "Keep the reference's painted dark-fantasy look: its own colours, broad painted colour areas and plain fittings, now as one solid three-dimensional object with real thickness, bevels and edges. The set is one kit: steel blades and heads, antique-brass fittings, red-brown leather wrapped grips, oiled brown wood. No photorealism, glossy modern redesign or microtexture; no added gems, runes, engraving, inscriptions, faces, chains, tassels or ornament the reference does not show.",
  "pose": "One complete standalone weapon standing upright, point or head at the top and pommel or butt at the bottom, centred with generous margin and frozen in shape. Its broad face is toward the camera at the start. Keep the tip, guard, grip and pommel fully inside the image. No hand, arm, person, scabbard, sheath, stand, hanger or other object. Neutral grey background.",
  "crunch": {"cell": 0.002, "steps": 6, "dither": 0.2, "light": 0.15, "size": 512},
@@ -220,7 +220,7 @@
   {
    "item": 127, "name": "battle-axe", "family": "axe", "hands": 1, "length": 0.80, "axis": "haft",
    "records": [0, 1], "icon": 1,
-   "firstPerson": {"cif": "WEAPON08", "use": "construction", "why": "head side profile, socket and shaft rings"},
+   "firstPerson": {"cif": "WEAPON08", "use": "compared", "why": "the head comes from the icon; Patch kept the plain socket over the classic rounded socket and rings (#10575)"},
    "subject": "A one-handed battle axe: a straight oiled wooden haft with a leather-bound grip, and a single broad bearded steel blade with a curved cutting edge, fixed to a steel socket at the top of the haft.",
    "invent": "The blade is flat and thin at its edge, thickening toward the socket. The socket is a short steel sleeve around the haft. The haft is round in section.",
    "grip": {"part": "haft", "span": [0, 0.3]},
@@ -233,7 +233,7 @@
   {
    "item": 128, "name": "war-axe", "family": "axe", "hands": 2, "length": 1.20, "axis": "haft",
    "records": [24], "icon": 24,
-   "firstPerson": {"cif": "WEAPON08", "use": "construction", "why": "head side profile, socket and shaft rings"},
+   "firstPerson": {"cif": "WEAPON08", "use": "compared", "why": "the head comes from the icon; Patch kept the plain socket over the classic rounded socket and rings (#10575)"},
    "subject": "A two-handed war axe: a long straight oiled wooden haft, and a steel head with two opposed crescent blades and a pointed spike at the top, fixed to a steel socket.",
    "invent": "The blades are flat and thin at their edges, thickening toward the socket. The socket is a short steel sleeve around the haft. The haft is round in section.",
    "grip": {"part": "haft", "span": [0, 0.3]},
