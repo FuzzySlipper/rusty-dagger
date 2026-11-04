@@ -29,8 +29,8 @@ bpy.ops.import_scene.gltf(filepath=glb)
 meshes = [o for o in bpy.context.scene.objects if o.type == 'MESH']
 pivot = bpy.data.objects.new('pivot', None)
 bpy.context.scene.collection.objects.link(pivot)
-for o in meshes:
-    if o.parent is None:
+for o in list(bpy.context.scene.objects):   # every root: a rigged model's meshes hang from its armature
+    if o.parent is None and o is not pivot:
         o.parent = pivot
 # glTF -Z (the length) imports as Blender +Y; stand it on +Z, the broad face (Blender X) toward the camera on -Y.
 pivot.rotation_euler = (math.radians(90), 0, math.radians(90))
