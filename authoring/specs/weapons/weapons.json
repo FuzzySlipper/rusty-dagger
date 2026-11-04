@@ -195,12 +195,12 @@
    "firstPerson": {"cif": "WEAPON06", "use": "construction", "why": "chain links and socket"},
    "subject": "A flail: a straight oiled wooden handle with a steel cap and ring at its end, a chain of oval iron links hanging from the ring, and a round iron ball studded all over with short conical spikes at the end of the chain.",
    "invent": "The handle is round in section. The chain links are oval rings, each turned at right angles to the next. The ball has the same spikes on every side.",
-   "grip": {"part": "haft", "span": [0, 0.4]},
+   "grip": {"part": "haft", "span": [0, 0.65]},
    "secondGrip": [0, 0, 0.142],
    "parts": [
-    {"name": "haft", "class": "leather", "rows": [206, 769], "shape": "lathe", "segments": 10, "smooth": 41},
+    {"name": "haft", "class": "leather", "rows": [420, 769], "shape": "lathe", "segments": 10, "smooth": 41},
     {"name": "butt", "class": "steel", "pick": "bottom", "shape": "lathe", "segments": 10, "smooth": 3},
-    {"name": "chain", "class": "steel", "rows": [0, 200], "shape": "chain", "on": "haft", "links": 7, "linkLength": 0.05, "linkWidth": 0.03, "wire": 0.006, "ball": 0.05, "light": 0.5, "spikes": {"count": 16, "length": 0.022, "base": 0.01}}
+    {"name": "chain", "class": "steel", "rows": [0, 200], "shape": "chain", "on": "haft", "links": 5, "linkLength": 0.05, "linkWidth": 0.03, "wire": 0.006, "ball": 0.05, "light": 0.8, "shade": [0.55, 1], "spikes": {"count": 16, "length": 0.022, "base": 0.01}}
    ]
   },
   {
