@@ -10,9 +10,13 @@ a blade's diamond section; `round` rises in a quarter circle, a bar). A `lathe` 
 the icon's outline there, round in section, about one straight axis fitted to its run; lathe parts that touch are
 turned as one profile and share their rings, so they join without gaps, and a run's end reaches a flat part just beyond it. `smooth` rings median-filter
 the radii so studs and spikes on the outline do not swell it. `ball` makes a lathe part a sphere, the largest circle
-inside its outline, keeping the narrower turned outline below it (a collar). `flanges` makes it a turned core (`core`, a share of its widest radius) with `count` flat plates
+inside its outline, on a short collar half its radius. `flanges` makes it a turned core (`core`, a share of its widest radius) with `count` flat plates
 `thickness` metres thick round it, each following the outline. `rows` limits a part to those icon rows, for a class
-the icon paints as one piece that is two parts. `spikes` sets cones on its widest ring's sphere: `count`, `length` and `base` in metres,
+the icon paints as one piece that is two parts, and `cols` the columns; class `any` takes every colour. A `disc` part is a
+round plate `half` metres either side of the centre of the icon's tilted ellipse of it (a tsuba). A `chain` part is
+`links` oval links of `linkLength`, `linkWidth` and `wire` running on from the top of part `on`, ending in a ball of radius
+`ball` with `spikes`. A `string` part is a cord of `radius` from tip to tip. Both take their colour from their piece of
+the icon. A lathe part with `bridge` always joins the run above it, across a gap in the icon. A part's `slot` overrides its material (`any` parts default to `trim`). `spikes` sets cones on its widest ring's sphere: `count`, `length` and `base` in metres,
 spread evenly. A part's `light` is passed to paint.py.
 
 Writes OUT_DIR/reference.glb (the icon projected flat onto every part, the colour layout `palette_cells.py`
@@ -43,6 +47,8 @@ icon = bpy.data.images.load(str(Path(icon_path).resolve()))
 W, H = icon.size
 pixels = np.array(icon.pixels[:]).reshape(H, W, 4)[::-1]   # row 0 at the top, as the PNG
 METRES = weapon['length'] / H                                # the icon's height is the weapon's length
+COLLAR = 0.5   # a `ball`'s collar, as a share of its radius
+INSET = 0.7   # a turned part's colour comes from this share of its width: the side would otherwise take the ink outline
 
 
 def classify():
@@ -90,11 +96,13 @@ def components(mask):
 
 
 def part_mask(cls, part):
-    want = {'steel': 1, 'brass': 2, 'leather': 3}[part['class']]
-    chosen = cls == want
+    chosen = pixels[..., 3] > 0.5 if part['class'] == 'any' else cls == {'steel': 1, 'brass': 2, 'leather': 3}[part['class']]
     if 'rows' in part:   # a class the icon paints as one piece that is two parts (wood running into a grip)
         top, bottom = part['rows']
         chosen = chosen & (np.arange(H)[:, None] >= top) & (np.arange(H)[:, None] <= bottom)
+    if 'cols' in part:   # the same, across (an axe's socket beside its blade)
+        left, right = part['cols']
+        chosen = chosen & (np.arange(W)[None, :] >= left) & (np.arange(W)[None, :] <= right)
     pieces = [m for m in components(chosen) if m.sum() > 100]
     if not pieces:
         raise SystemExit(f'{name}: no {part["class"]} pixels for {part["name"]}')
@@ -176,7 +184,7 @@ def turned(chain):
     top, bottom = int(ys.min()), int(ys.max())
     band = np.zeros((H, W), bool)
     band[top:bottom + 1] = pixels[top:bottom + 1, :, 3] > 0.5
-    outline = max(components(band), key=lambda m: (m & union).sum())
+    outline = np.any([m for m in components(band) if (m & union).any()], axis=0)   # a bridged run has several
     rows = [y for y in range(top, bottom + 1) if outline[y].any()]
     owner, last = {}, chain[0]['name']
     for y in rows:
@@ -205,14 +213,14 @@ def turned(chain):
             s[2] = float(np.median(raw[max(0, j - k // 2):j + k // 2 + 1]))
     segments = max(p.get('segments', 12) for p in chain)
     for part in (p for p in chain if p.get('ball')):
-        # A true sphere, the largest that fits the outline (spikes do not widen it). Below it the turned outline is
-        # kept where it is narrower than the ball (a collar), and the sphere ends where it is as narrow as the collar.
+        # A true sphere, the largest that fits the outline (spikes do not widen it), ending where it is as narrow as
+        # its collar; the rows below it are the collar, no wider than that, however the icon paints the ball's underside.
         mine = [s for s in stations if s[3] == part['name']]
         d = distance(masks[part['name']])
         cy, painted = (int(v) for v in np.unravel_index(int(np.argmax(d)), d.shape))
         cx, r = slope * cy + offset, float(d.max())
-        collar = [s for s in mine if s[0] > cy and s[2] < 0.8 * r]
-        end = math.asin(collar[0][2] / r) if collar else 0.0
+        end = math.asin(COLLAR)
+        collar = [[s[0], s[1], min(s[2], COLLAR * r), s[3], s[4]] for s in mine if s[0] > cy + r * math.cos(end)]
         ball = [[cy + r * math.cos(t), cx, max(r * math.sin(t), r * 0.05), part['name'], painted]
                 for t in np.linspace(math.pi, end, segments + 1)]
         a, b = stations.index(mine[0]), stations.index(mine[-1])
@@ -231,6 +239,14 @@ def turned(chain):
         stations.insert(0, [above] + stations[0][1:])
     if below is not None and below > stations[-1][0]:
         stations.append([below] + stations[-1][1:])
+    # A ring that adds nothing to the profile goes: a straight shaft needs only its ends and each change of part.
+    kept = stations[:1]
+    for s, after in zip(stations[1:-1], stations[2:]):
+        before = kept[-1]
+        line = before[2] + (after[2] - before[2]) * (s[0] - before[0]) / max(after[0] - before[0], 1e-6)
+        if s[3] != before[3] or s[3] != after[3] or abs(s[2] - line) > 0.03 * max(s[2], 1):
+            kept.append(s)
+    stations = kept + stations[-1:]
     meshes = {}
     for part in chain:
         mine = [i for i, s in enumerate(stations) if s[3] == part['name']]
@@ -240,7 +256,7 @@ def turned(chain):
 
         def vert(y, cx, x, z, painted):
             v = bm.verts.new(place(cx + x, y, z * METRES))
-            v[icon_x] = painted + x
+            v[icon_x] = painted + x * INSET
             return v
         rings = [[vert(y, cx, r * math.cos(2 * math.pi * k / segments), r * math.sin(2 * math.pi * k / segments), painted)
                   for k in range(segments)] for y, cx, r, _, painted in stations[a:b + 1]]
@@ -304,28 +320,95 @@ def spikes(bm, centre, r, spec):
 
 
 def rows_of(names):
-    ys = np.nonzero(np.any([masks[n] for n in names], axis=0))[0]
+    """The rows these parts span. A disc spans only its centre, wherever the icon's tilted ellipse of it reaches."""
+    ys = np.concatenate([[int(np.nonzero(masks[n])[0].mean())] if SHAPES[n] == 'disc' else np.nonzero(masks[n])[0] for n in names])
     return int(ys.min()), int(ys.max())
 
 
 def joins(names):
-    """The rows where the other parts just above and below these end, when one ends within 20 pixels of them."""
+    """The rows where the other parts just above and below these end, when one ends within 60 pixels of them."""
     top, bottom = rows_of(names)
-    others = [rows_of([n]) for n in masks if n not in names]
-    above = [b for t, b in others if top - 20 <= b <= top + 3 and t < top]
-    below = [t for t, b in others if bottom - 3 <= t <= bottom + 20 and b > bottom]
+    others = [rows_of([n]) for n in masks if n not in names and SHAPES[n] in ('flat', 'disc')]
+    above = [b for t, b in others if top - 60 <= b <= top + 3 and t < top]
+    below = [t for t, b in others if bottom - 3 <= t <= bottom + 60 and b > bottom]
     return (max(above) if above else None, min(below) if below else None)
 
 
+def tube(bm, path, radius, sides, closed):
+    """A round tube along a path of Blender points."""
+    rings = []
+    count = len(path)
+    for i, point in enumerate(path):
+        ahead = (path[(i + 1) % count] - path[i - 1 if i else 0]) if closed or 0 < i < count - 1 else (path[1] - path[0] if i == 0 else path[-1] - path[-2])
+        turn = Vector((0, 0, 1)).rotation_difference(ahead.normalized())
+        rings.append([bm.verts.new(point + turn @ Vector((radius * math.cos(2 * math.pi * k / sides), radius * math.sin(2 * math.pi * k / sides), 0)))
+                      for k in range(sides)])
+    for a, b in zip(rings, rings[1:] + (rings[:1] if closed else [])):
+        for k in range(sides):
+            bm.faces.new([a[k], a[(k + 1) % sides], b[(k + 1) % sides], b[k]])
+    if not closed:
+        bm.faces.new(rings[0][::-1])
+        bm.faces.new(rings[-1])
+
+
+def chain(bm, part):
+    """Oval links, each turned a quarter from the last, running on from the top of the part it hangs from, and a spiked
+    ball at the end. Links and ball are straight along the weapon's length, the flail swung out."""
+    rows = np.nonzero(masks[part['on']])[0]
+    top = int(rows.min())
+    xs = np.nonzero(masks[part['on']][top + 3])[0]
+    at = place((xs.min() + xs.max() + 1) / 2, top, 0)
+    length, width, wire = part['linkLength'], part['linkWidth'], part['wire']
+    for n in range(part['links']):
+        centre = at + Vector((0, length * 0.8 * (n + 0.6), 0))
+        oval = []
+        for k in range(10):
+            a = 2 * math.pi * k / 10
+            x, y = width / 2 * math.cos(a), length / 2 * math.sin(a)
+            oval.append(centre + (Vector((x, y, 0)) if n % 2 else Vector((0, y, x))))
+        tube(bm, oval, wire, 4, True)
+    r = part['ball']
+    centre = at + Vector((0, length * 0.8 * (part['links'] + 0.3) + r * 0.8, 0))
+    sphere = bmesh.ops.create_icosphere(bm, subdivisions=2, radius=r)
+    bmesh.ops.translate(bm, verts=sphere['verts'], vec=centre)
+    spikes(bm, centre, r, part['spikes'])
+
+
+def string(bm, part):
+    """A thin cord straight from one tip of the weapon to the other."""
+    opaque = pixels[..., 3] > 0.5
+    ys = np.nonzero(opaque.any(axis=1))[0]
+    ends = [place(np.nonzero(opaque[y])[0].mean(), y, 0) for y in (ys.min(), ys.max())]
+    tube(bm, ends, part['radius'], 4, False)
+
+
+def disc(bm, mask, part):
+    """A round plate at right angles to the length, as wide as the icon's ellipse of it, at that ellipse's centre."""
+    ys, xs = np.nonzero(mask)
+    y, x, r = ys.mean(), (xs.min() + xs.max() + 1) / 2, (xs.max() - xs.min() + 1) / 2
+    half = part['half'] / METRES
+    sides = part.get('segments', 16)
+    rings = [[bm.verts.new(place(x + r * math.cos(2 * math.pi * k / sides), row, r * math.sin(2 * math.pi * k / sides) * METRES))
+              for k in range(sides)] for row in (y - half, y + half)]
+    for k in range(sides):
+        bm.faces.new([rings[0][k], rings[0][(k + 1) % sides], rings[1][(k + 1) % sides], rings[1][k]])
+    bm.faces.new(rings[0][::-1])
+    bm.faces.new(rings[1])
+
+
 def chains():
-    """The lathe parts in runs that touch (within 20 pixels), top to bottom."""
+    """The lathe parts in runs that touch (within 30 pixels), top to bottom."""
     runs = []
     for part in sorted((p for p in weapon['parts'] if p['shape'] == 'lathe'), key=lambda p: rows_of([p['name']])[0]):
-        if runs and rows_of([part['name']])[0] <= rows_of([q['name'] for q in runs[-1]])[1] + 20:
+        if runs and (part.get('bridge') or rows_of([part['name']])[0] <= rows_of([q['name'] for q in runs[-1]])[1] + 30):
             runs[-1].append(part)
         else:
             runs.append([part])
     return runs
+
+
+def slot_of(part):
+    return part.get('slot', 'metal' if part['class'] == 'steel' else 'trim')
 
 
 def material(label, image=None):
@@ -343,32 +426,46 @@ def material(label, image=None):
 
 
 cls = classify()
+SHAPES = {p['name']: p['shape'] for p in weapon['parts']}
 masks = {p['name']: part_mask(cls, p) for p in weapon['parts']}
 grip = weapon['grip']   # the part the hand closes on, and the share of it (from its bottom) the hand covers
 gy, gx = np.nonzero(masks[grip['part']])
 top, bottom = gy.min(), gy.max() + 1
 lo, hi = grip.get('span', [0, 1])
-ORIGIN = ((gx.min() + gx.max() + 1) / 2, bottom - (lo + hi) / 2 * (bottom - top))
+held = gx[(gy >= bottom - hi * (bottom - top)) & (gy <= bottom - lo * (bottom - top))]
+ORIGIN = ((held.min() + held.max() + 1) / 2, bottom - (lo + hi) / 2 * (bottom - top))
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 icon = bpy.data.images.load(str(Path(icon_path).resolve()))
 lathed = {name: bm for chain in chains() for name, bm in turned(chain).items()}
 objects = []
 for part in weapon['parts']:
-    if part['shape'] == 'flat':
-        bm = bmesh.new()
-        flat(bm, masks[part['name']], part)
-    else:
+    if part['shape'] == 'lathe':
         bm = lathed[part['name']]
+    else:
+        bm = bmesh.new()
+        if part['shape'] == 'flat':
+            flat(bm, masks[part['name']], part)
+        elif part['shape'] == 'disc':
+            disc(bm, masks[part['name']], part)
+        elif part['shape'] == 'chain':
+            chain(bm, part)
+        else:
+            string(bm, part)
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     layer = bm.loops.layers.uv.new('UVMap')
     icon_x = bm.verts.layers.float.get('icon_x')
+    # A built part beyond the icon (a chain, a string) takes its colour from one pixel of its own piece.
+    painted = None
+    if part['shape'] in ('chain', 'string'):
+        ys, xs = np.nonzero(masks[part['name']])
+        painted = (float(np.median(xs)), float(np.median(ys)))
     for face in bm.faces:
         for loop in face.loops:   # project the icon flat: front and back both show it, as on the paper doll
             p = loop.vert.co
             x = loop.vert[icon_x] if icon_x else p.z / METRES + ORIGIN[0]
-            loop[layer].uv = uv(x, ORIGIN[1] - p.y / METRES)
+            loop[layer].uv = uv(*painted) if painted else uv(x, ORIGIN[1] - p.y / METRES)
     data = bpy.data.meshes.new(part['name'])
     bm.to_mesh(data)
     bm.free()
@@ -379,7 +476,7 @@ for part in weapon['parts']:
         mod.ratio = min(1.0, part.get('faces', 600) / max(1, len(data.polygons)))
         bpy.context.view_layer.objects.active = obj
         bpy.ops.object.modifier_apply(modifier=mod.name)
-    obj['slot'] = 'metal' if part['class'] == 'steel' else 'trim'
+    obj['slot'] = slot_of(part)
     objects.append(obj)
 
 projected = material('icon', icon)
@@ -423,7 +520,7 @@ def pieces(want):
 
 report = {'weapon': name, 'metresPerPixel': METRES, 'origin': ORIGIN,
           'pieces': {c: pieces(i) for c, i in (('steel', 1), ('brass', 2), ('leather', 3))},   # rows and pixels, top first
-          'parts': {p['name']: {'slot': 'metal' if p['class'] == 'steel' else 'trim', 'seeds': seeds(masks[p['name']]),
+          'parts': {p['name']: {'slot': slot_of(p), 'seeds': seeds(masks[p['name']]),
                                 **({'light': p['light']} if 'light' in p else {})} for p in weapon['parts']},
           'triangles': {o.name: sum(len(p.vertices) - 2 for p in o.data.polygons) for o in objects}}
 (out / 'build.json').write_text(json.dumps(report, indent=1) + '\n')
