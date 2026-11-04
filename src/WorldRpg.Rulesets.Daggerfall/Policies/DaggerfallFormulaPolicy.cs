@@ -249,19 +249,6 @@ internal static class DaggerfallFormulaPolicy
         return Math.Clamp(chance, 5, 95);
     }
 
-    /// <summary>Donor <c>FormulaHelper.CalculateBackstabChance</c>: an accepted facing-away opportunity contributes the live skill to hit chance.</summary>
-    internal static int BackstabChance(int skill, bool targetFacingAway) => targetFacingAway ? Math.Max(0, skill) : 0;
-
-    internal static int CalculateBackstabChance(int skill, bool targetFacingAway) => BackstabChance(skill, targetFacingAway);
-
-    /// <summary>
-    /// Donor <c>FormulaHelper.CalculateBackstabDamage</c>: with a backstabbing level above one and a
-    /// successful d100 roll at or under that level the struck damage triples. The caller owns the
-    /// keyed roll and only draws it when the level admits one, matching the donor's short-circuit.
-    /// </summary>
-    internal static int CalculateBackstabDamage(int damage, int backstabbingLevel, bool rollSucceeded) =>
-        backstabbingLevel > 1 && rollSucceeded ? checked(damage * 3) : damage;
-
     /// <summary>
     /// The damage half of donor <c>FormulaHelper.CalculateProficiencyModifiers</c>: an expert proficiency
     /// in the skill the attack uses adds <c>level / 3 + 1</c>. The donor's second arm grants the

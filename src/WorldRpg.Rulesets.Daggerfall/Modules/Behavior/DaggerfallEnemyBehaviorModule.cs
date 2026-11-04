@@ -179,6 +179,12 @@ internal sealed class DaggerfallEnemyBehaviorModule
     internal bool IsPacified(long actorId) =>
         _actors.TryGet(actorId, out ActorState actor) && (Senses(actor).Pacified || _questRestrained(actorId));
 
+    /// <summary>A blow tells an actor who struck it: it turns on its attacker, even from behind.</summary>
+    internal void Provoke(long actorId, long gameMinute)
+    {
+        if (_actors.TryGet(actorId, out ActorState actor)) Senses(actor).ProvokedUntilMinute = gameMinute + 1;
+    }
+
     internal void Pacify(long actorId)
     {
         if (!_actors.TryGet(actorId,out var actor) || actor.IsDefeated) return;

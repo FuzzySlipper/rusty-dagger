@@ -24,7 +24,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 /// <item>An enemy swing's damage lands no sooner than its published wind-up.</item>
 /// </list>
 /// Dodging is deflection and records a use on each blow that connects with the player; Critical Strike, with a held enchantment's attack-chance shift, is a
-/// chance of bonus damage; backstab keeps its chance of tripled damage from behind; a monster's natural
+/// chance of bonus damage on a power attack or a chain finisher; a target that hasn't noticed the player takes a
+/// backstab by Backstabbing; a monster's natural
 /// attack lands the slots that clear the player's reflexes; armour absorbs; and a whiff or a negated blow runs no
 /// Strikes payload.
 /// </summary>
@@ -224,9 +225,12 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
             ops.RecordSkillUse(new DaggerfallSkillUse(DaggerfallMechanicsIds.Dodging.Value, DaggerfallSkillUseReason.DodgingEnemyAttack, DaggerfallSkillUseOutcome.Attempted));
         CombatParticipants participants = ops.Participants(attacker.Id, targetId, admission.Action ?? attacker.Definition.ActionId ?? "attack");
         if (!ops.Rules.Contact(participants, true).Contact) return;
+        // Whatever the blow then does, its target now knows who struck it.
+        bool backstab = attacker.Id == PlayerId && ops.TargetUnaware(targetId);
+        if (attacker.Id == PlayerId) ops.AlertTarget(targetId);
         // Every connect trains the player's weapon skill, whatever the target then does to the blow; the
         // shared application credits a blow that lands, so only a negated connect is credited here.
-        string? playerSkill = attacker.Id == PlayerId ? ops.PlayerWeaponSkill() : null;
+        string? playerSkill = attacker.Id == PlayerId ? admission.Attack.Skill : null;
         void CreditNegatedConnect() { if (playerSkill is not null) ops.RecordPlayerWeaponHit(playerSkill); }
         void Negated(HarmNegation how) => facts.Append(new AttackNegatedFact(attacker.Id, targetId, how, enemy, request.Generation, request.SimulationStep) { Feedback = attack.Feedback });
         ExplicitMeleeRequest key = new(attacker.Id, targetId, request.Generation, request.SimulationStep, request.FixedDeltaSeconds);
@@ -254,23 +258,21 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         }
         else
         {
-            bool backstab = ops.BackstabOpportunity(attacker, target);
-            if (backstab)
-                ops.RecordSkillUse(new DaggerfallSkillUse("backstabbing", DaggerfallSkillUseReason.BackstabbingOpportunity, DaggerfallSkillUseOutcome.Accepted));
-            int backstabChance = DaggerfallFormulaPolicy.CalculateBackstabChance(DaggerCombatRules.ReadStat(attacker, new DaggerfallStatId("backstabbing")), backstab);
             int damageModifier = attacker.Id == PlayerId ? ops.PlayerDamageModifier(weapon) : 0;
-            Action<DamageEvent> rolled = ops.DamageRoll(key, attacker, target, weapon, enemy, damageModifier, backstabChance);
+            Action<DamageEvent> rolled = ops.DamageRoll(key, attacker, target, weapon, enemy, damageModifier);
+            double scale = admission.DamageMultiplier * (backstab ? ops.BackstabMultiplier(attacker) : 1d);
             roll = value =>
             {
                 rolled(value);
-                value.Damage = (int)Math.Round(value.Damage * admission.DamageMultiplier, MidpointRounding.AwayFromZero);
-                if (ops.Draw(key, attacker.Id, targetId, CriticalSalt, 1, 100, enemy) <= CriticalChance(attacker))
+                value.Damage = (int)Math.Round(value.Damage * scale, MidpointRounding.AwayFromZero);
+                if (admission.MayCritical && ops.Draw(key, attacker.Id, targetId, CriticalSalt, 1, 100, enemy) <= CriticalChance(attacker))
                     value.Damage = (int)Math.Round(value.Damage * tuning.CriticalDamageMultiplier, MidpointRounding.AwayFromZero);
             };
         }
         DamageEvent damage = ops.Rules.Damage(participants, roll);
         MitigationEvent mitigation = ops.Rules.Mitigate(participants, channel, damage.Damage, value => ops.Mitigation.Mitigate(value, harm));
         if (mitigation.Negation != HarmNegation.None) { CreditNegatedConnect(); Negated(mitigation.Negation); return; }
+        if (backstab) ops.RecordSkillUse(new DaggerfallSkillUse("backstabbing", DaggerfallSkillUseReason.BackstabbingOpportunity, DaggerfallSkillUseOutcome.Accepted));
         PreparedPhysicalAttack connected = attack with
         {
             Outcome = new AttackOutcome(Hit: true, Allowed: true, Damage: mitigation.Damage),
@@ -280,6 +282,7 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
             Mitigated = new DaggerfallHarmMitigation(mitigation.Deflected, mitigation.Absorbed),
         };
         ops.ApplyConnectedHarm(request with { TargetId = targetId }, targetId, connected, facts);
+        if (weapon.Skill == DaggerfallMechanicsIds.HandToHand.Value && !enemy) ops.DrainStamina(request, targetId, mitigation.Damage, facts);
     }
 
     /// <summary>
@@ -288,6 +291,7 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
     /// </summary>
     private double CriticalChance(Combatant attacker) =>
         DaggerCombatRules.ReadStat(attacker, new DaggerfallStatId("critical-strike")) * tuning.CriticalChancePerSkillPoint
+        + (DaggerCombatRules.ReadStat(attacker, DaggerfallMechanicsIds.Luck) - 50) * tuning.CriticalPerLuckAbove50
         + (attacker.Id == PlayerId ? ops.AttackChanceModifier() * tuning.CriticalChancePerAttackChancePoint : 0d);
 
     /// <summary>

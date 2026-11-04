@@ -52,15 +52,6 @@ public sealed class DaggerfallFormulaPolicyTests
     }
 
     [Fact]
-    public void Backstab_chance_is_the_skill_from_behind_and_nothing_otherwise()
-    {
-        Assert.Equal(37, DaggerfallFormulaPolicy.BackstabChance(37, true));
-        Assert.Equal(37, DaggerfallFormulaPolicy.CalculateBackstabChance(37, true));
-        Assert.Equal(0, DaggerfallFormulaPolicy.BackstabChance(37, false));
-        Assert.Equal(0, DaggerfallFormulaPolicy.BackstabChance(-1, true));
-    }
-
-    [Fact]
     public void MaterialGateRequiresTheTargetMinimumWithoutInventingNaturalWeaponMaterials()
     {
         IReadOnlyDictionary<string, int> materials = DaggerfallFormulaPolicy.ClassicWeaponMaterialRanks;
@@ -358,10 +349,6 @@ public sealed class DaggerfallFormulaPolicyTests
             baseDamage: 5, damageModifier: 1, strengthModifier: -4, enemyTypeModifier: 12));
         Assert.Equal(5, DaggerfallFormulaPolicy.CalculateHandToHandAttackDamage(
             baseDamage: 5, damageModifier: 0, strengthModifier: 0, enemyTypeModifier: 0));
-        // Backstab tripling is gated by the same level check as its roll.
-        Assert.Equal(15, DaggerfallFormulaPolicy.CalculateBackstabDamage(5, 12, rollSucceeded: true));
-        Assert.Equal(5, DaggerfallFormulaPolicy.CalculateBackstabDamage(5, 12, rollSucceeded: false));
-        Assert.Equal(5, DaggerfallFormulaPolicy.CalculateBackstabDamage(5, 1, rollSucceeded: true));
         Assert.True(DaggerfallFormulaPolicy.WeaponIsEdged(DaggerfallSkills.LongBlade));
         Assert.True(DaggerfallFormulaPolicy.WeaponIsEdged(DaggerfallSkills.Axe));
         Assert.False(DaggerfallFormulaPolicy.WeaponIsEdged(DaggerfallSkills.BluntWeapon));

@@ -25,6 +25,15 @@ internal interface IDaggerfallPlayerAttacks
     /// <summary>The skill of the weapon in hand, whose class sets the timing.</summary>
     string WeaponSkill { get; }
 
+    /// <summary>How many fast attacks the character can chain with this weapon.</summary>
+    int ChainLength { get; }
+
+    /// <summary>Whether the character is too winded for a power attack.</summary>
+    bool Winded { get; }
+
+    /// <summary>What the character's attributes, skill and state scale an attack's time by.</summary>
+    double TimeScale(string attack);
+
     /// <summary>The timing of a bow's shot, or null when the hands hold no bow.</summary>
     DaggerfallAttackTiming? ShotTiming { get; }
 
@@ -155,7 +164,7 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
         if (_press is double down && _held) _press = down + seconds;
         if (!Free) return;
         if (_kick) StartKick();
-        else if (_press is double press && (!_held || press >= tuning.PowerThresholdSeconds || attacks.ShotTiming is not null)) StartPressed(!_held);
+        else if (_press is double press && (!_held || press >= tuning.PowerThresholdSeconds && !attacks.Winded || attacks.ShotTiming is not null)) StartPressed(!_held);
     }
 
     /// <summary>Whether a press or kick is about to start a motion, so the rest between them is skipped.</summary>
@@ -179,13 +188,15 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
         DaggerfallWeaponClassAttacks weapon = tuning.For(attacks.WeaponSkill);
         if (tapped)
         {
-            if (Begin(DaggerfallAttackIds.Fast[_chain], weapon.Fast, delivers: true)) _chain = (_chain + 1) % DaggerfallAttackIds.Fast.Count;
+            int length = Math.Min(attacks.ChainLength, DaggerfallAttackIds.Fast.Count);
+            if (_chain >= length) _chain = 0;
+            if (Begin(DaggerfallAttackIds.Fast[_chain], weapon.Fast, delivers: true)) _chain = (_chain + 1) % length;
             return;
         }
         _pressSpent = true;
         _chain = 0;
         _power = weapon;
-        _playing = new(DaggerfallAttackIds.PowerIn, new(weapon.PowerCharge, 0d, 0d), Delivers: false);
+        _playing = new(DaggerfallAttackIds.PowerIn, Scaled(DaggerfallAttackIds.PowerIn, new(weapon.PowerCharge, 0d, 0d)), Delivers: false);
         attacks.Motion(DaggerfallAttackIds.PowerIn, _playing.Timing);
     }
 
@@ -212,9 +223,15 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
             else if (owed) attacks.Rest();
             return false;
         }
-        _playing = new(attack, timing, delivers);
-        attacks.Motion(attack, timing);
+        _playing = new(attack, Scaled(attack, timing), delivers);
+        attacks.Motion(attack, _playing.Timing);
         return true;
+    }
+
+    private DaggerfallAttackTiming Scaled(string attack, DaggerfallAttackTiming timing)
+    {
+        double scale = attacks.TimeScale(attack);
+        return new(timing.Windup * scale, timing.Commit * scale, timing.Recovery * scale);
     }
 
     /// <summary>Retires what is in progress without landing it: a site change, a held press lost, or the player's defeat.</summary>

@@ -18,7 +18,11 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// negative is stronger armor, positive weaker.
 /// </param>
 internal sealed record DaggerfallSeamInputs(DaggerfallDefinitions Definitions, Func<DaggerfallCharacterState?> Character,
-    IRandomService Random, Func<long, EquipmentRead> EquipmentOf, Func<long, StatsComponent?> StatsOf, Func<int> PlayerArmorValueModifier);
+    IRandomService Random, Func<long, EquipmentRead> EquipmentOf, Func<long, StatsComponent?> StatsOf, Func<int> PlayerArmorValueModifier)
+{
+    /// <summary>The player's biography bonus to avoiding blows, which deflection adds.</summary>
+    internal Func<int> PlayerAvoidHit { get; init; } = () => 0;
+}
 
 /// <summary>What a variant's seam owners are built from when its session is composed: the session's reads and the variant's own tuning.</summary>
 internal sealed record DaggerfallSeamContext(DaggerfallSeamInputs Session, TuningProfile Tuning)

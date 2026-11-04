@@ -345,13 +345,17 @@ internal sealed partial class DaggerfallSession
                 seams.PhysicalMitigation,
                 seams.PhysicalDelivery,
                 _tuning.Attacks,
+                targetUnaware: id => EnemyBehavior.LastEvidence.TryGetValue(id, out EnemyBehaviorEvidence? evidence) && evidence.State == EnemyBehaviorState.Idle,
+                alertTarget: id => EnemyBehavior.Provoke(id, MinuteIndex(_time.Calendar)),
+                playerRush: () => CareerSpecialsFor(actors.Player.DurableId).AdrenalineRush
+                    ? new DaggerfallAdrenalineRush(_heldEnchantments.Talents.AdrenalineRush) : null,
                 _contact, StrikePose, () => _sites?.CharacterEnvironment(assembled.PlayerControl.Motion),
                 // Only the player's own controller reports a velocity; site actors step between poses.
                 actor => actor == actors.Player.DurableId ? assembled.PlayerControl.Motion.ControlledVelocity : Vector3.Zero);
             DaggerfallSeamInputs SeamInputs() => new(definitions, () => character, _random,
                 id => id == actors.Player.DurableId ? equipmentCoordinator.Read() : actorInventories.EquipmentFor(id).Read(),
                 id => id == actors.Player.DurableId ? actors.Player.Stats : actors.TryGet(id, out ActorState actor) ? actor.Stats : null,
-                () => _heldEnchantments.ArmorValueModifier);
+                () => _heldEnchantments.ArmorValueModifier) { PlayerAvoidHit = () => character.Background?.Modifiers.AvoidHit ?? 0 };
             _equipmentMoves.Changed += _combat.EquipmentChanged;
             GameplayServices<IProductFact> kit = new(actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, inventory, equipmentCoordinator);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(

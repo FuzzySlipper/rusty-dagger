@@ -183,9 +183,9 @@ fast attack, and another click during its recovery chains the next one. Holding
 the button charges a power attack, released when you let go. **Right mouse** holds
 a guard and **G** kicks with any weapon. Controls can rebind them all.
 
-Stamina recovers at five points per second after two seconds without an admitted
-swing, including from exhaustion. The Daggerfall tuning payloads control this
-automatic recovery; it is separate from classic rest-based fatigue recovery.
+Fighting spends stamina, and it comes back only through rest, travel and the
+exhaustion collapse's recovery hour. A winded character still swings, slower and
+weaker, but has no power attack, kick or guard until rested.
 
 Weapon art retains classic proportions and fits the bottom and authored side of
 the view. Engine input capture keeps gameplay

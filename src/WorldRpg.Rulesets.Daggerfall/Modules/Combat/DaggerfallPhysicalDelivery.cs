@@ -25,6 +25,7 @@ internal sealed record DaggerfallAdmittedAttack(
     DaggerfallAttackDefinition Attack,
     bool Ranged,
     double DamageMultiplier,
+    bool MayCritical,
     string? Action,
     DaggerfallStrikeFeedback Feedback,
     ulong? WabbajackSource,
@@ -103,9 +104,16 @@ internal interface IDaggerfallPhysicalHarmOperations
     CombatParticipants Participants(long attacker, long target, string action);
     int Draw(ExplicitMeleeRequest request, long attacker, long target, int salt, int minimum, int maximum, bool enemy);
     Action<DamageEvent> DamageRoll(ExplicitMeleeRequest request, Combatant attacker, Combatant target,
-        DaggerfallAttackDefinition attack, bool enemy, int attackDamageMod, int backstabChance);
+        DaggerfallAttackDefinition attack, bool enemy, int attackDamageMod);
     int PlayerDamageModifier(DaggerfallAttackDefinition attack);
-    bool BackstabOpportunity(Combatant attacker, Combatant target);
+    /// <summary>Whether a target hasn't noticed the attacker, so a blow is a backstab.</summary>
+    bool TargetUnaware(long target);
+    /// <summary>A blow makes its target aware of who struck it.</summary>
+    void AlertTarget(long target);
+    /// <summary>What a backstab multiplies a blow by, from the attacker's Backstabbing.</summary>
+    double BackstabMultiplier(Combatant attacker);
+    /// <summary>An unarmed blow drains the target's stamina as well as its health.</summary>
+    void DrainStamina(AttackRequest request, long target, int damage, FactBuffer<IProductFact> facts);
     int EnemyTypeBonus(Combatant attacker, Combatant target);
     EquipmentRead EquipmentOf(long owner);
     int AttackChanceModifier();

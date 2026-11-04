@@ -46,7 +46,8 @@ internal sealed class DaggerfallContactMitigation(DaggerfallSeamInputs session, 
     }
 
     /// <summary>
-    /// The target's deflection chance in percent: a base, its Dodging skill, and Agility above average. A
+    /// The target's deflection chance in percent: a base, its Dodging skill, Agility and Luck above average, and the
+    /// player's biography. A
     /// player holding a guard up adds the guard's bonus, more behind a shield, up to the guard's own cap.
     /// </summary>
     internal int DeflectionChance(long target)
@@ -54,7 +55,9 @@ internal sealed class DaggerfallContactMitigation(DaggerfallSeamInputs session, 
         if (session.StatsOf(target) is not StatsComponent stats) return 0;
         double chance = tuning.DeflectionBaseChance
             + Read(stats, DaggerfallMechanicsIds.Dodging) * tuning.DeflectionPerDodgingPoint
-            + (Read(stats, DaggerfallMechanicsIds.Agility) - 50) * tuning.DeflectionPerAgilityAbove50;
+            + (Read(stats, DaggerfallMechanicsIds.Agility) - 50) * tuning.DeflectionPerAgilityAbove50
+            + (Read(stats, DaggerfallMechanicsIds.Luck) - 50) * tuning.DeflectionPerLuckAbove50
+            + (target == DaggerfallActorIdentity.PlayerEntityId ? session.PlayerAvoidHit() : 0);
         double maximum = tuning.DeflectionMaximumChance;
         if (target == DaggerfallActorIdentity.PlayerEntityId && guard.Raised)
         {

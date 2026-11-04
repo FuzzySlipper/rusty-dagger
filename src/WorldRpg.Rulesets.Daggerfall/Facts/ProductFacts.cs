@@ -45,7 +45,7 @@ internal sealed record SpellPointsAppliedFact(long SourceActorId, long TargetAct
 /// <summary>One accepted dungeon action magicka drain on a canonical actor track.</summary>
 internal sealed record DungeonMagickaDrainedFact(long TargetActorId, string ActionId, double ActualMagickaLost,
     ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
-internal enum AttackRejection { MissingPlayerPosition, UnknownExplicitCombatant, TargetDefeated, Equipping, Cooldown, AttackInProgress, NoAttackPolicy, InsufficientWeaponMaterial, EmptyQuiver, Incapacitated }
+internal enum AttackRejection { MissingPlayerPosition, UnknownExplicitCombatant, TargetDefeated, Equipping, Cooldown, AttackInProgress, Winded, NoAttackPolicy, InsufficientWeaponMaterial, EmptyQuiver, Incapacitated }
 internal sealed record AttackRejectedFact(AttackRejection Reason, long? ActorId = null) : IProductFact;
 /// <summary>
 /// One player attack passed cooldown and stamina admission, independently of what it meets.

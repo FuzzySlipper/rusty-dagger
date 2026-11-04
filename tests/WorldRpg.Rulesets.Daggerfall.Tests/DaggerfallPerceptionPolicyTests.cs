@@ -25,6 +25,18 @@ public sealed class DaggerfallPerceptionPolicyTests
     }
 
     [Fact]
+    public void A_struck_actor_knows_its_attacker_until_the_provocation_lapses()
+    {
+        DaggerfallEnemyPerceptionMemory memory = new() { ProvokedUntilMinute = Context().GameMinute };
+        DaggerfallEnemyPerceptionSource source = new();
+
+        Assert.True(DaggerfallPerceptionPolicy.Evaluate(memory, Pair(PerceptionPairKind.Occluded), source, Context(), _ => 0).InSight);
+
+        memory.ProvokedUntilMinute = Context().GameMinute - 1;
+        Assert.False(DaggerfallPerceptionPolicy.Evaluate(memory, Pair(PerceptionPairKind.Occluded), source, Context(), _ => 0).InSight);
+    }
+
+    [Fact]
     public void Illusion_effect_blocks_visibility_until_the_effect_flag_changes()
     {
         DaggerfallEnemyPerceptionMemory memory = new();

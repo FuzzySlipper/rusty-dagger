@@ -95,8 +95,8 @@ The feature and specialist inventories provide donor references for these splits
 A skill use is recorded by the admitted operation that makes it real, with the
 typed reason, outcome, amount and cadence its Daggerfall policy declares. Weapon
 skill and Critical Strike are tallied on a resolved player hit; Dodging on every
-resolved enemy attack against the player, including a miss; Backstabbing on the
-facing-away check. Each released spell effect records a use, and a cancelled cast
+resolved enemy attack against the player, including a miss; Backstabbing on a
+blow that lands on a target that hadn't noticed the player. Each released spell effect records a use, and a cancelled cast
 records nothing. Running records on each admitted running update and Jumping
 on an admitted ground-to-jump transition; Climbing on climbing checks and admitted
 rappelling updates; Swimming and Stealth once per admitted game-minute interval,

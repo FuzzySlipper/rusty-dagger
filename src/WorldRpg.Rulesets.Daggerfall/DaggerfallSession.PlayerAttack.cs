@@ -38,6 +38,23 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
 
     string IDaggerfallPlayerAttacks.WeaponSkill => _combat.PlayerWeaponSkill();
 
+    int IDaggerfallPlayerAttacks.ChainLength => _tuning.Attacks.Combatant.ChainLength(PlayerStat(_combat.PlayerWeaponSkill()));
+
+    bool IDaggerfallPlayerAttacks.Winded => _combat.PlayerWinded;
+
+    double IDaggerfallPlayerAttacks.TimeScale(string attack)
+    {
+        DaggerfallCombatantTuning tuning = _tuning.Attacks.Combatant;
+        double scale = 1d - tuning.SpeedPerPointAbove50 * (PlayerStat(DaggerfallMechanicsIds.Speed.Value) - 50)
+            - tuning.SkillAt100 * Math.Clamp(PlayerStat(_combat.PlayerWeaponSkill()), 0, 100) / 100d;
+        if (attack == DaggerfallAttackIds.PowerIn) scale -= tuning.StrengthPerPointAbove50 * (PlayerStat(DaggerfallMechanicsIds.Strength.Value) - 50);
+        if (_combat.PlayerWinded) scale *= tuning.WindedTimeScale;
+        scale *= _combat.PlayerRushTimeScale;
+        return Math.Max(tuning.MinimumTimeScale, scale);
+    }
+
+    private int PlayerStat(string stat) => State.Actors.Player.Stats.GetStat(StatId.Parse(stat)).ValueInt;
+
     DaggerfallAttackTiming? IDaggerfallPlayerAttacks.ShotTiming
     {
         get
@@ -52,7 +69,8 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
     {
         var (generation, simulationStep, seconds) = _attackStep;
         LookReceipt look = _input.ResolveCurrentLook(State.PlayerControl);
-        _combat.SelectPlayerAttack(attack);
+        int chain = Math.Min(_tuning.Attacks.Combatant.ChainLength(PlayerStat(_combat.PlayerWeaponSkill())), DaggerfallAttackIds.Fast.Count);
+        _combat.SelectPlayerAttack(attack, finisher: attack == DaggerfallAttackIds.Fast[chain - 1]);
         _attack = attack;
         _swing = null;
         State.Kit.Attacks.TryPlayerMelee(State.PlayerControl, look, generation, simulationStep, seconds, _facts);

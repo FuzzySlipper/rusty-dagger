@@ -246,49 +246,50 @@ public sealed class DaggerCombatDamagePolicyTests
         Assert.Equal([(0, 19)], result.Ranges);
     }
 
-    [Fact]
-    public void A_backstab_from_behind_triples_the_resolved_damage_only_when_its_roll_succeeds()
+    [Theory]
+    [InlineData(0, 20)]   // 13 * 1.5
+    [InlineData(100, 39)] // 13 * 3
+    public void An_unaware_target_always_takes_the_backstab_its_skill_scales(int skill, int damage)
     {
         using DamagePolicyFixture fixture = new();
-        fixture.PutPlayerBehindTarget(2);
-        fixture.PlayerBackstabbingSkill(20);
-        fixture.Script(body: 0, damage: 5, backstabRoll: 10);
+        fixture.PlayerStrength(50);
+        fixture.PlayerBackstabbingSkill(skill);
+        fixture.Unaware.Add(2);
+        fixture.Script(body: 0, damage: 11);
 
         BlowResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
 
-        Assert.True(result.Outcome.Hit);
-        Assert.Equal(12, result.Outcome.Damage); // (5 - 1 iron) * 3
-        Assert.Contains(CombatRandomKey.BackstabRollSalt, result.Salts);
+        Assert.Equal(damage, result.Outcome.Damage);
+        Assert.Contains(fixture.SkillUses, use => use.Skill == "backstabbing");
+        Assert.Contains(2L, fixture.Alerted);
     }
 
     [Fact]
-    public void A_backstab_facing_the_player_never_rolls_and_never_triples()
+    public void A_target_that_noticed_the_player_takes_no_backstab_from_any_side()
     {
         using DamagePolicyFixture fixture = new();
-        fixture.PutPlayerBehindTarget(2, facingAway: false);
-        fixture.PlayerBackstabbingSkill(20);
-        fixture.Script(body: 0, damage: 5);
+        fixture.PlayerStrength(50);
+        fixture.PlayerBackstabbingSkill(100);
+        fixture.Script(body: 0, damage: 11);
 
         BlowResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
 
-        Assert.Equal(4, result.Outcome.Damage); // 5 - 1 iron, never tripled
-        Assert.DoesNotContain(CombatRandomKey.BackstabRollSalt, result.Salts);
+        Assert.Equal(13, result.Outcome.Damage);
+        Assert.DoesNotContain(fixture.SkillUses, use => use.Skill == "backstabbing");
     }
 
     [Fact]
-    public void A_backstab_of_one_never_rolls_even_from_behind()
+    public void A_deflected_blow_alerts_its_target_and_trains_no_backstabbing()
     {
-        // The donor rolls backstab only above level one; a chance of one would triple every hit
-        // without a roll, so the roll and the tripling share the same eligibility gate.
         using DamagePolicyFixture fixture = new();
-        fixture.PutPlayerBehindTarget(2);
-        fixture.PlayerBackstabbingSkill(1);
-        fixture.Script(body: 0, damage: 5);
+        fixture.Unaware.Add(2);
+        fixture.Script(body: 0, deflect: 1);
 
         BlowResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
 
-        Assert.Equal(4, result.Outcome.Damage);
-        Assert.DoesNotContain(CombatRandomKey.BackstabRollSalt, result.Salts);
+        Assert.Equal(0, result.Outcome.Damage);
+        Assert.Contains(2L, fixture.Alerted);
+        Assert.DoesNotContain(fixture.SkillUses, use => use.Skill == "backstabbing");
     }
 
     [Fact]
@@ -539,32 +540,145 @@ public sealed class DaggerCombatDamagePolicyTests
     }
 
     [Fact]
-    public void Bad_reactions_reduce_the_players_critical_chance_without_penalizing_the_enemy()
+    public void Bad_reactions_reduce_the_players_critical_chance()
     {
         // A held enchantment's attack-chance shift moves the player's Critical Strike chance. At skill 50
-        // the chance is 15, so a draw of 15 is critical until a shift of -10 lowers the chance to 5.
-        int PlayerBlow(int shift)
+        // the chance is 30, so a draw of 30 is critical until a shift of -10 lowers the chance to 20.
+        int Blow(int shift)
         {
             using DamagePolicyFixture fixture = new(attackChanceShift: shift);
+            fixture.PlayerStrength(50);
             fixture.PlayerCriticalStrikeSkill(50);
-            fixture.Script(body: 0, damage: 11, critical: 15);
+            fixture.SelectPlayerAttack(DaggerfallAttackIds.PowerOut);
+            fixture.Script(body: 0, damage: 11, critical: 30);
             return fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 5, 9, .125d, Delayed: true)).Outcome.Damage;
         }
-        int EnemyBlow(int shift)
+
+        Assert.Equal(52, Blow(0));   // 13 * 2 power * 2 critical
+        Assert.Equal(26, Blow(-10));
+    }
+
+    [Theory]
+    [InlineData("fastA", false, 13)]
+    [InlineData("fastB", true, 26)]
+    public void Only_a_chain_finisher_or_a_power_release_can_be_critical(string attack, bool finisher, int damage)
+    {
+        using DamagePolicyFixture fixture = new();
+        fixture.PlayerStrength(50);
+        fixture.PlayerCriticalStrikeSkill(100);
+        fixture.SelectPlayerAttack(attack, finisher);
+        fixture.Script(body: 0, damage: 11, critical: finisher ? 1 : null);
+
+        BlowResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 5, 9, .125d, Delayed: true));
+
+        Assert.Equal(damage, result.Outcome.Damage);
+        Assert.Equal(finisher, result.Salts.Contains(DaggerfallContactDelivery.CriticalSalt));
+    }
+
+    [Fact]
+    public void Luck_above_average_raises_the_critical_chance()
+    {
+        int Blow(int luck)
         {
-            using DamagePolicyFixture fixture = new(attackChanceShift: shift);
-            fixture.NpcCriticalStrikeSkill(50);
-            fixture.NpcStrength(50);
-            fixture.EquipNpcWeapon(2, "iron-longsword", 9001);
-            fixture.Script(body: BareFeet, damage: 11, critical: 15);
-            return fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true)).Outcome.Damage;
+            using DamagePolicyFixture fixture = new();
+            fixture.PlayerStrength(50);
+            fixture.PlayerStat(DaggerfallMechanicsIds.Luck.Value, luck);
+            fixture.PlayerCriticalStrikeSkill(50);
+            fixture.SelectPlayerAttack("fastB", finisher: true);
+            fixture.Script(body: 0, damage: 11, critical: 32);
+            return fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 5, 9, .125d, Delayed: true)).Outcome.Damage;
         }
 
-        Assert.Equal(15, PlayerBlow(0));   // (11 - 1 iron) * 1.5
-        Assert.Equal(10, PlayerBlow(-10));
-        Assert.Equal(15, EnemyBlow(0));
-        Assert.Equal(15, EnemyBlow(-10));
+        Assert.Equal(13, Blow(50));
+        Assert.Equal(26, Blow(70));
     }
+
+    [Fact]
+    public void An_enemys_blow_is_never_critical()
+    {
+        using DamagePolicyFixture fixture = new();
+        fixture.NpcCriticalStrikeSkill(100);
+        fixture.NpcStrength(50);
+        fixture.EquipNpcWeapon(2, "iron-longsword", 9001);
+        fixture.Script(body: BareFeet, damage: 11);
+
+        BlowResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+
+        Assert.DoesNotContain(DaggerfallContactDelivery.CriticalSalt, result.Salts);
+    }
+
+    [Fact]
+    public void A_winded_character_swings_weaker_but_has_no_power_release_or_kick()
+    {
+        DaggerfallCombatantTuning tuning = DaggerfallAttackTuning.Default.Combatant;
+        foreach (string refused in new[] { DaggerfallAttackIds.PowerOut, DaggerfallAttackIds.Kick })
+        {
+            using DamagePolicyFixture fixture = new();
+            fixture.SetPlayerStamina(tuning.WindedStamina);
+            fixture.SelectPlayerAttack(refused);
+            _ = fixture.StartSwing(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false), out bool admitted);
+            Assert.False(admitted);
+        }
+
+        using DamagePolicyFixture winded = new();
+        winded.PlayerStrength(50);
+        winded.SetPlayerStamina(tuning.WindedStamina);
+        winded.Script(body: 0, damage: 11);
+        Assert.Equal(7, winded.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false)).Outcome.Damage); // 13 * .5
+    }
+
+    [Fact]
+    public void Fighting_never_empties_the_stamina_pool()
+    {
+        using DamagePolicyFixture fixture = new();
+        fixture.SetPlayerStamina(10d);
+        fixture.Script(body: 0, damage: 11);
+
+        _ = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
+
+        Assert.Equal(1d, fixture.PlayerStamina);
+    }
+
+    [Theory]
+    [InlineData(false, 16)] // 13 * 1.25
+    [InlineData(true, 20)]  // 13 * 1.5
+    public void An_adrenaline_rush_wakes_below_an_eighth_of_full_health(bool improved, int damage)
+    {
+        using DamagePolicyFixture hurt = new();
+        hurt.PlayerStrength(50);
+        hurt.Rush = new DaggerfallAdrenalineRush(improved);
+        hurt.SetPlayerHealth(.1d);
+        hurt.Script(body: 0, damage: 11);
+        Assert.Equal(damage, hurt.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false)).Outcome.Damage);
+
+        using DamagePolicyFixture healthy = new();
+        healthy.PlayerStrength(50);
+        healthy.Rush = new DaggerfallAdrenalineRush(improved);
+        healthy.Script(body: 0, damage: 11);
+        Assert.Equal(13, healthy.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false)).Outcome.Damage);
+    }
+
+    [Fact]
+    public void A_kick_trains_hand_to_hand_and_drains_the_targets_stamina_whatever_the_weapon()
+    {
+        using DamagePolicyFixture fixture = new();
+        fixture.SelectPlayerAttack(DaggerfallAttackIds.Kick);
+        fixture.Script(body: 0, deflect: null, damage: DaggerfallAttackTuning.Default.KickDamage, afterDamage: 100);
+        double before = fixture.Actors.Get(2).Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current;
+
+        BlowResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
+
+        Assert.True(result.Outcome.Hit);
+        Assert.Contains(fixture.SkillUses, use => use.Skill == DaggerfallMechanicsIds.HandToHand.Value);
+        Assert.True(fixture.Actors.Get(2).Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current < before);
+    }
+
+    [Theory]
+    [InlineData(10, 2)]
+    [InlineData(35, 3)]
+    [InlineData(70, 4)]
+    public void Weapon_skill_sets_how_long_a_chain_runs(int skill, int length) =>
+        Assert.Equal(length, DaggerfallAttackTuning.Default.Combatant.ChainLength(skill));
 
     [Fact]
     public void A_shot_that_meets_cover_lands_nothing_and_says_so()
@@ -613,14 +727,14 @@ public sealed class DaggerCombatDamagePolicyTests
             using DamagePolicyFixture fixture = new();
             fixture.PlayerStrength(50);
             fixture.SelectPlayerAttack(attack);
-            fixture.Script(body: 0, damage: 11);
+            fixture.Script(body: 0, damage: 11, critical: attack == DaggerfallAttackIds.PowerOut ? 100 : null);
             double before = fixture.PlayerStamina;
             BlowResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
             return (result.Outcome.Damage, before - fixture.PlayerStamina);
         }
 
-        Assert.Equal((10, 11d), Blow("fastA")); // 11 - 1 iron
-        Assert.Equal((20, 22d), Blow(DaggerfallAttackIds.PowerOut));
+        Assert.Equal((13, 64d), Blow("fastA")); // 11 - 1 iron + 3 for skill 60
+        Assert.Equal((26, 128d), Blow(DaggerfallAttackIds.PowerOut));
     }
 
     [Fact]
@@ -763,6 +877,7 @@ public sealed class DaggerCombatDamagePolicyTests
                 mitigation: mitigation ?? seams.PhysicalMitigation,
                 delivery: ops => Delivery = (delivery ?? seams.PhysicalDelivery)(ops),
                 attackTuning: DaggerfallAttackTuning.Default,
+                targetUnaware: Unaware.Contains, alertTarget: id => Alerted.Add(id), playerRush: () => Rush,
                 contact: Contact = CombatCollaborators.Contact(_actors, _spatial, () => _playerPosition),
                 strikePose: actor => CombatCollaborators.StrikePose(_actors, actor, _playerPosition),
                 actorVelocity: id => id == DaggerfallActorIdentity.PlayerEntityId ? PlayerVelocity : Vector3.Zero);
@@ -772,17 +887,16 @@ public sealed class DaggerCombatDamagePolicyTests
         /// <summary>
         /// Scripts one connecting blow's draws in order: the body, the deflection a target with a full
         /// channel draws before damage (the top of the percentile, which turns nothing aside), then the
-        /// damage roll with its backstab and critical draws, and whatever a partial channel draws after it.
+        /// damage roll with the critical draw a finishing blow makes, and whatever a partial channel draws after it.
         /// </summary>
-        internal void Script(int body, int? deflect = 100, int? damage = null, int? backstabRoll = null, int critical = 100, int? afterDamage = null)
+        internal void Script(int body, int? deflect = 100, int? damage = null, int? critical = null, int? afterDamage = null)
         {
             List<int> draws = [body];
             if (deflect is int deflection) draws.Add(deflection);
             if (damage is int weaponDamage)
             {
                 draws.Add(weaponDamage);
-                if (backstabRoll is int backstab) draws.Add(backstab);
-                draws.Add(critical);
+                if (critical is int strike) draws.Add(strike);
             }
             if (afterDamage is int after) draws.Add(after);
             _scripted.Feed(draws);
@@ -871,7 +985,19 @@ public sealed class DaggerCombatDamagePolicyTests
         internal double? ReachOf(long actorId) => _combat.ReachOf(actorId);
 
         /// <summary>Names the attack the next player admission carries, as the attack clock does.</summary>
-        internal void SelectPlayerAttack(string attack) => _combat.SelectPlayerAttack(attack);
+        internal void SelectPlayerAttack(string attack, bool finisher = false) => _combat.SelectPlayerAttack(attack, finisher);
+
+        internal HashSet<long> Unaware { get; } = [];
+        internal List<long> Alerted { get; } = [];
+        internal DaggerfallAdrenalineRush? Rush { get; set; }
+
+        internal void PlayerStat(string stat, int value) => _actors.Player.Stats.GetStat(StatId.Parse(stat)).BaseValue = value;
+        internal void SetPlayerStamina(double value) => _actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).SetCurrent(value);
+        internal void SetPlayerHealth(double share)
+        {
+            Track health = _actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
+            health.SetCurrent(health.Maximum.Value * share);
+        }
 
         internal double PlayerStamina => _actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current;
 
@@ -947,12 +1073,6 @@ public sealed class DaggerCombatDamagePolicyTests
         }
 
         internal void ReplaceActor(long entityId, DaggerfallActorDefinition definition) => _authored[entityId] = definition;
-
-        internal void PutPlayerBehindTarget(long targetEntityId, bool facingAway = true)
-        {
-            _playerPosition = new WorldPoint(0f, 0f, 0f);
-            _actors.Get(targetEntityId).ApplyPose(new ActorPose(new WorldPoint(0f, 0f, -1f), facingAway ? 0f : MathF.PI));
-        }
 
         internal BlowResolution Run(AttackRequest request) => Run(request, out _);
 
