@@ -19,12 +19,19 @@ internal sealed record DaggerfallWeaponClassAttacks(DaggerfallAttackTiming Fast,
 /// <summary>An attack's path in view space, as <see cref="SwingArc"/> takes it; its range comes from the weapon class.</summary>
 internal readonly record struct DaggerfallAttackPath(float Start, float End, float Tilt);
 
+/// <summary>
+/// The paths of weapons that swing differently from the default, by item template: what the rules hold the arc to, so a
+/// weapon's cut roughly follows the way its clips carry it. The arc stays authoritative; the clip only sells it.
+/// </summary>
+internal sealed record DaggerfallAttackPathGroup(IReadOnlySet<int> Templates, IReadOnlyDictionary<string, DaggerfallAttackPath> Paths);
+
 /// <summary>The player's attack set: its timing per weapon class, and what a power attack and a kick cost and do.</summary>
 internal sealed record DaggerfallAttackTuning(
     double PowerThresholdSeconds, double PowerDamageMultiplier, double PowerStaminaMultiplier,
     DaggerfallAttackTiming Kick, int KickStaminaCost, int KickDamage, float KickReach,
     IReadOnlyDictionary<string, DaggerfallWeaponClassAttacks> Classes,
-    IReadOnlyDictionary<string, DaggerfallAttackPath> Paths)
+    IReadOnlyDictionary<string, DaggerfallAttackPath> Paths,
+    IReadOnlyList<DaggerfallAttackPathGroup> PathGroups)
 {
     private static readonly DaggerfallWeaponClassAttacks ShortBlade = new(new(.18d, .12d, .28d), .5d, new(.15d, .12d, .35d), 1.9f);
 
@@ -45,7 +52,16 @@ internal sealed record DaggerfallAttackTuning(
             ["fastD"] = new(-12f, 12f, 0f),
             [DaggerfallAttackIds.PowerOut] = new(-45f, 35f, 80f),
             [DaggerfallAttackIds.Kick] = new(-12f, 12f, 0f),
-        });
+        },
+        [
+            new(new HashSet<int> { 116, 117, 118, 119, 120, 121, 124, 127, 288 },
+                new Dictionary<string, DaggerfallAttackPath>(StringComparer.Ordinal) { ["fastC"] = new(30f, -55f, 35f) }),
+            new(new HashSet<int> { 115 }, new Dictionary<string, DaggerfallAttackPath>(StringComparer.Ordinal)
+            {
+                ["fastB"] = new(-50f, 45f, 15f),
+                [DaggerfallAttackIds.PowerOut] = new(45f, -50f, 5f),
+            }),
+        ]);
 
     /// <summary>The attacks of the weapon class a skill names; refuses a skill with none, which is a content error.</summary>
     internal DaggerfallWeaponClassAttacks For(string skill) => Classes.TryGetValue(skill, out DaggerfallWeaponClassAttacks? attacks)
@@ -64,10 +80,15 @@ internal sealed record DaggerfallAttackTuning(
         };
     }
 
-    /// <summary>The arc a melee attack sweeps with a weapon of <paramref name="skill"/>; refuses an attack with no path, a content error.</summary>
-    internal SwingArc Arc(string attack, string skill)
+    /// <summary>
+    /// The arc a melee attack sweeps with a weapon of <paramref name="skill"/> and item <paramref name="template"/>, a path
+    /// group's where one covers it; refuses an attack with no path, a content error.
+    /// </summary>
+    internal SwingArc Arc(string attack, string skill, int? template)
     {
-        if (!Paths.TryGetValue(attack, out DaggerfallAttackPath path)) throw new InvalidOperationException($"Attack tuning has no path for '{attack}'.");
+        DaggerfallAttackPath? chosen = PathGroups.FirstOrDefault(group => template is int item && group.Templates.Contains(item) && group.Paths.ContainsKey(attack))?.Paths[attack];
+        if ((chosen ?? (Paths.TryGetValue(attack, out DaggerfallAttackPath common) ? common : null)) is not { } path)
+            throw new InvalidOperationException($"Attack tuning has no path for '{attack}'.");
         return new(path.Start, path.End, path.Tilt, attack == DaggerfallAttackIds.Kick ? KickReach : For(skill).Reach);
     }
 
@@ -76,11 +97,19 @@ internal sealed record DaggerfallAttackTuning(
         Dictionary<string, DaggerfallWeaponClassAttacks> classes = new(StringComparer.Ordinal);
         foreach (JsonProperty entry in root.GetProperty("classes").EnumerateObject())
             classes.Add(entry.Name, new(ReadTiming(entry.Value.GetProperty("fast")), Positive(entry.Value, "powerChargeSeconds"), ReadTiming(entry.Value.GetProperty("powerRelease")), (float)Positive(entry.Value, "reach")));
-        Dictionary<string, DaggerfallAttackPath> paths = new(StringComparer.Ordinal);
-        foreach (JsonProperty entry in root.GetProperty("paths").EnumerateObject())
-            paths.Add(entry.Name, new(entry.Value.GetProperty("start").GetSingle(), entry.Value.GetProperty("end").GetSingle(), entry.Value.GetProperty("tilt").GetSingle()));
+        List<DaggerfallAttackPathGroup> groups = [];
+        foreach (JsonElement group in root.GetProperty("pathGroups").EnumerateArray())
+            groups.Add(new(group.GetProperty("templates").EnumerateArray().Select(template => template.GetInt32()).ToHashSet(), ReadPaths(group.GetProperty("paths"))));
         return new(Positive(root, "powerThresholdSeconds"), Positive(root, "powerDamageMultiplier"), Positive(root, "powerStaminaMultiplier"),
-            ReadTiming(root.GetProperty("kick")), root.GetProperty("kickStaminaCost").GetInt32(), root.GetProperty("kickDamage").GetInt32(), (float)Positive(root, "kickReach"), classes, paths);
+            ReadTiming(root.GetProperty("kick")), root.GetProperty("kickStaminaCost").GetInt32(), root.GetProperty("kickDamage").GetInt32(), (float)Positive(root, "kickReach"), classes, ReadPaths(root.GetProperty("paths")), groups);
+    }
+
+    private static Dictionary<string, DaggerfallAttackPath> ReadPaths(JsonElement value)
+    {
+        Dictionary<string, DaggerfallAttackPath> paths = new(StringComparer.Ordinal);
+        foreach (JsonProperty entry in value.EnumerateObject())
+            paths.Add(entry.Name, new(entry.Value.GetProperty("start").GetSingle(), entry.Value.GetProperty("end").GetSingle(), entry.Value.GetProperty("tilt").GetSingle()));
+        return paths;
     }
 
     private static DaggerfallAttackTiming ReadTiming(JsonElement value) =>

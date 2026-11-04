@@ -1,6 +1,9 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using WorldRpg.Kit.Combat;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
@@ -42,6 +45,12 @@ public sealed class TuningPayloadSessionTests
         foreach (var (skill, attacks) in expected.Classes) Assert.Equal(attacks, loaded.Classes[skill]);
         Assert.Equal(expected.Paths.Keys.Order(), loaded.Paths.Keys.Order());
         foreach (var (attack, path) in expected.Paths) Assert.Equal(path, loaded.Paths[attack]);
+        Assert.Equal(expected.PathGroups.Count, loaded.PathGroups.Count);
+        foreach (var (authored, read) in expected.PathGroups.Zip(loaded.PathGroups))
+        {
+            Assert.Equal(authored.Templates.Order(), read.Templates.Order());
+            Assert.Equal(authored.Paths.OrderBy(path => path.Key), read.Paths.OrderBy(path => path.Key));
+        }
     }
 
     [Fact]
@@ -139,6 +148,28 @@ public sealed class TuningPayloadSessionTests
     /// the shipped profile must load to exactly the ruleset defaults, and an out-of-range value is refused
     /// at admission rather than reaching the owner that reads it.
     /// </summary>
+    [Fact]
+    public void A_weapons_path_group_replaces_only_the_attacks_it_names()
+    {
+        DaggerfallAttackTuning tuning = DaggerfallTuning.Defaults.Attacks;
+        SwingArc chop = tuning.Arc("fastC", DaggerfallSkills.LongBlade, null);
+
+        Assert.True(chop.TiltDegrees > 60f, "a weapon in no group chops overhead");
+        Assert.True(tuning.Arc("fastC", DaggerfallSkills.LongBlade, 120).TiltDegrees < 60f, "the sword-and-shield set's fastC rises across the view");
+        Assert.Equal(tuning.Arc("fastA", DaggerfallSkills.LongBlade, null), tuning.Arc("fastA", DaggerfallSkills.LongBlade, 120));
+        Assert.True(tuning.Arc("powerOut", DaggerfallSkills.BluntWeapon, 115).TiltDegrees < 30f, "the staff's power attack sweeps sideways");
+        Assert.True(tuning.Arc("powerOut", DaggerfallSkills.BluntWeapon, 122).TiltDegrees > 60f, "a two-handed sword's power attack chops");
+    }
+
+    [Fact]
+    public void The_path_groups_stay_in_step_with_the_clips_each_weapon_plays()
+    {
+        using JsonDocument held = JsonDocument.Parse(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/first-person/daggerfall.held.json")));
+        int[] rising = [.. held.RootElement.GetProperty("items").EnumerateObject()
+            .Where(item => item.Value.GetProperty("family").GetString() == "sns").Select(item => int.Parse(item.Name, CultureInfo.InvariantCulture)).Order()];
+
+        Assert.Equal(rising, DaggerfallTuning.Defaults.Attacks.PathGroups[0].Templates.Order());
+    }
     [Fact]
     public void The_default_payload_carries_property_transport_and_progression_tuning()
     {

@@ -367,7 +367,46 @@
         "end": 12,
         "tilt": 0
       }
-    }
+    },
+    "pathGroups": [
+      {
+        "templates": [
+          116,
+          117,
+          118,
+          119,
+          120,
+          121,
+          124,
+          127,
+          288
+        ],
+        "paths": {
+          "fastC": {
+            "start": 30,
+            "end": -55,
+            "tilt": 35
+          }
+        }
+      },
+      {
+        "templates": [
+          115
+        ],
+        "paths": {
+          "fastB": {
+            "start": -50,
+            "end": 45,
+            "tilt": 15
+          },
+          "powerOut": {
+            "start": 45,
+            "end": -50,
+            "tilt": 5
+          }
+        }
+      }
+    ]
   },
   "enemyBehavior": {
     "detectionDistance": 12.0,
