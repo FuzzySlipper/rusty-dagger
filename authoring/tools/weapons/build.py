@@ -7,8 +7,8 @@ when the class appears more than once (a guard and a pommel), a piece's index co
 them), or `all` its pieces; build.json lists every piece per class to choose from. A `flat` part is two sheets that
 meet at its outline, offset by `half` metres toward the middle over `ramp` metres (`profile` `ridge` rises straight,
 a blade's diamond section; `round` rises in a quarter circle, a bar). A `lathe` part is a ring every 5 mm as wide as
-the icon's outline there, round in section; lathe parts that touch are turned as one profile and share their
-rings, so they join without gaps, and a run's end reaches a flat part just beyond it. `smooth` rings median-filter
+the icon's outline there, round in section, about one straight axis fitted to its run; lathe parts that touch are
+turned as one profile and share their rings, so they join without gaps, and a run's end reaches a flat part just beyond it. `smooth` rings median-filter
 the radii so studs and spikes on the outline do not swell it. `ball` makes a lathe part a sphere, the largest circle
 inside its outline, keeping the narrower turned outline below it (a collar). `spikes` sets cones on its widest ring's sphere: `count`, `length` and `base` in metres,
 spread evenly. A part's `light` is passed to paint.py.
@@ -184,7 +184,14 @@ def turned(chain):
         # The outline within a few pixels of the parts' own: their ink edge, not a guard that crosses the same row.
         own = np.nonzero(union[y])[0] if union[y].any() else np.nonzero(outline[y])[0]
         xs = np.nonzero(outline[y, max(0, own.min() - 4):own.max() + 5])[0] + max(0, own.min() - 4)
-        stations.append([y, (xs.min() + xs.max() + 1) / 2, (xs.max() - xs.min() + 1) / 2, owner[y]])
+        centre = (xs.min() + xs.max() + 1) / 2
+        stations.append([y, centre, (xs.max() - xs.min() + 1) / 2, owner[y], centre])
+    # One straight axis for the run, fitted through the rows' centres: the painted outline wanders a pixel or two,
+    # which would kink the turned surface seen from the side and set a ball off its haft. Each ring keeps its row's
+    # painted centre (the last field) for the icon's projection, so the paint still lies on the painted shaft.
+    slope, offset = np.polyfit([s[0] for s in stations], [s[1] for s in stations], 1)
+    for s in stations:
+        s[1] = slope * s[0] + offset
     for part in chain:   # median-filter each part's radii on its own, so a ring's edge stays sharp
         mine = [s for s in stations if s[3] == part['name']]
         raw, k = [s[2] for s in mine], part.get('smooth', 1)
@@ -196,11 +203,11 @@ def turned(chain):
         # kept where it is narrower than the ball (a collar), and the sphere ends where it is as narrow as the collar.
         mine = [s for s in stations if s[3] == part['name']]
         d = distance(masks[part['name']])
-        cy, cx = np.unravel_index(int(np.argmax(d)), d.shape)
-        r = float(d.max())
+        cy, painted = (int(v) for v in np.unravel_index(int(np.argmax(d)), d.shape))
+        cx, r = slope * cy + offset, float(d.max())
         collar = [s for s in mine if s[0] > cy and s[2] < 0.8 * r]
         end = math.asin(collar[0][2] / r) if collar else 0.0
-        ball = [[cy + r * math.cos(t), cx, max(r * math.sin(t), r * 0.05), part['name']]
+        ball = [[cy + r * math.cos(t), cx, max(r * math.sin(t), r * 0.05), part['name'], painted]
                 for t in np.linspace(math.pi, end, segments + 1)]
         a, b = stations.index(mine[0]), stations.index(mine[-1])
         stations[a:b + 1] = ball + [s for s in collar if s[0] > ball[-1][0]]
@@ -214,9 +221,14 @@ def turned(chain):
         mine = [i for i, s in enumerate(stations) if s[3] == part['name']]
         a, b = mine[0], min(mine[-1] + 1, len(stations) - 1)
         bm = bmesh.new()
-        rings = [[bm.verts.new(place(cx + r * math.cos(2 * math.pi * k / segments), y,
-                                     r * math.sin(2 * math.pi * k / segments) * METRES)) for k in range(segments)]
-                 for y, cx, r, _ in stations[a:b + 1]]
+        icon_x = bm.verts.layers.float.new('icon_x')   # the icon column the vertex's colour is projected from
+
+        def vert(y, cx, x, z, painted):
+            v = bm.verts.new(place(cx + x, y, z * METRES))
+            v[icon_x] = painted + x
+            return v
+        rings = [[vert(y, cx, r * math.cos(2 * math.pi * k / segments), r * math.sin(2 * math.pi * k / segments), painted)
+                  for k in range(segments)] for y, cx, r, _, painted in stations[a:b + 1]]
         for lo, hi in zip(rings, rings[1:]):
             for k in range(segments):
                 bm.faces.new([lo[k], lo[(k + 1) % segments], hi[(k + 1) % segments], hi[k]])
@@ -225,13 +237,16 @@ def turned(chain):
         if mine[-1] == len(stations) - 1:
             bm.faces.new(rings[-1])
         if 'spikes' in part:
-            y, cx, r, _ = max(stations[a:b + 1], key=lambda s: s[2])
-            spikes(bm, place(cx, y, 0), r * METRES, part['spikes'])
+            y, cx, r, _, painted = max(stations[a:b + 1], key=lambda s: s[2])
+            for v in spikes(bm, place(cx, y, 0), r * METRES, part['spikes']):
+                v[icon_x] = v.co.z / METRES + ORIGIN[0] + painted - cx
         meshes[part['name']] = bm
     return meshes
 
 
 def spikes(bm, centre, r, spec):
+    """Cones spread evenly over the sphere of radius r round centre; returns their vertices."""
+    made = []
     n = spec['count']
     for k in range(n):   # a Fibonacci sphere spreads the spikes evenly
         z = 1 - 2 * (k + 0.5) / n
@@ -244,6 +259,8 @@ def spikes(bm, centre, r, spec):
         verts = cone['verts']
         bmesh.ops.rotate(bm, verts=verts, cent=Vector(), matrix=Vector((0, 0, 1)).rotation_difference(direction).to_matrix())
         bmesh.ops.translate(bm, verts=verts, vec=centre + direction * (r + spec['length'] / 2 - r * 0.15))
+        made += verts
+    return made
 
 
 def rows_of(names):
@@ -306,10 +323,12 @@ for part in weapon['parts']:
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     layer = bm.loops.layers.uv.new('UVMap')
+    icon_x = bm.verts.layers.float.get('icon_x')
     for face in bm.faces:
         for loop in face.loops:   # project the icon flat: front and back both show it, as on the paper doll
             p = loop.vert.co
-            loop[layer].uv = uv(p.z / METRES + ORIGIN[0], ORIGIN[1] - p.y / METRES)
+            x = loop.vert[icon_x] if icon_x else p.z / METRES + ORIGIN[0]
+            loop[layer].uv = uv(x, ORIGIN[1] - p.y / METRES)
     data = bpy.data.meshes.new(part['name'])
     bm.to_mesh(data)
     bm.free()
