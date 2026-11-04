@@ -1,18 +1,17 @@
 using Rusty.Engine;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>
 /// The 3D first-person weapon beside the classic sprite viewmodel. When the viewmodel tuning asks for a 3D style and
 /// a family of the installed first-person art draws the drawn weapon, the family's clip-led arms loop its idle at rest
-/// and play its clip for every strike it has one for, and the sprite stays hidden but keeps playing: its playback
-/// remains the swing's clock, delivering the hit and releasing the attack. A strike the family has no clip for shows
-/// the sprite for that swing. The wielded item chooses the family and look and tints the look by its metal, so a swap
+/// and play its clip for every attack it has one for, and the sprite stays hidden. Both follow the rules' attack clock.
+/// An attack the family has no clip for shows the sprite for that swing. The wielded item chooses the family and look and tints the look by its metal, so a swap
 /// between weapons of one classic visual redraws the 3D weapon while the sprite stays. While the developer workbench
-/// views a drawing (<see cref="ViewHeld"/>), it is drawn whatever the hands wield and only the workbench plays it; the
-/// swings still play and land on their hidden sprites.
+/// views a drawing (<see cref="ViewHeld"/>), it is drawn whatever the hands wield and only the workbench plays it.
 /// </summary>
 internal sealed partial class DaggerfallSiteAppearance
 {
@@ -128,19 +127,30 @@ internal sealed partial class DaggerfallSiteAppearance
 
     // An action starts on the sprite: the arms loop their idle for idle and play a strike's clip, timed to the sprite's
     // frames and hit frame; a strike without a clip shows the sprite.
-    private void StartHeldAction(string name, double frameSeconds, NormalizedClassicWeaponAction action, int hitFrame)
+    // The arms return to the idle loop with the sprite.
+    private void RestHeldAction(NormalizedClassicWeaponAction idle)
     {
         if (held is null || heldViewed) return;
-        double frame = frameSeconds > 0d ? frameSeconds : 1d / action.FramesPerSecond;
-        if (name == "idle")
-        {
-            held.Rest((float)frame);
-            heldShowing = true;
-            return;
-        }
-        heldShowing = held.Moves(name);
-        if (!heldShowing) { held.Rest((float)frame); return; }
-        held.Strike(name, frame, hitFrame, action.PlayedFrameCount);
+        held.Rest(1F / idle.FramesPerSecond);
+        heldShowing = true;
+    }
+
+    // Plays an attack's clip to the rules' timing, or shows the sprite for an attack the family has no clip for. The retro
+    // style samples a frame of the windup's own length, so the hit shows the strike mark.
+    private void PlayHeldAction(string attack, DaggerfallAttackTiming timing, int hitFrame)
+    {
+        if (held is null || heldViewed) return;
+        heldShowing = held.Moves(attack);
+        if (heldShowing) held.Attack(attack, timing, hitFrame);
+        else held.Rest((float)(timing.Windup / hitFrame));
+    }
+
+    // Keeps the charged power attack where the family holds it.
+    private void HoldHeldAction()
+    {
+        if (held is null || heldViewed || !held.Moves(DaggerfallAttackIds.PowerHold)) return;
+        heldShowing = true;
+        held.Hold();
     }
 
     // One classic frame of a weapon's idle, at which the retro style samples the idle loop.

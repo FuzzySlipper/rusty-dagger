@@ -52,7 +52,7 @@ public sealed class DaggerfallCatalogContentTests
         Assert.Equal(11, definitions.Actions["bow-shot"].StaminaCost);
         Assert.Equal(0, definitions.Actions["monster-strike"].AttackRangeIndex);
         Assert.Null(definitions.Actions["monster-strike"].MinimumDamage);
-        Assert.Equal(0.75, definitions.Actions["melee-attack"].CooldownSeconds);
+        Assert.Equal(.1, definitions.Actions["melee-attack"].CooldownSeconds);
         Assert.Equal(0, definitions.Actions["skeleton-strike"].AttackRangeIndex);
         Assert.Equal(2, definitions.Actions["thief-strike"].MinimumDamage);
         Assert.Equal(8, definitions.Actions["thief-strike"].MaximumDamage);

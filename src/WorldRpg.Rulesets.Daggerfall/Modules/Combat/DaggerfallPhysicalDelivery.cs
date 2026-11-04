@@ -24,6 +24,7 @@ internal sealed record DaggerfallAdmittedAttack(
     Combatant Attacker,
     DaggerfallAttackDefinition Attack,
     bool Ranged,
+    double DamageMultiplier,
     string? Action,
     DaggerfallStrikeFeedback Feedback,
     ulong? WabbajackSource,

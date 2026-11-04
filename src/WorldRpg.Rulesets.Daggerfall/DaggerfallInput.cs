@@ -8,6 +8,8 @@ internal static class DaggerfallInput
 {
     internal static readonly InputActionId ToggleWeapon = new("daggerfall.toggle-weapon");
     internal static readonly InputActionId Attack = new("daggerfall.attack");
+    internal static readonly InputActionId Kick = new("daggerfall.kick");
+    internal static readonly InputActionId Block = new("daggerfall.block");
     internal static readonly InputActionId Interact = new("daggerfall.interact");
     internal static readonly InputActionId Inventory = new("daggerfall.inventory");
     internal static readonly InputActionId Character = new("daggerfall.character");
@@ -26,6 +28,8 @@ internal static class DaggerfallInput
     internal static readonly IReadOnlyList<InputActionBinding> Bindings = [
         .. Shortcuts.Select(id => new InputActionBinding(Shortcut(id), System.Text.Encoding.UTF8.GetBytes(id))),
         new(Attack, "attack"u8.ToArray()),
+        new(Kick, "kick"u8.ToArray()),
+        new(Block, "block"u8.ToArray()),
         new(ToggleWeapon, "toggle-weapon"u8.ToArray()),
         new(Interact, "interact"u8.ToArray()),
         new(Inventory, "inventory"u8.ToArray()),
@@ -35,9 +39,24 @@ internal static class DaggerfallInput
     ];
 
     /// <summary>
+    /// How one input event moves a held control: true when <paramref name="intent"/>'s binding or a pad button for
+    /// <paramref name="action"/> goes down, false when it comes up, and null for any other event.
+    /// </summary>
+    internal static bool? HeldChange(ProductInputEvent input, ReadOnlySpan<byte> intent, InputActionId action, IReadOnlyList<ControllerActionBinding> pad)
+    {
+        if (input.Kind is InputEventKind.MappedDigital or InputEventKind.DirectDigital && input.Intent.Span.SequenceEqual(intent))
+            return input.Edge != InputEdge.Released && input.X > 0f;
+        if (input.Kind != InputEventKind.ControllerButton || input.Edge is not (InputEdge.Pressed or InputEdge.Released)) return null;
+        foreach (ControllerActionBinding binding in pad)
+            if (binding.Button == input.ControllerButton && binding.Action == action) return input.Edge == InputEdge.Pressed;
+        return null;
+    }
+
+    /// <summary>
     /// The pad's action buttons in the layout the browser shell delivers: the bottom face attacks, the
     /// right face reaches for what the player is facing, the left face readies the weapon, the top
-    /// face opens the character sheet, select opens the pack, and start opens the menu. They are
+    /// face opens the character sheet, the left shoulder guards, the right shoulder kicks, select opens
+    /// the pack, and start opens the menu. They are
     /// product bindings rather than engine mappings because the Engine publishes positions and this is
     /// the layer that knows what an action means.
     /// </summary>
@@ -46,6 +65,8 @@ internal static class DaggerfallInput
         new(ControllerButton.Button1, Interact),
         new(ControllerButton.Button2, ToggleWeapon),
         new(ControllerButton.Button3, Character),
+        new(ControllerButton.Button4, Block),
+        new(ControllerButton.Button5, Kick),
         new(ControllerButton.Button8, Inventory),
         new(ControllerButton.Button9, Menu),
     ];

@@ -36,12 +36,11 @@ Only stop browser sessions and hosts the tester owns.
 3. Choose a nearby named target. Compare actual XYZ movement after short inputs.
    Use free look and a 4/8-view survey when facing a wall or losing orientation.
 4. Check alive, hostile, attack eligibility, aim, reach and current refusal facts.
-   Attack eligibility alone does not establish hostility. Attack timing is a
-   bounded observation window, recalculated from live equipment, speed, authored
-   animation and cooldown. Inspect again if still recovering. The reasons
-   `attack-animation-active` and `attack-cooldown` identify separate guards;
-   `attackReadyAtStep` is a cooldown threshold, not a promise that animation has
-   finished.
+   Attack eligibility alone does not establish hostility. An attack action is a
+   tap, a fast attack that the rules' attack clock plays out on later admitted
+   steps. Inspect again if still recovering. The reasons `attack-animation-active`
+   and `attack-cooldown` identify separate guards; `attackReadyAtStep` is a cooldown
+   threshold, not a promise that the motion has finished.
 5. Use ordinary UI for controls, inventory and loot. Rebinding Attack to KeyQ in
    Settings must be visible in the next action query; never assume Primary stays
    bound. The harness supports ordinary pointer buttons as well as keyboard keys.
@@ -133,9 +132,9 @@ The motion viewer draws the 3D first-person art (`viewmodel.style` `held` or
 through the game's own held viewmodel. A
 look is a classic weapon visual the art draws (`weapon.dagger.steel`), shown by the
 family that draws it, and an action one of its classic strikes with a clip
-(`strikeDown`). It shows the family's arms whatever the hands wield; swings still land
-on their hidden sprites. A strike is timed as play times it at the visual's authored
-frame rate, with the hit on the melee hit frame, where the clip's strike mark plays.
+(`fastA`). It shows the family's arms whatever the hands wield. An attack is timed as
+play times it, by the attack tuning for the family's weapon class, with the hit where
+the windup ends, where the clip's strike mark plays.
 The keys are the clip's four marks: 0 start, 1 strike, 2 recover, 3 end.
 
 | Command | What it does |
@@ -144,7 +143,7 @@ The keys are the clip's four marks: 0 start, 1 strike, 2 recover, 3 end.
 | `held.motion.key N` | Holds the strike at mark N (-1 is rest). |
 | `held.motion.next` / `held.motion.prev` | Holds the next or previous mark, through rest. |
 | `held.motion.play SPEED` | Plays the strike from rest at SPEED (1 as in play, 0.25 a quarter; 0.01 to 4). |
-| `held.motion.at SECONDS` | Shows the strike paused SECONDS after its start, with the clip time it plays there (`heldRetro` holds each classic frame's sample). |
+| `held.motion.at SECONDS` | Shows the strike paused SECONDS after its start, with the clip time it plays there (`heldRetro` holds each frame's sample). |
 | `held.clip` | What the drawn arms play now, in play or in the viewer: the clip, its time and phase, what fades out under it. |
 | `held.motion.off` | Gives the hands back what they wield. Closing the developer tools does this too. |
 

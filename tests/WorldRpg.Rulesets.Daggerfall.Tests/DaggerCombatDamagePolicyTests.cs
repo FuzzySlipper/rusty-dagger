@@ -86,9 +86,7 @@ public sealed class DaggerCombatDamagePolicyTests
 
         Assert.True(admitted);
         PlayerAttackStartedFact announced = Assert.Single(started.OfType<PlayerAttackStartedFact>());
-        Assert.True(announced.WaitsWithoutTarget);
         Assert.Null(announced.TargetId);
-        Assert.True(announced.FrameSeconds > 0d);
         DaggerfallAdmittedAttack prepared = Assert.Single(delivery.Prepared);
         Assert.Equal(swing, prepared.Request);
         Assert.False(prepared.Ranged);
@@ -415,11 +413,9 @@ public sealed class DaggerCombatDamagePolicyTests
     }
 
     [Fact]
-    public void A_targeted_player_swing_admits_its_timing_and_lands_only_when_the_hit_frame_arrives()
+    public void A_targeted_player_swing_lands_only_when_its_impact_arrives()
     {
-        // The donor runs its melee damage when the swing animation reaches FPSWeapon's hit frame, so a
-        // targeted swing hands its impact to the shared pending state and publishes the tick time the
-        // viewmodel has to play at.
+        // A targeted swing hands its impact to the shared pending state; the attack clock delivers it.
         using DamagePolicyFixture fixture = new();
         fixture.Script(body: 9, damage: 10);
         fixture.Touches(2);
@@ -430,10 +426,6 @@ public sealed class DaggerCombatDamagePolicyTests
         Assert.True(started);
         PlayerAttackStartedFact opening = Assert.Single(admitted.OfType<PlayerAttackStartedFact>());
         Assert.Equal(2L, opening.TargetId);
-        // Stated from the donor's own arithmetic rather than read back from the formula the rules
-        // call: 3 * (115 - 50) / 980 seconds per frame.
-        Assert.Equal(3d * (115 - 50) / 980d, opening.FrameSeconds, 6);
-        Assert.Equal(DaggerfallFormulaPolicy.MeleeWeaponHitFrame, opening.HitFrame);
         Assert.DoesNotContain(admitted, fact => fact is AttackHitFact or AttackWhiffedFact);
 
         IReadOnlyList<IProductFact> impact = fixture.DeliverImpact(request);
@@ -516,7 +508,6 @@ public sealed class DaggerCombatDamagePolicyTests
         Assert.True(started);
         PlayerAttackStartedFact opening = Assert.Single(admitted.OfType<PlayerAttackStartedFact>());
         Assert.Equal(2L, opening.TargetId);
-        Assert.Equal(5, opening.HitFrame);   // the donor's bow animation releases on frame 5
         Assert.Equal(2UL, fixture.PlayerArrows());
         // (10 * (100 - 50) + 800) / 980 seconds, latched in 0.125s steps.
         Assert.Equal((ulong)Math.Ceiling((10d * (100 - 50) + 800) / 980d / .125d), fixture.CooldownRemaining(DaggerfallActorIdentity.PlayerEntityId, 5, 9));
@@ -593,6 +584,70 @@ public sealed class DaggerCombatDamagePolicyTests
         Assert.Contains(new AttackRejectedFact(AttackRejection.EmptyQuiver, DaggerfallActorIdentity.PlayerEntityId), facts);
         Assert.DoesNotContain(facts, fact => fact is PlayerAttackStartedFact);
         Assert.True(fixture.IsSwingReady(DaggerfallActorIdentity.PlayerEntityId, 5, 500));
+    }
+
+    [Fact]
+    public void A_power_release_doubles_the_rolled_damage_and_the_stamina_it_costs()
+    {
+        (int Damage, double Stamina) Blow(string attack)
+        {
+            using DamagePolicyFixture fixture = new();
+            fixture.PlayerStrength(50);
+            fixture.SelectPlayerAttack(attack);
+            fixture.Script(body: 0, damage: 11);
+            double before = fixture.PlayerStamina;
+            BlowResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
+            return (result.Outcome.Damage, before - fixture.PlayerStamina);
+        }
+
+        Assert.Equal((10, 11d), Blow("fastA")); // 11 - 1 iron
+        Assert.Equal((20, 22d), Blow(DaggerfallAttackIds.PowerOut));
+    }
+
+    [Fact]
+    public void A_kick_is_a_blunt_hand_to_hand_blow_of_its_own_damage_and_cost_whatever_the_weapon()
+    {
+        using DamagePolicyFixture fixture = new();
+        fixture.SelectPlayerAttack(DaggerfallAttackIds.Kick);
+        // Blunt deflects after the roll, and the kick's one-point range is drawn like any other.
+        fixture.Script(body: 0, deflect: null, damage: DaggerfallAttackTuning.Default.KickDamage, afterDamage: 100);
+        double before = fixture.PlayerStamina;
+
+        BlowResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
+
+        Assert.True(result.Outcome.Hit);
+        Assert.Contains((DaggerfallAttackTuning.Default.KickDamage, DaggerfallAttackTuning.Default.KickDamage), result.Ranges);
+        Assert.Equal(DaggerfallAttackTuning.Default.KickStaminaCost, before - fixture.PlayerStamina);
+        Assert.Contains(fixture.SkillUses, use => use.Skill == "long-blade" || use.Skill == "hand-to-hand");
+    }
+
+    [Fact]
+    public void A_kick_with_a_bow_in_hand_lands_by_contact_and_spends_no_arrow()
+    {
+        using DamagePolicyFixture fixture = new(armed: false);
+        fixture.EquipPlayerBow("iron-short-bow", 3001);
+        fixture.GivePlayerArrows(3);
+        fixture.SelectPlayerAttack(DaggerfallAttackIds.Kick);
+        fixture.Touches(2);
+        fixture.Script(body: 0, deflect: null, damage: DaggerfallAttackTuning.Default.KickDamage, afterDamage: 100);
+
+        fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false), out IReadOnlyList<IProductFact> facts);
+
+        Assert.Equal(3UL, fixture.PlayerArrows());
+        Assert.Single(facts.OfType<AttackHitFact>());
+    }
+
+    [Fact]
+    public void A_kick_with_a_bow_in_hand_works_with_an_empty_quiver()
+    {
+        using DamagePolicyFixture fixture = new(armed: false);
+        fixture.EquipPlayerBow("iron-short-bow", 3001);
+        fixture.SelectPlayerAttack(DaggerfallAttackIds.Kick);
+
+        IReadOnlyList<IProductFact> facts = fixture.StartSwing(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 5, 9, .125d, Delayed: true), out bool started);
+
+        Assert.True(started);
+        Assert.DoesNotContain(facts, fact => fact is AttackRejectedFact { Reason: AttackRejection.EmptyQuiver });
     }
 
     [Fact]
@@ -688,6 +743,7 @@ public sealed class DaggerCombatDamagePolicyTests
                 monsterHit: _ => { }, actorGameplayActive: _ => true, actorTeam: id => _authored.GetValueOrDefault(id)?.Team,
                 mitigation: mitigation ?? seams.PhysicalMitigation,
                 delivery: ops => Delivery = (delivery ?? seams.PhysicalDelivery)(ops),
+                attackTuning: DaggerfallAttackTuning.Default,
                 contact: Contact = CombatCollaborators.Contact(_actors, _spatial, () => _playerPosition),
                 strikePose: actor => CombatCollaborators.StrikePose(_actors, actor, _playerPosition),
                 actorVelocity: id => id == DaggerfallActorIdentity.PlayerEntityId ? PlayerVelocity : Vector3.Zero);
@@ -791,6 +847,11 @@ public sealed class DaggerCombatDamagePolicyTests
             .Where(stack => stack.Definition.Value == "arrow").Aggregate(0UL, (total, stack) => total + stack.Quantity);
 
         internal double? ReachOf(long actorId) => _combat.ReachOf(actorId);
+
+        /// <summary>Names the attack the next player admission carries, as the attack clock does.</summary>
+        internal void SelectPlayerAttack(string attack) => _combat.SelectPlayerAttack(attack);
+
+        internal double PlayerStamina => _actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current;
 
         /// <summary>Interrupts an attacker's attack, as leaving attack state or losing its target does.</summary>
         internal void Interrupt(long attackerId, ulong generation) => _combat.Execution.Interrupt(attackerId, generation);

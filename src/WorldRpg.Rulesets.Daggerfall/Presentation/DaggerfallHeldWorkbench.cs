@@ -1,3 +1,4 @@
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using Rusty.Engine;
 using Rusty.Engine.Debugging;
 using Rusty.Engine.FirstPerson;
@@ -17,16 +18,16 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// (<see cref="DaggerfallHeldArt.DocumentPath"/>) by the page's Save.
 /// </summary>
 /// <remarks>
-/// A strike is timed as play times it: the visual's classic action at its authored frame rate with the hit on the
-/// melee hit frame (<see cref="DaggerfallHeldViewmodel.Timing"/>), which the clip's strike mark lands on. Play scales
-/// that rate by the player's speed, so a hastened swing is shorter than the viewer's. Adapted from rusty-riders'
+/// An attack is timed as play times it: the attack tuning for the family's weapon class, with the hit where the
+/// windup ends, which the clip's strike mark lands on. Adapted from rusty-riders'
 /// <c>HeldMotionDebugCommands</c> and <c>HeldWorkbench</c>.
 /// </remarks>
 /// <param name="art">The art the composition resolved over; null when no first-person container is installed.</param>
+/// <param name="attacks">The attack tuning, which times what the viewer plays.</param>
 /// <param name="style">The viewmodel style the tuning asks for.</param>
 /// <param name="appearance">The current site's appearance, which draws the viewmodel.</param>
 /// <param name="publish">Republishes the presentation, so a change shows at once.</param>
-internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, DaggerfallViewmodelStyle style, Func<DaggerfallSiteAppearance> appearance, Action publish)
+internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, DaggerfallAttackTuning attacks, DaggerfallViewmodelStyle style, Func<DaggerfallSiteAppearance> appearance, Action publish)
 {
     internal const string Title = "First-person workbench";
     private static readonly string[] MarkNames = ["start", "strike", "recover", "end"];
@@ -65,7 +66,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
         if (art!.Look(heldLook) is not { } drawing) return Failure($"The art draws no '{heldLook}'. Looks: {string.Join(", ", Looks)}.");
         if (!art.Document.Families[drawing.Family].Strikes.ContainsKey(action))
             return Failure($"'{action}' has no clip for {heldLook}. Strikes with clips: {string.Join(", ", StrikesOf(heldLook))}; the others play their sprites.");
-        if (ClassicTiming(heldLook, action) is null) return Failure($"Classic weapon '{heldLook}' has no '{action}' action to time it by.");
+        if (AttackTiming(heldLook, action) is null) return Failure($"The rules don't time '{action}'.");
         if (appearance().ViewHeld(drawing) is not { } viewed) return Failure("The current site draws no 3D weapon.");
         (look, strike, key) = (heldLook, action, -1);
         viewed.Rest(0);
@@ -79,7 +80,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
         if (Viewed() is not { } viewed) return Unshown();
         if (n < -1 || n >= MarkNames.Length) return Failure($"Marks run from 0 to {MarkNames.Length - 1} (start, strike, recover, end; -1 is rest).");
         key = n;
-        var (timing, frame) = ClassicTiming(look!, strike!)!.Value;
+        var (timing, frame) = AttackTiming(look!, strike!)!.Value;
         if (n < 0) viewed.Rest(0);
         else viewed.Play(strike!, timing, frame, 1, MarkTimes(timing)[n]);
         publish();
@@ -96,7 +97,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
     {
         if (Viewed() is not { } viewed) return Unshown();
         if (!(speed >= .01F && speed <= 4)) return Failure("Speed runs from 0.01 to 4.");
-        var (timing, frame) = ClassicTiming(look!, strike!)!.Value;
+        var (timing, frame) = AttackTiming(look!, strike!)!.Value;
         key = -1;
         viewed.Play(strike!, timing, frame, speed);
         publish();
@@ -107,7 +108,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
     internal DebugCommandResult At(float seconds)
     {
         if (Viewed() is not { } viewed) return Unshown();
-        var (timing, frame) = ClassicTiming(look!, strike!)!.Value;
+        var (timing, frame) = AttackTiming(look!, strike!)!.Value;
         if (!(seconds >= 0 && seconds <= timing.Duration)) return Failure($"The strike runs from 0 to {timing.Duration:0.###} s.");
         key = -1;
         viewed.Play(strike!, timing, frame, 1, seconds);
@@ -145,8 +146,8 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
             DebugCommandResult shown = Show(Looks[0], StrikesOf(Looks[0])[0]);
             if (!shown.Succeeded) return new(Title, []) { Notice = shown.Message };
         }
-        var (timing, _) = ClassicTiming(look!, strike!)!.Value;
-        string[] still = [.. NormalizedClassicWeapon.StrikeActions.Except(Strikes)];
+        var (timing, _) = AttackTiming(look!, strike!)!.Value;
+        string[] still = [.. DaggerfallAttackIds.All.Except([DaggerfallAttackIds.PowerHold, DaggerfallAttackIds.Shot]).Except(Strikes)];
         float[] marks = MarkTimes(timing);
         return new(Title, DaggerfallHeldTunables.For(art!.Document, Drawing, strike!, timing, edited, publish))
         {
@@ -183,16 +184,15 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
     };
 
     private IReadOnlyList<string> StrikesOf(string shown) => art!.Look(shown) is { } drawing
-        ? [.. NormalizedClassicWeapon.StrikeActions.Where(art.Document.Families[drawing.Family].Strikes.ContainsKey)] : [];
+        ? [.. DaggerfallAttackIds.All.Where(art.Document.Families[drawing.Family].Strikes.ContainsKey)] : [];
 
-    // The strike's timing as play times it, and one classic frame; null when the look's visual has no such action. An
-    // item is timed by its family's first visual: a swing's frames are the same length whatever its visual.
-    private (PhaseTiming Timing, float Frame)? ClassicTiming(string shown, string action)
+    // The attack's timing as play times it, and the retro style's frame; null for an attack the rules don't time.
+    private (PhaseTiming Timing, float Frame)? AttackTiming(string shown, string action)
     {
-        string visual = shown.StartsWith(DaggerfallHeldArt.ItemLookPrefix, StringComparison.Ordinal) ? art!.Document.Families[art.Look(shown)!.Family].Weapons[0] : shown;
-        if (appearance().ClassicWeapon(visual)?.Actions.GetValueOrDefault(action) is not { } classic) return null;
-        float frame = 1F / classic.FramesPerSecond;
-        return (DaggerfallHeldViewmodel.Timing(frame, DaggerfallFormulaPolicy.MeleeWeaponHitFrame, classic.PlayedFrameCount), frame);
+        string skill = art!.Document.Families[art.Look(shown)!.Family].Class;
+        if (attacks.Timing(action, skill) is not { } timing) return null;
+        return (new PhaseTiming((float)timing.Windup, MathF.Max((float)timing.Commit, .001F), MathF.Max((float)timing.Recovery, .001F)),
+            (float)(timing.Windup / DaggerfallFormulaPolicy.MeleeWeaponHitFrame));
     }
 
     // When each mark plays in the strike: the start at its beginning, the strike at the hit, the recovery once the commit
@@ -204,7 +204,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
 
     private string Describe()
     {
-        var (timing, frame) = ClassicTiming(look!, strike!)!.Value;
+        var (timing, frame) = AttackTiming(look!, strike!)!.Value;
         return $"{look} ({Family}) · {strike} plays {Clip.Clip} ({1 / frame:0.##} frames a second; windup {timing.Windup:0.###} s, commit {timing.Commit:0.###} s, recovery {timing.Recovery:0.###} s; the hit is at {timing.Windup:0.###} s, fade {Clip.Fade:0.##} s)\n" +
             string.Join("\n", Enumerable.Range(0, MarkNames.Length).Select(i => Line(i, timing)));
     }

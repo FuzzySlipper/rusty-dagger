@@ -62,15 +62,11 @@ internal sealed partial class DaggerfallSession
         if (id == "attack")
         {
             var timing = _combat.InspectPlayerTiming();
-            // Untargeted swings use authored playback; targeted impacts use live speed.
-            bool targeted = State.PlayerControl.Position is WorldPoint attackOrigin
-                && State.Kit.Targeting.Inspect(attackOrigin, _input.ResolveCurrentLook(State.PlayerControl).Forward,
-                    _combat.ReachOf(DaggerfallActorIdentity.PlayerEntityId)).SelectedTargetId is not null;
-            duration = Math.Clamp(Math.Ceiling(Math.Max(timing.CooldownSeconds,
-                _appearance.InspectPlayerStrikeSeconds(State.Equipment.Read(), State.WeaponDrawn, targeted ? timing.FrameSeconds : 0)) * 1000), 1, 2000);
+            // A tap; the attack's own motion runs on from it in whatever time the window admits.
+            duration = 50;
             equipment = timing.Equipment;
             if (available && !State.WeaponDrawn) { available = false; reason = "weapon-sheathed; toggle-weapon"; }
-            else if (available && !_appearance.CanStartPlayerAttack)
+            else if (available && !_attackClock.Free)
             { available = false; reason = "attack-animation-active; advance then inspect"; }
             else if (available && (!_combat.PlayerWeaponReady || !State.Kit.AttackExecution.IsReady(DaggerfallActorIdentity.PlayerEntityId,
                 _latestUpdateGeneration ?? 1, _latestSimulationStep ?? 0)))

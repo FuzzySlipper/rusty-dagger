@@ -32,7 +32,8 @@ internal sealed partial class DaggerfallSession
         _input.Observe(State.PlayerControl, input, lookSeconds, firstStep.PlanarIntent);
         foreach (var action in firstStep.RequestedActions) _input.Request(action);
         _locomotion.Observe(input);
-        _guard.Observe(input);
+        _guard.Observe(input, PadBindings);
+        _attackClock.Observe(input, PadBindings);
     }
 
     // Opening a panel or preparing a spell must work without spending a world step. Physical
@@ -76,7 +77,7 @@ internal sealed partial class DaggerfallSession
             // momentum needs settling here; airborne gravity is covered by falling above.
             || falling || new Vector2(motion.ControlledVelocity.X, motion.ControlledVelocity.Z).LengthSquared() > .0001f
             || motion.ExternalVelocity.LengthSquared() > .0001f;
-        bool action = _pendingWorldAction || _input.HasPendingActions || _guard.WantsTime || !_appearance.CanStartPlayerAttack || !_combat.PlayerWeaponReady
+        bool action = _pendingWorldAction || _input.HasPendingActions || _guard.WantsTime || _attackClock.Busy || !_combat.PlayerWeaponReady
             || State.Actors.Player.Attack.ReadyAtStep > facts.SimulationStep
             || _combat.HasPlayerRangedFlight
             || Casting.PendingRangedFlights.Any(flight => flight.CasterId == DaggerfallActorIdentity.PlayerEntityId)

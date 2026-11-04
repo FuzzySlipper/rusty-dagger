@@ -83,7 +83,7 @@ public sealed class DaggerfallContactRulesTests
         fixture.Spatial.OverlapContactsResult = _ => Touching(fixture.Actors.Get(2).Actor.Entity.Value);
         AttackRequest swing = new(Player, null, 3, 5, .125d, Delayed: true);
 
-        Assert.True(Assert.Single(fixture.StartSwing(swing, out bool admitted).OfType<PlayerAttackStartedFact>()).WaitsWithoutTarget);
+        Assert.Null(Assert.Single(fixture.StartSwing(swing, out bool admitted).OfType<PlayerAttackStartedFact>()).TargetId);
         Assert.True(admitted);
         IReadOnlyList<IProductFact> facts = fixture.DeliverImpact(swing);
 
@@ -343,7 +343,7 @@ public sealed class DaggerfallContactRulesTests
 
         guard.Step(.5d, canGuard: true, swinging: false, 1, 1, facts);
         Assert.False(guard.Raised); // Nothing is held yet.
-        guard.Observe([Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, intent: "block")]);
+        guard.Observe([Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, intent: "block")], []);
         guard.Step(.5d, canGuard: false, swinging: false, 1, 2, facts);
         Assert.False(guard.Raised); // No drawn weapon, no guard.
         guard.Step(.5d, canGuard: true, swinging: true, 1, 3, facts);
@@ -364,10 +364,10 @@ public sealed class DaggerfallContactRulesTests
 
         stamina.SetCurrent(10d);
         guard.Step(.5d, canGuard: true, swinging: false, 1, 9, facts);
-        guard.Observe([Input(InputEventKind.MappedDigital, InputEdge.Released, x: 0, intent: "block")]);
+        guard.Observe([Input(InputEventKind.MappedDigital, InputEdge.Released, x: 0, intent: "block")], []);
         guard.Step(.5d, canGuard: true, swinging: false, 1, 10, facts);
         Assert.False(guard.Raised);
-        guard.Observe([Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, intent: "block")]);
+        guard.Observe([Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, intent: "block")], []);
         guard.Step(.5d, canGuard: true, swinging: false, 1, 11, facts);
         guard.Neutralize(1, 12, facts);
         Assert.False(guard.Raised);
@@ -401,7 +401,7 @@ public sealed class DaggerfallContactRulesTests
         int lowered = mitigation.DeflectionChance(Player);
         FactBuffer<IProductFact> facts = new();
 
-        guard.Observe([Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, intent: "block")]);
+        guard.Observe([Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, intent: "block")], []);
         guard.Step(.5d, canGuard: true, swinging: false, 1, 1, facts);
 
         Assert.True(guard.Raised);
@@ -412,7 +412,7 @@ public sealed class DaggerfallContactRulesTests
     {
         public bool Raised { get; set; }
         public bool WantsTime => false;
-        public void Observe(ReadOnlySpan<ProductInputEvent> inputs) { }
+        public void Observe(ReadOnlySpan<ProductInputEvent> inputs, IReadOnlyList<WorldRpg.Kit.Controls.ControllerActionBinding> pad) { }
         public void Step(double seconds, bool canGuard, bool swinging, ulong generation, ulong simulationStep, FactBuffer<IProductFact> facts) { }
         public void Neutralize(ulong generation, ulong simulationStep, FactBuffer<IProductFact> facts) { }
     }

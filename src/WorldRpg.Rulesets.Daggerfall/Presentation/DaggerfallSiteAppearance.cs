@@ -91,16 +91,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private ViewmodelVisual? viewmodel;
     // The next swing may select any authored strike. Report a bounded observation window
     // covering its longest animation at the current ruleset tick rate (or authored fallback).
-    internal double InspectPlayerStrikeSeconds(EquipmentRead equipment, bool weaponDrawn, double frameSeconds) =>
-        SelectPlayerWeapon(equipment, weaponDrawn).Weapon?.Actions.Where(pair => pair.Key.StartsWith("strike", StringComparison.Ordinal))
-            .Select(pair => pair.Value.PlayedFrameCount *
-                (frameSeconds > 0 ? frameSeconds : 1d / pair.Value.FramesPerSecond)).DefaultIfEmpty(0).Max() ?? 0;
-
-    /// <summary>
-    /// Whether the viewmodel is free for a new swing: no strike is still playing. Whether the weapon is
-    /// drawn at all is session state the caller checks beside this.
-    /// </summary>
-    internal bool CanStartPlayerAttack => viewmodel?.Strike != true;
     /// <summary>
     /// Reports an enemy hit swing whose authored damage frame has not been consumed yet.
     /// The session uses this presentation-owned state to keep post-enemy actions behind the
@@ -589,21 +579,16 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 }
                 break;
             case PlayerAttackStartedFact started:
-                PresentationEventIdentity swing = Event(DaggerfallActorIdentity.PlayerEntityId, started.TargetId ?? 0, started.OriginatingGeneration, started.OriginatingSimulationStep, "swing");
-                if (deliveredEvents.Contains(swing)) break;
-                // The viewmodel plays the swing at the tick time the rules published, and its hit
-                // frame is what delivers the admitted impact. A viewmodel that cannot play the
-                // authored strike has no frame to wait for, so the impact lands in this update
-                // rather than being withheld by a presentation the composition does not have.
-                if (!StartWeaponStrike(swing, started.FrameSeconds, started.WaitsWithoutTarget, started.TargetId, started.HitFrame))
-                {
-                    attackImpacts.Add(new AttackImpactNotice(DaggerfallActorIdentity.PlayerEntityId, started.TargetId ?? 0,
-                        started.OriginatingGeneration, started.OriginatingSimulationStep, Expired: false));
-                    if (started.Feedback.SwingCue != "sound.3") EmitPlayerVampireVoice(swing);
-                }
-                else if (started.Feedback.SwingCue != "sound.3") viewmodel!.PendingAttackVoice = swing;
+                PresentationEventIdentity swing = Event(DaggerfallActorIdentity.PlayerEntityId, started.TargetId ?? 0, started.OriginatingGeneration, started.OriginatingSimulationStep, "start");
+                if (!deliveredEvents.Add(swing)) break;
+                if (started.Feedback.SwingCue != "sound.3") EmitPlayerVampireVoice(swing);
                 Emit(started.Feedback.SwingCue, swing, 0);
-                deliveredEvents.Add(swing);
+                break;
+            case PlayerAttackMotionFact motion:
+                PlayAttackMotion(motion.Attack, motion.Timing);
+                break;
+            case PlayerAttackRestFact:
+                StartWeaponAction("idle");
                 break;
             case EnemyAttackStartedFact started:
                 // An enemy swing starts here; its consequence arrives later, when the
@@ -709,7 +694,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
 
     /// <summary>Called exactly once from the outer Product.Update, never from a private catch-up step.</summary>
     /// <summary>The marker a weapon swing's playback carries at its hit frame.</summary>
-    private const ulong WeaponHitMarkerId = 1;
 
     internal void Advance(ProductUpdateFacts update)
     {
@@ -772,34 +756,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         }
         if (viewmodel is { } weapon && weapon.Playback is { } weaponPlayback && weapon.LastOuterUpdate != identity)
         {
-            SpritePlaybackAdvanceResult receipt = appearance.AdvanceSpritePlayback(new SpritePlaybackAdvanceRequest(weaponPlayback));
-            // The classic swing's damage lands on its hit frame. One decided swing owns one beat: the
-            // Engine reports the hit marker's crossing once, and later frames of the same swing do not.
-            foreach (SpritePlaybackMarkerCrossing crossing in receipt.Crossings.Span)
-                if (crossing.MarkerId == WeaponHitMarkerId) weapon.HitCrossed = true;
-            if (weapon.Strike && weapon.PendingAttackVoice is { } voice && weapon.HitCrossed)
-            {
-                weapon.PendingAttackVoice = null;
-                EmitPlayerVampireVoice(voice);
-            }
-            if (weapon.Strike && weapon.PendingImpact is { } pending && !weapon.ImpactReported
-                && weapon.HitCrossed)
-            {
-                weapon.ImpactReported = true;
-                attackImpacts.Add(new AttackImpactNotice(pending.Attacker, pending.Target, pending.Generation, pending.SimulationStep, Expired: false));
-            }
-            if (weapon.Strike && receipt.Readout.Completed)
-            {
-                // Keep the first completed frame visible, then return to idle on the next
-                // admitted update. A completed one-shot no longer advances; the previous
-                // advancing completion is sufficient evidence to release the attack guard.
-                if (weapon.CompletedOuterUpdate) StartWeaponAction("idle");
-                else if (receipt.Advanced)
-                {
-                    RetireUnreportedImpact();
-                    weapon.CompletedOuterUpdate = true;
-                }
-            }
+            appearance.AdvanceSpritePlayback(new SpritePlaybackAdvanceRequest(weaponPlayback));
             weapon.LastOuterUpdate = identity;
         }
     }
@@ -1145,22 +1102,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         return hasDamageFrame;
     }
 
-    /// <summary>
-    /// Retires an unfinished player swing at a boundary that ends this appearance's lifetime, so the
-    /// shared attack state cannot stay charged against a viewmodel nothing will advance again. The
-    /// caller drains <see cref="TakeAttackImpacts"/> before the appearance goes away.
-    /// </summary>
-    internal void RetirePendingSwing() => RetireUnreportedImpact();
-
-    /// <summary>Retires a strike's admitted impact that its animation never delivered.</summary>
-    private void RetireUnreportedImpact()
-    {
-        if (viewmodel is not null) viewmodel.PendingAttackVoice = null;
-        if (viewmodel is not { PendingImpact: { } pending, ImpactReported: false }) return;
-        attackImpacts.Add(new AttackImpactNotice(pending.Attacker, pending.Target, pending.Generation, pending.SimulationStep, Expired: true));
-        viewmodel.PendingImpact = null;
-    }
-
     /// <summary>Drains the swings whose authored damage frame was reached or passed this update.</summary>
     internal IReadOnlyList<AttackImpactNotice> TakeAttackImpacts()
     {
@@ -1276,34 +1217,26 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     }
 
     /// <summary>
-    /// Plays the player's admitted attack. Answers whether a strike animation started:
-    /// a viewmodel-less or action-less composition reports false so the caller can land the impact in
-    /// the update that admitted it instead of waiting for a frame nothing will play.
+    /// Plays one attack motion to the rules' timing. The classic strike's frames are rescaled so its hit frame comes
+    /// as the windup ends: a power attack's charge plays the frames before the hit, its hold keeps the last of them,
+    /// and its release plays the hit and what follows.
     /// </summary>
-    private bool StartWeaponStrike(PresentationEventIdentity identity, double frameSeconds = 0d,
-        bool waitsWithoutTarget = false, long? target = null, int hitFrame = DaggerfallFormulaPolicy.MeleeWeaponHitFrame)
+    private void PlayAttackMotion(string attack, DaggerfallAttackTiming? timing)
     {
-        if (viewmodel is null) return false;
-        const string name = NormalizedClassicWeapon.PlayedStrike;
-        if (!viewmodel.Weapon.Actions.TryGetValue(name, out NormalizedClassicWeaponAction? strike)) return false;
-        // Admission refuses art whose strikes end before the hit frame the rules use, so a strike that
-        // cannot reach it is a broken composition: playing it would spend the swing (and a bow's arrow)
-        // and retire its impact unreported.
-        if (hitFrame < 0 || hitFrame >= strike.PlayedFrameCount)
-            throw new InvalidOperationException($"Classic weapon '{viewmodel.Weapon.ResourceId}' strike '{name}' plays {strike.PlayedFrameCount} frames and cannot reach the swing's hit frame {hitFrame}.");
-        // A new swing replaces whatever the last one left undelivered, then owns the impact its own
-        // hit frame will deliver: its target's, or an untargeted one (target zero) when the rules decide
-        // contact at the frame. An untargeted swing that resolved at admission has none.
-        RetireUnreportedImpact();
-        viewmodel.PendingImpact = target is long aimed ? identity with { Target = aimed }
-            : waitsWithoutTarget ? identity with { Target = 0 } : null;
-        viewmodel.ImpactReported = false;
-        viewmodel.HitFrame = hitFrame;
-        StartWeaponAction(name, frameSeconds);
-        return true;
+        if (viewmodel is null || !viewmodel.Weapon.Actions.TryGetValue(NormalizedClassicWeapon.PlayedStrike, out NormalizedClassicWeaponAction? strike)) return;
+        int hit = attack == DaggerfallAttackIds.Shot ? DaggerfallFormulaPolicy.BowWeaponHitFrame : DaggerfallFormulaPolicy.MeleeWeaponHitFrame;
+        // Admission refuses art whose strikes end before the hit frame the rules use, so a strike that cannot reach it
+        // is a broken composition.
+        if (hit >= strike.PlayedFrameCount)
+            throw new InvalidOperationException($"Classic weapon '{viewmodel.Weapon.ResourceId}' strike '{NormalizedClassicWeapon.PlayedStrike}' plays {strike.PlayedFrameCount} frames and cannot reach the hit frame {hit}.");
+        if (timing is not { } phases) { HoldHeldAction(); return; }
+        if (attack == DaggerfallAttackIds.PowerIn) StartWeaponAction(NormalizedClassicWeapon.PlayedStrike, phases.Windup / hit, frameCount: hit);
+        else if (attack == DaggerfallAttackIds.PowerOut) StartWeaponAction(NormalizedClassicWeapon.PlayedStrike, phases.Duration / (strike.PlayedFrameCount - hit), firstFrame: hit);
+        else StartWeaponAction(NormalizedClassicWeapon.PlayedStrike, phases.Windup / hit);
+        PlayHeldAction(attack, phases, hit);
     }
 
-    private void StartWeaponAction(string name, double frameSeconds = 0d)
+    private void StartWeaponAction(string name, double frameSeconds = 0d, int firstFrame = 0, int? frameCount = null)
     {
         if (viewmodel is null || !viewmodel.Weapon.Actions.TryGetValue(name, out NormalizedClassicWeaponAction? action)) return;
         NormalizedClassicWeapon weapon = viewmodel.Weapon;
@@ -1317,21 +1250,15 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             // donor actually plays at, so a hastened or slowed player swings at that rate.
             double framesPerSecond = frameSeconds > 0d ? 1d / frameSeconds : action.FramesPerSecond;
             SpritePlaybackFrame[] frames = SpriteAtlasAdapter.ToPlaybackFrames((action.Sequence ?? Enumerable.Range(action.FrameStart, action.FrameCount).ToArray())
-                .Select(index => weapon.Frames.Single(frame => frame.Id == index).Id).ToArray(), checked((float)framesPerSecond));
-            // A swing's hit frame is an Engine playback marker, so its one crossing is reported even
-            // when an update skips past the frame.
-            SpritePlaybackMarker[] markers = name != "idle"
-                ? [new SpritePlaybackMarker(WeaponHitMarkerId, checked((uint)viewmodel.HitFrame))] : [];
-            staged = appearance.CreateSpritePlayback(new SpritePlaybackCreateRequest(viewmodel.Appearance, viewmodel.Atlas, frames, markers, action.Loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1d));
+                .Skip(firstFrame).Take(frameCount ?? int.MaxValue).Select(index => weapon.Frames.Single(frame => frame.Id == index).Id).ToArray(), checked((float)framesPerSecond));
+            staged = appearance.CreateSpritePlayback(new SpritePlaybackCreateRequest(viewmodel.Appearance, viewmodel.Atlas, frames, ReadOnlyMemory<SpritePlaybackMarker>.Empty, action.Loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1d));
             appearance.ControlSpritePlayback(new SpritePlaybackControlRequest(staged, SpritePlaybackControl.Start));
             SpritePlayback? old = viewmodel.Playback;
             viewmodel.Playback = staged;
-            StartHeldAction(name, frameSeconds, action, viewmodel.HitFrame);
+            if (name == "idle") RestHeldAction(action);
             // Imported cells retain classic placement; Engine fits the complete
             // canvas to the viewport and advances the selected sequence.
             viewmodel.Strike = name != "idle";
-            viewmodel.HitCrossed = false;
-            viewmodel.CompletedOuterUpdate = false;
             viewmodel.LastOuterUpdate = null;
             if (old is not null) Retire(old);
         }
@@ -1368,9 +1295,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private void RetireViewmodel()
     {
         if (viewmodel is not { } weapon) return;
-        // A retired viewmodel can never reach its strike's hit frame, so its admitted impact is
-        // retired with it instead of landing later from nothing.
-        RetireUnreportedImpact();
         viewmodel = null;
         Retire(weapon);
         RetireHeld();
@@ -1701,15 +1625,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         internal Appearance Appearance { get; } = appearance;
         internal SpritePlayback? Playback { get; set; }
         internal bool Strike { get; set; }
-        /// <summary>The move this weapon swing delivers when its animation reaches the hit frame, if any.</summary>
-        internal PresentationEventIdentity? PendingImpact { get; set; }
-        internal PresentationEventIdentity? PendingAttackVoice { get; set; }
-        /// <summary>The frame of this swing's own animation that releases its impact.</summary>
-        internal int HitFrame { get; set; } = DaggerfallFormulaPolicy.MeleeWeaponHitFrame;
-        /// <summary>Whether the Engine has reported this swing's hit-frame marker crossing.</summary>
-        internal bool HitCrossed { get; set; }
-        internal bool ImpactReported { get; set; }
-        internal bool CompletedOuterUpdate { get; set; }
         internal AppearanceOuterUpdate? LastOuterUpdate { get; set; }
         internal void Dispose(ref List<Exception>? failures)
         {

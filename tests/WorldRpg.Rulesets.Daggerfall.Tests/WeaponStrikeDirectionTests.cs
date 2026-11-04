@@ -2,6 +2,7 @@ using Rusty.Engine;
 using WorldRpg.Kit.Combat;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
@@ -10,61 +11,50 @@ using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
-/// The viewmodel plays the one fixed strike for every attack, so every admitted swing reaches the hit
-/// frame that delivers its impact.
+/// The viewmodel plays the one fixed strike for every attack motion, and art that cannot reach the attack's
+/// hit frame is named rather than played. The rules' clock delivers the blow.
 /// </summary>
 public sealed class WeaponStrikeDirectionTests
 {
     /// <summary>
     /// The reproduction of #9700: the presentation used to draw any of the six strikes for a bow, and
-    /// the bow's four-frame up strike carried no marker for the bow hit frame, so the shot's arrow and
-    /// stamina were spent and its impact retired unreported. Every shot now plays the one fixed strike.
+    /// the bow's four-frame up strike could not reach the bow hit frame. Every shot now plays the one fixed strike.
     /// </summary>
     [Fact]
-    public void A_bow_shot_reaches_the_bow_hit_frame_and_delivers_its_impact()
+    public void A_bow_shot_plays_the_one_fixed_strike_with_its_hit_frame_at_the_release()
     {
         using Stage stage = new(BowWeapon(), "short-bow");
 
         stage.Presentation.BeginAdmittedUpdate();
-        stage.Presentation.React(new PlayerAttackStartedFact(2, 3, TargetId: 12, FrameSeconds: .25d,
-            HitFrame: DaggerfallFormulaPolicy.BowWeaponHitFrame));
+        stage.Presentation.React(new PlayerAttackMotionFact(DaggerfallAttackIds.Shot, new(1.25d, .25d, .25d), 2, 3));
         stage.Presentation.CompleteAdmittedUpdate();
 
         SpritePlaybackCreateRequest strike = stage.Appearance.PlaybackRequests.Last();
         Assert.Equal(7, strike.Frames.Length); // the bow's strikeDown, never its four-frame strikeUp
-        SpritePlaybackMarker marker = Assert.Single(strike.Markers.Span.ToArray());
-        Assert.Equal((uint)DaggerfallFormulaPolicy.BowWeaponHitFrame, marker.FrameIndex);
-
-        stage.Appearance.AdvanceReceiptForAll = WeaponHitReading(0, (uint)DaggerfallFormulaPolicy.BowWeaponHitFrame);
-        stage.Presentation.Advance(OuterUpdate(1));
-        AttackImpactNotice impact = Assert.Single(stage.Presentation.TakeAttackImpacts());
-        Assert.Equal(12, impact.TargetId);
-        Assert.False(impact.Expired);
+        // The release falls on the bow's hit frame: the windup is that many frames.
+        Assert.All(strike.Frames.Span.ToArray(), frame => Assert.Equal(1.25d / DaggerfallFormulaPolicy.BowWeaponHitFrame, frame.DurationSeconds, 6));
     }
 
     [Fact]
-    public void A_swing_plays_the_one_fixed_strike_with_its_hit_frame_marked()
+    public void A_swing_plays_the_one_fixed_strike()
     {
         using Stage stage = new(DistinctStrikes(), "iron-dagger");
 
-        stage.Presentation.React(new PlayerAttackStartedFact(2, 3, TargetId: 12));
+        stage.Presentation.React(new PlayerAttackMotionFact("fastA", new(.2d, .1d, .1d), 2, 3));
 
         SpritePlaybackCreateRequest strike = stage.Appearance.PlaybackRequests.Last();
         Assert.Equal(NormalizedClassicWeapon.StrikeActions.ToList().IndexOf(NormalizedClassicWeapon.PlayedStrike) + 3, strike.Frames.Length);
-        Assert.Equal((uint)DaggerfallFormulaPolicy.MeleeWeaponHitFrame, Assert.Single(strike.Markers.Span.ToArray()).FrameIndex);
     }
 
     [Fact]
-    public void A_strike_that_ends_before_the_hit_frame_fails_instead_of_dropping_the_impact()
+    public void A_strike_that_ends_before_the_hit_frame_is_named_rather_than_played()
     {
-        // Admission refuses such art; a composition that still reaches here names the broken strike
-        // rather than spending the swing and retiring its impact unreported.
+        // Admission refuses such art; a composition that still reaches here names the broken strike.
         using Stage stage = new(ShortStrike(), "short-bow");
 
         InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => stage.Presentation.React(
-            new PlayerAttackStartedFact(2, 3, TargetId: 12, HitFrame: DaggerfallFormulaPolicy.BowWeaponHitFrame)));
+            new PlayerAttackMotionFact(DaggerfallAttackIds.Shot, new(1d, .25d, .25d), 2, 3)));
         Assert.Contains("'weapon.bow' strike 'strikeDown' plays 4 frames", failure.Message, StringComparison.Ordinal);
-        Assert.Empty(stage.Presentation.TakeAttackImpacts());
     }
 
     private sealed class Stage : IDisposable

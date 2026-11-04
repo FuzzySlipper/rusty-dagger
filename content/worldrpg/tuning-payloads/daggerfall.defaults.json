@@ -96,6 +96,14 @@
         "action": "daggerfall.character"
       },
       {
+        "button": 4,
+        "action": "daggerfall.block"
+      },
+      {
+        "button": 5,
+        "action": "daggerfall.kick"
+      },
+      {
         "button": 8,
         "action": "daggerfall.inventory"
       },
@@ -242,6 +250,85 @@
       "meleeReachFraction": 0.75,
       "enemyWindUpSeconds": 0.4,
       "archerLeadFraction": 1.0
+    }
+  },
+  "attacks": {
+    "powerThresholdSeconds": 0.2,
+    "powerDamageMultiplier": 2,
+    "powerStaminaMultiplier": 2,
+    "kick": {
+      "windup": 0.25,
+      "commit": 0.12,
+      "recovery": 0.4
+    },
+    "kickStaminaCost": 6,
+    "kickDamage": 1,
+    "classes": {
+      "short-blade": {
+        "fast": {
+          "windup": 0.18,
+          "commit": 0.12,
+          "recovery": 0.28
+        },
+        "powerChargeSeconds": 0.5,
+        "powerRelease": {
+          "windup": 0.15,
+          "commit": 0.12,
+          "recovery": 0.35
+        }
+      },
+      "long-blade": {
+        "fast": {
+          "windup": 0.25,
+          "commit": 0.15,
+          "recovery": 0.33
+        },
+        "powerChargeSeconds": 0.7,
+        "powerRelease": {
+          "windup": 0.2,
+          "commit": 0.15,
+          "recovery": 0.4
+        }
+      },
+      "axe": {
+        "fast": {
+          "windup": 0.3,
+          "commit": 0.15,
+          "recovery": 0.35
+        },
+        "powerChargeSeconds": 0.8,
+        "powerRelease": {
+          "windup": 0.22,
+          "commit": 0.15,
+          "recovery": 0.45
+        }
+      },
+      "blunt-weapon": {
+        "fast": {
+          "windup": 0.32,
+          "commit": 0.15,
+          "recovery": 0.38
+        },
+        "powerChargeSeconds": 0.85,
+        "powerRelease": {
+          "windup": 0.25,
+          "commit": 0.15,
+          "recovery": 0.45
+        }
+      },
+      "hand-to-hand": {
+        "fast": {
+          "windup": 0.15,
+          "commit": 0.1,
+          "recovery": 0.2
+        },
+        "powerChargeSeconds": 0.4,
+        "powerRelease": {
+          "windup": 0.12,
+          "commit": 0.1,
+          "recovery": 0.3
+        }
+      }
     }
   },
   "enemyBehavior": {

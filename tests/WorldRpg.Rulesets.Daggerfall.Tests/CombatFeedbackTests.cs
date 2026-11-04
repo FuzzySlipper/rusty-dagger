@@ -140,7 +140,7 @@ public sealed class CombatFeedbackTests
             audio.Service, random: KeyedRandomFake.Create(8).Service);
 
         // The player's swing sounds at its start; meeting nothing at its hit frame adds no cue and no parry.
-        presentation.React(new PlayerAttackStartedFact(1, 2, WaitsWithoutTarget: true) { Feedback = new(true, "swing") }, actors);
+        presentation.React(new PlayerAttackStartedFact(1, 2) { Feedback = new(true, "swing") }, actors);
         int started = audio.Emits.Count + audio.Voices.Count;
         Assert.True(started > 0);
         presentation.React(new AttackWhiffedFact(1, null, false, 1, 2) { Feedback = new(true, "swing") }, actors);

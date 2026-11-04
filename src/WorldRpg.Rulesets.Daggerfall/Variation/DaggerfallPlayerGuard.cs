@@ -1,4 +1,5 @@
 using Rusty.Engine;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Facts;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 
@@ -19,8 +20,8 @@ internal interface IDaggerfallPlayerGuard
     /// </summary>
     bool WantsTime { get; }
 
-    /// <summary>Reads one update's input for the owner's guard intent.</summary>
-    void Observe(ReadOnlySpan<ProductInputEvent> inputs);
+    /// <summary>Reads one update's input for the owner's guard intent and its buttons on the pad.</summary>
+    void Observe(ReadOnlySpan<ProductInputEvent> inputs, IReadOnlyList<ControllerActionBinding> pad);
 
     /// <summary>
     /// Advances the guard one admitted step. <paramref name="canGuard"/> is whether the player may hold a

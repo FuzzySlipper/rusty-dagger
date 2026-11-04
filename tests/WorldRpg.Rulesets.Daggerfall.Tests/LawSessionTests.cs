@@ -73,7 +73,7 @@ public sealed class LawSessionTests
         var mana = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")); mana.Maximum.BaseValue = 10000; mana.SetCurrent(10000);
         s.State.Character.LearnSpell("custom-spell.1");
         Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell("custom-spell.1").Outcome);
-        f.Spatial.CapsuleCastHit = _ => default(SpatialHit) with { Present = true, Kind = SpatialHitKind.Entity, Entity = s.State.Actors.Get(target).Actor.Entity.Value };
+        s.Touches(target);
         var result = s.ReleaseReadySpell(1, Vector3.UnitZ);
         Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, result.Outcome);
         Assert.True(health.Current < (lethal ? 1 : 1000));
@@ -150,7 +150,7 @@ public sealed class LawSessionTests
         var mana = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")); mana.Maximum.BaseValue = 10000; mana.SetCurrent(10000);
         s.State.Character.LearnSpell("custom-spell.1");
         Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell("custom-spell.1").Outcome);
-        f.Spatial.CapsuleCastHit = _ => default(SpatialHit) with {Present = true, Kind = SpatialHitKind.Entity, Entity = s.State.Actors.Get(target).Actor.Entity.Value};
+        s.Touches(target);
         Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, s.ReleaseReadySpell(1, Vector3.UnitZ).Outcome);
         Assert.True(health.Current <= 980);
         Assert.Equal(lethal ? 2 : 1, s.State.Crime.Incidents.Count);

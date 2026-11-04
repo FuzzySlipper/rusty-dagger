@@ -61,18 +61,16 @@ public sealed class ControlsInputSessionTests
         double staminaBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current;
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         session.Touches(2000);
-        ProductInputEvent pressed = Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack");
-        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d), [pressed, pressed]));
+        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d), [AttackDown, AttackDown, AttackUp]));
         // Two copies of one press are one admitted swing and one stamina charge, and the damage itself
-        // waits for the classic hit frame of the swing the viewmodel is playing.
+        // waits for the end of the swing's windup.
         Assert.Equal(before, session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current);
         Assert.True(session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current < staminaBefore);
-        appearance.AdvanceReceiptForAll = WeaponHitReading(2, 2);
-        session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 2, 60, 3, 0, 1d / 60d), []));
+        ulong step = 4;
+        RunSeconds(session, ref step, DaggerfallTuning.Defaults.Attacks.For("long-blade").Fast.Windup + 2d / 60d);
         double after = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
         Assert.True(after < before);
         // Held input cannot start a second swing while the first is still playing.
-        appearance.AdvanceReceiptForAll = null;
         session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 2, 1, 1, 100, 60, 3, 0, 1d / 60d),
             [Input(InputEventKind.MappedDigital, InputEdge.Held, x: 1, phase: InputPhase.Held, intent: "attack")]));
         Assert.Equal(after, session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current);
@@ -102,7 +100,7 @@ public sealed class ControlsInputSessionTests
         Assert.False(loaded.InvertLookX);
         Assert.Equal(2.5f, loaded.LookYawRadiansPerSecond);
         Assert.Equal(
-            [ControllerButton.Button0, ControllerButton.Button1, ControllerButton.Button2, ControllerButton.Button3, ControllerButton.Button8, ControllerButton.Button9],
+            [ControllerButton.Button0, ControllerButton.Button1, ControllerButton.Button2, ControllerButton.Button3, ControllerButton.Button4, ControllerButton.Button5, ControllerButton.Button8, ControllerButton.Button9],
             loaded.Actions.Select(binding => binding.Button));
         Assert.Equal(
             ["daggerfall.attack", "daggerfall.interact", "daggerfall.toggle-weapon", "daggerfall.character", "daggerfall.inventory", "daggerfall.menu"],
@@ -117,6 +115,8 @@ public sealed class ControlsInputSessionTests
         // exactly what a renamed action id would produce: nothing else reads the payload's string back.
         HashSet<string> declared = [
             DaggerfallInput.Attack.Value,
+            DaggerfallInput.Kick.Value,
+            DaggerfallInput.Block.Value,
             DaggerfallInput.ToggleWeapon.Value,
             DaggerfallInput.Interact.Value,
             DaggerfallInput.Inventory.Value,
@@ -239,18 +239,18 @@ public sealed class ControlsInputSessionTests
             Assert.Equal("menu", engine.PublishedNested("panelRequest", "panel"));
             Assert.Equal("3", engine.PublishedNested("panelRequest", "revision"));
 
-            // The player moves the pack to the left shoulder: that button opens it, the old one no longer does,
+            // The player moves the pack to a free button: that button opens it, the old one no longer does,
             // and the choice is in the preferences the host persists.
-            session.Update(new ProductUpdate(OuterUpdate(5), [Ui("{\"action\":\"controls-rebind-button\",\"item\":\"inventory\",\"amount\":4}")]));
+            session.Update(new ProductUpdate(OuterUpdate(5), [Ui("{\"action\":\"controls-rebind-button\",\"item\":\"inventory\",\"amount\":6}")]));
             Press(ControllerButton.Button8, 6);
             Assert.Equal("3", engine.PublishedNested("panelRequest", "revision"));
-            Press(ControllerButton.Button4, 7);
+            Press(ControllerButton.Button6, 7);
             Assert.Equal("inventory", engine.PublishedNested("panelRequest", "panel"));
             Assert.Equal("4", engine.PublishedNested("panelRequest", "revision"));
             Assert.Contains("\"controller\":{", session.CapturePlayerPreferences(), StringComparison.Ordinal);
             // A shortcut action answers a pad button the same way.
-            session.Update(new ProductUpdate(OuterUpdate(8), [Ui("{\"action\":\"controls-rebind-button\",\"item\":\"spell\",\"amount\":5}")]));
-            Press(ControllerButton.Button5, 9);
+            session.Update(new ProductUpdate(OuterUpdate(8), [Ui("{\"action\":\"controls-rebind-button\",\"item\":\"spell\",\"amount\":7}")]));
+            Press(ControllerButton.Button7, 9);
             Assert.Equal("spells", engine.PublishedNested("panelRequest", "panel"));
 
             // Sound levels apply to the Engine's buses at once and persist with the controls.

@@ -1,6 +1,7 @@
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Combat;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
@@ -43,7 +44,7 @@ public sealed class ContactGuardSessionTests
     }
 
     [Fact]
-    public void A_swing_keeps_the_guard_down_past_its_hit_frame_until_its_strike_completes()
+    public void A_swing_keeps_the_guard_down_past_its_blow_until_its_motion_ends()
     {
         using Fixture f = new();
         f.Step();
@@ -52,22 +53,21 @@ public sealed class ContactGuardSessionTests
         f.Step();
         Assert.True(f.Session.PlayerGuardRaised);
 
-        f.Observe(Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack"));
+        f.Observe(AttackTap);
         f.Step();
         Assert.NotNull(f.Session.State.Actors.Player.Actor.Get<AttackState>().Pending);
         Assert.False(f.Session.PlayerGuardRaised);
 
-        // The hit frame resolves the swing, but its strike still plays.
-        f.Appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: 1);
-        f.Step();
+        // The blow lands as the windup ends, but the swing's recovery still plays.
+        DaggerfallAttackTiming fast = DaggerfallTuning.Defaults.Attacks.For("long-blade").Fast;
+        for (int step = 0; step < Steps(fast.Windup) + 2; step++) f.Step();
         Assert.Null(f.Session.State.Actors.Player.Actor.Get<AttackState>().Pending);
         Assert.False(f.Session.PlayerGuardRaised);
-        f.Step();
-        Assert.False(f.Session.PlayerGuardRaised);
 
-        f.Appearance.AdvanceReceiptForAll = CompletedMarker(2);
-        for (int i = 0; i < 3 && !f.Session.PlayerGuardRaised; i++) f.Step();
+        for (int step = 0; step < Steps(fast.Commit + fast.Recovery) && !f.Session.PlayerGuardRaised; step++) f.Step();
         Assert.True(f.Session.PlayerGuardRaised);
+
+        static int Steps(double seconds) => (int)Math.Ceiling(seconds * 60d);
     }
 
     [Fact]
@@ -83,8 +83,9 @@ public sealed class ContactGuardSessionTests
         session.Update(new ProductUpdate(OuterUpdate(1), [block]));
         Assert.True(session.PlayerGuardRaised);
 
-        // The player's swing waits behind that enemy frame, then is admitted at the update's end.
-        session.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "attack")]));
+        // The player's swing waits behind that enemy frame, and the clock admits it on the next step.
+        session.Update(new ProductUpdate(OuterUpdate(2), AttackTap));
+        session.Update(new ProductUpdate(OuterUpdate(3), []));
         Assert.NotNull(session.State.Actors.Player.Actor.Get<AttackState>().Pending);
         Assert.False(session.PlayerGuardRaised);
     }

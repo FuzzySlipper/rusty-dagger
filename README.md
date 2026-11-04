@@ -178,10 +178,10 @@ the script. See [third-party notices](THIRD_PARTY_NOTICES.md) for what is and is
 not redistributed.
 
 Use WASD to move and the mouse to look. **Z** draws or sheathes the equipped
-weapon; empty hands use unarmed art. **Left mouse** swings once per press by
-default while drawn, including empty space. Controls can rebind the attack.
-Cooldown, stamina and the active swing
-limit repeated attacks; Engine playback returns the weapon to ready.
+weapon; empty hands use unarmed art. While drawn, a click of **left mouse** is a
+fast attack, and another click during its recovery chains the next one. Holding
+the button charges a power attack, released when you let go. **Right mouse** holds
+a guard and **G** kicks with any weapon. Controls can rebind them all.
 
 Stamina recovers at five points per second after two seconds without an admitted
 swing, including from exhaustion. The Daggerfall tuning payloads control this

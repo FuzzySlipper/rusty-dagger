@@ -134,10 +134,10 @@ public sealed class StaticNpcAdmissionTests
         };
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
 
-        // The destination's normalized treasure billboard is admitted by the projection before
+        // The destination's ground container billboards are admitted by the projection before
         // static source people are materialized; fail the next atlas so the injected error lands
         // in the static actor admission itself.
-        int nextAtlas = appearance.AtlasRequests.Count + 2;
+        int nextAtlas = appearance.AtlasRequests.Count + providerSite.GroundContainerSprites.Count + 1;
         appearance.FailSpriteAtlasCreateAt = nextAtlas;
         InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => session.TryTransitionTo(providerSite.ProfileKey));
 
@@ -177,9 +177,9 @@ public sealed class StaticNpcAdmissionTests
         };
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
 
-        // One destination atlas is admitted before the static people; fail the second static
-        // atlas so the first person has already acquired an actor, binding, placement, and sprite.
-        appearance.FailSpriteAtlasCreateAt = appearance.AtlasRequests.Count + 3;
+        // The destination's ground container atlases are admitted before the static people; fail the
+        // second static atlas so the first person has already acquired an actor, binding, placement, and sprite.
+        appearance.FailSpriteAtlasCreateAt = appearance.AtlasRequests.Count + providerSite.GroundContainerSprites.Count + 2;
         Assert.Throws<InvalidOperationException>(() => session.TryTransitionTo(providerSite.ProfileKey));
 
         DaggerfallNpc[] candidates = session.State.Npcs.All.Where(value => value.Kind == DaggerfallNpcKind.Static).ToArray();

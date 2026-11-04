@@ -334,6 +334,7 @@ internal sealed partial class DaggerfallSession
             DaggerfallActorInventories actorInventories = assembled.ActorInventories;
             DaggerfallComposedSeams seams = composition.Seams.Build(SeamInputs(), _tuning.Contact);
             _guard = seams.PlayerGuard;
+            _attackClock = new DaggerfallPlayerAttackClock(_tuning.Attacks, this);
             _harmPresentation = seams.HarmPresentation;
             _touch = seams.TouchDelivery(new(_contact, _spatial, () => _sites?.CharacterEnvironment(assembled.PlayerControl.Motion)));
             _combat = new DaggerCombatRules(_random, actors, equipmentCoordinator, actorInventories.InventoryFor, itemInstances, definitions, authored, targeting, use => skillUses.Record(use),
@@ -343,6 +344,7 @@ internal sealed partial class DaggerfallSession
                 npcs.IsGameplayActive, EffectiveFoeTeam,
                 seams.PhysicalMitigation,
                 seams.PhysicalDelivery,
+                _tuning.Attacks,
                 _contact, StrikePose, () => _sites?.CharacterEnvironment(assembled.PlayerControl.Motion),
                 // Only the player's own controller reports a velocity; site actors step between poses.
                 actor => actor == actors.Player.DurableId ? assembled.PlayerControl.Motion.ControlledVelocity : Vector3.Zero);

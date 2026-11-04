@@ -61,7 +61,7 @@ internal sealed class DaggerCombatFixture : IDisposable
             molagBalStrike: (_, _, _, _, _, _, _) => throw new InvalidOperationException("This fixture arms no Mace of Molag Bal."),
             itemStrike: (_, _, _, damage) => damage, monsterHit: MonsterHits.Add,
             actorGameplayActive: _ => true, actorTeam: id => authored.GetValueOrDefault(id)?.Team,
-            mitigation: seams.PhysicalMitigation, delivery: seams.PhysicalDelivery);
+            mitigation: seams.PhysicalMitigation, delivery: seams.PhysicalDelivery, attackTuning: DaggerfallAttackTuning.Default);
     }
 
     /// <summary>The skill uses combat recorded, in order.</summary>

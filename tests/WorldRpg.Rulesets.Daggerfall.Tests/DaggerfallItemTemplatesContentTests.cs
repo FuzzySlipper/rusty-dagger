@@ -22,7 +22,9 @@ public sealed class DaggerfallItemTemplatesContentTests
     {
         DaggerfallDefinitions definitions = Definitions();
 
-        Assert.Equal(288, definitions.ItemTemplateCatalog.Templates.Count);
+        // The classic catalog's 288 and the ruleset's authored club, template 288.
+        Assert.Equal(289, definitions.ItemTemplateCatalog.Templates.Count);
+        Assert.Equal("Club", definitions.ItemTemplateCatalog.Resolve(288).Name);
         Assert.Equal(59, definitions.ItemTemplateCatalog.Magic.Count);
 
         // A weapon resolves with its media; armor with its condition; gold stacks.

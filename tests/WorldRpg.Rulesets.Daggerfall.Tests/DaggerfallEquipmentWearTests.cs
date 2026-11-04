@@ -382,7 +382,7 @@ public sealed partial class DaggerfallEquipmentWearTests
                 molagBalStrike: molagBalStrike ?? ((_, _, _, _, _, _, _) => throw new InvalidOperationException("This fixture was given no Mace of Molag Bal transfer.")),
                 itemStrike: (_, _, _, damage) => damage,
                 monsterHit: _ => { }, actorGameplayActive: _ => true, actorTeam: id => _authored.GetValueOrDefault(id)?.Team,
-                mitigation: seams.PhysicalMitigation, delivery: seams.PhysicalDelivery,
+                mitigation: seams.PhysicalMitigation, delivery: seams.PhysicalDelivery, attackTuning: DaggerfallAttackTuning.Default,
                 contact: CombatCollaborators.Contact(_actors, _spatial, () => null),
                 strikePose: actor => CombatCollaborators.StrikePose(_actors, actor, null));
         }

@@ -18,8 +18,8 @@ public sealed class DaggerfallControlSettingsTests
         Assert.Equal([0], settings.ControllerButtons(pad)["attack"]);
         Assert.Equal([8], settings.ControllerButtons(pad)["inventory"]);
         // A free button: the action moves there.
-        settings.RebindButton("spell", 5, pad);
-        Assert.Equal([5], settings.ControllerButtons(pad)["spell"]);
+        settings.RebindButton("spell", 6, pad);
+        Assert.Equal([6], settings.ControllerButtons(pad)["spell"]);
         // A held button is refused naming its holder, unless swapped; the holder then takes the old buttons.
         InvalidOperationException held = Assert.Throws<InvalidOperationException>(() => settings.RebindButton("inventory", 0, pad));
         Assert.Contains("'attack'", held.Message, StringComparison.Ordinal);

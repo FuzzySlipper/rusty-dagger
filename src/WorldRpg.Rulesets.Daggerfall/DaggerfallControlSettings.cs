@@ -37,6 +37,8 @@ public sealed class DaggerfallControlSettings
         new("crouch", ["ControlLeft"], "movement"),
         new("jump", ["Space"], "movement"),
         new("attack", ["Primary"], "combat"),
+        new("block", ["Secondary"], "combat"),
+        new("kick", ["KeyG"], "combat"),
         new("interact", ["KeyF"], "combat"),
         new("toggle-weapon", ["KeyZ"], "combat"),
         new("inventory", ["KeyI"], "interface"),
@@ -64,7 +66,7 @@ public sealed class DaggerfallControlSettings
     public static readonly IReadOnlyDictionary<string, string> Labels = new Dictionary<string, string>(StringComparer.Ordinal)
     {
         ["move.forward"] = "Move forward", ["move.backward"] = "Move backward", ["move.left"] = "Strafe left", ["move.right"] = "Strafe right",
-        ["run"] = "Run", ["crouch"] = "Crouch", ["jump"] = "Jump", ["attack"] = "Attack", ["interact"] = "Activate",
+        ["run"] = "Run", ["crouch"] = "Crouch", ["jump"] = "Jump", ["attack"] = "Attack", ["block"] = "Guard", ["kick"] = "Kick", ["interact"] = "Activate",
         ["toggle-weapon"] = "Ready or sheathe weapon", ["inventory"] = "Inventory", ["character"] = "Character sheet", ["menu"] = "Game menu",
         ["spell"] = "Spellbook", ["rest"] = "Rest", ["map"] = "Map", ["transport"] = "Travel and transport",
         ["activation.steal"] = "Steal mode", ["activation.grab"] = "Grab mode", ["activation.info"] = "Information mode", ["activation.talk"] = "Talk mode",
@@ -121,6 +123,9 @@ public sealed class DaggerfallControlSettings
     /// </summary>
     public static bool IsControllerBindable(string action) =>
         action != MenuAction && DaggerfallInput.Bindings.Any(binding => binding.Action == InputAction(action));
+
+    // Whether an action reads how long its binding stays down, which needs the release as well as the press.
+    private static bool IsHeld(DaggerfallControlAction action) => action.Category == "movement" || action.Id is "attack" or "block";
 
     private static bool IsDirection(string action) => action.StartsWith("move.", StringComparison.Ordinal);
 
@@ -350,7 +355,7 @@ public sealed class DaggerfallControlSettings
             return new ProductInputMapping(
                 Encoding.UTF8.GetBytes($"controls.{action.Id}.{index}"), Encoding.UTF8.GetBytes(action.Id),
                 keyboard ? InputTriggerKind.Key : InputTriggerKind.PointerButton,
-                action.Category == "movement" ? InputEdge.Held : InputEdge.Pressed,
+                IsHeld(action) ? InputEdge.Held : InputEdge.Pressed,
                 default, keyboard ? control : default,
                 keyboard ? default : Enum.Parse<PointerButton>(key), default, default, default,
                 new InputContext("gameplay.default"u8.ToArray()));
