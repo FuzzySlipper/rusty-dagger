@@ -17,7 +17,7 @@ round plate `half` metres either side of the centre of the icon's tilted ellipse
 `links` oval links of `linkLength`, `linkWidth` and `wire` running on from the top of part `on`, ending in a ball of radius
 `ball` with `spikes`. A `string` part is a cord of `radius` from tip to tip. Both take their colour from their piece of
 the icon. A lathe part with `bridge` always joins the run above it, across a gap in the icon. `reach` runs a flat part on to the named part it joins, and `root` thickens it by `gain` toward the part named `toward`.
-A lathe part's `radius` in metres replaces the icon's width, for an icon drawn fatter than the thing. A chain skins the model to joints that can swing it: see rigged(). A part's `slot` overrides its material (`any` parts default to `trim`). `spikes` sets cones on its widest ring's sphere: `count`, `length` and `base` in metres,
+A lathe part's `radius` in metres replaces the icon's width, for an icon drawn fatter than the thing. A `socket` part is a steel cone on top of part `on`, whose tip a chain hangs from. A chain skins the model to joints that can swing it: see rigged(). A part's `slot` overrides its material (`any` parts default to `trim`). `spikes` sets cones on its widest ring's sphere: `count`, `length` and `base` in metres,
 spread evenly. A part's `light` and `shade` are passed to paint.py, and `coloursFrom` paints it in another part's colours.
 
 Writes OUT_DIR/reference.glb (the icon projected flat onto every part, the colour layout `palette_cells.py`
@@ -396,16 +396,37 @@ def tube(bm, path, radius, sides, closed):
     return [v for ring in rings for v in ring]
 
 
+def top_of(name):
+    """The middle of the top of a part."""
+    top = int(np.nonzero(masks[name])[0].min())
+    xs = np.nonzero(masks[name][top + 3])[0]
+    return place((xs.min() + xs.max() + 1) / 2, top, 0)
+
+
+def socket(bm, part):
+    """A steel cone rising `length` metres from the top of part `on`, from `radius` to `tip` where a chain leaves it,
+    with a raised ring round its foot that laps over the part."""
+    sides = part.get('segments', 10)
+    r, tip, length = part['radius'], part['tip'], part['length']
+    at = top_of(part['on']) + Vector((0, length, 0))
+    profile = [(0, tip), (.55 * length, .72 * r), (length, r), (length, 1.14 * r), (length + .012, 1.14 * r), (length + .012, .9 * r)]
+    rings = [[bm.verts.new(at + Vector((rad * math.cos(2 * math.pi * k / sides), -down, rad * math.sin(2 * math.pi * k / sides))))
+              for k in range(sides)] for down, rad in profile]
+    for lo, hi in zip(rings, rings[1:]):
+        for k in range(sides):
+            bm.faces.new([lo[k], lo[(k + 1) % sides], hi[(k + 1) % sides], hi[k]])
+    bm.faces.new(rings[0])
+    bm.faces.new(rings[-1][::-1])
+
+
 def chain(bm, part):
     """Oval links, each turned a quarter from the last, running on from the top of the part it hangs from, and a spiked
     ball at the end. Links and ball are straight along the weapon's length, the flail swung out. Each link and the ball
     weigh wholly on its own joint, so the links stay rigid as they turn about the points where they hook; RIG keeps
     where those joints go, for the armature."""
     joint = bm.verts.layers.int.new('joint')
-    rows = np.nonzero(masks[part['on']])[0]
-    top = int(rows.min())
-    xs = np.nonzero(masks[part['on']][top + 3])[0]
-    at = place((xs.min() + xs.max() + 1) / 2, top, 0)
+    # It hangs from the tip of a socket on the same part, if the weapon has one.
+    at = top_of(part['on']) + Vector((0, sum(p['length'] for p in weapon['parts'] if p['shape'] == 'socket'), 0))
     length, width, wire = part['linkLength'], part['linkWidth'], part['wire']
     for n in range(part['links']):
         centre = at + Vector((0, length * 0.8 * (n + 0.6), 0))
@@ -506,6 +527,8 @@ for part in weapon['parts']:
             disc(bm, masks[part['name']], part)
         elif part['shape'] == 'chain':
             chain(bm, part)
+        elif part['shape'] == 'socket':
+            socket(bm, part)
         else:
             string(bm, part)
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
@@ -514,7 +537,7 @@ for part in weapon['parts']:
     icon_x = bm.verts.layers.float.get('icon_x')
     # A built part beyond the icon (a chain, a string) takes its colour from one pixel of its own piece.
     painted = None
-    if part['shape'] in ('chain', 'string'):
+    if part['shape'] in ('chain', 'string', 'socket'):
         ys, xs = np.nonzero(masks[part['name']])
         light = pixels[ys, xs, :3].max(axis=1)   # a lit pixel of it, not the ink a median can land on
         at = int(np.argsort(light)[int(len(light) * 0.85)])

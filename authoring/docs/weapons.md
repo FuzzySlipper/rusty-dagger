@@ -34,7 +34,7 @@ sampled and matte.
 3. **Parts.** Give the weapon its `grip` and `parts` in the spec. `build.py` splits the icon into colour pieces
    (steel, brass, leather) and builds each part as `flat` (blades, guards, axe blades: two sheets meeting at the
    outline), `lathe` (grips, pommels, hafts: round in section; `ball` and `spikes` for a spiked head, `flanges` for a
-   flanged one), `disc` (a tsuba or a saber's bell), `chain` (a flail's links and ball) or `string` (a bowstring). Touching
+   flanged one), `disc` (a tsuba or a saber's bell), `chain` (a flail's links and ball), `socket` (the steel cone a chain hangs from) or `string` (a bowstring). Touching
    lathe parts share one straight axis and one profile; `bridge` joins a part to the run above across a gap in the icon.
    Turned parts' necks and the ink at their seams are closed, so sections read as one piece; a detail thinner than about
    a centimetre reads as a crack at this crunch, so leave it to the paint rather than making it a part. `reach` runs a

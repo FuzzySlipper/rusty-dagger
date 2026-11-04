@@ -194,28 +194,32 @@
   {
    "item": 125, "name": "flail", "family": "blunt", "hands": 2, "length": 0.95, "axis": "haft",
    "records": [8], "icon": 8,
-   "firstPerson": {"cif": "WEAPON06", "use": "compared", "why": "the same ball and links; the classic's conical socket at the haft's top is left out, and the haft is shorter so the ball can hang in view (#10574)"},
+   "firstPerson": {"cif": "WEAPON06", "use": "compared", "why": "the same ball and links, and the conical socket with its ring at the haft's top; the haft is shorter so the ball can hang in view"},
    "subject": "A flail: a straight oiled wooden handle with a steel cap and ring at its end, a chain of oval iron links hanging from the ring, and a round iron ball studded all over with short conical spikes at the end of the chain.",
    "invent": "The handle is round in section. The chain links are oval rings, each turned at right angles to the next. The ball has the same spikes on every side.",
-   "grip": {"part": "haft", "span": [0, 0.65]},
+   "grip": {"part": "haft", "span": [0, 0.78]},
    "secondGrip": [0, 0, 0.142],
    "parts": [
-    {"name": "haft", "class": "leather", "rows": [420, 769], "shape": "lathe", "segments": 10, "smooth": 41},
+    {"name": "haft", "class": "leather", "rows": [480, 769], "shape": "lathe", "segments": 10, "smooth": 41},
     {"name": "butt", "class": "steel", "pick": "bottom", "shape": "lathe", "segments": 10, "smooth": 3},
+    {"name": "socket", "class": "steel", "rows": [0, 200], "shape": "socket", "on": "haft", "length": 0.07, "radius": 0.019, "tip": 0.009, "segments": 10, "coloursFrom": "chain", "light": 0.8},
     {"name": "chain", "class": "steel", "rows": [0, 200], "shape": "chain", "on": "haft", "links": 5, "linkLength": 0.05, "linkWidth": 0.03, "wire": 0.006, "ball": 0.05, "light": 0.8, "shade": [0.55, 1], "spikes": {"count": 16, "length": 0.022, "base": 0.01}}
    ]
   },
   {
    "item": 126, "name": "warhammer", "family": "blunt", "hands": 2, "length": 1.10, "axis": "haft",
    "records": [25], "icon": 25,
-   "firstPerson": {"cif": "WEAPON07", "use": "compared", "why": "the head comes from the icon; the classic's steel sleeve and ring under the head are left out, as the war axe keeps its plain socket (#10574)"},
+   "firstPerson": {"cif": "WEAPON07", "use": "construction", "why": "the solid head block, and the steel sleeve and ring under it; the head's outline comes from the icon"},
    "subject": "A two-handed warhammer: a long straight oiled wooden haft with a leather-bound grip, and a heavy steel head set across its top: a flat square hammer face on one side and a thick pointed beak on the other.",
    "invent": "The head is a solid block of steel, square in section, wider than it is tall, with the haft passing through a socket in its middle. The haft is round in section.",
-   "grip": {"part": "haft", "span": [0, 0.3]},
+   "grip": {"part": "haft", "span": [0, 0.34]},
    "secondGrip": [0, 0, 0.142],
    "parts": [
-    {"name": "head", "class": "any", "rows": [0, 140], "pick": "all", "slot": "metal", "shape": "flat", "profile": "round", "half": 0.03, "ramp": 0.012, "faces": 900},
-    {"name": "haft", "class": "leather", "rows": [141, 690], "pick": "all", "shape": "lathe", "segments": 10, "smooth": 41},
+    {"name": "head", "class": "any", "rows": [0, 140], "pick": "all", "slot": "metal", "shape": "flat", "profile": "round", "half": 0.05, "ramp": 0.02, "faces": 500, "cols": [0, 160], "light": 0.5},
+    {"name": "beak", "class": "any", "rows": [0, 140], "pick": "all", "slot": "metal", "shape": "flat", "profile": "ridge", "half": 0.03, "ramp": 0.05, "faces": 300, "cols": [161, 237], "light": 0.5, "root": {"toward": "head", "gain": 0.6}},
+    {"name": "sleeve", "class": "any", "rows": [143, 195], "cols": [105, 145], "pick": "all", "slot": "metal", "coloursFrom": "head", "shape": "lathe", "segments": 10, "smooth": 1, "radius": 0.026, "light": 0.7},
+    {"name": "ring", "class": "any", "rows": [196, 206], "cols": [105, 145], "pick": "all", "slot": "metal", "coloursFrom": "head", "shape": "lathe", "segments": 10, "smooth": 1, "radius": 0.031, "light": 0.7},
+    {"name": "haft", "class": "leather", "rows": [207, 690], "pick": "all", "shape": "lathe", "segments": 10, "smooth": 41},
     {"name": "butt", "class": "steel", "pick": "bottom", "shape": "lathe", "segments": 10, "smooth": 3}
    ]
   },
