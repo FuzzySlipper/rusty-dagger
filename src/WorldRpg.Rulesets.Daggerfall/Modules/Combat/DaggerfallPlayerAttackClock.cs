@@ -121,6 +121,9 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
         _pressSpent = false;
     }
 
+    /// <summary>The attack in motion, or null at rest.</summary>
+    internal string? Current => _playing?.Attack;
+
     /// <summary>The attack was requested this step.</summary>
     internal void Press()
     {
@@ -133,6 +136,7 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
     /// <summary>Advances one admitted step: the motion in progress, then whatever the input now starts.</summary>
     internal void Step(double seconds)
     {
+        bool struck = false;
         if (_playing is { } playing)
         {
             playing.Seconds += seconds;
@@ -141,7 +145,7 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
                 double cycle = Math.Min(1d, (playing.Seconds - playing.Timing.Value.Windup) / playing.Timing.Value.Commit);
                 if (attacks.Sweep(cycle) || cycle >= 1d)
                 {
-                    playing.Landed = true;
+                    playing.Landed = struck = true;
                     attacks.Impact();
                 }
             }
@@ -162,7 +166,8 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
             }
         }
         if (_press is double down && _held) _press = down + seconds;
-        if (!Free) return;
+        // A blow resolves at the head of the next update, and the rules admit nothing until it has.
+        if (!Free || struck) return;
         if (_kick) StartKick();
         else if (_press is double press && (!_held || press >= tuning.PowerThresholdSeconds && !attacks.Winded || attacks.ShotTiming is not null)) StartPressed(!_held);
     }

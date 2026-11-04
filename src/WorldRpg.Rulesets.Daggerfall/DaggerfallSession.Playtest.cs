@@ -6,6 +6,7 @@ using Rusty.Engine;
 using Rusty.Engine.Debugging;
 using Rusty.Engine.Mechanics;
 using Rusty.Engine.Interaction;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Controls;
@@ -175,6 +176,15 @@ internal sealed partial class DaggerfallSession
         w.WriteString("equipment", _combat.InspectPlayerTiming().Equipment);
         w.WriteString("attackUnavailableReason", InspectPlaytestAction("attack").Reason);
         w.WriteNumber("attackReadyAtStep", State.Actors.Player.Attack.ReadyAtStep);
+        IDaggerfallPlayerAttacks attacks = this;
+        w.WriteString("attackPlaying", _attackClock.Current);
+        w.WriteNumber("attackTimeScale", attacks.TimeScale(DaggerfallAttackIds.Fast[0]));
+        w.WriteNumber("attackChainLength", attacks.ChainLength);
+        w.WriteBoolean("winded", attacks.Winded);
+        w.WriteStartObject("attributes");
+        foreach (DaggerfallStatId stat in new[] { DaggerfallMechanicsIds.Strength, DaggerfallMechanicsIds.Agility, DaggerfallMechanicsIds.Speed, DaggerfallMechanicsIds.Luck })
+            w.WriteNumber(stat.Value, PlayerStat(stat.Value));
+        w.WriteEndObject();
         w.WriteEndObject();
         w.WriteStartObject("controls");
         foreach (var pair in _controlSettings.All) { w.WriteStartArray(pair.Key); foreach (string key in pair.Value) w.WriteStringValue(key); w.WriteEndArray(); }
