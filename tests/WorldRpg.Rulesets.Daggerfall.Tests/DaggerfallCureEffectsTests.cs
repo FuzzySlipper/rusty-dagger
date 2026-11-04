@@ -72,17 +72,16 @@ public sealed class DaggerfallCureEffectsTests
     public void Cure_paralyzation_releases_real_movement_and_physical_attack_consumers_before_expiry()
     {
         using Fixture f = new(); var s = f.Session;
-        s.State.Kit.Rules.RegisterAction(s.DefinitionsByActor[1].ActionId!, new CertainStrike());
         Paralyze(s, "blocked.one", 2000, 1); Paralyze(s, "blocked.two", 2001, 1);
         s.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
         Assert.Equal(Vector2.Zero, f.Spatial.StepRequests.Last().Command.PlanarIntent);
         double before = Health(s, 2000).Current;
-        s.ResolveExplicitMelee(new(1, 2000, 1, 1000, .125)); Assert.Equal(before, Health(s, 2000).Current);
+        s.Strike(new(1, 2000, 1, 1000, .125)); Assert.Equal(before, Health(s, 2000).Current);
         Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(Cast(s, CureParalysisKey).Results).Outcome);
         Assert.Equal(default, s.State.Effects.ControlsFor(1));
         s.Update(new ProductUpdate(OuterUpdate(2), []));
         Assert.NotEqual(Vector2.Zero, f.Spatial.StepRequests.Last().Command.PlanarIntent);
-        s.ResolveExplicitMelee(new(1, 2000, 1, 1000, .125)); Assert.True(Health(s, 2000).Current < before);
+        s.Strike(new(1, 2000, 1, 1000, .125)); Assert.True(Health(s, 2000).Current < before);
         using var restored = f.Restore(s.CaptureSave()); Assert.Equal(default, restored.State.Effects.ControlsFor(1));
     }
 
@@ -231,8 +230,6 @@ public sealed class DaggerfallCureEffectsTests
         return new(catalog, s.State.Effects, id => id == 1 ? s.State.Actors.Player.Actor : s.State.Actors.TryGet(id, out var actor) ? actor.Actor : null,
             s.MagicProfile, _ => true, _ => { }, _ => { }, DaggerfallCastingTests.SaveDice.Create(draw), 1, playerKnowsSpell: _ => true);
     }
-    private sealed class CertainStrike : ICombatContribution
-    { public void Hit(TryHitEvent interaction) => interaction.Hit = true; }
 
     /// <summary>
     /// No published spell cures paralysis: SPELLS.STD's only Cure Paralyzation slot is Free Action's,

@@ -12,40 +12,30 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Policies;
-using WorldRpg.Rulesets.Daggerfall.Variants;
 using Xunit;
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 using Fixture = WorldRpg.Rulesets.Daggerfall.Tests.DaggerCombatDamagePolicyTests.DamagePolicyFixture;
 using PreparedPhysicalAttack = WorldRpg.Rulesets.Daggerfall.Modules.Combat.DaggerCombatRules.DaggerfallPreparedAttack;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
-/// The contact + mitigation variant at the rules boundary: no to-hit roll, harm reaches whoever the swing
+/// The contact rules at the rules boundary: no to-hit roll, harm reaches whoever the swing
 /// volume or arrow physically meets, and the target deflects or absorbs it by channel.
 /// </summary>
-public sealed class DaggerfallContactVariantTests
+public sealed class DaggerfallContactRulesTests
 {
     private const long Player = DaggerfallActorIdentity.PlayerEntityId;
-    private static DaggerfallRulesVariant Contact => DaggerfallVariants.All.Single(variant => variant.Manifest.Id == DaggerfallVariants.Contact);
-    private static DaggerfallContactTuning Tuning => DaggerfallContactTuning.Read(TestContentFiles.ReadCopy(TuningPath));
-    private static string TuningPath => Path.Combine(TestData.RepositoryRoot, "content/worldrpg/variant-tuning-payloads/daggerfall.contact.json");
+    private static DaggerfallContactTuning Tuning => DaggerfallTuning.Defaults.Contact;
 
     [Fact]
-    public void The_contact_bundle_selects_the_variant_for_its_physical_and_touch_seams_and_classic_selects_none()
+    public void The_contact_tuning_is_read_from_the_default_profile_and_the_classic_bundle_selects_no_variant()
     {
-        ProductContent content = TestSessions.FullContent(TestData.RepositoryRoot);
-        RulesVariantManifest[] compiled = [.. DaggerfallVariants.All.Select(variant => variant.Manifest)];
+        ProductContent content = FullContent(TestData.RepositoryRoot);
+        ResolvedGameComposition classic = Resolve(content, new GameBundleId("daggerfall.classic"), []).RequireComposition();
 
-        ResolvedGameComposition contact = TestSessions.Resolve(content, new GameBundleId("daggerfall.contact"), compiled).RequireComposition();
-        ResolvedGameComposition classic = TestSessions.Resolve(content, new GameBundleId("daggerfall.classic"), compiled).RequireComposition();
-
-        Assert.Equal([DaggerfallVariants.Contact], contact.Identity.Variants);
         Assert.Empty(classic.Identity.Variants);
-        Assert.Equal(classic.ContentPacks.Select(pack => pack.Id), contact.ContentPacks.Select(pack => pack.Id));
-        DaggerfallSeamSelection selection = DaggerfallSeamSelection.From(contact.Variants, DaggerfallVariants.All);
-        Assert.Equal((DaggerfallVariants.Contact, DaggerfallVariants.Contact), (selection.PhysicalDeliveryVariant!.Value, selection.PhysicalMitigationVariant!.Value));
-        Assert.Equal(DaggerfallVariants.Contact, selection.TouchDeliveryVariant);
-        DaggerfallContactTuning tuning = DaggerfallContactTuning.Read(contact.Variants.Single().Tuning.Payload.Span);
+        DaggerfallContactTuning tuning = DaggerfallTuning.Read(classic.Tuning.Payload.Span).Contact;
         Assert.Equal(new DaggerfallChannelDeflection(DaggerfallDeflectionMode.Partial, .5d), tuning.DeflectionFor(DaggerfallHarmChannels.Blunt));
         Assert.Equal(DaggerfallDeflectionMode.Full, tuning.DeflectionFor(DaggerfallHarmChannels.Edged)!.Mode);
     }
@@ -53,8 +43,8 @@ public sealed class DaggerfallContactVariantTests
     [Fact]
     public void An_enemy_blow_that_connects_lands_without_a_to_hit_roll_uses_Dodging_and_is_absorbed_by_the_armour_it_strikes()
     {
-        (AttackHitFact chest, KeyedRandom chestRandom, Fixture chestFixture) = EnemyBlow(bodyRoll: 8);
-        (AttackHitFact feet, _, Fixture feetFixture) = EnemyBlow(bodyRoll: 19);
+        (AttackHitFact chest, Fixture chestFixture) = EnemyBlow(bodyRoll: 8);
+        (AttackHitFact feet, Fixture feetFixture) = EnemyBlow(bodyRoll: 19);
         using (chestFixture)
         using (feetFixture)
         {
@@ -67,15 +57,13 @@ public sealed class DaggerfallContactVariantTests
             // The hit carries what the armour took, for presentation; bare feet took the whole blow.
             Assert.Equal((0, absorbed), (chest.Mitigated.Deflected, chest.Mitigated.Absorbed));
             Assert.Equal(default, feet.Mitigated);
-            Assert.DoesNotContain(chestRandom.Keys, key => key.EndsWith($":salt:{CombatRandomKey.HitSalt}", StringComparison.Ordinal));
-            Assert.Contains(chestFixture.SkillUses, use => use.Skill == DaggerfallMechanicsIds.Dodging.Value);
+            Assert.Single(chestFixture.SkillUses, use => use.Skill == DaggerfallMechanicsIds.Dodging.Value);
         }
     }
 
-    private static (AttackHitFact Hit, KeyedRandom Random, Fixture Fixture) EnemyBlow(int bodyRoll)
+    private static (AttackHitFact Hit, Fixture Fixture) EnemyBlow(int bodyRoll)
     {
-        KeyedRandom random = KeyedRandom.Create(bodyRoll);
-        Fixture fixture = new(random: random.Service, variant: Contact);
+        Fixture fixture = new(random: KeyedRandom.Create(bodyRoll).Service);
         fixture.EquipNpcWeapon(2, "iron-longsword", 9001);
         fixture.Spatial.OverlapContactsResult = _ => Touching(fixture.Actors.Player.Actor.Entity.Value);
         AttackRequest swing = new(2, Player, 5, 9, .125d, Delayed: true);
@@ -83,15 +71,15 @@ public sealed class DaggerfallContactVariantTests
         Assert.True(admitted);
         // The strike's frame comes before the wind-up ends; the blow lands once it has.
         IReadOnlyList<IProductFact> facts = [.. fixture.DeliverImpact(swing), .. fixture.AdvanceFlight(5, 9, steps: 5)];
-        Assert.DoesNotContain(facts, fact => fact is AttackMissedFact);
-        return (Assert.Single(facts.OfType<AttackHitFact>()), random, fixture);
+        Assert.DoesNotContain(facts, fact => fact is AttackWhiffedFact);
+        return (Assert.Single(facts.OfType<AttackHitFact>()), fixture);
     }
 
     [Fact]
     public void A_player_swing_reaches_every_actor_its_volume_touches_and_a_whiff_reports_it_met_nothing()
     {
         KeyedRandom random = KeyedRandom.Create(8);
-        using Fixture fixture = new(random: random.Service, variant: Contact);
+        using Fixture fixture = new(random: random.Service);
         fixture.Spatial.OverlapContactsResult = _ => Touching(fixture.Actors.Get(2).Actor.Entity.Value);
         AttackRequest swing = new(Player, null, 3, 5, .125d, Delayed: true);
 
@@ -119,14 +107,14 @@ public sealed class DaggerfallContactVariantTests
         static int WeaponHits(Fixture fixture) => fixture.SkillUses.Count(use => use.Reason == DaggerfallSkillUseReason.WeaponHit);
         AttackRequest swing = new(Player, null, 3, 5, .125d, Delayed: true);
 
-        using Fixture landing = new(random: KeyedRandom.Create(8).Service, variant: Contact);
+        using Fixture landing = new(random: KeyedRandom.Create(8).Service);
         landing.Spatial.OverlapContactsResult = _ => Touching(landing.Actors.Get(2).Actor.Entity.Value);
         landing.StartSwing(swing, out _);
         Assert.Single(landing.DeliverImpact(swing).OfType<AttackHitFact>());
         Assert.Equal(1, WeaponHits(landing));
 
         // The lowest draw on every percentile deflects the edged blow whole.
-        using Fixture deflected = new(random: RandomMinimum.Create(), variant: Contact);
+        using Fixture deflected = new(random: RandomMinimum.Create());
         deflected.Spatial.OverlapContactsResult = _ => Touching(deflected.Actors.Get(2).Actor.Entity.Value);
         deflected.StartSwing(swing, out _);
         IReadOnlyList<IProductFact> turned = deflected.DeliverImpact(swing);
@@ -135,7 +123,7 @@ public sealed class DaggerfallContactVariantTests
         Assert.Equal((Player, 2L, HarmNegation.Deflected), (negated.AttackerId, negated.TargetId, negated.Negation));
         Assert.Equal(1, WeaponHits(deflected));
 
-        using Fixture whiff = new(random: KeyedRandom.Create(8).Service, variant: Contact);
+        using Fixture whiff = new(random: KeyedRandom.Create(8).Service);
         whiff.StartSwing(swing, out _);
         whiff.DeliverImpact(swing);
         Assert.Equal(0, WeaponHits(whiff));
@@ -144,7 +132,7 @@ public sealed class DaggerfallContactVariantTests
     [Fact]
     public void A_swing_aimed_at_an_actor_defeated_before_its_hit_frame_still_reaches_whoever_its_volume_touches_there()
     {
-        using Fixture fixture = new(random: KeyedRandom.Create(8).Service, variant: Contact);
+        using Fixture fixture = new(random: KeyedRandom.Create(8).Service);
         ActorState bystander = fixture.SpawnBrigand(3, new WorldPoint(1f, 0f, .4f));
         AttackRequest swing = new(Player, 2, 3, 5, .125d, Delayed: true);
         fixture.StartSwing(swing, out bool admitted);
@@ -160,7 +148,7 @@ public sealed class DaggerfallContactVariantTests
     [Fact]
     public void An_enemy_swing_publishes_its_wind_up_and_its_damage_waits_for_it_however_early_the_frame_comes()
     {
-        using Fixture fixture = new(random: KeyedRandom.Create(8).Service, variant: Contact);
+        using Fixture fixture = new(random: KeyedRandom.Create(8).Service);
         fixture.EquipNpcWeapon(2, "iron-longsword", 9001);
         fixture.Spatial.OverlapContactsResult = _ => Touching(fixture.Actors.Player.Actor.Entity.Value);
         AttackRequest swing = new(2, Player, 5, 9, .125d, Delayed: true);
@@ -179,7 +167,7 @@ public sealed class DaggerfallContactVariantTests
     [Fact]
     public void An_interrupted_attack_drops_its_winding_up_blow_so_it_never_lands()
     {
-        using Fixture fixture = new(random: KeyedRandom.Create(8).Service, variant: Contact);
+        using Fixture fixture = new(random: KeyedRandom.Create(8).Service);
         fixture.EquipNpcWeapon(2, "iron-longsword", 9001);
         fixture.Spatial.OverlapContactsResult = _ => Touching(fixture.Actors.Player.Actor.Entity.Value);
         AttackRequest swing = new(2, Player, 5, 9, .125d, Delayed: true);
@@ -194,19 +182,18 @@ public sealed class DaggerfallContactVariantTests
     }
 
     [Fact]
-    public void Melee_enemies_engage_inside_their_reach_while_archers_engage_at_range_and_classic_engages_at_reach()
+    public void Melee_enemies_engage_inside_their_reach_while_archers_engage_at_range()
     {
         IDaggerfallEnemyEngagement contact = new DaggerfallContactEngagement(Tuning);
         Assert.Equal(2.25d * Tuning.EngageReachFraction, contact.EngageReach(2.25d, ranged: false), 6);
         Assert.True(contact.EngageReach(2.25d, ranged: false) < 2.25d);
         Assert.Equal(30d, contact.EngageReach(30d, ranged: true));
-        Assert.Equal(2.25d, DaggerfallClassicEnemyEngagement.Instance.EngageReach(2.25d, ranged: false));
     }
 
     [Fact]
     public void An_enemy_archer_holds_a_shot_another_body_or_the_world_would_stop()
     {
-        using Fixture fixture = new(variant: Contact);
+        using Fixture fixture = new();
         ulong player = fixture.Actors.Player.Actor.Entity.Value;
         ulong bystander = fixture.SpawnBrigand(3, new WorldPoint(.5f, 0f, 0f)).Actor.Entity.Value;
         SpatialHit Struck(SpatialHitKind kind, ulong entity) => default(SpatialHit) with { Present = true, Kind = kind, Entity = entity, Distance = .4d };
@@ -217,8 +204,6 @@ public sealed class DaggerfallContactVariantTests
         Assert.True(fixture.Delivery.HoldsFire(2, Player));
         fixture.Spatial.FloorHit = _ => Struck(SpatialHitKind.StaticMesh, 0);
         Assert.True(fixture.Delivery.HoldsFire(2, Player));
-        using Fixture classic = new();
-        Assert.False(classic.Delivery.HoldsFire(2, Player));
     }
 
     [Theory]
@@ -226,7 +211,7 @@ public sealed class DaggerfallContactVariantTests
     [InlineData(5f)]
     public void An_enemy_archer_leads_a_moving_target_by_the_arrows_flight_time(float sideways)
     {
-        using Fixture fixture = new(variant: Contact);
+        using Fixture fixture = new();
         fixture.PlayerVelocity = new Vector3(0f, 0f, sideways);
         AttackRequest shot = new(2, Player, 5, 9, .125d, Delayed: true);
         PreparedPhysicalAttack arrow = new(1d, new AttackOutcome(true, true, 0), DaggerfallStrikeFeedback.Unarmed, IsRanged: true);
@@ -249,13 +234,13 @@ public sealed class DaggerfallContactVariantTests
     [Fact]
     public void Deflection_negates_an_edged_blow_whole_turns_aside_part_of_a_blunt_one_and_the_material_requirement_still_holds()
     {
-        using Fixture fixture = new(variant: Contact);
-        DaggerfallSeamContext context = fixture.VariantContext(Contact);
+        using Fixture fixture = new();
+        DaggerfallSeamInputs inputs = fixture.SeamInputs;
         DaggerfallActorDefinition player = TestPayload.Definitions.RequireActor(new DaggerfallActorId("player"));
         CombatParticipants participants = new(fixture.Actors.Get(2).Actor, fixture.Actors.Player.Actor, "attack");
         DaggerfallPhysicalHarm chest = new(2, Player, player, "long-blade", "iron", 3, 1, 1);
 
-        DaggerfallContactMitigation certain = new(context with { Session = context.Session with { Random = RandomMinimum.Create() } }, Tuning, new FixedGuard());
+        DaggerfallContactMitigation certain = new(inputs with { Random = RandomMinimum.Create() }, Tuning, new FixedGuard());
         NegationEvent edged = new(participants, DaggerfallHarmChannels.Edged);
         certain.Negate(edged, chest);
         Assert.Equal(HarmNegation.Deflected, edged.Negation);
@@ -264,7 +249,7 @@ public sealed class DaggerfallContactVariantTests
         Assert.Equal(5, blunt.Deflected);
         Assert.Equal(certain.Absorption(chest, DaggerfallHarmChannels.Blunt), blunt.Absorbed);
 
-        DaggerfallContactMitigation never = new(context with { Session = context.Session with { Random = RandomMaximum.Create() } }, Tuning, new FixedGuard());
+        DaggerfallContactMitigation never = new(inputs with { Random = RandomMaximum.Create() }, Tuning, new FixedGuard());
         NegationEvent landed = new(participants, DaggerfallHarmChannels.Edged);
         never.Negate(landed, chest);
         Assert.Equal(HarmNegation.None, landed.Negation);
@@ -275,10 +260,10 @@ public sealed class DaggerfallContactVariantTests
     }
 
     [Fact]
-    public void Worn_armor_enchantments_shift_what_the_players_armor_absorbs_under_the_variant()
+    public void Worn_armor_enchantments_shift_what_the_players_armor_absorbs()
     {
-        using Fixture fixture = new(variant: Contact);
-        DaggerfallContactMitigation mitigation = new(fixture.VariantContext(Contact), Tuning, new FixedGuard());
+        using Fixture fixture = new();
+        DaggerfallContactMitigation mitigation = new(fixture.SeamInputs, Tuning, new FixedGuard());
         DaggerfallActorDefinition player = TestPayload.Definitions.RequireActor(new DaggerfallActorId("player"));
         CombatParticipants participants = new(fixture.Actors.Get(2).Actor, fixture.Actors.Player.Actor, "attack");
         DaggerfallPhysicalHarm chest = new(2, Player, player, "long-blade", "iron", 3, 1, 1);
@@ -307,7 +292,7 @@ public sealed class DaggerfallContactVariantTests
     public void An_arrow_flies_step_by_step_and_harms_the_first_actor_it_meets_or_stops_at_the_world(bool meetsActor)
     {
         KeyedRandom random = KeyedRandom.Create(8);
-        using Fixture fixture = new(armed: false, random: random.Service, variant: Contact);
+        using Fixture fixture = new(armed: false, random: random.Service);
         fixture.EquipPlayerBow("iron-short-bow", 3001);
         fixture.GivePlayerArrows(1);
         ulong brigand = fixture.Actors.Get(2).Actor.Entity.Value;
@@ -326,13 +311,13 @@ public sealed class DaggerfallContactVariantTests
     }
 
     [Fact]
-    public void A_game_under_the_contact_variant_composes_its_owners_and_saves_and_restores()
+    public void A_game_composes_the_contact_owners_and_saves_and_restores()
     {
-        DaggerfallSiteProfile inputs = TestSessions.ReadInputs(TestData.RepositoryRoot);
-        DaggerfallSessionComposition composition = TestSessions.ContactComposition(inputs);
+        DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);
+        DaggerfallSessionComposition composition = new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults);
         List<string> releases = [];
         ContentFake content = new(releases);
-        TestSessions.PopulateContent(content, inputs);
+        PopulateContent(content, inputs);
         var engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
 
         RulesetSavePayload saved;
@@ -345,21 +330,20 @@ public sealed class DaggerfallContactVariantTests
         }
         using DaggerfallSession restored = DaggerfallSession.Restore(engine.Context, composition, saved);
         Assert.Equal(9, restored.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
-        Assert.Equal([DaggerfallVariants.Contact], composition.Identity!.Variants);
     }
 
     [Fact]
     public void Holding_block_raises_a_guard_only_with_a_drawn_weapon_and_no_swing_and_it_costs_stamina_until_the_pool_empties()
     {
-        using Fixture fixture = new(variant: Contact);
-        DaggerfallContactGuard guard = new(fixture.VariantContext(Contact), Tuning);
+        using Fixture fixture = new();
+        DaggerfallContactGuard guard = new(fixture.SeamInputs, Tuning);
         Track stamina = fixture.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value));
         stamina.SetCurrent(10d);
         FactBuffer<IProductFact> facts = new();
 
         guard.Step(.5d, canGuard: true, swinging: false, 1, 1, facts);
         Assert.False(guard.Raised); // Nothing is held yet.
-        guard.Observe([TestSessions.Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, intent: "block")]);
+        guard.Observe([Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, intent: "block")]);
         guard.Step(.5d, canGuard: false, swinging: false, 1, 2, facts);
         Assert.False(guard.Raised); // No drawn weapon, no guard.
         guard.Step(.5d, canGuard: true, swinging: true, 1, 3, facts);
@@ -380,10 +364,10 @@ public sealed class DaggerfallContactVariantTests
 
         stamina.SetCurrent(10d);
         guard.Step(.5d, canGuard: true, swinging: false, 1, 9, facts);
-        guard.Observe([TestSessions.Input(InputEventKind.MappedDigital, InputEdge.Released, x: 0, intent: "block")]);
+        guard.Observe([Input(InputEventKind.MappedDigital, InputEdge.Released, x: 0, intent: "block")]);
         guard.Step(.5d, canGuard: true, swinging: false, 1, 10, facts);
         Assert.False(guard.Raised);
-        guard.Observe([TestSessions.Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, intent: "block")]);
+        guard.Observe([Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, intent: "block")]);
         guard.Step(.5d, canGuard: true, swinging: false, 1, 11, facts);
         guard.Neutralize(1, 12, facts);
         Assert.False(guard.Raised);
@@ -397,10 +381,10 @@ public sealed class DaggerfallContactVariantTests
     [Fact]
     public void A_raised_guard_adds_its_deflection_bonus_to_the_player_only()
     {
-        using Fixture fixture = new(variant: Contact);
-        DaggerfallSeamContext context = fixture.VariantContext(Contact);
+        using Fixture fixture = new();
+        DaggerfallSeamInputs inputs = fixture.SeamInputs;
         FixedGuard guard = new();
-        DaggerfallContactMitigation mitigation = new(context, Tuning, guard);
+        DaggerfallContactMitigation mitigation = new(inputs, Tuning, guard);
         int lowered = mitigation.DeflectionChance(Player), enemy = mitigation.DeflectionChance(2);
         guard.Raised = true;
         Assert.Equal(Math.Min(lowered + (int)Tuning.GuardDeflectionBonus, (int)Tuning.GuardMaximumChance), mitigation.DeflectionChance(Player));
@@ -408,12 +392,20 @@ public sealed class DaggerfallContactVariantTests
     }
 
     [Fact]
-    public void The_contact_variant_composes_one_guard_its_mitigation_reads()
+    public void The_default_owners_share_one_guard_the_mitigation_reads()
     {
-        using Fixture fixture = new(variant: Contact);
-        DaggerfallSeamOwners owners = fixture.Owners!;
-        Assert.IsType<DaggerfallContactGuard>(owners.PlayerGuard);
-        Assert.Equal([DaggerfallRulesSeams.PhysicalMitigation, DaggerfallRulesSeams.PhysicalDelivery, DaggerfallRulesSeams.PlayerGuard, DaggerfallRulesSeams.TouchDelivery, DaggerfallRulesSeams.EnemyEngagement, DaggerfallRulesSeams.HarmPresentation], owners.Seams);
+        using Fixture fixture = new();
+        DaggerfallComposedSeams seams = DaggerfallSeamSelection.Default.Build(fixture.SeamInputs, Tuning);
+        DaggerfallContactGuard guard = Assert.IsType<DaggerfallContactGuard>(seams.PlayerGuard);
+        DaggerfallContactMitigation mitigation = Assert.IsType<DaggerfallContactMitigation>(seams.PhysicalMitigation);
+        int lowered = mitigation.DeflectionChance(Player);
+        FactBuffer<IProductFact> facts = new();
+
+        guard.Observe([Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, intent: "block")]);
+        guard.Step(.5d, canGuard: true, swinging: false, 1, 1, facts);
+
+        Assert.True(guard.Raised);
+        Assert.True(mitigation.DeflectionChance(Player) > lowered);
     }
 
     private sealed class FixedGuard : IDaggerfallPlayerGuard
@@ -428,8 +420,8 @@ public sealed class DaggerfallContactVariantTests
     [Fact]
     public void A_touch_reaches_every_actor_its_volume_contacts_but_none_behind_the_world_and_one_that_meets_no_one_is_still_released()
     {
-        using Fixture fixture = new(variant: Contact);
-        IDaggerfallTouchDelivery touch = fixture.Owners!.TouchDelivery!(fixture.TouchOperations);
+        using Fixture fixture = new();
+        IDaggerfallTouchDelivery touch = new DaggerfallContactTouch(fixture.TouchOperations, Tuning);
         ulong brigand = fixture.Actors.Get(2).Actor.Entity.Value;
         ulong second = fixture.SpawnBrigand(3, new WorldPoint(1f, 0f, .4f)).Actor.Entity.Value;
         DaggerfallTouchCast cast = new(Player, new Vector3(0f, 1.65f, 0f), Vector3.UnitX, Admitted: null);
@@ -461,8 +453,8 @@ public sealed class DaggerfallContactVariantTests
     [Fact]
     public void An_enemy_touch_reaches_the_player_only_when_its_volume_does_whatever_its_behavior_admitted()
     {
-        using Fixture fixture = new(variant: Contact);
-        IDaggerfallTouchDelivery touch = fixture.Owners!.TouchDelivery!(fixture.TouchOperations);
+        using Fixture fixture = new();
+        IDaggerfallTouchDelivery touch = new DaggerfallContactTouch(fixture.TouchOperations, Tuning);
         DaggerfallTouchCast cast = new(2, new Vector3(1f, 1.62f, 0f), -Vector3.UnitX, Admitted: Player);
 
         fixture.Spatial.OverlapContactsResult = _ => Touching();
@@ -472,36 +464,13 @@ public sealed class DaggerfallContactVariantTests
     }
 
     [Fact]
-    public void Classic_touch_picks_the_first_actor_a_short_capsule_meets_refuses_when_none_and_trusts_an_enemys_admitted_target()
+    public void A_player_touch_that_meets_no_one_is_paid_for_and_misses()
     {
-        using Fixture fixture = new();
-        IDaggerfallTouchDelivery touch = DaggerfallSeamSelection.Classic.Build(fixture.SeamInputs).TouchDelivery(fixture.TouchOperations);
-        Assert.IsType<DaggerfallClassicTouchDelivery>(touch);
-        DaggerfallTouchCast cast = new(Player, new Vector3(0f, 1.65f, 0f), Vector3.UnitX, Admitted: null);
-
-        fixture.Spatial.CapsuleCastHit = _ => default(SpatialHit) with { Present = true, Kind = SpatialHitKind.Entity, Entity = fixture.Actors.Get(2).Actor.Entity.Value };
-        DaggerfallTouchReach picked = touch.Reach(cast);
-        Assert.True(picked.Releases);
-        Assert.Equal([2L], picked.Targets);
-        SpatialCapsuleQueryRequest sweep = Assert.Single(fixture.Spatial.CapsuleCastRequests);
-        Assert.Equal((.25d, 3f), (sweep.Radius, sweep.Translation.Length()));
-
-        fixture.Spatial.CapsuleCastHit = _ => default;
-        Assert.False(touch.Reach(cast).Releases);
-
-        Assert.Equal([Player], touch.Reach(new(2, new Vector3(1f, 1.62f, 0f), -Vector3.UnitX, Admitted: Player)).Targets);
-        Assert.Equal(2, fixture.Spatial.CapsuleCastRequests.Count);
-        Assert.Empty(fixture.Spatial.OverlapContactsRequests);
-    }
-
-    [Fact]
-    public void A_player_touch_under_the_contact_variant_that_meets_no_one_is_paid_for_and_misses()
-    {
-        DaggerfallSiteProfile inputs = TestSessions.ReadInputs(TestData.RepositoryRoot);
-        DaggerfallSessionComposition composition = TestSessions.ContactComposition(inputs);
+        DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);
+        DaggerfallSessionComposition composition = new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults);
         List<string> releases = [];
         ContentFake content = new(releases);
-        TestSessions.PopulateContent(content, inputs);
+        PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession creation = DaggerfallSession.StartNew(engine.Context, composition);
@@ -531,25 +500,6 @@ public sealed class DaggerfallContactVariantTests
             if (game.ReadyPlayerSpell(spell.Key).Outcome == DaggerfallCastOutcome.Ready) return spell.Key;
         }
         throw new InvalidOperationException("No stock touch spell can be readied.");
-    }
-
-    /// <summary>A contact result touching the given entities, in order.</summary>
-    private static SpatialContactResult Touching(params ulong[] entities) => new(
-        entities.Select(entity => new SpatialContact(SpatialHitKind.Entity, entity, 0, 0, 0, 0, 0, Vector3.Zero, Vector3.Zero, 0d, .1d, false)).ToArray(),
-        false, false, 1, 1);
-
-    /// <summary>The seam context a variant's owners are built from, with the repository's contact tuning.</summary>
-    internal static DaggerfallSeamContext Context(DaggerfallRulesVariant variant, DaggerfallSeamInputs inputs)
-    {
-        byte[] tuning = TestContentFiles.ReadCopy(TuningPath);
-        ResolvedGameComposition composition = TestSessions.Resolve(Content(
-            ("worldrpg/bundles/test.bundle.json", Encoding.UTF8.GetBytes($$"""{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"daggerfall","contentPacks":[{"id":"test.base"}],"tuning":{"id":"test.tuning"},"variants":["{{variant.Manifest.Id.Value}}"]}""")),
-            ("worldrpg/content-packs/test.base.pack.json", """{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"daggerfall","role":"daggerfall.base","dependencies":[],"payload":"payload/base.json"}"""u8.ToArray()),
-            ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"daggerfall","payload":"payload/tuning.json"}"""u8.ToArray()),
-            ("worldrpg/tuning/variant.tuning.json", Encoding.UTF8.GetBytes($$"""{"kind":"worldrpg.tuning-profile","id":"{{variant.Manifest.Tuning.Value}}","ruleset":"daggerfall","payload":"payload/variant.json"}""")),
-            ("payload/base.json", "{}"u8.ToArray()), ("payload/tuning.json", "{}"u8.ToArray()), ("payload/variant.json", tuning)),
-            new GameBundleId("test.bundle"), [variant.Manifest]).RequireComposition();
-        return new DaggerfallSeamContext(inputs, composition.Variants.Single().Tuning);
     }
 
     private static ProductContent Content(params (string Path, byte[] Value)[] files) =>

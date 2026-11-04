@@ -1,10 +1,10 @@
 using Rusty.Engine;
 using WorldRpg.Kit.Combat;
 
-namespace WorldRpg.Rulesets.Daggerfall.Variants;
+namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 /// <summary>
-/// Touch delivery under the contact + mitigation variant. A touch spell reaches every actor its touch volume
+/// Touch delivery by contact. A touch spell reaches every actor its touch volume
 /// contacts at the cast frame, the way a swing reaches whatever its blade crosses: no capsule pick, and no
 /// promise from an enemy's behavior that the player is in reach. A touch that contacts no one is still
 /// released and paid for, and misses.

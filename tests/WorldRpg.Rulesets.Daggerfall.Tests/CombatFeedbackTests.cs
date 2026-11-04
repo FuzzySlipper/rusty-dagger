@@ -151,10 +151,8 @@ public sealed class CombatFeedbackTests
         Assert.Equal(started, audio.Emits.Count + audio.Voices.Count);
     }
 
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void A_reflected_or_absorbed_spell_effect_sounds_its_outcome_only_under_the_contact_presentation(bool contact)
+    [Fact]
+    public void A_reflected_or_absorbed_spell_effect_sounds_its_outcome()
     {
         List<string> releases = [];
         AudioRecorder audio = AudioRecorder.Create();
@@ -162,12 +160,12 @@ public sealed class CombatFeedbackTests
         using ActorsState actors = ActorsWithNpc(11, HealthyMechanics(), new(2, 0, 3));
         using DaggerfallSiteAppearance presentation = new(MediaContent(releases), new AppearanceFake(releases), inputs,
             audio.Service, random: KeyedRandomFake.Create(8).Service);
-        IDaggerfallHarmPresentation harm = contact ? new Variants.DaggerfallContactHarmPresentation() : DaggerfallClassicHarmPresentation.Instance;
+        IDaggerfallHarmPresentation harm = new Modules.Combat.DaggerfallContactHarmPresentation();
         ulong Clip(string id) => (ulong)(inputs.Audio.ToList().FindIndex(value => value.Id == id) + 1);
         SpellCastFact Cast(long sequence, DaggerfallCastOutcome outcome) => new(DaggerfallCastOutcome.DeliveryCompleted, sequence, 1, "spell", 5,
             [new DaggerfallCastEffectResult(0, 11, outcome)]);
 
-        // A spell that met no one, and an applied effect, keep their classic presentation: no outcome cue.
+        // A spell that met no one, and an applied effect, keep their own presentation: no outcome cue.
         presentation.ReactSpellCast(Cast(1, DaggerfallCastOutcome.Missed), actors, null, harm);
         presentation.ReactSpellCast(Cast(2, DaggerfallCastOutcome.Applied), actors, null, harm);
         Assert.Empty(audio.Voices);
@@ -176,7 +174,6 @@ public sealed class CombatFeedbackTests
         presentation.ReactSpellCast(reflected, actors, null, harm);
         presentation.ReactSpellCast(reflected, actors, null, harm);
         presentation.ReactSpellCast(Cast(4, DaggerfallCastOutcome.Absorbed), actors, null, harm);
-        if (!contact) { Assert.Empty(audio.Voices); return; }
         Assert.Equal(2, audio.Voices.Count);
         Assert.Equal((Clip("sound.436"), new Vector3(2, 0, 3), 1.1F), (audio.Voices[0].Clip.Handle.Value, audio.Voices[0].Position, audio.Voices[0].Pitch));
         Assert.StartsWith("hit", inputs.Audio.ToList()[(int)audio.Voices[1].Clip.Handle.Value - 1].Id, StringComparison.Ordinal);
@@ -202,18 +199,19 @@ public sealed class CombatFeedbackTests
     }
 
     [Theory]
-    [InlineData("sound.347", "sound.347")]
-    [InlineData("sound.3", "sound.436")]
-    public void Enemy_melee_misses_swing_while_bow_misses_can_parry(string acceptedCue, string emittedCue)
+    [InlineData("sound.347", 1)]
+    [InlineData("sound.3", 0)]
+    public void An_enemy_melee_whiff_sounds_its_swing_once_and_a_loosed_shot_already_sounded_at_its_start(string acceptedCue, int emitted)
     {
         List<string> releases = [];
         AudioRecorder audio = AudioRecorder.Create();
         using DaggerfallSiteAppearance presentation = new(MediaContent(releases), new AppearanceFake(releases),
             FeedbackInputs(0, parry: true), audio.Service, random: KeyedRandomFake.Create(8).Service);
-        AttackMissedFact missed = new(12, 11, 100, 50, true, 1, 2) { Feedback = new(true, acceptedCue) };
-        presentation.React(missed);
-        presentation.React(missed);
-        Assert.EndsWith($".{emittedCue}", Assert.Single(audio.Emits).SignalId, StringComparison.Ordinal);
+        AttackWhiffedFact whiffed = new(12, 11, true, 1, 2) { Feedback = new(true, acceptedCue) };
+        presentation.React(whiffed);
+        presentation.React(whiffed);
+        Assert.Equal(emitted, audio.Emits.Count);
+        Assert.All(audio.Emits, emit => Assert.EndsWith($".{acceptedCue}", emit.SignalId, StringComparison.Ordinal));
     }
 
     [Theory]

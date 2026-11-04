@@ -35,7 +35,7 @@ public sealed partial class DaggerfallEquipmentWearTests
         using WearFixture fixture = new();
         fixture.EquipEnemyWeapon("iron-longsword", 9001);
         // A body roll of 9 is the classic table's chest, where this player wears the iron cuirass.
-        fixture.Script(body: 9, critical: 50, hit: 1, damage: 15);
+        fixture.Script(body: 9, damage: 15);
         int enemyWeapon = fixture.Condition(9001);
         int playerArmour = fixture.Condition(1003);
         int playerWeapon = fixture.Condition(1001);
@@ -43,10 +43,11 @@ public sealed partial class DaggerfallEquipmentWearTests
         IReadOnlyList<IProductFact> facts = fixture.RunEnemyAttack();
 
         // Ten percent of the accepted damage, rounded to nearest, charged on both items without a floor
-        // roll: the swing's own weapon and the armour that covered the struck body part. The accepted
-        // hit is 13, whose ten percent rounds up to one unit; stated as a literal rather than read back
-        // from the formula the rules call, so a change to the donor's rounding fails here too.
-        Assert.Equal(13, AppliedDamage(facts));
+        // roll: the swing's own weapon and the armour that covered the struck body part. The cuirass
+        // absorbs 3 of the rolled 13, and ten percent of the accepted 10 is one unit; stated as a literal
+        // rather than read back from the formula the rules call, so a change to the donor's rounding
+        // fails here too.
+        Assert.Equal(10, AppliedDamage(facts));
         const int units = 1;
         Assert.Equal(enemyWeapon - units, fixture.Condition(9001));
         Assert.Equal(playerArmour - units, fixture.Condition(1003));
@@ -68,7 +69,7 @@ public sealed partial class DaggerfallEquipmentWearTests
         {
             Attacks = [new DaggerfallAttackRange(1, 8), new(0, 0), new(0, 0)],
         });
-        fixture.ScriptMonster(body: 9, reflex: 50, critical: 50, hit: 1, damage: 8);
+        fixture.ScriptMonster(body: 9, reflex: 50, damage: 8);
         int playerArmour = fixture.Condition(1003);
         int playerWeapon = fixture.Condition(1001);
 
@@ -80,17 +81,18 @@ public sealed partial class DaggerfallEquipmentWearTests
     }
 
     [Fact]
-    public void A_miss_and_a_material_refusal_leave_every_item_at_its_condition()
+    public void A_deflected_blow_and_a_material_refusal_leave_every_item_at_its_condition()
     {
         using WearFixture fixture = new();
         fixture.EquipEnemyWeapon("iron-longsword", 9001);
-        fixture.Script(body: 3, critical: 50, hit: 99);
+        fixture.Script(body: 3, deflect: 1);
         int enemyWeapon = fixture.Condition(9001);
         int playerArmour = fixture.Condition(1003);
 
-        IReadOnlyList<IProductFact> missed = fixture.RunEnemyAttack();
+        IReadOnlyList<IProductFact> deflected = fixture.RunEnemyAttack();
 
-        Assert.Empty(missed.OfType<EquipmentWornFact>());
+        Assert.Single(deflected.OfType<AttackNegatedFact>());
+        Assert.Empty(deflected.OfType<EquipmentWornFact>());
         Assert.Equal(playerArmour, fixture.Condition(1003));
         Assert.Equal(enemyWeapon, fixture.Condition(9001));
 
@@ -102,7 +104,7 @@ public sealed partial class DaggerfallEquipmentWearTests
             ActionId = "enemy-class-equipped-melee",
             MinimumMaterial = "silver",
         });
-        immune.Script(body: 3, critical: 50, hit: 1);
+        immune.Script(body: 3);
         int immuneWeapon = immune.Condition(1001);
 
         IReadOnlyList<IProductFact> refused = immune.RunPlayerAttack();
@@ -116,10 +118,10 @@ public sealed partial class DaggerfallEquipmentWearTests
     public void A_blow_below_five_damage_takes_one_unit_only_when_the_floor_roll_grants_it()
     {
         // Damage below five scales to zero, so the classic one-in-five floor decides: a roll of 20 or
-        // less takes one unit, a roll of 21 leaves that item whole.
+        // less takes one unit, a roll of 21 leaves that item whole. The cuirass absorbs 3 of the rolled 5.
         using WearFixture worn = new();
         worn.EquipEnemyWeapon("iron-longsword", 9001);
-        worn.Script(body: 9, critical: 50, hit: 1, damage: 4, wornWeaponRoll: 20, wornArmourRoll: 21);
+        worn.Script(body: 9, damage: 7, wornWeaponRoll: 20, wornArmourRoll: 21);
         int enemyWeapon = worn.Condition(9001);
         int playerArmour = worn.Condition(1003);
 
@@ -133,7 +135,7 @@ public sealed partial class DaggerfallEquipmentWearTests
 
         using WearFixture spared = new();
         spared.EquipEnemyWeapon("iron-longsword", 9001);
-        spared.Script(body: 9, critical: 50, hit: 1, damage: 4, wornWeaponRoll: 21, wornArmourRoll: 21);
+        spared.Script(body: 9, damage: 7, wornWeaponRoll: 21, wornArmourRoll: 21);
         int sparedWeapon = spared.Condition(9001);
 
         IReadOnlyList<IProductFact> sparedFacts = spared.RunEnemyAttack();
@@ -151,7 +153,7 @@ public sealed partial class DaggerfallEquipmentWearTests
         // shield is the only defence that can wear.
         fixture.EquipPlayerItem("tower-shield", 2001, "left-hand");
         // A body roll of 6 is the classic table's left arm, which the tower shield covers.
-        fixture.Script(body: 6, critical: 50, hit: 1, damage: 15);
+        fixture.Script(body: 6, damage: 15);
         int shield = fixture.Condition(2001);
         int cuirass = fixture.Condition(1003);
         int enemyWeapon = fixture.Condition(9001);
@@ -159,8 +161,8 @@ public sealed partial class DaggerfallEquipmentWearTests
         IReadOnlyList<IProductFact> facts = fixture.RunEnemyAttack();
 
         // The covering shield takes the defence's wear, and it does not excuse the swing's own weapon:
-        // one accepted hit still costs both items their single unit.
-        Assert.Equal(13, AppliedDamage(facts));
+        // one accepted hit still costs both items their single unit. It absorbs 2 of the rolled 13.
+        Assert.Equal(11, AppliedDamage(facts));
         const int units = 1;
         Assert.Equal(shield - units, fixture.Condition(2001));
         Assert.Equal(cuirass, fixture.Condition(1003));
@@ -182,7 +184,7 @@ public sealed partial class DaggerfallEquipmentWearTests
         fixture.EquipPlayerItem("template-104-iron", 4001, "legs-armor");
         fixture.SetCondition(fixture.PlayerItem(4001), 1);
         // A body roll of 17 is the classic table's legs.
-        fixture.Script(body: 17, critical: 50, hit: 1, damage: 15);
+        fixture.Script(body: 17, damage: 15);
 
         IReadOnlyList<IProductFact> facts = fixture.RunEnemyAttack();
 
@@ -203,7 +205,7 @@ public sealed partial class DaggerfallEquipmentWearTests
     {
         using WearFixture fixture = new();
         fixture.EquipEnemyWeapon("iron-longsword", 9001);
-        fixture.Script(body: 9, critical: 50, hit: 1, damage: 15);
+        fixture.Script(body: 9, damage: 15);
         UniqueItem cuirass = fixture.PlayerItem(1003);
         fixture.SetCondition(cuirass, 1);
 
@@ -217,7 +219,7 @@ public sealed partial class DaggerfallEquipmentWearTests
 
         // A second accepted hit finds the worn-out armour gone from the struck body part, so it breaks
         // nothing again: exactly one break came out of the item that reached zero.
-        fixture.Script(body: 9, critical: 50, hit: 1, damage: 15);
+        fixture.Script(body: 9, damage: 15);
         int weaponBefore = fixture.Condition(9001);
 
         // A later admitted step clears the enemy's swing cooldown.
@@ -321,6 +323,7 @@ public sealed partial class DaggerfallEquipmentWearTests
         private readonly DaggerfallEquipmentMoves _playerMoves;
         private readonly DaggerfallItemConditionService _itemCondition;
         private readonly SpatialMovementSystem _spatial;
+        private readonly SpatialFake _contact;
 
         internal DaggerfallDefinitions Definitions { get; }
         internal MechanicsEquipmentCoordinator PlayerEquipment { get; }
@@ -362,35 +365,47 @@ public sealed partial class DaggerfallEquipmentWearTests
             _authored[DaggerfallActorIdentity.PlayerEntityId] = playerDefinition;
             _authored[Enemy] = brigand;
             _actorEquipment[Enemy] = BuildEquipment(enemy.Actor.Entity, enemy.Actor, out _);
+            DaggerfallComposedSeams seams = DaggerfallSeamSelection.Default.Build(new DaggerfallSeamInputs(Definitions, () => null, _random,
+                id => id == DaggerfallActorIdentity.PlayerEntityId ? PlayerEquipment.Read() : _actorEquipment[id].Read(),
+                id => id == DaggerfallActorIdentity.PlayerEntityId ? _actors.Player.Stats : _actors.TryGet(id, out ActorState actor) ? actor.Stats : null,
+                () => 0), DaggerfallContactTuning.Default);
             _combat = new DaggerCombatRules(_random, _actors, PlayerEquipment, _ => null, _itemInstances, Definitions, _authored,
-                CombatCollaborators.Targeting(_actors, _authored, out _spatial),
-                skillUses: _ => { }, playerBiographyAvoidHit: () => 0,
+                CombatCollaborators.Targeting(_actors, _authored, out _spatial, out _contact),
+                skillUses: _ => { },
                 actorEquipment: id => _actorEquipment.TryGetValue(id, out MechanicsEquipmentCoordinator? coordinator) ? coordinator : PlayerEquipment,
-                itemCondition: _itemCondition, rules: new CombatResolution(), adrenalineRush: _ => default,
-                playerPosition: () => new WorldPoint(0f, 0f, 0f), character: () => null, playerSwing: () => DaggerfallSwingDirection.None,
-                coverBlocksShot: (_, _) => false, armorValueModifier: () => 0,
+                itemCondition: _itemCondition, rules: new CombatResolution(),
+                playerPosition: () => new WorldPoint(0f, 0f, 0f), character: () => null,
                 deliverWeaponPoison: (_, _) => throw new InvalidOperationException("This fixture coats no weapon."),
                 attackChanceModifier: () => 0,
                 transformActor: (_, target, _, _, _) => new DaggerfallWabbajackResult(DaggerfallWabbajackOutcome.InvalidTarget, target),
                 magicDefense: _ => DaggerfallMagicDefense.None, physicalAttacksBlocked: _ => false,
                 molagBalStrike: molagBalStrike ?? ((_, _, _, _, _, _, _) => throw new InvalidOperationException("This fixture was given no Mace of Molag Bal transfer.")),
                 itemStrike: (_, _, _, damage) => damage,
-                monsterHit: _ => { }, actorGameplayActive: _ => true, actorTeam: id => _authored.GetValueOrDefault(id)?.Team);
+                monsterHit: _ => { }, actorGameplayActive: _ => true, actorTeam: id => _authored.GetValueOrDefault(id)?.Team,
+                mitigation: seams.PhysicalMitigation, delivery: seams.PhysicalDelivery,
+                contact: CombatCollaborators.Contact(_actors, _spatial, () => null),
+                strikePose: actor => CombatCollaborators.StrikePose(_actors, actor, null));
         }
 
-        internal void Script(int body, int critical, int hit, int? damage = null, int? wornWeaponRoll = null, int? wornArmourRoll = null, int? razorSave = null)
+        /// <summary>
+        /// Scripts one connecting blow's draws in order: the body, the deflection a full channel draws (the top
+        /// of the percentile turns nothing aside), the damage roll and its critical draw, then what its
+        /// application draws. A blow with no damage scripted is one that stops at its negation.
+        /// </summary>
+        internal void Script(int body, int deflect = 100, int? damage = null, int? wornWeaponRoll = null, int? wornArmourRoll = null, int? razorSave = null)
         {
-            List<int> draws = [body, critical, hit];
-            if (damage is int rolled) draws.Add(rolled);
+            List<int> draws = [body, deflect];
+            if (damage is int rolled) draws.AddRange([rolled, 100]);
             if (razorSave is int save) draws.Add(save);
             if (wornWeaponRoll is int weapon) draws.Add(weapon);
             if (wornArmourRoll is int armour) draws.Add(armour);
             _scripted.Feed(draws);
         }
 
-        internal void ScriptMonster(int body, int reflex, int critical, int hit, int damage)
+        /// <summary>A monster's natural blow: the first slot lands, the others are evaded, and its blunt deflection turns nothing aside.</summary>
+        internal void ScriptMonster(int body, int reflex, int damage)
         {
-            _scripted.Feed([body, reflex, critical, hit, damage, 100, reflex, reflex]);
+            _scripted.Feed([body, reflex, damage, 100, 100, 100, 100]);
         }
 
         internal void ReplaceActor(long entityId, DaggerfallActorDefinition definition) => _authored[entityId] = definition;
@@ -465,6 +480,7 @@ public sealed partial class DaggerfallEquipmentWearTests
         internal IReadOnlyList<IProductFact> RunPlayerAttack(bool requireAccepted = true, Action? beforeImpact = null)
         {
             FactBuffer<IProductFact> facts = new();
+            _contact.OverlapContactsResult = _ => TestSessions.Touching(_actors.Get(Enemy).Actor.Entity.Value);
             bool accepted = _combat.Execution.Start(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, Enemy, 5, 9, .125d, Delayed: beforeImpact is not null), facts);
             Assert.Equal(requireAccepted, accepted);
             if (accepted && beforeImpact is not null)
@@ -478,10 +494,14 @@ public sealed partial class DaggerfallEquipmentWearTests
         internal IReadOnlyList<IProductFact> RunEnemyAttack(ulong step = 9, bool retireBeforeImpact = false)
         {
             FactBuffer<IProductFact> facts = new();
+            _contact.OverlapContactsResult = _ => TestSessions.Touching(_actors.Player.Actor.Entity.Value);
             AttackRequest request = new(Enemy, DaggerfallActorIdentity.PlayerEntityId, 5, step, .125d, Delayed: true);
             Assert.True(_combat.Execution.Start(request, facts));
             if (retireBeforeImpact) _actors.Entities.Destroy(ActorsState.Identity(Enemy));
             _combat.Execution.ApplyImpacts([new AttackImpactNotice(Enemy, DaggerfallActorIdentity.PlayerEntityId, 5, step, Expired: false)], 5, facts);
+            // The blow lands once the enemy's published wind-up has passed.
+            for (ulong windUp = 0; windUp <= 4; windUp++)
+                _combat.LandDueImpacts(5, step + windUp, facts);
             return Delivered(facts);
         }
 

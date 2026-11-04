@@ -11,11 +11,3 @@ internal interface IDaggerfallHarmPresentation
 {
     DaggerfallOutcomeCue? SpellOutcomeCue(DaggerfallCastOutcome outcome);
 }
-
-/// <summary>Classic presentation sounds a spell's release and its effects, never a negated effect's outcome.</summary>
-internal sealed class DaggerfallClassicHarmPresentation : IDaggerfallHarmPresentation
-{
-    internal static DaggerfallClassicHarmPresentation Instance { get; } = new();
-    private DaggerfallClassicHarmPresentation() { }
-    public DaggerfallOutcomeCue? SpellOutcomeCue(DaggerfallCastOutcome outcome) => null;
-}

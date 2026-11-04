@@ -81,7 +81,8 @@ harm source can use:
 1. **Delivery**: `TryHitEvent` is the pre-contact admission a ruleset can use for
    a to-hit roll; `ContactEvent` records whether the harm reached this target.
    The delivery owner supplies the base contact answer (an admitted target, a
-   collision). An admission refusal is final: no contact is raised.
+   collision). An admission refusal is final: no contact is raised. Daggerfall
+   has no to-hit roll, so it uses no admission: contact alone decides.
 2. **Mitigation**: `NegationEvent` decides before calculation whether the
    target turns the whole harm on a typed `HarmChannelId` away (`HarmNegation`:
    immune, deflected, absorbed or resisted), so a negated harm is never
@@ -132,29 +133,27 @@ manifests and refuses an unknown variant, one for another ruleset, or two
 claiming one seam; `ResolvedCompositionIdentity.Variants` records the set, and
 the Host refuses to load a save under a different set. Daggerfall declares its
 seams in `DaggerfallRulesSeams`, each with one owner interface; session
-composition builds the selected variant's owner or classic's. The first variant,
-`daggerfall.contact` (bundle `daggerfall.contact`), claims physical delivery and
-mitigation: no to-hit roll, swings and arrows harm whoever they physically meet,
-and targets deflect or absorb by channel through its own tuning profile. It
-also claims the player guard seam: holding the product's `block` intent raises a
-guard that costs stamina and adds deflection, stays down for a swing's whole
-strike, and keeps action-driven time running while it rises, holds or settles;
-classic's guard owner reads no input at all. Worn armor enchantments shift what
-the player's armor absorbs, and a connect trains the weapon skill even when it
-is deflected. Its blows present four outcomes through the classic presentation
-owners: a whiff (`AttackWhiffedFact`, the swing alone), a deflection or whole
-absorption (`AttackNegatedFact`, a parry clang or an unpitched hit), and a landed
-hit whose `AttackHitFact.Mitigated` names what was deflected and absorbed. Its
-enemy engagement seam owner closes melee enemies to a tuned fraction of their
-reach before they swing; its delivery publishes each enemy swing's wind-up
-(`EnemyAttackTelegraphFact`) and lands the blow no sooner, and its archers lead
-a moving target and hold a shot another body or the world would stop. Its touch delivery seam owner sends a touch spell to every
-actor its touch volume contacts at the cast frame, and a touch that meets no one
-is still released and misses; classic's owner keeps the short capsule pick and
-the enemy behavior's admitted target. A variant composes all of its owners together, so they can
-share state such as the guard its mitigation reads. Additive
-deviations stay contributions to the shared RuleEvents, so effects and
-enchantments work under every variant.
+composition builds the selected variant's owner, or the ruleset's default. A
+variant composes all of its owners together, so they can share state such as a
+guard its mitigation reads. Additive deviations stay contributions to the shared
+RuleEvents, so effects and enchantments work under every variant.
+
+Daggerfall's default physical owners are the contact rules (DEC-12): no to-hit
+roll, swings and arrows harm whoever they physically meet, and targets deflect
+or absorb by channel. Holding the product's `block` intent raises a guard that
+costs stamina and adds deflection, stays down for a swing's whole strike, and
+keeps action-driven time running while it rises, holds or settles. Worn armor
+enchantments shift what the player's armor absorbs, and a connect trains the
+weapon skill even when it is deflected. Blows present four outcomes: a whiff
+(`AttackWhiffedFact`, the swing alone), a deflection or whole absorption
+(`AttackNegatedFact`, a parry clang or an unpitched hit), and a landed hit whose
+`AttackHitFact.Mitigated` names what was deflected and absorbed. Melee enemies
+close to a tuned fraction of their reach before they swing; each enemy swing
+publishes its wind-up (`EnemyAttackTelegraphFact`) and lands no sooner, and
+archers lead a moving target and hold a shot another body or the world would
+stop. A touch spell reaches every actor its touch volume contacts at the cast
+frame, and a touch that meets no one is still released and misses. The
+[contact rules](combat-contact-rules.md) record each owner and its tuning.
 
 `FactBuffer.Deliver` detaches a stable batch. Facts appended during reactions wait
 for the next delivery. A throwing reaction does not requeue already applied
@@ -175,9 +174,9 @@ or payment/transfer must succeed as a whole. A quote may need its funds or item
 checked when accepted. These do not establish a baseline proposal/accept/commit
 protocol, revision guard or whole-state snapshot for every action.
 
-Timing remains deliberate product policy. Attacks roll at admission. A player
-swing with a target applies on the weapon's classic hit frame and an empty swing
-resolves immediately; enemy attacks apply at the authored damage marker.
+Timing remains deliberate product policy. An attack spends its costs at
+admission and is decided at impact: a player swing, aimed or not, resolves by
+contact on its hit frame; enemy attacks apply at the authored damage marker.
 Interrupting delivery retains charged costs/cooldown. Pending strikes are
 transient on load; remaining cooldown is restored onto the new timeline. Keep
 keyed gameplay RNG and admitted-step catch-up semantics. Consult the

@@ -77,7 +77,7 @@ public sealed class ItemSoulEffectsSessionTests
         Trap(s, f.Enemy, 100); AddGem(s, f, "melee-gem");
         var health = s.State.Actors.Get(f.Enemy).Stats.GetTrack(TrackId.Parse("health")); health.SetCurrent(1);
         s.State.Kit.Rules.RegisterAction(s.DefinitionsByActor[1].ActionId!, new LethalStrike());
-        s.ResolveExplicitMelee(new(1, f.Enemy, 1, 10000, .125)); f.Update();
+        s.Strike(new(1, f.Enemy, 1, 10000, .125)); f.Update();
         Assert.True(s.State.Actors.Get(f.Enemy).IsDefeated);
         Assert.DoesNotContain(s.State.Effects.Active, effect => effect.Definition.Key == "soul-trap");
         Assert.Contains("Soul trapped", s.Presentation.LastOutcome);
@@ -90,7 +90,6 @@ public sealed class ItemSoulEffectsSessionTests
 
     private sealed class LethalStrike : ICombatContribution
     {
-        public void Hit(TryHitEvent hit) { hit.Hit = true; hit.Chance = 100; hit.Roll = 1; }
         public void Damage(DamageEvent damage) { damage.Damage = 1000; }
     }
     [Fact]

@@ -120,8 +120,10 @@ public sealed class QuestSocialTests
             .Select(target => new PerceptionPair(observer.Entity, target.Entity, Vector3.Distance(observer.Origin, target.Center), 1, PerceptionPairKind.Visible, 1))).ToArray());
         f.Update();
         ulong marker = checked((ulong)f.Inputs.MobileSprites[146].AttackSequences[0].SourceFrames.ToList().IndexOf(-1) + 1);
+        session.Touches(DaggerfallActorIdentity.PlayerEntityId);
         f.Appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: marker);
-        for (int step = 0; step < 10 && session.State.Crime.ScriptedCrime is not null; step++)
+        // The guard's blow lands when its wind-up ends.
+        for (ulong step = 0; step < WindUpEnd(10) && session.State.Crime.ScriptedCrime is not null; step++)
         {
             var current = session.State.PlayerControl.Position!.Value;
             session.State.Actors.Get(guard).ApplyPose(new(new(current.X, current.Y, current.Z - .1f), MathF.PI));
@@ -151,7 +153,7 @@ public sealed class QuestSocialTests
     }
 
     private sealed class ForceHit : ICombatContribution
-    { public void Hit(TryHitEvent value) => value.Hit = true; public void Damage(DamageEvent value) => value.Damage = 1; }
+    { public void Damage(DamageEvent value) => value.Damage = 1; }
     private static DaggerfallQuestInstanceSave Quest(DaggerfallSession s) => s.State.Quests.Capture().Instances.Single();
     private static void Advance(DaggerfallSession s) => s.State.Quests.Advance(s.State.Variables, DaggerfallCalendar.Start);
     private static void SetTask(DaggerfallSession s, string name)

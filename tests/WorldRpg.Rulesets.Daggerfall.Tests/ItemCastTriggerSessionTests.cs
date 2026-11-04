@@ -279,10 +279,11 @@ public sealed class ItemCastTriggerSessionTests
     {
         using var f = new SanguineRoseSessionTests.Fixture(magicItemKey: "magic-item.0046");
         var s = f.Session; Equip(s, f.Item, weapon: true);
-        var contribution = new Attack(hit, damage);
+        var contribution = new Attack(damage);
         s.State.Kit.Rules.RegisterAction(TestPayload.Definitions.RequireActor(new DaggerfallActorId("player")).ActionId!, contribution);
         long sequence = s.Casting.NextSequence; int condition = f.Condition;
-        s.ResolveExplicitMelee(new(1, f.Enemy, 1, 10000, .125));
+        if (hit) s.Strike(new(1, f.Enemy, 1, 10000, .125));
+        else s.ResolveExplicitMelee(new(1, f.Enemy, 1, 10000, .125));
         Assert.Equal(hit && damage > 0 ? sequence + 2 : sequence, s.Casting.NextSequence);
         if (hit && damage > 0)
         {
@@ -299,9 +300,10 @@ public sealed class ItemCastTriggerSessionTests
     {
         using var f = new SanguineRoseSessionTests.Fixture(magicItemKey: "magic-item.0046");
         var s = f.Session; Equip(s, f.Item, weapon: true);
-        s.State.Kit.Rules.RegisterAction(TestPayload.Definitions.RequireActor(new DaggerfallActorId("player")).ActionId!, new Attack(true, 5));
+        s.State.Kit.Rules.RegisterAction(TestPayload.Definitions.RequireActor(new DaggerfallActorId("player")).ActionId!, new Attack(5));
         var facts = new FactBuffer<IProductFact>();
         long next = s.Casting.NextSequence;
+        s.Touches(f.Enemy);
         Assert.True(s.State.Kit.AttackExecution.Start(new(1, f.Enemy, 1, 1000, .125, true), facts));
         Assert.Equal(next, s.Casting.NextSequence);
         if (unequip) Assert.Equal(EquipmentMoveOutcome.Applied, s.EquipmentMoves.MoveToGrid(f.Item, 49).Outcome);
@@ -365,9 +367,8 @@ public sealed class ItemCastTriggerSessionTests
         Assert.True(result.Outcome == EquipmentMoveOutcome.Applied, result.Detail);
         if (weapon) TestSessions.FinishEquipmentDelay(s);
     }
-    private sealed class Attack(bool hit, int damage) : ICombatContribution
+    private sealed class Attack(int damage) : ICombatContribution
     {
-        public void Hit(TryHitEvent value) => value.Hit = hit;
         public void Damage(DamageEvent value) => value.Damage = damage;
     }
 }

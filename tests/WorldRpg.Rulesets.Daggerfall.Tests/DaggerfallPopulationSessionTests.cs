@@ -47,7 +47,7 @@ public sealed class DaggerfallPopulationSessionTests
         sourceActor!.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60;
         for (ulong step = 1; step < 16 && !sourceActor.IsDefeated; step++)
-            session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, sourceNpc.DurableId, 1, step, .125));
+            session.Strike(new ExplicitMeleeRequest(1, sourceNpc.DurableId, 1, step, .125));
         Assert.True(sourceActor.IsDefeated);
         Assert.True(session.Corpses.ContainsKey(sourceNpc.DurableId));
         int before = PopulationTextureOpens(fixture.Appearance);
@@ -269,7 +269,7 @@ public sealed class DaggerfallPopulationSessionTests
         actor.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60;
         for (ulong step = 1; step < 16 && !actor.IsDefeated; step++)
-            session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, id, 1, step, .125));
+            session.Strike(new ExplicitMeleeRequest(1, id, 1, step, .125));
         Assert.True(actor.IsDefeated);
         Assert.True(session.Corpses.ContainsKey(id));
 

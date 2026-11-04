@@ -1,6 +1,5 @@
 using WorldRpg.Kit.Combat;
 using WorldRpg.Rulesets.Daggerfall.Content;
-using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -22,24 +21,4 @@ internal interface IDaggerfallPhysicalMitigation
 
     /// <summary>What the target deflects, absorbs or resists of the calculated harm.</summary>
     void Mitigate(MitigationEvent mitigation, DaggerfallPhysicalHarm harm);
-}
-
-/// <summary>
-/// Classic physical mitigation: the weapon-material requirement as immunity, decided before the damage
-/// roll as the donor rejects the attempt before rolling. A player whose racial override requires silver
-/// is cut only by silver or better. Classic has no physical deflection or absorption; armor lowers the
-/// chance to hit instead.
-/// </summary>
-internal sealed class DaggerfallClassicPhysicalMitigation(Func<DaggerfallCharacterState?> character) : IDaggerfallPhysicalMitigation
-{
-    public void Negate(NegationEvent negation, DaggerfallPhysicalHarm harm)
-    {
-        string? minimum = harm.TargetId == DaggerfallActorIdentity.PlayerEntityId && character()?.RacialOverrides?.Current?.RequiresSilver == true
-            ? "silver" : harm.Target.MinimumMaterial;
-        if (harm.WeaponMaterial is not null
-            && !DaggerfallFormulaPolicy.CanHitMaterial(harm.WeaponMaterial, minimum, DaggerfallFormulaPolicy.ClassicWeaponMaterialRanks))
-            negation.Negation = HarmNegation.Immune;
-    }
-
-    public void Mitigate(MitigationEvent mitigation, DaggerfallPhysicalHarm harm) { }
 }

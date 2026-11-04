@@ -258,9 +258,9 @@ public sealed class DaggerfallEnemyMagicSessionTests
     }
 
     [Fact]
-    public void A_contact_touch_that_meets_no_one_is_one_paid_admitted_cast_with_no_physical_fallback_across_the_catch_up_window()
+    public void A_touch_that_meets_no_one_is_one_paid_admitted_cast_with_no_physical_fallback_across_the_catch_up_window()
     {
-        using Fixture fixture = new(contact: true);
+        using Fixture fixture = new();
         DaggerfallSession session = fixture.Session;
         WorldPoint playerPosition = session.State.PlayerControl.Position
             ?? throw new InvalidOperationException("The fixture player has no position.");
@@ -338,8 +338,7 @@ public sealed class DaggerfallEnemyMagicSessionTests
         internal SpatialFake Spatial { get; }
         internal PerceptionFake Perception { get; }
 
-        /// <param name="contact">Whether the game runs under the contact + mitigation variant's bundle.</param>
-        internal Fixture(bool contact = false)
+        internal Fixture()
         {
             string root = TestData.RepositoryRoot;
             DaggerfallDefinitions definitions = TestPayload.Definitions;
@@ -350,8 +349,7 @@ public sealed class DaggerfallEnemyMagicSessionTests
             Perception = PerceptionFake.Create();
             EngineContextFake engine = EngineContextFake.Create(content, Spatial.Service,
                 new AppearanceFake(releases), Perception.Service);
-            DaggerfallSessionComposition composition = contact ? ContactComposition(inputs) : new(definitions, inputs, DaggerfallTuning.Defaults);
-            Session = DaggerfallSession.StartNew(engine.Context, composition);
+            Session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         }
 
         public void Dispose() => Session.Dispose();

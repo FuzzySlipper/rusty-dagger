@@ -367,7 +367,6 @@ public sealed class DaggerfallCharacterStateTests
 
         Assert.Equal(-5, selected.Modifiers.AvoidHit);
         Assert.Equal(0, selected.Modifiers.DiseaseResistance);
-        Assert.Equal(15, DaggerfallFormulaPolicy.CalculateHitChance(60, 0, 45, 50, 45, 50, 0, selected.Modifiers.AvoidHit));
         DaggerfallSocialState social = new(definitions.Factions);
         DaggerfallFactionDefinition faction = definitions.Factions.Factions.Values.First(value => value.SocialGroup >= 0);
         int baseline = social.ReactionForFaction(faction.Id).Value;

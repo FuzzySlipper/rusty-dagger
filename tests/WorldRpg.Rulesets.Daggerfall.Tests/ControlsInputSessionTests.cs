@@ -60,6 +60,7 @@ public sealed class ControlsInputSessionTests
         double before = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
         double staminaBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current;
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
+        session.Touches(2000);
         ProductInputEvent pressed = Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack");
         session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d), [pressed, pressed]));
         // Two copies of one press are one admitted swing and one stamina charge, and the damage itself
@@ -387,7 +388,7 @@ public sealed class ControlsInputSessionTests
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         double healthBefore = session.State.Actors.Get(2000).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current;
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
-        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
+        session.Strike(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
         Assert.True(session.State.Actors.Get(2000).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current < healthBefore);
     }
 
@@ -648,7 +649,7 @@ public sealed class ControlsInputSessionTests
         AimActivationAt(session, actorId);
         session.State.Actors.Get(actorId).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60;
-        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, actorId, 1, 2, .125));
+        session.Strike(new ExplicitMeleeRequest(1, actorId, 1, 2, .125));
         Assert.True(session.State.Actors.Get(actorId).IsDefeated);
         var corpse = session.Corpses[actorId];
         Assert.True(corpse.IsRegistered);
@@ -695,7 +696,7 @@ public sealed class ControlsInputSessionTests
         DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
-        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
+        session.Strike(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
         AimActivationAt(session, 2000);
         CorpseContainer corpse = session.Corpses[2000];
         session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5, Stack: InventoryStackId.Parse("test.loot.3486"))]);

@@ -12,8 +12,10 @@ using Rusty.Engine.Mechanics;
 using WorldRpg.Host;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.Combat;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
@@ -248,7 +250,6 @@ internal static class TestSessions
         || relative.StartsWith("worldrpg/bundles/", StringComparison.Ordinal)
         || relative.StartsWith("worldrpg/tuning/", StringComparison.Ordinal)
         || relative.StartsWith("worldrpg/tuning-payloads/", StringComparison.Ordinal)
-        || relative.StartsWith("worldrpg/variant-tuning-payloads/", StringComparison.Ordinal)
         || relative.StartsWith("worldrpg/media/", StringComparison.Ordinal)
             && string.Equals(Path.GetExtension(relative), ".json", StringComparison.OrdinalIgnoreCase);
 
@@ -582,22 +583,11 @@ internal static class TestSessions
     internal static DaggerfallSiteAppearance.EffectVisual Effect(DaggerfallSiteAppearance presentation) => Assert.Single((List<DaggerfallSiteAppearance.EffectVisual>)typeof(DaggerfallSiteAppearance).GetField("effects", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(presentation)!);
     internal static DaggerfallSiteAppearance.ViewmodelVisual Viewmodel(DaggerfallSiteAppearance presentation) => Assert.IsType<DaggerfallSiteAppearance.ViewmodelVisual>(typeof(DaggerfallSiteAppearance).GetField("viewmodel", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(presentation));
 
-    /// <summary>A session composition under the <c>daggerfall.contact</c> bundle, with its compiled variant's owners.</summary>
-    internal static DaggerfallSessionComposition ContactComposition(DaggerfallSiteProfile inputs)
-    {
-        ResolvedGameComposition resolved = Resolve(FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.contact"),
-            [.. WorldRpg.Rulesets.Daggerfall.Variants.DaggerfallVariants.All.Select(variant => variant.Manifest)]).RequireComposition();
-        return new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults, resolved.Identity)
-        {
-            Seams = DaggerfallSeamSelection.From(resolved.Variants, WorldRpg.Rulesets.Daggerfall.Variants.DaggerfallVariants.All),
-        };
-    }
-
-    internal static (DaggerfallSession Session, AppearanceFake Appearance, PerceptionFake Perception) VisibleEnemySession(List<string> releases, double distance = 1d, Action<EngineContextFake>? engineCreated = null, bool contact = false) =>
-        VisibleEnemySession(releases, out _, distance, engineCreated, contact);
+    internal static (DaggerfallSession Session, AppearanceFake Appearance, PerceptionFake Perception) VisibleEnemySession(List<string> releases, double distance = 1d, Action<EngineContextFake>? engineCreated = null) =>
+        VisibleEnemySession(releases, out _, distance, engineCreated);
 
     /// <summary>The same visible-enemy session, also handing back the spatial fake that answers its contact queries.</summary>
-    internal static (DaggerfallSession Session, AppearanceFake Appearance, PerceptionFake Perception) VisibleEnemySession(List<string> releases, out SpatialFake spatial, double distance = 1d, Action<EngineContextFake>? engineCreated = null, bool contact = false, IRandomService? random = null)
+    internal static (DaggerfallSession Session, AppearanceFake Appearance, PerceptionFake Perception) VisibleEnemySession(List<string> releases, out SpatialFake spatial, double distance = 1d, Action<EngineContextFake>? engineCreated = null, IRandomService? random = null)
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
@@ -610,8 +600,47 @@ internal static class TestSessions
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service, random: random);
         engineCreated?.Invoke(engine);
-        return (DaggerfallSession.StartNew(engine.Context, contact ? ContactComposition(inputs) : new(definitions, inputs, DaggerfallTuning.Defaults)), appearance, perception);
+        return (DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)), appearance, perception);
     }
+
+    /// <summary>The spatial fake a session was composed over, which answers its contact queries.</summary>
+    internal static SpatialFake Spatial(this DaggerfallSession session) =>
+        (SpatialFake)(object)((IEngineContext)typeof(DaggerfallSession).GetField("_engine", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(session)!).Spatial;
+
+    /// <summary>The swing and touch volumes of a session meet the given actors' bodies.</summary>
+    internal static void Touches(this DaggerfallSession session, params long[] actors)
+    {
+        ulong[] entities = [.. actors.Select(actor => (actor == DaggerfallActorIdentity.PlayerEntityId ? session.State.Actors.Player.Actor : session.State.Actors.Get(actor).Actor).Entity.Value)];
+        // Contact at the query's own origin, so a fixture's other geometry occludes nothing.
+        session.Spatial().OverlapContactsResult = request => Touching(request.Start.Translation, entities);
+    }
+
+    /// <summary>Resolves an explicit strike whose swing volume touches its target, as standing in reach of it would.</summary>
+    internal static void Strike(this DaggerfallSession session, ExplicitMeleeRequest request)
+    {
+        SpatialFake spatial = session.Spatial();
+        Func<SpatialContactQueryRequest, SpatialContactResult> answer = spatial.OverlapContactsResult;
+        if (session.State.Actors.TryGet(request.TargetId, out _)) session.Touches(request.TargetId);
+        try { session.ResolveExplicitMelee(request); }
+        finally { spatial.OverlapContactsResult = answer; }
+    }
+
+    /// <summary>The last admitted step of the published wind-up of a swing decided at <paramref name="decided"/>, at the sixty steps a second of <see cref="OuterUpdate"/>.</summary>
+    internal static ulong WindUpEnd(ulong decided) => decided + (ulong)Math.Ceiling(DaggerfallTuning.Defaults.Contact.EnemyWindUpSeconds * 60d - 1e-9);
+
+    /// <summary>Runs ordinary updates from <paramref name="from"/> through the end of a swing's wind-up, where its blow lands.</summary>
+    internal static void RunWindUp(DaggerfallSession session, ulong from, ulong decided)
+    {
+        for (ulong step = from; step <= WindUpEnd(decided); step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
+    }
+
+    /// <summary>A contact result touching the given entities, in order.</summary>
+    internal static SpatialContactResult Touching(params ulong[] entities) => Touching(Vector3.Zero, entities);
+
+    /// <summary>A contact result touching the given entities at one point.</summary>
+    internal static SpatialContactResult Touching(Vector3 point, ulong[] entities) => new(
+        entities.Select(entity => new SpatialContact(SpatialHitKind.Entity, entity, 0, 0, 0, 0, 0, point, Vector3.Zero, 0d, .1d, false)).ToArray(),
+        false, false, 1, 1);
 
     internal static long PlayerHealth(DaggerfallSession session) => session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).ValueInt64;
 

@@ -162,7 +162,7 @@ public sealed class QuestPlacementActionTests
         {
             state.Kit.Rules.RegisterAction(f.Session.DefinitionsByActor[1].ActionId!, new DefeatingHit());
             actor.Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).SetCurrent(1);
-            f.Session.ResolveExplicitMelee(new(1, f.Enemy, 1, 10000, .125));
+            f.Session.Strike(new(1, f.Enemy, 1, 10000, .125));
             f.Update();
             Assert.True(actor.IsDefeated);
         }
@@ -356,8 +356,7 @@ public sealed class QuestPlacementActionTests
 
     private sealed class DefeatingHit : ICombatContribution
     {
-        public void Hit(TryHitEvent value) => value.Hit = true;
-        public void Damage(DamageEvent value) => value.Damage = 1;
+        public void Damage(DamageEvent value) => value.Damage = 10000;
     }
 
     private static DaggerfallQuestInstanceSave Start(SanguineRoseSessionTests.Fixture f, DaggerfallDefinitions definitions, DaggerfallSiteProfile profile)

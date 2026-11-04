@@ -20,11 +20,11 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
 /// The weapon, unarmed and enemy attack-set damage policy at the rules boundary the player swing
-/// and the AI attack capability actually enter: <see cref="DaggerCombatRules.TryPrepare"/>. Every
-/// scenario drives the one admitted resolution, and the scripted random records each keyed draw's
-/// requested range in order, so the ranges are the evidence that the donor's draw discipline —
-/// gates that skip their roll, reflex-gated slots, backstab rolls only above level one — survived
-/// into the product rather than being approximated by a flat roll.
+/// and the AI attack capability actually enter: an admitted attack whose blow connects with its
+/// target at the hit frame. The scripted random records each keyed draw's requested range and salt
+/// in order, so they are the evidence that the draw discipline — gates that skip their roll,
+/// reflex-gated slots, backstab rolls only above level one — survived into the product rather than
+/// being approximated by a flat roll.
 /// </summary>
 public sealed class DaggerCombatDamagePolicyTests
 {
@@ -38,9 +38,9 @@ public sealed class DaggerCombatDamagePolicyTests
         fixture.NpcHandToHandSkill(100);
         fixture.NpcStrength(50);
         fixture.EquipNpcWeapon(2, "iron-longsword", 9001);
-        fixture.Script(body: 3, critical: 1, hit: 1, damage: 7);
+        fixture.Script(body: BareFeet, damage: 7);
 
-        PreparedResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+        BlowResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
 
         Assert.True(result.Admitted);
         Assert.True(result.Outcome.Hit);
@@ -50,17 +50,17 @@ public sealed class DaggerCombatDamagePolicyTests
     }
 
     [Fact]
-    public void A_variants_physical_mitigation_owner_replaces_classic_mitigation_for_the_prepared_attack()
+    public void A_variants_physical_mitigation_owner_replaces_the_default_mitigation_for_the_blow()
     {
         // The same armed brigand swing as above, under a whole-owner mitigation seam that absorbs two and
-        // does not apply classic's material requirement.
+        // neither deflects nor applies the default material requirement.
         RecordingMitigation absorbing = new(absorb: 2);
         using DamagePolicyFixture fixture = new(mitigation: absorbing);
         fixture.NpcStrength(50);
         fixture.EquipNpcWeapon(2, "iron-longsword", 9001);
-        fixture.Script(body: 3, critical: 1, hit: 1, damage: 7);
+        fixture.Script(body: BareFeet, deflect: null, damage: 7);
 
-        PreparedResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+        BlowResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
 
         Assert.Equal((true, true, 4), (result.Outcome.Hit, result.Outcome.Allowed, result.Outcome.Damage));
         DaggerfallPhysicalHarm harm = Assert.Single(absorbing.Mitigated);
@@ -69,8 +69,8 @@ public sealed class DaggerCombatDamagePolicyTests
 
         using DamagePolicyFixture negated = new(mitigation: new RecordingMitigation(negate: true));
         negated.EquipNpcWeapon(2, "iron-longsword", 9001);
-        negated.Script(body: 3, critical: 1, hit: 1);
-        PreparedResolution turned = negated.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+        negated.Script(body: BareFeet, deflect: null);
+        BlowResolution turned = negated.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
         Assert.Equal((true, false, 0), (turned.Outcome.Hit, turned.Outcome.Allowed, turned.Outcome.Damage));
         Assert.DoesNotContain(turned.Ranges, range => range == (2, 16)); // A negated harm is never rolled.
     }
@@ -101,17 +101,6 @@ public sealed class DaggerCombatDamagePolicyTests
         Assert.NotNull(delivery.Operations); // Bind asserts the owner is built once, over the shared operations.
     }
 
-    [Fact]
-    public void Classic_delivery_resolves_an_untargeted_swing_at_admission_and_reports_nothing_in_reach()
-    {
-        using DamagePolicyFixture fixture = new();
-        AttackRequest swing = new(DaggerfallActorIdentity.PlayerEntityId, null, 3, 5, .125d, Delayed: false);
-        IReadOnlyList<IProductFact> started = fixture.StartSwing(swing, out bool admitted);
-        Assert.True(admitted);
-        Assert.False(Assert.Single(started.OfType<PlayerAttackStartedFact>()).WaitsWithoutTarget);
-        Assert.Contains(new AttackRejectedFact(AttackRejection.NoTargetInReach), started);
-    }
-
     private sealed class RecordingDelivery : IDaggerfallPhysicalDelivery
     {
         internal IDaggerfallPhysicalHarmOperations? Operations { get; private set; }
@@ -123,8 +112,6 @@ public sealed class DaggerCombatDamagePolicyTests
             Operations = operations;
             return this;
         }
-        public bool UntargetedSwingsWaitForImpact => true;
-        public bool ImpactsOutliveTheirTarget => false;
         public bool HoldsFire(long archer, long target) => false;
         public void Interrupt(long attacker, ulong generation) { }
         public bool TryPrepare(DaggerfallAdmittedAttack admitted, FactBuffer<IProductFact> facts, out DaggerCombatRules.DaggerfallPreparedAttack prepared)
@@ -139,6 +126,8 @@ public sealed class DaggerCombatDamagePolicyTests
             IReadOnlyDictionary<long, WorldPoint> positions, FactBuffer<IProductFact> facts) { }
         public IReadOnlyList<DaggerfallRangedFlightView> ReadFlights(ulong generation, ulong simulationStep) => [];
         public bool HasPlayerFlight => false;
+        public bool HoldsImpactAt(long target) => false;
+        public void LandDueImpacts(ulong generation, ulong simulationStep, FactBuffer<IProductFact> facts) { }
         public void ClearFlight() { }
         public void RebaseFlight(System.Numerics.Vector3 delta) { }
     }
@@ -167,10 +156,10 @@ public sealed class DaggerCombatDamagePolicyTests
         {
             Attacks = [new DaggerfallAttackRange(1, 8), new(1, 8), new(1, 10)],
         });
-        // Each slot independently passes reflex, critical and hit rolls before drawing damage.
-        fixture.ScriptMonster(0, (50, 1, 4, 100), (50, 1, 5, 100), (50, 1, 6, 100));
+        // Each slot independently passes its reflex gate before drawing damage and its consequence.
+        fixture.ScriptMonster(0, (50, 4, 100), (50, 5, 100), (50, 6, 100));
 
-        PreparedResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+        BlowResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
 
         Assert.True(result.Outcome.Hit);
         Assert.True(result.Outcome.Allowed);
@@ -178,14 +167,15 @@ public sealed class DaggerCombatDamagePolicyTests
         Assert.Equal(
         [
             (0, 19),
-            (1, 100), (1, 100), (1, 100), (1, 8), (1, 100),
-            (1, 100), (1, 100), (1, 100), (1, 8), (1, 100),
-            (1, 100), (1, 100), (1, 100), (1, 10), (1, 100),
+            (1, 100), (1, 8), (1, 100),
+            (1, 100), (1, 8), (1, 100),
+            (1, 100), (1, 10), (1, 100),
+            (1, 100), // A natural blow is blunt: its deflection is drawn on the rolled damage.
         ], result.Ranges);
     }
 
     [Fact]
-    public void A_slot_the_targets_reflexes_evade_never_reaches_its_hit_or_damage_roll()
+    public void A_slot_the_targets_reflexes_evade_never_reaches_its_damage_roll()
     {
         using DamagePolicyFixture fixture = new();
         fixture.ReplaceActor(2, Definitions.RequireActor(new DaggerfallActorId("rat")) with
@@ -194,9 +184,9 @@ public sealed class DaggerCombatDamagePolicyTests
         });
         // Slot 1's reflex roll (51) beats the 50 gate; the recorded sequence jumps from that roll
         // straight to slot 2's reflex roll with no (1, 8) damage draw in between.
-        fixture.ScriptMonster(0, (50, 1, 4, 100), (51, null, null, null), (50, 1, 6, 100));
+        fixture.ScriptMonster(0, (50, 4, 100), (51, null, null), (50, 6, 100));
 
-        PreparedResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+        BlowResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
 
         Assert.Equal(10, result.Outcome.Damage);
         // Slot 0's damage (1, 8) is the only (1, 8) draw: slot 1 went from its reflex roll straight
@@ -204,14 +194,15 @@ public sealed class DaggerCombatDamagePolicyTests
         Assert.Equal(
         [
             (0, 19),
-            (1, 100), (1, 100), (1, 100), (1, 8), (1, 100),
+            (1, 100), (1, 8), (1, 100),
             (1, 100),
-            (1, 100), (1, 100), (1, 100), (1, 10), (1, 100),
+            (1, 100), (1, 10), (1, 100),
+            (1, 100),
         ], result.Ranges);
     }
 
     [Fact]
-    public void A_slot_that_misses_the_rerolled_gate_or_has_no_authored_minimum_adds_no_damage_and_no_career_bonus()
+    public void A_slot_its_reflexes_evade_or_with_no_authored_minimum_adds_no_damage_and_no_career_bonus()
     {
         using DamagePolicyFixture fixture = new();
         // The vampire's classic enemy configuration carries the humanoid bonus (bit 0x04), so each
@@ -221,39 +212,40 @@ public sealed class DaggerCombatDamagePolicyTests
             ActionId = "monster-strike",
             Attacks = [new DaggerfallAttackRange(1, 3), new(0, 0), new(1, 3)],
         });
-        // Slot 1 has no authored minimum and stops after its reflex draw; slot 2's rerolled hit
-        // gate (98, above the clamped chance ceiling) refuses it after its reflex roll passed.
-        fixture.ScriptMonster(0, (50, 1, 3, 1_000_000), (50, null, null, null), (50, 98, null, null));
+        // Slot 1 has no authored minimum and stops after its reflex draw; slot 2's reflex roll (51)
+        // evades it before any damage.
+        fixture.ScriptMonster(0, (50, 3, 1_000_000), (50, null, null), (51, null, null));
 
-        PreparedResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+        BlowResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
 
         Assert.Equal(22, result.Outcome.Damage); // (3 + 19) from slot 0 alone
         Assert.Equal(
         [
             (0, 19),
-            (1, 100), (1, 100), (1, 100), (1, 3), (0, 1_000_000),
+            (1, 100), (1, 3), (0, 1_000_000),
             (1, 100), // The zero-minimum slot still draws reflexes.
-            (1, 100), (1, 100), (1, 100),
+            (1, 100),
+            (1, 100),
         ], result.Ranges);
     }
 
     [Fact]
-    public void A_weapon_below_the_target_material_immunity_hits_but_deals_no_damage()
+    public void A_weapon_below_the_target_material_immunity_connects_but_deals_no_damage()
     {
-        // The donor returns before its damage roll when the weapon cannot scratch an immune target;
-        // the product draws the keyed hit first and stops before the damage roll, so an immune
-        // attempt never fabricates a damage draw and never reports a scratch.
+        // The material requirement is settled before deflection and the damage roll, so an immune
+        // connect never fabricates a damage draw and never reports a scratch.
         using DamagePolicyFixture fixture = new();
         fixture.ReplaceActor(2, Definitions.RequireActor(new DaggerfallActorId("rat")) with { MinimumMaterial = "silver" });
-        fixture.Script(body: 0, critical: 1, hit: 1);
+        fixture.Script(body: 0, deflect: null);
 
-        PreparedResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
+        BlowResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false), out IReadOnlyList<IProductFact> facts);
 
         Assert.True(result.Admitted);
         Assert.True(result.Outcome.Hit);
         Assert.False(result.Outcome.Allowed);
         Assert.Equal(0, result.Outcome.Damage);
-        Assert.DoesNotContain(result.Ranges, range => range != (0, 19) && range != (1, 100));
+        Assert.Contains(new AttackRejectedFact(AttackRejection.InsufficientWeaponMaterial), facts);
+        Assert.Equal([(0, 19)], result.Ranges);
     }
 
     [Fact]
@@ -262,13 +254,13 @@ public sealed class DaggerCombatDamagePolicyTests
         using DamagePolicyFixture fixture = new();
         fixture.PutPlayerBehindTarget(2);
         fixture.PlayerBackstabbingSkill(20);
-        fixture.Script(body: 0, critical: 1, hit: 1, damage: 5, backstabRoll: 10);
+        fixture.Script(body: 0, damage: 5, backstabRoll: 10);
 
-        PreparedResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
+        BlowResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
 
         Assert.True(result.Outcome.Hit);
         Assert.Equal(12, result.Outcome.Damage); // (5 - 1 iron) * 3
-        Assert.Equal((1, 100), result.Ranges[^1]);
+        Assert.Contains(CombatRandomKey.BackstabRollSalt, result.Salts);
     }
 
     [Fact]
@@ -277,12 +269,12 @@ public sealed class DaggerCombatDamagePolicyTests
         using DamagePolicyFixture fixture = new();
         fixture.PutPlayerBehindTarget(2, facingAway: false);
         fixture.PlayerBackstabbingSkill(20);
-        fixture.Script(body: 0, critical: 1, hit: 1, damage: 5);
+        fixture.Script(body: 0, damage: 5);
 
-        PreparedResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
+        BlowResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
 
         Assert.Equal(4, result.Outcome.Damage); // 5 - 1 iron, never tripled
-        Assert.Equal(4, result.Ranges.Count);   // body, critical, hit, damage — no backstab roll
+        Assert.DoesNotContain(CombatRandomKey.BackstabRollSalt, result.Salts);
     }
 
     [Fact]
@@ -293,12 +285,12 @@ public sealed class DaggerCombatDamagePolicyTests
         using DamagePolicyFixture fixture = new();
         fixture.PutPlayerBehindTarget(2);
         fixture.PlayerBackstabbingSkill(1);
-        fixture.Script(body: 0, critical: 1, hit: 1, damage: 5);
+        fixture.Script(body: 0, damage: 5);
 
-        PreparedResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
+        BlowResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
 
         Assert.Equal(4, result.Outcome.Damage);
-        Assert.Equal(4, result.Ranges.Count);
+        Assert.DoesNotContain(CombatRandomKey.BackstabRollSalt, result.Salts);
     }
 
     [Fact]
@@ -306,9 +298,9 @@ public sealed class DaggerCombatDamagePolicyTests
     {
         using DamagePolicyFixture fixture = new();
         fixture.PlayerStrength(30); // DamageModifier (30 - 50) / 5 = -4
-        fixture.Script(body: 0, critical: 1, hit: 1, damage: 2);
+        fixture.Script(body: 0, damage: 2);
 
-        PreparedResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
+        BlowResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
 
         Assert.True(result.Outcome.Hit);
         Assert.True(result.Outcome.Allowed);
@@ -316,19 +308,19 @@ public sealed class DaggerCombatDamagePolicyTests
     }
 
     [Fact]
-    public void A_monsters_first_miss_does_not_cancel_later_hits()
+    public void A_monsters_first_evaded_slot_does_not_cancel_later_slots()
     {
         using DamagePolicyFixture fixture = new();
         fixture.ReplaceActor(2, Definitions.RequireActor(new DaggerfallActorId("rat")) with
         {
             Attacks = [new DaggerfallAttackRange(1, 8), new(1, 8), new(1, 10)],
         });
-        fixture.ScriptMonster(0, (1, 100, null, null), (1, 1, 5, 100), (1, 1, 6, 100));
-        PreparedResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+        fixture.ScriptMonster(0, (100, null, null), (1, 5, 100), (1, 6, 100));
+        BlowResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
 
         Assert.True(result.Outcome.Hit);
         Assert.Equal(11, result.Outcome.Damage);
-        Assert.Equal(1, result.Detail.Roll);
+        Assert.Equal(0, result.Body);
     }
 
     [Fact]
@@ -340,68 +332,62 @@ public sealed class DaggerCombatDamagePolicyTests
             Attacks = [new DaggerfallAttackRange(1, 8), new(1, 8), new(1, 10)],
         });
         List<string> order = [];
-        fixture.Contribute(new PhysicalImmunity(order));
-        // Every slot clears its reflex and hit gates; an immune target leaves nothing else to draw.
-        fixture.ScriptMonster(0, (50, 1, null, null), (50, 1, null, null), (50, 1, null, null));
+        fixture.Contribute(new BluntImmunity(order));
+        // Contact and the body draw come first; an immune target leaves nothing else to draw.
+        fixture.Script(body: 0, deflect: null);
 
-        PreparedResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+        BlowResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
 
-        Assert.Equal((true, false, 0), (result.Outcome.Hit, result.Outcome.Allowed, result.Outcome.Damage));
-        Assert.All(result.Ranges, range => Assert.True(range is (0, 19) or (1, 100), $"An immune target drew {range}."));
-        Assert.Equal(["hit", "negate", "hit", "hit", "contact"], order);
+        Assert.Equal((false, 0), (result.Outcome.Allowed, result.Outcome.Damage));
+        Assert.Equal([(0, 19)], result.Ranges);
+        Assert.Equal(["contact", "negate"], order);
     }
 
-    private sealed class PhysicalImmunity(List<string> order) : ICombatContribution
+    private sealed class BluntImmunity(List<string> order) : ICombatContribution
     {
-        public void Hit(TryHitEvent interaction) => order.Add("hit");
         public void Contact(ContactEvent interaction) => order.Add("contact");
         public void Negate(NegationEvent interaction)
         {
             order.Add("negate");
-            if (interaction.Channel == DaggerfallHarmChannels.Physical) interaction.Negation = HarmNegation.Immune;
+            if (interaction.Channel == DaggerfallHarmChannels.Blunt) interaction.Negation = HarmNegation.Immune;
         }
         public void Damage(DamageEvent interaction) => order.Add("damage");
     }
 
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void A_monster_whose_slots_all_fail_reports_a_miss_without_damage(bool evaded)
+    [Fact]
+    public void A_monster_whose_slots_are_all_evaded_connects_for_no_damage()
     {
         using DamagePolicyFixture fixture = new();
         fixture.ReplaceActor(2, Definitions.RequireActor(new DaggerfallActorId("rat")) with
         {
             Attacks = [new DaggerfallAttackRange(1, 8), new(1, 8), new(1, 10)],
         });
-        var slot = (Reflex: (int?)(evaded ? 100 : 1), Hit: evaded ? null : (int?)100, Damage: (int?)null, Consequence: (int?)null);
-        fixture.ScriptMonster(0, slot, slot, slot);
+        fixture.ScriptMonster(0, (100, null, null), (100, null, null), (100, null, null));
         CountingContribution contribution = new();
         fixture.Contribute(contribution);
-        PreparedResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+        BlowResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
 
         Assert.True(result.Admitted);
-        Assert.False(result.Outcome.Hit);
+        Assert.True(result.Outcome.Hit);
         Assert.Equal(0, result.Outcome.Damage);
-        Assert.Equal(evaded ? 0 : 3, contribution.HitCount);
-        Assert.Equal(0, contribution.DamageCount);
+        Assert.DoesNotContain(result.Ranges, range => range is (1, 8) or (1, 10));
     }
 
     [Fact]
-    public void Each_monster_slot_uses_hit_contributions_and_the_combined_damage_is_resolved_once()
+    public void A_monsters_combined_slot_damage_is_resolved_once()
     {
         using DamagePolicyFixture fixture = new();
         fixture.ReplaceActor(2, Definitions.RequireActor(new DaggerfallActorId("rat")) with
         {
             Attacks = [new DaggerfallAttackRange(1, 8), new(1, 8), new(1, 10)],
         });
-        CountingContribution contribution = new(rejectFirst: true);
+        CountingContribution contribution = new();
         fixture.Contribute(contribution);
-        fixture.ScriptMonster(0, (1, 1, null, null), (1, 1, 5, 100), (1, 1, 6, 100));
-        PreparedResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+        fixture.ScriptMonster(0, (100, null, null), (1, 5, 100), (1, 6, 100));
+        BlowResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
 
         Assert.True(result.Outcome.Hit);
         Assert.Equal(11, result.Outcome.Damage);
-        Assert.Equal(3, contribution.HitCount);
         Assert.Equal(1, contribution.DamageCount);
     }
 
@@ -412,18 +398,19 @@ public sealed class DaggerCombatDamagePolicyTests
     [InlineData("dark-elf", true, 3)]
     public void Racial_weapon_bonuses_require_an_equipped_weapon(string race, bool armed, int bonus)
     {
-        PreparedResolution Attack(string selectedRace)
+        BlowResolution Attack(string selectedRace)
         {
             using DamagePolicyFixture fixture = new(armed);
             fixture.PlayerRace(selectedRace, 12);
-            fixture.Script(body: 0, critical: 100, hit: 1, damage: 3);
+            // An armed blow is edged and draws deflection before damage; a fist is blunt and draws it after.
+            if (armed) fixture.Script(body: 0, damage: 3);
+            else fixture.Script(body: 0, deflect: null, damage: 3, afterDamage: 100);
             return fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
         }
 
-        PreparedResolution baseline = Attack("breton");
-        PreparedResolution racial = Attack(race);
+        BlowResolution baseline = Attack("breton");
+        BlowResolution racial = Attack(race);
         Assert.True(racial.Outcome.Hit);
-        Assert.Equal(baseline.Detail.Chance + bonus, racial.Detail.Chance);
         Assert.Equal(baseline.Outcome.Damage + bonus, racial.Outcome.Damage);
     }
 
@@ -434,7 +421,8 @@ public sealed class DaggerCombatDamagePolicyTests
         // targeted swing hands its impact to the shared pending state and publishes the tick time the
         // viewmodel has to play at.
         using DamagePolicyFixture fixture = new();
-        fixture.Script(body: 9, critical: 50, hit: 1, damage: 10);
+        fixture.Script(body: 9, damage: 10);
+        fixture.Touches(2);
         AttackRequest request = new(DaggerfallActorIdentity.PlayerEntityId, 2, 5, 9, .125d, Delayed: true);
 
         IReadOnlyList<IProductFact> admitted = fixture.StartSwing(request, out bool started);
@@ -445,7 +433,8 @@ public sealed class DaggerCombatDamagePolicyTests
         // Stated from the donor's own arithmetic rather than read back from the formula the rules
         // call: 3 * (115 - 50) / 980 seconds per frame.
         Assert.Equal(3d * (115 - 50) / 980d, opening.FrameSeconds, 6);
-        Assert.DoesNotContain(admitted, fact => fact is AttackHitFact or AttackMissedFact);
+        Assert.Equal(DaggerfallFormulaPolicy.MeleeWeaponHitFrame, opening.HitFrame);
+        Assert.DoesNotContain(admitted, fact => fact is AttackHitFact or AttackWhiffedFact);
 
         IReadOnlyList<IProductFact> impact = fixture.DeliverImpact(request);
 
@@ -454,86 +443,27 @@ public sealed class DaggerCombatDamagePolicyTests
         Assert.Empty(fixture.DeliverImpact(request));
     }
 
-    [Theory]
-    [InlineData("StrikeUp")]
-    [InlineData("StrikeDown")]
-    [InlineData("StrikeDownLeft")]
-    [InlineData("StrikeDownRight")]
-    [InlineData("StrikeLeft")]
-    [InlineData("StrikeRight")]
-    public void Bow_modifiers_are_neutral_and_do_not_consume_the_melee_gesture(string direction)
-    {
-        DaggerfallSwingDirection gesture = Enum.Parse<DaggerfallSwingDirection>(direction);
-        PreparedResolution Shot(DaggerfallSwingDirection drawn)
-        {
-            using DamagePolicyFixture fixture = new(armed: false);
-            fixture.EquipPlayerBow("iron-short-bow", 3001);
-            fixture.GivePlayerArrows(1);
-            fixture.Gesture = drawn;
-            fixture.Script(body: 9, critical: 50, hit: 1, damage: 10);
-            var result = fixture.Run(new AttackRequest(1, 2, 1, 1, .125d, Delayed: true), out var facts);
-            Assert.Equal(drawn, fixture.Gesture);
-            Assert.Equal(DaggerfallSwingDirection.StrikeDown, Assert.Single(facts.OfType<PlayerAttackStartedFact>()).Swing);
-            return result;
-        }
-        PreparedResolution neutral = Shot(DaggerfallSwingDirection.None);
-        PreparedResolution swung = Shot(gesture);
-        Assert.Equal(neutral.Detail.Chance, swung.Detail.Chance);
-        Assert.Equal(neutral.Outcome.Damage, swung.Outcome.Damage);
-    }
-
-    [Theory]
-    [InlineData("StrikeUp", 10, -4)]
-    [InlineData("StrikeDown", -10, 4)]
-    [InlineData("StrikeLeft", 0, 0)]
-    public void A_player_swing_publishes_the_direction_it_rolls_with(string direction, int toHit, int damage)
-    {
-        DaggerfallSwingDirection gesture = Enum.Parse<DaggerfallSwingDirection>(direction);
-        // The gesture is read once per swing: the strike the viewmodel plays and the swing modifiers the
-        // rolls carry describe the same swing, and the swing consumes it.
-        PreparedResolution Attack(DaggerfallSwingDirection drawn, out PlayerAttackStartedFact started)
-        {
-            using DamagePolicyFixture fixture = new();
-            fixture.Gesture = drawn;
-            fixture.Script(body: 0, critical: 100, hit: 1, damage: 10);
-            PreparedResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: true),
-                out IReadOnlyList<IProductFact> published);
-            Assert.Equal(DaggerfallSwingDirection.None, fixture.Gesture);
-            started = Assert.Single(published.OfType<PlayerAttackStartedFact>());
-            return result;
-        }
-
-        PreparedResolution baseline = Attack(DaggerfallSwingDirection.None, out PlayerAttackStartedFact straight);
-        PreparedResolution swung = Attack(gesture, out PlayerAttackStartedFact drawnSwing);
-
-        Assert.Equal(DaggerfallSwingDirection.None, straight.Swing);
-        Assert.Equal(gesture, drawnSwing.Swing);
-        Assert.Equal(DaggerfallFormulaPolicy.MeleeWeaponHitFrame, drawnSwing.HitFrame);
-        Assert.Equal(baseline.Detail.Chance + toHit, swung.Detail.Chance);
-        Assert.Equal(baseline.Outcome.Damage + damage, swung.Outcome.Damage);
-    }
-
     [Fact]
     public void A_swing_whose_animation_never_reaches_its_hit_frame_delivers_nothing()
     {
         using DamagePolicyFixture fixture = new();
-        fixture.Script(body: 9, critical: 50, hit: 1, damage: 10);
+        fixture.Touches(2);
         AttackRequest request = new(DaggerfallActorIdentity.PlayerEntityId, 2, 5, 9, .125d, Delayed: true);
         _ = fixture.StartSwing(request, out bool started);
         Assert.True(started);
 
         IReadOnlyList<IProductFact> impact = fixture.DeliverImpact(request, expired: true);
 
-        Assert.DoesNotContain(impact, fact => fact is AttackHitFact or AttackMissedFact or EquipmentWornFact);
+        Assert.DoesNotContain(impact, fact => fact is AttackHitFact or AttackWhiffedFact or EquipmentWornFact);
         // A delivered or expired swing leaves nothing pending, so the next admitted swing is ready.
         Assert.True(fixture.IsSwingReady(DaggerfallActorIdentity.PlayerEntityId, 5, 40));
     }
 
     [Fact]
-    public void An_unaimed_player_swing_resolves_immediately_and_reports_nothing_in_reach()
+    public void An_undelayed_unaimed_swing_resolves_in_its_own_update_and_reports_it_met_nothing()
     {
-        // No target means no animation frame to wait for: the swing resolves in its own update, spends
-        // its stamina once, and says what the melee query found.
+        // With no animation to wait for, the swing's volume is queried in its own update: it spends its
+        // stamina once and says what it met.
         using DamagePolicyFixture fixture = new();
         AttackRequest request = new(DaggerfallActorIdentity.PlayerEntityId, null, 5, 9, .125d, Delayed: false);
 
@@ -542,7 +472,7 @@ public sealed class DaggerCombatDamagePolicyTests
         Assert.True(started);
         Assert.Equal(new PlayerAttackStartedFact(5, 9) { Feedback = new(true, "sound.347") },
             Assert.Single(facts.OfType<PlayerAttackStartedFact>()));
-        Assert.Contains(new AttackRejectedFact(AttackRejection.NoTargetInReach), facts);
+        Assert.Single(facts.OfType<AttackWhiffedFact>());
     }
 
     [Fact]
@@ -553,19 +483,19 @@ public sealed class DaggerCombatDamagePolicyTests
         // the charge stands, and the next swing waits for the authored cadence like any other.
         using DamagePolicyFixture fixture = new();
         fixture.EquipNpcWeapon(2, "iron-longsword", 9001);
-        fixture.Script(body: 3, critical: 1, hit: 1, damage: 7);
+        fixture.Touches(DaggerfallActorIdentity.PlayerEntityId);
         AttackRequest request = new(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true);
 
         IReadOnlyList<IProductFact> admitted = fixture.StartSwing(request, out bool started);
         Assert.True(started);
-        Assert.DoesNotContain(admitted, fact => fact is AttackHitFact or AttackMissedFact);
+        Assert.DoesNotContain(admitted, fact => fact is AttackHitFact or AttackWhiffedFact);
         Assert.False(fixture.IsSwingReady(2, 5, 500));
 
         fixture.CancelSwing(2, 5);
 
         Assert.False(fixture.IsSwingReady(2, 5, 9));      // the cancellation costs the charge
         Assert.True(fixture.IsSwingReady(2, 5, 500));      // and the charge elapses on its authored cadence
-        Assert.Empty(fixture.DeliverImpact(request).Where(fact => fact is AttackHitFact or AttackMissedFact));
+        Assert.Empty(fixture.DeliverImpact(request).Where(fact => fact is AttackHitFact or AttackWhiffedFact));
     }
 
     [Fact]
@@ -577,7 +507,8 @@ public sealed class DaggerCombatDamagePolicyTests
         using DamagePolicyFixture fixture = new(armed: false);
         fixture.EquipPlayerBow("iron-short-bow", 3001);
         fixture.GivePlayerArrows(3);
-        fixture.Script(body: 9, critical: 50, hit: 1, damage: 10);
+        fixture.Script(body: 9, damage: 10);
+        fixture.ArrowsMeet(2);
         AttackRequest request = new(DaggerfallActorIdentity.PlayerEntityId, 2, 5, 9, .125d, Delayed: true);
 
         IReadOnlyList<IProductFact> admitted = fixture.StartSwing(request, out bool started);
@@ -586,12 +517,10 @@ public sealed class DaggerCombatDamagePolicyTests
         PlayerAttackStartedFact opening = Assert.Single(admitted.OfType<PlayerAttackStartedFact>());
         Assert.Equal(2L, opening.TargetId);
         Assert.Equal(5, opening.HitFrame);   // the donor's bow animation releases on frame 5
-        // WeaponManager forces a bow's attack direction to Down, which FPSWeapon plays as StrikeDown.
-        Assert.Equal(DaggerfallSwingDirection.StrikeDown, opening.Swing);
         Assert.Equal(2UL, fixture.PlayerArrows());
         // (10 * (100 - 50) + 800) / 980 seconds, latched in 0.125s steps.
         Assert.Equal((ulong)Math.Ceiling((10d * (100 - 50) + 800) / 980d / .125d), fixture.CooldownRemaining(DaggerfallActorIdentity.PlayerEntityId, 5, 9));
-        Assert.DoesNotContain(admitted, fact => fact is AttackHitFact or AttackMissedFact);
+        Assert.DoesNotContain(admitted, fact => fact is AttackHitFact or AttackWhiffedFact);
 
         // The release is queued for flight, and the arrival is what lands the hit.
         Assert.Empty(fixture.DeliverImpact(request));
@@ -600,51 +529,43 @@ public sealed class DaggerCombatDamagePolicyTests
     }
 
     [Fact]
-    public void A_strengthened_armor_value_makes_the_worn_player_harder_to_hit()
+    public void Bad_reactions_reduce_the_players_critical_chance_without_penalizing_the_enemy()
     {
-        // StrengthensArmor shifts the wearer's armor value down by five, and the classic hit chance
-        // adds that value: a lower value must mean a lower chance to hit, not a higher one.
-        using DamagePolicyFixture plain = new(armed: true);
-        plain.EquipNpcWeapon(2, "iron-longsword", 9001);
-        plain.Script(body: 5, critical: 50, hit: 1, damage: 7);
-        PreparedResolution unarmoured = plain.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
+        // A held enchantment's attack-chance shift moves the player's Critical Strike chance. At skill 50
+        // the chance is 15, so a draw of 15 is critical until a shift of -10 lowers the chance to 5.
+        int PlayerBlow(int shift)
+        {
+            using DamagePolicyFixture fixture = new(attackChanceShift: shift);
+            fixture.PlayerCriticalStrikeSkill(50);
+            fixture.Script(body: 0, damage: 11, critical: 15);
+            return fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 5, 9, .125d, Delayed: true)).Outcome.Damage;
+        }
+        int EnemyBlow(int shift)
+        {
+            using DamagePolicyFixture fixture = new(attackChanceShift: shift);
+            fixture.NpcCriticalStrikeSkill(50);
+            fixture.NpcStrength(50);
+            fixture.EquipNpcWeapon(2, "iron-longsword", 9001);
+            fixture.Script(body: BareFeet, damage: 11, critical: 15);
+            return fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true)).Outcome.Damage;
+        }
 
-        using DamagePolicyFixture strengthened = new(armed: true, armorValueShift: -5);
-        strengthened.EquipNpcWeapon(2, "iron-longsword", 9001);
-        strengthened.Script(body: 5, critical: 50, hit: 1, damage: 7);
-        PreparedResolution armoured = strengthened.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
-
-        Assert.True(unarmoured.Admitted && armoured.Admitted);
-        Assert.Equal(unarmoured.Detail.Chance - 5, armoured.Detail.Chance);
-        Assert.Equal(unarmoured.Outcome.Hit, armoured.Outcome.Hit);
-    }
-
-    [Fact]
-    public void Bad_reactions_reduce_player_attack_chance_without_penalizing_the_enemy()
-    {
-        using DamagePolicyFixture plain = new();
-        using DamagePolicyFixture penalized = new(attackChanceShift: -10);
-        AttackRequest playerAttack = new(DaggerfallActorIdentity.PlayerEntityId, 2, 5, 9, .125d, Delayed: true);
-        plain.Script(body: 5, critical: 50, hit: 1, damage: 7);
-        penalized.Script(body: 5, critical: 50, hit: 1, damage: 7);
-        Assert.Equal(plain.Run(playerAttack).Detail.Chance - 10, penalized.Run(playerAttack).Detail.Chance);
-        plain.EquipNpcWeapon(2, "iron-longsword", 9001);
-        penalized.EquipNpcWeapon(2, "iron-longsword", 9001);
-        AttackRequest enemyAttack = new(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true);
-        plain.Script(body: 5, critical: 50, hit: 1, damage: 7);
-        penalized.Script(body: 5, critical: 50, hit: 1, damage: 7);
-        Assert.Equal(plain.Run(enemyAttack).Detail.Chance, penalized.Run(enemyAttack).Detail.Chance);
+        Assert.Equal(15, PlayerBlow(0));   // (11 - 1 iron) * 1.5
+        Assert.Equal(10, PlayerBlow(-10));
+        Assert.Equal(15, EnemyBlow(0));
+        Assert.Equal(15, EnemyBlow(-10));
     }
 
     [Fact]
     public void A_shot_that_meets_cover_lands_nothing_and_says_so()
     {
-        // Static geometry on the release line stops the missile before the target: neither the roll
-        // nor the aim decides anything, so nothing about the target is damaged or reported as a miss.
-        using DamagePolicyFixture fixture = new(armed: false, coverBlocks: (origin, aim) => origin != aim);
+        // Static geometry on the arrow's line stops it before the target: nothing about the target is
+        // damaged or reported as having met nothing.
+        using DamagePolicyFixture fixture = new(armed: false);
         fixture.EquipPlayerBow("iron-short-bow", 3001);
         fixture.GivePlayerArrows(3);
-        fixture.Script(body: 9, critical: 50, hit: 1, damage: 10);
+        fixture.Spatial.FloorHit = request => new SpatialHit(true, SpatialHitKind.StaticMesh, 0, 1, 1, 1, 0, 0, 0, default,
+            request.Origin + request.Direction, -request.Direction, 1d, 0d, 0d, false, true);
         AttackRequest request = new(DaggerfallActorIdentity.PlayerEntityId, 2, 5, 9, .125d, Delayed: true);
         fixture.StartSwing(request, out bool started);
         Assert.True(started);
@@ -656,7 +577,7 @@ public sealed class DaggerCombatDamagePolicyTests
         Assert.Equal(DaggerfallActorIdentity.PlayerEntityId, blocked.AttackerId);
         Assert.Equal(2L, blocked.TargetId);
         Assert.Empty(arrived.OfType<AttackHitFact>());
-        Assert.Empty(arrived.OfType<AttackMissedFact>());
+        Assert.Empty(arrived.OfType<AttackWhiffedFact>());
     }
 
     [Fact]
@@ -664,7 +585,6 @@ public sealed class DaggerCombatDamagePolicyTests
     {
         using DamagePolicyFixture fixture = new(armed: false);
         fixture.EquipPlayerBow("iron-short-bow", 3001);
-        fixture.Script(body: 9, critical: 50, hit: 1, damage: 10);
 
         IReadOnlyList<IProductFact> facts = fixture.StartSwing(
             new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 5, 9, .125d, Delayed: true), out bool started);
@@ -687,17 +607,14 @@ public sealed class DaggerCombatDamagePolicyTests
         Assert.Equal(10d, fixture.ReachOf(DaggerfallActorIdentity.PlayerEntityId));
     }
 
-    private sealed class CountingContribution(bool rejectFirst = false) : ICombatContribution
+    private sealed class CountingContribution : ICombatContribution
     {
-        internal int HitCount { get; private set; }
         internal int DamageCount { get; private set; }
-        public void Hit(TryHitEvent interaction)
-        {
-            HitCount++;
-            if (rejectFirst && HitCount == 1) interaction.Hit = false;
-        }
         public void Damage(DamageEvent interaction) => DamageCount++;
     }
+
+    /// <summary>The body roll that strikes the feet, which the payload player wears nothing on.</summary>
+    private const int BareFeet = 19;
 
     private static DaggerfallDefinitions Definitions => _definitions ??= TestPayload.Definitions;
     private static DaggerfallDefinitions? _definitions;
@@ -723,23 +640,14 @@ public sealed class DaggerCombatDamagePolicyTests
         private WorldPoint? _playerPosition;
 
         private DaggerfallCharacterState? _character;
-        /// <summary>The gesture the next swing reads; reading it consumes it, as the session's tracker does.</summary>
-        internal DaggerfallSwingDirection Gesture { get; set; }
-        private DaggerfallSwingDirection TakeGesture()
-        {
-            DaggerfallSwingDirection gesture = Gesture;
-            Gesture = DaggerfallSwingDirection.None;
-            return gesture;
-        }
 
-        internal DamagePolicyFixture(bool armed = true, Func<WorldPoint, WorldPoint, bool>? coverBlocks = null, int armorValueShift = 0, int attackChanceShift = 0,
+        internal DamagePolicyFixture(bool armed = true, int attackChanceShift = 0,
             IDaggerfallPhysicalMitigation? mitigation = null, Func<IDaggerfallPhysicalHarmOperations, IDaggerfallPhysicalDelivery>? delivery = null,
-            IRandomService? random = null, DaggerfallRulesVariant? variant = null)
+            IRandomService? random = null)
         {
             DaggerfallDefinitions definitions = Definitions;
             DaggerfallActorDefinition playerDefinition = definitions.RequireActor(new DaggerfallActorId("player"));
             _random = random ?? (IRandomService)(object)_scripted;
-            ArmorValueShift = armorValueShift;
             _actors = new ActorsState();
             PlayerActorState player = _actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId(playerDefinition.Id.Value),
                 new DaggerfallMechanicsState().CreateStats(playerDefinition, DaggerfallPlayerVitals.Initial(playerDefinition.Stats, definitions.Catalogs.RequireCareer("class00"))), "health", DaggerActorFactory.PlayerCapabilities);
@@ -763,15 +671,14 @@ public sealed class DaggerCombatDamagePolicyTests
             _actorEquipment[2] = BuildEquipment(enemy.Actor.Entity, 2, enemy.Actor);
             _itemCondition = new DaggerfallItemConditionService(definitions, _itemInstances,
                 new DaggerfallEquipmentMoves(_actorInventories[DaggerfallActorIdentity.PlayerEntityId], _playerEquipment, definitions, itemInstances: _itemInstances));
-            Owners = variant?.Compose(VariantContext(variant));
+            DaggerfallComposedSeams seams = DaggerfallSeamSelection.Default.Build(SeamInputs, DaggerfallContactTuning.Default);
             _combat = new DaggerCombatRules(_random, _actors, _playerEquipment,
                 id => _actorInventories.TryGetValue(id, out MechanicsInventoryCoordinator? quiver) ? quiver : null,
                 _itemInstances, definitions, _authored, CombatCollaborators.Targeting(_actors, _authored, out _spatial, out SpatialFake spatialFake),
-                skillUses: SkillUses.Add, playerBiographyAvoidHit: () => 0,
+                skillUses: SkillUses.Add,
                 actorEquipment: id => _actorEquipment.TryGetValue(id, out MechanicsEquipmentCoordinator? coordinator) ? coordinator : _playerEquipment,
-                itemCondition: _itemCondition, rules: new CombatResolution(), adrenalineRush: _ => default,
-                playerPosition: () => _playerPosition, character: () => _character, playerSwing: TakeGesture,
-                coverBlocksShot: coverBlocks ?? ((_, _) => false), armorValueModifier: () => ArmorValueShift,
+                itemCondition: _itemCondition, rules: new CombatResolution(),
+                playerPosition: () => _playerPosition, character: () => _character,
                 deliverWeaponPoison: (_, _) => throw new InvalidOperationException("This fixture coats no weapon."),
                 attackChanceModifier: () => attackChanceShift,
                 transformActor: (_, target, _, _, _) => new DaggerfallWabbajackResult(DaggerfallWabbajackOutcome.InvalidTarget, target),
@@ -779,35 +686,59 @@ public sealed class DaggerCombatDamagePolicyTests
                 molagBalStrike: (_, _, _, _, _, _, _) => throw new InvalidOperationException("This fixture arms no Mace of Molag Bal."),
                 itemStrike: (_, _, _, damage) => damage,
                 monsterHit: _ => { }, actorGameplayActive: _ => true, actorTeam: id => _authored.GetValueOrDefault(id)?.Team,
-                mitigation: Owners?.PhysicalMitigation ?? mitigation,
-                delivery: ops => Delivery = (Owners?.PhysicalDelivery ?? delivery)?.Invoke(ops) ?? new DaggerfallClassicPhysicalDelivery(ops),
-                contact: Contact = new ActorContact(_actors, _spatial, () => new PlayerControlState(_playerPosition ?? new WorldPoint(0f, 0f, 0f), 0f, 0f),
-                    DaggerfallSession.ActorContactBody, _ => true),
-                strikePose: StrikePose,
+                mitigation: mitigation ?? seams.PhysicalMitigation,
+                delivery: ops => Delivery = (delivery ?? seams.PhysicalDelivery)(ops),
+                contact: Contact = CombatCollaborators.Contact(_actors, _spatial, () => _playerPosition),
+                strikePose: actor => CombatCollaborators.StrikePose(_actors, actor, _playerPosition),
                 actorVelocity: id => id == DaggerfallActorIdentity.PlayerEntityId ? PlayerVelocity : Vector3.Zero);
             Spatial = spatialFake;
         }
 
-        internal void Script(int body, int critical, int hit, int? damage = null, int? backstabRoll = null)
+        /// <summary>
+        /// Scripts one connecting blow's draws in order: the body, the deflection a target with a full
+        /// channel draws before damage (the top of the percentile, which turns nothing aside), then the
+        /// damage roll with its backstab and critical draws, and whatever a partial channel draws after it.
+        /// </summary>
+        internal void Script(int body, int? deflect = 100, int? damage = null, int? backstabRoll = null, int critical = 100, int? afterDamage = null)
         {
-            List<int> draws = [body, critical, hit];
-            if (damage is int weaponDamage) draws.Add(weaponDamage);
-            if (backstabRoll is int backstab) draws.Add(backstab);
+            List<int> draws = [body];
+            if (deflect is int deflection) draws.Add(deflection);
+            if (damage is int weaponDamage)
+            {
+                draws.Add(weaponDamage);
+                if (backstabRoll is int backstab) draws.Add(backstab);
+                draws.Add(critical);
+            }
+            if (afterDamage is int after) draws.Add(after);
             _scripted.Feed(draws);
         }
 
-        internal void ScriptMonster(int body, params (int? Reflex, int? Hit, int? Damage, int? Consequence)[] slots)
+        /// <summary>Scripts a monster's natural blow: the body, each slot's gates, then the blunt deflection on what they rolled.</summary>
+        internal void ScriptMonster(int body, params (int? Reflex, int? Damage, int? Consequence)[] slots)
         {
             List<int> draws = [body];
             foreach (var slot in slots)
             {
                 if (slot.Reflex is int reflex) draws.Add(reflex);
-                if (slot.Hit is int hit) draws.AddRange([1, hit]); // critical, then hit
                 if (slot.Damage is int damage) draws.Add(damage);
                 if (slot.Consequence is int consequence) draws.Add(consequence);
             }
+            draws.Add(100);
             _scripted.Feed(draws);
         }
+
+        /// <summary>The swing and touch volumes meet the given actor's body.</summary>
+        internal void Touches(long actorId) => Spatial.OverlapContactsResult = _ => TestSessions.Touching(EntityOf(actorId));
+
+        /// <summary>Every arrow segment meets the given actor's body.</summary>
+        internal void ArrowsMeet(long actorId)
+        {
+            ulong entity = EntityOf(actorId);
+            Spatial.FloorHit = request => new SpatialHit(true, SpatialHitKind.Entity, entity, 0, 0, 0, 0, 0, 0, default,
+                request.Origin + request.Direction * .7f, -request.Direction, .7d, 0d, 0d, false, true);
+        }
+
+        private ulong EntityOf(long actorId) => (actorId == DaggerfallActorIdentity.PlayerEntityId ? _actors.Player.Actor : _actors.Get(actorId).Actor).Entity.Value;
 
         internal void PlayerRace(string race, int level)
         {
@@ -827,6 +758,10 @@ public sealed class DaggerCombatDamagePolicyTests
         internal void PlayerStrength(int strength) => _actors.Player.Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Strength.Value)).BaseValue = strength;
 
         internal void PlayerBackstabbingSkill(int skill) => _actors.Player.Stats.GetStat(StatId.Parse("backstabbing")).BaseValue = skill;
+
+        internal void PlayerCriticalStrikeSkill(int skill) => _actors.Player.Stats.GetStat(StatId.Parse("critical-strike")).BaseValue = skill;
+
+        internal void NpcCriticalStrikeSkill(int skill) => _actors.Get(2).Stats.GetStat(StatId.Parse("critical-strike")).BaseValue = skill;
 
         internal void NpcHandToHandSkill(int skill) => _actors.Get(2).Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.HandToHand.Value)).BaseValue = skill;
 
@@ -869,9 +804,6 @@ public sealed class DaggerCombatDamagePolicyTests
         /// <summary>The player's worn armor-value shift, as held enchantments would give it.</summary>
         internal int ArmorValueShift { get; set; }
 
-        /// <summary>The variant's composed owners, when the fixture runs under one.</summary>
-        internal DaggerfallSeamOwners? Owners { get; }
-
         /// <summary>The spatial fake answering contact queries.</summary>
         internal SpatialFake Spatial { get; }
 
@@ -897,13 +829,6 @@ public sealed class DaggerCombatDamagePolicyTests
 
         internal ActorsState Actors => _actors;
 
-        /// <summary>The player strikes from its eye facing +X, toward the brigand; a site actor from near the top of its body along its heading.</summary>
-        private DaggerfallStrikePose? StrikePose(long actor) => actor == DaggerfallActorIdentity.PlayerEntityId
-            ? new((_playerPosition ?? new WorldPoint(0f, 0f, 0f)).ToVector() + new Vector3(0f, 1.65f, 0f), Vector3.UnitX)
-            : _actors.TryGet(actor, out ActorState site) ? new(site.Position.ToVector() + new Vector3(0f, 1.62f, 0f), ActorHeading.Forward(site.HeadingYawRadians)) : null;
-
-        internal DaggerfallSeamContext VariantContext(DaggerfallRulesVariant variant) => DaggerfallContactVariantTests.Context(variant, SeamInputs);
-
         /// <summary>The session reads seam owners are built over, from this fixture.</summary>
         internal DaggerfallSeamInputs SeamInputs => new(Definitions, () => _character, _random,
             id => id == DaggerfallActorIdentity.PlayerEntityId ? _playerEquipment.Read() : _actorEquipment[id].Read(),
@@ -923,7 +848,10 @@ public sealed class DaggerCombatDamagePolicyTests
                 [2] = _actors.Get(2).Position,
             };
             for (int index = 0; index < steps; index++)
+            {
+                _combat.LandDueImpacts(generation, checked(step + (ulong)index), facts);
                 _combat.AdvanceRangedFlight(generation, checked(step + (ulong)index), .125d, positions, facts);
+            }
             return Delivered(facts);
         }
 
@@ -943,15 +871,23 @@ public sealed class DaggerCombatDamagePolicyTests
             _actors.Get(targetEntityId).ApplyPose(new ActorPose(new WorldPoint(0f, 0f, -1f), facingAway ? 0f : MathF.PI));
         }
 
-        internal PreparedResolution Run(AttackRequest request) => Run(request, out _);
+        internal BlowResolution Run(AttackRequest request) => Run(request, out _);
 
-        internal PreparedResolution Run(AttackRequest request, out IReadOnlyList<IProductFact> published)
+        /// <summary>Admits one attack whose volume touches its target, and carries it through its hit frame and any wind-up.</summary>
+        internal BlowResolution Run(AttackRequest request, out IReadOnlyList<IProductFact> published)
         {
-            FactBuffer<IProductFact> facts = new();
-            bool admitted = _combat.TryPrepare(request, facts, out PreparedAttack prepared);
-            published = Delivered(facts);
-            return new PreparedResolution(admitted, prepared.Outcome,
-                (prepared as DaggerCombatRules.DaggerfallPreparedAttack)?.Detail ?? default, _scripted.Ranges);
+            Touches(request.TargetId!.Value);
+            List<IProductFact> facts = [.. StartSwing(request, out bool admitted)];
+            if (request.Delayed)
+            {
+                facts.AddRange(DeliverImpact(request));
+                facts.AddRange(AdvanceFlight(request.Generation, request.SimulationStep, steps: 5));
+            }
+            published = facts;
+            AttackHitFact? hit = facts.OfType<AttackHitFact>().SingleOrDefault();
+            bool connected = hit is not null || facts.Any(fact => fact is AttackNegatedFact or AttackRejectedFact { Reason: AttackRejection.InsufficientWeaponMaterial });
+            return new BlowResolution(admitted, new AttackOutcome(connected, hit is not null, hit?.CalculatedDamage ?? 0), hit?.StruckBody ?? 0,
+                _scripted.Ranges, _scripted.Salts);
         }
 
         /// <summary>Admits one swing through the shared attack lifecycle and delivers what it published.</summary>
@@ -1007,24 +943,31 @@ public sealed class DaggerCombatDamagePolicyTests
         }
     }
 
-    internal sealed record PreparedResolution(bool Admitted, AttackOutcome Outcome, DaggerCombatRules.DaggerfallAttackDetail Detail,
-        IReadOnlyList<(int Minimum, int Maximum)> Ranges);
+    internal sealed record BlowResolution(bool Admitted, AttackOutcome Outcome, int Body,
+        IReadOnlyList<(int Minimum, int Maximum)> Ranges, IReadOnlyList<int> Salts);
 
     private class ScriptedRandom : DispatchProxy
     {
         private readonly List<int> _values = [];
         private readonly List<(int Minimum, int Maximum)> _ranges = [];
+        private readonly List<int> _salts = [];
         private int _next;
 
         internal void Feed(IEnumerable<int> values) => _values.AddRange(values);
 
         internal IReadOnlyList<(int Minimum, int Maximum)> Ranges => _ranges;
 
+        internal IReadOnlyList<int> Salts => _salts;
+
         protected override object? Invoke(MethodInfo? method, object?[]? arguments)
         {
             if (method?.Name != nameof(IRandomService.DrawKeyed)) throw new NotSupportedException(method?.Name);
             KeyedRngRequest request = (KeyedRngRequest)arguments![0]!;
+            int salt = int.Parse(request.Key[(request.Key.LastIndexOf(':') + 1)..]);
+            // Wear follows the applied hit and is not what these facts script: its top draw wears nothing extra.
+            if (salt is CombatRandomKey.WeaponConditionSalt or CombatRandomKey.ArmorConditionSalt) return new KeyedRngReceipt(request.Maximum);
             _ranges.Add(((int)request.Minimum, (int)request.Maximum));
+            _salts.Add(salt);
             if (_next >= _values.Count) throw new InvalidOperationException($"The scripted attack reached draw {_next + 1} with no scripted value.");
             int value = _values[_next++];
             if (value < request.Minimum || value > request.Maximum)

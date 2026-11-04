@@ -49,7 +49,7 @@ public sealed class GroundRestingSessionTests
         s.State.Actors.Get(rat).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         s.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60;
 
-        s.ResolveExplicitMelee(new ExplicitMeleeRequest(1, rat, 1, 1, .125));
+        s.Strike(new ExplicitMeleeRequest(1, rat, 1, 1, .125));
 
         Assert.True(s.Corpses.ContainsKey(rat));
         WorldPoint corpse = s.State.Actors.Get(rat).Position;

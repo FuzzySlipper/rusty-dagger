@@ -26,9 +26,9 @@ public sealed class WabbajackSessionTests
     [InlineData(false, false)]
     [InlineData(true, true)]
     [InlineData(false, true)]
-    public void Real_strike_contact_transforms_once_keeps_prior_wounds_and_restores_without_a_hidden_actor(bool hit, bool dynamic)
+    public void Real_strike_contact_transforms_once_keeps_prior_wounds_and_restores_without_a_hidden_actor(bool damages, bool dynamic)
     {
-        using Fixture f = new(hit, dynamic);
+        using Fixture f = new(damages, dynamic);
         var old = f.Session.State.Actors.Get(f.Target);
         var oldEntity = old.Actor.Entity;
         var pose = new ActorPose(new WorldPoint(9, 3, -4), .6f);
@@ -46,7 +46,7 @@ public sealed class WabbajackSessionTests
         Assert.Equal(Health(replacement).Maximum.Value - 3, Health(replacement).Current);
         Assert.Contains("Wabbajack transformed", f.Session.Presentation.LastOutcome, StringComparison.Ordinal);
         int condition = f.Session.State.ItemInstances.RequireUnique(f.Source).CurrentCondition;
-        Assert.Equal(hit, condition < 1500);
+        Assert.Equal(damages, condition < 1500);
         using var restored = DaggerfallSession.Restore(f.Engine().Context, f.Composition, f.Session.CaptureSave());
         var resumed = restored.State.Actors.Get(f.Target);
         Assert.Equal(replacement.Actor.TypeId, resumed.Actor.TypeId);
@@ -54,9 +54,9 @@ public sealed class WabbajackSessionTests
         Assert.Equal(DaggerfallWabbajack.DefinitionOf(replacement.Actor), DaggerfallWabbajack.DefinitionOf(resumed.Actor));
         Assert.Equal(Health(replacement).Current, Health(resumed).Current);
         Assert.Equal(condition, restored.State.ItemInstances.RequireUnique(f.Source).CurrentCondition);
-        f.Session.ResolveExplicitMelee(new(1, f.Target, 1, 10000, .125));
+        f.Session.Strike(new(1, f.Target, 1, 10000, .125));
         Assert.Equal(replacement.Actor.Entity, f.Session.State.Actors.Get(f.Target).Actor.Entity);
-        Assert.Equal(hit ? Health(replacement).Maximum.Value - 16 : Health(replacement).Maximum.Value - 3, Health(replacement).Current);
+        Assert.Equal(damages ? Health(replacement).Maximum.Value - 16 : Health(replacement).Maximum.Value - 3, Health(replacement).Current);
     }
 
     public static IEnumerable<object[]> Variants => Enumerable.Range(0, 17).Select(index => new object[] { index });
@@ -80,6 +80,7 @@ public sealed class WabbajackSessionTests
         using Fixture f = new(true);
         var original = f.Session.State.Actors.Get(f.Target).Actor.Entity;
         var facts = new FactBuffer<IProductFact>();
+        f.Session.Touches(f.Target);
         Assert.True(f.Session.State.Kit.AttackExecution.Start(new(1, f.Target, 1, 1, .125, true), facts));
         f.Session.State.Equipment.Unequip(f.Item);
         f.Session.State.Inventory.Destroy(f.Item);
@@ -118,7 +119,7 @@ public sealed class WabbajackSessionTests
         using var restored = DaggerfallSession.Restore(f.Engine().Context, f.Composition, f.Session.CaptureSave());
         Assert.True(restored.State.Quests.ProtectsActor(f.Target));
         f.Session.State.Quests.Complete("wabbajack-protected", "finished");
-        f.Session.ResolveExplicitMelee(new(1, f.Target, 1, 10000, .125));
+        f.Session.Strike(new(1, f.Target, 1, 10000, .125));
         Assert.NotNull(DaggerfallWabbajack.DefinitionOf(f.Session.State.Actors.Get(f.Target).Actor));
     }
 
@@ -140,7 +141,7 @@ public sealed class WabbajackSessionTests
         using Fixture f = new(false);
         var dynamic = f.Session.SpawnActor("orc", new(new WorldPoint(7, 2, -5), .7f));
         f.Strike();
-        f.Session.ResolveExplicitMelee(new(1, dynamic, 1, 10000, .125));
+        f.Session.Strike(new(1, dynamic, 1, 10000, .125));
         var first = f.Session.State.Actors.Get(f.Target).Pose;
         var second = f.Session.State.Actors.Get(dynamic).Pose;
         var destination = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)),
@@ -167,11 +168,12 @@ public sealed class WabbajackSessionTests
         Assert.Equal(expected.HeadingYawRadians, actual.HeadingYawRadians, precision: 5);
     }
 
-    private sealed class Strike(bool hit, bool allowed) : ICombatContribution
+    private sealed class Strike(bool damages, bool allowed) : ICombatContribution
     {
-        public void Hit(TryHitEvent value) => value.Hit = hit;
         public void Negate(NegationEvent value) { if (!allowed) value.Negation = HarmNegation.Immune; }
-        public void Damage(DamageEvent value) => value.Damage = 13;
+        public void Damage(DamageEvent value) => value.Damage = damages ? 13 : 0;
+        // The replacement's natural armour is the draw's; these facts count the blow itself.
+        public void Mitigate(MitigationEvent value) => value.Absorbed = 0;
     }
 
     private sealed class Fixture : IDisposable
@@ -183,7 +185,7 @@ public sealed class WabbajackSessionTests
         internal readonly ulong Source;
         internal readonly UniqueInventoryItem Item;
         private readonly int _draw;
-        internal Fixture(bool hit, bool dynamic = false, int draw = 16, bool allowed = true)
+        internal Fixture(bool damages, bool dynamic = false, int draw = 16, bool allowed = true)
         {
             _draw = draw;
             var definitions = TestPayload.Definitions;
@@ -199,7 +201,7 @@ public sealed class WabbajackSessionTests
             Session.State.ItemInstances.RegisterUnique(Source, created.Metadata);
             Assert.Equal(EquipmentMoveOutcome.Applied, Session.EquipmentMoves.MoveToSlot(Item, new EquipmentSlotId("right-hand")).Outcome);
             FinishEquipmentDelay(Session);
-            Session.State.Kit.Rules.RegisterAction(definitions.RequireActor(new("player")).ActionId!, new Strike(hit, allowed));
+            Session.State.Kit.Rules.RegisterAction(definitions.RequireActor(new("player")).ActionId!, new Strike(damages, allowed));
         }
         internal EngineContextFake Engine(DaggerfallSiteProfile? additional = null)
         {
@@ -212,7 +214,7 @@ public sealed class WabbajackSessionTests
             var spatial = SpatialFake.Create((additional ?? Inputs).SpatialArtifact.Sha256, releases); spatial.KeepPosition = true;
             return EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: SelectionRandom.Create(_draw));
         }
-        internal void Strike() => Session.ResolveExplicitMelee(new(1, Target, 1, 1, .125));
+        internal void Strike() => Session.Strike(new(1, Target, 1, 1, .125));
         public void Dispose() => Session.Dispose();
     }
 

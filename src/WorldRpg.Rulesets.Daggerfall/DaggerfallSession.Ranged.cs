@@ -11,8 +11,7 @@ internal sealed partial class DaggerfallSession
 {
     /// <summary>
     /// Advances Daggerfall-owned travelling ranged releases after sprite impact notices have been
-    /// consumed. The combat owner receives the one admitted-step delta used to derive arrival
-    /// steps; the simulation step itself carries already-live arrows across a catch-up batch.
+    /// consumed. An arrow covers every step the update admitted, so a catch-up batch keeps its speed.
     /// </summary>
     partial void UpdateRangedFlight(ProductUpdateFacts facts)
     {
@@ -21,7 +20,7 @@ internal sealed partial class DaggerfallSession
         double fixedDeltaSeconds = facts.FixedDeltaSeconds;
         if (!double.IsFinite(fixedDeltaSeconds) || fixedDeltaSeconds <= 0d)
             throw new ArgumentOutOfRangeException(nameof(facts), "Admitted ranged-flight step time must be finite and positive.");
-        _combat.AdvanceRangedFlight(generation, simulationStep, fixedDeltaSeconds, CurrentPositions(), _facts);
+        _combat.AdvanceRangedFlight(generation, simulationStep, fixedDeltaSeconds * facts.AdmittedStepCount, CurrentPositions(), _facts);
         AdvanceSpellFlights(facts, generation, fixedDeltaSeconds);
         DeliverFacts();
     }

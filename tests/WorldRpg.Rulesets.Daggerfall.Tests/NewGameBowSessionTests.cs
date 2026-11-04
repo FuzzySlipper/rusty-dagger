@@ -40,7 +40,7 @@ public sealed class NewGameBowSessionTests
     }
 
     [Fact]
-    public void A_new_archer_cannot_select_or_damage_a_target_beyond_the_authored_bow_reach()
+    public void A_new_archer_cannot_select_a_target_beyond_the_authored_bow_reach_and_an_arrow_loosed_there_harms_nothing()
     {
         using Fixture f = new(TestPayload.Definitions.Actions["bow-shot"].Reach!.Value + 1);
         double health = f.Game.State.Actors.Get(Fixture.Target).Stats.GetTrack(TrackId.Parse("health")).Current;
@@ -48,10 +48,10 @@ public sealed class NewGameBowSessionTests
         f.Attack();
 
         Assert.Null(Assert.IsType<TargetingEvidence>(f.Game.LastMeleeTargeting).SelectedTargetId);
-        Assert.Null(f.Game.State.Actors.Player.Attack.Pending);
+        // Nothing selected does not refuse the shot: the arrow is loosed along the look and meets what it meets.
+        Assert.NotNull(f.Game.State.Actors.Player.Attack.Pending);
+        Assert.Equal(23UL, f.Arrows().Quantity);
         Assert.Equal(health, f.Game.State.Actors.Get(Fixture.Target).Stats.GetTrack(TrackId.Parse("health")).Current);
-        using var observation = JsonDocument.Parse(f.Game.ReadPlaytestObservation().Message);
-        Assert.Equal("AttackRejected:NoTargetInReach", observation.RootElement.GetProperty("lastCombatEvent").GetProperty("kind").GetString());
     }
 
     [Fact]
@@ -121,9 +121,8 @@ public sealed class NewGameBowSessionTests
         internal AppearanceFake Appearance { get; }
         private readonly DaggerfallSession title;
 
-        /// <param name="contact">Whether the game is composed from the <c>daggerfall.contact</c> bundle.</param>
         /// <param name="random">The session's random service; the lowest draw on every percentile by default.</param>
-        internal Fixture(double distance, bool contact = false, IRandomService? random = null)
+        internal Fixture(double distance, IRandomService? random = null)
         {
             var inputs = ReadInputs(TestData.RepositoryRoot);
             Inputs = inputs;
@@ -149,7 +148,7 @@ public sealed class NewGameBowSessionTests
             Appearance = new AppearanceFake(releases);
             var engine = EngineContextFake.Create(content, spatial.Service, Appearance, perception.Service,
                 random: random ?? RandomMinimum.Create());
-            title = DaggerfallSession.StartNew(engine.Context, contact ? ContactComposition(inputs) : new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
+            title = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
             NewGameSessionTests.Commit(title, "class13");
             Game = Assert.IsType<DaggerfallSession>(title.CreateNewGame());
             Game.ApplyProductMode(ProductMode.Playing);

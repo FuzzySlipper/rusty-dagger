@@ -588,7 +588,7 @@ public sealed class DungeonInteractionSessionTests
         long spawned = session.SpawnActor("rat", new ActorPose(playerPosition with { Z = playerPosition.Z - 1f }, 0f));
         session.State.Actors.Get(spawned).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
-        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, spawned, 1, 1, .125));
+        session.Strike(new ExplicitMeleeRequest(1, spawned, 1, 1, .125));
         Assert.True(session.Corpses.ContainsKey(spawned));
         AimActivationAt(session, spawned);
         perception.Receipt = Receipt(new PerceptionPair(1, checked((ulong)spawned), 1d, 1d, PerceptionPairKind.Visible, 1d));

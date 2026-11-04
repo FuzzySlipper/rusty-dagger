@@ -199,19 +199,15 @@ public sealed class VampirismSessionTests
         var stamina = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")); stamina.SetCurrent(stamina.Maximum.Value);
         var player = s.State.PlayerControl.Position!.Value; var enemy = s.State.Actors.Get(f.Enemy);
         enemy.ApplyPose(new(new WorldPoint(player.X,player.Y,player.Z-0.1f),0));
-        var contact = new ForceContact();
-        s.State.Kit.Rules.RegisterAction(s.DefinitionsByActor[1].ActionId!, contact);
+        s.State.Kit.Rules.RegisterAction(s.DefinitionsByActor[1].ActionId!, new OneDamage());
         s.ResolveExplicitMelee(new(1,f.Enemy,1,10000,.125));
         Assert.Equal(hungry,s.State.RacialOverrides.Current!.State.Vampire!.LastFedMinute);
-        contact.HitResult = true;
-        s.ResolveExplicitMelee(new(1,f.Enemy,1,20000,.125));
+        s.Strike(new(1,f.Enemy,1,20000,.125));
         Assert.True(Minute(s) == s.State.RacialOverrides.Current!.State.Vampire!.LastFedMinute, s.Presentation.LastOutcome);
     }
 
-    private sealed class ForceContact : WorldRpg.Kit.Combat.ICombatContribution
+    private sealed class OneDamage : WorldRpg.Kit.Combat.ICombatContribution
     {
-        internal bool HitResult;
-        public void Hit(WorldRpg.Kit.Combat.TryHitEvent value) => value.Hit=HitResult;
         public void Damage(WorldRpg.Kit.Combat.DamageEvent value) => value.Damage=1;
     }
 

@@ -42,7 +42,7 @@ public sealed class EnemySetupSessionTests
         var items = s.State.ActorInventories.InventoryFor(id)!.Read().UniqueItems.Select(item => item.Definition.Value).ToArray();
         Assert.NotEmpty(items);
         s.State.Kit.Rules.RegisterAction(s.DefinitionsByActor[1].ActionId!, new LethalStrike());
-        s.ResolveExplicitMelee(new(1, id, 1, 10000, .125));
+        s.Strike(new(1, id, 1, 10000, .125));
         f.Update();
         var corpse = Assert.Single(DaggerfallSavePayload.Read(s.CaptureSave()).Corpses, row => row.ActorId == id);
         Assert.NotNull(corpse);
@@ -86,7 +86,6 @@ public sealed class EnemySetupSessionTests
     }
     private sealed class LethalStrike : ICombatContribution
     {
-        public void Hit(TryHitEvent hit) { hit.Hit = true; hit.Chance = 100; hit.Roll = 1; }
         public void Damage(DamageEvent damage) { damage.Damage = 1000; }
     }
 

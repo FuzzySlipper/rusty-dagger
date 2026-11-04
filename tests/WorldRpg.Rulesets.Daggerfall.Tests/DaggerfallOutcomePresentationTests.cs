@@ -32,8 +32,8 @@ public sealed class DaggerfallOutcomePresentationTests
 
         outcome.React(new AttackHitFact(2000, DaggerfallActorIdentity.PlayerEntityId, 7, 7, 0, EnemyAttack: true, 1, 1));
         Assert.Equal("Nightblade hit you for 7 damage", state.LastOutcome);
-        outcome.React(new AttackMissedFact(DaggerfallActorIdentity.PlayerEntityId, 2000, 1, 50, EnemyAttack: false, 1, 2));
-        Assert.Equal("Missed Nightblade", state.LastOutcome);
+        outcome.React(new AttackWhiffedFact(DaggerfallActorIdentity.PlayerEntityId, 2000, EnemyAttack: false, 1, 2));
+        Assert.Equal("Your blow meets nothing; Nightblade is out of reach", state.LastOutcome);
         outcome.React(new ActorDiedFact(2000, 1, DaggerfallDamageCause.PhysicalAttack, 10, 2, 1, 3));
         Assert.StartsWith("Defeated Nightblade for 2 damage", state.LastOutcome);
     }

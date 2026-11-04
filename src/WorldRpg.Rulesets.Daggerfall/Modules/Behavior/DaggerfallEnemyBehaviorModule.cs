@@ -1,3 +1,4 @@
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using Rusty.Engine;
 using WorldRpg.Kit.Ai;
 using WorldRpg.Kit.Actors;
@@ -70,7 +71,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
         Func<ActorState, bool>? openBlockedDoor = null, Func<long, PursuitTarget?>? selectTarget = null, Func<long, bool>? questRestrained = null, Func<long, long, double, (double Reach, bool Ranged)?>? attackAtDistance = null,
         IDaggerfallEnemyEngagement? engagement = null)
     {
-        _engagement = engagement ?? DaggerfallClassicEnemyEngagement.Instance;
+        _engagement = engagement ?? new DaggerfallContactEngagement(DaggerfallContactTuning.Default);
         _random = random;
         _motorContext = motorContext;
         _attackAtDistance = attackAtDistance;

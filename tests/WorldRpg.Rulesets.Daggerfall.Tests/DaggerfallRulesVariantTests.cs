@@ -26,48 +26,51 @@ public sealed class DaggerfallRulesVariantTests
 
         DaggerfallRulesVariant missing = new(Manifest("test.claims"), _ => new());
         DaggerfallRulesVariant extra = new(Manifest("test.contact", seams: [DaggerfallRulesSeams.PhysicalMitigation]),
-            _ => new(PhysicalMitigation: new Absorb(), PhysicalDelivery: ops => new DaggerfallClassicPhysicalDelivery(ops)));
+            _ => new(PhysicalMitigation: new Absorb(), PhysicalDelivery: ops => new DaggerfallContactDelivery(ops, DaggerfallContactTuning.Default)));
         foreach (DaggerfallRulesVariant variant in new[] { missing, extra })
         {
             DaggerfallSeamSelection selection = DaggerfallSeamSelection.From(Resolve([variant.Manifest.Id.Value], variant).Variants, [variant]);
-            Assert.Throws<InvalidOperationException>(() => selection.Build(Inputs));
+            Assert.Throws<InvalidOperationException>(() => selection.Build(Inputs, DaggerfallContactTuning.Default));
         }
     }
 
     [Fact]
-    public void A_selected_variant_composes_its_owners_once_with_its_tuning_and_classic_fills_the_rest()
+    public void A_selected_variant_composes_its_owners_once_with_its_tuning_and_the_defaults_fill_the_rest()
     {
         int compositions = 0;
         DaggerfallSeamContext? built = null;
-        DaggerfallRulesVariant contact = new(Manifest("test.contact", seams: [DaggerfallRulesSeams.PhysicalDelivery]),
-            context => { compositions++; built = context; return new(PhysicalDelivery: ops => new DaggerfallClassicPhysicalDelivery(ops)); });
-        ResolvedGameComposition composition = Resolve(["test.contact"], contact);
+        Absorb absorb = new();
+        DaggerfallRulesVariant armor = new(Manifest("test.armor"),
+            context => { compositions++; built = context; return new(PhysicalMitigation: absorb); });
+        ResolvedGameComposition composition = Resolve(["test.armor"], armor);
 
-        DaggerfallSeamSelection selection = DaggerfallSeamSelection.From(composition.Variants, [contact]);
-        DaggerfallComposedSeams seams = selection.Build(Inputs);
+        DaggerfallSeamSelection selection = DaggerfallSeamSelection.From(composition.Variants, [armor]);
+        DaggerfallComposedSeams seams = selection.Build(Inputs, DaggerfallContactTuning.Default);
 
         Assert.Equal(1, compositions);
-        Assert.Equal(new RulesVariantId("test.contact"), selection.PhysicalDeliveryVariant);
-        Assert.Null(selection.PhysicalMitigationVariant);
+        Assert.Equal(new RulesVariantId("test.armor"), selection.PhysicalMitigationVariant);
+        Assert.Null(selection.PhysicalDeliveryVariant);
         Assert.Null(selection.PlayerGuardVariant);
-        Assert.IsType<DaggerfallClassicPhysicalDelivery>(seams.PhysicalDelivery(null!));
-        Assert.IsType<DaggerfallClassicPhysicalMitigation>(seams.PhysicalMitigation);
-        Assert.Same(DaggerfallNoPlayerGuard.Instance, seams.PlayerGuard);
+        Assert.Same(absorb, seams.PhysicalMitigation);
+        Assert.IsType<DaggerfallContactDelivery>(seams.PhysicalDelivery(null!));
+        Assert.IsType<DaggerfallContactGuard>(seams.PlayerGuard);
         Assert.Equal("variant tuning", Encoding.UTF8.GetString(built!.Tuning.Payload.Span));
         Assert.Same(TestPayload.Definitions, built.Definitions);
     }
 
     [Fact]
-    public void Classic_owns_every_seam_and_has_no_guard()
+    public void The_contact_owners_are_the_default_for_every_seam()
     {
-        DaggerfallComposedSeams seams = DaggerfallSeamSelection.From([], [Variant("test.armor")]).Build(Inputs);
-        Assert.IsType<DaggerfallClassicPhysicalMitigation>(seams.PhysicalMitigation);
-        Assert.IsType<DaggerfallClassicPhysicalDelivery>(seams.PhysicalDelivery(null!));
-        Assert.Same(DaggerfallNoPlayerGuard.Instance, seams.PlayerGuard);
+        DaggerfallComposedSeams seams = DaggerfallSeamSelection.From([], [Variant("test.armor")]).Build(Inputs, DaggerfallContactTuning.Default);
+        Assert.IsType<DaggerfallContactMitigation>(seams.PhysicalMitigation);
+        Assert.IsType<DaggerfallContactDelivery>(seams.PhysicalDelivery(null!));
+        Assert.IsType<DaggerfallContactGuard>(seams.PlayerGuard);
         Assert.False(seams.PlayerGuard.Raised);
-        Assert.IsType<DaggerfallClassicTouchDelivery>(seams.TouchDelivery(null!));
-        Assert.Null(DaggerfallSeamSelection.Classic.TouchDeliveryVariant);
-        Assert.Null(DaggerfallSeamSelection.Classic.PhysicalDeliveryVariant);
+        Assert.IsType<DaggerfallContactTouch>(seams.TouchDelivery(null!));
+        Assert.IsType<DaggerfallContactEngagement>(seams.EnemyEngagement);
+        Assert.IsType<DaggerfallContactHarmPresentation>(seams.HarmPresentation);
+        Assert.Null(DaggerfallSeamSelection.Default.TouchDeliveryVariant);
+        Assert.Null(DaggerfallSeamSelection.Default.PhysicalDeliveryVariant);
     }
 
     [Fact]

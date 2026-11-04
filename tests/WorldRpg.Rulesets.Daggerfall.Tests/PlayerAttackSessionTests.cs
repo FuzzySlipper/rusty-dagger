@@ -70,6 +70,7 @@ public sealed class PlayerAttackSessionTests
         // accepted operations so its physical-wear removal cannot change the selected skill.
         DaggerfallItemInstanceMetadata sword = session.State.ItemInstances.RequireUnique(1001);
         session.State.ItemInstances.ReplaceUnique(1001, sword with { CurrentCondition = 100, MaximumCondition = 100 });
+        session.Touches(2000);
         ProductInputEvent pressed = Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack");
         ProductUpdateFacts first = new(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d);
 
@@ -148,7 +149,7 @@ public sealed class PlayerAttackSessionTests
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
         authored[2000] = authored[2000] with { MinimumMaterial = "daedric" };
         TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
-        DaggerCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting);
+        DaggerCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting, targetingSpatial);
 
         double staminaBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current;
         FactBuffer<IProductFact> facts = new();
@@ -157,10 +158,21 @@ public sealed class PlayerAttackSessionTests
         facts.Deliver(emptySpace.Add);
 
         Assert.Equal(staminaBefore - 11, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
-        Assert.Equal(new PlayerAttackStartedFact(7, 13) { Feedback = new(true, "sound.347") },
-            Assert.Single(emptySpace.OfType<PlayerAttackStartedFact>()));
-        Assert.Contains(new AttackRejectedFact(AttackRejection.NoTargetInReach), emptySpace);
+        // A swing at empty space waits for its hit frame like any other, and only there meets nothing.
+        PlayerAttackStartedFact started = Assert.Single(emptySpace.OfType<PlayerAttackStartedFact>());
+        Assert.Equal(((long?)null, true, new DaggerfallStrikeFeedback(true, "sound.347")), (started.TargetId, started.WaitsWithoutTarget, started.Feedback));
+        Assert.DoesNotContain(emptySpace, fact => fact is AttackRejectedFact);
         Assert.Equal(new AttackCooldown(DaggerfallActorIdentity.PlayerEntityId, 6), Assert.Single(combat.Execution.CaptureCooldowns(7, 13)));
+
+        combat.Attacks.TryPlayerMelee(session.State.PlayerControl, ForwardLook(), 7, 14, .125, facts);
+        List<IProductFact> swinging = [];
+        facts.Deliver(swinging.Add);
+        Assert.Equal([new AttackRejectedFact(AttackRejection.AttackInProgress, DaggerfallActorIdentity.PlayerEntityId)], swinging);
+
+        combat.Execution.ApplyImpacts([new AttackImpactNotice(DaggerfallActorIdentity.PlayerEntityId, 0, 7, 13, Expired: false)], 7, facts);
+        List<IProductFact> whiffed = [];
+        facts.Deliver(whiffed.Add);
+        Assert.Single(whiffed.OfType<AttackWhiffedFact>());
 
         combat.Attacks.TryPlayerMelee(session.State.PlayerControl, ForwardLook(), 7, 14, .125, facts);
         List<IProductFact> coolingDown = [];
@@ -168,13 +180,14 @@ public sealed class PlayerAttackSessionTests
         Assert.Equal([new AttackRejectedFact(AttackRejection.Cooldown, DaggerfallActorIdentity.PlayerEntityId)], coolingDown);
         Assert.Equal(staminaBefore - 11, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
 
+        session.Touches(2000);
         combat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 8, 20, .125), facts);
         List<IProductFact> materialImmune = [];
         facts.Deliver(materialImmune.Add);
         Assert.Equal(new PlayerAttackStartedFact(8, 20) { Feedback = new(true, "sound.347") },
             Assert.Single(materialImmune.OfType<PlayerAttackStartedFact>()));
         Assert.Contains(new AttackRejectedFact(AttackRejection.InsufficientWeaponMaterial), materialImmune);
-        Assert.DoesNotContain(materialImmune, fact => fact is AttackHitFact or AttackMissedFact);
+        Assert.DoesNotContain(materialImmune, fact => fact is AttackHitFact or AttackWhiffedFact);
 
         // The factory's material is instance meaning, not the iron source definition used to give
         // template 113 its weapon shape. Equip the factory product and prove combat reads that
@@ -190,7 +203,7 @@ public sealed class PlayerAttackSessionTests
         session.State.Equipment.Swap(equipped, new WorldRpg.Kit.Inventory.UniqueInventoryItem(steelItem.Entity.Value, steelDagger.Item),
             [new WorldRpg.Kit.Inventory.EquipmentSlotId("right-hand")]);
         authored[2000] = authored[2000] with { MinimumMaterial = "steel" };
-        DaggerCombatRules steelCombat = CombatCollaborators.SessionRules(session, definitions, authored, targeting);
+        DaggerCombatRules steelCombat = CombatCollaborators.SessionRules(session, definitions, authored, targeting, targetingSpatial);
 
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         int healthBeforeSteelHit = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).ValueInt;
@@ -319,12 +332,11 @@ public sealed class PlayerAttackSessionTests
 
         Assert.Equal("Hit Rat for 7 damage", presentation.LastOutcome);
 
-        // A miss is a result too, and once the result has aged out the rejection shows. As in the
-        // donor, the player's line names no roll or chance.
-        outcomes.React(new AttackMissedFact(1, 2008, 41, 8, false, 1, 200));
-        Assert.Equal("Missed Rat", presentation.LastOutcome);
-        outcomes.React(new AttackMissedFact(2008, DaggerfallActorIdentity.PlayerEntityId, 0, 0, true, 1, 201));
-        Assert.Equal("Rat missed you", presentation.LastOutcome);
+        // A blow that met nothing is a result too, and once the result has aged out the rejection shows.
+        outcomes.React(new AttackWhiffedFact(1, 2008, false, 1, 200));
+        Assert.Equal("Your blow meets nothing; Rat is out of reach", presentation.LastOutcome);
+        outcomes.React(new AttackWhiffedFact(2008, DaggerfallActorIdentity.PlayerEntityId, true, 1, 201));
+        Assert.Equal("Rat's blow misses you", presentation.LastOutcome);
         presentation.Advance(presentation.LifetimeSeconds);
         outcomes.React(new AttackRejectedFact(AttackRejection.Cooldown));
         Assert.Equal("Cooldown", presentation.LastOutcome);
@@ -347,18 +359,21 @@ public sealed class PlayerAttackSessionTests
             placement => placement.EntityId,
             placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
-        TargetingService backstabTargeting = CombatCollaborators.Targeting(session.State.Actors, authored, out SpatialMovementSystem backstabSpatial);
+        TargetingService backstabTargeting = CombatCollaborators.Targeting(session.State.Actors, authored, out SpatialMovementSystem backstabSpatial, out SpatialFake contact);
         using SpatialMovementSystem ownedBackstabSpatial = backstabSpatial;
-        DaggerCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, backstabTargeting,
+        DaggerCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, backstabTargeting, backstabSpatial,
             random: RandomMaximum.Create(), skillUses: use => session.State.SkillUses.Record(use),
             playerPosition: () => session.State.PlayerControl.Position);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("backstabbing")).BaseValue = 37;
 
         WorldPoint player = session.State.PlayerControl.Position!.Value;
         ActorState target = session.State.Actors.Get(2000);
+        // Every swing lands, and this fact needs the target alive for each of them.
+        void Heal() => target.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(target.Stats.GetTrack(TrackId.Parse("health")).Maximum.Value);
         // With zero heading an actor faces -Z; putting the player at +Z leaves the actor's back
         // toward the accepted player attack, matching the donor's IsBackFacing opportunity.
         target.ApplyPose(new ActorPose(new WorldPoint(player.X, player.Y, player.Z - 1f), 0f));
+        contact.OverlapContactsResult = _ => Touching(target.Actor.Entity.Value);
         FactBuffer<IProductFact> facts = new();
         combat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 9999, 30, 1, .125), facts);
         List<IProductFact> rejectedFacts = [];
@@ -369,9 +384,10 @@ public sealed class PlayerAttackSessionTests
         combat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 31, 1, .125), facts);
         List<IProductFact> awayFacts = [];
         facts.Deliver(awayFacts.Add);
-        AttackMissedFact away = Assert.Single(awayFacts.OfType<AttackMissedFact>());
+        Assert.Single(awayFacts.OfType<AttackHitFact>());
         Assert.Equal(1, session.State.Progression.SkillUses["backstabbing"]);
 
+        Heal();
         combat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 31, 1, .125), facts);
         List<IProductFact> replayFacts = [];
         facts.Deliver(replayFacts.Add);
@@ -379,22 +395,22 @@ public sealed class PlayerAttackSessionTests
         Assert.Equal(1, session.State.Progression.SkillUses["backstabbing"]);
 
         // DFU's 100-degree sector rounds to facing index 2, which is a side-facing opportunity
-        // and therefore contributes neither chance nor a use tally.
+        // and therefore contributes no use tally.
         target.ApplyPose(new ActorPose(target.Position, MathF.PI * 80f / 180f));
+        Heal();
         combat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 32, 1, .125), facts);
         List<IProductFact> sideFacts = [];
         facts.Deliver(sideFacts.Add);
-        AttackMissedFact side = Assert.Single(sideFacts.OfType<AttackMissedFact>());
-        Assert.Equal(away.Chance - 37, side.Chance);
+        Assert.Single(sideFacts.OfType<AttackHitFact>());
         Assert.Equal(1, session.State.Progression.SkillUses["backstabbing"]);
 
         // The donor's 135-degree sector rounds to facing index 3, the first back-facing sector.
         target.ApplyPose(new ActorPose(target.Position, MathF.PI / 4f));
+        Heal();
         combat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 33, 1, .125), facts);
         List<IProductFact> diagonalFacts = [];
         facts.Deliver(diagonalFacts.Add);
-        AttackMissedFact diagonal = Assert.Single(diagonalFacts.OfType<AttackMissedFact>());
-        Assert.Equal(away.Chance, diagonal.Chance);
+        Assert.Single(diagonalFacts.OfType<AttackHitFact>());
         Assert.Equal(2, session.State.Progression.SkillUses["backstabbing"]);
 
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
@@ -427,6 +443,7 @@ public sealed class PlayerAttackSessionTests
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         double healthBefore = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
+        session.Touches(2000);
         session.Update(AttackUpdate());
 
         TargetingEvidence evidence = Assert.IsType<TargetingEvidence>(session.LastMeleeTargeting);
@@ -606,7 +623,7 @@ public sealed class PlayerAttackSessionTests
             placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
         TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
-        DaggerCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting);
+        DaggerCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting, targetingSpatial);
         FactBuffer<IProductFact> facts = new();
 
         // The enemy decides a swing against the living player.
@@ -623,7 +640,7 @@ public sealed class PlayerAttackSessionTests
 
         // A defeated target is dropped, not struck for zero: the clamp would otherwise
         // still publish a hit fact for an impact that changed nothing.
-        Assert.DoesNotContain(impacts, fact => fact is AttackHitFact or AttackMissedFact);
+        Assert.DoesNotContain(impacts, fact => fact is AttackHitFact or AttackWhiffedFact);
         Assert.Equal(0d, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
 
         // The swing is consumed by the dropped impact rather than left blocking its

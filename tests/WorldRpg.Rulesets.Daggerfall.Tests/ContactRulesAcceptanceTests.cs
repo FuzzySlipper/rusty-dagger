@@ -9,69 +9,54 @@ using WorldRpg.Kit.Facts;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Policies;
-using WorldRpg.Rulesets.Daggerfall.Variants;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
-/// End-to-end acceptance of the <c>daggerfall.contact</c> bundle: every delivery reaches by contact in a game
-/// composed from the bundle, and a save made under it loads under it and is refused under classic.
+/// End-to-end acceptance of the contact rules: every delivery reaches by contact in a game composed from the
+/// classic bundle, and that game saves and loads.
 /// </summary>
-public sealed class ContactVariantAcceptanceTests
+public sealed class ContactRulesAcceptanceTests
 {
     private const long Player = DaggerfallActorIdentity.PlayerEntityId;
     private const long Enemy = 2000;
 
     [Fact]
-    public void A_contact_game_saves_and_loads_under_its_bundle_and_classic_refuses_the_save()
+    public void A_game_raises_its_guard_and_saves_and_loads()
     {
         string root = TestData.RepositoryRoot;
         InMemoryPersistenceService persistence = new();
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
 
         (EngineContextFake engine, CapturingDaggerfallRuleset ruleset) = Product(persistence);
-        using (WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.contact")))
-        {
-            product.Start();
-            NewGameSessionTests.Commit(ruleset.RequireSession());
-            product.Begin();
-            DaggerfallSession game = ruleset.RequireSession();
-            // The contact owners are live: a held block raises the guard classic does not have.
-            game.State.WeaponDrawn = true;
-            product.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "block")]));
-            Assert.True(game.PlayerGuardRaised);
-            game.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(11);
+        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.classic"));
+        product.Start();
+        NewGameSessionTests.Commit(ruleset.RequireSession());
+        product.Begin();
+        DaggerfallSession game = ruleset.RequireSession();
+        // The contact owners are live: a held block raises the guard.
+        game.State.WeaponDrawn = true;
+        product.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "block")]));
+        Assert.True(game.PlayerGuardRaised);
+        game.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(11);
 
-            product.Update(new ProductUpdate(OuterUpdate(2), [Ui("{\"action\":\"save-slot\",\"label\":\"Contact run\"}")]));
-            product.Update(new ProductUpdate(OuterUpdate(3), []));
-            Assert.Contains("Saved 'Contact run'", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
-            product.Update(new ProductUpdate(OuterUpdate(4), [Ui("{\"action\":\"load-slot\",\"key\":\"slot-1\"}")]));
-            FinishLoading(product, 4);
-            DaggerfallSession loaded = ruleset.RequireSession();
-            Assert.NotSame(game, loaded);
-            Assert.Equal(11, loaded.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
-        }
-
-        (EngineContextFake classicEngine, CapturingDaggerfallRuleset classicRuleset) = Product(persistence);
-        using (WorldRpgProduct classic = new(new ProductCreateContext(classicEngine.Context, FullContent(root), input), classicRuleset, new GameBundleId("daggerfall.classic")))
-        {
-            classic.Start();
-            DaggerfallSession title = classicRuleset.RequireSession();
-            classic.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"load-slot\",\"key\":\"slot-1\"}")]));
-            Assert.Same(title, classicRuleset.RequireSession());
-            string outcome = classicEngine.PublishedField("lastOutcome")!;
-            Assert.StartsWith("Load failed:", outcome, StringComparison.Ordinal);
-            Assert.Contains(DaggerfallVariants.Contact.Value, outcome, StringComparison.Ordinal);
-        }
+        product.Update(new ProductUpdate(OuterUpdate(2), [Ui("{\"action\":\"save-slot\",\"label\":\"Contact run\"}")]));
+        product.Update(new ProductUpdate(OuterUpdate(3), []));
+        Assert.Contains("Saved 'Contact run'", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
+        product.Update(new ProductUpdate(OuterUpdate(4), [Ui("{\"action\":\"load-slot\",\"key\":\"slot-1\"}")]));
+        FinishLoading(product, 4);
+        DaggerfallSession loaded = ruleset.RequireSession();
+        Assert.NotSame(game, loaded);
+        Assert.Equal(11, loaded.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
     }
 
     [Fact]
     public void A_player_swing_lands_on_the_enemy_its_volume_touches_at_the_hit_frame()
     {
         List<string> releases = [];
-        (DaggerfallSession session, AppearanceFake appearance, _) = VisibleEnemySession(releases, out SpatialFake spatial, contact: true, random: RandomMaximum.Create());
+        (DaggerfallSession session, AppearanceFake appearance, _) = VisibleEnemySession(releases, out SpatialFake spatial, random: RandomMaximum.Create());
         using DaggerfallSession disposable = session;
         session.State.WeaponDrawn = true;
         spatial.OverlapContactsResult = _ => Touching(session.State.Actors.Get(Enemy).Actor.Entity.Value);
@@ -99,7 +84,7 @@ public sealed class ContactVariantAcceptanceTests
             using DaggerfallSession disposableProbe = probe;
             reach = probe.State.Kit.Attacks.ReachOf(Enemy)!.Value;
         }
-        (DaggerfallSession session, AppearanceFake appearance, _) = VisibleEnemySession(releases, out SpatialFake spatial, distance: reach * .5d, contact: true, random: RandomMaximum.Create());
+        (DaggerfallSession session, AppearanceFake appearance, _) = VisibleEnemySession(releases, out SpatialFake spatial, distance: reach * .5d, random: RandomMaximum.Create());
         using DaggerfallSession disposable = session;
         spatial.OverlapContactsResult = _ => Touching(session.State.Actors.Player.Actor.Entity.Value);
         double health = Health(session, Player);
@@ -122,7 +107,7 @@ public sealed class ContactVariantAcceptanceTests
     {
         List<string> releases = [];
         // Far enough that the enemy only closes, so no combat line replaces the spell's.
-        (DaggerfallSession session, _, _) = VisibleEnemySession(releases, out SpatialFake spatial, distance: 20d, contact: true, random: RandomMaximum.Create());
+        (DaggerfallSession session, _, _) = VisibleEnemySession(releases, out SpatialFake spatial, distance: 20d, random: RandomMaximum.Create());
         using DaggerfallSession disposable = session;
         Track magicka = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value));
         magicka.Maximum.BaseValue = 1000;
@@ -152,7 +137,7 @@ public sealed class ContactVariantAcceptanceTests
     {
         List<string> releases = [];
         // Far enough that the enemy only closes, so no combat line replaces the spell's.
-        (DaggerfallSession session, _, _) = VisibleEnemySession(releases, out SpatialFake spatial, distance: 20d, contact: true, random: RandomMaximum.Create());
+        (DaggerfallSession session, _, _) = VisibleEnemySession(releases, out SpatialFake spatial, distance: 20d, random: RandomMaximum.Create());
         using DaggerfallSession disposable = session;
         Track magicka = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value));
         magicka.Maximum.BaseValue = 1000;
@@ -183,7 +168,7 @@ public sealed class ContactVariantAcceptanceTests
         PerceptionFake perception = PerceptionFake.Create();
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service, random: RandomMaximum.Create());
-        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, ContactComposition(inputs));
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
         const long archer = 2004;
         session.State.PlayerControl.MoveTo(Vector3.Zero);
         session.State.Actors.Get(archer).ApplyPose(new(new(0, 0, -8), MathF.PI));
@@ -206,7 +191,7 @@ public sealed class ContactVariantAcceptanceTests
     [Fact]
     public void A_new_archers_arrow_leaves_on_its_release_frame_and_flies_through_ordinary_updates_into_the_target()
     {
-        using NewGameBowSessionTests.Fixture f = new(4, contact: true, random: RandomMaximum.Create());
+        using NewGameBowSessionTests.Fixture f = new(4, random: RandomMaximum.Create());
         ulong target = f.Game.State.Actors.Get(NewGameBowSessionTests.Fixture.Target).Actor.Entity.Value;
         f.Spatial.FloorHit = request => MathF.Abs(request.Direction.Y) < .5f
             ? new SpatialHit(true, SpatialHitKind.Entity, target, 0, 0, 0, 0, 0, 0, default, request.Origin + request.Direction * .2f, -request.Direction, .2d, 0d, 0d, false, true)
@@ -230,7 +215,7 @@ public sealed class ContactVariantAcceptanceTests
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service, persistence: persistence);
-        return (engine, new CapturingDaggerfallRuleset(variants: DaggerfallVariants.All));
+        return (engine, new CapturingDaggerfallRuleset());
     }
 
     /// <summary>Teaches the first stock spell of a delivery this ruleset can ready, and leaves it unready for the UI to ready.</summary>
@@ -249,8 +234,4 @@ public sealed class ContactVariantAcceptanceTests
 
     private static double Health(DaggerfallSession session, long actor) =>
         (actor == Player ? session.State.Actors.Player.Stats : session.State.Actors.Get(actor).Stats).GetTrack(TrackId.Parse("health")).Current;
-
-    private static SpatialContactResult Touching(params ulong[] entities) => new(
-        entities.Select(entity => new SpatialContact(SpatialHitKind.Entity, entity, 0, 0, 0, 0, 0, Vector3.Zero, Vector3.Zero, 0d, .1d, false)).ToArray(),
-        false, false, 1, 1);
 }

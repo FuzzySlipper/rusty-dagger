@@ -57,7 +57,7 @@ internal sealed record DaggerfallSessionComposition(
     internal DaggerfallEffectCatalog? Effects { get; init; }
 
     /// <summary>The owner selected for each rules seam; classic unless a selected variant claims it.</summary>
-    internal DaggerfallSeamSelection Seams { get; init; } = DaggerfallSeamSelection.Classic;
+    internal DaggerfallSeamSelection Seams { get; init; } = DaggerfallSeamSelection.Default;
 
     /// <summary>The classic block records building names are admitted from; null admits none.</summary>
     internal DaggerfallBlocksSnapshot? Blocks { get; init; }

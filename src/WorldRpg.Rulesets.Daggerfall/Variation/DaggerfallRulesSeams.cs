@@ -4,8 +4,8 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
 /// The variation points a compiled rules variant may replace as whole owners. Each seam has one owner
-/// interface; classic Daggerfall supplies the default owner, and a variant claiming the seam supplies
-/// its own. Nothing inside a classic owner branches on which variant is selected.
+/// interface; the ruleset supplies the default owner, and a variant claiming the seam supplies its own.
+/// Nothing inside a default owner branches on which variant is selected.
 /// </summary>
 public static class DaggerfallRulesSeams
 {
@@ -15,7 +15,7 @@ public static class DaggerfallRulesSeams
     /// <summary>When an admitted physical attack's harm is decided and whom it reaches: <see cref="Modules.Combat.IDaggerfallPhysicalDelivery"/>.</summary>
     public static readonly RulesSeamId PhysicalDelivery = new("daggerfall.physical-delivery");
 
-    /// <summary>The player's guard: whether and how the player can block, <see cref="IDaggerfallPlayerGuard"/>. Classic has none.</summary>
+    /// <summary>The player's guard: whether and how the player can block, <see cref="IDaggerfallPlayerGuard"/>.</summary>
     public static readonly RulesSeamId PlayerGuard = new("daggerfall.player-guard");
 
     /// <summary>Whom a touch spell reaches at its cast frame: <see cref="IDaggerfallTouchDelivery"/>.</summary>

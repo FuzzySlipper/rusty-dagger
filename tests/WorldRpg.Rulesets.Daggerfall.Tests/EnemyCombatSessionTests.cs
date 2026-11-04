@@ -81,8 +81,8 @@ public sealed class EnemyCombatSessionTests
             Assert.True(
                 action.AttackRangeIndex is not null || (action.MinimumDamage is > 0 && action.MaximumDamage is > 0),
                 $"'{placement.ActorId.Value}' swings with '{action.Id}', which names neither a damage range nor damage.");
-            // The donor resolves a monster's swing with a skill its record carries; a swing keyed on a
-            // skill the actor reads as zero would be a hit chance the donor never describes.
+            // A monster's swing is keyed on a skill its record carries; one keyed on a skill the actor
+            // reads as zero is a swing the donor never describes.
             Assert.True(definition.Stats.Values[new DaggerfallStatId(action.Skill)] > 0, $"'{placement.ActorId.Value}' swings with '{action.Skill}', which its record does not carry.");
             swinging.Add(placement.ActorId);
         }
@@ -109,17 +109,20 @@ public sealed class EnemyCombatSessionTests
 
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         double healthBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
-        // The swing is decided on the admitted step and lands when its authored damage
-        // frame is reached, so the update that carries the crossing is the one that hurts.
+        session.Touches(DaggerfallActorIdentity.PlayerEntityId);
+        // The swing is decided on the admitted step; its authored damage frame hands it to the
+        // published wind-up, and the blow lands on the player's body when that ends.
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
         session.Update(new ProductUpdate(OuterUpdate(1), []));
         Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[2000].State);
+        Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
+        appearance.AdvanceReceiptForAll = null;
+        RunWindUp(session, 2, 1);
         double healthAfterAttack = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
         Assert.True(healthAfterAttack < healthBefore);
 
         // The same swing cannot land twice, and a frame that never crosses lands nothing.
-        appearance.AdvanceReceiptForAll = null;
-        session.Update(new ProductUpdate(OuterUpdate(2), []));
+        session.Update(new ProductUpdate(OuterUpdate(WindUpEnd(1) + 1), []));
         Assert.Equal(healthAfterAttack, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
 
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 0d, PerceptionPairKind.FacingRejected, 0d));
@@ -156,7 +159,7 @@ public sealed class EnemyCombatSessionTests
         long corpse = session.SpawnActor("rat", new ActorPose(playerPosition with { Z = playerPosition.Z - 1f }, 0f));
         session.State.Actors.Get(corpse).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
-        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, corpse, 1, 1, .125));
+        session.Strike(new ExplicitMeleeRequest(1, corpse, 1, 1, .125));
         Assert.True(session.Corpses.ContainsKey(corpse));
 
         session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
@@ -164,9 +167,15 @@ public sealed class EnemyCombatSessionTests
         perception.Receipt = Receipt(
             new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Visible, 1d),
             new PerceptionPair(1, checked((ulong)corpse), 1d, 1d, PerceptionPairKind.Visible, 1d));
+        session.Touches(DaggerfallActorIdentity.PlayerEntityId);
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+        appearance.AdvanceReceiptForAll = null;
+        for (ulong step = 2; step < WindUpEnd(1); step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
+        Assert.False(session.State.Actors.Player.IsDefeated);
 
-        session.Update(new ProductUpdate(OuterUpdate(1), [
+        // The interaction asked for in the update whose blow kills the player opens nothing.
+        session.Update(new ProductUpdate(OuterUpdate(WindUpEnd(1)), [
             Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "interact"),
         ]));
 
@@ -196,14 +205,17 @@ public sealed class EnemyCombatSessionTests
         Assert.False(session.State.Kit.AttackExecution.IsReady(DaggerfallActorIdentity.PlayerEntityId, 1, 3));
         Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
 
-        // The enemy's strike lands at its own frame, independently of the player's swing.
+        // The enemy's strike lands at its own frame and wind-up, independently of the player's swing.
+        session.Touches(DaggerfallActorIdentity.PlayerEntityId);
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
         session.Update(new ProductUpdate(OuterUpdate(3), []));
+        appearance.AdvanceReceiptForAll = null;
+        RunWindUp(session, 4, 1);
         Assert.True(session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current < healthBefore);
     }
 
     [Fact]
-    public void A_lethal_enemy_frame_in_the_same_update_resolves_before_a_deferred_player_swing()
+    public void A_lethal_enemy_blow_in_the_same_update_resolves_before_a_deferred_player_swing()
     {
         List<string> releases = [];
         (DaggerfallSession session, AppearanceFake appearance, _) = VisibleEnemySession(releases);
@@ -212,10 +224,14 @@ public sealed class EnemyCombatSessionTests
         session.Update(new ProductUpdate(OuterUpdate(1), []));
         Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[2000].State);
         session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.Touches(DaggerfallActorIdentity.PlayerEntityId);
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
+        session.Update(new ProductUpdate(OuterUpdate(2), []));
+        appearance.AdvanceReceiptForAll = null;
+        for (ulong step = 3; step < WindUpEnd(1); step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
 
-        // The swing asked for in the update whose frame kills the player is never made.
-        session.Update(new ProductUpdate(OuterUpdate(2), [
+        // The swing asked for in the update whose blow kills the player is never made.
+        session.Update(new ProductUpdate(OuterUpdate(WindUpEnd(1)), [
             Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "attack"),
         ]));
 
@@ -258,7 +274,7 @@ public sealed class EnemyCombatSessionTests
 
         // One resolver owns enemy swings; the in-step path is the player's, and
         // accepting an enemy here would silently restore the old timing.
-        Assert.Throws<ArgumentException>(() => session.ResolveExplicitMelee(new ExplicitMeleeRequest(2000, 1, 1, 1, .125)));
+        Assert.Throws<ArgumentException>(() => session.Strike(new ExplicitMeleeRequest(2000, 1, 1, 1, .125)));
     }
 
     [Fact]
@@ -288,9 +304,12 @@ public sealed class EnemyCombatSessionTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, resumedAppearance, perception.Service);
         using DaggerfallSession resumed = DaggerfallSession.Restore(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, composition), DaggerfallSavePayload.Encode(saved));
         long resumedHealth = PlayerHealth(resumed);
+        resumed.Touches(DaggerfallActorIdentity.PlayerEntityId);
 
         resumedAppearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
         resumed.Update(new ProductUpdate(OuterUpdate(2), []));
+        resumedAppearance.AdvanceReceiptForAll = null;
+        RunWindUp(resumed, 3, 1);
 
         Assert.Equal(resumedHealth, PlayerHealth(resumed));
     }
@@ -351,6 +370,7 @@ public sealed class EnemyCombatSessionTests
         (DaggerfallSession session, AppearanceFake appearance, PerceptionFake perception) = VisibleEnemySession(releases, engineCreated: created => engine = created);
         using DaggerfallSession disposable = session;
         long healthBefore = PlayerHealth(session);
+        session.Touches(DaggerfallActorIdentity.PlayerEntityId);
         session.Update(new ProductUpdate(OuterUpdate(1), []));
 
         // Still visible, but beyond the authored reach: the behaviour chases instead
@@ -358,8 +378,10 @@ public sealed class EnemyCombatSessionTests
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, 5d, 1d, PerceptionPairKind.Visible, 5d));
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
         session.Update(new ProductUpdate(OuterUpdate(2), []));
-
         Assert.Equal(EnemyBehaviorState.Chase, session.LastEnemyBehavior[2000].State);
+        appearance.AdvanceReceiptForAll = null;
+        RunWindUp(session, 3, 1);
+
         Assert.Equal(healthBefore, PlayerHealth(session));
         Assert.DoesNotContain(engine.EmittedAudio, cue => cue.SignalId.Split('.').Last().StartsWith("hit", StringComparison.Ordinal));
     }
@@ -371,11 +393,14 @@ public sealed class EnemyCombatSessionTests
         (DaggerfallSession session, AppearanceFake appearance, _) = VisibleEnemySession(releases);
         using DaggerfallSession disposable = session;
         long healthBefore = PlayerHealth(session);
+        session.Touches(DaggerfallActorIdentity.PlayerEntityId);
         session.Update(new ProductUpdate(OuterUpdate(1), []));
 
         session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(-999, clamp: true);
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
         session.Update(new ProductUpdate(OuterUpdate(2), []));
+        appearance.AdvanceReceiptForAll = null;
+        RunWindUp(session, 3, 1);
 
         Assert.Equal(EnemyBehaviorState.Dead, session.LastEnemyBehavior[2000].State);
         Assert.Equal(healthBefore, PlayerHealth(session));
@@ -388,6 +413,7 @@ public sealed class EnemyCombatSessionTests
         (DaggerfallSession session, AppearanceFake appearance, _) = VisibleEnemySession(releases);
         using DaggerfallSession disposable = session;
         long healthBefore = PlayerHealth(session);
+        session.Touches(DaggerfallActorIdentity.PlayerEntityId);
         session.Update(new ProductUpdate(OuterUpdate(1), []));
 
         // The animation ends without ever reaching its damage frame.
@@ -401,6 +427,8 @@ public sealed class EnemyCombatSessionTests
         // A crossing arriving afterwards cannot land the expired swing.
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
         session.Update(new ProductUpdate(OuterUpdate(3), []));
+        appearance.AdvanceReceiptForAll = null;
+        RunWindUp(session, 4, 1);
         Assert.Equal(healthBefore, PlayerHealth(session));
     }
 
@@ -511,6 +539,7 @@ public sealed class EnemyCombatSessionTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         double healthBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
+        session.Touches(DaggerfallActorIdentity.PlayerEntityId);
 
         // The update that decides the swing carries no damage: nothing has been struck
         // until the authored damage frame is reached.
@@ -520,11 +549,13 @@ public sealed class EnemyCombatSessionTests
 
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
         session.Update(new ProductUpdate(OuterUpdate(2), []));
+        appearance.AdvanceReceiptForAll = null;
+        RunWindUp(session, 3, 1);
         double healthAfterImpact = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
         Assert.True(healthAfterImpact < healthBefore);
 
         // The same frame cannot land a second time.
-        session.Update(new ProductUpdate(OuterUpdate(3), []));
+        session.Update(new ProductUpdate(OuterUpdate(WindUpEnd(1) + 1), []));
         Assert.Equal(healthAfterImpact, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
     }
 
@@ -544,6 +575,7 @@ public sealed class EnemyCombatSessionTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         double healthBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
+        session.Touches(DaggerfallActorIdentity.PlayerEntityId);
 
         session.Update(new ProductUpdate(OuterUpdate(1), []));
         // Losing sight cancels the swing; a crossing from the already-playing animation
@@ -551,8 +583,10 @@ public sealed class EnemyCombatSessionTests
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 0d, PerceptionPairKind.Occluded, 0d));
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
         session.Update(new ProductUpdate(OuterUpdate(2), []));
-
         Assert.Equal(EnemyBehaviorState.Search, session.LastEnemyBehavior[2000].State);
+        appearance.AdvanceReceiptForAll = null;
+        RunWindUp(session, 3, 1);
+
         Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
     }
 }

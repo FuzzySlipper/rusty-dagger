@@ -98,12 +98,12 @@ public sealed class CrimeCallerSessionTests
     {
         using Fixture f = new(); var s = f.Session; f.Civilian(s);
         s.State.Actors.Player.Actor.Get<CombatContributions>().Rules.Add(new ForceDamage(lethal ? 10000 : 0));
-        s.ResolveExplicitMelee(new(1, f.TargetId, 8, 10, .125));
+        s.Strike(new(1, f.TargetId, 8, 10, .125));
         var crime = Assert.Single(s.State.Crime.Incidents);
         Assert.Equal(lethal ? DaggerfallCrimeKind.Murder : DaggerfallCrimeKind.Assault, crime.Crime);
         Assert.Equal(lethal ? DaggerfallCrimeGuildCredit.CivilianMurder : DaggerfallCrimeGuildCredit.None, crime.GuildCredit);
         // A refused repeat of the same admitted attack does not publish another legal consequence.
-        s.ResolveExplicitMelee(new(1, f.TargetId, 8, 10, .125));
+        s.Strike(new(1, f.TargetId, 8, 10, .125));
         Assert.Single(s.State.Crime.Incidents);
         using var restored = f.Restore(s.CaptureSave()); Assert.Single(restored.State.Crime.Incidents);
     }
@@ -112,7 +112,7 @@ public sealed class CrimeCallerSessionTests
     public void Ordinary_physical_hit_defeats_the_civilian_without_enemy_combat_skills()
     {
         using Fixture f = new(); var s = f.Session; f.Civilian(s);
-        s.ResolveExplicitMelee(new(1, f.TargetId, 8, 10, .125));
+        s.Strike(new(1, f.TargetId, 8, 10, .125));
         Assert.True(s.State.Actors.Get(f.TargetId).IsDefeated);
         var incident = Assert.Single(s.State.Crime.Incidents);
         Assert.Equal(DaggerfallCrimeKind.Murder, incident.Crime);
@@ -134,7 +134,7 @@ public sealed class CrimeCallerSessionTests
             ? s.SpawnActor(TestPayload.Definitions.Actors.Values.First(actor => actor.MobileId == 146).Id.Value, new(new(10, 0, 10), 0))
             : f.Civilian(s, "guard");
         s.State.Actors.Player.Actor.Get<CombatContributions>().Rules.Add(new ForceDamage(10000));
-        s.ResolveExplicitMelee(new(1, target, 8, 10, .125));
+        s.Strike(new(1, target, 8, 10, .125));
         var incident = Assert.Single(s.State.Crime.Incidents);
         Assert.Equal(DaggerfallCrimeTargetKind.Guard, incident.TargetKind);
         Assert.Equal(cityWatch ? DaggerfallCrimeKind.Murder : DaggerfallCrimeKind.Assault, incident.Crime);
@@ -154,20 +154,17 @@ public sealed class CrimeCallerSessionTests
     }
 
     [Fact]
-    public void Missed_attack_does_not_report_assault()
+    public void A_swing_that_meets_no_one_does_not_report_assault()
     {
         using Fixture f = new(); var s = f.Session; f.Civilian(s);
-        s.State.Actors.Player.Actor.Get<CombatContributions>().Rules.Add(new ForceMiss());
         s.ResolveExplicitMelee(new(1, f.TargetId, 8, 10, .125));
         Assert.Empty(s.State.Crime.Incidents);
     }
 
     private sealed class ForceDamage(int damage) : ICombatContribution
     {
-        public void Hit(TryHitEvent value) => value.Hit = true;
         public void Damage(DamageEvent value) => value.Damage = damage;
     }
-    private sealed class ForceMiss : ICombatContribution { public void Hit(TryHitEvent value) => value.Hit = false; }
 
     private sealed class Fixture : IDisposable
     {

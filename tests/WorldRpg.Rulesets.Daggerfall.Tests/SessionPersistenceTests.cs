@@ -726,7 +726,7 @@ public sealed class SessionPersistenceTests
         RulesetSavePayload payload;
         using (DaggerfallSession original = DaggerfallSession.StartNew(source.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
-            original.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 77, 400, .125));
+            original.Strike(new ExplicitMeleeRequest(1, 2000, 77, 400, .125));
             payload = original.CaptureSave();
         }
 
@@ -740,7 +740,7 @@ public sealed class SessionPersistenceTests
         using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), payload);
         double before = resumed.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
 
-        resumed.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 2, 1, .125));
+        resumed.Strike(new ExplicitMeleeRequest(1, 2000, 2, 1, .125));
 
         Assert.Equal(before, resumed.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current);
         Assert.Equal(0, resumedSpatial.StepCalls);

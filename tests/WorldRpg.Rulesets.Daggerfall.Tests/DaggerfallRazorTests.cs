@@ -15,10 +15,10 @@ public sealed partial class DaggerfallEquipmentWearTests
     public void Delayed_melee_feedback_retains_the_accepted_weapon_after_its_source_is_removed(bool hit)
     {
         using WearFixture f = new();
-        f.Script(body: 9, critical: 50, hit: hit ? 1 : 100, damage: hit ? 15 : null);
+        f.Script(body: 9, deflect: hit ? 100 : 1, damage: hit ? 15 : null);
         var facts = f.RunPlayerAttack(beforeImpact: () => f.DestroyNamira(1001));
         var feedback = hit ? Assert.Single(facts.OfType<AttackHitFact>()).Feedback
-            : Assert.Single(facts.OfType<AttackMissedFact>()).Feedback;
+            : Assert.Single(facts.OfType<AttackNegatedFact>()).Feedback;
         Assert.True(feedback.Weapon);
         Assert.Equal("sound.347", feedback.SwingCue);
         Assert.DoesNotContain(f.PlayerEquipment.Read().Assignments, item => item.Item.Definition.Value == "iron-longsword");
@@ -31,7 +31,7 @@ public sealed partial class DaggerfallEquipmentWearTests
     {
         using WearFixture f = new();
         f.EquipRazor();
-        f.Script(body: 9, critical: 50, hit: 1, damage: 5, razorSave: save);
+        f.Script(body: 9, damage: 5, razorSave: save);
         var facts = f.RunPlayerAttack();
         var artifact = Assert.Single(facts.OfType<ArtifactTerminalStrikeFact>());
         Assert.Equal(terminal ? 200 : 0, artifact.AddedDamage);
@@ -45,19 +45,19 @@ public sealed partial class DaggerfallEquipmentWearTests
     }
 
     [Fact]
-    public void Razor_miss_offers_its_save_and_a_removed_source_has_no_artifact_result()
+    public void A_deflected_blow_offers_no_Razor_save_and_a_removed_source_has_no_artifact_result()
     {
-        // The donor runs the player's Strikes payloads on a miss too.
-        using WearFixture miss = new();
-        miss.EquipRazor();
-        miss.Script(body: 9, critical: 50, hit: 100, razorSave: 1);
-        Assert.Equal(0, Assert.Single(miss.RunPlayerAttack().OfType<ArtifactTerminalStrikeFact>()).AddedDamage);
-        Assert.Equal(1500, miss.Condition(9501));
+        // A deflected blow stops at its negation, before any Strikes payload.
+        using WearFixture deflected = new();
+        deflected.EquipRazor();
+        deflected.Script(body: 9, deflect: 1);
+        Assert.Empty(deflected.RunPlayerAttack().OfType<ArtifactTerminalStrikeFact>());
+        Assert.Equal(1500, deflected.Condition(9501));
         using WearFixture removed = new();
         removed.EquipRazor();
         removed.DestroyNamira(9501);
         removed.EquipPlayerItem("iron-longsword", 9600, "right-hand");
-        removed.Script(body: 9, critical: 50, hit: 1, damage: 15);
+        removed.Script(body: 9, damage: 15);
         Assert.Empty(removed.RunPlayerAttack().OfType<ArtifactTerminalStrikeFact>());
     }
 
@@ -72,7 +72,7 @@ public sealed partial class DaggerfallEquipmentWearTests
         f.EquipRazor();
         var immune = f.Definitions.Catalogs.RequireCareer("class00");
         f.ReplaceActor(Enemy, f.Definitions.RequireActor(new DaggerfallActorId("thief")) with { ActionId = "enemy-class-equipped-melee", Career = immune.Id });
-        f.Script(body: 9, critical: 50, hit: 1, damage: 5);
+        f.Script(body: 9, damage: 5);
         Assert.Equal(0, Assert.Single(f.RunPlayerAttack().OfType<ArtifactTerminalStrikeFact>()).AddedDamage);
         Assert.True(f.EnemyActor.Get<StatsComponent>().GetTrack(TrackId.Parse("health")).Current > 0);
     }
@@ -88,7 +88,7 @@ public sealed partial class DaggerfallEquipmentWearTests
         {
             f.ReplaceActor(Enemy, f.Definitions.RequireActor(new DaggerfallActorId("thief")) with
                 { ActionId = "enemy-class-equipped-melee", MinimumMaterial = "daedric" });
-            f.Script(body: 9, critical: 50, hit: 1);
+            f.Script(body: 9);
         }
         var facts = f.RunPlayerAttack(requireAccepted: !dead);
         Assert.Empty(facts.OfType<ArtifactTerminalStrikeFact>());
@@ -101,7 +101,7 @@ public sealed partial class DaggerfallEquipmentWearTests
     {
         using WearFixture f = new();
         f.EquipRazor(condition: 50);
-        f.Script(body: 9, critical: 50, hit: 1, damage: 5, razorSave: 100);
+        f.Script(body: 9, damage: 5, razorSave: 100);
         var facts = f.RunPlayerAttack();
         Assert.Equal(0, f.Condition(9501));
         Assert.DoesNotContain(f.PlayerEquipment.Read().Assignments, assignment => assignment.Item.Definition.Value == "template-113-orcish-magic-magic-item-0001");

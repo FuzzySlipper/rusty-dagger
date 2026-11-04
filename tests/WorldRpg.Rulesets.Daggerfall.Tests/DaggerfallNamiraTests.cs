@@ -9,6 +9,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed partial class DaggerfallEquipmentWearTests
 {
+    /// <summary>The body roll that strikes the feet, which the payload player wears nothing on.</summary>
+    private const int BareFeet = 19;
+
     [Theory]
     [InlineData("vermin", 0)]
     [InlineData("spriggans", 0)]
@@ -26,7 +29,7 @@ public sealed partial class DaggerfallEquipmentWearTests
         f.EquipEnemyWeapon("iron-longsword", 9001);
         f.EquipNamira();
         f.ReplaceActor(Enemy, f.Definitions.RequireActor(new DaggerfallActorId("thief")) with { ActionId = "enemy-class-equipped-melee", Team = team });
-        f.Script(body: 9, critical: 50, hit: 1, damage: 15);
+        f.Script(body: BareFeet, damage: 15);
         var facts = f.RunEnemyAttack();
         Assert.Equal(13, AppliedDamage(facts));
         Assert.Equal(200 - expected, f.EnemyActor.Get<StatsComponent>().GetTrack(TrackId.Parse("health")).Current);
@@ -50,23 +53,23 @@ public sealed partial class DaggerfallEquipmentWearTests
         f.EquipNamira();
         if (destroy) f.DestroyNamira(9501);
         else f.PlayerEquipment.Unequip(f.PlayerItem(9501));
-        f.Script(9, 50, 1, 15);
+        f.Script(BareFeet, damage: 15);
         var facts = f.RunEnemyAttack();
         Assert.Empty(facts.OfType<ArtifactDamageReflectedFact>());
         Assert.Equal(200, f.EnemyActor.Get<StatsComponent>().GetTrack(TrackId.Parse("health")).Current);
     }
 
     [Fact]
-    public void Namira_miss_reflects_nothing_and_two_rings_do_not_double_the_result()
+    public void A_deflected_blow_reflects_nothing_through_Namira_and_two_rings_do_not_double_the_result()
     {
         using WearFixture f = new();
         f.EquipEnemyWeapon("iron-longsword", 9001);
         f.EquipNamira();
         f.EquipNamira(9502, "ring1");
-        f.Script(9, 50, 99);
+        f.Script(BareFeet, deflect: 1);
         Assert.Empty(f.RunEnemyAttack().OfType<ArtifactDamageReflectedFact>());
         Assert.Equal(1500, f.Condition(9501));
-        f.Script(9, 50, 1, 15);
+        f.Script(BareFeet, damage: 15);
         Assert.Single(f.RunEnemyAttack(step: 100).OfType<ArtifactDamageReflectedFact>());
         Assert.Equal(1500, f.Condition(9501));
         Assert.Equal(1500, f.Condition(9502));
@@ -80,7 +83,7 @@ public sealed partial class DaggerfallEquipmentWearTests
         f.EquipNamira();
         f.Player.Add(new CombatContributions());
         f.Player.Get<CombatContributions>().Rules.Add(new NamiraDefense());
-        f.Script(9, 50, 1, 15, wornWeaponRoll: 21, wornArmourRoll: 21);
+        f.Script(BareFeet, damage: 15, wornWeaponRoll: 21, wornArmourRoll: 21);
         var facts = f.RunEnemyAttack();
         var normal = Assert.Single(facts.OfType<AttackHitFact>());
         Assert.Equal(13, normal.CalculatedDamage);
@@ -99,7 +102,7 @@ public sealed partial class DaggerfallEquipmentWearTests
         f.EquipEnemyWeapon("iron-longsword", 9001);
         f.EquipNamira(condition: 5);
         f.EnemyActor.Get<StatsComponent>().GetTrack(TrackId.Parse("health")).SetCurrent(3);
-        f.Script(9, 50, 1, 15);
+        f.Script(BareFeet, damage: 15);
         var facts = f.RunEnemyAttack().ToList();
         var death = Assert.Single(facts.OfType<ActorDiedFact>());
         Assert.Equal((Enemy, DaggerfallActorIdentity.PlayerEntityId, DaggerfallDamageCause.Effect, 3d), (death.ActorId, death.KillerId, death.Cause, death.ActualHealthLost));
@@ -118,7 +121,7 @@ public sealed partial class DaggerfallEquipmentWearTests
         f.EquipNamira();
         f.EnemyActor.Add(new CombatContributions());
         f.EnemyActor.Get<CombatContributions>().Rules.Add(new ReflectionImmunity());
-        f.Script(9, 50, 1, 15);
+        f.Script(BareFeet, damage: 15);
         var facts = f.RunEnemyAttack();
         Assert.Single(facts.OfType<AttackHitFact>());
         Assert.Empty(facts.OfType<ArtifactDamageReflectedFact>());
@@ -145,7 +148,7 @@ public sealed partial class DaggerfallEquipmentWearTests
         using WearFixture f = new();
         f.EquipEnemyWeapon("iron-longsword", 9001);
         f.EquipNamira();
-        f.Script(9, 50, 1, 15);
+        f.Script(BareFeet, damage: 15);
         var facts = f.RunEnemyAttack(retireBeforeImpact: true);
         Assert.Empty(facts.OfType<DamageAppliedFact>());
         Assert.Empty(facts.OfType<ArtifactDamageReflectedFact>());

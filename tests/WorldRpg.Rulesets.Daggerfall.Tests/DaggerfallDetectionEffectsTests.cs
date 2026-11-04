@@ -95,11 +95,11 @@ public sealed class DaggerfallDetectionEffectsTests
     [Fact]
     public void Corpse_treasure_uses_the_durable_container_and_current_nonempty_inventory()
     {
-        using Fixture f = new(random: RandomMinimum.Create()); var s = f.Session;
+        using Fixture f = new(random: SessionRandom.Create()); var s = f.Session;
         long target = 2000;
         s.State.Actors.Get(target).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1);
         s.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60;
-        s.ResolveExplicitMelee(new WorldRpg.Rulesets.Daggerfall.Modules.Combat.ExplicitMeleeRequest(1, target, 1, 1, .125));
+        s.Strike(new WorldRpg.Rulesets.Daggerfall.Modules.Combat.ExplicitMeleeRequest(1, target, 1, 1, .125));
         var corpse = s.Corpses[target];
         var inventory = s.State.Containers.Read(corpse.Owner);
         Assert.NotEmpty(inventory.Stacks);

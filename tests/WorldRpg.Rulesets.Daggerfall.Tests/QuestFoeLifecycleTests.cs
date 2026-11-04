@@ -63,7 +63,7 @@ public sealed class QuestFoeLifecycleTests
         Assert.True(health.Maximum.Value > 1);
         health.SetCurrent(terminal ? 1 : health.Maximum.Value);
         f.Session.State.Kit.Rules.RegisterAction(f.Session.DefinitionsByActor[1].ActionId!, new OneDamage());
-        f.Session.ResolveExplicitMelee(new(1, id, 1, 10000, .125));
+        f.Session.Strike(new(1, id, 1, 10000, .125));
         Assert.Equal(!terminal, Resource(f.Session).FoeInjured);
         Assert.Equal(terminal ? 1 : 0, Resource(f.Session).DefeatedFoeIds.Length);
         f.Update();
@@ -162,7 +162,7 @@ public sealed class QuestFoeLifecycleTests
         Start(f, definitions); f.Update();
         long id = Resource(f.Session).Binding.ActorIds.Single();
         f.Session.State.Kit.Rules.RegisterAction(f.Session.DefinitionsByActor[1].ActionId!, new OneDamage());
-        f.Session.ResolveExplicitMelee(new(1, id, 1, 10000, .125));
+        f.Session.Strike(new(1, id, 1, 10000, .125));
         f.Update(); f.Update();
         Assert.Single(f.Session.State.Quests.Capture().Messages.Deliveries, value => value.MessageId == 100);
         using var restored = f.Restore();
@@ -253,7 +253,6 @@ public sealed class QuestFoeLifecycleTests
 
     private sealed class OneDamage : ICombatContribution
     {
-        public void Hit(TryHitEvent value) => value.Hit = true;
         public void Damage(DamageEvent value) => value.Damage = 1;
     }
     private static DaggerfallQuestResourceState Resource(DaggerfallSession session) => session.State.Quests.Capture().Instances.Single().Resources.Single(value => value.Symbol == "enemy");

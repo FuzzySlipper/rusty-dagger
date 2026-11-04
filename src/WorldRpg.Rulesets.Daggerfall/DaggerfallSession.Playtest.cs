@@ -28,7 +28,6 @@ internal sealed partial class DaggerfallSession
         {
             AttackRejectedFact rejected => $"AttackRejected:{rejected.Reason}",
             PlayerAttackStartedFact => "PlayerAttackStarted",
-            AttackMissedFact => "AttackMissed",
             AttackNegatedFact negated => $"AttackNegated:{negated.Negation}",
             AttackWhiffedFact => "AttackWhiffed",
             EnemyAttackTelegraphFact telegraph => FormattableString.Invariant($"EnemyAttackTelegraph:{telegraph.WindUpSeconds:0.###}"),
@@ -89,7 +88,6 @@ internal sealed partial class DaggerfallSession
         if (!double.IsFinite(yawDegrees) || !double.IsFinite(pitchDegrees))
             return DebugCommandResult.Failure(DebugCommandStatus.InvalidArguments, "Look requires finite degrees.");
         _input.InspectLook(State.PlayerControl, yawDegrees, pitchDegrees);
-        _playerSwings.Rebase(State.PlayerControl.YawRadians, State.PlayerControl.PitchRadians);
         _camera.Update(State.PlayerControl);
         return ReadPlaytestObservation();
     }

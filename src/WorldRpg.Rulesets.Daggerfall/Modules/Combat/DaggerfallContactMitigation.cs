@@ -2,16 +2,17 @@ using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Combat;
 using WorldRpg.Rulesets.Daggerfall.Content;
-using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using EquipmentAssignment = WorldRpg.Kit.Inventory.EquipmentAssignment;
 
-namespace WorldRpg.Rulesets.Daggerfall.Variants;
+namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 /// <summary>
-/// Physical mitigation under the contact + mitigation variant. A blow that connects is never missed; the
-/// target instead deflects or absorbs it, by channel:
+/// Physical mitigation by contact. A blow that connects is never missed; the target instead deflects or
+/// absorbs it, by channel:
 /// <list type="bullet">
-/// <item>The weapon-material requirement stays a target property: an immune target is never harmed.</item>
+/// <item>The weapon-material requirement is a target property: an immune target is never harmed, and a
+/// player whose racial override requires silver is cut only by silver or better.</item>
 /// <item>Deflection is the target's chance (Dodging and Agility) to turn the blow aside. On a channel the
 /// tuning marks full it negates the whole blow before damage is rolled; on a partial channel it turns aside
 /// a share of the rolled damage.</item>
@@ -19,15 +20,18 @@ namespace WorldRpg.Rulesets.Daggerfall.Variants;
 /// scaled per channel, taken off the damage that reaches it.</item>
 /// </list>
 /// </summary>
-internal sealed class DaggerfallContactMitigation(DaggerfallSeamContext context, DaggerfallContactTuning tuning, IDaggerfallPlayerGuard guard) : IDaggerfallPhysicalMitigation
+internal sealed class DaggerfallContactMitigation(DaggerfallSeamInputs session, DaggerfallContactTuning tuning, IDaggerfallPlayerGuard guard) : IDaggerfallPhysicalMitigation
 {
-    /// <summary>The variant's own deflection draw, keyed beside classic's combat salts without sharing one.</summary>
+    /// <summary>The deflection draw's salt.</summary>
     internal const int DeflectionSalt = 71;
-    private readonly DaggerfallClassicPhysicalMitigation _material = new(context.Session.Character);
 
     public void Negate(NegationEvent negation, DaggerfallPhysicalHarm harm)
     {
-        _material.Negate(negation, harm);
+        string? minimum = harm.TargetId == DaggerfallActorIdentity.PlayerEntityId && session.Character()?.RacialOverrides?.Current?.RequiresSilver == true
+            ? "silver" : harm.Target.MinimumMaterial;
+        if (harm.WeaponMaterial is not null
+            && !DaggerfallFormulaPolicy.CanHitMaterial(harm.WeaponMaterial, minimum, DaggerfallFormulaPolicy.ClassicWeaponMaterialRanks))
+            negation.Negation = HarmNegation.Immune;
         if (negation.Negated || !DaggerfallHarmChannels.IsPhysical(negation.Channel)) return;
         if (tuning.DeflectionFor(negation.Channel) is { Mode: DaggerfallDeflectionMode.Full } && Deflects(harm))
             negation.Negation = HarmNegation.Deflected;
@@ -47,7 +51,7 @@ internal sealed class DaggerfallContactMitigation(DaggerfallSeamContext context,
     /// </summary>
     internal int DeflectionChance(long target)
     {
-        if (context.Session.StatsOf(target) is not StatsComponent stats) return 0;
+        if (session.StatsOf(target) is not StatsComponent stats) return 0;
         double chance = tuning.DeflectionBaseChance
             + Read(stats, DaggerfallMechanicsIds.Dodging) * tuning.DeflectionPerDodgingPoint
             + (Read(stats, DaggerfallMechanicsIds.Agility) - 50) * tuning.DeflectionPerAgilityAbove50;
@@ -60,26 +64,26 @@ internal sealed class DaggerfallContactMitigation(DaggerfallSeamContext context,
         return (int)Math.Clamp(Math.Round(chance, MidpointRounding.AwayFromZero), 0d, maximum);
     }
 
-    private bool HoldsShield(long owner) => context.Session.EquipmentOf(owner).Assignments.Any(assignment => assignment.Slot.Value == "left-hand"
-        && context.Definitions.RequireItem(new DaggerfallItemId(assignment.Item.Definition.Value)).Shield is not null);
+    private bool HoldsShield(long owner) => session.EquipmentOf(owner).Assignments.Any(assignment => assignment.Slot.Value == "left-hand"
+        && session.Definitions.RequireItem(new DaggerfallItemId(assignment.Item.Definition.Value)).Shield is not null);
 
     /// <summary>What the target's protection on the struck body part takes off one blow on a channel.</summary>
     internal int Absorption(DaggerfallPhysicalHarm harm, HarmChannelId channel)
     {
         double points = 0d;
         string slot = DaggerCombatRules.BodySlot(harm.BodyPart);
-        foreach (EquipmentAssignment assignment in context.Session.EquipmentOf(harm.TargetId).Assignments)
+        foreach (EquipmentAssignment assignment in session.EquipmentOf(harm.TargetId).Assignments)
         {
-            DaggerfallItemDefinition item = context.Definitions.RequireItem(new DaggerfallItemId(assignment.Item.Definition.Value));
+            DaggerfallItemDefinition item = session.Definitions.RequireItem(new DaggerfallItemId(assignment.Item.Definition.Value));
             if (item.Armor is { } worn && assignment.Slot.Value == slot)
-                points += context.Definitions.ArmorValuesByMaterial[worn.Material] * tuning.AbsorptionPerArmorPoint;
+                points += session.Definitions.ArmorValuesByMaterial[worn.Material] * tuning.AbsorptionPerArmorPoint;
             else if (item.Shield is { } shield && assignment.Slot.Value == "left-hand" && DaggerCombatRules.ShieldCovers(item, harm.BodyPart))
                 points += shield.Armor * tuning.AbsorptionPerShieldPoint;
         }
         // The player's worn armor enchantments shift its whole armor value once, not any one piece; the
         // donor's value falls as armor strengthens, so a negative shift absorbs more.
         if (harm.TargetId == DaggerfallActorIdentity.PlayerEntityId)
-            points = Math.Max(0d, points - context.Session.PlayerArmorValueModifier() * tuning.AbsorptionPerArmorValueShift);
+            points = Math.Max(0d, points - session.PlayerArmorValueModifier() * tuning.AbsorptionPerArmorValueShift);
         // A monster's natural armour class is lower the tougher its hide; the baseline is an unarmoured beast.
         if (harm.Target.Kind == DaggerfallActorKinds.Monster)
             points += Math.Max(0d, tuning.MonsterArmorBaseline - harm.Target.Armor) * tuning.MonsterAbsorptionPerPoint;
@@ -88,10 +92,12 @@ internal sealed class DaggerfallContactMitigation(DaggerfallSeamContext context,
 
     private bool Deflects(DaggerfallPhysicalHarm harm)
     {
+        // A civilian's lightweight definition carries no combat skills, and it has none to turn a blow aside with.
+        if (harm.Target.Kind == DaggerfallActorKinds.Civilian) return false;
         int chance = DeflectionChance(harm.TargetId);
         if (chance <= 0) return false;
         bool enemy = harm.AttackerId != DaggerfallActorIdentity.PlayerEntityId;
-        long roll = context.Session.Random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, enemy ? CombatRandomKey.EnemyScope : CombatRandomKey.PlayerScope,
+        long roll = session.Random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, enemy ? CombatRandomKey.EnemyScope : CombatRandomKey.PlayerScope,
             CombatRandomKey.For(harm.Generation, harm.SimulationStep, harm.AttackerId, harm.TargetId, DeflectionSalt), 1, 100)).Value;
         return roll <= chance;
     }

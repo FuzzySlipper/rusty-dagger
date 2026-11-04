@@ -46,20 +46,22 @@ internal sealed class DaggerCombatFixture : IDisposable
         MechanicsEquipmentCoordinator sourceEquipment = CombatCollaborators.Equipment(Actors, source.Actor, Definitions, out MechanicsInventoryCoordinator sourceInventory);
         DaggerfallItemConditionService itemCondition = new(Definitions, itemInstances,
             new DaggerfallEquipmentMoves(playerInventory, playerEquipment, Definitions, itemInstances: itemInstances));
+        DaggerfallComposedSeams seams = DaggerfallSeamSelection.Default.Build(new DaggerfallSeamInputs(Definitions, () => null, Random,
+            id => (id == 2 ? sourceEquipment : playerEquipment).Read(), id => Actors.TryGet(id, out ActorState actor) ? actor.Stats : null, () => 0), DaggerfallContactTuning.Default);
         Rules = new DaggerCombatRules(
             Random, Actors, playerEquipment, id => id == 2 ? sourceInventory : playerInventory,
             itemInstances, Definitions, authored,
             CombatCollaborators.Targeting(Actors, authored, out _spatial),
-            skillUses: SkillUses.Add, playerBiographyAvoidHit: () => 0,
+            skillUses: SkillUses.Add,
             actorEquipment: id => id == 2 ? sourceEquipment : playerEquipment, itemCondition: itemCondition,
-            rules: new CombatResolution(), adrenalineRush: _ => default, playerPosition: () => null, character: () => null,
-            playerSwing: () => DaggerfallSwingDirection.None, coverBlocksShot: (_, _) => false, armorValueModifier: () => 0,
+            rules: new CombatResolution(), playerPosition: () => null, character: () => null,
             deliverWeaponPoison: (target, poison) => WeaponPoisons.Add((target, poison)), attackChanceModifier: () => 0,
             transformActor: (_, target, _, _, _) => new DaggerfallWabbajackResult(DaggerfallWabbajackOutcome.InvalidTarget, target),
             magicDefense: _ => DaggerfallMagicDefense.None, physicalAttacksBlocked: _ => false,
             molagBalStrike: (_, _, _, _, _, _, _) => throw new InvalidOperationException("This fixture arms no Mace of Molag Bal."),
             itemStrike: (_, _, _, damage) => damage, monsterHit: MonsterHits.Add,
-            actorGameplayActive: _ => true, actorTeam: id => authored.GetValueOrDefault(id)?.Team);
+            actorGameplayActive: _ => true, actorTeam: id => authored.GetValueOrDefault(id)?.Team,
+            mitigation: seams.PhysicalMitigation, delivery: seams.PhysicalDelivery);
     }
 
     /// <summary>The skill uses combat recorded, in order.</summary>
@@ -85,6 +87,10 @@ internal sealed class DaggerCombatFixture : IDisposable
     internal double Health => Track(DaggerfallMechanicsIds.Health.Value);
 
     internal double Stamina => Track(DaggerfallMechanicsIds.Stamina.Value);
+
+    /// <summary>Applies a blow that already connected with the request's target, through the application every delivery shares.</summary>
+    internal void ApplyConnected(AttackRequest request, DaggerCombatRules.DaggerfallPreparedAttack attack) =>
+        ((IDaggerfallPhysicalHarmOperations)Rules).ApplyConnectedHarm(request, request.TargetId!.Value, attack, Facts);
 
     internal List<IProductFact> Deliver()
     {

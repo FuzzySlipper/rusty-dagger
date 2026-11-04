@@ -6,7 +6,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
 /// The player guard seam (<see cref="DaggerfallRulesSeams.PlayerGuard"/>): whether the player holds a
-/// guard up. The owner reads its own input intent, so a ruleset with no guard reads nothing.
+/// guard up. The owner reads its own input intent.
 /// </summary>
 internal interface IDaggerfallPlayerGuard
 {
@@ -30,16 +30,4 @@ internal interface IDaggerfallPlayerGuard
 
     /// <summary>Drops held input on a focus, mode or site change, which a missed release must not keep raised.</summary>
     void Neutralize(ulong generation, ulong simulationStep, FactBuffer<IProductFact> facts);
-}
-
-/// <summary>Classic Daggerfall has no guard: the player never blocks, and no input is read for one.</summary>
-internal sealed class DaggerfallNoPlayerGuard : IDaggerfallPlayerGuard
-{
-    internal static DaggerfallNoPlayerGuard Instance { get; } = new();
-    private DaggerfallNoPlayerGuard() { }
-    public bool Raised => false;
-    public bool WantsTime => false;
-    public void Observe(ReadOnlySpan<ProductInputEvent> inputs) { }
-    public void Step(double seconds, bool canGuard, bool swinging, ulong generation, ulong simulationStep, FactBuffer<IProductFact> facts) { }
-    public void Neutralize(ulong generation, ulong simulationStep, FactBuffer<IProductFact> facts) { }
 }

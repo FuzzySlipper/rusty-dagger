@@ -79,7 +79,7 @@ public sealed class SiteTransitionSessionTests
         sourceActor.ApplyPose(new ActorPose(actorPosition, .4f));
         sourceActor.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
-        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, sourceActorId, 1, 1, .125));
+        session.Strike(new ExplicitMeleeRequest(1, sourceActorId, 1, 1, .125));
         Assert.True(session.Corpses.ContainsKey(sourceActorId));
         CorpseContainer sourceCorpse = session.Corpses[sourceActorId];
         int sourceCorpseStacks = session.State.Containers.Read(sourceCorpse.Owner).Stacks.Count;
@@ -146,7 +146,7 @@ public sealed class SiteTransitionSessionTests
         long defeatedActor = session.SpawnActor("encounter-warrior", new ActorPose(new WorldPoint(20, 0, 20), 0), level: 4);
         session.State.Actors.Get(defeatedActor).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60;
-        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, defeatedActor, 1, 1, .125));
+        session.Strike(new ExplicitMeleeRequest(1, defeatedActor, 1, 1, .125));
         CorpseContainer corpse = session.Corpses[defeatedActor];
         EntityId actorOwner = session.State.Actors.Get(equippedActor).Actor.Entity;
         EntityId playerOwner = session.State.Actors.Player.Actor.Entity;

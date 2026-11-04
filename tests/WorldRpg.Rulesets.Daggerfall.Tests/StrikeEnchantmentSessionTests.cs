@@ -22,46 +22,48 @@ public sealed class StrikeEnchantmentSessionTests
         DaggerfallEnemyGroup group = parameter switch { 0 => DaggerfallEnemyGroup.Undead, 1 => DaggerfallEnemyGroup.Daedra, 2 => DaggerfallEnemyGroup.Humanoid, _ => DaggerfallEnemyGroup.Animals };
         long target = Spawn(f, group);
         var health = Health(s, target); health.Maximum.BaseValue = 100; health.SetCurrent(100); double before = health.Current;
-        s.State.Kit.Rules.RegisterAction(s.DefinitionsByActor[1].ActionId!, new Strike(true, 10));
-        s.ResolveExplicitMelee(new(1, target, 1, 10000, .125));
+        s.State.Kit.Rules.RegisterAction(s.DefinitionsByActor[1].ActionId!, new Strike(10));
+        s.Strike(new(1, target, 1, 10000, .125));
         Assert.Equal(type == 4 ? 15d : 5d, before - health.Current);
         long other = Spawn(f, group == DaggerfallEnemyGroup.Animals ? DaggerfallEnemyGroup.Undead : DaggerfallEnemyGroup.Animals);
         var otherHealth = Health(s, other); otherHealth.Maximum.BaseValue = 100; otherHealth.SetCurrent(100); before = otherHealth.Current;
-        s.ResolveExplicitMelee(new(1, other, 1, 20000, .125));
+        s.Strike(new(1, other, 1, 20000, .125));
         Assert.Equal(10d, before - otherHealth.Current);
     }
 
     [Fact]
-    public void A_missed_contact_preserves_the_donor_payload_semantics_and_no_target_does_not_trigger()
+    public void A_zero_damage_connect_runs_the_payload_and_a_blow_that_meets_no_one_does_not()
     {
         using var f = new SanguineRoseSessionTests.Fixture(); var s = f.Session;
         var source = Add(f, 4, 2); Equip(s, source.Item);
         s.State.ItemInstances.ReplaceUnique(source.Id,
             s.State.ItemInstances.RequireUnique(source.Id) with { PoisonVariant = 130 });
         var health = Health(s, f.Enemy); double before = health.Current;
-        s.State.Kit.Rules.RegisterAction(s.DefinitionsByActor[1].ActionId!, new Strike(false, 10));
-        s.ResolveExplicitMelee(new(1, f.Enemy, 1, 10000, .125));
-        Assert.Equal(5d, before - health.Current); // Only PotentVs: the missed physical strike contributes zero.
+        s.State.Kit.Rules.RegisterAction(s.DefinitionsByActor[1].ActionId!, new Strike(0));
+        s.Strike(new(1, f.Enemy, 1, 10000, .125));
+        Assert.Equal(5d, before - health.Current); // Only PotentVs: the physical strike contributes zero.
         Assert.Equal(130, s.State.ItemInstances.RequireUnique(source.Id).PoisonVariant);
         before = health.Current;
         s.State.Kit.AttackExecution.Start(new(1, null, 1, 20000, .125, false), new FactBuffer<IProductFact>());
         Assert.Equal(before, health.Current);
+        s.ResolveExplicitMelee(new(1, f.Enemy, 1, 25000, .125));
+        Assert.Equal(before, health.Current);
         Assert.Equal(EquipmentMoveOutcome.Applied, s.EquipmentMoves.MoveToGrid(source.Item, 49).Outcome);
-        s.ResolveExplicitMelee(new(1, f.Enemy, 1, 30000, .125));
+        s.Strike(new(1, f.Enemy, 1, 30000, .125));
         Assert.Equal(before, health.Current);
     }
 
     [Fact]
-    public void Whenever_used_leech_updates_the_item_age_on_missed_strike_and_actual_inventory_use_without_extra_wear()
+    public void Whenever_used_leech_updates_the_item_age_on_a_zero_damage_strike_and_actual_inventory_use_without_extra_wear()
     {
         using var f = new SanguineRoseSessionTests.Fixture(); var s = f.Session;
         var source = Add(f, 21, 0); Equip(s, source.Item);
         int condition = s.State.ItemInstances.RequireUnique(source.Id).CurrentCondition;
         var health = Health(s, 1); double before = health.Current;
         s.AdvanceElapsedTime(60);
-        s.State.Kit.Rules.RegisterAction(s.DefinitionsByActor[1].ActionId!, new Strike(false, 10));
+        s.State.Kit.Rules.RegisterAction(s.DefinitionsByActor[1].ActionId!, new Strike(0));
         s.State.Kit.AttackExecution.Start(new(1, null, 1, 9000, .125, false), new FactBuffer<IProductFact>()); Assert.Equal(before, health.Current);
-        s.ResolveExplicitMelee(new(1, f.Enemy, 1, 10000, .125));
+        s.Strike(new(1, f.Enemy, 1, 10000, .125));
         Assert.Equal(before - 8, health.Current);
         Assert.Equal(Minute(s), s.State.ItemInstances.RequireUnique(source.Id).HealthLeechLastUsedMinute);
         Assert.Equal(condition, s.State.ItemInstances.RequireUnique(source.Id).CurrentCondition);
@@ -101,8 +103,8 @@ public sealed class StrikeEnchantmentSessionTests
         var source = Add(f, 6, 1); Equip(s, source.Item);
         var player = Health(s, 1); player.SetCurrent(player.Maximum.Value - 2);
         var enemy = Health(s, f.Enemy); enemy.SetCurrent(2);
-        s.State.Kit.Rules.RegisterAction(s.DefinitionsByActor[1].ActionId!, new Strike(true, 10));
-        s.ResolveExplicitMelee(new(1, f.Enemy, 1, 10000, .125));
+        s.State.Kit.Rules.RegisterAction(s.DefinitionsByActor[1].ActionId!, new Strike(10));
+        s.Strike(new(1, f.Enemy, 1, 10000, .125));
         Assert.Equal(player.Maximum.Value, player.Current); Assert.True(s.State.Actors.Get(f.Enemy).IsDefeated);
         using var restored = f.Restore(); Assert.True(restored.State.Actors.Get(f.Enemy).IsDefeated);
     }
@@ -159,8 +161,8 @@ public sealed class StrikeEnchantmentSessionTests
     {
         using var f = new SanguineRoseSessionTests.Fixture(); var s = f.Session;
         var source = Add(f, 21, 0); Equip(s, source.Item); Health(s, 1).SetCurrent(8);
-        s.State.Kit.Rules.RegisterAction(s.DefinitionsByActor[1].ActionId!, new Strike(false, 0));
-        s.ResolveExplicitMelee(new(1, f.Enemy, 1, 10000, .125)); Assert.Equal(0, Health(s, 1).Current);
+        s.State.Kit.Rules.RegisterAction(s.DefinitionsByActor[1].ActionId!, new Strike(0));
+        s.Strike(new(1, f.Enemy, 1, 10000, .125)); Assert.Equal(0, Health(s, 1).Current);
         s.AdvanceElapsedTime(60, resting: true); Assert.Equal(0, Health(s, 1).Current);
         using var restored = f.Restore(); Assert.Equal(0, Health(restored, 1).Current);
         Assert.Throws<ArgumentOutOfRangeException>(() => new DaggerfallStrikeEnchantmentTuning(-1, 2).Validate());
@@ -193,9 +195,10 @@ public sealed class StrikeEnchantmentSessionTests
     }
     private static Track Health(DaggerfallSession s, long id) => (id == 1 ? s.State.Actors.Player.Stats : s.State.Actors.Get(id).Stats).GetTrack(TrackId.Parse("health"));
     private static long Minute(DaggerfallSession s) { var v = DaggerfallSavePayload.Read(s.CaptureSave()).Calendar; return new World.DaggerfallCalendar(v.Year, v.Month, v.Day, v.Hour, v.Minute, v.Second).ToAbsoluteSeconds() / 60; }
-    private sealed class Strike(bool hit, int damage) : ICombatContribution
+    private sealed class Strike(int damage) : ICombatContribution
     {
-        public void Hit(TryHitEvent value) => value.Hit = hit;
         public void Damage(DamageEvent value) => value.Damage = damage;
+        // Natural armour differs by enemy group; these facts are about the enchantment's share alone.
+        public void Mitigate(MitigationEvent value) => value.Absorbed = 0;
     }
 }

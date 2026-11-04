@@ -52,7 +52,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     private readonly DaggerCombatRules _combat;
     // The player's weapon swing gesture, read from the look turns each admitted update commits and
     // consumed by the weapon attack it admits.
-    private readonly DaggerfallSwingTracker _playerSwings;
     private readonly DaggerfallVitalityConsequences _vitality;
     // The poisons the session's actors carry, and the ordinal its draws advance on so a replay inside a
     // session draws the same values.
@@ -934,7 +933,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _appearance.Publish(State.Actors, _groundContainers.All.Where(pair => pair.Value.PropertyPlacement is null).ToDictionary(),
             _latestUpdateGeneration is ulong generation && _latestSimulationStep is ulong simulationStep
                 ? _combat.ReadRangedFlights(generation, simulationStep) : [],
-            _tuning.Camera.EyeHeight, State.Effects.PerceptionFor, ReadNpcViews(), spellFlights, State.Npcs.IsGameplayActive,
+            State.Effects.PerceptionFor, ReadNpcViews(), spellFlights, State.Npcs.IsGameplayActive,
             id => _groundContainers.Read(id) is { } contents ? _inventoryUi.GroundLook(id, contents) : null);
         PublishDebugOverlays();
     }

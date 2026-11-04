@@ -1,7 +1,7 @@
 using System.Numerics;
 using Rusty.Engine;
 
-namespace WorldRpg.Rulesets.Daggerfall.Variants;
+namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 /// <summary>The box a swing or a touch sweeps in front of an actor's eye, turned to its heading.</summary>
 internal static class DaggerfallContactVolume
