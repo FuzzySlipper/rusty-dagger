@@ -90,7 +90,7 @@ export function renderSpells(root:HTMLElement,view:SpellbookProjection|null,cont
   place.view=view;place.send=send;
   const binding=(id:string)=>controls?.bindings.find(candidate=>candidate.id===id)?.keys.map(keyLabel).join(' or ') ?? null;
   const recast=binding('recast'),abort=binding('abort-spell');
-  place.hints=[recast && `Recast: ${recast}`,abort && `Abort: ${abort}`].filter(Boolean).join(' · ');
+  place.hints=[recast && `Cast: ${recast}`,abort && `Abort: ${abort}`].filter(Boolean).join(' · ');
   draw(root,place);
 }
 

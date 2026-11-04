@@ -19,12 +19,13 @@ public sealed class Arena2ClassicMediaPublicationTests
         Arena2ClassicMediaPublication second = Arena2ClassicMediaPublication.Create(inputs);
 
         // Five service screens and their donor companions are thirteen more artifacts and resources, and
-        // the spell icon atlas and the targeting and element tiles two more: naming an image admits it.
-        Assert.Equal(81 + first.Audio.Count, first.Artifacts.Count);
+        // the spell icon atlas and the targeting and element tiles two more, and the five casting hands
+        // five: naming an image admits it.
+        Assert.Equal(86 + first.Audio.Count, first.Artifacts.Count);
         Assert.Equal(first.Artifacts.Count, first.MediaManifest.Resources.Count);
         Assert.Empty(first.MapMedia);
         // Fourteen more admitted source files, because those images are read as well as named.
-        Assert.Equal(58, first.Sources.Count);
+        Assert.Equal(63, first.Sources.Count);
         Assert.Equal(first.Artifacts.Select(artifact => artifact.RelativePath).OrderBy(path => path, StringComparer.Ordinal), first.Artifacts.Select(artifact => artifact.RelativePath));
         Assert.Equal(first.Artifacts.Select(artifact => artifact.RelativePath), second.Artifacts.Select(artifact => artifact.RelativePath));
         Assert.All(first.Artifacts.Zip(second.Artifacts), pair => Assert.Equal(pair.First.Bytes.ToArray(), pair.Second.Bytes.ToArray()));
@@ -36,8 +37,8 @@ public sealed class Arena2ClassicMediaPublicationTests
         Assert.True(daggerActions[0].Timing.Loop);
         Assert.All(daggerActions.Skip(1), action => Assert.False(action.Timing.Loop));
         Assert.All(daggerActions, action => Assert.Equal(10F, action.Timing.FramesPerSecond));
-        Assert.Equal(12, first.WeaponMedia.Count);
-        Assert.Equal(["weapon.00", "weapon.03", "weapon.axe", "weapon.bow", "weapon.dagger.steel", "weapon.flail", "weapon.longblade", "weapon.mace", "weapon.staff", "weapon.unarmed", "weapon.warhammer", "weapon.werecreature"], first.WeaponMedia.Select(weapon => weapon.ResourceId).OrderBy(id => id, StringComparer.Ordinal));
+        Assert.Equal(17, first.WeaponMedia.Count);
+        Assert.Equal(["weapon.00", "weapon.03", "weapon.axe", "weapon.bow", "weapon.dagger.steel", "weapon.flail", "weapon.longblade", "weapon.mace", "weapon.staff", "weapon.unarmed", "weapon.warhammer", "weapon.werecreature"], first.WeaponMedia.Select(weapon => weapon.ResourceId).Where(id => !id.StartsWith("hand.", StringComparison.Ordinal)).OrderBy(id => id, StringComparer.Ordinal));
         ClassicWeaponMediaManifest bow = first.WeaponMedia.Single(weapon => weapon.ResourceId == "weapon.bow");
         Assert.All(bow.Actions, action => Assert.Equal(0, action.SourceRecordOrdinal));
         Assert.Equal(7, bow.Actions.Single(action => action.Action == ClassicDaggerWeaponAction.StrikeDown).FrameCount);
@@ -527,7 +528,7 @@ public sealed class Arena2ClassicMediaPublicationTests
         Assert.Throws<ArgumentException>(() => Arena2ClassicMediaPublication.Create(CreateInputs(), collidingProvenance));
     }
 
-    [CorpusFact("WEAPON00.CIF", "WEAPON01.CIF", "WEAPON02.CIF", "WEAPON03.CIF", "WEAPON04.CIF", "WEAPON05.CIF", "WEAPON06.CIF", "WEAPON07.CIF", "WEAPON08.CIF", "WEAPON09.CIF", "WEAPON10.CIF", "WEAPON11.CIF")]
+    [CorpusFact("FIRE00C6.CIF", "FRST00C6.CIF", "POIS00C6.CIF", "SHOK00C6.CIF", "MJIC00C6.CIF", "WEAPON00.CIF", "WEAPON01.CIF", "WEAPON02.CIF", "WEAPON03.CIF", "WEAPON04.CIF", "WEAPON05.CIF", "WEAPON06.CIF", "WEAPON07.CIF", "WEAPON08.CIF", "WEAPON09.CIF", "WEAPON10.CIF", "WEAPON11.CIF")]
     public void RegeneratesTheSelectedClosureFromOperatorSuppliedArena2WhenAvailable()
     {
         string arena2 = TestData.CorpusRoot;
@@ -541,16 +542,17 @@ public sealed class Arena2ClassicMediaPublicationTests
             Read(arena2, "REST01I0.IMG"), Read(arena2, "REST02I0.IMG"), Read(arena2, "INVE08I0.IMG"), Read(arena2, "INVE10I0.IMG"), Read(arena2, "INVE11I0.IMG"),
             Read(arena2, "INVE12I0.IMG"), Read(arena2, "INVE14I0.IMG"), Read(arena2, "GILD01I0.IMG"), Read(arena2, "ICON00I0.IMG"), Read(arena2, "MASK04I0.IMG"),
             Read(arena2, "TEXTURE.216"), Read(arena2, "FONT0003.FNT"), Read(arena2, "WEAPON00.CIF"), Read(arena2, "WEAPON03.CIF"), Read(arena2, "WEAPON11.CIF"), Read(arena2, "FONT0000.FNT"), Read(arena2, "FONT0001.FNT"), Read(arena2, "FONT0002.FNT"), Read(arena2, "FONT0004.FNT"), ReadCorpusMapMedia(arena2), Read(arena2, "FMAP_PAL.COL"), Read(arena2, "MAP.PAL"), [], Read(arena2, "TEXTURE.205"),
-            Read(arena2, "TEXTURE.375"), Read(arena2, "TEXTURE.376"), Read(arena2, "TEXTURE.377"), Read(arena2, "TEXTURE.378"), Read(arena2, "TEXTURE.379"), Read(arena2, "TEXTURE.434")));
+            Read(arena2, "TEXTURE.375"), Read(arena2, "TEXTURE.376"), Read(arena2, "TEXTURE.377"), Read(arena2, "TEXTURE.378"), Read(arena2, "TEXTURE.379"), Read(arena2, "TEXTURE.434"),
+            Read(arena2, "FIRE00C6.CIF"), Read(arena2, "FRST00C6.CIF"), Read(arena2, "POIS00C6.CIF"), Read(arena2, "SHOK00C6.CIF"), Read(arena2, "MJIC00C6.CIF")));
 
         Assert.Equal(31, WeaponActions(publication, "weapon.dagger.steel").Sum(action => action.FrameCount));
-        Assert.Equal(67 + 81 + publication.Audio.Count, publication.Artifacts.Count);
-        Assert.Equal(50 + 76 + 2, publication.Sources.Count);
+        Assert.Equal(67 + 86 + publication.Audio.Count, publication.Artifacts.Count);
+        Assert.Equal(55 + 76 + 2, publication.Sources.Count);
         AssertPng(Artifact(publication, "media/combat/weapon-dagger-steel-atlas.png"), 3840, 600);
         Assert.All(publication.Audio, clip => Assert.Equal(11_025U, clip.SampleRate));
         // All twelve archives decode: the two spares and the werecreature form carry the same
         // wield-image-plus-six-strikes shape as the general weapons.
-        Assert.Equal(12, publication.WeaponMedia.Count);
+        Assert.Equal(17, publication.WeaponMedia.Count);
         Assert.Equal(31, WeaponActions(publication, "weapon.00").Sum(action => action.FrameCount));
         Assert.Equal(31, WeaponActions(publication, "weapon.03").Sum(action => action.FrameCount));
         Assert.Equal(31, WeaponActions(publication, "weapon.werecreature").Sum(action => action.FrameCount));
@@ -636,6 +638,29 @@ public sealed class Arena2ClassicMediaPublicationTests
         Assert.Equal("data", Encoding.ASCII.GetString(wave, 36, 4));
     }
 
+    [Fact]
+    public void Casting_hands_publish_as_weapon_media_with_every_frame_at_its_own_screen_place()
+    {
+        Arena2ClassicMediaPublication publication = Arena2ClassicMediaPublication.Create(CreateInputs());
+
+        foreach (string hand in new[] { "hand.fire", "hand.cold", "hand.poison", "hand.shock", "hand.magic" })
+        {
+            ClassicWeaponMediaManifest media = Assert.Single(publication.WeaponMedia, value => value.ResourceId == hand);
+            Assert.Equal(1, media.Actions.Single(action => action.Action == ClassicDaggerWeaponAction.Idle).FrameCount);
+            Assert.Equal(6, media.Actions.Single(action => action.Action == ClassicDaggerWeaponAction.StrikeDown).FrameCount);
+            Assert.Equal(7, media.Actions.Count);
+        }
+    }
+
+    [Fact]
+    public void A_casting_frame_that_leaves_the_screen_is_refused()
+    {
+        byte[] broken = CreateCastingCif();
+        BitConverter.TryWriteBytes(broken.AsSpan(0, 2), (short)319);
+
+        Assert.Throws<Arena2FormatException>(() => Arena2ClassicMediaPublication.Create(CreateInputs() with { Fire00C6Cif = broken }));
+    }
+
     private static Arena2ClassicMediaInputs CreateInputs(byte[]? brokenScreen = null) => new(
         CreateWeaponCif(),
         CreateWeaponCif(),
@@ -703,7 +728,25 @@ public sealed class Arena2ClassicMediaPublicationTests
         // The five spell element archives: a missile and an impact record each.
         CreateTextureArchive(2), CreateTextureArchive(2), CreateTextureArchive(2), CreateTextureArchive(2), CreateTextureArchive(2),
         // The inventory glints are records 5 and 6 of TEXTURE.434.
-        CreateTextureArchive(7));
+        CreateTextureArchive(7),
+        CreateCastingCif(),
+        CreateCastingCif(),
+        CreateCastingCif(),
+        CreateCastingCif(),
+        CreateCastingCif());
+
+    /// <summary>Six uncompressed casting records, each a 4x4 frame placed at 10,150 on the classic screen.</summary>
+    private static byte[] CreateCastingCif()
+    {
+        using MemoryStream stream = new();
+        using BinaryWriter writer = new(stream);
+        for (int record = 0; record < 6; record++)
+        {
+            foreach (short field in new short[] { 10, 150, 4, 4, 0, 16 }) writer.Write(field);
+            writer.Write(Enumerable.Repeat((byte)(record + 1), 16).ToArray());
+        }
+        return stream.ToArray();
+    }
 
     private static byte[] Read(string directory, string fileName) => File.ReadAllBytes(Path.Combine(directory, fileName));
 

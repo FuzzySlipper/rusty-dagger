@@ -3364,7 +3364,7 @@ test('spellbook rows describe the chosen spell and its details panel readies, ca
     const panel=f.root.querySelector('.dagger-spells-root');
     assert.equal(panel.hidden,false);
     assert.equal(f.root.querySelector('#dagger-menu-title').textContent,'Known spells');
-    assert.match(panel.querySelector('.dagger-spellbook-keys').textContent,/Recast: Q · Abort: E/);
+    assert.match(panel.querySelector('.dagger-spellbook-keys').textContent,/Cast: Q · Abort: E/);
     // Tabs count each school and close the empty ones.
     assert.equal(panel.querySelector('[data-spell-school="restoration"]').textContent,'Restoration 1');
     assert.equal(panel.querySelector('[data-spell-school="destruction"]').disabled,true);

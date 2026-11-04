@@ -82,7 +82,13 @@ public sealed record Arena2ClassicMediaInputs(
     byte[] Texture378,
     byte[] Texture379,
     // The inventory window's glints: the magic shimmer (record 5) and the coin glint (record 6).
-    byte[] Texture434)
+    byte[] Texture434,
+    // The five elements' casting hands, fire, cold, poison, shock and magic, in the spell archives' order.
+    byte[] Fire00C6Cif,
+    byte[] Frst00C6Cif,
+    byte[] Pois00C6Cif,
+    byte[] Shok00C6Cif,
+    byte[] Mjic00C6Cif)
 { }
 
 /// <summary>Quotas for bounded, deterministic classic-media regeneration.</summary>
@@ -1091,6 +1097,10 @@ public sealed record Arena2ClassicMediaPublication(
     /// are longblade-shaped archives no donor reader addresses, so they follow the general action
     /// layout their record and frame counts match and keep file-derived identities no item references.
     /// </summary>
+    /// <summary>The casting file of each spell element, by the name its hand is published under.</summary>
+    private static readonly (string Element, string FileName)[] CastingHandSources =
+        [("fire", "FIRE00C6.CIF"), ("cold", "FRST00C6.CIF"), ("poison", "POIS00C6.CIF"), ("shock", "SHOK00C6.CIF"), ("magic", "MJIC00C6.CIF")];
+
     private static readonly WeaponMediaSource[] WeaponMediaSources =
     [
         new("WEAPON00.CIF", "weapon.00", GeneralWeaponActionSources),
@@ -1330,6 +1340,7 @@ public sealed record Arena2ClassicMediaPublication(
             generated.Add(weapon);
             weaponMedia.Add(new(resourceId, actions));
         }
+        generated.AddRange(BuildCastingHands(source, artPalette, effectiveOptions, weaponMedia));
         generated.AddRange(BuildEffects(source, palette, resolved, effectiveOptions, out ClassicEffectManifest[] effects));
         generated.AddRange(BuildAudio(source.DaggerSound, effectiveOptions, out ClassicAudioManifest[] audio));
         generated.AddRange(BuildUi(source, artPalette, resolved, effectiveOptions, out ClassicUiImageManifest[] uiImages));
@@ -1513,6 +1524,56 @@ public sealed record Arena2ClassicMediaPublication(
             frames,
             SpriteAtlasOptions.FixedCellGrid(options.MaximumAtlasDimension, WeaponReferenceWidth, WeaponReferenceHeight, bottomAlign: true));
         return (GeneratedMediaArtifact.FromAtlas(resourceId, NormalizedMediaKind.WeaponSprite, $"media/combat/{Slug(resourceId)}-atlas.png", atlas), actions.ToArray());
+    }
+
+    /// <summary>
+    /// The elements' casting hands as weapon media. Each record of a casting file is one frame that already knows its
+    /// place on the 320x200 screen, so a frame is drawn at its own offsets; every strike plays the whole sequence.
+    /// </summary>
+    private static IEnumerable<GeneratedMediaArtifact> BuildCastingHands(
+        SourceBytes sources, Arena2Palette palette, Arena2ClassicMediaPublicationOptions options, List<ClassicWeaponMediaManifest> media)
+    {
+        foreach ((string element, string fileName) in CastingHandSources)
+        {
+            string resourceId = $"hand.{element}";
+            IReadOnlyList<IndexedImg> records = ImgDecoder.DecodeRecordSequence(sources.RequireCastingHand(fileName), $"arena2/{fileName}");
+            DecodedSpriteFrame[] frames = [.. records.Select((record, index) =>
+                new DecodedSpriteFrame($"{resourceId}/{index:D2}", WeaponReferenceWidth, WeaponReferenceHeight, PlaceCastingFrame(record, palette)))];
+            ClassicWeaponActionManifest Action(ClassicDaggerWeaponAction action, int count, bool loop) => new(action, 0, 0, count,
+                ClassicWeaponScreenAlignment.Left, 0F, new ClassicSpriteTiming(10F, loop), records[0].XOffset, records[0].YOffset, null);
+            ClassicWeaponActionManifest[] actions =
+            [
+                Action(ClassicDaggerWeaponAction.Idle, 1, true),
+                .. Enum.GetValues<ClassicDaggerWeaponAction>().Where(action => action != ClassicDaggerWeaponAction.Idle)
+                    .Select(action => Action(action, frames.Length, false)),
+            ];
+            foreach (ClassicWeaponActionManifest action in actions) action.Validate(frames.Length);
+            media.Add(new(resourceId, actions));
+            NormalizedSpriteAtlas atlas = SpriteAtlasNormalizer.Normalize(
+                frames, SpriteAtlasOptions.FixedCellGrid(options.MaximumAtlasDimension, WeaponReferenceWidth, WeaponReferenceHeight, bottomAlign: true));
+            yield return GeneratedMediaArtifact.FromAtlas(resourceId, NormalizedMediaKind.WeaponSprite, $"media/combat/{Slug(resourceId)}-atlas.png", atlas);
+        }
+    }
+
+    private static byte[] PlaceCastingFrame(IndexedImg source, Arena2Palette palette)
+    {
+        if (source.XOffset < 0 || source.YOffset < 0 || source.XOffset + source.Width > WeaponReferenceWidth || source.YOffset + source.Height > WeaponReferenceHeight)
+            throw new Arena2FormatException(source.Source, 0, $"casting frame at {source.XOffset},{source.YOffset} of {source.Width}x{source.Height} leaves the {WeaponReferenceWidth}x{WeaponReferenceHeight} screen");
+        Rgba32[] pixels = palette.ToRgba(source.Pixels.Span, PaletteAlphaMode.IndexZeroTransparent);
+        byte[] canvas = new byte[WeaponReferenceWidth * WeaponReferenceHeight * 4];
+        for (int row = 0; row < source.Height; row++)
+        {
+            for (int column = 0; column < source.Width; column++)
+            {
+                Rgba32 pixel = pixels[(row * source.Width) + column];
+                int target = (((source.YOffset + row) * WeaponReferenceWidth) + source.XOffset + column) * 4;
+                canvas[target] = pixel.Red;
+                canvas[target + 1] = pixel.Green;
+                canvas[target + 2] = pixel.Blue;
+                canvas[target + 3] = pixel.Alpha;
+            }
+        }
+        return canvas;
     }
 
     private static IEnumerable<GeneratedMediaArtifact> BuildEffects(
@@ -2449,6 +2510,11 @@ public sealed record Arena2ClassicMediaPublication(
             Weapon00Cif = inputs.Weapon00Cif;
             Weapon03Cif = inputs.Weapon03Cif;
             Weapon11Cif = inputs.Weapon11Cif;
+            _castingHands = new Dictionary<string, byte[]>(StringComparer.Ordinal)
+            {
+                ["FIRE00C6.CIF"] = inputs.Fire00C6Cif, ["FRST00C6.CIF"] = inputs.Frst00C6Cif, ["POIS00C6.CIF"] = inputs.Pois00C6Cif,
+                ["SHOK00C6.CIF"] = inputs.Shok00C6Cif, ["MJIC00C6.CIF"] = inputs.Mjic00C6Cif,
+            };
             LogicalSources = logicalSources;
         }
 
@@ -2464,6 +2530,8 @@ public sealed record Arena2ClassicMediaPublication(
         public byte[] Weapon00Cif { get; }
         public byte[] Weapon03Cif { get; }
         public byte[] Weapon11Cif { get; }
+        private readonly IReadOnlyDictionary<string, byte[]> _castingHands;
+        public byte[] RequireCastingHand(string fileName) => _castingHands[fileName];
         public byte[] ArtPalette { get; }
         public byte[] Texture380 { get; }
         public byte[] Texture375 { get; }
@@ -2521,6 +2589,8 @@ public sealed record Arena2ClassicMediaPublication(
             [
                 ("WEAPON00.CIF", inputs.Weapon00Cif), ("WEAPON01.CIF", inputs.Weapon01Cif), ("WEAPON02.CIF", inputs.Weapon02Cif), ("WEAPON03.CIF", inputs.Weapon03Cif), ("WEAPON04.CIF", inputs.Weapon04Cif),
                 ("WEAPON05.CIF", inputs.Weapon05Cif), ("WEAPON06.CIF", inputs.Weapon06Cif), ("WEAPON07.CIF", inputs.Weapon07Cif),
+                ("FIRE00C6.CIF", inputs.Fire00C6Cif), ("FRST00C6.CIF", inputs.Frst00C6Cif), ("POIS00C6.CIF", inputs.Pois00C6Cif),
+                ("SHOK00C6.CIF", inputs.Shok00C6Cif), ("MJIC00C6.CIF", inputs.Mjic00C6Cif),
                 ("WEAPON08.CIF", inputs.Weapon08Cif), ("WEAPON09.CIF", inputs.Weapon09Cif), ("WEAPON10.CIF", inputs.Weapon10Cif), ("WEAPON11.CIF", inputs.Weapon11Cif),
                 ("ART_PAL.COL", inputs.ArtPalette), ("TEXTURE.380", inputs.Texture380), ("PAL.PAL", inputs.Palette),
                 ("TEXTURE.375", inputs.Texture375), ("TEXTURE.376", inputs.Texture376), ("TEXTURE.377", inputs.Texture377), ("TEXTURE.378", inputs.Texture378), ("TEXTURE.379", inputs.Texture379), ("TEXTURE.434", inputs.Texture434),

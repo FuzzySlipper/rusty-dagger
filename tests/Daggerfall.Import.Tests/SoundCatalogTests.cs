@@ -275,7 +275,8 @@ public sealed class SoundCatalogTests
         Read("REST01I0.IMG"), Read("REST02I0.IMG"), Read("INVE08I0.IMG"), Read("INVE10I0.IMG"), Read("INVE11I0.IMG"),
         Read("INVE12I0.IMG"), Read("INVE14I0.IMG"), Read("GILD01I0.IMG"), Read("ICON00I0.IMG"), Read("MASK04I0.IMG"),
         Read("TEXTURE.216"), Read("FONT0003.FNT"), Read("WEAPON00.CIF"), Read("WEAPON03.CIF"), Read("WEAPON11.CIF"), Read("FONT0000.FNT"), Read("FONT0001.FNT"), Read("FONT0002.FNT"), Read("FONT0004.FNT"), [], Read("FMAP_PAL.COL"), Read("MAP.PAL"), [], Read("TEXTURE.205"),
-        Read("TEXTURE.375"), Read("TEXTURE.376"), Read("TEXTURE.377"), Read("TEXTURE.378"), Read("TEXTURE.379"), Read("TEXTURE.434")));
+        Read("TEXTURE.375"), Read("TEXTURE.376"), Read("TEXTURE.377"), Read("TEXTURE.378"), Read("TEXTURE.379"), Read("TEXTURE.434"),
+        Read("FIRE00C6.CIF"), Read("FRST00C6.CIF"), Read("POIS00C6.CIF"), Read("SHOK00C6.CIF"), Read("MJIC00C6.CIF")));
 
     private static byte[] Read(string name) => File.ReadAllBytes(TestData.Corpus(name));
 
