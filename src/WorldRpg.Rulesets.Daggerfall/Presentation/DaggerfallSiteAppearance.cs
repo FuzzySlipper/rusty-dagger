@@ -1217,9 +1217,10 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     }
 
     /// <summary>
-    /// Plays one attack motion to the rules' timing. The classic strike's frames are rescaled so its hit frame comes
-    /// as the windup ends: a power attack's charge plays the frames before the hit, its hold keeps the last of them,
-    /// and its release plays the hit and what follows.
+    /// Plays one attack motion to the rules' timing. The classic strike's frames are fitted to its phases, so the hit
+    /// frame comes as the windup ends, when the rules deliver the blow: the frames before it share the windup, and it
+    /// and those after share the commit and recovery. A power attack's charge plays the frames before the hit, its hold
+    /// keeps the last of them, and its release stays on that pose through its windup before the hit.
     /// </summary>
     private void PlayAttackMotion(string attack, DaggerfallAttackTiming? timing)
     {
@@ -1230,13 +1231,16 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         if (hit >= strike.PlayedFrameCount)
             throw new InvalidOperationException($"Classic weapon '{viewmodel.Weapon.ResourceId}' strike '{NormalizedClassicWeapon.PlayedStrike}' plays {strike.PlayedFrameCount} frames and cannot reach the hit frame {hit}.");
         if (timing is not { } phases) { HoldHeldAction(); return; }
-        if (attack == DaggerfallAttackIds.PowerIn) StartWeaponAction(NormalizedClassicWeapon.PlayedStrike, phases.Windup / hit, frameCount: hit);
-        else if (attack == DaggerfallAttackIds.PowerOut) StartWeaponAction(NormalizedClassicWeapon.PlayedStrike, phases.Duration / (strike.PlayedFrameCount - hit), firstFrame: hit);
-        else StartWeaponAction(NormalizedClassicWeapon.PlayedStrike, phases.Windup / hit);
+        double afterHit = (phases.Commit + phases.Recovery) / (strike.PlayedFrameCount - hit);
+        double[] follow = [.. Enumerable.Repeat(afterHit, strike.PlayedFrameCount - hit)];
+        double[] windup = [.. Enumerable.Repeat(phases.Windup / hit, hit)];
+        if (attack == DaggerfallAttackIds.PowerIn) StartWeaponAction(NormalizedClassicWeapon.PlayedStrike, frameLengths: windup);
+        else if (attack == DaggerfallAttackIds.PowerOut) StartWeaponAction(NormalizedClassicWeapon.PlayedStrike, firstFrame: hit - 1, frameLengths: [phases.Windup, .. follow]);
+        else StartWeaponAction(NormalizedClassicWeapon.PlayedStrike, frameLengths: [.. windup, .. follow]);
         PlayHeldAction(attack, phases, hit);
     }
 
-    private void StartWeaponAction(string name, double frameSeconds = 0d, int firstFrame = 0, int? frameCount = null)
+    private void StartWeaponAction(string name, int firstFrame = 0, IReadOnlyList<double>? frameLengths = null)
     {
         if (viewmodel is null || !viewmodel.Weapon.Actions.TryGetValue(name, out NormalizedClassicWeaponAction? action)) return;
         NormalizedClassicWeapon weapon = viewmodel.Weapon;
@@ -1245,12 +1249,10 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         {
             (Vector2 minimum, Vector2 size) = name == "idle" ? RestingPlacement(action) : ViewmodelPlacement();
             appearance.SetSpriteViewport(new SpriteViewportUpdateRequest(viewmodel.Appearance, true, minimum, size, Vector2.Zero, SpriteViewportFit.Stretch));
-            // The classic weapon animation's authored table rate is its authoring default; the tick
-            // time the rules published for this swing (FORM-04.GetMeleeWeaponAnimTime) is what the
-            // donor actually plays at, so a hastened or slowed player swings at that rate.
-            double framesPerSecond = frameSeconds > 0d ? 1d / frameSeconds : action.FramesPerSecond;
             SpritePlaybackFrame[] frames = SpriteAtlasAdapter.ToPlaybackFrames((action.Sequence ?? Enumerable.Range(action.FrameStart, action.FrameCount).ToArray())
-                .Skip(firstFrame).Take(frameCount ?? int.MaxValue).Select(index => weapon.Frames.Single(frame => frame.Id == index).Id).ToArray(), checked((float)framesPerSecond));
+                .Skip(firstFrame).Take(frameLengths?.Count ?? int.MaxValue).Select(index => weapon.Frames.Single(frame => frame.Id == index).Id).ToArray(), checked((float)action.FramesPerSecond));
+            if (frameLengths is not null)
+                for (int frame = 0; frame < frames.Length; frame++) frames[frame] = frames[frame] with { DurationSeconds = frameLengths[frame] };
             staged = appearance.CreateSpritePlayback(new SpritePlaybackCreateRequest(viewmodel.Appearance, viewmodel.Atlas, frames, ReadOnlyMemory<SpritePlaybackMarker>.Empty, action.Loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1d));
             appearance.ControlSpritePlayback(new SpritePlaybackControlRequest(staged, SpritePlaybackControl.Start));
             SpritePlayback? old = viewmodel.Playback;
