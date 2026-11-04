@@ -61,6 +61,9 @@ internal sealed record PlayerAttackStartedFact(ulong OriginatingGeneration, ulon
 /// </summary>
 internal sealed record PlayerAttackMotionFact(string Attack, Modules.Combat.DaggerfallAttackTiming? Timing,
     ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
+/// <summary>The left hand began a cast of a spell of this element; the weapon rests in the right.</summary>
+internal sealed record PlayerCastMotionFact(int Element, Modules.Combat.DaggerfallAttackTiming Timing,
+    ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
 /// <summary>The player's last attack motion ended with nothing after it: the weapon returns to rest.</summary>
 internal sealed record PlayerAttackRestFact(ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
 /// <summary>

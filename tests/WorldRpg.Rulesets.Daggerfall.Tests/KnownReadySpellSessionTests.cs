@@ -25,11 +25,42 @@ public sealed class KnownReadySpellSessionTests
         Assert.Equal("No spell ready.",s.ReadSpells().Result);
         f.Submit(new{action="spell-ready",key="spell.023"});
         double before=Magicka(s).Current;
-        f.Submit(new{action="spell-cast"});
+        f.Cast();
         Assert.Null(s.ReadSpells().Ready);Assert.Equal("Spell cast.",s.ReadSpells().Result);
         Assert.Equal(before-row.Cost,Magicka(s).Current);
         Assert.Equal("regenerate",Assert.Single(s.State.Effects.Active).Definition.Key);
         Assert.Equal(2,s.Casting.NextSequence);
+    }
+
+    [Fact]
+    public void A_cast_spends_nothing_until_its_windup_ends_and_keeps_the_weapon_drawn()
+    {
+        using Fixture f=new();var s=f.Session;Fund(s);
+        s.State.Character.LearnSpell("spell.023");f.Submit(new{action="spell-ready",key="spell.023"});
+        s.State.WeaponDrawn=true;
+        double before=Magicka(s).Current;
+
+        f.Submit(new{action="spell-cast"});
+        Assert.Equal(before,Magicka(s).Current);
+        Assert.NotNull(s.Casting.ReadyFor(1));
+        for(int index=0;index<50;index++) f.Submit();
+
+        Assert.True(Magicka(s).Current<before);
+        Assert.True(s.State.WeaponDrawn);
+    }
+
+    [Fact]
+    public void A_cast_without_the_magicka_is_refused_before_any_motion_and_keeps_the_spell_ready()
+    {
+        using Fixture f=new();var s=f.Session;Fund(s);
+        s.State.Character.LearnSpell("spell.023");f.Submit(new{action="spell-ready",key="spell.023"});
+        Magicka(s).SetCurrent(0);
+
+        f.Cast();
+
+        Assert.Equal("Not enough magicka.",s.ReadSpells().Result);
+        Assert.Equal("spell.023",s.Casting.ReadyFor(1)!.SpellKey);
+        Assert.Empty(s.State.Effects.Active);
     }
 
     [Fact]
@@ -81,7 +112,7 @@ public sealed class KnownReadySpellSessionTests
         f.Submit(new{action="menu",open=true});
         f.Submit(new{action="spell-cast"});Assert.Equal("spell.023",s.Casting.ReadyFor(1)!.SpellKey);
         Assert.Empty(s.State.Effects.Active);
-        f.Submit(new{action="menu",open=false},new{action="spell-cast"});
+        f.Submit(new{action="menu",open=false});f.Cast();
         Assert.Null(s.Casting.ReadyFor(1));Assert.Single(s.State.Effects.Active);
         Assert.Equal("Spell cast.",s.ReadSpells().Result);
         f.Submit(new{action="spell-unready"});Assert.Null(s.Casting.ReadyFor(1));
@@ -109,6 +140,12 @@ public sealed class KnownReadySpellSessionTests
         {
             Session.Update(new ProductUpdate(OuterUpdate(++step),actions.Select(action=>Ui(JsonSerializer.Serialize(action))).ToArray()));
             if(Session.PendingModeRequest is { } mode) Session.ApplyProductMode(mode);
+        }
+        /// <summary>Casts through the spellbook's button and runs the cast's windup and recovery.</summary>
+        internal void Cast()
+        {
+            Submit(new{action="spell-cast"});
+            for(int index=0;index<50;index++) Submit();
         }
         internal DaggerfallSession Restore(RulesetSavePayload save)=>DaggerfallSession.Restore(CreateEngine().Context,composition,save);
         public void Dispose()=>Session.Dispose();

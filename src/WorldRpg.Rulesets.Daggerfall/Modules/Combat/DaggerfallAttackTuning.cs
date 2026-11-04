@@ -185,6 +185,9 @@ internal sealed record DaggerfallAttackTuning(
     internal DaggerfallStaminaTuning Stamina { get; init; } = DaggerfallStaminaTuning.Default;
     internal DaggerfallStrikeTuning Strike { get; init; } = DaggerfallStrikeTuning.Default;
 
+    /// <summary>The left hand's cast: its spell releases as the windup ends.</summary>
+    internal DaggerfallAttackTiming Cast { get; init; } = new(.3d, .02d, .3d);
+
     private static readonly DaggerfallWeaponClassAttacks ShortBlade = new(new(.18d, .12d, .28d), .5d, new(.15d, .12d, .35d), 1.9f);
 
     internal static DaggerfallAttackTuning Default { get; } = new(.2d, 2d, 2d, new(.25d, .12d, .4d), 10, 1, 1.7f,
@@ -254,7 +257,7 @@ internal sealed record DaggerfallAttackTuning(
             groups.Add(new(group.GetProperty("templates").EnumerateArray().Select(template => template.GetInt32()).ToHashSet(), ReadPaths(group.GetProperty("paths"))));
         return new(Positive(root, "powerThresholdSeconds"), Positive(root, "powerDamageMultiplier"), Positive(root, "powerStaminaMultiplier"),
             ReadTiming(root.GetProperty("kick")), root.GetProperty("kickStaminaCost").GetInt32(), root.GetProperty("kickDamage").GetInt32(), (float)Positive(root, "kickReach"), classes, ReadPaths(root.GetProperty("paths")), groups)
-        { Combatant = DaggerfallCombatantTuning.Read(root.GetProperty("combatant")), Stamina = DaggerfallStaminaTuning.Read(root.GetProperty("stamina")), Strike = DaggerfallStrikeTuning.Read(root.GetProperty("strike")) };
+        { Combatant = DaggerfallCombatantTuning.Read(root.GetProperty("combatant")), Stamina = DaggerfallStaminaTuning.Read(root.GetProperty("stamina")), Strike = DaggerfallStrikeTuning.Read(root.GetProperty("strike")), Cast = ReadTiming(root.GetProperty("cast")) };
     }
 
     private static Dictionary<string, DaggerfallAttackPath> ReadPaths(JsonElement value)

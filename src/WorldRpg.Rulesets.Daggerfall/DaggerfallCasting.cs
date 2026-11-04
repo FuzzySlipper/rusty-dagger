@@ -390,6 +390,15 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
     }
 
     /// <summary>Caller validates touch/shape using the Engine before release. Ranged delivery awaits its impact callback.</summary>
+    /// <summary>Why the ready spell couldn't be released now, or null when it could: checked before a cast is committed to.</summary>
+    internal DaggerfallCastOutcome? ReleaseRefusal(long casterId)
+    {
+        if (ReadyFor(casterId) is not { } ready) return DaggerfallCastOutcome.Unready;
+        if (ready.ItemId is null && effects.MagicDefenseFor(casterId).BlocksCasting) return DaggerfallCastOutcome.Silenced;
+        if (ResolveSource(casterId, null) is not { } actor) return DaggerfallCastOutcome.SourceUnavailable;
+        return CanPay(actor, casterId, ready.Cost, ready.ItemId) ? null : DaggerfallCastOutcome.InsufficientMagicka;
+    }
+
     internal DaggerfallCastResult Release(long casterId, bool targetValid, Vector3? origin = null, Vector3? direction = null)
     {
         if (resolveActor(casterId) is null) return Finish(DaggerfallCastOutcome.SourceUnavailable);

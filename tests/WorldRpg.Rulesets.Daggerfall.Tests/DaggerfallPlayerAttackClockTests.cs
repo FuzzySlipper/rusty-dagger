@@ -17,7 +17,75 @@ public sealed class DaggerfallPlayerAttackClockTests
     private static readonly DaggerfallAttackTiming Kick = new(.25d, .125d, .25d);
     private static readonly DaggerfallAttackTuning Tuning = new(.25d, 2d, 2d, Kick, 6, 1, 1.7f,
         new Dictionary<string, DaggerfallWeaponClassAttacks> { ["short-blade"] = new(Fast, .5d, Release, 2f) },
-        new Dictionary<string, DaggerfallAttackPath>(), []);
+        new Dictionary<string, DaggerfallAttackPath>(), []) { Cast = new(.25d, .125d, .25d) };
+
+    [Fact]
+    public void A_cast_starts_from_a_swings_recovery_and_releases_as_its_windup_ends()
+    {
+        Stage stage = new();
+        stage.Tap();
+        stage.Steps(2);
+        stage.Clock.PressCast();
+        stage.Steps(1);
+        Assert.DoesNotContain("start cast", stage.Log); // Still in the swing's hit window.
+
+        stage.Steps(1);
+        Assert.Contains("start cast", stage.Log);
+        Assert.True(stage.Clock.Casting);
+        int impacts = stage.Count("impact");
+
+        stage.Steps(2);
+
+        Assert.Equal(impacts + 1, stage.Count("impact"));
+    }
+
+    [Fact]
+    public void No_attack_starts_until_a_cast_has_recovered_and_a_press_during_it_then_goes()
+    {
+        Stage stage = new();
+        stage.Clock.PressCast();
+        stage.Steps(1);
+        Assert.False(stage.Clock.Free);
+
+        stage.Clock.Press();
+        stage.Clock.PressKick();
+        stage.Steps(4); // Five steps of cast: through its recovery, but not past its end.
+        Assert.DoesNotContain("start fastA", stage.Log);
+        Assert.DoesNotContain("start kick", stage.Log);
+        Assert.False(stage.Clock.Free);
+
+        stage.Steps(1);
+
+        Assert.Contains("start kick", stage.Log);
+        Assert.False(stage.Clock.Casting);
+    }
+
+    [Fact]
+    public void A_refused_cast_leaves_the_swing_it_would_have_cut_to_finish()
+    {
+        Stage stage = new();
+        stage.Tap();
+        stage.Steps(4);
+        stage.Refusing = true;
+        stage.Clock.PressCast();
+        stage.Steps(1);
+
+        Assert.Equal("fastA", stage.Clock.Current);
+        Assert.False(stage.Clock.Casting);
+    }
+
+    [Fact]
+    public void Cancelling_drops_a_cast_that_was_waiting()
+    {
+        Stage stage = new();
+        stage.Tap();
+        stage.Clock.PressCast();
+
+        stage.Clock.Cancel();
+
+        Assert.False(stage.Clock.Casting);
+        Assert.False(stage.Clock.Busy);
+    }
 
     [Fact]
     public void A_tap_starts_fastA_in_its_own_step()
