@@ -62,10 +62,10 @@ public sealed class TuningPayloadSessionTests
         Assert.Equal(melee.Order(), tuning.Paths.Keys.Order());
         foreach (string skill in tuning.Classes.Keys)
             foreach (string attack in melee)
-                Assert.True(tuning.Arc(attack, skill).Range > 0f, $"{attack} with {skill} reaches nothing.");
-        Assert.Equal(tuning.KickReach, tuning.Arc(DaggerfallAttackIds.Kick, "long-blade").Range);
-        Assert.Equal(tuning.For("axe").Reach, tuning.Arc("fastA", "axe").Range);
-        Assert.Throws<InvalidOperationException>(() => tuning.Arc(DaggerfallAttackIds.PowerHold, "long-blade"));
+                Assert.True(tuning.Arc(attack, skill, null).Range > 0f, $"{attack} with {skill} reaches nothing.");
+        Assert.Equal(tuning.KickReach, tuning.Arc(DaggerfallAttackIds.Kick, "long-blade", null).Range);
+        Assert.Equal(tuning.For("axe").Reach, tuning.Arc("fastA", "axe", null).Range);
+        Assert.Throws<InvalidOperationException>(() => tuning.Arc(DaggerfallAttackIds.PowerHold, "long-blade", null));
     }
 
     [Fact]
