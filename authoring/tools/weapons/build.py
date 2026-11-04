@@ -17,7 +17,8 @@ round plate `half` metres either side of the centre of the icon's tilted ellipse
 `links` oval links of `linkLength`, `linkWidth` and `wire` running on from the top of part `on`, ending in a ball of radius
 `ball` with `spikes`. A `string` part is a cord of `radius` from tip to tip. Both take their colour from their piece of
 the icon. A lathe part with `bridge` always joins the run above it, across a gap in the icon. `reach` runs a flat part on to the named part it joins, and `root` thickens it by `gain` toward the part named `toward`.
-A lathe part's `radius` in metres replaces the icon's width, for an icon drawn fatter than the thing. A `socket` part is a steel cone on top of part `on`, whose tip a chain hangs from. A chain skins the model to joints that can swing it: see rigged(). A part's `slot` overrides its material (`any` parts default to `trim`). `spikes` sets cones on its widest ring's sphere: `count`, `length` and `base` in metres,
+A lathe part's `radius` in metres replaces the icon's width, for an icon drawn fatter than the thing. A `hammer` part is a head built from its `sections`, on top of part `on`, and `langets` are the steel strips riveted down it. A weapon's `turn` gives the model a half turn about
+its length: +Y leads every slash in the clips, so what should strike goes there. A `socket` part is a steel cone on top of part `on`, whose tip a chain hangs from. A chain skins the model to joints that can swing it: see rigged(). A part's `slot` overrides its material (`any` parts default to `trim`). `spikes` sets cones on its widest ring's sphere: `count`, `length` and `base` in metres,
 spread evenly. A part's `light` and `shade` are passed to paint.py, and `coloursFrom` paints it in another part's colours.
 
 Writes OUT_DIR/reference.glb (the icon projected flat onto every part, the colour layout `palette_cells.py`
@@ -36,7 +37,7 @@ from pathlib import Path
 import bmesh
 import bpy
 import numpy as np
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 ROOT = Path(__file__).resolve().parents[3]
 name, icon_path, out = sys.argv[sys.argv.index('--') + 1:][:3]
@@ -396,6 +397,57 @@ def tube(bm, path, radius, sides, closed):
     return [v for ring in rings for v in ring]
 
 
+def hammer(bm, part):
+    """A hammer head across the top of part `on`, its centre `seat` metres above it: `sections` of [distance toward the
+    face, half its height, half its depth, how far it drops toward the haft] in metres, from the point of the spike to
+    the face. Each is an eight-sided ring with cut corners, turned to follow the line of the sections, so a drop curves
+    the spike. It is painted from the icon's pixels of the part."""
+    icon_x, icon_y = bm.verts.layers.float.new('icon_x'), bm.verts.layers.float.new('icon_y')
+    sections = sorted(part['sections'])
+    tallest = max(s[1] for s in sections)
+    centre = top_of(part['on']) + Vector((0, part['seat'], 0))
+    ys, xs = np.nonzero(masks[part['name']])
+    near, far = sections[0][0], sections[-1][0]
+    rings = []
+    for n, (along, h, d, drop) in enumerate(sections):
+        a, c = sections[max(n - 1, 0)], sections[min(n + 1, len(sections) - 1)]
+        run, rise = c[0] - a[0], c[3] - a[3]
+        length = math.hypot(run, rise)
+        run, rise = run / length, rise / length
+        ring = []
+        for y, x in ((h, .7 * d), (.75 * h, d), (-.75 * h, d), (-h, .7 * d), (-h, -.7 * d), (-.75 * h, -d), (.75 * h, -d), (h, -.7 * d)):
+            v = bm.verts.new(centre + Vector((x, drop + y * run, -(along - y * rise))))
+            v[icon_x] = xs.max() + (xs.min() - xs.max()) * (along - near) / (far - near)
+            v[icon_y] = (ys.min() + ys.max()) / 2 - y / tallest * (ys.max() - ys.min()) / 2
+            ring.append(v)
+        rings.append(ring)
+    for lo, hi in zip(rings, rings[1:]):
+        for k in range(8):
+            bm.faces.new([lo[k], lo[(k + 1) % 8], hi[(k + 1) % 8], hi[k]])
+    bm.faces.new(rings[0])
+    bm.faces.new(rings[-1][::-1])
+
+
+def langets(bm, part):
+    """A steel strip down each flank of part `on`, from `start` metres above its top for `length` metres, `width` wide and
+    `thick` thick, `offset` from the axis, tapering to a point, with `rivets` round heads down its middle."""
+    top = top_of(part['on'])
+    half, thick, offset, length = part['width'] / 2, part['thick'], part['offset'], part['length']
+    y0 = top.y + part['start']
+    outline = [(y0, -half), (y0, half), (y0 - length + 2 * half, half), (y0 - length, 0), (y0 - length + 2 * half, -half)]
+    for side in (1, -1):
+        rings = [[bm.verts.new(Vector((side * x, y, top.z + z))) for y, z in outline] for x in (offset, offset + thick)]
+        bm.faces.new(rings[0] if side < 0 else rings[0][::-1])
+        bm.faces.new(rings[1][::-1] if side < 0 else rings[1])
+        for k in range(len(outline)):
+            n = (k + 1) % len(outline)
+            bm.faces.new([rings[0][k], rings[0][n], rings[1][n], rings[1][k]])
+        for r in range(part['rivets']):
+            y = y0 - .03 - r * (length - .06 - 2 * half) / max(part['rivets'] - 1, 1)
+            rivet = bmesh.ops.create_icosphere(bm, subdivisions=1, radius=half * .6)
+            bmesh.ops.translate(bm, verts=rivet['verts'], vec=Vector((side * (offset + thick), y, top.z)))
+
+
 def top_of(name):
     """The middle of the top of a part."""
     top = int(np.nonzero(masks[name])[0].min())
@@ -529,15 +581,19 @@ for part in weapon['parts']:
             chain(bm, part)
         elif part['shape'] == 'socket':
             socket(bm, part)
+        elif part['shape'] == 'hammer':
+            hammer(bm, part)
+        elif part['shape'] == 'langets':
+            langets(bm, part)
         else:
             string(bm, part)
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     layer = bm.loops.layers.uv.new('UVMap')
-    icon_x = bm.verts.layers.float.get('icon_x')
+    icon_x, icon_y = bm.verts.layers.float.get('icon_x'), bm.verts.layers.float.get('icon_y')
     # A built part beyond the icon (a chain, a string) takes its colour from one pixel of its own piece.
     painted = None
-    if part['shape'] in ('chain', 'string', 'socket'):
+    if part['shape'] in ('chain', 'string', 'socket', 'langets'):
         ys, xs = np.nonzero(masks[part['name']])
         light = pixels[ys, xs, :3].max(axis=1)   # a lit pixel of it, not the ink a median can land on
         at = int(np.argsort(light)[int(len(light) * 0.85)])
@@ -546,10 +602,13 @@ for part in weapon['parts']:
         for loop in face.loops:   # project the icon flat: front and back both show it, as on the paper doll
             p = loop.vert.co
             x = loop.vert[icon_x] if icon_x else p.z / METRES + ORIGIN[0]
-            loop[layer].uv = uv(*painted) if painted else uv(x, ORIGIN[1] - p.y / METRES)
+            y = loop.vert[icon_y] if icon_y else ORIGIN[1] - p.y / METRES
+            loop[layer].uv = uv(*painted) if painted else uv(x, y)
     data = bpy.data.meshes.new(part['name'])
     bm.to_mesh(data)
     bm.free()
+    if weapon.get('turn'):
+        data.transform(Matrix.Rotation(math.pi, 4, 'Y'))
     obj = bpy.data.objects.new(part['name'], data)
     bpy.context.scene.collection.objects.link(obj)
     if part['shape'] == 'flat':
