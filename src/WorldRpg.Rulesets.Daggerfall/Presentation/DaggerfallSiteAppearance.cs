@@ -585,9 +585,14 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 Emit(started.Feedback.SwingCue, swing, 0);
                 break;
             case PlayerAttackMotionFact motion:
+                RetireCastHand();
                 PlayAttackMotion(motion.Attack, motion.Timing);
                 break;
+            case PlayerCastMotionFact cast:
+                PlayCastHand(cast.Element, cast.Timing);
+                break;
             case PlayerAttackRestFact:
+                RetireCastHand();
                 StartWeaponAction("idle");
                 break;
             case EnemyAttackStartedFact started:
@@ -763,6 +768,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             appearance.AdvanceSpritePlayback(new SpritePlaybackAdvanceRequest(weaponPlayback));
             weapon.LastOuterUpdate = identity;
         }
+        AdvanceCastHand(identity);
     }
 
     public void Dispose()
@@ -787,6 +793,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         foreach (EffectVisual effect in effects.AsEnumerable().Reverse()) effect.Dispose(ref failures);
         effects.Clear();
         if (viewmodel is { } weapon) { viewmodel = null; weapon.Dispose(ref failures); }
+        if (castHand is { } hand) { castHand = null; hand.Dispose(ref failures); }
         if (held is { } drawn) { held = null; Dispose(drawn, ref failures); }
         foreach (IDisposable value in nextRetired.AsEnumerable().Reverse()) Dispose(value, ref failures);
         foreach (IDisposable value in priorRetired.AsEnumerable().Reverse()) Dispose(value, ref failures);

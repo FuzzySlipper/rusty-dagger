@@ -636,7 +636,7 @@
       {
         "id": "recast",
         "category": "magic",
-        "label": "Recast last spell",
+        "label": "Cast ready or last spell",
         "keys": [
           "KeyQ"
         ],

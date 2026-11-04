@@ -241,6 +241,55 @@ public sealed class PlayerViewmodelTests
     }
 
     [Fact]
+    public void A_cast_draws_the_elements_hand_over_the_resting_weapon_until_the_rules_rest()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        content.Add("weapon/dagger.png", Hash);
+        content.Add("weapon/fire.png", Hash);
+        NormalizedClassicPresentation original = ClassicWeapon();
+        NormalizedClassicWeapon dagger = original.Weapons["weapon.dagger.steel"];
+        NormalizedClassicPresentation classic = original with
+        {
+            Weapons = new Dictionary<string, NormalizedClassicWeapon>
+            {
+                [dagger.ResourceId] = dagger,
+                ["hand.fire"] = dagger with { ResourceId = "hand.fire", TexturePath = "weapon/fire.png" },
+            },
+        };
+        AppearanceFake appearance = new(releases);
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: classic));
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
+        using ActorsState actors = EmptyActors();
+
+        presentation.React(new PlayerCastMotionFact(0, new(.2d, .02d, .2d), 1, 1));
+        presentation.Publish(actors);
+        Assert.Equal(2, appearance.Snapshots.Last().Count(fact => fact.Layer == RenderLayer.Viewmodel));
+        Assert.False(Viewmodel(presentation).Strike); // The weapon rests in the right hand.
+
+        presentation.React(new PlayerAttackRestFact(1, 2));
+        presentation.Publish(actors);
+        Assert.Equal(1, appearance.Snapshots.Last().Count(fact => fact.Layer == RenderLayer.Viewmodel));
+    }
+
+    [Fact]
+    public void A_cast_with_no_hand_in_the_data_draws_nothing_and_breaks_nothing()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        content.Add("weapon/dagger.png", Hash);
+        AppearanceFake appearance = new(releases);
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
+        using ActorsState actors = EmptyActors();
+
+        presentation.React(new PlayerCastMotionFact(0, new(.2d, .02d, .2d), 1, 1));
+        presentation.Publish(actors);
+
+        Assert.Equal(1, appearance.Snapshots.Last().Count(fact => fact.Layer == RenderLayer.Viewmodel));
+    }
+
+    [Fact]
     public void A_raised_guard_lifts_the_resting_weapon_toward_the_centre_and_a_lowered_one_returns_it()
     {
         List<string> releases = [];
