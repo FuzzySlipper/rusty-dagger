@@ -1,4 +1,7 @@
+using Rusty.Engine;
 using Rusty.Engine.Mechanics;
+using WorldRpg.Kit;
+using WorldRpg.Kit.Combat;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using Xunit;
@@ -19,6 +22,24 @@ public sealed class DaggerfallAttackPaceTests
         Stat(session, DaggerfallMechanicsIds.Speed.Value, 50);
         Stat(session, DaggerfallMechanicsIds.Strength.Value, 50);
         Stat(session, ((IDaggerfallPlayerAttacks)session).WeaponSkill, 0);
+    }
+
+    [Fact]
+    public void Every_attack_of_a_mashed_chain_is_admitted()
+    {
+        using DaggerfallSession session = FreshSession();
+        IDaggerfallPlayerAttacks attacks = session;
+        session.State.WeaponDrawn = true;
+        HashSet<ulong> admitted = [];
+        for (ulong step = 1; step <= 180; step++)
+        {
+            session.Update(new ProductUpdate(OuterUpdate(step), AttackTap));
+            if (session.State.Actors.Player.Actor.Get<AttackState>().Pending is { } pending) admitted.Add(pending.Request.SimulationStep);
+        }
+
+        DaggerfallAttackTiming fast = DaggerfallAttackTuning.Default.For(attacks.WeaponSkill).Fast;
+        double between = (fast.Windup + fast.Commit) * attacks.TimeScale("fastA") + 2d / 60d;
+        Assert.True(admitted.Count >= (int)(3d / between) - 1, $"{admitted.Count} attacks admitted in three seconds of {between} each");
     }
 
     [Fact]

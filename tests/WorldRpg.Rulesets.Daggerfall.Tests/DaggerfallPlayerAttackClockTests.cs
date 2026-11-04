@@ -437,6 +437,22 @@ public sealed class DaggerfallPlayerAttackClockTests
     }
 
     [Fact]
+    public void A_press_buffered_through_the_hit_window_starts_only_after_the_blow_has_resolved()
+    {
+        Stage stage = new() { MeetsAt = 2d }; // A whiff: the impact comes as the window closes, the step recovery opens.
+        stage.Tap();
+        stage.Clock.Press();
+        for (int step = 0; step < 8 && stage.Count("start fastB") == 0; step++)
+        {
+            int impacts = stage.Count("impact");
+            stage.Steps(1);
+            if (stage.Count("impact") > impacts) Assert.Equal(0, stage.Count("start fastB"));
+        }
+        Assert.Equal(1, stage.Count("impact"));
+        Assert.Equal(1, stage.Count("start fastB"));
+    }
+
+    [Fact]
     public void The_chain_wraps_at_the_length_the_weapon_skill_reaches()
     {
         Stage stage = new() { Chain = 2 };

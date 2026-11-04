@@ -76,7 +76,7 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
         _attack = attack;
         _swing = null;
         State.Kit.Attacks.TryPlayerMelee(State.PlayerControl, look, generation, simulationStep, seconds, _facts);
-        if (State.Actors.Player.Actor.Get<AttackState>().Pending is null) return false;
+        if (State.Actors.Player.Actor.Get<AttackState>().Pending?.Request.SimulationStep != simulationStep) return false;
         // A swing admitted here lowers a raised guard before anything resolves against it.
         StepGuard(0d, generation, simulationStep);
         // WeaponManager sends Attack to an action on the environment after the ordinary hit query. The safe
