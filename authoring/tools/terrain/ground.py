@@ -10,10 +10,13 @@ transitions between them. So a set is a few materials and a map of which pixels 
             climates, and a rain set uses its summer's materials, so a record stays the same ground in every set.
   build     For each set (SETS), each material brought to that set's own classic record: surfaces' crunch, then calm
             (lightness spread to CALM of itself, lifted to the classic's 5th percentile). A pure record is its material.
-            A transition is labelled at the refreshed size. Classic pixels are blurred first, since one pixel of a speckled
-            ground says little; each pixel of the classic upscaled with wrap goes to the material whose classic pixels lie
-            nearest (mean of K); materials under SHARE of the tile are dropped as its blended fringe, the rest take the
-            tile, and a wrapping 5x5 majority makes organic edges. Only the paved records draw paving.
+            A transition joins the materials LAYOUT names, so the classic's blended fringe never reads as a third ground.
+            Classic pixels are blurred, since one pixel of a speckled ground says little, and each goes to the nearest of
+            those materials. The fade follows that contour: each material's signed distance from its edge, wandered a
+            little away from the tile's border (so a shoreline crosses into the next tile where the classic has it),
+            through a softmax SHORE wide at water and SOFT between land. Weights take classic-sized grain, and at the shore
+            the fringe takes the classic tile's own colours, its murk and weed. Pure ground keeps its material's pixels;
+            a blended pixel takes the nearest colour the tile's materials or its classic use.
 
     ground.py generate --host den-m5 --part 0/2
     ground.py build
@@ -38,7 +41,10 @@ GENERATE = 1024
 CALM = 0.75
 K = 5
 BLUR = 1.5      # classic pixels
-SHARE = 0.08
+SOFT, SHORE = 3.0, 8.0    # fade widths, refreshed pixels: land against land, and at water
+WANDER, BORDER = 3.0, 16  # how far an edge wanders, and how far in from the tile's border it starts to
+GRAIN = 0.45
+FRINGE = 0.85   # how much of the classic's colour the shore's middle takes
 RECORDS = 56
 GROUND = ("Seamless tileable square ground texture for a dark fantasy RPG, seen straight down from above, flat orthographic, "
           "fills the whole frame edge to edge, continues evenly off all four edges with no focal point. Hand-painted "
@@ -49,7 +55,7 @@ NEGATIVE = batch.NEGATIVE + ", dark holes, deep shadows"
 # Each material: the classic archive and record it starts from, how many times that tile repeats across the refreshed
 # one (2 makes its features half the size: a ground, not a paving stone), and what it is.
 MATERIALS = {
-    "water": (302, 0, 2, "Calm open water surface: an even deep cool blue with fine soft lighter blue ripple streaks spread evenly everywhere, no spots, bubbles, blobs, lily pads or stones"),
+    "water": (302, 0, 2, "Still deep water seen from above: soft mottled blues, broad dim patches of darker and lighter blue blending into each other, a faint diagonal shimmer, no swirls, no ripple lines, no waves, no foam, no spots"),
     "dirt": (302, 1, 2, "Packed earth road surface: warm tan and ochre dirt, finely grained, with scattered tiny pebbles and faint wheel-worn streaks, no large stones"),
     "grass": (302, 2, 2, "Dense short turf grass covering everything evenly: countless fine blades in mid and dark greens, a fine even texture with no separate tufts, no bare soil, no holes or dark spots"),
     "gravel": (302, 3, 2, "Fine loose gravel: thousands of small grey stone chips, each smaller than a thumbnail, densely packed into an even fine-grained grey surface, no large stones or cobbles"),
@@ -71,8 +77,14 @@ MATERIALS = {
     "snow-grass": (403, 3, 1, "Fresh snow with dark green marsh grass tufts breaking through in small clumps"),
 }
 FIELD = 54
-PAVED = (47, 55)                     # the transitions that draw paving
-UNBLENDED = {"field", "mud-stones"}  # pure records alone: no transition draws them
+# Which pure records each transition joins: the one layout every set shares.
+LAYOUT = {**{r: (1, 0) for r in (4, 5, 6, 7, 8, 48)}, **{r: (1, 2) for r in (9, 10, 11, 12, 13, 51)},
+          **{r: (2, 3) for r in (14, 15, 16, 17, 18, 53)}, **{r: (2, 0) for r in (19, 20, 21, 22, 23, 49)},
+          **{r: (1, 3) for r in (24, 25, 26, 27, 28, 52)}, **{r: (3, 0) for r in (29, 30, 31, 32, 33, 50)},
+          **{r: (0, 1, 2) for r in (34, 37, 40)}, **{r: (0, 2, 3) for r in (35, 41, 44)},
+          **{r: (0, 1, 3) for r in (36, 38, 43)}, **{r: (1, 2, 3) for r in (39, 42, 45)}, 47: (1, 46), 55: (2, 46)}
+# A swamp summer tile the classic left in the winter set, without snow: it takes the summer's materials.
+STRAYS = {(403, 35): 402}
 SUMMER = {0: "water", 46: "paving", FIELD: "field"}
 WINTER = {0: "water", 1: "snow", 2: "snow", 3: "snow", 46: "paving", FIELD: "snow"}
 TEMPERATE = SUMMER | {1: "dirt", 2: "grass", 3: "gravel"}
@@ -135,41 +147,66 @@ def generate_materials(host, part):
     print("GENERATE-DONE", flush=True)
 
 
-def build_set(archive, pure):
+def weights(source, archive, record):
+    """The materials a transition joins and each pixel's weight for them."""
+    pure = SETS[source]
+    materials = list(dict.fromkeys(pure[r] for r in LAYOUT[record]))
+    trees = [cKDTree(np.concatenate([np.asarray(blurred(classic(source, r)), np.float32).reshape(-1, 3)
+                                     for r, m in pure.items() if m == material and r != FIELD])) for material in materials]
+    pixels = np.asarray(wrap_upscale(blurred(classic(archive, record)), 1, SIZE), np.float32).reshape(-1, 3)
+    distances = np.stack([tree.query(pixels, k=K)[0].mean(1) for tree in trees], 1)
+    labels = ndimage.median_filter(distances.argmin(1).reshape(SIZE, SIZE), size=5, mode="wrap")
+    wander = ndimage.gaussian_filter(np.random.default_rng(source * 100 + record).normal(0, 1, (SIZE, SIZE)), 7, mode="wrap")
+    ramp = np.minimum(np.minimum(np.arange(SIZE), np.arange(SIZE)[::-1]) / BORDER, 1)
+    wander *= WANDER / wander.std() * np.outer(ramp, ramp)
+    fields = []
+    for k, material in enumerate(materials):
+        inside = np.tile(labels == k, (3, 3))
+        signed = ndimage.distance_transform_edt(inside) - ndimage.distance_transform_edt(~inside)
+        fields.append(signed[SIZE:2 * SIZE, SIZE:2 * SIZE] + (wander if material == "water" else -wander))
+    w = np.exp(np.clip(np.stack(fields, -1) / (SHORE if "water" in materials else SOFT), -30, 30))
+    return materials, w / w.sum(-1, keepdims=True)
+
+
+def blend(archive, record, materials, w, bases):
+    stack = np.stack([np.asarray(bases[m].convert("RGB"), np.float32) for m in materials], -2)
+    noise = np.random.default_rng(archive * 100 + record).normal(0, 1, (SIZE // 2, SIZE // 2, w.shape[-1])).repeat(2, 0).repeat(2, 1)
+    grained = np.clip(w + noise * GRAIN * (1 - w.max(-1, keepdims=True)), 0, None) + 1e-6
+    grained /= grained.sum(-1, keepdims=True)
+    mixed = (stack * grained[..., None]).sum(-2)
+    tile = classic(archive, record)
+    if "water" in materials:
+        wet = grained[..., materials.index("water")]
+        shore = ((4 * wet * (1 - wet)) ** 0.6 * FRINGE)[..., None]
+        mixed = mixed * (1 - shore) + np.asarray(wrap_upscale(tile, 1, SIZE), np.float32) * shore
+    colours = np.unique(np.concatenate([stack.reshape(-1, 3), np.asarray(tile, np.float32).reshape(-1, 3)]), axis=0)
+    out = colours[cKDTree(colours).query(mixed.reshape(-1, 3))[1]].reshape(mixed.shape)
+    pure = grained.max(-1) > 0.97
+    out[pure] = stack[pure, grained.argmax(-1)[pure]]
+    return Image.fromarray(out.astype(np.uint8))
+
+
+def build_set(archive, pure, built):
     folder = OUT / folders()[archive]
     (folder / "bases").mkdir(parents=True, exist_ok=True)
-    # Each material from the first record that shows it, and that record's pixels stand for it in labelling.
+    # Each material from the first record that shows it.
     first = {}
     for record, material in sorted(pure.items()):
         first.setdefault(material, record)
-    bases = {}
+    bases = built[archive] = {}
     for material, record in first.items():
         reference = classic(archive, record)
         bases[material] = calm(reduce.crunch(OUT / "raw" / f"{material}.png", reference), reference)
         bases[material].save(folder / "bases" / f"{material}.png")
-    trees = {material: cKDTree(np.concatenate([np.asarray(blurred(classic(archive, r)), np.float32).reshape(-1, 3)
-                                               for r, m in pure.items() if m == material and r != FIELD]))
-             for material in {m for r, m in pure.items() if r != FIELD} - UNBLENDED}
     for record in range(RECORDS):
         final = folder / f"texture-{archive:03d}-{record}.png"
         if record in pure:
             bases[pure[record]].save(final)
             continue
-        pixels = np.asarray(wrap_upscale(blurred(classic(archive, record)), 1, SIZE), np.float32).reshape(-1, 3)
-        materials = [m for m in trees if m != "paving" or record in PAVED]
-        distances = np.stack([trees[m].query(pixels, k=K)[0].mean(1) for m in materials], 1)
-        shares = np.bincount(distances.argmin(1), minlength=len(materials)) / len(pixels)
-        kept = [k for k, share in enumerate(shares) if share >= SHARE]
-        nearest = np.array(kept)[distances[:, kept].argmin(1)].reshape(SIZE, SIZE)
-        votes = np.stack([nearest == k for k in kept], -1).astype(np.int32)
-        labels = np.array(kept)[sum(np.roll(np.roll(votes, dy, 0), dx, 1) for dy in range(-2, 3) for dx in range(-2, 3)).argmax(-1)]
-        out = np.zeros((SIZE, SIZE, 3), np.uint8)
-        for k in kept:
-            out[labels == k] = np.asarray(bases[materials[k]].convert("RGB"))[labels == k]
-        Image.fromarray(out).save(final)
+        source = STRAYS.get((archive, record), archive)
+        materials, w = weights(source, archive, record)
+        blend(archive, record, materials, w, built[source]).save(final)
     print(folder.name, len(first), "materials", flush=True)
-
-
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("step", choices=("generate", "build"))
@@ -179,8 +216,9 @@ def main():
     if a.step == "generate":
         generate_materials(a.host, a.part)
     else:
+        built = {}
         for archive, pure in SETS.items():
-            build_set(archive, pure)
+            build_set(archive, pure, built)
 
 
 if __name__ == "__main__":
