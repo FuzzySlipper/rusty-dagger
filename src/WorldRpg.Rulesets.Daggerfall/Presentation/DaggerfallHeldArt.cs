@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using Rusty.Engine;
 using Rusty.Engine.FirstPerson;
 using WorldRpg.Kit;
+using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
@@ -184,11 +185,12 @@ internal sealed record DaggerfallHeldDrawing(string Family, int? Item, string Me
 
 /// <summary>
 /// An item template's own place in the held art: the family whose clips it plays, as its template holds it (one hand or
-/// two), and its model (a container path), grip and hold, each the family look's when not given.
+/// two), and its model (a container path), grip and hold, each the family look's when not given, and any chain on the model.
 /// </summary>
 internal sealed record DaggerfallHeldItem(string Family)
 {
     public string? Model { get; init; }
+    public HeldChainDefinition? Chain { get; init; }
     public Vector3? Grip { get; set; }
     public Vector3? Hold { get; set; }
 }

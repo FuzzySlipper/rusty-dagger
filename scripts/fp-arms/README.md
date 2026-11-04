@@ -118,6 +118,11 @@ Each is in the Engine's held-look frame (origin at the grip's centre, length alo
 steel parts are their own `metal` material and the other parts are `trim`. The game tints the `metal` material with the
 item's metal, from the same `dyeTints` the paper doll draws with; steel stays untinted.
 
+An item's `chain` in the definition hangs the model's links and weight as an Engine ragdoll (`HeldChain`, in a Dynamics
+world of its own): the handle joint follows the hand, and the rest swing below it. That world is in view space, so the
+chain falls toward the bottom of the view, touches nothing, and turning the view does not swing it. `heldRetro` steps
+the chain when the hand jumps and at least once per classic frame, because stepping between jumps tears the chain apart.
+
 ## Reused from rusty-riders
 
 Riders was a one-time donor of its clip-led arms: its `ArmClipCatalog`/

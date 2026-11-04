@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using Rusty.Engine;
 using Rusty.Engine.FirstPerson;
 using WorldRpg.Kit;
+using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
@@ -174,6 +175,20 @@ public sealed class DaggerfallHeldArtTests
         Assert.Contains("'first-person/arms.glb' is not in first-person.rpak", Assert.Throws<InvalidDataException>(() => Read(Document(), models: [])).Message, StringComparison.Ordinal);
         Assert.Contains("'first-person/dagger.glb' is not in first-person.rpak", Assert.Throws<InvalidDataException>(() => Read(document)).Message, StringComparison.Ordinal);
         Assert.Equal("first-person/dagger.glb", Read(document, models: ["first-person/arms.glb", "first-person/arms-retro.glb", "first-person/dagger.glb", .. Weapons()]).Document.Families["dagger"].Look.Model);
+    }
+
+    [Fact]
+    public void The_flail_alone_hangs_a_chain_from_its_handle_to_its_ball()
+    {
+        DaggerfallHeldArt art = Read(Document());
+
+        Assert.Equal([125], art.Document.Items.Where(item => item.Value.Chain is not null).Select(item => item.Key));
+        HeldChainDefinition chain = art.Document.Items[125].Chain!;
+        Assert.Equal("handle", chain.Handle);
+        Assert.Equal(["link0", "link1", "link2", "link3", "link4"], chain.Links);
+        Assert.Equal("ball", chain.Weight);
+        // A chain's weight is what swings it: heavier than a link, or the links would lead it.
+        Assert.True(chain.WeightMass > chain.LinkMass);
     }
 
     [Fact]

@@ -55,6 +55,8 @@ sampled and matte.
    `content/worldrpg/first-person/weapons/NAME.glb`, run `rusty asset check` on it, rebuild the container with
    `scripts/fp-arms/build.sh`, and check it in the hand with `scripts/fp-arms/sheet.sh` in a 1920×1080 window run.
 
+A flail's `chain` part also skins the model: `handle` carries everything else, and each link and the ball has its own joint, with a `rest` clip because the Engine admits a skin only through a GLB with a clip. In the game the item's `chain` in the held definition (`WorldRpg.Kit.Presentation.HeldChain`) makes those joints one ragdoll: the handle follows the hand, and the links and ball swing below it. Film a chain by playing a strike in manual time (`held.motion.play`, then `engine.time.advance`): `scripts/fp-arms/sheet.sh` jumps the hand between moments, which gives the chain nothing real to follow.
+
 The models are in the Engine's held-look frame: origin at the grip's centre, length along -Z with the tip forward,
 +Y one edge. A family's measured `look.grip` and `look.hold` then seat them where the clips held the pack's weapon.
 The steel parts form the `metal` material, which the game tints per metal (iron … daedric), as the paper doll tints

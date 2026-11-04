@@ -493,8 +493,22 @@
     },
     "125": {
       "family": "longsword",
-      "model": "first-person/weapons/flail.glb"
-    },
+      "model": "first-person/weapons/flail.glb",
+      "chain": {
+        "handle": "handle",
+        "links": ["link0", "link1", "link2", "link3", "link4"],
+        "weight": "ball",
+        "linkRadius": 0.01,
+        "linkMass": 0.15,
+        "weightLength": 0.098,
+        "weightRadius": 0.05,
+        "weightMass": 0.6,
+        "swing": 1.0,
+        "twist": 0.3,
+        "linearDamping": 0.6,
+        "angularDamping": 3
+      }
+      },
     "126": {
       "family": "longsword",
       "model": "first-person/weapons/warhammer.glb"
