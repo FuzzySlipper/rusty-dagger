@@ -81,12 +81,14 @@
     <RustyEngineProductInputIntent Include="recast" Value="digital" />
     <RustyEngineProductInputIntent Include="abort-spell" Value="digital" />
     <RustyEngineProductInputIntent Include="attack" Value="digital" />
-    <!-- Held, not pressed: the attack clock tells a tap from a charge by when the button comes up. -->
-    <RustyEngineProductInputMapping Include="attack.primary" Intent="attack" Trigger="pointer-button:primary:held" />
+    <!-- A mapping fires on its one edge, so what reads how long a button stays down maps its press and its release. -->
+    <RustyEngineProductInputMapping Include="attack.primary" Intent="attack" Trigger="pointer-button:primary:pressed" />
+    <RustyEngineProductInputMapping Include="attack.primary.released" Intent="attack" Trigger="pointer-button:primary:released" />
     <RustyEngineProductInputIntent Include="kick" Value="digital" />
     <RustyEngineProductInputMapping Include="kick.key-g" Intent="kick" Trigger="key:key-g:pressed" />
     <RustyEngineProductInputIntent Include="block" Value="digital" />
-    <RustyEngineProductInputMapping Include="block.secondary" Intent="block" Trigger="pointer-button:secondary:held" />
+    <RustyEngineProductInputMapping Include="block.secondary" Intent="block" Trigger="pointer-button:secondary:pressed" />
+    <RustyEngineProductInputMapping Include="block.secondary.released" Intent="block" Trigger="pointer-button:secondary:released" />
     <RustyEngineProductInputIntent Include="interact" Value="digital" />
     <RustyEngineProductInputMapping Include="interact.key-f" Intent="interact" Trigger="key:key-f:pressed" />
     <RustyEngineProductInputMapping Include="move.forward.key-w" Intent="move.forward" Trigger="key:key-w:held" />

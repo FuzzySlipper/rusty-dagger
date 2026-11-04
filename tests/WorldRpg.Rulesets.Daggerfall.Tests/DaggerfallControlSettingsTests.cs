@@ -11,6 +11,18 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallControlSettingsTests
 {
     [Fact]
+    public void The_attack_and_the_guard_map_their_release_because_a_mapping_fires_on_its_one_edge()
+    {
+        ProductInputMapping[] mappings = new DaggerfallControlSettings().PhysicalMappings();
+        InputEdge[] Edges(string action) => [.. mappings.Where(mapping => mapping.Intent.Span.SequenceEqual(System.Text.Encoding.UTF8.GetBytes(action))).Select(mapping => mapping.Edge).Order()];
+
+        Assert.Equal([InputEdge.Pressed, InputEdge.Released], Edges("attack").Order());
+        Assert.Equal([InputEdge.Pressed, InputEdge.Released], Edges("block").Order());
+        Assert.Equal([InputEdge.Pressed], Edges("kick"));
+        Assert.Equal([InputEdge.Held], Edges("move.forward"));
+    }
+
+    [Fact]
     public void Controller_buttons_rebind_with_conflicts_named_swaps_explicit_and_the_menu_and_movement_kept()
     {
         IReadOnlyList<WorldRpg.Kit.Controls.ControllerActionBinding> pad = DaggerfallTuning.Defaults.ControllerInput!.Actions;
@@ -73,7 +85,7 @@ public sealed class DaggerfallControlSettingsTests
         settings.Rebind("attack", ["KeyB"]);
 
         ProductInputMapping attack = Assert.Single(settings.PhysicalMappings(), mapping =>
-            mapping.Intent.Span.SequenceEqual("attack"u8));
+            mapping.Intent.Span.SequenceEqual("attack"u8) && mapping.Edge == InputEdge.Pressed);
         Assert.Equal(KeyboardControl.KeyB, attack.Keyboard);
         Assert.Equal("gameplay.default", Encoding.UTF8.GetString(attack.Context.Value.Span));
     }
