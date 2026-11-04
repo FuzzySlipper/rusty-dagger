@@ -627,16 +627,18 @@ public sealed class DaggerCombatDamagePolicyTests
         Assert.Equal(7, winded.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false)).Outcome.Damage); // 13 * .5
     }
 
-    [Fact]
-    public void Fighting_never_empties_the_stamina_pool()
+    [Theory]
+    [InlineData(150d, 128d)] // Spends down to the winded threshold and no further.
+    [InlineData(100d, 100d)] // Already below it, a blow spends nothing.
+    public void An_attack_spends_no_stamina_past_the_winded_threshold(double before, double after)
     {
         using DamagePolicyFixture fixture = new();
-        fixture.SetPlayerStamina(10d);
+        fixture.SetPlayerStamina(before);
         fixture.Script(body: 0, damage: 11);
 
         _ = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
 
-        Assert.Equal(1d, fixture.PlayerStamina);
+        Assert.Equal(after, fixture.PlayerStamina);
     }
 
     [Theory]
