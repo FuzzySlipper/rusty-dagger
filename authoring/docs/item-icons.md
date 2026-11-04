@@ -115,7 +115,7 @@ measured against the import's published dyed images (so the import must have run
 its rect in a sidecar: `finalize.py --study` writes it from the generation's recorded input transform (the source's
 whole-number scale and canvas placement, at the spec's canvas size), and `dress.py`, `bodies.py` and `pictures.py`
 write the rect they draw in. A final without one is refused. `tools/items/test_registration.py` checks a final made
-at a non-default canvas size and occupancy lands where its generation put it. Rerunning an area replaces that area's files and entries, so a redo
+at a non-default canvas size and occupancy lands where its generation put it. Rerunning an area deletes that area's files and writes them all again, about ten minutes for `worn`, so don't interrupt it; `--key KEY` promotes one accepted final and leaves the rest. A redo
 reaches the game by being accepted and promoted again. Nothing unaccepted or from `studies/` is promoted.
 
 The `items` and `spells` areas promote icons. An item's icon is its template's inventory image: equipment shows its

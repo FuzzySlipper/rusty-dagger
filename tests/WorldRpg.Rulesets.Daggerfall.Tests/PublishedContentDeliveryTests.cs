@@ -796,8 +796,10 @@ public sealed class PublishedContentDeliveryTests
         // publication also carries the inventory images of the templates the doll does not draw (`item.A.R`).
         HashSet<string> dollPublication = [.. new[] { "worldrpg/media/character/character-media-inventory.json", PaperDollGroup + "paper-doll-inventory.json" }
             .SelectMany(path => Index(path).Artifacts).Select(artifact => artifact.GetProperty("mediaId").GetString()!)];
-        HashSet<string> doll = [.. dollPublication.Where(id => !id.StartsWith("item.", StringComparison.Ordinal))];
-        HashSet<string> classic = [.. dollPublication, .. Index("worldrpg/media/classic-media-inventory.json").Artifacts.Select(artifact => artifact.GetProperty("mediaId").GetString()!)];
+        // A design of its own over classic records another item keeps: the flanged mace, the template's refreshedArt.
+        string[] designs = ["paper-doll.mace.14", "paper-doll.mace.15"];
+        HashSet<string> doll = [.. dollPublication.Where(id => !id.StartsWith("item.", StringComparison.Ordinal)), .. designs];
+        HashSet<string> classic = [.. dollPublication, .. designs, .. Index("worldrpg/media/classic-media-inventory.json").Artifacts.Select(artifact => artifact.GetProperty("mediaId").GetString()!)];
         Assert.Contains(DaggerfallSpellConstruction.IconAtlasMedia, classic);
         Assert.Contains(DaggerfallSpellConstruction.SelectorAtlasMedia, classic);
         HashSet<string> spellCells = [.. DaggerfallSpellConstruction.RefreshableMedia()];
@@ -817,7 +819,7 @@ public sealed class PublishedContentDeliveryTests
         // armour or a weapon the classic draws in other metals one bare-steel image with the mask of the steel a metal
         // recolours, and the set states a tint for every classic clothing dye and metal.
         Assert.All(art.All.Where(replacement => replacement.Replaces is var id && id.StartsWith("paper-doll.", StringComparison.Ordinal)
-                && (int.Parse(id.Split('.')[1], CultureInfo.InvariantCulture) is >= 235 and <= 242 || classic.Contains($"{id}.daedric"))),
+                && (designs.Contains(id) || int.Parse(id.Split('.')[1], CultureInfo.InvariantCulture) is >= 235 and <= 242 || classic.Contains($"{id}.daedric"))),
             replacement => Assert.NotNull(replacement.DyeMask));
         Assert.Equal(["adamantium", "aquamarine", "blue", "daedric", "dark-brown", "dwarven", "ebony", "elven", "green", "grey", "iron", "light-brown",
                 "mithril", "orcish", "purple", "red", "silver", "white", "yellow"],
