@@ -189,6 +189,9 @@ public sealed class DaggerfallHeldArtTests
         Assert.Equal("ball", chain.Weight);
         // A chain's weight is what swings it: heavier than a link, or the links would lead it.
         Assert.True(chain.WeightMass > chain.LinkMass);
+        // It leans right, so the ball hangs out of the view at rest, and a strike has something to let go of.
+        Assert.True(chain.Gravity.X > 0 && chain.Gravity.Y < 0);
+        Assert.True(chain.HeldDamping > 0);
     }
 
     [Fact]

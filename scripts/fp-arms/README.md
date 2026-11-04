@@ -119,9 +119,12 @@ steel parts are their own `metal` material and the other parts are `trim`. The g
 item's metal, from the same `dyeTints` the paper doll draws with; steel stays untinted.
 
 An item's `chain` in the definition hangs the model's links and weight as an Engine ragdoll (`HeldChain`, in a Dynamics
-world of its own): the handle joint follows the hand, and the rest swing below it. That world is in view space, so the
-chain falls toward the bottom of the view, touches nothing, and turning the view does not swing it. `heldRetro` steps
-the chain when the hand jumps and at least once per classic frame, because stepping between jumps tears the chain apart.
+world of its own): the handle joint follows the hand, and the rest swing below it. That world is in view space, so
+turning the view does not swing the chain, and its `gravity` is ours to choose: the flail's leans right, so the ball
+hangs off the edge of the view at rest and only a strike brings it in. The chain collides with itself and the haft, not
+the hands. Held, `heldDamping` makes its links sluggish, so walking and the idle leave it still; a strike lets it go
+until the strike ends. It never sleeps, since it hangs from a bone that follows the pose. `heldRetro` steps the chain
+when the hand jumps and at least once per classic frame, because stepping between jumps tears the chain apart.
 
 ## Reused from rusty-riders
 
