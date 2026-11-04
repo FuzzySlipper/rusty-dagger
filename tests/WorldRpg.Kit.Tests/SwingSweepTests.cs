@@ -41,6 +41,15 @@ public sealed class SwingSweepTests
     }
 
     [Fact]
+    public void A_cut_goes_through_a_body_it_passes_and_meets_the_next()
+    {
+        using ActorContactTests.Scene scene = Adjacent();
+        SwingSweep sweep = new(scene.Contact, 1, new SwingArc(-40f, 40f, 0f, 3f), passes: actor => actor == 2);
+
+        Assert.Equal(3L, sweep.Advance(Eye, East, 1f));
+    }
+
+    [Fact]
     public void A_cut_that_passes_beside_a_body_misses_it()
     {
         using ActorContactTests.Scene scene = new();

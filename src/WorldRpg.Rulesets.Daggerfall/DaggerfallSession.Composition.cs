@@ -358,7 +358,8 @@ internal sealed partial class DaggerfallSession
                 // Only the player's own controller reports a velocity; site actors step between poses.
                 actor => actor == actors.Player.DurableId ? assembled.PlayerControl.Motion.ControlledVelocity : Vector3.Zero,
                 new DaggerfallStrikes(_tuning.Attacks.Strike, actors, _reactions, () => assembled.PlayerControl.Position,
-                    id => DefinitionsByActor.TryGetValue(id, out DaggerfallActorDefinition? struck) ? struck.Weight : null, id => EnemyBehavior.NavigationMode(id)));
+                    id => DefinitionsByActor.TryGetValue(id, out DaggerfallActorDefinition? struck) ? struck.Weight : null, id => EnemyBehavior.NavigationMode(id)),
+                PassesThrough);
             DaggerfallSeamInputs SeamInputs() => new(definitions, () => character, _random,
                 id => id == actors.Player.DurableId ? equipmentCoordinator.Read() : actorInventories.EquipmentFor(id).Read(),
                 id => id == actors.Player.DurableId ? actors.Player.Stats : actors.TryGet(id, out ActorState actor) ? actor.Stats : null,

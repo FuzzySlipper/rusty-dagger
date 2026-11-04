@@ -39,6 +39,9 @@ internal sealed record DaggerfallAdmittedAttack(
     /// <summary>The attack a player's blow is, by id, which sets its force; null for an enemy's.</summary>
     internal string? PlayerAttack { get; init; }
 
+    /// <summary>Whether this player's attack started aimed at a civilian, so it harms any it meets.</summary>
+    internal bool HarmsCivilians { get; init; }
+
     /// <summary>The prepared attack carrying this admission's sources, with the delivery owner's outcome.</summary>
     internal PreparedPhysicalAttack Prepared(AttackOutcome outcome) => new(Attack.CooldownSeconds, outcome, Feedback, WabbajackSource,
         MolagBalSource: MolagBalSource, ItemStrikeSource: StrikeSource, IsRanged: Ranged, RangedWeapon: RangedWeapon, Action: Action, Admission: this);
@@ -115,6 +118,8 @@ internal interface IDaggerfallPhysicalHarmOperations
     void AlertTarget(long target);
     /// <summary>What a backstab multiplies a blow by, from the attacker's Backstabbing.</summary>
     double BackstabMultiplier(Combatant attacker);
+    /// <summary>Whether a player's attack goes through this body as if it weren't there.</summary>
+    bool PassesThrough(long target, bool harmsCivilians);
     /// <summary>A player's blow rocks the body it landed on, by its force against that body's weight.</summary>
     void Strike(AttackRequest request, long target, string attack, FactBuffer<IProductFact> facts);
     /// <summary>An unarmed blow drains the target's fatigue as well as its health.</summary>

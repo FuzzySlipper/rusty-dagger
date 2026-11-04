@@ -95,7 +95,7 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         double reach = admission.Attack.Reach ?? ops.ReachOf(request.AttackerId) ?? tuning.DefaultReach;
         // The swing sweeps a box in front of the attacker's eye, as deep as the attack's reach.
         (SpatialShape swing, SpatialPose at) = DaggerfallContactVolume.Ahead(pose.Eye, pose.Forward, tuning.SwingWidth, tuning.SwingHeight, tuning.SwingDrop, reach);
-        VolumeContact touched = ops.Contact.Volume(request.AttackerId, swing, at, pose.Eye, ops.ContactEnvironment());
+        VolumeContact touched = ops.Contact.Volume(request.AttackerId, swing, at, pose.Eye, ops.ContactEnvironment(), Passes(admission));
         if (touched.Actors.Count == 0) { Whiff(request, attack, facts); return; }
         foreach (ActorVolumeContact contact in touched.Actors) Connect(request, attack, contact.ActorId, facts);
     }
@@ -188,13 +188,17 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         return float.IsFinite(led.LengthSquared()) ? led : target;
     }
 
+    /// <summary>The bodies a player's attack goes through; an enemy's meets everyone.</summary>
+    private Func<long, bool>? Passes(DaggerfallAdmittedAttack? admission) =>
+        admission is { EnemyAttack: false } ? target => ops.PassesThrough(target, admission.HarmsCivilians) : null;
+
     /// <summary>Flies one segment; true when the shot ended by meeting an actor or the world.</summary>
     private bool Fly(Shot shot, double distance, FactBuffer<IProductFact> facts)
     {
         if (distance <= 0d) return false;
         Vector3 to = shot.Position + shot.Direction * (float)distance;
         AttackRequest request = shot.Release.Request;
-        SegmentContact contact = ops.Contact.Segment(request.AttackerId, shot.Position, to, ops.ContactEnvironment());
+        SegmentContact contact = ops.Contact.Segment(request.AttackerId, shot.Position, to, ops.ContactEnvironment(), Passes(((PreparedPhysicalAttack)shot.Release.Attack).Admission));
         shot.Position = to;
         shot.Remaining -= distance;
         switch (contact.Kind)

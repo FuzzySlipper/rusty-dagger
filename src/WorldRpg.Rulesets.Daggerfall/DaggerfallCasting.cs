@@ -79,6 +79,8 @@ internal sealed class DaggerfallLiveSpell(long sequence, long? casterId, ulong? 
     DaggerfallActionCastSource? actionSource = null, DaggerfallSpellTarget? targetOverride = null)
 {
     internal DaggerfallCastSource Source { get; } = source;
+    /// <summary>Whether a spell the player released started aimed at a civilian, so it harms any it meets. Set at release.</summary>
+    internal bool HarmsCivilians { get; set; }
     internal DaggerfallActionCastSource? ActionSource { get; set; } = actionSource;
     internal Vector3? ReleaseOrigin { get; set; } = origin;
     internal Vector3? ReleaseDirection { get; set; } = direction;

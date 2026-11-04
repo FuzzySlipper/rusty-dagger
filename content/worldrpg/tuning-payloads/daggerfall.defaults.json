@@ -264,6 +264,7 @@
       "recovery": 0.4
     },
     "kickStaminaCost": 10,
+    "aimRange": 64,
     "cast": {
       "windup": 0.3,
       "commit": 0.02,

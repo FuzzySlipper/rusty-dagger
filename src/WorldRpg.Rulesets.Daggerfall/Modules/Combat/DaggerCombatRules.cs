@@ -24,6 +24,8 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     private const string StaminaTrack = "stamina";
     private const string FatigueTrack = "fatigue";
     private readonly DaggerfallStrikes? _strikes;
+    private readonly Func<long, bool, bool> _passesThrough;
+    private bool _playerHarmsCivilians;
     private readonly IRandomService _random;
     internal CombatResolution Rules { get; }
     private readonly ActorsState _actors;
@@ -99,9 +101,10 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         DaggerfallAttackTuning attackTuning,
         Func<long, bool>? targetUnaware = null, Action<long>? alertTarget = null, Func<DaggerfallAdrenalineRush?>? playerRush = null,
         ActorContact? contact = null, Func<long, DaggerfallStrikePose?>? strikePose = null, Func<CharacterStepEnvironment?>? contactEnvironment = null,
-        Func<long, Vector3>? actorVelocity = null, DaggerfallStrikes? strikes = null)
+        Func<long, Vector3>? actorVelocity = null, DaggerfallStrikes? strikes = null, Func<long, bool, bool>? passesThrough = null)
     {
         _strikes = strikes;
+        _passesThrough = passesThrough ?? ((_, _) => false);
         _contact = contact;
         _strikePose = strikePose;
         _contactEnvironment = contactEnvironment;
@@ -197,7 +200,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         var poisonSource = CaptureWeaponPoison(request.AttackerId, rangedWeapon);
         var strikeSource = DaggerfallItemCastTriggers.CaptureStrike(_catalog.Magic, _itemInstances, _actors.Entities, rangedWeapon ?? EquippedWeapon(request.AttackerId));
         DaggerfallAdmittedAttack admitted = new(request, attacker, attack, rangedAttack, enemyAttack ? 1d : PlayerDamageScale, !enemyAttack && (_playerFinisher || _playerAttack == DaggerfallAttackIds.PowerOut), selectedAction, feedback,
-            wabbajackSource, molagBalSource, poisonSource, strikeSource, rangedWeapon) { PlayerAttack = enemyAttack ? null : _playerAttack };
+            wabbajackSource, molagBalSource, poisonSource, strikeSource, rangedWeapon) { PlayerAttack = enemyAttack ? null : _playerAttack, HarmsCivilians = !enemyAttack && _playerHarmsCivilians };
         if (!_delivery.TryPrepare(admitted, facts, out DaggerfallPreparedAttack delivered)) return false;
         prepared = delivered;
         return true;
@@ -241,7 +244,8 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     internal void SetSweptTarget(long target) => _sweptTarget = target;
 
     /// <summary>Names the attack the next player admission carries, from the attack clock.</summary>
-    internal void SelectPlayerAttack(string attack, bool finisher = false) => (_playerAttack, _playerFinisher) = (attack, finisher);
+    internal void SelectPlayerAttack(string attack, bool finisher = false, bool harmsCivilians = false) =>
+        (_playerAttack, _playerFinisher, _playerHarmsCivilians) = (attack, finisher, harmsCivilians);
 
     /// <summary>Whether the player is too short of stamina for a power attack, a kick or a guard.</summary>
     internal bool PlayerWinded => _actors.Player.Stats.GetTrack(TrackId.Parse(StaminaTrack)).Current <= _attackTuning.Combatant.WindedStamina;
@@ -849,6 +853,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     bool IDaggerfallPhysicalHarmOperations.TargetUnaware(long target) => _targetUnaware(target);
     void IDaggerfallPhysicalHarmOperations.AlertTarget(long target) => _alertTarget(target);
     double IDaggerfallPhysicalHarmOperations.BackstabMultiplier(Combatant attacker) => _attackTuning.Combatant.BackstabMultiplier(ReadStat(attacker, new DaggerfallStatId("backstabbing")));
+    bool IDaggerfallPhysicalHarmOperations.PassesThrough(long target, bool harmsCivilians) => _passesThrough(target, harmsCivilians);
     void IDaggerfallPhysicalHarmOperations.Strike(AttackRequest request, long target, string attack, FactBuffer<IProductFact> facts) =>
         _strikes?.Land(request, target, attack, facts);
     void IDaggerfallPhysicalHarmOperations.DrainFatigue(AttackRequest request, long target, int damage, FactBuffer<IProductFact> facts) =>
