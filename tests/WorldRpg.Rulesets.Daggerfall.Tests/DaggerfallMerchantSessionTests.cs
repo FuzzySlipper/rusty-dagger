@@ -40,6 +40,27 @@ public sealed class DaggerfallMerchantSessionTests
         Assert.Equal(3UL, session.State.Merchants.Read(context).Stock.Single(item => item.Key == row.Key).Quantity);
     }
 
+    [Theory]
+    [InlineData("Mace")]
+    [InlineData("Club")]
+    public void A_weapon_smith_stocks_and_sells_the_mace_and_the_club(string weapon)
+    {
+        using var fixture = new ConditionSessionFixture(random: RandomMinimum.Create());
+        DaggerfallSession session = fixture.Session;
+        session.AdvanceElapsedTime(6 * 60 * 60);
+        DaggerfallServiceProvider provider = OpenProvider(session, faction: 0, service: "shop", "shop");
+        DaggerfallMerchantProviderContext context = Context(provider, buildingType: 13);
+        AddGold(session, 100_000);
+
+        DaggerfallMerchantView stock = session.State.Merchants.Read(context);
+        DaggerfallMerchantItemView row = Assert.Single(stock.Stock, item => item.Label.EndsWith($" {weapon}", StringComparison.Ordinal));
+        DaggerfallMerchantResult bought = session.State.Merchants.Buy(context, stock.Revision, row.Key, 1);
+
+        Assert.True(bought.Accepted, bought.Outcome);
+        Assert.Equal(row.UnitPrice, bought.PaidGold);
+        Assert.DoesNotContain(session.State.Merchants.Read(context).Stock, item => item.Key == row.Key);
+    }
+
     [Fact]
     public void Actual_trade_caller_supports_partial_stolen_and_payment_failure_without_losing_stock_on_restock_or_save()
     {
