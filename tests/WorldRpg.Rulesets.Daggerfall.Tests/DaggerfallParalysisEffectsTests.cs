@@ -12,6 +12,7 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Policies;
+using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
@@ -166,6 +167,32 @@ public sealed class DaggerfallParalysisEffectsTests
         var bundle=casting.Release(1,true).Bundle!;long target=f.Session.State.Actors.All.First().DurableId;casting.Deliver(bundle,[target]);
         Assert.Equal(DaggerfallCastOutcome.Applied,Assert.Single(bundle.Results).Outcome);
         Assert.True(f.Session.State.Effects.ControlsFor(target).Movement);
+    }
+
+    [Theory]
+    [InlineData(true)] [InlineData(false)]
+    public void Paralysis_idles_an_enemy_but_changes_nothing_it_knows(bool aware)
+    {
+        using Fixture f = new(); var s = f.Session;
+        var spell = TestPayload.Definitions.Magic.Spells["spell.047"];
+        spell = spell with { Effects = [spell.Effects[0] with { ChanceBase=100, ChanceMod=0 }] };
+        var magicka=s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka"));magicka.Maximum.BaseValue=10000;magicka.SetCurrent(10000);
+        long target=s.State.Actors.All.First().DurableId;
+        var memory=s.State.Actors.Get(target).Actor.Get<WorldRpg.Rulesets.Daggerfall.Modules.Behavior.DaggerfallEnemyPerceptionMemory>();
+        memory.Detected=aware;
+        var casting=CastingFor(f,spell,100); casting.Ready(1,spell.Key);
+        var bundle=casting.Release(1,true).Bundle!;casting.Deliver(bundle,[target]);
+        Assert.True(s.State.Effects.ControlsFor(target).Movement);
+
+        s.Update(new ProductUpdate(OuterUpdate(1),[]));
+        Assert.Equal(EnemyBehaviorState.Idle, s.EnemyBehavior.LastEvidence[target].State);
+        Assert.Equal(!aware, s.EnemyBehavior.Unaware(target));
+
+        // The first blow tells it, and with its senses skipped nothing else would.
+        s.EnemyBehavior.Provoke(target, 0);
+        s.Update(new ProductUpdate(OuterUpdate(2),[]));
+        Assert.False(s.EnemyBehavior.Unaware(target));
+        Assert.True(memory.HasEncounteredPlayer);
     }
 
     [Fact]

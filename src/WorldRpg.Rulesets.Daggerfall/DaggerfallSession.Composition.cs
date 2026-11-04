@@ -345,7 +345,7 @@ internal sealed partial class DaggerfallSession
                 seams.PhysicalMitigation,
                 seams.PhysicalDelivery,
                 _tuning.Attacks,
-                targetUnaware: id => EnemyBehavior.LastEvidence.TryGetValue(id, out EnemyBehaviorEvidence? evidence) && evidence.State == EnemyBehaviorState.Idle,
+                targetUnaware: id => EnemyBehavior.Unaware(id),
                 alertTarget: id => EnemyBehavior.Provoke(id, MinuteIndex(_time.Calendar)),
                 playerRush: () => CareerSpecialsFor(actors.Player.DurableId).AdrenalineRush
                     ? new DaggerfallAdrenalineRush(_heldEnchantments.Talents.AdrenalineRush) : null,
