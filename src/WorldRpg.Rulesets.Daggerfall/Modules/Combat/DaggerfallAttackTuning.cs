@@ -231,6 +231,7 @@ internal sealed record DaggerfallAttackTuning(
             DaggerfallAttackIds.PowerIn => new(weapon.PowerCharge, 0d, 0d),
             DaggerfallAttackIds.PowerOut => weapon.PowerRelease,
             DaggerfallAttackIds.Kick => Kick,
+            DaggerfallAttackIds.Cast => Cast,
             _ => DaggerfallAttackIds.Fast.Contains(attack) ? weapon.Fast : null,
         };
     }

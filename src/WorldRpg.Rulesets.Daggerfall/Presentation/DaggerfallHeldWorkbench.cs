@@ -147,7 +147,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
             if (!shown.Succeeded) return new(Title, []) { Notice = shown.Message };
         }
         var (timing, _) = AttackTiming(look!, strike!)!.Value;
-        string[] still = [.. DaggerfallAttackIds.All.Except([DaggerfallAttackIds.PowerHold, DaggerfallAttackIds.Shot]).Except(Strikes)];
+        string[] still = [.. DaggerfallAttackIds.Held.Except([DaggerfallAttackIds.PowerHold, DaggerfallAttackIds.Shot]).Except(Strikes)];
         float[] marks = MarkTimes(timing);
         return new(Title, DaggerfallHeldTunables.For(art!.Document, Drawing, strike!, timing, edited, publish))
         {
@@ -184,7 +184,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
     };
 
     private IReadOnlyList<string> StrikesOf(string shown) => art!.Look(shown) is { } drawing
-        ? [.. DaggerfallAttackIds.All.Where(art.Document.Families[drawing.Family].Strikes.ContainsKey)] : [];
+        ? [.. DaggerfallAttackIds.Held.Where(art.Document.Families[drawing.Family].Strikes.ContainsKey)] : [];
 
     // The attack's timing as play times it, and the retro style's frame; null for an attack the rules don't time.
     private (PhaseTiming Timing, float Frame)? AttackTiming(string shown, string action)

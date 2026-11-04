@@ -139,8 +139,8 @@ internal sealed class DaggerfallHeldArt
             if (family.Strikes.Count == 0) problems.Add($"{at}.strikes: names no strike clip.");
             foreach (var (action, clip) in family.Strikes)
             {
-                if (!DaggerfallAttackIds.All.Contains(action) || action == DaggerfallAttackIds.PowerHold)
-                    problems.Add($"{at}.strikes.{action}: is not an attack with a timed clip ({string.Join(", ", DaggerfallAttackIds.All.Except([DaggerfallAttackIds.PowerHold]))}).");
+                if (!DaggerfallAttackIds.Held.Contains(action) || action == DaggerfallAttackIds.PowerHold)
+                    problems.Add($"{at}.strikes.{action}: is not an attack with a timed clip ({string.Join(", ", DaggerfallAttackIds.Held.Except([DaggerfallAttackIds.PowerHold]))}).");
                 Add(clip.Problems(), $"{at}.strikes.{action}");
             }
             if (!DaggerfallAttackTuning.Default.Classes.ContainsKey(family.Class))

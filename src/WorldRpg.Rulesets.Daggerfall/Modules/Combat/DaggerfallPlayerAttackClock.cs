@@ -18,6 +18,9 @@ internal static class DaggerfallAttackIds
 
     /// <summary>Every motion a weapon can play. A cast isn't one: the left hand plays it and the weapon rests.</summary>
     internal static IReadOnlyList<string> All { get; } = [.. Fast, PowerIn, PowerHold, PowerOut, Kick, Shot];
+
+    /// <summary>Every motion the held arms can have a clip for.</summary>
+    internal static IReadOnlyList<string> Held { get; } = [.. All, Cast];
 }
 
 /// <summary>What the attack clock asks of the session around one admitted step.</summary>

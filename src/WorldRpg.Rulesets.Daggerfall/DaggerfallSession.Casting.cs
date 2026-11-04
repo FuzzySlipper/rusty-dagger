@@ -76,8 +76,15 @@ internal sealed partial class DaggerfallSession
     }
 
     /// <summary>The cast's windup is over: the ready spell leaves the left hand along the view.</summary>
-    private void ReleaseCast() =>
-        ReportCast(ReleaseReadySpell(State.Actors.Player.DurableId, _input.ResolveCurrentLook(State.PlayerControl).Forward).Outcome);
+    private void ReleaseCast()
+    {
+        long player = State.Actors.Player.DurableId;
+        DaggerfallReadySpell? ready = Casting.ReadyFor(player);
+        ReportCast(ReleaseReadySpell(player, _input.ResolveCurrentLook(State.PlayerControl).Forward).Outcome);
+        // The spell the player set active stays ready for the next cast; what an item readied was good for one.
+        if (ready is { Source: DaggerfallCastSource.Spell } chosen && Casting.ReadyFor(player) is null && State.Character.KnownSpells.Contains(chosen.SpellKey))
+            Casting.RestoreReadySpell(chosen with { Cost = Casting.AvailableSpellCost(player, chosen.SpellKey) ?? chosen.Cost });
+    }
 
     /// <summary>Player wording for the result of readying, cancelling or releasing the player's spell.</summary>
     internal static string CastOutcomeText(DaggerfallCastOutcome outcome) => outcome switch

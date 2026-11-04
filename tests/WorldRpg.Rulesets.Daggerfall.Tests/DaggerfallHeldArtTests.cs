@@ -1,3 +1,4 @@
+using WorldRpg.Rulesets.Daggerfall.Facts;
 using System.Text.Json.Nodes;
 using Rusty.Engine;
 using Rusty.Engine.FirstPerson;
@@ -267,15 +268,56 @@ public sealed class DaggerfallHeldArtTests
         }
     }
 
+    [Fact]
+    public void A_family_with_a_cast_clip_plays_it_to_the_rules_timing_and_draws_no_sprite_hand()
+    {
+        JsonObject document = Document();
+        JsonObject strikes = document["families"]!["sns"]!["strikes"]!.AsObject();
+        strikes["cast"] = strikes["kick"]!.DeepClone();
+        List<string> releases = [];
+        (DaggerfallSiteAppearance presentation, AppearanceFake appearance, _) = Viewing(releases, document);
+        using (presentation)
+        {
+            presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
+            int atlases = appearance.AtlasRequests.Count;
+
+            presentation.React(new PlayerCastMotionFact(0, new(.3d, .02d, .3d), 1, 1));
+
+            Assert.Equal(DaggerfallAttackIds.Cast, presentation.DrawnHeld!.Playing);
+            Assert.Equal(atlases, appearance.AtlasRequests.Count);
+
+            presentation.React(new PlayerAttackRestFact(1, 2));
+
+            Assert.Null(presentation.DrawnHeld!.Playing);
+        }
+    }
+
+    [Fact]
+    public void A_cast_with_no_clip_rests_the_held_arms_it_cuts_into()
+    {
+        List<string> releases = [];
+        (DaggerfallSiteAppearance presentation, _, _) = Viewing(releases);
+        using (presentation)
+        {
+            presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
+            presentation.React(new PlayerAttackMotionFact("fastA", new(.2d, .1d, .1d), 1, 1));
+            Assert.Equal("fastA", presentation.DrawnHeld!.Playing);
+
+            presentation.React(new PlayerCastMotionFact(0, new(.3d, .02d, .3d), 1, 2));
+
+            Assert.Null(presentation.DrawnHeld!.Playing);
+        }
+    }
+
     // A site drawing the authored art through arms whose model has the rig's joints and every clip, whatever the hands
     // wield standing for a longsword (template 120).
-    private static (DaggerfallSiteAppearance Presentation, AppearanceFake Appearance, EngineContextFake Engine) Viewing(List<string> releases)
+    private static (DaggerfallSiteAppearance Presentation, AppearanceFake Appearance, EngineContextFake Engine) Viewing(List<string> releases, JsonObject? document = null)
     {
         ContentFake content = MediaContent(releases);
         content.Add("weapon/dagger.png", Hash);
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(Hash, releases).Service, appearance, PerceptionFake.Create().Service);
-        DaggerfallHeldArt art = Read(Document());
+        DaggerfallHeldArt art = Read(document ?? Document());
         engine.Animation.Joints = Joints(art.Document.Rig);
         engine.Animation.Clips = [.. art.Document.Families.Values.SelectMany(family => family.Strikes.Values.Select(clip => clip.Clip).Append(family.Idle.Clip)).Distinct()
             .Select(clip => new AnimationClipInfo(clip, clip, 1, true, 0))];

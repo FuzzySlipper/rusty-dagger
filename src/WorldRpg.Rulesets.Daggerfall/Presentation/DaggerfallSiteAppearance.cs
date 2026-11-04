@@ -589,7 +589,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 PlayAttackMotion(motion.Attack, motion.Timing);
                 break;
             case PlayerCastMotionFact cast:
-                PlayCastHand(cast.Element, cast.Timing);
+                PlayCast(cast.Element, cast.Timing);
                 break;
             case PlayerAttackRestFact:
                 RetireCastHand();

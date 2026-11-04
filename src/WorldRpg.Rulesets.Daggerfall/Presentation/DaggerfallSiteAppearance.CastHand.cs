@@ -7,9 +7,10 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>
-/// The element's classic casting hand, drawn over whichever weapon the right hand holds in either style, for as long as
-/// the rules' cast plays. Its frames carry their own place on the classic screen, so the hand fills the view as the
-/// weapon sprite does. A data pack from before the hands were published draws no hand, and the spell still leaves.
+/// The left hand's cast. A held family with a cast clip plays it on the arms to the rules' timing. Otherwise the weapon
+/// rests and the element's classic casting hand draws over it for as long as the cast plays: its frames carry their own
+/// place on the classic screen, so it fills the view as the weapon sprite does. A data pack from before the hands were
+/// published draws no hand, and the spell still leaves.
 /// </summary>
 internal sealed partial class DaggerfallSiteAppearance
 {
@@ -18,9 +19,17 @@ internal sealed partial class DaggerfallSiteAppearance
 
     private ViewmodelVisual? castHand;
 
-    private void PlayCastHand(int element, DaggerfallAttackTiming timing)
+    private void PlayCast(int element, DaggerfallAttackTiming timing)
     {
         RetireCastHand();
+        // A cast can cut into a swing's recovery, which leaves that swing's motion playing.
+        StartWeaponAction("idle");
+        if (held is not null && !heldViewed && held.Moves(DaggerfallAttackIds.Cast)) held.Attack(DaggerfallAttackIds.Cast, timing, CastReleaseFrame);
+        else PlayCastHand(element, timing);
+    }
+
+    private void PlayCastHand(int element, DaggerfallAttackTiming timing)
+    {
         if (classicPresentation.Viewmodel is not { } style || DaggerfallSpellElements.Name(element) is not { } name
             || !classicPresentation.Weapons.TryGetValue($"hand.{name}", out NormalizedClassicWeapon? hand)
             || !hand.Actions.TryGetValue(NormalizedClassicWeapon.PlayedStrike, out NormalizedClassicWeaponAction? cast)) return;
