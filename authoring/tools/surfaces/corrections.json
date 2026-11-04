@@ -1,0 +1,25 @@
+{
+ "texture-009-0": {
+  "caption": "A vertical strip of weathered light wooden planks beside a darker blocky stone wall, a narrow horizontal band near the top, in warm browns and tans."
+ },
+ "texture-022-3": {
+  "denoise": 0.4
+ },
+ "texture-044-4": {
+  "caption": "Packed sandy earth floor, fine-grained grit and small pebbles, framed by a thin darker edge, in warm tan and pale ochre.",
+  "denoise": 0.4
+ },
+ "texture-168-8": {
+  "caption": "One large flat grey flagstone slab with a thin dark joint along its edges, its face rough and gently mottled in dark greys."
+ },
+ "texture-168-9": {
+  "caption": "Damp packed earth and mud floor, fine-grained with small pebbles and grit and faint wet patches, in dark browns and muted olive.",
+  "denoise": 0.4
+ },
+ "texture-312-1": {
+  "caption": "A rough sand-coloured lime plaster wall, smooth trowelled patches and fine cracks, with a darker red-brown band at the top and bottom, in warm tan and ochre."
+ },
+ "texture-312-2": {
+  "caption": "A rough sand-coloured lime plaster wall, smooth trowelled patches and fine cracks, with a darker red-brown band at the top and bottom, in warm tan and ochre."
+ }
+}
