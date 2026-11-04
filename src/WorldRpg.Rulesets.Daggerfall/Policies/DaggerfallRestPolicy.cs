@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
@@ -43,9 +44,10 @@ internal sealed record DaggerfallRestRequest(DaggerfallRestMode Mode, int Hours 
 /// <summary>Facts the current world owner supplies when deciding whether a player may rest.</summary>
 /// <remarks>
 /// The session supplies town camping, live rented-room and guild privileges. Recovery consumes
-/// these facts without maintaining a second room or location owner.
+/// these facts without maintaining a second room or location owner. A rest in a room, a home or guild
+/// quarters recovers Fatigue at the full rate; a camp names its <paramref name="FatigueDivisor"/>.
 /// </remarks>
-internal sealed record DaggerfallRestEligibility(bool Allowed, bool IsAlive = true, string? Message = null)
+internal sealed record DaggerfallRestEligibility(bool Allowed, bool IsAlive = true, string? Message = null, int FatigueDivisor = 1)
 {
     internal void Validate()
     {
@@ -53,7 +55,20 @@ internal sealed record DaggerfallRestEligibility(bool Allowed, bool IsAlive = tr
             throw new ArgumentException("A defeated player cannot be granted rest eligibility.", nameof(Allowed));
         if (Allowed && !string.IsNullOrWhiteSpace(Message))
             throw new ArgumentException("An allowed rest eligibility cannot carry a rejection message.", nameof(Message));
+        if (FatigueDivisor < 1) throw new ArgumentOutOfRangeException(nameof(FatigueDivisor));
     }
+}
+
+/// <summary>How much better a bed is than the ground.</summary>
+/// <param name="InnFatigueMultiplier">How many times faster a room recovers Fatigue than a rough camp. A room keeps the classic rate, so a night in one is a full recovery and a camp's rate is that divided by this.</param>
+internal sealed record DaggerfallRestTuning(int InnFatigueMultiplier)
+{
+    internal static DaggerfallRestTuning Default { get; } = new(4);
+
+    internal static DaggerfallRestTuning Read(JsonElement root) =>
+        root.GetProperty("innFatigueMultiplier").GetInt32() is >= 1 and var multiplier
+            ? new(multiplier)
+            : throw new InvalidOperationException("Rest tuning 'innFatigueMultiplier' must be at least 1.");
 }
 
 /// <summary>One interval accepted by the shared calendar owner.</summary>
@@ -117,13 +132,14 @@ internal static class DaggerfallRestPolicy
         int maximumFatigue,
         int maximumMagicka,
         bool rapidHealing,
-        bool noRegeneration)
+        bool noRegeneration,
+        int fatigueDivisor = 1)
     {
         if (endurance < 0 || medical < 0 || maximumHealth < 0 || maximumFatigue < 0 || maximumMagicka < 0)
             throw new ArgumentOutOfRangeException(nameof(endurance));
         return (
             DaggerfallFormulaPolicy.CalculateHealthRecoveryRate(endurance, medical, maximumHealth, rapidHealing),
-            DaggerfallFormulaPolicy.CalculateFatigueRecoveryRate(maximumFatigue),
+            Math.Max(1, DaggerfallFormulaPolicy.CalculateFatigueRecoveryRate(maximumFatigue) / fatigueDivisor),
             DaggerfallFormulaPolicy.CalculateSpellPointRecoveryRate(maximumMagicka, noRegeneration));
     }
 

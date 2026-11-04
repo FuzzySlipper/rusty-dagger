@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
@@ -11,6 +12,48 @@ public sealed class DaggerfallRestRecoveryModuleTests
     private static readonly TrackId Health = TrackId.Parse(DaggerfallMechanicsIds.Health.Value);
     private static readonly TrackId Fatigue = TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value);
     private static readonly TrackId Magicka = TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value);
+
+    [Fact]
+    public void A_camp_recovers_fatigue_at_its_share_of_a_rooms_rate_and_says_so()
+    {
+        StatsComponent room = PlayerStats(health: 10, fatigue: 100, magicka: 10);
+        StatsComponent camp = PlayerStats(health: 10, fatigue: 100, magicka: 10);
+        DaggerfallRestRecoveryModule module = new();
+
+        DaggerfallRestResult inRoom = module.Apply(room, new(DaggerfallRestMode.Timed, 2), new(true),
+            50, 30, false, false, seconds => new(seconds, seconds));
+        DaggerfallRestResult inCamp = module.Apply(camp, new(DaggerfallRestMode.Timed, 2), new(true, FatigueDivisor: 4),
+            50, 30, false, false, seconds => new(seconds, seconds));
+
+        Assert.Equal(200, inRoom.FatigueRecovered);
+        Assert.Equal(50, inCamp.FatigueRecovered);
+        Assert.Equal((inRoom.HealthRecovered, inRoom.SpellPointsRecovered), (inCamp.HealthRecovered, inCamp.SpellPointsRecovered));
+        Assert.Equal("Rested for 2 hour(s).", inRoom.Message);
+        Assert.Equal("Rested for 2 hour(s). The rough ground does little for your fatigue.", inCamp.Message);
+    }
+
+    [Fact]
+    public void Cautious_travel_restores_all_fatigue_at_inns_and_the_camps_share_on_the_road()
+    {
+        StatsComponent inns = PlayerStats(health: 10, fatigue: 100, magicka: 10);
+        StatsComponent road = PlayerStats(health: 10, fatigue: 100, magicka: 10);
+
+        DaggerfallRestRecoveryModule.RecoverForCautiousTravel(inns, noRegeneration: false, fatigueDivisor: 1);
+        DaggerfallRestRecoveryModule.RecoverForCautiousTravel(road, noRegeneration: false, fatigueDivisor: 4);
+
+        Assert.Equal(800, inns.GetTrack(Fatigue).Current);
+        Assert.Equal(300, road.GetTrack(Fatigue).Current);
+    }
+
+    [Fact]
+    public void The_inn_multiplier_is_tuning_and_cannot_favour_the_ground()
+    {
+        using JsonDocument payload = JsonDocument.Parse(TestContentFiles.ReadText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/tuning-payloads/daggerfall.defaults.json")));
+        Assert.Equal(DaggerfallRestTuning.Default, DaggerfallRestTuning.Read(payload.RootElement.GetProperty("rest")));
+
+        using JsonDocument refused = JsonDocument.Parse("""{ "innFatigueMultiplier": 0 }""");
+        Assert.Throws<InvalidOperationException>(() => DaggerfallRestTuning.Read(refused.RootElement));
+    }
 
     [Fact]
     public void Timed_rest_uses_the_shared_ten_minute_interval_and_recovers_once_per_hour()

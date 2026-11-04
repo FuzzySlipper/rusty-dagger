@@ -223,7 +223,8 @@ internal sealed partial class DaggerfallSession
             if (quote.Options.SpeedCautious)
             {
                 (_, bool noRegen) = RestCharacterTraits();
-                DaggerfallRestRecoveryModule.RecoverForCautiousTravel(State.Actors.Player.Stats, noRegen);
+                DaggerfallRestRecoveryModule.RecoverForCautiousTravel(State.Actors.Player.Stats, noRegen,
+                    quote.Options.SleepModeInn ? 1 : _tuning.Rest.InnFatigueMultiplier);
             }
             departure = QuestTravelOrigin();
             outcome = AdvanceTravelTime(quote.TravelSeconds, origin);

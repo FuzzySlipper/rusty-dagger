@@ -79,7 +79,7 @@ internal sealed partial class DaggerfallSession
         DaggerfallRestRecoveryModule.RecoverOneHour(player,
             player.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).ValueInt,
             player.GetStat(StatId.Parse("medical")).ValueInt,
-            rapidHealing, noRegeneration);
+            rapidHealing, noRegeneration, _tuning.Rest.InnFatigueMultiplier);
         State.SkillUses.Record(new DaggerfallSkillUse("medical", DaggerfallSkillUseReason.MedicalRest, DaggerfallSkillUseOutcome.Accepted));
         DeliverFacts();
         Presentation.SetOutcome(ExhaustionLine(new DaggerfallTextKey(DaggerfallTextKind.Resource, ExhaustedSafelyText)));

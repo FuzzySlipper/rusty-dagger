@@ -61,7 +61,8 @@ public sealed class DaggerfallExhaustionSessionTests
 
         Assert.Equal(secondsBefore + DaggerfallRestPolicy.SecondsPerRestHour, CalendarSeconds(session));
         Assert.Equal(Math.Min(health.MaximumValue, healthBefore + healthRate), health.Current);
-        Assert.Equal(fatigueRate, fatigue.Current);
+        // A collapse is no night in a bed: Fatigue comes back at a rough camp's share of the rate.
+        Assert.Equal(fatigueRate / DaggerfallRestTuning.Default.InnFatigueMultiplier, fatigue.Current);
         Assert.Equal(Math.Min(magicka.MaximumValue, magickaBefore + spellRate), magicka.Current);
         Assert.Equal(medicalBefore + 1, session.State.Progression.SkillUses["medical"]);
         Assert.False(session.State.Actors.Player.IsDefeated);
