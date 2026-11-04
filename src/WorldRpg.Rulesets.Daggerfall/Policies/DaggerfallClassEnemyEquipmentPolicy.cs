@@ -55,7 +55,7 @@ internal static class DaggerfallClassEnemyEquipmentPolicy
         }
         else
         {
-            int template = Draw(random, actorId, "right-template", 122, 127);
+            int template = HeavyWeapons[Draw(random, actorId, "right-template", 0, HeavyWeapons.Length - 1)];
             CreateAndEquip(factory, definitions, instances, identities, inventory, equipment, actorId, "right", template, itemLevel, race, gender,
                 WeaponSlots(definitions, template, "right-hand"));
             chance = variant == 1 ? 75 : 90;
@@ -129,6 +129,12 @@ internal static class DaggerfallClassEnemyEquipmentPolicy
             .Select(assignment => assignment.Item).Distinct().ToArray();
         equipment.Reassign(unique, targetSlots, replaced);
     }
+
+    /// <summary>
+    /// The weapons a heavier class enemy draws from: the donor's templates 122-127 (claymore, dai-katana, mace,
+    /// flail, warhammer, battle axe), and the club the ruleset adds beside the mace.
+    /// </summary>
+    private static readonly int[] HeavyWeapons = [122, 123, 124, 125, 126, 127, 288];
 
     private static bool Success(IRandomService random, long actorId, string key, int chance) => Draw(random, actorId, key, 1, 100) <= chance;
     private static int Draw(IRandomService random, long actorId, string key, int minimum, int maximum) => checked((int)random.DrawKeyed(new KeyedRngRequest(Seed, Scope, $"actor:{actorId}:{key}", minimum, maximum)).Value);
