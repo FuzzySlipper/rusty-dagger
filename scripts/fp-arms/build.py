@@ -230,16 +230,18 @@ def degrees(turn):
     return [round(math.degrees(a), 2) for a in (math.asin(max(-1, min(1, -cz.y))), math.atan2(cz.x, cz.z), math.atan2(cx.y, cy.y))]
 
 
-# The commit's share of the time after the hit, which is close to this in every weapon class's tuning.
+# The commit's share of the time after the hit, which is close to this in every weapon class's tuning. A cast's commit
+# is the moment the spell leaves, so nearly all of its time after the hit is recovery.
 COMMIT_SHARE = 0.3
+CAST_COMMIT_SHARE = 0.06
 
 
-def marks(tips, speeds):
+def marks(tips, speeds, commit_share=COMMIT_SHARE):
     """
     Suggested marks from a point 30 cm along the blade, per frame (camera space): the strike where the swing meets what
     is in front, the frame of its fastest burst (the frames around its top speed at a third of it or more) whose point
     lies nearest the centre of the view; the end where the clip has come back (the point stays within 3 cm of where the clip leaves it); and the
-    recovery COMMIT_SHARE of the way between, so the clip plays after the hit at one pace over the rules' commit and
+    recovery commit_share of the way between, so the clip plays after the hit at one pace over the rules' commit and
     recovery.
     """
     peak = max(range(len(speeds)), key=lambda i: speeds[i])
@@ -251,7 +253,7 @@ def marks(tips, speeds):
     strike = min(range(first, last_fast + 1), key=lambda i: tips[i].angle(Vector((0, 0, -1))))
     last = len(tips) - 1
     end = next(i for i in range(strike, last + 1) if all((tips[j] - tips[-1]).length < 0.03 for j in range(i, last + 1)))
-    return {"start": 0, "strike": round(strike / last, 3), "recover": round((strike + (end - strike) * COMMIT_SHARE) / last, 3), "end": round(end / last, 3)}
+    return {"start": 0, "strike": round(strike / last, 3), "recover": round((strike + (end - strike) * commit_share) / last, 3), "end": round(end / last, 3)}
 
 
 def rounded(v, places=4):
@@ -277,10 +279,12 @@ for name, family in families.items():
     look = axes @ LOOK_IN_BONE
     strikes = {}
     for action, clip in family["strikes"].items():
-        tips = [camera(s["weapon_r"].translation + s["weapon_r"].to_3x3().normalized().col[2] * 0.3) for s in samples[clip["clip"]]]
+        # A cast is the left hand's: its hit is the palm thrown forward, not a blade.
+        cast = action == "cast"
+        tips = [camera(s["hand_l"].translation) if cast else camera(s["weapon_r"].translation + s["weapon_r"].to_3x3().normalized().col[2] * 0.3) for s in samples[clip["clip"]]]
         speeds = [round((tips[i + 1] - tips[i]).length * 60, 2) for i in range(len(tips) - 1)]
         strikes[action] = {"clip": clip["clip"], "frames": len(tips), "seconds": round((len(tips) - 1) / 60, 4),
-                           "marks": marks(tips, speeds), "tipSpeed": speeds}
+                           "marks": marks(tips, speeds, CAST_COMMIT_SHARE if cast else COMMIT_SHARE), "tipSpeed": speeds}
     measure["families"][name] = {
         "idleSeconds": round((len(samples[family["idle"]["clip"]]) - 1) / 60, 4),
         "powerHoldSeconds": round((len(samples[family["powerHold"]["clip"]]) - 1) / 60, 4),

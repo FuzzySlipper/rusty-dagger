@@ -110,6 +110,17 @@ internal sealed partial class DaggerfallSession : IDeveloperPlayerSession
         return DebugCommandResult.Success("Vitals restored.");
     }
 
+    public DebugCommandResult Spell(string spell)
+    {
+        if (DeveloperMoveRefusal() is { } refusal) return Refused(refusal);
+        var named = _definitions.Magic.Spells.Where(pair => pair.Value.Name.Contains(spell ?? "", StringComparison.OrdinalIgnoreCase)).OrderBy(pair => pair.Value.Name, StringComparer.Ordinal).ToArray();
+        var exact = named.Where(pair => pair.Value.Name.Equals(spell, StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (exact.Length == 1) named = exact;
+        if (named.Length != 1)
+            return Refused(named.Length == 0 ? $"No spell is named '{spell}'." : $"'{spell}' names several spells: {string.Join(", ", named.Select(pair => pair.Value.Name))}.");
+        return DebugCommandResult.Success(State.Character.LearnSpell(named[0].Key) ? $"Learned {named[0].Value.Name}." : $"{named[0].Value.Name} is already known.");
+    }
+
     public DebugCommandResult Items(string filter)
     {
         StringBuilder text = new();

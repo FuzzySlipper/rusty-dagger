@@ -257,7 +257,20 @@
         "clip": "FPP_Dag_AttackHeavyD_Start",
         "at": 1
       },
+      "leftHand": [
+        "cast"
+      ],
       "strikes": {
+        "cast": {
+          "clip": "FPP_Dag_Magic",
+          "marks": {
+            "start": 0,
+            "strike": 0.175,
+            "recover": 0.219,
+            "end": 0.912
+          },
+          "fade": 0.1
+        },
         "fastA": {
           "clip": "FPP_Dag_AttackR",
           "marks": {
@@ -360,7 +373,20 @@
         "clip": "FPP_Longs_AttackHeavy_D_Idle",
         "seconds": 4.4333
       },
+      "leftHand": [
+        "cast"
+      ],
       "strikes": {
+        "cast": {
+          "clip": "FPP_Longs_Magic",
+          "marks": {
+            "start": 0,
+            "strike": 0.2,
+            "recover": 0.231,
+            "end": 0.714
+          },
+          "fade": 0.1
+        },
         "fastA": {
           "clip": "FPP_Longs_Attack_R",
           "marks": {
@@ -459,7 +485,20 @@
         "clip": "FPP_sns_AttackHeavyU_Loop",
         "seconds": 4.6333
       },
+      "leftHand": [
+        "cast"
+      ],
       "strikes": {
+        "cast": {
+          "clip": "FPP_sns_Magic1",
+          "marks": {
+            "start": 0,
+            "strike": 0.138,
+            "recover": 0.182,
+            "end": 0.872
+          },
+          "fade": 0.1
+        },
         "fastA": {
           "clip": "FPP_sns_Attack_RD",
           "marks": {
@@ -559,7 +598,20 @@
         "clip": "FPP_Halb_AttackHeavy_R_Loop",
         "seconds": 4.5667
       },
+      "leftHand": [
+        "cast"
+      ],
       "strikes": {
+        "cast": {
+          "clip": "FPP_Halb_Magic",
+          "marks": {
+            "start": 0,
+            "strike": 0.186,
+            "recover": 0.226,
+            "end": 0.853
+          },
+          "fade": 0.1
+        },
         "fastA": {
           "clip": "FPP_Halb_Attack_R",
           "marks": {

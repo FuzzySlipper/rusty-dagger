@@ -98,7 +98,21 @@ internal sealed partial class DaggerfallSiteAppearance
     private EffectVisual? SpawnEffect(string name, WorldPoint position, PresentationEventIdentity identity,
         string? activeInstance = null, long? target = null, long? source = null, ulong? item = null)
     {
+        if (EffectSprite(name) is not { } sprite) return null;
+        EffectVisual spawned = new(NextVisualEntityId(), position, sprite.Atlas, sprite.Visual, sprite.Playback)
+        { ActiveInstance = activeInstance, TargetActor = target, SourceActor = source, SourceItem = item, Refreshed = sprite.Refreshed };
+        effects.Add(spawned);
+        return spawned;
+    }
+
+    /// <summary>
+    /// One effect's sprite, playing, in refreshed art when that is drawn: at its classic world size, or <paramref name="width"/>
+    /// metres wide; null when the effect is not published.
+    /// </summary>
+    private (SpriteAtlas Atlas, Appearance Visual, SpritePlayback Playback, bool Refreshed)? EffectSprite(string name, float? width = null)
+    {
         if (!classicEffects.TryGetValue(name, out NormalizedClassicEffect? effect)) return null;
+        float scale = width is { } wanted ? wanted / effect.DisplaySize.X : 1F;
         bool refreshed = drawRefreshedEffects() && refreshedEffects.ContainsKey(name);
         SpriteAtlas? atlas = null;
         Appearance? visual = null;
@@ -116,7 +130,7 @@ internal sealed partial class DaggerfallSiteAppearance
                 // The refreshed frame is larger than the classic one it holds: scale the classic size by the share the
                 // classic frame takes of it, and move the classic anchor (a fraction of its frame, from the bottom) into it.
                 DaggerfallArtRect classic = art.Classic;
-                Vector2 size = effect.DisplaySize / new Vector2((float)classic.Width, (float)classic.Height);
+                Vector2 size = effect.DisplaySize * scale / new Vector2((float)classic.Width, (float)classic.Height);
                 Vector2 pivot = new((float)(classic.X + effect.Pivot.X * classic.Width), (float)(1 - classic.Y - classic.Height + effect.Pivot.Y * classic.Height));
                 request = new SpriteFromAtlasRequest(atlas, initialFrame, pivot, size, BillboardMode.Spherical, SpriteSizeMode.World, 0,
                     SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F), new SpriteMaterialDescriptor(SpriteLightingMode.Unlit, default, default, 1f, 0f,
@@ -128,17 +142,14 @@ internal sealed partial class DaggerfallSiteAppearance
                 SpriteAtlasFrame[] frames = SpriteAtlasAdapter.ToAtlasFrames(effect.AtlasWidth, effect.AtlasHeight,
                     effect.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height)).ToArray());
                 atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
-                request = new SpriteFromAtlasRequest(atlas, initialFrame, effect.Pivot, effect.DisplaySize, BillboardMode.Cylindrical, SpriteSizeMode.World, 0,
+                request = new SpriteFromAtlasRequest(atlas, initialFrame, effect.Pivot, effect.DisplaySize * scale, BillboardMode.Cylindrical, SpriteSizeMode.World, 0,
                     SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F));
             }
             visual = appearance.CreateSpriteFromAtlas(request);
             SpritePlaybackFrame[] playbackFrames = SpriteAtlasAdapter.ToPlaybackFrames(effect.Sequence.Select(index => effect.Frames.Single(frame => frame.Id == index).Id).ToArray(), effect.FramesPerSecond);
             playback = appearance.CreateSpritePlayback(new SpritePlaybackCreateRequest(visual, atlas, playbackFrames, Array.Empty<SpritePlaybackMarker>(), effect.Loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1d));
             appearance.ControlSpritePlayback(new SpritePlaybackControlRequest(playback, SpritePlaybackControl.Start));
-            EffectVisual spawned = new(NextVisualEntityId(), position, atlas, visual, playback)
-            { ActiveInstance = activeInstance, TargetActor = target, SourceActor = source, SourceItem = item, Refreshed = refreshed };
-            effects.Add(spawned);
-            return spawned;
+            return (atlas, visual, playback, refreshed);
         }
         catch
         {

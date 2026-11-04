@@ -45,12 +45,12 @@ chained attack is a new clip fading in over the recovery. An attack a family has
 
 ### Families and items
 
-| Family | Visuals | Fast attacks | Power attack | Hands |
-|---|---|---|---|---|
-| `dagger` | `weapon.dagger.steel` | `FPP_Dagger`: AttackR, AttackLSlash, AttackD, AttackF | AttackHeavyD, held at the end of its Start | one |
-| `longsword` | `weapon.longblade`, `weapon.axe`, `weapon.flail`, `weapon.warhammer` | `FPP_Longsword`: Attack_R, _L, _D, _F | AttackHeavy_D | both |
-| `sns` | `weapon.mace` | `FPP_SnS` (sword and shield; the shield hand rests out of view): Attack_RD, _LU, _RU, _F | AttackHeavyU | one |
-| `halberd` | `weapon.staff` | `FPP_Halberd`: Attack_R, _LD, _D, _F | AttackHeavy_R | both |
+| Family | Visuals | Fast attacks | Power attack | Cast | Hands |
+|---|---|---|---|---|---|
+| `dagger` | `weapon.dagger.steel` | `FPP_Dagger`: AttackR, AttackLSlash, AttackD, AttackF | AttackHeavyD, held at the end of its Start | Magic | one |
+| `longsword` | `weapon.longblade`, `weapon.axe`, `weapon.flail`, `weapon.warhammer` | `FPP_Longsword`: Attack_R, _L, _D, _F | AttackHeavy_D | Magic | both |
+| `sns` | `weapon.mace` | `FPP_SnS` (sword and shield; the shield hand rests out of view): Attack_RD, _LU, _RU, _F | AttackHeavyU | Magic1 | one |
+| `halberd` | `weapon.staff` | `FPP_Halberd`: Attack_R, _LD, _D, _F | AttackHeavy_R | Magic | both |
 
 `fastA` to `fastD` are the four fast attacks in the order a chain cycles them, so a cut from one side is followed by one
 from the other, then a downward blow and a thrust. Every plain clip starts and ends at its family's idle, so any can
@@ -59,6 +59,12 @@ follow any. A chain cuts a clip's long tail at its recovery. `powerIn` plays a h
 its hold clip, a plain idle, so its hold stays on Start's last frame. The halberd's End waits still for over a second
 before it swings, so its `start` mark skips the wait. `kick` plays the family's Kick, whose strike mark is half way along
 the arms' path; the clips move only the arms. The bow and the werecreature have no fitting clip and keep their sprites.
+
+`cast` is the left hand's, so every family lists it in `leftHand` and the weapon stays in the right hand. The rules time
+it, and the spell leaves at the clip's strike mark, the palm thrown forward. Until then the element's missile burns on the
+palm: `DaggerfallSiteAppearance` draws the same sprite the spell flies as, in the art chosen, on the viewmodel layer where
+`DaggerfallHeldViewmodel.CastPalm` samples the left hand in the clip. With no family drawn (bare hands, or the weapon
+sheathed) the element's classic casting hand draws instead.
 
 A classic visual covers weapons of both kinds: `weapon.longblade` draws every sword and `weapon.axe` both axes. So the
 family follows the item's handedness in Daggerfall, and `items` moves the one-handed items off their visual's family:
@@ -91,8 +97,10 @@ and build again. `build.py`:
   per attack the blade's speed per frame and suggested marks. The strike mark is the frame of the swing's fastest burst
   whose blade (30 cm along the weapon bone's +Z, the pack's blade axis) lies nearest the centre of the view; the end is
   where the clip has come back to rest; the recovery lies three tenths of the way between, the commit's share of the
-  time after the hit in the tuning, so the clip plays at one pace after the hit. A `powerIn` clip is all windup, so its
-  strike mark is where its motion ends. Copy what the definition should take from it, then tune in the game.
+  time after the hit in the tuning, so the clip plays at one pace after the hit. A `cast` is measured on the left hand,
+  not the blade, and its recovery lies much nearer the strike, because its commit is only the moment the spell leaves. A
+  `powerIn` clip is all windup, so its strike mark is where its motion ends. Copy what the definition should take from
+  it, then tune in the game.
 
 The clips were animated for a 90° horizontal field of view (about 59° vertical at 16:9); Dagger's 65° vertical shows
 them a little smaller than authored.
@@ -114,6 +122,7 @@ place marks.
 - The other arm sets (female leather, male and female cloth, male chainmail) are not built: a set chosen by the
   player's gender and armour needs its own bake where its skeleton's rest differs.
 - The bows draw their sprites: there are no clips for them yet, so their models wait for those.
+- Casting with bare hands or a sheathed weapon draws the classic hand: no family draws them yet (#10585).
 
 ## Weapon models
 
