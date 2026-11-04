@@ -5,7 +5,8 @@ Each accepted final in gen-raw/AREA stands in for one classic media id, which th
 when the refreshed art set is chosen (classic stays selectable). For each final this:
 
   - finds the classic media id it replaces, from its art key: a worn layer `texture-A-record-R-frame-000` is
-    the paper doll's `paper-doll.A.R`, a body `bodies--bodyGNi{0,1}--...` is
+    the paper doll's `paper-doll.A.R`, a design of its own `texture-NAME-record-R-frame-000` over a classic record
+    another item keeps is `paper-doll.NAME.R` (the template's refreshedArt), a body `bodies--bodyGNi{0,1}--...` is
     `character.body-{unclothed,clothed}.{gender}.0N.0`, a head `faces--faceGNi0--...-record-RRR-...` is
     `character.head.{gender}.0N.R`, and a vampire head, beast head or beast doll `creatures--NAMEi0--...-record-RRR-...`
     is `character.FAMILY.NAMEi0.R`, FAMILY being the name's first four letters (vamp, were, wolf, boar);
@@ -50,6 +51,8 @@ mesh's footprint, its longest side in metres, so the game draws it at the width 
 The `surfaces` area promotes the walls, floors and ceilings (`surfaces`): each accepted final `texture-AAA-R`, from
 its family's folder under gen-raw/surfaces (tools/surfaces/batch.py), stands in for classic TEXTURE.AAA record R as an
 8-bit RGBA PNG at its own size, and the game draws it on the location materials and terrain that draw that record.
+The `terrain` area does the same into `surfaces` for the ground tiles, from gen-raw/terrain (tools/terrain/ground.py). A
+record has one entry: a ground tile models also draw is marked superseded in the surfaces ledger.
 
 Icons are written at their area's ICON pixels on the longer side and carry no doll rect.
 
@@ -61,7 +64,7 @@ opaque box in the import's published image), from which the game sizes it on the
 Only finals whose ledger/AREA-notes.json status is `accepted` are promoted. Rerunning an area replaces that
 area's entries and files and keeps every other area's.
 
-    promote.py --area paper-doll --area worn --area items --area spells --area effects --area surfaces
+    promote.py --area paper-doll --area worn --area items --area spells --area effects --area surfaces --area terrain
 """
 import argparse, hashlib, io, json, re
 from pathlib import Path
@@ -77,7 +80,7 @@ CONTENT = REPOSITORY / "content"
 MEDIA = "worldrpg/media/refreshed"
 PAYLOAD = CONTENT / "worldrpg/payloads/daggerfall.art-replacements.json"
 QUALITY = 90
-AREAS = ("paper-doll", "worn", "items", "spells", "effects", "surfaces")
+AREAS = ("paper-doll", "worn", "items", "spells", "effects", "surfaces", "terrain")
 SURFACE = re.compile(r"texture-(\d{3})-(\d+)")
 ICON = {"items": 256, "spells": 128}   # pixels on an icon's longer side: an item slot, a spell glyph of about 3rem
 CLASSIC_MANIFEST = REPOSITORY / "local/import/staging/worldrpg/imports/shared/media/classic/manifest.json"
@@ -116,6 +119,10 @@ METALS = ["iron", "silver", "elven", "dwarven", "mithril", "adamantium", "ebony"
 CLASSIC = REPOSITORY / "local/import/staging/worldrpg/media/character/paper-doll"
 
 WORN = re.compile(r"texture-(\d+)-record-(\d+)-frame-000")
+# A design of its own over classic records another item keeps (the flanged mace over the club's), named by the
+# template's refreshedArt, and the classic archive it stands over.
+NAMED = re.compile(r"texture-([a-z]+)-record-(\d+)-frame-000")
+NAMED_ARCHIVE = {"mace": 234}
 BODY = re.compile(r"bodies--body(\d)(\d)(i[01])--.*")
 FACE = re.compile(r"faces--face(\d)(\d)i0--.*-record-(\d+)-frame-000")
 CREATURE = re.compile(r"creatures--((\w{4})\d\di0)--.*-record-(\d+)-frame-000")
@@ -126,6 +133,8 @@ def replaces(key):
     """The classic media id a final's art key stands in for."""
     if m := WORN.fullmatch(key):
         return f"paper-doll.{int(m[1])}.{int(m[2])}"
+    if m := NAMED.fullmatch(key):
+        return f"paper-doll.{m[1]}.{int(m[2])}"
     if m := BODY.fullmatch(key):
         return f"character.body-{'unclothed' if m[3] == 'i0' else 'clothed'}.{GENDER[m[1]]}.0{m[2]}.0"
     if m := FACE.fullmatch(key):
@@ -138,7 +147,9 @@ def replaces(key):
 def rect_of(area, key, path):
     """The final's doll-space rect, from its sidecar as doll_preview.py places it."""
     if area == "worn":
-        layer = worn_layer(key, None)
+        # A named design is painted on the canvas of the classic record it stands over, so it takes that record's place.
+        named = NAMED.fullmatch(key)
+        layer = worn_layer(f"texture-{NAMED_ARCHIVE[named[1]]}-record-{named[2]}-frame-000" if named else key, None)
     else:
         family, name, rest = key.split("--")
         layer = doll_layer(family, name, int(re.search(r"record-(\d+)", rest)[1]), key)
@@ -233,7 +244,8 @@ def promote(area, key, path):
     world = world_size(image)
     if area == "worn":
         entry["world"] = world_png(image.resize(world, Image.Resampling.LANCZOS), f"{MEDIA}/{area}/{key}.png")
-    if (m := WORN.fullmatch(key)) and dyed(int(m[1]), int(m[2])):
+    m = WORN.fullmatch(key) or NAMED.fullmatch(key)
+    if m and dyed(NAMED_ARCHIVE.get(m[1]) or int(m[1]), int(m[2])):
         mask = dye_mask(image)
         entry["dyeMask"] = {"mediaId": f"refreshed.{classic}.dye", **webp(mask, f"{MEDIA}/{area}/{key}-dye.webp", lossless=True)}
         if area == "worn":
@@ -382,19 +394,19 @@ def classic_size(media):
     return {"width": right - left, "height": bottom - top}
 
 
-def surfaces():
-    """Each accepted surface final's entry, by the classic texture record it replaces."""
-    finals = {path.stem: path for path in (AUTHORING / "gen-raw" / "surfaces").glob("*/texture-*.png") if path.parent.name != "raw"}
+def surfaces(area):
+    """Each accepted final's entry in the area, by the classic texture record it replaces."""
+    finals = {path.stem: path for path in (AUTHORING / "gen-raw" / area).glob("*/texture-*.png") if path.parent.name != "raw"}
     promoted = []
-    for key, note in ledger("surfaces").items():
+    for key, note in ledger(area).items():
         if note.get("status") != "accepted":
             continue
         if key not in finals:
-            raise SystemExit(f"{key} is accepted in ledger/surfaces-notes.json but has no final under gen-raw/surfaces.")
+            raise SystemExit(f"{key} is accepted in ledger/{area}-notes.json but has no final under gen-raw/{area}.")
         archive, record = map(int, SURFACE.fullmatch(key).groups())
         promoted.append({"replaces": {"archive": archive, "record": record},
-                         **world_png(Image.open(finals[key]), f"{MEDIA}/surfaces/{key}.png")})
-    return sorted(promoted, key=lambda entry: (entry["replaces"]["archive"], entry["replaces"]["record"]))
+                         **world_png(Image.open(finals[key]), f"{MEDIA}/{area}/{key}.png")})
+    return promoted
 
 
 def icon_entry(replaces, image, name, world=None):
@@ -409,10 +421,21 @@ def icon_entry(replaces, image, name, world=None):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--area", action="append", choices=AREAS, required=True)
+    ap.add_argument("--key", action="append", help="promote only this accepted final of a paper-doll or worn --area, "
+                    "leaving the area's other files and its tints as they are; a whole area deletes and rewrites its media")
     a = ap.parse_args()
     payload = json.loads(PAYLOAD.read_text()) if PAYLOAD.exists() else {"artReplacements": {"images": []}}
     images = payload["artReplacements"]["images"]
     for area in a.area:
+        if a.key:
+            notes = ledger(area)
+            for key in a.key:
+                if notes.get(key, {}).get("status") != "accepted":
+                    raise SystemExit(f"{key} is not accepted in ledger/{area}-notes.json.")
+                images[:] = [entry for entry in images if entry["replaces"] != replaces(key)]
+                images.append(promote(area, key, AUTHORING / "gen-raw" / area / f"{key}.png"))
+                print(f"{area}: {key}", flush=True)
+            continue
         if area == "effects":
             directory = CONTENT / MEDIA / "effects"
             directory.mkdir(parents=True, exist_ok=True)
@@ -424,13 +447,19 @@ def main():
             payload["artReplacements"]["meshes"] = world_meshes()
             print(f"effects: {len(effects)} effects, {sum(entry['byteLength'] for entry in effects) / 1e6:.1f} MB", flush=True)
             continue
-        if area == "surfaces":
-            directory = CONTENT / MEDIA / "surfaces"
+        if area in ("surfaces", "terrain"):
+            directory = CONTENT / MEDIA / area
             directory.mkdir(parents=True, exist_ok=True)
             for old in directory.glob("*.png"):
                 old.unlink()
-            promoted = payload["artReplacements"]["surfaces"] = surfaces()
-            print(f"surfaces: {len(promoted)} finals, {sum(entry['byteLength'] for entry in promoted) / 1e6:.1f} MB", flush=True)
+            promoted = surfaces(area)
+            kept = [entry for entry in payload["artReplacements"].get("surfaces", []) if not entry["path"].startswith(f"{MEDIA}/{area}/")]
+            entries = sorted(kept + promoted, key=lambda entry: (entry["replaces"]["archive"], entry["replaces"]["record"]))
+            records = [(entry["replaces"]["archive"], entry["replaces"]["record"]) for entry in entries]
+            if len(set(records)) != len(records):
+                raise SystemExit(f"Two areas replace one record: {sorted(r for r in set(records) if records.count(r) > 1)}.")
+            payload["artReplacements"]["surfaces"] = entries
+            print(f"{area}: {len(promoted)} finals, {sum(entry['byteLength'] for entry in promoted) / 1e6:.1f} MB", flush=True)
             continue
         notes = ledger(area)
         accepted = sorted(key for key, note in notes.items() if note.get("status") == "accepted")
@@ -450,7 +479,8 @@ def main():
                 raise SystemExit(f"{key} is accepted in ledger/{area}-notes.json but {path} does not exist.")
             images.append(promote(area, key, path))
         if area == "worn":
-            finals = [(key, AUTHORING / "gen-raw" / area / f"{key}.png") for key in accepted]
+            # A named design is left out: the tints are measured against the classic images of each record.
+            finals = [(key, AUTHORING / "gen-raw" / area / f"{key}.png") for key in accepted if WORN.fullmatch(key)]
             clothing = [final for final in finals if int(WORN.fullmatch(final[0])[1]) in CLOTHING]
             metal = [final for final in finals if int(WORN.fullmatch(final[0])[1]) not in CLOTHING]
             payload["artReplacements"]["dyeTints"] = dye_tints(clothing, DYES, "red") | dye_tints(metal, METALS, "daedric")

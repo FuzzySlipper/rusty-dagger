@@ -2,6 +2,7 @@ using System.Numerics;
 using Rusty.Engine;
 using Rusty.Engine.FirstPerson;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
@@ -24,6 +25,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// </remarks>
 internal sealed class DaggerfallHeldViewmodel : IDisposable
 {
+    // The longest the retro style's chain waits for the hand: about one classic frame.
+    private const float RetroChainSeconds = .1F;
+
     // Where a hand that holds nothing is sent (the left's place; the right's mirrors it): below the view and beside the
     // body, so its arm is never drawn in view.
     private static readonly Vector3 HandAway = new(-.25F, -.8F, .05F);
@@ -35,6 +39,12 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     private readonly FirstPersonArms arms;
     private readonly RenderResource? model;
     private readonly Appearance look;
+    // The model's chain, for an item that has one, and the world seconds it has not yet been stepped.
+    private readonly HeldChain? chain;
+    private float chainSeconds;
+    // The clip frame last drawn, and whether the hand has moved to it since the chain last stepped.
+    private ArmClipFrame drawn;
+    private bool handMoved;
     // The strike playing: its action, timing, one classic frame, and how far into it (seconds); null at rest.
     private (string Action, PhaseTiming Timing, float Frame, float Seconds)? strike;
     // How fast the strike plays (the workbench plays it slower or holds it still); 1 in play.
@@ -74,6 +84,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
                     look = engine.Animation.CreateAnimatedMeshAppearance(new(model));
                     if (metal is not null && art.MetalSlot(path) is uint slot)
                         engine.Animation.UpdateAnimatedMeshMaterialFactors(new(look, new[] { MeshMaterialFactors.Tint(slot, DaggerfallHeldArt.MetalColor(metal)) }));
+                    if (item?.Chain is { } hanging) chain = new HeldChain(engine, hanging, model, look, weaponObject);
                 }
                 catch { look?.Dispose(); model.Dispose(); throw; }
             }
@@ -142,12 +153,16 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
         if (holding) held += seconds;
         if (strike is { } playing) strike = playing with { Seconds = playing.Seconds + seconds * rate };
         else idle += seconds;
+        StepChain(seconds);
     }
 
     /// <summary>Leads the arms by the clip playing now, and adds the look where the main hand holds it and the arms.</summary>
     internal void AppendFacts(List<AppearanceFact> facts, bool shown)
     {
-        arms.Lead(Frame(), since);
+        ArmClipFrame now = Frame();
+        handMoved |= now != drawn;
+        drawn = now;
+        arms.Lead(now, since);
         since = 0;
         (Vector3 grip, Quaternion turn) = arms.Ride(MainAim());
         // The model's origin is its own grip; the hand holds the look's grip point.
@@ -157,16 +172,41 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     }
 
     /// <summary>Once the snapshot with <see cref="AppendFacts"/> is published: poses the arms by their clip and aims.</summary>
-    internal void Reach() => arms.Reach(MainAim(), OffAim());
+    internal void Reach()
+    {
+        arms.Reach(MainAim(), OffAim());
+        chain?.Published();
+    }
 
     public void Dispose()
     {
-        try { arms.Dispose(); }
+        try
+        {
+            chain?.Dispose();
+            arms.Dispose();
+        }
         finally
         {
             look.Dispose();
             model?.Dispose();
         }
+    }
+
+    // Swings the chain. The retro style moves the hand once per classic frame, which would tear a chain stepped between
+    // those jumps, so its chain moves with the hand: one step over the seconds since it last moved, through which the
+    // Engine carries the jump. A hand that stays still must not hold the chain up, so it also moves at the classic pace.
+    private void StepChain(float seconds)
+    {
+        if (chain is null) return;
+        chainSeconds += seconds;
+        if (retro && !handMoved && chainSeconds < RetroChainSeconds)
+        {
+            chain.Step(0);
+            return;
+        }
+        chain.Step(chainSeconds);
+        chainSeconds = 0;
+        handMoved = false;
     }
 
     // The strike's clip where it has got to, or the idle loop at rest and once the strike is over.

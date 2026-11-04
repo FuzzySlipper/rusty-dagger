@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using Rusty.Engine;
 using Rusty.Engine.FirstPerson;
 using WorldRpg.Kit;
+using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
@@ -115,6 +116,7 @@ public sealed class DaggerfallHeldArtTests
 
         Assert.Equal(120, longsword.Item);
         Assert.Equal("first-person/weapons/longsword.glb", art.Document.Items[120].Model);
+        Assert.All(art.Document.Items.Values, item => Assert.NotNull(item.Model));
         Assert.Null(dagger.Item);
         Assert.Equal("first-person/weapons/dagger.glb", art.Document.Families[dagger.Family].Look.Model);
         Assert.NotEqual(art.Drawing("weapon.longblade", 120, "ebony"), longsword);
@@ -179,7 +181,21 @@ public sealed class DaggerfallHeldArtTests
 
         Assert.Contains("'first-person/arms.glb' is not in first-person.rpak", Assert.Throws<InvalidDataException>(() => Read(Document(), models: [])).Message, StringComparison.Ordinal);
         Assert.Contains("'first-person/dagger.glb' is not in first-person.rpak", Assert.Throws<InvalidDataException>(() => Read(document)).Message, StringComparison.Ordinal);
-        Assert.Equal("first-person/dagger.glb", Read(document, models: ["first-person/arms.glb", "first-person/arms-retro.glb", "first-person/dagger.glb", "first-person/weapons/longsword.glb", "first-person/weapons/club.glb", "first-person/weapons/mace.glb"]).Document.Families["dagger"].Look.Model);
+        Assert.Equal("first-person/dagger.glb", Read(document, models: ["first-person/arms.glb", "first-person/arms-retro.glb", "first-person/dagger.glb", .. Weapons()]).Document.Families["dagger"].Look.Model);
+    }
+
+    [Fact]
+    public void The_flail_alone_hangs_a_chain_from_its_handle_to_its_ball()
+    {
+        DaggerfallHeldArt art = Read(Document());
+
+        Assert.Equal([125], art.Document.Items.Where(item => item.Value.Chain is not null).Select(item => item.Key));
+        HeldChainDefinition chain = art.Document.Items[125].Chain!;
+        Assert.Equal("handle", chain.Handle);
+        Assert.Equal(["link0", "link1", "link2", "link3", "link4"], chain.Links);
+        Assert.Equal("ball", chain.Weight);
+        // A chain's weight is what swings it: heavier than a link, or the links would lead it.
+        Assert.True(chain.WeightMass > chain.LinkMass);
     }
 
     [Fact]
@@ -288,15 +304,16 @@ public sealed class DaggerfallHeldArtTests
     internal static JsonObject Document() =>
         JsonNode.Parse(File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content", DaggerfallHeldArt.DocumentPath)))!.AsObject();
 
+    private static string[] Weapons() => Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/first-person/weapons"), "*.glb")
+        .Select(path => $"first-person/weapons/{Path.GetFileName(path)}").ToArray();
+
     // The definition read over a container that carries the given models (by default what scripts/fp-arms/build.sh
     // packs: both arms and the committed weapon models).
     internal static DaggerfallHeldArt Read(JsonObject document, string[]? models = null)
     {
         BundleContentFake service = new();
         service.Container(DaggerfallHeldArt.ContainerName);
-        string[] weapons = Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/first-person/weapons"), "*.glb")
-            .Select(path => $"first-person/weapons/{Path.GetFileName(path)}").ToArray();
-        foreach (string model in models ?? ["first-person/arms.glb", "first-person/arms-retro.glb", .. weapons])
+        foreach (string model in models ?? ["first-person/arms.glb", "first-person/arms-retro.glb", .. Weapons()])
             service.Add(DaggerfallHeldArt.ContainerName, model, [7]);
         ProductContentBundle container = new ProductContent(Array.Empty<ProductContentFile>(), service).OpenContainer(DaggerfallHeldArt.ContainerName);
         return DaggerfallHeldArt.Read(container, System.Text.Encoding.UTF8.GetBytes(document.ToJsonString()));
