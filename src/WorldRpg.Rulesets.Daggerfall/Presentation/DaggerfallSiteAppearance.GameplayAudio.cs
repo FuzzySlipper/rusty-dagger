@@ -103,7 +103,7 @@ internal sealed partial class DaggerfallSiteAppearance
             : template.Groups.Any(group => group is "Jewellery" or "Gems") ? 383
             : template.Groups.Contains("Armor") ? item.Shield is not null || template.Index == 107 ? 419
                 : metadata.Material == "leather" ? 417 : metadata.Material == "chain" ? 418 : 419
-            : template.Groups.Contains("Weapons") ? template.Index switch
+            : template.Groups.Contains("Weapons") ? template.ClassicIndex switch
             {
                 113 or 114 or 116 or 117 => 377, 118 or 119 or 120 or 121 => 378, 122 or 123 => 379,
                 115 => 380, 124 or 126 => 413, 125 => 414, 127 or 128 => 415, 129 or 130 => 416, _ => -1,

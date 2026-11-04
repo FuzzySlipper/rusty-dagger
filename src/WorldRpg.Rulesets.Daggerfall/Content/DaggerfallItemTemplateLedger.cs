@@ -26,7 +26,6 @@ internal sealed record DaggerfallItemTemplateLedger(
     string BaselinePath,
     string SubstituteStatus,
     string SubstitutePath,
-    int PublishedItemCount,
     string PublishedValueProvenance,
     bool PublishedNativeDecoding,
     int DeclaredTargets,
