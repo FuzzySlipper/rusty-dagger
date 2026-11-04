@@ -1,4 +1,5 @@
 using System.Numerics;
+using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
@@ -8,7 +9,7 @@ using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
-/// <summary>A hurt trap the player sets off reaches the bodies close by.</summary>
+/// <summary>What the world does by touch through the live session: hurt traps and fire.</summary>
 public sealed class DungeonTrapSessionTests
 {
     private const long Enemy = 2000;
@@ -51,6 +52,55 @@ public sealed class DungeonTrapSessionTests
         using DaggerfallSession near = Standing(1f);
         near.SpreadHurt(Action(DaggerfallDungeonActionFlag.DrainMagicka), 1);
         Assert.Equal(1000d, Health(near));
+    }
+
+    [Theory]
+    [InlineData(0, true)]
+    [InlineData(50, true)]
+    [InlineData(100, false)]
+    public void A_player_on_the_campfire_burns_by_what_gets_through_their_resistance(int resistance, bool hurts)
+    {
+        double lost = Burned(resistance, player: true);
+
+        Assert.Equal(hurts, lost > 0d);
+        if (resistance == 50) Assert.InRange(lost, Burned(0, player: true) * .5d - 1d, Burned(0, player: true) * .5d + 1d);
+    }
+
+    [Theory]
+    [InlineData(0, true)]
+    [InlineData(50, true)]
+    [InlineData(100, false)]
+    public void A_body_thrown_on_the_campfire_burns_by_what_gets_through_its_resistance(int resistance, bool hurts)
+    {
+        double lost = Burned(resistance, player: false);
+
+        Assert.Equal(hurts, lost > 0d);
+        if (resistance == 50) Assert.InRange(lost, Burned(0, player: false) * .5d - 1d, Burned(0, player: false) * .5d + 1d);
+    }
+
+    // Three seconds at the sixty steps a second of play on the start room's campfire, the player standing in it or the
+    // enemy held there by a blow. What it took off them.
+    private static double Burned(int resistance, bool player)
+    {
+        List<string> releases = [];
+        (DaggerfallSession session, _, _) = VisibleEnemySession(releases, out SpatialFake spatial, distance: 30d);
+        using DaggerfallSession disposable = session;
+        spatial.KeepPosition = true;
+        Vector3 fire = session.Sites.Projection.Inputs.Decorations.First(flat => flat.Source == (210, 1)).Position.ToVector();
+        ActorState enemy = session.State.Actors.Get(Enemy);
+        Rusty.Engine.Mechanics.StatsComponent stats = player ? session.State.Actors.Player.Stats : enemy.Stats;
+        stats.GetStat(StatId.Parse("resistance-fire")).BaseValue = resistance;
+        Track health = stats.GetTrack(TrackId.Parse("health"));
+        health.Maximum.BaseValue = 1000;
+        health.SetCurrent(1000);
+        if (player) Assert.True(session.Teleport(fire.X, fire.Y, fire.Z, force: true).Succeeded);
+        else
+        {
+            enemy.ApplyPose(new ActorPose(WorldPoint.From(fire), 0f));
+            session.Reactions.Begin(Enemy, Vector3.Zero, 3d, 9f, ActorNavigationMode.Swimming);
+        }
+        for (ulong step = 1; step <= 180; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
+        return 1000d - health.Current;
     }
 
     private static float DaggerfallHazardReach => DaggerfallTuning.Defaults.Hazards.TrapRadius;

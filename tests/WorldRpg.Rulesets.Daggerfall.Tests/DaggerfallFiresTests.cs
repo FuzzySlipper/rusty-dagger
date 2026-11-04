@@ -1,5 +1,6 @@
 using System.Numerics;
 using System.Text.Json;
+using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using Xunit;
 
@@ -54,6 +55,47 @@ public sealed class DaggerfallFiresTests
 
         Assert.InRange(lost, (int)(Tuning.BodyBurnPerSecond * Tuning.BodyBurnSeconds) - 1, (int)(Tuning.BodyBurnPerSecond * Tuning.BodyBurnSeconds) + 1);
         Assert.Empty(fires.BurnBodies(1d));
+    }
+
+    [Theory]
+    [InlineData(.25d)]
+    [InlineData(.5d)]
+    [InlineData(.75d)]
+    public void Partial_resistance_takes_its_share_of_a_burn_at_the_ordinary_step(double felt)
+    {
+        DaggerfallFires full = new(Tuning), resisted = new(Tuning);
+        full.Ignite(7);
+        resisted.Ignite(7);
+        int fullLoss = 0, resistedLoss = 0, playerFull = 0, playerResisted = 0;
+        DaggerfallFires playerAtFull = new(Tuning), playerResisting = new(Tuning);
+        for (int step = 0; step < 300; step++)
+        {
+            fullLoss += full.BurnBodies(Step).Sum(burn => burn.Damage);
+            resistedLoss += resisted.BurnBodies(Step, _ => felt).Sum(burn => burn.Damage);
+            playerFull += playerAtFull.BurnPlayer(true, Step);
+            playerResisted += playerResisting.BurnPlayer(true, Step, felt);
+        }
+
+        Assert.InRange(resistedLoss, fullLoss * felt - 1d, fullLoss * felt + 1d);
+        Assert.InRange(playerResisted, playerFull * felt - 1d, playerFull * felt + 1d);
+    }
+
+    [Fact]
+    public void Full_resistance_stops_a_burn_and_a_weakness_adds_to_it()
+    {
+        DaggerfallFires body = new(Tuning), player = new(Tuning);
+        body.Ignite(7);
+        int lost = 0;
+        for (int step = 0; step < 300; step++) lost += body.BurnBodies(Step, _ => 0d).Sum(burn => burn.Damage) + player.BurnPlayer(true, Step, 0d);
+        Assert.Equal(0, lost);
+
+        StatsComponent weak = new();
+        weak.AddStat(StatId.Parse("resistance-fire"), new Stat(-50, -10_000, 10_000));
+        Assert.Equal(1.5d, DaggerfallSession.FireFelt(weak));
+        weak.GetStat(StatId.Parse("resistance-fire")).BaseValue = 150;
+        Assert.Equal(0d, DaggerfallSession.FireFelt(weak));
+        weak.GetStat(StatId.Parse("resistance-fire")).BaseValue = 25;
+        Assert.Equal(.75d, DaggerfallSession.FireFelt(weak));
     }
 
     [Theory]
