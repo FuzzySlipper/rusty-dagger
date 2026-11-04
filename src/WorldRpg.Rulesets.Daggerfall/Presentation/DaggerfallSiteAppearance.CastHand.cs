@@ -1,5 +1,6 @@
 using System.Numerics;
 using Rusty.Engine;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
@@ -7,25 +8,50 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>
-/// The left hand's cast. A held family with a cast clip plays it on the arms to the rules' timing. Otherwise the weapon
-/// rests and the element's classic casting hand draws over it for as long as the cast plays: its frames carry their own
-/// place on the classic screen, so it fills the view as the weapon sprite does. A data pack from before the hands were
-/// published draws no hand, and the spell still leaves.
+/// The left hand's cast. A held family with a cast clip plays it on the arms to the rules' timing, with the element's
+/// missile burning on the palm until the spell leaves. Otherwise the weapon rests and the element's classic casting hand
+/// draws over it for as long as the cast plays: its frames carry their own place on the classic screen, so it fills the
+/// view as the weapon sprite does. A data pack from before the hands were published draws no hand, and the spell still
+/// leaves.
 /// </summary>
 internal sealed partial class DaggerfallSiteAppearance
 {
     /// <summary>The frame the spell leaves on, as the classic's casting hands release it.</summary>
     private const int CastReleaseFrame = 5;
 
+    /// <summary>How wide the element burns on the palm (metres).</summary>
+    private const float CastGlowWidth = .22F;
+
     private ViewmodelVisual? castHand;
+    // The element burning on the held arms' palm, from the cast's start until the spell leaves.
+    private EffectVisual? castGlow;
 
     private void PlayCast(int element, DaggerfallAttackTiming timing)
     {
         RetireCastHand();
         // A cast can cut into a swing's recovery, which leaves that swing's motion playing.
         StartWeaponAction("idle");
-        if (held is not null && !heldViewed && held.Moves(DaggerfallAttackIds.Cast)) held.Attack(DaggerfallAttackIds.Cast, timing, CastReleaseFrame);
+        if (held is not null && !heldViewed && held.Moves(DaggerfallAttackIds.Cast))
+        {
+            held.Attack(DaggerfallAttackIds.Cast, timing, CastReleaseFrame);
+            StartCastGlow(element);
+        }
         else PlayCastHand(element, timing);
+    }
+
+    private void StartCastGlow(int element)
+    {
+        if (DaggerfallSpellElements.Name(element) is not { } name || EffectSprite($"{name}Missile", CastGlowWidth) is not { } sprite) return;
+        castGlow = new EffectVisual(NextVisualEntityId(), WorldPoint.From(Vector3.Zero), sprite.Atlas, sprite.Visual, sprite.Playback) { Refreshed = sprite.Refreshed };
+    }
+
+    // The element on the palm, on the viewmodel layer with the arms; the spell having left, it goes.
+    private void AppendCastGlowFact(List<AppearanceFact> facts)
+    {
+        if (castGlow is not { } glow) return;
+        if (held?.CastPalm() is { } palm)
+            facts.Add(new AppearanceFact(glow.EntityId, false, 0, new Transform(palm, Quaternion.Identity, Vector3.One), glow.Appearance, true, RenderLayer.Viewmodel));
+        else RetireCastGlow();
     }
 
     private void PlayCastHand(int element, DaggerfallAttackTiming timing)
@@ -68,6 +94,11 @@ internal sealed partial class DaggerfallSiteAppearance
 
     private void AdvanceCastHand(AppearanceOuterUpdate identity)
     {
+        if (castGlow is { } glow && glow.LastOuterUpdate != identity)
+        {
+            appearance.AdvanceSpritePlayback(new SpritePlaybackAdvanceRequest(glow.Playback));
+            glow.LastOuterUpdate = identity;
+        }
         if (castHand is not { Playback: { } playback } hand || hand.LastOuterUpdate == identity) return;
         appearance.AdvanceSpritePlayback(new SpritePlaybackAdvanceRequest(playback));
         hand.LastOuterUpdate = identity;
@@ -75,8 +106,16 @@ internal sealed partial class DaggerfallSiteAppearance
 
     private void RetireCastHand()
     {
+        RetireCastGlow();
         if (castHand is not { } hand) return;
         castHand = null;
         Retire(hand);
+    }
+
+    private void RetireCastGlow()
+    {
+        if (castGlow is not { } glow) return;
+        castGlow = null;
+        Retire(glow);
     }
 }

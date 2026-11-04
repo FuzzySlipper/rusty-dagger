@@ -168,6 +168,7 @@ internal sealed partial class DaggerfallSiteAppearance
         if (weapon is not null)
             facts.Add(new AppearanceFact(weapon.EntityId, false, 0, weapon.Transform, weapon.Appearance, sprite, RenderLayer.Viewmodel));
         held?.AppendFacts(facts, !sprite);
+        AppendCastGlowFact(facts);
         if (castHand is { } hand) facts.Add(new AppearanceFact(hand.EntityId, false, 0, hand.Transform, hand.Appearance, true, RenderLayer.Viewmodel));
     }
 

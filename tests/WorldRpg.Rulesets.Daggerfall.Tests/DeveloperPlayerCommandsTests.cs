@@ -30,6 +30,20 @@ public sealed class DeveloperPlayerCommandsTests
     }
 
     [Fact]
+    public void Spell_teaches_a_named_spell_once_and_refuses_what_it_cannot_tell_apart()
+    {
+        using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold);
+        DaggerfallSession session = run.Session;
+        var spell = TestPayload.Definitions.Magic.Spells.First(pair => !session.State.Character.KnownSpells.Contains(pair.Key));
+
+        Assert.True(session.Spell(spell.Value.Name).Succeeded);
+        Assert.Contains(spell.Key, session.State.Character.KnownSpells);
+        Assert.Contains("already known", session.Spell(spell.Value.Name).Message, StringComparison.Ordinal);
+        Assert.False(session.Spell("no such spell").Succeeded);
+        Assert.Contains("several spells", session.Spell("a").Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Give_makes_items_by_label_template_name_or_index_and_refuses_what_it_cannot_name()
     {
         using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold);

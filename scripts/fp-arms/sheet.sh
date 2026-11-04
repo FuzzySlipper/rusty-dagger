@@ -18,7 +18,7 @@ capture() {
     python3 -c "import sys; b = sys.stdin.buffer.read(); open(sys.argv[1], 'wb').write(b[b.find(b'\x89PNG'):])" "$1"
 }
 strikes=("$@")
-(( ${#strikes[@]} )) || strikes=(fastA fastB fastC fastD powerIn powerOut kick)
+(( ${#strikes[@]} )) || strikes=(fastA fastB fastC fastD powerIn powerOut kick cast)
 mkdir -p "$out"
 run engine.time.mode manual >/dev/null
 for strike in "${strikes[@]}"; do

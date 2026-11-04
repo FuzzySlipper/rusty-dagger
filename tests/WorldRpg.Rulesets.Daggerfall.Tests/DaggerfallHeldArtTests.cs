@@ -38,6 +38,8 @@ public sealed class DaggerfallHeldArtTests
             DaggerfallAttackTiming fast = DaggerfallAttackTuning.Default.For(family.Class).Fast;
             PhaseTiming timing = new((float)fast.Windup, (float)fast.Commit, (float)fast.Recovery);
             Assert.All(DaggerfallAttackIds.Fast, id => Assert.Contains(id, family.Strikes.Keys));
+            Assert.Contains(DaggerfallAttackIds.Cast, family.Strikes.Keys);
+            Assert.True(family.MovesLeft(DaggerfallAttackIds.Cast), $"{name}'s cast is the left hand's.");
             Assert.NotNull(family.PowerHold);
             foreach (var (action, clip) in family.Strikes)
             {
@@ -271,20 +273,17 @@ public sealed class DaggerfallHeldArtTests
     [Fact]
     public void A_family_with_a_cast_clip_plays_it_to_the_rules_timing_and_draws_no_sprite_hand()
     {
-        JsonObject document = Document();
-        JsonObject strikes = document["families"]!["sns"]!["strikes"]!.AsObject();
-        strikes["cast"] = strikes["kick"]!.DeepClone();
         List<string> releases = [];
-        (DaggerfallSiteAppearance presentation, AppearanceFake appearance, _) = Viewing(releases, document);
+        (DaggerfallSiteAppearance presentation, AppearanceFake appearance, _) = Viewing(releases);
         using (presentation)
         {
             presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
             int atlases = appearance.AtlasRequests.Count;
 
-            presentation.React(new PlayerCastMotionFact(0, new(.3d, .02d, .3d), 1, 1));
+            presentation.React(new PlayerCastMotionFact(1, new(.3d, .02d, .3d), 1, 1));
 
             Assert.Equal(DaggerfallAttackIds.Cast, presentation.DrawnHeld!.Playing);
-            Assert.Equal(atlases, appearance.AtlasRequests.Count);
+            Assert.Equal(atlases, appearance.AtlasRequests.Count); // Cold has no effect published here, and no hand is drawn.
 
             presentation.React(new PlayerAttackRestFact(1, 2));
 
@@ -293,10 +292,59 @@ public sealed class DaggerfallHeldArtTests
     }
 
     [Fact]
-    public void A_cast_with_no_clip_rests_the_held_arms_it_cuts_into()
+    public void A_cast_burns_its_element_on_the_palm_until_the_spell_leaves()
     {
         List<string> releases = [];
-        (DaggerfallSiteAppearance presentation, _, _) = Viewing(releases);
+        (DaggerfallSiteAppearance presentation, AppearanceFake appearance, _) = Viewing(releases);
+        using (presentation)
+        {
+            int Drawn()
+            {
+                presentation.Publish(EmptyActors());
+                return appearance.Snapshots.Last().Count(fact => fact.Layer == RenderLayer.Viewmodel && fact.Visible);
+            }
+            presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
+            int arms = Drawn();
+
+            presentation.React(new PlayerCastMotionFact(0, new(.3d, .02d, .3d), 1, 1));
+            Assert.Equal(arms + 1, Drawn());
+
+            presentation.DrawnHeld!.Step(.25F);
+            Assert.Equal(arms + 1, Drawn());
+
+            presentation.DrawnHeld!.Step(.1F);
+            Assert.Equal(arms, Drawn());
+            Assert.Equal(DaggerfallAttackIds.Cast, presentation.DrawnHeld!.Playing);
+        }
+    }
+
+    [Fact]
+    public void A_cast_cut_short_takes_its_element_off_the_palm()
+    {
+        List<string> releases = [];
+        (DaggerfallSiteAppearance presentation, AppearanceFake appearance, _) = Viewing(releases);
+        using (presentation)
+        {
+            presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
+            presentation.Publish(EmptyActors());
+            int arms = appearance.Snapshots.Last().Count(fact => fact.Layer == RenderLayer.Viewmodel && fact.Visible);
+            presentation.React(new PlayerCastMotionFact(0, new(.3d, .02d, .3d), 1, 1));
+
+            presentation.React(new PlayerAttackRestFact(1, 2));
+
+            presentation.Publish(EmptyActors());
+            Assert.Equal(arms, appearance.Snapshots.Last().Count(fact => fact.Layer == RenderLayer.Viewmodel && fact.Visible));
+        }
+    }
+
+    [Fact]
+    public void A_cast_with_no_clip_rests_the_held_arms_it_cuts_into()
+    {
+        JsonObject document = Document();
+        document["families"]!["sns"]!["strikes"]!.AsObject().Remove("cast");
+        document["families"]!["sns"]!.AsObject().Remove("leftHand");
+        List<string> releases = [];
+        (DaggerfallSiteAppearance presentation, _, _) = Viewing(releases, document);
         using (presentation)
         {
             presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
@@ -315,13 +363,15 @@ public sealed class DaggerfallHeldArtTests
     {
         ContentFake content = MediaContent(releases);
         content.Add("weapon/dagger.png", Hash);
+        content.Add("effect/fire-missile.png", Hash);
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(Hash, releases).Service, appearance, PerceptionFake.Create().Service);
         DaggerfallHeldArt art = Read(document ?? Document());
         engine.Animation.Joints = Joints(art.Document.Rig);
         engine.Animation.Clips = [.. art.Document.Families.Values.SelectMany(family => family.Strikes.Values.Select(clip => clip.Clip).Append(family.Idle.Clip)).Distinct()
             .Select(clip => new AnimationClipInfo(clip, clip, 1, true, 0))];
-        DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
+        NormalizedClassicPresentation classic = ClassicWeapon() with { Effects = [.. ClassicEffects(fireSpell: true).Effects.Where(effect => effect.Name == "fireMissile")] };
+        DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: classic));
         presentation.UseHeldArt(engine.Context, art, DaggerfallViewmodelStyle.Held, new Dictionary<string, DaggerfallDyeTint>(), _ => (120, DaggerfallHeldDrawing.Steel));
         return (presentation, appearance, engine);
     }

@@ -36,7 +36,10 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     private readonly DaggerfallHeldFamily family;
     private readonly DaggerfallHeldItem? item;
     private readonly bool retro;
+    private readonly IEngineContext engine;
     private readonly FirstPersonArms arms;
+    // The arms' model for sampling where a clip puts the off hand, which the arms don't publish.
+    private readonly RenderResource armsPose;
     private readonly RenderResource? model;
     private readonly Appearance look;
     // The model's chain, for an item that has one, and the world seconds it has not yet been stepped.
@@ -68,8 +71,12 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
         item = drawing.Item is int template ? art.Document.Items[template] : null;
         retro = style == DaggerfallViewmodelStyle.HeldRetro;
         WeaponObject = weaponObject;
+        this.engine = engine;
         using (ContentReference armsModel = art.Container.OpenReference(retro ? art.Document.RetroModel : art.Document.Rig.Model))
+        {
             arms = new FirstPersonArms(engine, art.Document.Arms, art.Document.Rig, armsObject, armsModel);
+            armsPose = engine.Animation.OpenAnimatedMeshFromContent(new(armsModel));
+        }
         try
         {
             string[] missing = [.. new[] { family.Idle.Clip }.Concat(family.Strikes.Values.Select(clip => clip.Clip)).Where(clip => !arms.Clips.Contains(clip))];
@@ -94,7 +101,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
                 look = engine.Graphics.CreatePrimitive(new(PrimitiveGeometry.Cube, false, new Color(1F, 1F, 1F, 1F)));
             }
         }
-        catch { arms.Dispose(); throw; }
+        catch { armsPose.Dispose(); arms.Dispose(); throw; }
     }
 
     /// <summary>What this weapon is drawn as: its family, its item's look and its metal.</summary>
@@ -108,6 +115,18 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
 
     /// <summary>The action whose clip the arms play now; null while they rest.</summary>
     internal string? Playing => strike?.Action;
+
+    /// <summary>Where the off hand's palm is drawn (camera space) while a cast has yet to let its spell go; null otherwise.</summary>
+    internal Vector3? CastPalm()
+    {
+        if (strike is not { Action: DaggerfallAttackIds.Cast } cast || cast.Seconds >= cast.Timing.Windup + cast.Timing.Commit) return null;
+        HandRig hand = arms.Hand(true);
+        ReadOnlySpan<JointPose> joints = engine.Animation.SampleModelJointPose(
+            AnimationModelPoseSampleRequest.OfClip(armsPose, drawn.Clip, drawn.Time, new(Vector3.Zero, Quaternion.Identity, Vector3.One))).Span;
+        Vector3 palm = (joints[(int)hand.Wrist].Model.Translation + joints[(int)hand.Middle[0]].Model.Translation) / 2;
+        Transform placed = arms.Fact(true).Transform;
+        return placed.Translation + Vector3.Transform(palm * placed.Scale, placed.Rotation);
+    }
 
     /// <summary>Whether the family has a clip for a classic strike action.</summary>
     internal bool Moves(string action) => action == DaggerfallAttackIds.PowerHold ? family.PowerHold is not null : family.Strikes.ContainsKey(action);
@@ -192,6 +211,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
         {
             look.Dispose();
             model?.Dispose();
+            armsPose.Dispose();
         }
     }
 

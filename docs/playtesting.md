@@ -119,6 +119,7 @@ earned. Like the movement commands they wait while a screen or question is open.
 | `player.give ITEM COUNT` | Gives COUNT of an item, named as the game labels it (`"Steel Dagger"`), by template name or index, with an optional material first (`"ebony 113"`); a weapon or armour without a material takes one rolled for the player's level. A stackable item comes as one stack. |
 | `player.hold ITEM` | Gives one item and wields it in the main hand, drawn, through the ordinary equip rules: the quickest way to test a weapon's first-person view or animation. |
 | `player.gold AMOUNT` | Gives gold. |
+| `player.spell SPELL` | Teaches a spell, by its name or a part only it has. |
 | `player.skill SKILL VALUE` | Sets a skill (`short-blade`, …) within 0–100. |
 | `player.levelup` | Raises the career's level skills until the next level is due and opens the ordinary level-up on the character sheet. |
 | `player.heal` | Restores health, fatigue and magicka. |
