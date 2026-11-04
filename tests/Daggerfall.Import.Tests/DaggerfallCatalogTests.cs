@@ -95,7 +95,7 @@ public sealed class DaggerfallCatalogTests
         Assert.Equal(5, catalogs.Resistances.Count);
         // Every pack actor except the player is an enemy reference the catalog resolves.
         Assert.Equal(44, catalogs.Enemies.Count);
-        Assert.Equal(31, catalogs.ItemTemplates.Count);
+        Assert.Equal(32, catalogs.ItemTemplates.Count);
         // Every record cites a documented source path, which the build validated.
         Assert.All(catalogs.Careers, career => Assert.StartsWith("arena2/CLASS", career.Source.Path, StringComparison.Ordinal));
         Assert.All(catalogs.Races, race => Assert.Equal("daggerfall-unity/Assets/Scripts/Game/Entities/RaceTemplate.cs", race.Source.Path));
