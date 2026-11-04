@@ -31,7 +31,7 @@ internal sealed partial class DaggerfallSession
         Vector3[] fires = FireSpots();
         if (State.PlayerControl.Position is WorldPoint player)
         {
-            int burn = _fires.BurnPlayer(_fires.Near(_sites.LocalToProfile(player.ToVector()), fires), seconds);
+            int burn = _fires.BurnPlayer(_fires.Near(_sites.LocalToProfile(player.ToVector()), fires), seconds, FireFelt(State.Actors.Player.Stats));
             if (burn > 0)
             {
                 Burn(State.Actors.Player.Actor, burn);
@@ -46,7 +46,7 @@ internal sealed partial class DaggerfallSession
             if (_fires.Near(at, fires)) _fires.Ignite(thrown);
             SpringTraps(actor, at);
         }
-        foreach ((long actor, int damage) in _fires.BurnBodies(seconds))
+        foreach ((long actor, int damage) in _fires.BurnBodies(seconds, id => State.Actors.TryGet(id, out ActorState body) ? FireFelt(body.Stats) : 0d))
             if (State.Actors.TryGet(actor, out ActorState burning) && !burning.IsDefeated) Burn(burning.Actor, damage);
     }
 
@@ -58,13 +58,12 @@ internal sealed partial class DaggerfallSession
         return _fireSpots = [.. inputs.Decorations.Where(flat => _tuning.Hazards.BurningFlats.Contains(flat.Source)).Select(flat => flat.Position.ToVector())];
     }
 
-    private void Burn(Rusty.Engine.Entities.Actor target, int damage)
-    {
-        int resistance = target.Get<StatsComponent>().TryGetStat(StatId.Parse(DaggerfallMechanicsIds.ResistanceFire.Value), out Stat? stat) ? stat.ValueInt : 0;
-        int felt = damage * Math.Clamp(100 - resistance, 0, 200) / 100;
-        if (felt <= 0) return;
-        AppendDamage(_vitality.ResolveBurn(State.Actors.Player.Actor, target, felt), DaggerfallDamageCause.Hazard, 0);
-    }
+    /// <summary>The share of a fire that gets through a body's resistance; a negative resistance is a weakness.</summary>
+    internal static double FireFelt(StatsComponent stats) =>
+        Math.Clamp(100 - (stats.TryGetStat(StatId.Parse(DaggerfallMechanicsIds.ResistanceFire.Value), out Stat? resistance) ? resistance.ValueInt : 0), 0, 200) / 100d;
+
+    private void Burn(Rusty.Engine.Entities.Actor target, int damage) =>
+        AppendDamage(_vitality.ResolveBurn(State.Actors.Player.Actor, target, damage), DaggerfallDamageCause.Hazard, 0);
 
     /// <summary>A hurt trap the player set off reaches the bodies around the player as well.</summary>
     internal void SpreadHurt(DaggerfallDungeonActionDefinition action, ulong count)

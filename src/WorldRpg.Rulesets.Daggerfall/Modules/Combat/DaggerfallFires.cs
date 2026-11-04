@@ -57,15 +57,18 @@ internal sealed class DaggerfallFires(DaggerfallHazardTuning tuning)
         return false;
     }
 
-    /// <summary>One step of the player's burn; the whole points of health it costs.</summary>
-    internal int BurnPlayer(bool inFire, double seconds)
+    /// <summary>
+    /// One step of the player's burn; the whole points of health it costs. <paramref name="felt"/> is the share of it that
+    /// gets through their resistance, taken before whole points are, since a step's burn is well under a point.
+    /// </summary>
+    internal int BurnPlayer(bool inFire, double seconds, double felt = 1d)
     {
         if (!inFire)
         {
             _heat = Math.Max(0d, _heat - seconds * tuning.PlayerCoolRate);
             return 0;
         }
-        _playerCarry += Math.Min(tuning.PlayerBurnMaximum, tuning.PlayerBurnStart + _heat * tuning.PlayerBurnRamp) * seconds;
+        _playerCarry += Math.Min(tuning.PlayerBurnMaximum, tuning.PlayerBurnStart + _heat * tuning.PlayerBurnRamp) * seconds * felt;
         _heat += seconds;
         return Take(ref _playerCarry);
     }
@@ -77,13 +80,13 @@ internal sealed class DaggerfallFires(DaggerfallHazardTuning tuning)
         burn.Seconds = tuning.BodyBurnSeconds;
     }
 
-    /// <summary>One step of every burning body: who loses whole points of health, and how many.</summary>
-    internal IReadOnlyList<(long Actor, int Damage)> BurnBodies(double seconds)
+    /// <summary>One step of every burning body: who loses whole points of health, and how many, each after the share <paramref name="felt"/> gives it.</summary>
+    internal IReadOnlyList<(long Actor, int Damage)> BurnBodies(double seconds, Func<long, double>? felt = null)
     {
         List<(long, int)> burned = [];
         foreach ((long actor, Burn burn) in _bodies.OrderBy(pair => pair.Key).ToArray())
         {
-            burn.Carry += tuning.BodyBurnPerSecond * Math.Min(seconds, burn.Seconds);
+            burn.Carry += tuning.BodyBurnPerSecond * Math.Min(seconds, burn.Seconds) * (felt?.Invoke(actor) ?? 1d);
             burn.Seconds -= seconds;
             if (Take(ref burn.Carry) is > 0 and var damage) burned.Add((actor, damage));
             if (burn.Seconds <= 0d) _bodies.Remove(actor);
