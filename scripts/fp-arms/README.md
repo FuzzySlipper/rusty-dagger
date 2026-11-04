@@ -26,11 +26,14 @@ The game draws the arms from two parts:
     so the clips' eye is the game's; the elbow pole and the default hand closures.
   - `families`: each weapon family, by the clip set it plays. Its `weapons` are the classic weapon visuals it draws,
     `look` the held weapon (a family with no model has the hand play its clips holding nothing) with the point the hand
-    holds and its hold, measured where the clips' `weapon_r` bone sits, `idle` the loop at rest and its length, `class`
+    holds and its hold, measured where the clips' `weapon_r` bone sits, `idle` the loop at rest and its length, `guard` the clips that raise, hold and lower the weapon, each over its seconds, `class`
     the weapon class the workbench times it by, `powerHold` what the arms do while a power attack stays charged (a
     `clip` looped every `seconds`, or held still `at` a fraction of it), and `strikes` an Engine `ArmClip` per attack id
     with its `marks` (start, strike, recover, end as fractions of the clip) and `fade`. `twoHanded` lets the off hand
     play every clip (it otherwise rests out of view); `leftHand` lists attacks whose clips move it.
+  - `shield`: how a shield on the off arm draws. `family` is the family whose clips were made for one, `seat` where a
+    shield sits on the off hand's joint, `carry` where the hand holds it in view, `guard` how the arms raise it, and
+    `items` each shield's model by item template, with its own `seat` where it differs.
   - `items`: what an item template changes, keyed by template index: its `family`, and its `model`, `grip` and `hold`
     where they differ from that family's look. A template not listed draws its classic visual's family and look.
 - **The container**, `local/first-person.rpak` (ignored): both arms GLBs, each carrying every clip the definition names
@@ -65,6 +68,16 @@ it, and the spell leaves at the clip's strike mark, the palm thrown forward. Unt
 palm: `DaggerfallSiteAppearance` draws the same sprite the spell flies as, in the art chosen, on the viewmodel layer where
 `DaggerfallHeldViewmodel.CastPalm` samples the left hand in the clip. With no family drawn (bare hands, or the weapon
 sheathed) the element's classic casting hand draws instead.
+
+A shield goes on the left hand with an Engine joint attachment, so the renderer carries it and nothing polls the joint.
+The arms skeleton's root is scaled 0.01 and its joints are in centimetres, so a `seat` is in centimetres with `scale` 100.
+With a shield up every one-handed weapon plays the `sns` clips, as they were made for it, and the weapon keeps its model.
+Those clips hold the shield out of view at rest, so the hand keeps to `carry` through idle and every strike, and leaves
+it only to raise the guard or cast, easing back after. `held.shield` moves a seat or carry in the running game to place
+them by eye, and answers with what to save.
+
+The rules' guard (the `block` intent) plays the family's `guard` clips, or the shield's with a shield up. They run faster
+than authored, because the guard counts from the moment it is raised.
 
 A classic visual covers weapons of both kinds: `weapon.longblade` draws every sword and `weapon.axe` both axes. So the
 family follows the item's handedness in Daggerfall, and `items` moves the one-handed items off their visual's family:

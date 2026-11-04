@@ -28,6 +28,9 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     // The longest the retro style's chain waits for the hand: about one classic frame.
     private const float RetroChainSeconds = .1F;
 
+    // How long the off hand takes to leave its shield carry for a cast's clip, and to return.
+    private const float CarryEase = .12F;
+
     // Where a hand that holds nothing is sent (the left's place; the right's mirrors it): below the view and beside the
     // body, so its arm is never drawn in view.
     private static readonly Vector3 HandAway = new(-.25F, -.8F, .05F);
@@ -41,6 +44,15 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     // The arms' model for sampling where a clip puts the off hand, which the arms don't publish.
     private readonly RenderResource armsPose;
     private readonly RenderResource? model;
+    // The shield on the off arm and its model: its appearance, drawn on the off hand's joint by the Engine, and where it sits.
+    private readonly RenderResource? shieldModel;
+    private readonly Appearance? shieldLook;
+    private readonly DaggerfallHeldSeat? shieldSeat;
+    private bool shieldAttached;
+    // How this drawing raises its guard, and how far into raising, holding or lowering it (seconds); null with no guard up.
+    private readonly DaggerfallHeldGuard? guard;
+    private float? guarding;
+    private bool lowering;
     private readonly Appearance look;
     // The model's chain, for an item that has one, and the world seconds it has not yet been stepped.
     private readonly HeldChain? chain;
@@ -63,7 +75,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     // The shortest phase a clip is fitted to: a power attack's charge is all windup.
     private const float MinimumPhase = .001F;
 
-    internal DaggerfallHeldViewmodel(IEngineContext engine, DaggerfallHeldArt art, DaggerfallHeldDrawing drawing, DaggerfallDyeTint? metal, DaggerfallViewmodelStyle style, ulong weaponObject, ulong armsObject)
+    internal DaggerfallHeldViewmodel(IEngineContext engine, DaggerfallHeldArt art, DaggerfallHeldDrawing drawing, DaggerfallDyeTint? metal, DaggerfallDyeTint? shieldMetal, DaggerfallViewmodelStyle style, ulong weaponObject, ulong armsObject, ulong shieldObject)
     {
         this.art = art;
         Drawing = drawing;
@@ -102,10 +114,26 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
             }
         }
         catch { armsPose.Dispose(); arms.Dispose(); throw; }
+        ShieldObject = shieldObject;
+        guard = family.Guard;
+        if (drawing.Shield is int shield && art.Document.Shield is { } shields)
+        {
+            guard = shields.Guard;
+            DaggerfallHeldShieldItem carried = shields.Items[shield];
+            shieldSeat = carried.Seat ?? shields.Seat;
+            using ContentReference shieldContent = art.Container.OpenReference(carried.Model);
+            shieldModel = engine.Animation.OpenAnimatedMeshFromContent(new(shieldContent));
+            shieldLook = engine.Animation.CreateAnimatedMeshAppearance(new(shieldModel));
+            if (shieldMetal is not null && art.MetalSlot(carried.Model) is uint slot)
+                engine.Animation.UpdateAnimatedMeshMaterialFactors(new(shieldLook, new[] { MeshMaterialFactors.Tint(slot, DaggerfallHeldArt.MetalColor(shieldMetal)) }));
+        }
     }
 
     /// <summary>What this weapon is drawn as: its family, its item's look and its metal.</summary>
     internal DaggerfallHeldDrawing Drawing { get; }
+
+    /// <summary>The published object a shield is drawn on.</summary>
+    internal ulong ShieldObject { get; }
 
     /// <summary>The published object the weapon's look is drawn on.</summary>
     internal ulong WeaponObject { get; }
@@ -139,6 +167,14 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
         Play(action, new PhaseTiming((float)timing.Windup, MathF.Max((float)timing.Commit, MinimumPhase), MathF.Max((float)timing.Recovery, MinimumPhase)),
             (float)(timing.Windup / hitFrame), 1);
 
+    /// <summary>Raises the guard or lowers it, for a drawing that has one.</summary>
+    internal void Guard(bool raised)
+    {
+        if (guard is null || raised == (guarding is not null && !lowering)) return;
+        guarding = 0;
+        lowering = !raised;
+    }
+
     /// <summary>Keeps the charged power attack where the family's <c>powerHold</c> says, until the release plays.</summary>
     internal void Hold()
     {
@@ -155,6 +191,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     internal void Play(string action, PhaseTiming timing, float frame, float speed, float? pausedAt = null)
     {
         holding = false;
+        guarding = null;
         strike = (action, timing, frame, pausedAt ?? 0);
         rate = pausedAt is null ? speed : 0;
     }
@@ -173,6 +210,8 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     {
         since += seconds;
         if (holding) held += seconds;
+        if (guarding is { } raised)
+            guarding = lowering && raised + seconds >= guard!.Lower.Seconds ? null : raised + seconds;
         if (strike is { } playing) strike = playing with { Seconds = playing.Seconds + seconds * rate };
         else idle += seconds;
         StepChain(seconds);
@@ -191,13 +230,22 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
         Vector3 at = grip - Vector3.Transform(item?.Grip ?? family.Look.Grip, turn);
         facts.Add(new AppearanceFact(WeaponObject, false, 0, new Transform(at, turn, Vector3.One), look, shown && model is not null, RenderLayer.Viewmodel));
         facts.Add(arms.Fact(shown));
+        if (shieldLook is not null) facts.Add(ShieldFact(shown));
     }
+
+    // The shield's fact: a child of the arms, its transform local to the joint the Engine binds it to.
+    private AppearanceFact ShieldFact(bool shown) => new(ShieldObject, true, arms.Object,
+        new Transform(shieldSeat!.At, HeldFrames.Turn(shieldSeat.Turn), new Vector3(shieldSeat.Scale)), shieldLook!, shown, RenderLayer.Viewmodel);
 
     /// <summary>Once the snapshot with <see cref="AppendFacts"/> is published: poses the arms by their clip and aims.</summary>
     internal void Reach()
     {
         arms.Reach(MainAim(), OffAim());
         chain?.Published();
+        if (shieldLook is null || shieldAttached) return;
+        // Once: a later snapshot keeps the binding, and the renderer moves the shield with the hand from then on.
+        engine.Graphics.PublishChanges(new(new[] { ShieldFact(true) }, ReadOnlyMemory<ulong>.Empty, new MeshJointAttachment[] { new(ShieldObject, art.Document.Rig.Off.Hand) }));
+        shieldAttached = true;
     }
 
     public void Dispose()
@@ -211,6 +259,8 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
         {
             look.Dispose();
             model?.Dispose();
+            shieldLook?.Dispose();
+            shieldModel?.Dispose();
             armsPose.Dispose();
         }
     }
@@ -238,6 +288,10 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     {
         if (holding && family.PowerHold is { } hold)
             return new(hold.Clip, hold.At ?? held / hold.Seconds!.Value % 1);
+        if (guarding is { } up && guard is { } stance)
+            return lowering ? new(stance.Lower.Clip, up / stance.Lower.Seconds)
+                : up < stance.Raise.Seconds ? new(stance.Raise.Clip, up / stance.Raise.Seconds)
+                : new(stance.Hold.Clip, (up - stance.Raise.Seconds) / stance.Hold.Seconds % 1);
         if (strike is { } playing && playing.Seconds <= playing.Timing.Duration)
             return family.Strikes[playing.Action].At(playing.Timing, Sampled(playing.Seconds, playing.Frame, playing.Timing.Duration));
         double seconds = retro && idleFrame > 0 ? Math.Floor(idle / idleFrame) * idleFrame : idle;
@@ -259,8 +313,18 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     private HandAim MainAim() =>
         new(HeldFrames.Mirror(HandAway), Quaternion.Identity, item?.Hold ?? family.Look.Hold, 0, art.Document.Arms.Pole);
 
-    // The off hand rests out of view, unless the family's look is held in both hands or the strike moves it: then it
-    // plays the clip (reach 0).
-    private HandAim OffAim() =>
-        new(HandAway, Quaternion.Identity, null, 0, HeldFrames.Mirror(art.Document.Arms.Pole), Reach: family.MovesLeft(strike?.Action) ? 0 : 1);
+    // The off hand carries a shield in view. Without one it rests out of view, unless the family's look is held in both
+    // hands or the strike moves it: then it plays the clip (reach 0).
+    private HandAim OffAim() => Drawing.Shield is not null && art.Document.Shield is { Carry: var carry }
+        ? new(carry.Grip, Quaternion.Identity, carry.Hold, 0, HeldFrames.Mirror(art.Document.Arms.Pole), HoldMirrored: false, Reach: CarryReach())
+        : new(HandAway, Quaternion.Identity, null, 0, HeldFrames.Mirror(art.Document.Arms.Pole), Reach: family.MovesLeft(strike?.Action) ? 0 : 1);
+
+    // How far the off hand keeps to its carry: fully, but for the guard it raises and the cast it throws, which it plays
+    // from their clips, easing out and back so the shield doesn't jump.
+    private float CarryReach()
+    {
+        if (guarding is { } up) return lowering ? Math.Clamp(up / guard!.Lower.Seconds, 0, 1) : 1 - Math.Clamp(up / guard!.Raise.Seconds, 0, 1);
+        if (strike is not { Action: DaggerfallAttackIds.Cast } cast) return 1;
+        return Math.Clamp(MathF.Max(1 - cast.Seconds / CarryEase, 1 - (cast.Timing.Duration - cast.Seconds) / CarryEase), 0, 1);
+    }
 }

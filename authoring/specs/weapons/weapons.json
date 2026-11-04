@@ -290,6 +290,76 @@
     {"name": "shaft", "class": "any", "rows": [130, 735], "cols": [46, 73], "pick": "all", "shape": "lathe", "segments": 8, "smooth": 41, "radius": 0.0065},
     {"name": "fletching", "class": "any", "rows": [545, 738], "pick": "all", "slot": "trim", "shape": "flat", "vanes": true, "profile": "ridge", "half": 0.0012, "ramp": 0.004, "faces": 500}
    ]
+  },
+  {
+   "item": 109,
+   "name": "buckler",
+   "family": "shield",
+   "hands": 1,
+   "length": 0.5,
+   "face": 0.48,
+   "art": 251,
+   "records": [33],
+   "icon": 33,
+   "firstPerson": {"cif": "none", "use": "none", "why": "the classic draws no shield in first person"},
+   "grip": {"part": "face", "span": [0.45, 0.55]},
+   "parts": [
+    {"name": "face", "class": "any", "pick": "all", "slot": "trim", "shape": "flat", "profile": "round", "half": 0.012, "ramp": 0.03, "faces": 900},
+    {"name": "plate", "class": "steel", "pick": "all", "open": 6, "slot": "metal", "shape": "flat", "profile": "round", "half": 0.017, "ramp": 0.015, "faces": 900},
+    {"name": "boss", "class": "steel", "rows": [300, 650], "cols": [390, 750], "pick": "all", "slot": "metal", "shape": "flat", "profile": "round", "half": 0.03, "ramp": 0.06, "faces": 500}
+   ]
+  },
+  {
+   "item": 110,
+   "name": "round-shield",
+   "family": "shield",
+   "hands": 1,
+   "length": 0.72,
+   "face": 0.62,
+   "art": 251,
+   "records": [34],
+   "icon": 34,
+   "firstPerson": {"cif": "none", "use": "none", "why": "the classic draws no shield in first person"},
+   "grip": {"part": "face", "span": [0.45, 0.55]},
+   "parts": [
+    {"name": "face", "class": "any", "pick": "all", "slot": "trim", "shape": "flat", "profile": "round", "half": 0.012, "ramp": 0.03, "faces": 900},
+    {"name": "plate", "class": "steel", "pick": "all", "open": 6, "slot": "metal", "shape": "flat", "profile": "round", "half": 0.017, "ramp": 0.015, "faces": 900}
+   ]
+  },
+  {
+   "item": 111,
+   "name": "kite-shield",
+   "family": "shield",
+   "hands": 1,
+   "length": 0.95,
+   "face": 0.66,
+   "art": 251,
+   "records": [35],
+   "icon": 35,
+   "firstPerson": {"cif": "none", "use": "none", "why": "the classic draws no shield in first person"},
+   "grip": {"part": "face", "span": [0.45, 0.55]},
+   "parts": [
+    {"name": "face", "class": "any", "pick": "all", "slot": "trim", "shape": "flat", "profile": "round", "half": 0.012, "ramp": 0.03, "faces": 900},
+    {"name": "plate", "class": "steel", "pick": "all", "open": 6, "slot": "metal", "shape": "flat", "profile": "round", "half": 0.017, "ramp": 0.015, "faces": 900}
+   ]
+  },
+  {
+   "item": 112,
+   "name": "tower-shield",
+   "family": "shield",
+   "hands": 1,
+   "length": 1.25,
+   "face": 0.62,
+   "mirror": true,
+   "art": 251,
+   "records": [36],
+   "icon": 36,
+   "firstPerson": {"cif": "none", "use": "none", "why": "the classic draws no shield in first person"},
+   "grip": {"part": "face", "span": [0.45, 0.55]},
+   "parts": [
+    {"name": "face", "class": "any", "pick": "all", "slot": "trim", "shape": "flat", "profile": "round", "half": 0.012, "ramp": 0.03, "faces": 900},
+    {"name": "plate", "class": "steel", "pick": "all", "open": 20, "slot": "metal", "shape": "flat", "profile": "round", "half": 0.017, "ramp": 0.015, "faces": 900}
+   ]
   }
  ]
 }

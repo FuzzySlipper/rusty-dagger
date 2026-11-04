@@ -115,7 +115,7 @@ public sealed class DaggerfallHeldArtTests
     public void An_item_draws_its_own_model_and_a_weapon_without_an_entry_draws_its_familys()
     {
         DaggerfallHeldArt art = Read(Document());
-        DaggerfallHeldDrawing longsword = art.Drawing("weapon.longblade", 120, "steel")!, dagger = art.Drawing("weapon.dagger.steel", 113, "steel")!;
+        DaggerfallHeldDrawing longsword = art.Drawing("weapon.longblade", 120, "steel")!, dagger = art.Drawing("weapon.dagger.steel", null, "steel")!;
 
         Assert.Equal(120, longsword.Item);
         Assert.Equal("first-person/weapons/longsword.glb", art.Document.Items[120].Model);
@@ -319,6 +319,75 @@ public sealed class DaggerfallHeldArtTests
     }
 
     [Fact]
+    public void A_shield_plays_the_family_its_clips_were_made_for_and_binds_to_the_off_hand_until_it_comes_off()
+    {
+        List<string> releases = [];
+        (int Template, string Metal)? worn = (110, "ebony");
+        (DaggerfallSiteAppearance presentation, AppearanceFake appearance, EngineContextFake engine) = Viewing(releases, shieldOf: _ => worn);
+        using (presentation)
+        {
+            presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
+            DaggerfallHeldViewmodel shielded = presentation.DrawnHeld!;
+            Assert.Equal(new DaggerfallHeldDrawing("sns", 120, DaggerfallHeldDrawing.Steel) { Shield = 110, ShieldMetal = "ebony" }, shielded.Drawing);
+
+            presentation.Publish(EmptyActors());
+            presentation.Publish(EmptyActors());
+
+            MeshJointAttachment attachment = Assert.Single(appearance.Attachments);
+            Assert.Equal((shielded.ShieldObject, "hand_l"), (attachment.ChildObjectId, attachment.Joint));
+            AppearanceFact shield = Assert.Single(appearance.Snapshots.Last(), fact => fact.ObjectId == shielded.ShieldObject);
+            Assert.True(shield.Visible);
+            Assert.True(shield.HasParentObject);
+
+            worn = null;
+            presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
+
+            Assert.Null(presentation.DrawnHeld!.Drawing.Shield);
+            presentation.Publish(EmptyActors());
+            Assert.DoesNotContain(appearance.Snapshots.Last(), fact => fact.ObjectId == shielded.ShieldObject);
+        }
+    }
+
+    [Fact]
+    public void A_guard_raises_holds_and_lowers_on_its_clips_and_a_shield_brings_its_own()
+    {
+        List<string> releases = [];
+        (DaggerfallSiteAppearance presentation, AppearanceFake appearance, _) = Viewing(releases, shieldOf: _ => (110, DaggerfallHeldDrawing.Steel));
+        using (presentation)
+        {
+            string Drawn()
+            {
+                presentation.Publish(EmptyActors());
+                return presentation.DrawnHeld!.Clip.Playing!.Value.Clip;
+            }
+            presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
+            string idle = Drawn();
+
+            presentation.React(new PlayerGuardChangedFact(true, 1, 1));
+            presentation.DrawnHeld!.Step(.1F);
+            Assert.Equal("FPP_sns_BlockShieldStart", Drawn());
+            presentation.DrawnHeld!.Step(.3F);
+            Assert.Equal("FPP_sns_BlockShieldIdle", Drawn());
+
+            presentation.React(new PlayerGuardChangedFact(false, 1, 2));
+            presentation.DrawnHeld!.Step(.1F);
+            Assert.Equal("FPP_sns_BlockShieldStop", Drawn());
+            presentation.DrawnHeld!.Step(.3F);
+            Assert.Equal(idle, Drawn());
+        }
+    }
+
+    [Fact]
+    public void A_shield_with_no_entry_leaves_the_weapon_as_it_was()
+    {
+        DaggerfallHeldArt art = Read(Document());
+        DaggerfallHeldDrawing dagger = art.Drawing("weapon.dagger.steel", 113, DaggerfallHeldDrawing.Steel)!;
+
+        Assert.Equal(dagger, art.WithShield(dagger, 999, DaggerfallHeldDrawing.Steel));
+        Assert.Equal("sns", art.WithShield(dagger, 109, DaggerfallHeldDrawing.Steel).Family);
+    }
+
+    [Fact]
     public void A_cast_cut_short_takes_its_element_off_the_palm()
     {
         List<string> releases = [];
@@ -359,7 +428,8 @@ public sealed class DaggerfallHeldArtTests
 
     // A site drawing the authored art through arms whose model has the rig's joints and every clip, whatever the hands
     // wield standing for a longsword (template 120).
-    private static (DaggerfallSiteAppearance Presentation, AppearanceFake Appearance, EngineContextFake Engine) Viewing(List<string> releases, JsonObject? document = null)
+    private static (DaggerfallSiteAppearance Presentation, AppearanceFake Appearance, EngineContextFake Engine) Viewing(List<string> releases, JsonObject? document = null,
+        Func<WorldRpg.Kit.Inventory.EquipmentRead, (int Template, string Metal)?>? shieldOf = null)
     {
         ContentFake content = MediaContent(releases);
         content.Add("weapon/dagger.png", Hash);
@@ -368,13 +438,15 @@ public sealed class DaggerfallHeldArtTests
         EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(Hash, releases).Service, appearance, PerceptionFake.Create().Service);
         DaggerfallHeldArt art = Read(document ?? Document());
         engine.Animation.Joints = Joints(art.Document.Rig);
-        engine.Animation.Clips = [.. art.Document.Families.Values.SelectMany(family => family.Strikes.Values.Select(clip => clip.Clip).Append(family.Idle.Clip)).Distinct()
+        engine.Animation.Clips = [.. art.Document.Families.Values.SelectMany(family => family.Strikes.Values.Select(clip => clip.Clip).Append(family.Idle.Clip).Concat(GuardClips(family.Guard!))).Concat(GuardClips(art.Document.Shield!.Guard)).Distinct()
             .Select(clip => new AnimationClipInfo(clip, clip, 1, true, 0))];
         NormalizedClassicPresentation classic = ClassicWeapon() with { Effects = [.. ClassicEffects(fireSpell: true).Effects.Where(effect => effect.Name == "fireMissile")] };
         DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: classic));
-        presentation.UseHeldArt(engine.Context, art, DaggerfallViewmodelStyle.Held, new Dictionary<string, DaggerfallDyeTint>(), _ => (120, DaggerfallHeldDrawing.Steel));
+        presentation.UseHeldArt(engine.Context, art, DaggerfallViewmodelStyle.Held, new Dictionary<string, DaggerfallDyeTint>(), _ => (120, DaggerfallHeldDrawing.Steel), shieldOf ?? (_ => null));
         return (presentation, appearance, engine);
     }
+
+    private static string[] GuardClips(DaggerfallHeldGuard guard) => [guard.Raise.Clip, guard.Hold.Clip, guard.Lower.Clip];
 
     // Both arms' joints under one root: the upper arm, the forearm and its twist, the hand and its digits.
     private static AnimationJointInfo[] Joints(ArmRig rig)

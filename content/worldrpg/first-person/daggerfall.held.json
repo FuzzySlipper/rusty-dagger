@@ -260,6 +260,20 @@
       "leftHand": [
         "cast"
       ],
+      "guard": {
+        "raise": {
+          "clip": "FPP_Dag_BlockStart",
+          "seconds": 0.3
+        },
+        "hold": {
+          "clip": "FPP_Dag_BlockLoop",
+          "seconds": 11.9167
+        },
+        "lower": {
+          "clip": "FPP_Dag_BlockEnd",
+          "seconds": 0.35
+        }
+      },
       "strikes": {
         "cast": {
           "clip": "FPP_Dag_Magic",
@@ -376,6 +390,20 @@
       "leftHand": [
         "cast"
       ],
+      "guard": {
+        "raise": {
+          "clip": "FPP_Longs_BlockStart",
+          "seconds": 0.3
+        },
+        "hold": {
+          "clip": "FPP_Longs_BlockLoop",
+          "seconds": 4.4333
+        },
+        "lower": {
+          "clip": "FPP_Longs_BlockStop",
+          "seconds": 0.35
+        }
+      },
       "strikes": {
         "cast": {
           "clip": "FPP_Longs_Magic",
@@ -488,6 +516,20 @@
       "leftHand": [
         "cast"
       ],
+      "guard": {
+        "raise": {
+          "clip": "FPP_sns_SwordBlockStart",
+          "seconds": 0.3
+        },
+        "hold": {
+          "clip": "FPP_sns_SwordBlockLoop",
+          "seconds": 4.6333
+        },
+        "lower": {
+          "clip": "FPP_sns_SwordBlockStop",
+          "seconds": 0.35
+        }
+      },
       "strikes": {
         "cast": {
           "clip": "FPP_sns_Magic1",
@@ -601,6 +643,20 @@
       "leftHand": [
         "cast"
       ],
+      "guard": {
+        "raise": {
+          "clip": "FPP_Halb_BlockStart",
+          "seconds": 0.3
+        },
+        "hold": {
+          "clip": "FPP_Halb_BlockLoop",
+          "seconds": 4.5667
+        },
+        "lower": {
+          "clip": "FPP_Halb_BlockStop",
+          "seconds": 0.35
+        }
+      },
       "strikes": {
         "cast": {
           "clip": "FPP_Halb_Magic",
@@ -686,7 +742,56 @@
       "class": "blunt-weapon"
     }
   },
+  "shield": {
+    "family": "sns",
+    "seat": {
+      "at": [9.87, 5.07, -10],
+      "turn": [165, -6, 50],
+      "scale": 100
+    },
+    "carry": {
+      "grip": [-0.34, -0.33, -0.5],
+      "hold": [20, 0, 0]
+    },
+    "guard": {
+      "raise": {
+        "clip": "FPP_sns_BlockShieldStart",
+        "seconds": 0.3
+      },
+      "hold": {
+        "clip": "FPP_sns_BlockShieldIdle",
+        "seconds": 4.6333
+      },
+      "lower": {
+        "clip": "FPP_sns_BlockShieldStop",
+        "seconds": 0.35
+      }
+    },
+    "items": {
+      "109": {
+        "model": "first-person/weapons/buckler.glb"
+      },
+      "110": {
+        "model": "first-person/weapons/round-shield.glb"
+      },
+      "111": {
+        "model": "first-person/weapons/kite-shield.glb"
+      },
+      "112": {
+        "model": "first-person/weapons/tower-shield.glb",
+        "seat": {
+          "at": [9.87, 5.07, -10],
+          "turn": [165, 34, 50],
+          "scale": 100
+        }
+      }
+    }
+  },
   "items": {
+    "113": {
+      "family": "dagger",
+      "model": "first-person/weapons/dagger.glb"
+    },
     "114": {
       "family": "dagger",
       "model": "first-person/weapons/tanto.glb"

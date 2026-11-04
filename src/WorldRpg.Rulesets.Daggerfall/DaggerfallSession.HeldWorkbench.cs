@@ -32,6 +32,9 @@ internal sealed partial class DaggerfallSession : IDeveloperHeldSession
 
     public DebugCommandResult EndHeldView() => Workbench.Off();
 
+    public DebugCommandResult TuneHeldShield(string part, float x, float y, float z, float turnX, float turnY, float turnZ) =>
+        Workbench.Shield(part, new(x, y, z), new(turnX, turnY, turnZ));
+
     public TunablesPage HeldWorkbench() => Workbench.Page();
 
     public string? ChooseHeld(string chooser, string value) => Workbench.Choose(chooser, value);

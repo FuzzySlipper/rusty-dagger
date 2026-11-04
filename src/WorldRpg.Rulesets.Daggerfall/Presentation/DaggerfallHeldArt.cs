@@ -63,6 +63,13 @@ internal sealed class DaggerfallHeldArt
         template is int index && Document.Items.TryGetValue(index, out DaggerfallHeldItem? item) ? new(item.Family, index, metal)
         : Family(resourceId) is { } family ? new(family, null, metal) : null;
 
+    /// <summary>
+    /// What draws a weapon with a shield on the other arm: the shield's family, whose clips carry it, and the shield of
+    /// <paramref name="template"/> in <paramref name="metal"/>; the weapon as it was when the art has no such shield.
+    /// </summary>
+    internal DaggerfallHeldDrawing WithShield(DaggerfallHeldDrawing drawing, int template, string metal) =>
+        Document.Shield is { } shield && shield.Items.ContainsKey(template) ? drawing with { Family = shield.Family, Shield = template, ShieldMetal = metal } : drawing;
+
     /// <summary>What the workbench's look id draws, in steel: a classic visual or an item (<c>item.120</c>); null for neither.</summary>
     internal DaggerfallHeldDrawing? Look(string look) =>
         look.StartsWith(ItemLookPrefix, StringComparison.Ordinal)
@@ -150,6 +157,18 @@ internal sealed class DaggerfallHeldArt
             foreach (string action in (family.LeftHand ?? []).Where(action => !family.Strikes.ContainsKey(action)))
                 problems.Add($"{at}.leftHand: '{action}' has no strike clip here.");
         }
+        void Guard(DaggerfallHeldGuard guard, string at)
+        {
+            foreach (var (phase, clip) in new[] { ("raise", guard.Raise), ("hold", guard.Hold), ("lower", guard.Lower) })
+                if (clip.Clip.Length == 0 || !(clip.Seconds > 0)) problems.Add($"{at}.{phase}: must name a clip and how many seconds it plays over.");
+        }
+        foreach (var (name, family) in document.Families)
+            if (family.Guard is { } guard) Guard(guard, $"families.{name}.guard");
+        if (document.Shield is { } shield)
+        {
+            if (!document.Families.ContainsKey(shield.Family)) problems.Add($"shield.family: names no family ({string.Join(", ", document.Families.Keys)}).");
+            Guard(shield.Guard, "shield.guard");
+        }
         foreach (var (template, item) in document.Items)
         {
             if (!document.Families.TryGetValue(item.Family, out DaggerfallHeldFamily? family))
@@ -158,7 +177,7 @@ internal sealed class DaggerfallHeldArt
                 problems.Add($"items.{template}.family: {item.Family} has no clip for {string.Join(", ", missing)}.");
         }
         IEnumerable<string> models = [document.Rig.Model, document.RetroModel, .. document.Families.Values.Select(family => family.Look.Model).OfType<string>(),
-            .. document.Items.Values.Select(item => item.Model).OfType<string>()];
+            .. document.Items.Values.Select(item => item.Model).OfType<string>(), .. document.Shield?.Items.Values.Select(item => item.Model) ?? []];
         foreach (string model in models.Where(model => !container.Entries.ToArray().Any(entry => entry.Path == model)))
             problems.Add($"'{model}' is not in {ContainerName}.");
         return problems.Count == 0
@@ -176,6 +195,8 @@ internal sealed record DaggerfallHeldArtDocument(ArmRig Rig, string RetroModel, 
 {
     /// <summary>The weapons a classic visual alone can't settle, by item template index.</summary>
     public Dictionary<int, DaggerfallHeldItem> Items { get; init; } = [];
+    /// <summary>How a shield on the off arm draws; without one a shield is not drawn.</summary>
+    public DaggerfallHeldShield? Shield { get; init; }
 }
 
 /// <summary>
@@ -184,9 +205,45 @@ internal sealed record DaggerfallHeldArtDocument(ArmRig Rig, string RetroModel, 
 /// </summary>
 internal sealed record DaggerfallHeldDrawing(string Family, int? Item, string Metal)
 {
+    /// <summary>The item template of the shield on the off arm, null for none, and its metal.</summary>
+    public int? Shield { get; init; }
+    public string? ShieldMetal { get; init; }
+
     /// <summary>The bare metal the models are painted in, which no tint changes.</summary>
     internal const string Steel = "steel";
 }
+
+/// <summary>
+/// A shield on the off arm: the family whose clips it was made for, which every one-handed weapon plays with a shield up;
+/// where it sits on the off hand's joint; where the hand carries it at rest and through a swing, since those clips hold
+/// it out of view; how the arms raise it to guard; and each shield's model, by item template index.
+/// </summary>
+internal sealed record DaggerfallHeldShield(string Family, DaggerfallHeldSeat Seat, DaggerfallHeldCarry Carry, DaggerfallHeldGuard Guard, Dictionary<int, DaggerfallHeldShieldItem> Items);
+
+/// <summary>Where the off hand carries a shield in view when no clip moves it (camera space), and how the hand is turned there (degrees).</summary>
+internal sealed record DaggerfallHeldCarry(Vector3 Grip, Vector3 Hold)
+{
+    public Vector3 Grip { get; set; } = Grip;
+    public Vector3 Hold { get; set; } = Hold;
+}
+
+/// <summary>Where a model sits on a joint: from the joint, in its own frame (metres), and how it turns there (degrees about X, Y and Z).</summary>
+internal sealed record DaggerfallHeldSeat(Vector3 At, Vector3 Turn)
+{
+    public Vector3 At { get; set; } = At;
+    public Vector3 Turn { get; set; } = Turn;
+    /// <summary>The model's scale on the joint, against the scale the joint carries from its skeleton.</summary>
+    public float Scale { get; init; } = 1;
+}
+
+/// <summary>One shield: its model (a container path) and its own seat where it differs from the shields'.</summary>
+internal sealed record DaggerfallHeldShieldItem(string Model)
+{
+    public DaggerfallHeldSeat? Seat { get; init; }
+}
+
+/// <summary>A raised guard: the clip that raises it, the loop it holds on and the clip that lowers it, each over its seconds.</summary>
+internal sealed record DaggerfallHeldGuard(DaggerfallIdleClip Raise, DaggerfallIdleClip Hold, DaggerfallIdleClip Lower);
 
 /// <summary>
 /// An item template's own place in the held art: the family whose clips it plays, as its template holds it (one hand or
@@ -214,6 +271,8 @@ internal sealed record DaggerfallHeldFamily(IReadOnlyList<string> Weapons, Dagge
     public string Class { get; init; } = DaggerfallSkills.ShortBlade;
     /// <summary>Where a charged power attack waits for release; without one its sprite shows the hold.</summary>
     public DaggerfallPowerHold? PowerHold { get; init; }
+    /// <summary>How the arms raise the weapon to guard; without one the guard shows on nothing.</summary>
+    public DaggerfallHeldGuard? Guard { get; init; }
 
     /// <summary>Whether the off hand plays the clip of <paramref name="action"/> (null at rest).</summary>
     internal bool MovesLeft(string? action) => TwoHanded || action is not null && (LeftHand?.Contains(action) ?? false);

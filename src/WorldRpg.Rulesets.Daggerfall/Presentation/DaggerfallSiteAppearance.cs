@@ -571,6 +571,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         {
             case PlayerGuardChangedFact guard:
                 playerGuardRaised = guard.Raised;
+                if (!heldViewed) this.held?.Guard(guard.Raised);
                 // A raised guard lifts the resting weapon toward the centre; a strike plays where it always does.
                 if (viewmodel is { Strike: false } held && held.Weapon.Actions.TryGetValue("idle", out NormalizedClassicWeaponAction? rest))
                 {
@@ -674,8 +675,10 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     {
         ArgumentNullException.ThrowIfNull(equipment);
         (NormalizedClassicWeapon? selected, UniqueInventoryItem? item) = SelectPlayerWeapon(equipment, weaponDrawn);
-        bool sameItem = Equals(heldItem, item);
+        (int Template, string Metal)? shield = heldArt?.ShieldOf(equipment);
+        bool sameItem = Equals(heldItem, item) && heldShield == shield;
         heldItem = item;
+        heldShield = shield;
         if (viewmodel?.Weapon.ResourceId == selected?.ResourceId)
         {
             if (!sameItem) RefreshHeld();
