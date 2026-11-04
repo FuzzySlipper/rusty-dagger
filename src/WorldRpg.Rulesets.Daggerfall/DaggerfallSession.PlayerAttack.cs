@@ -45,7 +45,9 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
     double IDaggerfallPlayerAttacks.TimeScale(string attack)
     {
         DaggerfallCombatantTuning tuning = _tuning.Attacks.Combatant;
-        double scale = 1d - tuning.SpeedPerPointAbove50 * (PlayerStat(DaggerfallMechanicsIds.Speed.Value) - 50)
+        // A bow's shot already runs on the classic frame time, which Speed sets.
+        double speed = attack == DaggerfallAttackIds.Shot ? 0d : tuning.SpeedPerPointAbove50 * (PlayerStat(DaggerfallMechanicsIds.Speed.Value) - 50);
+        double scale = 1d - speed
             - tuning.SkillAt100 * Math.Clamp(PlayerStat(_combat.PlayerWeaponSkill()), 0, 100) / 100d;
         if (attack == DaggerfallAttackIds.PowerIn) scale -= tuning.StrengthPerPointAbove50 * (PlayerStat(DaggerfallMechanicsIds.Strength.Value) - 50);
         if (_combat.PlayerWinded) scale *= tuning.WindedTimeScale;
@@ -69,7 +71,7 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
     {
         var (generation, simulationStep, seconds) = _attackStep;
         LookReceipt look = _input.ResolveCurrentLook(State.PlayerControl);
-        int chain = Math.Min(_tuning.Attacks.Combatant.ChainLength(PlayerStat(_combat.PlayerWeaponSkill())), DaggerfallAttackIds.Fast.Count);
+        int chain = _tuning.Attacks.Combatant.ChainLength(PlayerStat(_combat.PlayerWeaponSkill()));
         _combat.SelectPlayerAttack(attack, finisher: attack == DaggerfallAttackIds.Fast[chain - 1]);
         _attack = attack;
         _swing = null;

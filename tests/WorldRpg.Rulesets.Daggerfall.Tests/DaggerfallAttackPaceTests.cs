@@ -37,6 +37,16 @@ public sealed class DaggerfallAttackPaceTests
     }
 
     [Fact]
+    public void A_shot_is_not_quickened_by_speed_twice()
+    {
+        using DaggerfallSession session = FreshSession();
+        IDaggerfallPlayerAttacks attacks = session;
+        Average(session);
+        Stat(session, DaggerfallMechanicsIds.Speed.Value, 100);
+        Assert.Equal(1d, attacks.TimeScale(DaggerfallAttackIds.Shot), 6);
+    }
+
+    [Fact]
     public void Weapon_skill_shortens_an_attack_and_strength_only_a_power_charge()
     {
         using DaggerfallSession session = FreshSession();

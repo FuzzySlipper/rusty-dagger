@@ -188,9 +188,8 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
         DaggerfallWeaponClassAttacks weapon = tuning.For(attacks.WeaponSkill);
         if (tapped)
         {
-            int length = Math.Min(attacks.ChainLength, DaggerfallAttackIds.Fast.Count);
-            if (_chain >= length) _chain = 0;
-            if (Begin(DaggerfallAttackIds.Fast[_chain], weapon.Fast, delivers: true)) _chain = (_chain + 1) % length;
+            if (_chain >= attacks.ChainLength) _chain = 0;
+            if (Begin(DaggerfallAttackIds.Fast[_chain], weapon.Fast, delivers: true)) _chain = (_chain + 1) % attacks.ChainLength;
             return;
         }
         _pressSpent = true;

@@ -51,7 +51,7 @@ internal sealed record DaggerfallCombatantTuning(double SpeedPerPointAbove50, do
     internal static DaggerfallCombatantTuning Default { get; } = new(.004d, .15d, .004d, .5d, .05d, [35, 70], 128d, 1.4d, .5d, 1.5d, 3d, .85d, 1.25d, .75d, 1.5d);
 
     /// <summary>How many fast attacks a weapon skill chains: two, and one more for each skill step reached.</summary>
-    internal int ChainLength(int skill) => 2 + ChainSkills.Count(step => skill >= step);
+    internal int ChainLength(int skill) => Math.Min(DaggerfallAttackIds.Fast.Count, 2 + ChainSkills.Count(step => skill >= step));
 
     /// <summary>The share of a blow's damage an unaware target takes on top of it, by Backstabbing.</summary>
     internal double BackstabMultiplier(int skill) => BackstabMinimum + (BackstabMaximum - BackstabMinimum) * Math.Clamp(skill, 0, 100) / 100d;
