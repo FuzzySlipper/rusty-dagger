@@ -144,7 +144,7 @@ public sealed class DaggerfallHeldArtTests
         DaggerfallHeldArt art = DaggerfallHeldArt.Read(container, System.Text.Encoding.UTF8.GetBytes(Document().ToJsonString()));
 
         Assert.Equal(0u, art.MetalSlot("first-person/weapons/dagger.glb"));
-        Assert.Equal(1u, art.MetalSlot("first-person/weapons/club.glb"));
+        Assert.Equal(1u, art.MetalSlot("first-person/weapons/saber.glb"));
 
         Color white = DaggerfallHeldArt.MetalColor(new("#ffffff", 1));
         Color bright = DaggerfallHeldArt.MetalColor(new("#808080", 1.5));
