@@ -92,7 +92,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     // The next swing may select any authored strike. Report a bounded observation window
     // covering its longest animation at the current ruleset tick rate (or authored fallback).
     internal double InspectPlayerStrikeSeconds(EquipmentRead equipment, bool weaponDrawn, double frameSeconds) =>
-        SelectPlayerWeapon(equipment, weaponDrawn)?.Actions.Where(pair => pair.Key.StartsWith("strike", StringComparison.Ordinal))
+        SelectPlayerWeapon(equipment, weaponDrawn).Weapon?.Actions.Where(pair => pair.Key.StartsWith("strike", StringComparison.Ordinal))
             .Select(pair => pair.Value.PlayedFrameCount *
                 (frameSeconds > 0 ? frameSeconds : 1d / pair.Value.FramesPerSecond)).DefaultIfEmpty(0).Max() ?? 0;
 
@@ -686,21 +686,32 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     internal void UpdateRightHandEquipment(EquipmentRead equipment, bool weaponDrawn)
     {
         ArgumentNullException.ThrowIfNull(equipment);
-        NormalizedClassicWeapon? selected = SelectPlayerWeapon(equipment, weaponDrawn);
-        if (viewmodel?.Weapon.ResourceId == selected?.ResourceId) return;
+        (NormalizedClassicWeapon? selected, UniqueInventoryItem? item) = SelectPlayerWeapon(equipment, weaponDrawn);
+        bool sameItem = Equals(heldItem, item);
+        heldItem = item;
+        if (viewmodel?.Weapon.ResourceId == selected?.ResourceId)
+        {
+            if (!sameItem) RefreshHeld();
+            return;
+        }
         RetireViewmodel();
         if (selected is not null && classicPresentation.Viewmodel is not null) CreateViewmodel(selected);
     }
 
-    private NormalizedClassicWeapon? SelectPlayerWeapon(EquipmentRead equipment, bool weaponDrawn)
+    private (NormalizedClassicWeapon? Weapon, UniqueInventoryItem? Item) SelectPlayerWeapon(EquipmentRead equipment, bool weaponDrawn)
     {
         string? resource = playerBeastForm() is not null ? "weapon.werecreature" : null;
+        UniqueInventoryItem? wielded = null;
         foreach (string slot in new[] { "right-hand", "left-hand" })
             if (resource is null && equipment.TryGet(new EquipmentSlotId(slot), out UniqueInventoryItem item)
-                && classicPresentation.CompatibleItemVisuals.TryGetValue(item.Definition.Value, out resource)) break;
+                && classicPresentation.CompatibleItemVisuals.TryGetValue(item.Definition.Value, out resource))
+            {
+                wielded = item;
+                break;
+            }
         resource ??= classicPresentation.UnarmedVisual;
         return weaponDrawn && resource is not null
-            && classicPresentation.Weapons.TryGetValue(resource, out NormalizedClassicWeapon? weapon) ? weapon : null;
+            && classicPresentation.Weapons.TryGetValue(resource, out NormalizedClassicWeapon? weapon) ? (weapon, wielded) : (null, null);
     }
 
     /// <summary>Called exactly once from the outer Product.Update, never from a private catch-up step.</summary>

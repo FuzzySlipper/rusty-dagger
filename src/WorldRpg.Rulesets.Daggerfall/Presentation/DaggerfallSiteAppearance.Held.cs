@@ -1,4 +1,5 @@
 using Rusty.Engine;
+using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
@@ -8,38 +9,50 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// a family of the installed first-person art draws the drawn weapon, the family's clip-led arms loop its idle at rest
 /// and play its clip for every strike it has one for, and the sprite stays hidden but keeps playing: its playback
 /// remains the swing's clock, delivering the hit and releasing the attack. A strike the family has no clip for shows
-/// the sprite for that swing. While the developer workbench views a family (<see cref="ViewHeld"/>), it is drawn
-/// whatever the hands wield and only the workbench plays it; the swings still play and land on their hidden sprites.
+/// the sprite for that swing. The wielded item chooses the family and look and tints the look by its metal, so a swap
+/// between weapons of one classic visual redraws the 3D weapon while the sprite stays. While the developer workbench
+/// views a drawing (<see cref="ViewHeld"/>), it is drawn whatever the hands wield and only the workbench plays it; the
+/// swings still play and land on their hidden sprites.
 /// </summary>
 internal sealed partial class DaggerfallSiteAppearance
 {
-    private (IEngineContext Engine, DaggerfallHeldArt Art, DaggerfallViewmodelStyle Style)? heldArt;
+    private (IEngineContext Engine, DaggerfallHeldArt Art, DaggerfallViewmodelStyle Style, IReadOnlyDictionary<string, DaggerfallDyeTint> Metals,
+        Func<UniqueInventoryItem, (int? Template, string Metal)> ItemOf)? heldArt;
     private DaggerfallHeldViewmodel? held;
+    // The item the hands wield, which the 3D weapon is drawn for; null for bare hands and a beast's claws.
+    private UniqueInventoryItem? heldItem;
     // Whether the 3D weapon draws the current action (false while a strike its family has no clip for shows the sprite).
     private bool heldShowing;
     // Whether the developer workbench views the art, which then owns the 3D weapon.
     private bool heldViewed;
 
-    /// <summary>Draws the weapons <paramref name="art"/> covers in 3D in <paramref name="style"/>, from the next weapon drawn.</summary>
-    internal void UseHeldArt(IEngineContext engine, DaggerfallHeldArt art, DaggerfallViewmodelStyle style)
+    /// <summary>
+    /// Draws the weapons <paramref name="art"/> covers in 3D in <paramref name="style"/>, from the next weapon drawn,
+    /// each model's metal tinted by <paramref name="metals"/>; <paramref name="itemOf"/> reads a wielded item's template
+    /// and metal.
+    /// </summary>
+    internal void UseHeldArt(IEngineContext engine, DaggerfallHeldArt art, DaggerfallViewmodelStyle style, IReadOnlyDictionary<string, DaggerfallDyeTint> metals,
+        Func<UniqueInventoryItem, (int? Template, string Metal)> itemOf)
     {
         ArgumentNullException.ThrowIfNull(engine);
         ArgumentNullException.ThrowIfNull(art);
+        ArgumentNullException.ThrowIfNull(metals);
+        ArgumentNullException.ThrowIfNull(itemOf);
         if (style == DaggerfallViewmodelStyle.Classic) throw new ArgumentOutOfRangeException(nameof(style), style, "The classic style draws no 3D weapon.");
-        heldArt = (engine, art, style);
+        heldArt = (engine, art, style, metals, itemOf);
     }
 
     /// <summary>
-    /// The developer workbench's view: a family's 3D weapon, drawn whatever the hands wield, for the workbench alone to
+    /// The developer workbench's view: a drawing's 3D weapon, drawn whatever the hands wield, for the workbench alone to
     /// play; null when this appearance draws no 3D weapon.
     /// </summary>
-    internal DaggerfallHeldViewmodel? ViewHeld(string family)
+    internal DaggerfallHeldViewmodel? ViewHeld(DaggerfallHeldDrawing drawing)
     {
-        if (heldArt is not { } chosen) return null;
-        if (held?.Family != family)
+        if (heldArt is null) return null;
+        if (held?.Drawing != drawing)
         {
-            // Built before the drawn one retires, so a family that cannot be drawn leaves the drawn one in place.
-            DaggerfallHeldViewmodel viewed = new(chosen.Engine, chosen.Art, family, chosen.Style, NextVisualEntityId(), NextVisualEntityId());
+            // Built before the drawn one retires, so a drawing that cannot be drawn leaves the drawn one in place.
+            DaggerfallHeldViewmodel viewed = NewHeld(drawing);
             if (held is { } other) Retire(other);
             held = viewed;
         }
@@ -54,18 +67,9 @@ internal sealed partial class DaggerfallSiteAppearance
     /// <summary>Ends the workbench's view: the hands show what they wield again, at rest.</summary>
     internal void EndHeldView()
     {
-        if (!heldViewed || held is not { } shown) return;
+        if (!heldViewed || held is null) return;
         heldViewed = false;
-        if (viewmodel is { } weapon && heldArt?.Art.Family(weapon.Weapon.ResourceId) == shown.Family)
-        {
-            shown.Rest(IdleFrame(weapon.Weapon));
-            heldShowing = true;
-        }
-        else
-        {
-            RetireHeld();
-            if (viewmodel is { } wielded) CreateHeld(wielded.Weapon);
-        }
+        RefreshHeld();
     }
 
     /// <summary>The classic weapon a visual names, whose actions time the art's strikes; null when the session has none.</summary>
@@ -73,9 +77,39 @@ internal sealed partial class DaggerfallSiteAppearance
 
     private void CreateHeld(NormalizedClassicWeapon weapon)
     {
-        if (heldViewed || heldArt is not { } chosen || chosen.Art.Family(weapon.ResourceId) is not { } family) return;
-        held = new DaggerfallHeldViewmodel(chosen.Engine, chosen.Art, family, chosen.Style, NextVisualEntityId(), NextVisualEntityId());
+        if (heldViewed || Drawing(weapon) is not { } drawing) return;
+        held = NewHeld(drawing);
         heldShowing = true;
+    }
+
+    private DaggerfallHeldViewmodel NewHeld(DaggerfallHeldDrawing drawing)
+    {
+        var chosen = heldArt!.Value;
+        return new DaggerfallHeldViewmodel(chosen.Engine, chosen.Art, drawing, chosen.Metals.GetValueOrDefault(drawing.Metal), chosen.Style, NextVisualEntityId(), NextVisualEntityId());
+    }
+
+    // What draws the wielded weapon: the item the hands hold chooses, its classic visual otherwise.
+    private DaggerfallHeldDrawing? Drawing(NormalizedClassicWeapon weapon)
+    {
+        if (heldArt is not { } chosen) return null;
+        var (template, metal) = heldItem is { } item ? chosen.ItemOf(item) : (null, DaggerfallHeldDrawing.Steel);
+        return chosen.Art.Drawing(weapon.ResourceId, template, metal);
+    }
+
+    // The hands changed what they wield, or the workbench gave them back: the 3D weapon is drawn anew if the wielded
+    // item draws differently, as a sword swapped for another of the same classic visual does.
+    private void RefreshHeld()
+    {
+        if (heldViewed || viewmodel is not { } weapon) return;
+        if (held is { } shown && shown.Drawing == Drawing(weapon.Weapon))
+        {
+            shown.Rest(IdleFrame(weapon.Weapon));
+            heldShowing = true;
+            return;
+        }
+        RetireHeld();
+        CreateHeld(weapon.Weapon);
+        held?.Rest(IdleFrame(weapon.Weapon));
     }
 
     private void RetireHeld()

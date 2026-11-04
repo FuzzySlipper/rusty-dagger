@@ -7,8 +7,8 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>
-/// The developer first-person workbench over the 3D first-person art: the motion viewer shows the family that draws a
-/// classic weapon visual (its look) with one of its strikes, holds the strike's clip at any of its marks, plays the
+/// The developer first-person workbench over the 3D first-person art: the motion viewer shows what draws a classic
+/// weapon visual or a named item (its look, <c>item.120</c> for an item template) with one of its strikes, holds the strike's clip at any of its marks, plays the
 /// strike at any speed or shows it paused at any moment, all through the held viewmodel the game draws
 /// (<see cref="DaggerfallSiteAppearance.ViewHeld"/>), and never through the click attack's random strike. The Engine
 /// tunables page (<see cref="Page"/>) adds choosers for the look and strike, the strike's marks as its timeline, and the
@@ -37,7 +37,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
     // The strikes whose marks were set on the page, which it keeps binding (so Save writes them) after the viewer moves on.
     private readonly HashSet<string> edited = [];
 
-    /// <summary>The look shown (a classic weapon visual the art draws), the strike it plays, and the held mark (-1: none).</summary>
+    /// <summary>The look shown (a classic weapon visual or item the art draws), the strike it plays, and the held mark (-1: none).</summary>
     internal (string? Look, string? Strike, int Key) Viewing => (look, strike, key);
 
     /// <summary>Why nothing can be viewed, or null when the art is drawn.</summary>
@@ -47,24 +47,26 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
             ? "viewmodel.style is classic, which draws the weapon sprites: set it to held or heldRetro in the tuning payload."
             : null;
 
-    /// <summary>The classic weapon visuals the art draws, family by family.</summary>
-    internal IReadOnlyList<string> Looks => art is null ? [] : [.. art.Document.Families.Values.SelectMany(family => family.Weapons)];
+    /// <summary>The classic weapon visuals the art draws, family by family, then the items with their own place in it.</summary>
+    internal IReadOnlyList<string> Looks => art is null ? [] :
+        [.. art.Document.Families.Values.SelectMany(family => family.Weapons), .. art.Document.Items.Keys.Order().Select(template => $"{DaggerfallHeldArt.ItemLookPrefix}{template}")];
 
     /// <summary>The strikes the shown look's family has clips for (the first look's before one is shown), in the classic order.</summary>
     internal IReadOnlyList<string> Strikes => art is null ? [] : StrikesOf(look ?? Looks[0]);
 
-    private string Family => art!.Family(look!)!;
+    private DaggerfallHeldDrawing Drawing => art!.Look(look!)!;
+    private string Family => Drawing.Family;
     private ArmClip Clip => art!.Document.Families[Family].Strikes[strike!];
 
     /// <summary>Shows a look's family at rest with one of its strikes, and lists the strike's marks.</summary>
     internal DebugCommandResult Show(string heldLook, string action)
     {
         if (Unavailable is { } unavailable) return Failure(unavailable);
-        if (art!.Family(heldLook) is not { } family) return Failure($"The art draws no '{heldLook}'. Looks: {string.Join(", ", Looks)}.");
-        if (!art.Document.Families[family].Strikes.ContainsKey(action))
+        if (art!.Look(heldLook) is not { } drawing) return Failure($"The art draws no '{heldLook}'. Looks: {string.Join(", ", Looks)}.");
+        if (!art.Document.Families[drawing.Family].Strikes.ContainsKey(action))
             return Failure($"'{action}' has no clip for {heldLook}. Strikes with clips: {string.Join(", ", StrikesOf(heldLook))}; the others play their sprites.");
         if (ClassicTiming(heldLook, action) is null) return Failure($"Classic weapon '{heldLook}' has no '{action}' action to time it by.");
-        if (appearance().ViewHeld(family) is not { } viewed) return Failure("The current site draws no 3D weapon.");
+        if (appearance().ViewHeld(drawing) is not { } viewed) return Failure("The current site draws no 3D weapon.");
         (look, strike, key) = (heldLook, action, -1);
         viewed.Rest(0);
         publish();
@@ -122,7 +124,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
         ArmClipReading reading = drawn.Clip;
         string playing = reading.Playing is { } frame ? FormattableString.Invariant($"{frame.Clip} at {frame.Time:0.###}{(frame.Phase is { } phase ? $" ({phase.ToString().ToLowerInvariant()})" : "")}") : "no clip";
         string under = reading.From is { } from ? FormattableString.Invariant($", over {from} at {reading.FromTime:0.###} faded in {reading.Blend:0.##}") : "";
-        return DebugCommandResult.Success(FormattableString.Invariant($"{drawn.Family}: {playing}{under}; clip-led {reading.Led:0.##}"));
+        return DebugCommandResult.Success(FormattableString.Invariant($"{drawn.Drawing.Family}: {playing}{under}; clip-led {reading.Led:0.##}"));
     }
 
     /// <summary>Returns the hands to what they wield.</summary>
@@ -146,7 +148,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
         var (timing, _) = ClassicTiming(look!, strike!)!.Value;
         string[] still = [.. NormalizedClassicWeapon.StrikeActions.Except(Strikes)];
         float[] marks = MarkTimes(timing);
-        return new(Title, DaggerfallHeldTunables.For(art!.Document, Family, strike!, timing, edited, publish))
+        return new(Title, DaggerfallHeldTunables.For(art!.Document, Drawing, strike!, timing, edited, publish))
         {
             Choosers =
             [
@@ -175,17 +177,19 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
     /// <summary>A chooser picks the look or the strike; null when it is shown, else why not.</summary>
     internal string? Choose(string chooser, string value) => chooser switch
     {
-        "look" => Refusal(Show(value, art?.Family(value) is not null && strike is not null && StrikesOf(value).Contains(strike) ? strike : StrikesOf(value).FirstOrDefault() ?? "")),
+        "look" => Refusal(Show(value, art?.Look(value) is not null && strike is not null && StrikesOf(value).Contains(strike) ? strike : StrikesOf(value).FirstOrDefault() ?? "")),
         "strike" => look is null ? "Choose a look first." : Refusal(Show(look, value)),
         _ => $"Unknown chooser '{chooser}'."
     };
 
-    private IReadOnlyList<string> StrikesOf(string visual) => art!.Family(visual) is { } family
-        ? [.. NormalizedClassicWeapon.StrikeActions.Where(art.Document.Families[family].Strikes.ContainsKey)] : [];
+    private IReadOnlyList<string> StrikesOf(string shown) => art!.Look(shown) is { } drawing
+        ? [.. NormalizedClassicWeapon.StrikeActions.Where(art.Document.Families[drawing.Family].Strikes.ContainsKey)] : [];
 
-    // The strike's timing as play times it, and one classic frame; null when the visual has no such action.
-    private (PhaseTiming Timing, float Frame)? ClassicTiming(string visual, string action)
+    // The strike's timing as play times it, and one classic frame; null when the look's visual has no such action. An
+    // item is timed by its family's first visual: a swing's frames are the same length whatever its visual.
+    private (PhaseTiming Timing, float Frame)? ClassicTiming(string shown, string action)
     {
+        string visual = shown.StartsWith(DaggerfallHeldArt.ItemLookPrefix, StringComparison.Ordinal) ? art!.Document.Families[art.Look(shown)!.Family].Weapons[0] : shown;
         if (appearance().ClassicWeapon(visual)?.Actions.GetValueOrDefault(action) is not { } classic) return null;
         float frame = 1F / classic.FramesPerSecond;
         return (DaggerfallHeldViewmodel.Timing(frame, DaggerfallFormulaPolicy.MeleeWeaponHitFrame, classic.PlayedFrameCount), frame);
@@ -196,7 +200,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
     private static float[] MarkTimes(PhaseTiming timing) => [0, timing.Windup, timing.Windup + timing.Commit, timing.Duration];
 
     // The viewed 3D weapon; null when nothing is shown.
-    private DaggerfallHeldViewmodel? Viewed() => look is null ? null : appearance().ViewHeld(Family);
+    private DaggerfallHeldViewmodel? Viewed() => look is null ? null : appearance().ViewHeld(Drawing);
 
     private string Describe()
     {

@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -20,7 +21,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// <remarks>
 /// The definition names the arms rig and the Engine's held arms, and each weapon family: the
 /// classic weapon visuals it draws, its look (its model, if it has one yet, and where and how the hand holds it), its
-/// idle loop and its strike clips, keyed by the classic strike action ids. Its models are container paths. A
+/// idle loop and its strike clips, keyed by the classic strike action ids. A visual only gives a weapon its default
+/// family, as one visual covers weapons held differently: an item template's entry names the family it plays and its
+/// own model, grip and hold. Its models are container paths. A
 /// definition that names what cannot be drawn is refused by file and field rather than drawn wrong; a clip the arms
 /// lack is refused when they are first drawn. Its records are the Engine's tunable first-person records, so edits to
 /// the loaded art show on the next draw.
@@ -43,9 +46,58 @@ internal sealed class DaggerfallHeldArt
 
     internal DaggerfallHeldArtDocument Document { get; }
 
+    /// <summary>The prefix of an item template's look id in the workbench (<c>item.120</c>).</summary>
+    internal const string ItemLookPrefix = "item.";
+
     /// <summary>The family that draws the classic weapon visual <paramref name="resourceId"/>, or null when none does.</summary>
     internal string? Family(string resourceId) =>
         Document.Families.FirstOrDefault(family => family.Value.Weapons.Contains(resourceId, StringComparer.Ordinal)).Key;
+
+    /// <summary>
+    /// What draws a weapon: an item template's entry if it has one, else the family of its classic visual
+    /// <paramref name="resourceId"/>, in <paramref name="metal"/>; null when neither draws it.
+    /// </summary>
+    internal DaggerfallHeldDrawing? Drawing(string resourceId, int? template, string metal) =>
+        template is int index && Document.Items.TryGetValue(index, out DaggerfallHeldItem? item) ? new(item.Family, index, metal)
+        : Family(resourceId) is { } family ? new(family, null, metal) : null;
+
+    /// <summary>What the workbench's look id draws, in steel: a classic visual or an item (<c>item.120</c>); null for neither.</summary>
+    internal DaggerfallHeldDrawing? Look(string look) =>
+        look.StartsWith(ItemLookPrefix, StringComparison.Ordinal)
+            ? int.TryParse(look.AsSpan(ItemLookPrefix.Length), out int template) && Document.Items.TryGetValue(template, out DaggerfallHeldItem? item)
+                ? new(item.Family, template, DaggerfallHeldDrawing.Steel) : null
+            : Drawing(look, null, DaggerfallHeldDrawing.Steel);
+
+    /// <summary>The material slot of a model's <c>metal</c> material, which an item's metal tints; null when it has none.</summary>
+    internal uint? MetalSlot(string model)
+    {
+        byte[] glb = Container.ReadBytes(model).ToArray();
+        using JsonDocument gltf = JsonDocument.Parse(glb.AsMemory(20, BinaryPrimitives.ReadInt32LittleEndian(glb.AsSpan(12))));
+        if (!gltf.RootElement.TryGetProperty("materials", out JsonElement materials)) return null;
+        uint slot = 0;
+        foreach (JsonElement material in materials.EnumerateArray())
+        {
+            if (material.TryGetProperty("name", out JsonElement name) && name.ValueEquals("metal")) return slot;
+            slot++;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// The colour a dye tint multiplies a model's texture by (linear): the paper doll's tint, its colour brightened as it
+    /// brightens the image.
+    /// </summary>
+    internal static Color MetalColor(DaggerfallDyeTint tint)
+    {
+        static float Linear(int srgb)
+        {
+            float value = srgb / 255F;
+            return value <= .04045F ? value / 12.92F : MathF.Pow((value + .055F) / 1.055F, 2.4F);
+        }
+        int rgb = Convert.ToInt32(tint.Multiply[1..], 16);
+        float bright = MathF.Pow((float)tint.Brightness, 2.2F);
+        return new Color(Linear(rgb >> 16 & 255) * bright, Linear(rgb >> 8 & 255) * bright, Linear(rgb & 255) * bright, 1F);
+    }
 
     /// <summary>The art a composition resolved over, or nothing when no first-person container was opened.</summary>
     internal static DaggerfallHeldArt? For(ResolvedGameComposition composition)
@@ -92,7 +144,15 @@ internal sealed class DaggerfallHeldArt
             foreach (string action in (family.LeftHand ?? []).Where(action => !family.Strikes.ContainsKey(action)))
                 problems.Add($"{at}.leftHand: '{action}' has no strike clip here.");
         }
-        IEnumerable<string> models = [document.Rig.Model, document.RetroModel, .. document.Families.Values.Select(family => family.Look.Model).OfType<string>()];
+        foreach (var (template, item) in document.Items)
+        {
+            if (!document.Families.TryGetValue(item.Family, out DaggerfallHeldFamily? family))
+                problems.Add($"items.{template}.family: names no family ({string.Join(", ", document.Families.Keys)}).");
+            else if (NormalizedClassicWeapon.StrikeActions.Except(family.Strikes.Keys).ToArray() is { Length: > 0 } missing)
+                problems.Add($"items.{template}.family: {item.Family} has no clip for {string.Join(", ", missing)}.");
+        }
+        IEnumerable<string> models = [document.Rig.Model, document.RetroModel, .. document.Families.Values.Select(family => family.Look.Model).OfType<string>(),
+            .. document.Items.Values.Select(item => item.Model).OfType<string>()];
         foreach (string model in models.Where(model => !container.Entries.ToArray().Any(entry => entry.Path == model)))
             problems.Add($"'{model}' is not in {ContainerName}.");
         return problems.Count == 0
@@ -106,7 +166,32 @@ internal sealed class DaggerfallHeldArt
 /// <param name="RetroModel">The same arms with the retro look (their colour map alone, small and drawn nearest), which the heldRetro style draws; a container path.</param>
 /// <param name="Arms">The shoulder (where the clips' right upper arm sits from the eye), elbow pole, default hold and hand closures.</param>
 /// <param name="Families">The weapon families by name, each playing its own clips.</param>
-internal sealed record DaggerfallHeldArtDocument(ArmRig Rig, string RetroModel, HeldArms Arms, Dictionary<string, DaggerfallHeldFamily> Families);
+internal sealed record DaggerfallHeldArtDocument(ArmRig Rig, string RetroModel, HeldArms Arms, Dictionary<string, DaggerfallHeldFamily> Families)
+{
+    /// <summary>The weapons a classic visual alone can't settle, by item template index.</summary>
+    public Dictionary<int, DaggerfallHeldItem> Items { get; init; } = [];
+}
+
+/// <summary>
+/// What draws one weapon: the family whose clips it plays, the item template that names its own look (null for the
+/// family's), and its metal. A change of any of them draws the weapon anew.
+/// </summary>
+internal sealed record DaggerfallHeldDrawing(string Family, int? Item, string Metal)
+{
+    /// <summary>The bare metal the models are painted in, which no tint changes.</summary>
+    internal const string Steel = "steel";
+}
+
+/// <summary>
+/// An item template's own place in the held art: the family whose clips it plays, as its template holds it (one hand or
+/// two), and its model (a container path), grip and hold, each the family look's when not given.
+/// </summary>
+internal sealed record DaggerfallHeldItem(string Family)
+{
+    public string? Model { get; init; }
+    public Vector3? Grip { get; set; }
+    public Vector3? Hold { get; set; }
+}
 
 /// <summary>
 /// A weapon family: the classic weapon visuals (resource ids) it draws, its look, the clip the arms loop at rest and

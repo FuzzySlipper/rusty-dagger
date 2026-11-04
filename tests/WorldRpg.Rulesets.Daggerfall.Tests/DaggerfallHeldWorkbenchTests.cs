@@ -45,9 +45,11 @@ public sealed class DaggerfallHeldWorkbenchTests
     {
         JsonObject authored = DaggerfallHeldArtTests.Document();
         authored["families"]!["dagger"]!["strikes"]!.AsObject().Remove("strikeLeft");
+        authored["items"]!.AsObject().Remove("114"); // an item's family must have every strike
         DaggerfallHeldWorkbench workbench = new(DaggerfallHeldArtTests.Read(authored), DaggerfallViewmodelStyle.HeldRetro, Unreached, () => { });
 
-        Assert.Equal(["weapon.dagger.steel", "weapon.longblade", "weapon.axe", "weapon.flail", "weapon.warhammer", "weapon.mace", "weapon.staff"], workbench.Looks);
+        Assert.Equal(["weapon.dagger.steel", "weapon.longblade", "weapon.axe", "weapon.flail", "weapon.warhammer", "weapon.mace", "weapon.staff"], workbench.Looks.Take(7));
+        Assert.Contains("item.120", workbench.Looks);
         Assert.DoesNotContain("strikeLeft", workbench.Strikes);
         Assert.Contains("Looks: weapon.dagger.steel, weapon.longblade, weapon.axe", workbench.Show("weapon.bow", "strikeDown").Message, StringComparison.Ordinal);
         DebugCommandResult noClip = workbench.Show("weapon.dagger.steel", "strikeLeft");
@@ -79,7 +81,7 @@ public sealed class DaggerfallHeldWorkbenchTests
         PhaseTiming timing = DaggerfallHeldViewmodel.Timing(.1F, 2, 5);
 
         foreach (var (family, strike) in new[] { ("dagger", "strikeDown"), ("longsword", "strikeUp"), ("sns", "strikeRight"), ("halberd", "strikeLeft") })
-            foreach (TunableControl control in DaggerfallHeldTunables.For(art.Document, family, strike, timing, new HashSet<string>(), () => { })
+            foreach (TunableControl control in DaggerfallHeldTunables.For(art.Document, new(family, null, DaggerfallHeldDrawing.Steel), strike, timing, new HashSet<string>(), () => { })
                 .SelectMany(group => group.Tunables).Select(tunable => tunable.Control))
             {
                 TunableSource source = Assert.IsType<TunableSource>(control.Source);
@@ -94,7 +96,7 @@ public sealed class DaggerfallHeldWorkbenchTests
     {
         DaggerfallHeldArt art = DaggerfallHeldArtTests.Read(DaggerfallHeldArtTests.Document());
         int redraws = 0;
-        List<TunableGroup> groups = DaggerfallHeldTunables.For(art.Document, "dagger", "strikeDown", DaggerfallHeldViewmodel.Timing(.1F, 2, 5), new HashSet<string>(), () => redraws++);
+        List<TunableGroup> groups = DaggerfallHeldTunables.For(art.Document, new("dagger", null, DaggerfallHeldDrawing.Steel), "strikeDown", DaggerfallHeldViewmodel.Timing(.1F, 2, 5), new HashSet<string>(), () => redraws++);
         Tunable Control(string id) => groups.SelectMany(group => group.Tunables).Single(tunable => tunable.Control.Id == id);
         DaggerfallHeldFamily dagger = art.Document.Families["dagger"];
 
@@ -121,7 +123,7 @@ public sealed class DaggerfallHeldWorkbenchTests
         // The workbench's page as it shows one strike, then another; the first one's marks stay bound once edited.
         HashSet<string> edited = [];
         string strike = "strikeDown";
-        TunablesPage Page() => new(DaggerfallHeldWorkbench.Title, DaggerfallHeldTunables.For(art.Document, "dagger", strike, timing, edited, () => { }));
+        TunablesPage Page() => new(DaggerfallHeldWorkbench.Title, DaggerfallHeldTunables.For(art.Document, new("dagger", null, DaggerfallHeldDrawing.Steel), strike, timing, edited, () => { }));
         Source source = new(authored.ToJsonString());
         TunablesDebugModule module = new(source, Page, (_, _) => null);
 
@@ -146,7 +148,7 @@ public sealed class DaggerfallHeldWorkbenchTests
         PhaseTiming timing = DaggerfallHeldViewmodel.Timing(.1F, 2, 5);
         HashSet<string> edited = [];
         string family = "dagger";
-        TunablesPage Page() => new(DaggerfallHeldWorkbench.Title, DaggerfallHeldTunables.For(art.Document, family, "strikeDown", timing, edited, () => { }));
+        TunablesPage Page() => new(DaggerfallHeldWorkbench.Title, DaggerfallHeldTunables.For(art.Document, new(family, null, DaggerfallHeldDrawing.Steel), "strikeDown", timing, edited, () => { }));
         Source source = new(authored.ToJsonString());
         TunablesDebugModule module = new(source, Page, (_, _) => null);
 
@@ -163,6 +165,29 @@ public sealed class DaggerfallHeldWorkbenchTests
         Assert.Equal(3, Resolve(saved, "/families/dagger/idle/seconds")!.GetValue<float>(), 4);
         Assert.Equal(.05F, Resolve(saved, "/families/dagger/look/grip/0")!.GetValue<float>(), 4);
         Assert.Equal(-80, Resolve(saved, "/families/longsword/look/hold/1")!.GetValue<float>(), 2);
+    }
+
+    [Fact]
+    public void An_items_own_grip_and_hold_are_on_the_page_when_it_is_viewed_and_still_saved_after_it_is_left()
+    {
+        JsonObject authored = DaggerfallHeldArtTests.Document();
+        authored["items"]!["120"]!["grip"] = new JsonArray(0.01, 0.02, 0.03);
+        DaggerfallHeldArt art = DaggerfallHeldArtTests.Read(authored);
+        PhaseTiming timing = DaggerfallHeldViewmodel.Timing(.1F, 2, 5);
+        HashSet<string> edited = [];
+        DaggerfallHeldDrawing shown = art.Look("item.120")!;
+        TunablesPage Page() => new(DaggerfallHeldWorkbench.Title, DaggerfallHeldTunables.For(art.Document, shown, "strikeDown", timing, edited, () => { }));
+        Source source = new(authored.ToJsonString());
+        TunablesDebugModule module = new(source, Page, (_, _) => null);
+
+        Assert.Equal("sns", shown.Family);
+        Assert.True(module.Set("item.120.grip.y", .05F).Succeeded);
+        Assert.Equal(.05F, art.Document.Items[120].Grip!.Value.Y);
+        shown = art.Look("weapon.dagger.steel")!;
+
+        string sha = JsonNode.Parse(module.Diff().Message)!["files"]![0]!["sha256"]!.GetValue<string>();
+        Assert.True(module.Save(DaggerfallHeldArt.DocumentPath, sha).Succeeded);
+        Assert.Equal(.05F, Resolve(source.Saved(), "/items/120/grip/1")!.GetValue<float>(), 4);
     }
 
     // The developer content source over one held definition: reads it and applies the RFC 6902 replacements Save sends.
