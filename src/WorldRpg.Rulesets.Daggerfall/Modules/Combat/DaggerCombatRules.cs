@@ -459,11 +459,12 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     /// Charges the admitted swing's fatigue, clamped at zero. The donor (WeaponManager) never refuses a
     /// swing for fatigue; a swing that empties the pool leaves the session's exhaustion owner to decide.
     /// </summary>
-    private static void SpendPlayerStamina(Combatant player, int staminaCost)
+    private void SpendPlayerStamina(Combatant player, int staminaCost)
     {
-        // Fighting winds a character but never empties the pool: the collapse belongs to running and swimming.
+        // An attack winds a character and spends no further: an empty pool near an enemy is fatal, and ordinary
+        // fatigue has to be left time to get there, not a last point to take.
         Track stamina = player.Stats.GetTrack(TrackId.Parse(StaminaTrack));
-        _ = stamina.Spend(Math.Max(0d, Math.Min(stamina.Current - 1d, staminaCost)));
+        _ = stamina.Spend(Math.Max(0d, Math.Min(stamina.Current - _attackTuning.Combatant.WindedStamina, staminaCost)));
     }
 
     private CombatParticipants Participants(long attacker, long target, string action) => new(

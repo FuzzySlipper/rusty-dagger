@@ -185,7 +185,8 @@ a guard and **G** kicks with any weapon. Controls can rebind them all.
 
 Fighting spends stamina, and it comes back only through rest, travel and the
 exhaustion collapse's recovery hour. A winded character still swings, slower and
-weaker, but has no power attack, kick or guard until rested.
+weaker, but has no power attack, kick or guard until rested. Ordinary fatigue
+keeps draining what's left, and collapsing near an enemy is fatal.
 
 Weapon art retains classic proportions and fits the bottom and authored side of
 the view. Engine input capture keeps gameplay

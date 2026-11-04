@@ -1,6 +1,7 @@
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Combat;
+using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
@@ -88,6 +89,23 @@ public sealed class ContactGuardSessionTests
         session.Update(new ProductUpdate(OuterUpdate(3), []));
         Assert.NotNull(session.State.Actors.Player.Actor.Get<AttackState>().Pending);
         Assert.False(session.PlayerGuardRaised);
+    }
+
+    [Fact]
+    public void A_winded_player_cannot_raise_a_guard()
+    {
+        using DaggerfallSession session = FreshSession();
+        session.State.WeaponDrawn = true;
+        Track stamina = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value));
+        stamina.SetCurrent(DaggerfallAttackTuning.Default.Combatant.WindedStamina);
+        ProductInputEvent block = Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "block");
+
+        session.Update(new ProductUpdate(OuterUpdate(1), [block]));
+        Assert.False(session.PlayerGuardRaised);
+
+        stamina.SetCurrent(stamina.MaximumValue);
+        session.Update(new ProductUpdate(OuterUpdate(2), [block]));
+        Assert.True(session.PlayerGuardRaised);
     }
 
     private sealed class Fixture : IDisposable
