@@ -111,9 +111,9 @@ public sealed class PlayerViewmodelTests
         presentation.React(new PlayerAttackMotionFact("fastA", new(.5d, .2d, .3d), 2, 3));
         presentation.CompleteAdmittedUpdate();
 
-        // A windup of .5 s up to the hit on the classic frame 2: every frame lasts .25 s.
+        // A windup of .5 s up to the hit on the classic frame 2: the two frames before it last .25 s each.
         SpritePlaybackCreateRequest strike = appearance.PlaybackRequests.Last();
-        Assert.All(strike.Frames.Span.ToArray(), frame => Assert.Equal(.25d, frame.DurationSeconds, 6));
+        Assert.All(strike.Frames.Span[..DaggerfallFormulaPolicy.MeleeWeaponHitFrame].ToArray(), frame => Assert.Equal(.25d, frame.DurationSeconds, 6));
 
         // The rules' clock delivers the blow: the playback carries no marker, and any frame it reports delivers nothing.
         Assert.True(strike.Markers.IsEmpty);
@@ -151,8 +151,28 @@ public sealed class PlayerViewmodelTests
         presentation.React(new PlayerAttackMotionFact(DaggerfallAttackIds.PowerOut, new(.1d, .1d, .1d), 2, 5));
         presentation.CompleteAdmittedUpdate();
         SpritePlaybackCreateRequest release = appearance.PlaybackRequests.Last();
-        Assert.Equal(played - hit, release.Frames.Length);
-        Assert.All(release.Frames.Span.ToArray(), frame => Assert.Equal(.3d / (played - hit), frame.DurationSeconds, 6));
+        // The release stays on the charged pose through its windup, so the hit frame begins as the rules deliver the blow.
+        Assert.Equal(played - hit + 1, release.Frames.Length);
+        Assert.Equal(.1d, release.Frames.Span[0].DurationSeconds, 6);
+        Assert.All(release.Frames.Span[1..].ToArray(), frame => Assert.Equal(.2d / (played - hit), frame.DurationSeconds, 6));
+    }
+
+    [Fact]
+    public void A_fast_attacks_hit_frame_begins_as_the_windup_ends_and_its_frames_fill_the_motion()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        content.Add("weapon/dagger.png", Hash);
+        AppearanceFake appearance = new(releases);
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
+
+        DaggerfallAttackTiming timing = new(.2d, .1d, .3d);
+        presentation.React(new PlayerAttackMotionFact("fastA", timing, 1, 1));
+
+        SpritePlaybackFrame[] frames = appearance.PlaybackRequests.Last().Frames.ToArray();
+        Assert.Equal(timing.Windup, frames.Take(DaggerfallFormulaPolicy.MeleeWeaponHitFrame).Sum(frame => frame.DurationSeconds), 6);
+        Assert.Equal(timing.Duration, frames.Sum(frame => frame.DurationSeconds), 6);
     }
 
     [Fact]
