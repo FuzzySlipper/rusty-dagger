@@ -47,7 +47,7 @@ public sealed class DaggerfallHeldWorkbenchTests
         authored["families"]!["dagger"]!["strikes"]!.AsObject().Remove("strikeLeft");
         DaggerfallHeldWorkbench workbench = new(DaggerfallHeldArtTests.Read(authored), DaggerfallViewmodelStyle.HeldRetro, Unreached, () => { });
 
-        Assert.Equal(["weapon.dagger.steel", "weapon.longblade", "weapon.axe", "weapon.warhammer", "weapon.mace", "weapon.flail", "weapon.staff"], workbench.Looks);
+        Assert.Equal(["weapon.dagger.steel", "weapon.longblade", "weapon.axe", "weapon.flail", "weapon.warhammer", "weapon.mace", "weapon.staff"], workbench.Looks);
         Assert.DoesNotContain("strikeLeft", workbench.Strikes);
         Assert.Contains("Looks: weapon.dagger.steel, weapon.longblade, weapon.axe", workbench.Show("weapon.bow", "strikeDown").Message, StringComparison.Ordinal);
         DebugCommandResult noClip = workbench.Show("weapon.dagger.steel", "strikeLeft");

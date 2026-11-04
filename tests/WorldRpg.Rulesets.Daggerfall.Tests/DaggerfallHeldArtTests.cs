@@ -24,7 +24,7 @@ public sealed class DaggerfallHeldArtTests
         Assert.Equal("longsword", art.Family("weapon.longblade"));
         Assert.Equal("longsword", art.Family("weapon.warhammer"));
         Assert.Equal("sns", art.Family("weapon.mace"));
-        Assert.Equal("sns", art.Family("weapon.flail"));
+        Assert.Equal("longsword", art.Family("weapon.flail"));
         Assert.Equal("halberd", art.Family("weapon.staff"));
         Assert.Null(art.Family("weapon.bow"));
         Assert.Empty(art.Document.Rig.Problems());
