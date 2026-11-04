@@ -80,9 +80,18 @@
   },
   {
    "item": 124, "name": "mace", "family": "blunt", "hands": 1, "length": 0.70,
-   "records": [], "icon": null,
-   "note": "The flanged head of the classic first-person frames; its inventory and paper-doll art is new (#10581).",
-   "firstPerson": {"cif": "WEAPON05", "use": "design", "why": "the flanged head the new icon is drawn from"}
+   "records": [14, 15], "icon": 15, "art": "mace",
+   "note": "The flanged head of the classic first-person frames; its paper-doll art is new (authoring/gen-raw/worn/texture-mace-record-*, #10581).",
+   "firstPerson": {"cif": "WEAPON05", "use": "construction", "why": "the flanges seen from the side and below"},
+   "subject": "A one-handed flanged mace: a short steel head of five or six broad flat flanges running along its length, parallel to the haft, each a plate with a straight outer edge, around a central steel core, with a short steel spike at the tip and a ringed steel collar below; a straight oiled brown wooden haft, the lower part bound in red-brown leather straps for the grip, ending in a steel butt cap.",
+   "invent": "The flanges are spaced evenly round the head and are the same on every side; seen end-on the head is a star of flat plates around a round core. The haft is round in section. The grip binding is continuous from where the wood ends to the butt cap.",
+   "grip": {"part": "grip"},
+   "parts": [
+    {"name": "head", "class": "steel", "pick": "top", "shape": "lathe", "segments": 12, "smooth": 3, "light": 0.2, "flanges": {"count": 6, "thickness": 0.012, "core": 0.6}},
+    {"name": "haft", "class": "leather", "rows": [0, 640], "pick": "top", "shape": "lathe", "segments": 10, "smooth": 41},
+    {"name": "grip", "class": "leather", "rows": [641, 906], "pick": "top", "shape": "lathe", "segments": 10, "smooth": 21},
+    {"name": "butt", "class": "steel", "pick": "bottom", "shape": "lathe", "segments": 12, "smooth": 3}
+   ]
   },
   {
    "item": null, "name": "club", "family": "blunt", "hands": 1, "length": 0.70,
