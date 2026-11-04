@@ -103,7 +103,7 @@ public sealed class ControlsInputSessionTests
             [ControllerButton.Button0, ControllerButton.Button1, ControllerButton.Button2, ControllerButton.Button3, ControllerButton.Button4, ControllerButton.Button5, ControllerButton.Button8, ControllerButton.Button9],
             loaded.Actions.Select(binding => binding.Button));
         Assert.Equal(
-            ["daggerfall.attack", "daggerfall.interact", "daggerfall.toggle-weapon", "daggerfall.character", "daggerfall.inventory", "daggerfall.menu"],
+            ["daggerfall.attack", "daggerfall.interact", "daggerfall.toggle-weapon", "daggerfall.character", "daggerfall.block", "daggerfall.kick", "daggerfall.inventory", "daggerfall.menu"],
             loaded.Actions.Select(binding => binding.Action.Value));
     }
 
