@@ -160,14 +160,14 @@ internal sealed class DaggerfallOutcomePresentation(
                 presentation.SetOutcome(NegatedLine(negated.AttackerId, negated.TargetId, negated.Negation));
                 break;
             // The player's swing at empty air has no line, as a classic swing with nothing in reach has
-            // none: the swing and its sound are the feedback. A swing aimed at someone out of reach does
-            // say so, because that tells the player something they could not see.
+            // none: the swing and its sound are the feedback. A swing aimed at someone that passes them does
+            // say so, because that tells the player the blow went where they didn't mean it.
             case AttackWhiffedFact { TargetId: null } whiff when whiff.AttackerId == DaggerfallActorIdentity.PlayerEntityId:
                 break;
             case AttackWhiffedFact whiff:
                 _lineIsResult = true;
                 presentation.SetOutcome(whiff.AttackerId == DaggerfallActorIdentity.PlayerEntityId
-                    ? $"Your blow meets nothing; {Name(whiff.TargetId!.Value)} is out of reach"
+                    ? $"Your blow misses {Name(whiff.TargetId!.Value)}"
                     : whiff.TargetId == DaggerfallActorIdentity.PlayerEntityId ? $"{Name(whiff.AttackerId)}'s blow misses you"
                     : whiff.TargetId is long other ? $"{Name(whiff.AttackerId)}'s blow misses {Name(other)}" : $"{Name(whiff.AttackerId)}'s blow meets nothing");
                 break;

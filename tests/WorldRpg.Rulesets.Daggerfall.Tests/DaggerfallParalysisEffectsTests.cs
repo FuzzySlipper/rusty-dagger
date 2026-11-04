@@ -101,6 +101,7 @@ public sealed class DaggerfallParalysisEffectsTests
         Assert.True(s.State.Kit.AttackExecution.Start(new(1,enemy,1,1,.125,true),facts));
         double health = s.State.Actors.Get(enemy).Stats.GetTrack(TrackId.Parse("health")).Current;
         Start(s, "player", 1, 1, 10);
+        s.SweptInto(enemy);
         s.State.Kit.AttackExecution.ApplyImpacts([new(1,enemy,1,1,false)],1,facts);
         Assert.Equal(health, s.State.Actors.Get(enemy).Stats.GetTrack(TrackId.Parse("health")).Current);
         Start(s, "enemy", 1, enemy, 10);

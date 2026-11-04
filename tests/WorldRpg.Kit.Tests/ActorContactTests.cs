@@ -119,7 +119,7 @@ public sealed class ActorContactTests
         Assert.Equal([3L], scene.Contact.Volume(1, Reach(1f, 5f), SpatialPose.Identity, Chest).Actors.Select(actor => actor.ActorId));
     }
 
-    private sealed class Scene : IDisposable
+    internal sealed class Scene : IDisposable
     {
         internal ActorsState Actors { get; } = new();
         internal SpatialDouble Spatial { get; } = SpatialDouble.Create();

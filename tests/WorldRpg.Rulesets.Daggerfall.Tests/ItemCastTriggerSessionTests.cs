@@ -303,7 +303,7 @@ public sealed class ItemCastTriggerSessionTests
         s.State.Kit.Rules.RegisterAction(TestPayload.Definitions.RequireActor(new DaggerfallActorId("player")).ActionId!, new Attack(5));
         var facts = new FactBuffer<IProductFact>();
         long next = s.Casting.NextSequence;
-        s.Touches(f.Enemy);
+        s.SweptInto(f.Enemy);
         Assert.True(s.State.Kit.AttackExecution.Start(new(1, f.Enemy, 1, 1000, .125, true), facts));
         Assert.Equal(next, s.Casting.NextSequence);
         if (unequip) Assert.Equal(EquipmentMoveOutcome.Applied, s.EquipmentMoves.MoveToGrid(f.Item, 49).Outcome);

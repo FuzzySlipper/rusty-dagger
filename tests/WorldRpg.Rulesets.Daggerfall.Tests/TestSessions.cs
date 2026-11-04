@@ -614,16 +614,28 @@ internal static class TestSessions
         ulong[] entities = [.. actors.Select(actor => (actor == DaggerfallActorIdentity.PlayerEntityId ? session.State.Actors.Player.Actor : session.State.Actors.Get(actor).Actor).Entity.Value)];
         // Contact at the query's own origin, so a fixture's other geometry occludes nothing.
         session.Spatial().OverlapContactsResult = request => Touching(request.Start.Translation, entities);
+        // A swing's level rays meet the first of them too; a ray straight up or down is a floor probe, which the
+        // fixture's own floor keeps answering.
+        Func<SpatialRaycastRequest, SpatialHit> floor = session.Spatial().FloorHit;
+        session.Spatial().FloorHit = request => MathF.Abs(request.Direction.Y) > .9f ? floor(request)
+            : entities.Length == 0 ? default
+            : new SpatialHit(true, SpatialHitKind.Entity, entities[0], 0, 0, 0, 0, 0, 0, default,
+                request.Origin + request.Direction * .5f, -request.Direction, .5d, 0d, 0d, false, true);
     }
+
+    /// <summary>Records that the player's sweep met <paramref name="actor"/>, for a fact that fires a timed swing's impact by hand.</summary>
+    internal static void SweptInto(this DaggerfallSession session, long actor) =>
+        ((DaggerCombatRules)typeof(DaggerfallSession).GetField("_combat", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(session)!).SetSweptTarget(actor);
 
     /// <summary>Resolves an explicit strike whose swing volume touches its target, as standing in reach of it would.</summary>
     internal static void Strike(this DaggerfallSession session, ExplicitMeleeRequest request)
     {
         SpatialFake spatial = session.Spatial();
         Func<SpatialContactQueryRequest, SpatialContactResult> answer = spatial.OverlapContactsResult;
+        Func<SpatialRaycastRequest, SpatialHit> rays = spatial.FloorHit;
         if (session.State.Actors.TryGet(request.TargetId, out _)) session.Touches(request.TargetId);
         try { session.ResolveExplicitMelee(request); }
-        finally { spatial.OverlapContactsResult = answer; }
+        finally { (spatial.OverlapContactsResult, spatial.FloorHit) = (answer, rays); }
     }
 
     /// <summary>The last admitted step of the published wind-up of a swing decided at <paramref name="decided"/>, at the sixty steps a second of <see cref="OuterUpdate"/>.</summary>

@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
@@ -24,6 +25,38 @@ public sealed class TuningPayloadSessionTests
         Assert.Equal(new DaggerfallStrikeEnchantmentTuning(7, 3), adjusted.StrikeEnchantments);
         Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallTuning.Read(MutatedTuning(root,
             tuning => tuning["strikeEnchantments"]!["vampiricRange"] = 0)));
+    }
+
+    [Fact]
+    public void The_attack_tunings_code_default_agrees_with_the_payload_including_its_paths_and_reach()
+    {
+        DaggerfallAttackTuning expected = DaggerfallAttackTuning.Default;
+        DaggerfallAttackTuning loaded = DaggerfallTuning.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot,
+            "content/worldrpg/tuning-payloads/daggerfall.defaults.json"))).Attacks;
+
+        Assert.Equal((expected.PowerThresholdSeconds, expected.PowerDamageMultiplier, expected.PowerStaminaMultiplier),
+            (loaded.PowerThresholdSeconds, loaded.PowerDamageMultiplier, loaded.PowerStaminaMultiplier));
+        Assert.Equal((expected.Kick, expected.KickStaminaCost, expected.KickDamage, expected.KickReach),
+            (loaded.Kick, loaded.KickStaminaCost, loaded.KickDamage, loaded.KickReach));
+        Assert.Equal(expected.Classes.Keys.Order(), loaded.Classes.Keys.Order());
+        foreach (var (skill, attacks) in expected.Classes) Assert.Equal(attacks, loaded.Classes[skill]);
+        Assert.Equal(expected.Paths.Keys.Order(), loaded.Paths.Keys.Order());
+        foreach (var (attack, path) in expected.Paths) Assert.Equal(path, loaded.Paths[attack]);
+    }
+
+    [Fact]
+    public void Every_delivering_melee_attack_has_a_path_with_every_weapon_class_and_nothing_else_has_one()
+    {
+        DaggerfallAttackTuning tuning = DaggerfallTuning.Defaults.Attacks;
+        string[] melee = [.. DaggerfallAttackIds.Fast, DaggerfallAttackIds.PowerOut, DaggerfallAttackIds.Kick];
+
+        Assert.Equal(melee.Order(), tuning.Paths.Keys.Order());
+        foreach (string skill in tuning.Classes.Keys)
+            foreach (string attack in melee)
+                Assert.True(tuning.Arc(attack, skill).Range > 0f, $"{attack} with {skill} reaches nothing.");
+        Assert.Equal(tuning.KickReach, tuning.Arc(DaggerfallAttackIds.Kick, "long-blade").Range);
+        Assert.Equal(tuning.For("axe").Reach, tuning.Arc("fastA", "axe").Range);
+        Assert.Throws<InvalidOperationException>(() => tuning.Arc(DaggerfallAttackIds.PowerHold, "long-blade"));
     }
 
     [Fact]

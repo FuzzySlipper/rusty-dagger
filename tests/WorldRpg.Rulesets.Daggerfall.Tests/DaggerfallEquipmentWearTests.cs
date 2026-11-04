@@ -485,6 +485,7 @@ public sealed partial class DaggerfallEquipmentWearTests
             Assert.Equal(requireAccepted, accepted);
             if (accepted && beforeImpact is not null)
             {
+                _combat.SetSweptTarget(Enemy);
                 beforeImpact();
                 _combat.Execution.ApplyImpacts([new(DaggerfallActorIdentity.PlayerEntityId, Enemy, 5, 9, false)], 5, facts);
             }
