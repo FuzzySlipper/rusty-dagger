@@ -118,6 +118,7 @@ earned. Like the movement commands they wait while a screen or question is open.
 | `player.items FILTER` | The item names `player.give` and `player.hold` take that contain FILTER (`""` for all), the weapon and armour materials, and the skill ids. |
 | `player.give ITEM COUNT` | Gives COUNT of an item, named as the game labels it (`"Steel Dagger"`), by template name or index, with an optional material first (`"ebony 113"`); a weapon or armour without a material takes one rolled for the player's level. A stackable item comes as one stack. |
 | `player.hold ITEM` | Gives one item and wields it in the main hand, drawn, through the ordinary equip rules: the quickest way to test a weapon's first-person view or animation. |
+| `player.equip ITEM` | Gives one item and wears it through the ordinary equip rules: a shield goes on the off arm, anything else in the first slot that takes it. |
 | `player.gold AMOUNT` | Gives gold. |
 | `player.spell SPELL` | Teaches a spell, by its name or a part only it has. |
 | `player.skill SKILL VALUE` | Sets a skill (`short-blade`, …) within 0–100. |
@@ -145,6 +146,7 @@ The keys are the clip's four marks: 0 start, 1 strike, 2 recover, 3 end.
 | `held.motion.next` / `held.motion.prev` | Holds the next or previous mark, through rest. |
 | `held.motion.play SPEED` | Plays the attack from rest at SPEED (1 as in play, 0.25 a quarter; 0.01 to 4). |
 | `held.motion.at SECONDS` | Shows the attack paused SECONDS after its start, with the clip time it plays there (`heldRetro` holds each frame's sample). |
+| `held.shield PART X Y Z TX TY TZ` | Moves a shield's `seat` on the hand joint or the hand's `carry` in the loaded art, to place it by eye, and answers with what to save. |
 | `held.clip` | What the drawn arms play now, in play or in the viewer: the clip, its time and phase, what fades out under it. |
 | `held.motion.off` | Gives the hands back what they wield. Closing the developer tools does this too. |
 

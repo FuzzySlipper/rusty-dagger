@@ -46,7 +46,7 @@ public sealed class DaggerfallHeldWorkbenchTests
     {
         JsonObject authored = DaggerfallHeldArtTests.Document();
         authored["families"]!["dagger"]!["strikes"]!.AsObject().Remove("fastC");
-        authored["items"]!.AsObject().Remove("114"); // an item's family must have every strike
+        foreach (string item in new[] { "113", "114" }) authored["items"]!.AsObject().Remove(item); // an item's family must have every strike
         DaggerfallHeldWorkbench workbench = new(DaggerfallHeldArtTests.Read(authored), DaggerfallAttackTuning.Default, DaggerfallViewmodelStyle.HeldRetro, Unreached, () => { });
 
         Assert.Equal(["weapon.dagger.steel", "weapon.longblade", "weapon.axe", "weapon.flail", "weapon.warhammer", "weapon.mace", "weapon.staff"], workbench.Looks.Take(7));

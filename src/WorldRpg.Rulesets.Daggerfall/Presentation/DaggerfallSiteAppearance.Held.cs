@@ -16,10 +16,12 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 internal sealed partial class DaggerfallSiteAppearance
 {
     private (IEngineContext Engine, DaggerfallHeldArt Art, DaggerfallViewmodelStyle Style, IReadOnlyDictionary<string, DaggerfallDyeTint> Metals,
-        Func<UniqueInventoryItem, (int? Template, string Metal)> ItemOf)? heldArt;
+        Func<UniqueInventoryItem, (int? Template, string Metal)> ItemOf, Func<EquipmentRead, (int Template, string Metal)?> ShieldOf)? heldArt;
     private DaggerfallHeldViewmodel? held;
     // The item the hands wield, which the 3D weapon is drawn for; null for bare hands and a beast's claws.
     private UniqueInventoryItem? heldItem;
+    // The shield on the off arm, which the 3D weapon draws too; null for none.
+    private (int Template, string Metal)? heldShield;
     // Whether the 3D weapon draws the current action (false while a strike its family has no clip for shows the sprite).
     private bool heldShowing;
     // Whether the developer workbench views the art, which then owns the 3D weapon.
@@ -28,17 +30,18 @@ internal sealed partial class DaggerfallSiteAppearance
     /// <summary>
     /// Draws the weapons <paramref name="art"/> covers in 3D in <paramref name="style"/>, from the next weapon drawn,
     /// each model's metal tinted by <paramref name="metals"/>; <paramref name="itemOf"/> reads a wielded item's template
-    /// and metal.
+    /// and metal, and <paramref name="shieldOf"/> those of the shield worn.
     /// </summary>
     internal void UseHeldArt(IEngineContext engine, DaggerfallHeldArt art, DaggerfallViewmodelStyle style, IReadOnlyDictionary<string, DaggerfallDyeTint> metals,
-        Func<UniqueInventoryItem, (int? Template, string Metal)> itemOf)
+        Func<UniqueInventoryItem, (int? Template, string Metal)> itemOf, Func<EquipmentRead, (int Template, string Metal)?> shieldOf)
     {
         ArgumentNullException.ThrowIfNull(engine);
         ArgumentNullException.ThrowIfNull(art);
         ArgumentNullException.ThrowIfNull(metals);
         ArgumentNullException.ThrowIfNull(itemOf);
+        ArgumentNullException.ThrowIfNull(shieldOf);
         if (style == DaggerfallViewmodelStyle.Classic) throw new ArgumentOutOfRangeException(nameof(style), style, "The classic style draws no 3D weapon.");
-        heldArt = (engine, art, style, metals, itemOf);
+        heldArt = (engine, art, style, metals, itemOf, shieldOf);
     }
 
     /// <summary>
@@ -47,7 +50,8 @@ internal sealed partial class DaggerfallSiteAppearance
     /// </summary>
     internal DaggerfallHeldViewmodel? ViewHeld(DaggerfallHeldDrawing drawing)
     {
-        if (heldArt is null) return null;
+        if (heldArt is not { } chosen) return null;
+        if (heldShield is { } shield) drawing = chosen.Art.WithShield(drawing, shield.Template, shield.Metal);
         if (held?.Drawing != drawing)
         {
             // Built before the drawn one retires, so a drawing that cannot be drawn leaves the drawn one in place.
@@ -84,7 +88,8 @@ internal sealed partial class DaggerfallSiteAppearance
     private DaggerfallHeldViewmodel NewHeld(DaggerfallHeldDrawing drawing)
     {
         var chosen = heldArt!.Value;
-        return new DaggerfallHeldViewmodel(chosen.Engine, chosen.Art, drawing, chosen.Metals.GetValueOrDefault(drawing.Metal), chosen.Style, NextVisualEntityId(), NextVisualEntityId());
+        return new DaggerfallHeldViewmodel(chosen.Engine, chosen.Art, drawing, chosen.Metals.GetValueOrDefault(drawing.Metal),
+            drawing.ShieldMetal is { } metal ? chosen.Metals.GetValueOrDefault(metal) : null, chosen.Style, NextVisualEntityId(), NextVisualEntityId(), NextVisualEntityId());
     }
 
     // What draws the wielded weapon: the item the hands hold chooses, its classic visual otherwise.
@@ -92,7 +97,8 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         if (heldArt is not { } chosen) return null;
         var (template, metal) = heldItem is { } item ? chosen.ItemOf(item) : (null, DaggerfallHeldDrawing.Steel);
-        return chosen.Art.Drawing(weapon.ResourceId, template, metal);
+        return chosen.Art.Drawing(weapon.ResourceId, template, metal) is { } drawing && heldShield is { } shield
+            ? chosen.Art.WithShield(drawing, shield.Template, shield.Metal) : chosen.Art.Drawing(weapon.ResourceId, template, metal);
     }
 
     // The hands changed what they wield, or the workbench gave them back: the 3D weapon is drawn anew if the wielded

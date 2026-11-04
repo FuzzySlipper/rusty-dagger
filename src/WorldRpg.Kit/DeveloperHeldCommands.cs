@@ -31,6 +31,9 @@ public interface IDeveloperHeldSession
     /// <summary>What the drawn held art plays now (in play or in the viewer): for clip-led arms, the clip, its time and phase.</summary>
     DebugCommandResult ReadHeld();
 
+    /// <summary>Moves a held shield's <paramref name="part"/> (its seat on the hand, or the hand's carry) in the loaded art, to place it by eye.</summary>
+    DebugCommandResult TuneHeldShield(string part, float x, float y, float z, float turnX, float turnY, float turnZ);
+
     /// <summary>Ends the viewer: the hands show what they wield again.</summary>
     DebugCommandResult EndHeldView();
 
@@ -65,6 +68,9 @@ public sealed class DeveloperHeldDebugModule(Func<IDeveloperHeldSession> current
 
     [DebugCommand("held.motion.at", Description = "Developer motion viewer: show the action paused SECONDS after its start, as the Engine plays it.")]
     public DebugCommandResult At(float seconds) => current().ShowHeldAt(seconds);
+
+    [DebugCommand("held.shield", Description = "Developer: place a held shield by eye: PART seat (where on the hand joint, then its turn) or carry (the hand's grip, then its hold), X Y Z then three degrees. Shown at the next draw; the answer is what to save.")]
+    public DebugCommandResult Shield(string part, float x, float y, float z, float turnX, float turnY, float turnZ) => current().TuneHeldShield(part, x, y, z, turnX, turnY, turnZ);
 
     [DebugCommand("held.clip", Description = "Developer readout: what the drawn held art plays now, in play or in the viewer (for clip-led arms: the clip, its time and phase, and what fades out under it).")]
     public DebugCommandResult Read() => current().ReadHeld();

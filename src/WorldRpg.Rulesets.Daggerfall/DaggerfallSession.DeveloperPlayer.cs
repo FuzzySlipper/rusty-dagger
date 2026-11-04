@@ -69,6 +69,26 @@ internal sealed partial class DaggerfallSession : IDeveloperPlayerSession
         return DebugCommandResult.Success($"Holding {ItemLabel(created)}, drawn.");
     }
 
+    public DebugCommandResult Equip(string item)
+    {
+        if (DeveloperMoveRefusal() is { } refusal) return Refused(refusal);
+        if (ResolveItemTemplate(item, out DaggerfallItemTemplateDefinition? template, out string? material) is { } unresolved) return Refused(unresolved);
+        DaggerfallCreatedItem created;
+        try { created = CreateDeveloperItems(template!, material, 1).Single(); }
+        catch (ArgumentException refused) { return Refused($"{template!.Name} cannot be made: {refused.Message}"); }
+        if (created.Stackable) return Refused($"{template!.Name} stacks, so give it with player.give.");
+        if (Grant(created, out DurableIdentityReference? identity) is { } failed) return Refused(failed);
+        DaggerfallItemDefinition definition = _definitions.RequireItem(new DaggerfallItemId(created.Item.Value));
+        // A shield goes on the off arm; anything else takes the first slot that fits it.
+        string[] slots = [.. _definitions.EquipmentSlots.Keys.Select(slot => slot.Value).Where(slot => DaggerfallEquipmentPolicy.IsCompatible(_definitions, definition, slot))
+            .OrderBy(slot => definition.Shield is not null && slot == "left-hand" ? 0 : 1)];
+        if (slots.Length == 0) return Refused($"Gave {ItemLabel(created)}, but no slot takes it.");
+        EquipmentMoveResult worn = EquipmentMoves.MoveToSlot(new UniqueInventoryItem(State.Actors.Entities.Resolve(identity!.Value).Value, created.Item), new EquipmentSlotId(slots[0]));
+        return worn.Outcome == EquipmentMoveOutcome.Applied
+            ? DebugCommandResult.Success($"Wearing {ItemLabel(created)} ({slots[0]}).")
+            : Refused($"Gave {ItemLabel(created)}, but it was not worn: {worn.Detail}");
+    }
+
     public DebugCommandResult Money(long amount)
     {
         if (DeveloperMoveRefusal() is { } refusal) return Refused(refusal);

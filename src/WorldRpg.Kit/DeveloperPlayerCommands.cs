@@ -16,6 +16,9 @@ public interface IDeveloperPlayerSession
     /// <summary>Gives the player one of an item and wields it in the main hand, drawn, through the ordinary equip rules.</summary>
     DebugCommandResult Hold(string item);
 
+    /// <summary>Gives the player one of an item and wears it in the first slot that takes it, a shield on the off arm, through the ordinary equip rules.</summary>
+    DebugCommandResult Equip(string item);
+
     /// <summary>Gives the player an amount of money.</summary>
     DebugCommandResult Money(long amount);
 
@@ -43,6 +46,9 @@ public sealed class DeveloperPlayerDebugModule(Func<IDeveloperPlayerSession> cur
 
     [DebugCommand("player.hold", Description = "Developer: give the player one ITEM and wield it in the main hand, drawn, through the ordinary equip rules (what was there stays in the pack).")]
     public DebugCommandResult Hold(string item) => current().Hold(item);
+
+    [DebugCommand("player.equip", Description = "Developer: give the player one ITEM and wear it through the ordinary equip rules, a shield on the off arm (what was there stays in the pack).")]
+    public DebugCommandResult Equip(string item) => current().Equip(item);
 
     [DebugCommand("player.gold", Description = "Developer: give the player AMOUNT gold.")]
     public DebugCommandResult Money(long amount) => current().Money(amount);

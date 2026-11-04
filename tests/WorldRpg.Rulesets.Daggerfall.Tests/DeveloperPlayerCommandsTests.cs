@@ -30,6 +30,21 @@ public sealed class DeveloperPlayerCommandsTests
     }
 
     [Fact]
+    public void Equip_goes_through_the_ordinary_rules_and_tries_a_shield_on_the_off_arm()
+    {
+        using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold);
+        DaggerfallSession session = run.Session;
+
+        // The fixture's class forbids shields, so the rules refuse it by name and it stays in the pack.
+        DebugCommandResult refused = session.Equip("steel 110");
+
+        Assert.False(refused.Succeeded);
+        Assert.Contains("cannot use round shields", refused.Message, StringComparison.Ordinal);
+        Assert.Contains(session.State.Inventory.Read().UniqueItems, item => item.Definition.Value.StartsWith("template-110", StringComparison.Ordinal));
+        Assert.False(session.Equip("no such item").Succeeded);
+    }
+
+    [Fact]
     public void Spell_teaches_a_named_spell_once_and_refuses_what_it_cannot_tell_apart()
     {
         using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold);

@@ -61,6 +61,11 @@ A flail's `chain` part also skins the model: `handle` carries everything else, a
 
 A bow's `draw` (the nock's travel in metres as `length`, and `rest`, how far to the archer's left of the grip the arrow lies) stands it with its string along its length and its grip at the origin, and skins it; `turn` puts the string on -Y, toward the archer, and the belly forward: `handle` over the grip, `upper1`–`upper4` and `lower1`–`lower4` down the limbs, and `nock` at the middle of the string. Its clips are `rest`, `draw` (a second, the nock moving steadily back, so a half draw is the clip's middle, each limb bending as far as keeps the string its length) and `loose` (back to rest in two frames). The arrow is its own model, with its origin at its nock: it goes on the `nock` joint as a mesh-joint attachment with no translation and a quarter turn about X (rotation `[0.7071, 0, 0, 0.7071]`), as the joint's +Y runs from the string through the arrow's rest. `sheet.py OUT.png LABEL=BOW.glb --arrow ARROW.glb` shows a bow at rest, half and full draw with the arrow on.
 
+A shield (`family` `shield`) has no turnaround. `python3 authoring/tools/weapons/shield.py NAME ICON.png` stands its refreshed
+paper-doll layer square, at its `face` width for its `length`, and `mirror` makes a whole shield of a layer that shows only
+its near half. Its parts are a solid `face` of every colour with the steel raised on it as `plate`, then steps 3 to 5 as
+for any weapon.
+
 The models are in the Engine's held-look frame: origin at the grip's centre, length along -Z with the tip forward,
 +Y one edge, the edge that leads every slash of the clips, so what strikes goes on +Y (`turn` gives a model a half turn
 about its length). A family's measured `look.grip` and `look.hold` then seat them where the clips held the pack's weapon.

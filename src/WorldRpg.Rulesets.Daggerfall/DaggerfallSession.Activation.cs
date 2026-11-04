@@ -34,6 +34,19 @@ internal sealed partial class DaggerfallSession
             _inventoryUi.EquippedMetadata(item.EntityId)?.Material ?? definition.Weapon?.Material ?? DaggerfallHeldDrawing.Steel);
     }
 
+    // The shield worn on the off arm: its template and metal, which the 3D first-person art draws it by.
+    private (int Template, string Metal)? HeldShield(EquipmentRead equipment)
+    {
+        foreach (EquipmentAssignment assignment in equipment.Assignments)
+        {
+            if (assignment.Slot.Value != "left-hand") continue;
+            DaggerfallItemDefinition definition = _definitions.RequireItem(new DaggerfallItemId(assignment.Item.Definition.Value));
+            if (definition.Shield is not null && _definitions.SourceTemplateFor(definition) is { } template)
+                return (template.Index, _inventoryUi.EquippedMetadata(assignment.Item.EntityId)?.Material ?? definition.Armor?.Material ?? DaggerfallHeldDrawing.Steel);
+        }
+        return null;
+    }
+
     /// <summary>Binds live session policy once whenever a site appearance is created.</summary>
     private void ConfigureSiteAppearance(DaggerfallSiteAppearance appearance)
     {
@@ -41,7 +54,7 @@ internal sealed partial class DaggerfallSession
         appearance.UsePlayerVampireGender(() => State.RacialOverrides.Current?.IsVampire == true ? State.Character.Identity.Gender == DaggerfallCharacterGender.Female : null);
         appearance.UsePlayerBeastForm(() => State.RacialOverrides.Current is { State.BeastForm: true } form ? form.State.Kind : null);
         if (_tuning.Viewmodel.Style != DaggerfallViewmodelStyle.Classic && _composition.HeldArt is { } art)
-            appearance.UseHeldArt(_engine, art, _tuning.Viewmodel.Style, _composition.ArtReplacements?.Tints ?? new Dictionary<string, DaggerfallDyeTint>(), HeldItem);
+            appearance.UseHeldArt(_engine, art, _tuning.Viewmodel.Style, _composition.ArtReplacements?.Tints ?? new Dictionary<string, DaggerfallDyeTint>(), HeldItem, HeldShield);
         if (_composition.ArtReplacements is { } refreshed)
             appearance.UseEffectArt(_engine.Presentation, _engine.Animation, refreshed, () => DrawnArt is not null);
     }

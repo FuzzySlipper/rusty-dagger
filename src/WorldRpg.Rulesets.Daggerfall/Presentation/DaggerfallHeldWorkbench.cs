@@ -1,3 +1,4 @@
+using System.Numerics;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using Rusty.Engine;
 using Rusty.Engine.Debugging;
@@ -72,6 +73,23 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
         viewed.Rest(0);
         publish();
         return DebugCommandResult.Success(Describe());
+    }
+
+    /// <summary>
+    /// Moves the shields' seat on the hand joint (<paramref name="part"/> <c>seat</c>: where, then the turn) or the hand's
+    /// carry (<c>carry</c>: the grip, then the hold) in the loaded art, shown at the next draw; the answer is what to save.
+    /// </summary>
+    internal DebugCommandResult Shield(string part, Vector3 at, Vector3 turn)
+    {
+        if (Unavailable is { } unavailable) return Failure(unavailable);
+        if (art!.Document.Shield is not { } shield) return Failure("The held definition draws no shields.");
+        switch (part)
+        {
+            case "seat": (shield.Seat.At, shield.Seat.Turn) = (at, turn); break;
+            case "carry": (shield.Carry.Grip, shield.Carry.Hold) = (at, turn); break;
+            default: return Failure("A part is seat or carry.");
+        }
+        return DebugCommandResult.Success($"shield.{part}: {at}, {turn}");
     }
 
     /// <summary>Holds the strike's clip exactly at mark <paramref name="n"/> (0 start, 1 strike, 2 recover, 3 end; -1 is rest).</summary>

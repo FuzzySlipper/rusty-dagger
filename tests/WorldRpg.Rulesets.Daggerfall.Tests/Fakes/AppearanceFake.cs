@@ -6,7 +6,9 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
 {
 
     public TextureResourceInfo ReadTextureInfo(RenderResource resource) => throw new NotSupportedException();
-    public void PublishChanges(AppearanceChangesRequest request) => throw new NotSupportedException();
+    public void PublishChanges(AppearanceChangesRequest request) => Attachments.AddRange(request.Attachments.ToArray());
+    /// <summary>The joints objects were bound to, in order.</summary>
+    internal List<MeshJointAttachment> Attachments { get; } = [];
     public void PublishOverlaySet(OverlaySetRequest request) => OverlaySets.Add(request);
     /// <summary>Every overlay set published, in order; an empty one removes its set.</summary>
     internal List<OverlaySetRequest> OverlaySets { get; } = [];

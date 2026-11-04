@@ -160,7 +160,7 @@ def bake(rig, stem):
                 local = b.parent.matrix_local.inverted() @ b.matrix_local
                 basis[b.name] = local.inverted() @ posed[b.parent.name].inverted() @ posed[b.name]
         frames.append(basis)
-        samples.append({name: rig.matrix_world @ m for name, m in posed.items()} | {"weapon_r": view @ world(source, "weapon_r")})
+        samples.append({name: rig.matrix_world @ m for name, m in posed.items()} | {"weapon_r": view @ world(source, "weapon_r"), "weapon_l": view @ world(source, "weapon_l")})
     remove(imported)
     bpy.data.actions.remove(clip)
 
@@ -262,7 +262,15 @@ def rounded(v, places=4):
 
 rig_clip = definition["rig"]["clip"]
 families = definition["families"]
-stems = [rig_clip, *(stem for family in families.values() for stem in (family["idle"]["clip"], family["powerHold"]["clip"], *(clip["clip"] for clip in family["strikes"].values())))]
+shield = definition["shield"]
+
+
+def guard_stems(guard):
+    return [guard[phase]["clip"] for phase in ("raise", "hold", "lower")]
+
+
+stems = [rig_clip, *guard_stems(shield["guard"]), *(stem for family in families.values() for stem in (
+    family["idle"]["clip"], family["powerHold"]["clip"], *guard_stems(family["guard"]), *(clip["clip"] for clip in family["strikes"].values())))]
 rig = arms()
 samples = {stem: bake(rig, stem) for stem in dict.fromkeys(stems)}
 export(out / "first-person/arms.glb", list(samples))
@@ -293,5 +301,11 @@ for name, family in families.items():
         "strikes": strikes,
     }
 measure["palm"] = rounded(palm)
+# Where the clips carry a shield: the weapon_l bone in hand_l's own frame, at the height of the raised guard.
+raised = samples[shield["guard"]["hold"]["clip"]][0]
+carried = raised["hand_l"].inverted() @ raised["weapon_l"]
+measure["shieldSeat"] = {"at": rounded(carried.translation), "turn": rounded(carried.to_euler("XYZ"))}
+measure["guardSeconds"] = {stem: round((len(samples[stem]) - 1) / 60, 4) for stem in dict.fromkeys(
+    [*guard_stems(shield["guard"]), *(stem for family in families.values() for stem in guard_stems(family["guard"]))])}
 (out / "measure.json").write_text(json.dumps(measure, indent=1))
 print("BUILT", out)
