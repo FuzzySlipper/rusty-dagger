@@ -22,32 +22,83 @@
   {
    "item": 114, "name": "tanto", "family": "curved-blade", "hands": 1, "length": 0.40,
    "records": [22, 23], "icon": 23,
-   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"}
+   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"},
+   "subject": "A short single-edged Japanese knife: a broad straight steel blade with a clipped angular tip, a round brass tsuba guard, a grip wrapped in red-brown leather cord and a small brass end cap.",
+   "invent": "The tsuba is a flat round disc at right angles to the blade. The grip is oval in section. The blade is thick at its back and thin at its edge.",
+   "grip": {"part": "grip"},
+   "parts": [
+    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.005, "ramp": 0.015, "faces": 700},
+    {"name": "tsuba", "class": "brass", "pick": "top", "shape": "disc", "half": 0.004},
+    {"name": "grip", "class": "leather", "shape": "lathe", "segments": 10, "smooth": 9},
+    {"name": "cap", "class": "brass", "rows": [800, 884], "pick": "all", "shape": "lathe", "segments": 10, "smooth": 3}
+   ]
   },
   {
    "item": 115, "name": "staff", "family": "blunt", "hands": 2, "length": 1.80,
    "records": [21], "icon": 21,
-   "firstPerson": {"cif": "WEAPON01", "use": "construction", "why": "iron end caps"}
+   "firstPerson": {"cif": "WEAPON01", "use": "construction", "why": "iron end caps"},
+   "subject": "A long plain wooden quarterstaff: one straight oiled brown wooden pole of even thickness with a small dark iron cap at each end.",
+   "invent": "The pole is round in section and straight, with the same cap at both ends.",
+   "grip": {"part": "haft", "span": [0.4, 0.6]},
+   "parts": [
+    {"name": "haft", "class": "leather", "pick": "all", "shape": "lathe", "segments": 10, "smooth": 41}
+   ]
   },
   {
    "item": 116, "name": "shortsword", "family": "straight-sword", "hands": 1, "length": 0.70,
    "records": [19, 20], "icon": 20,
-   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"}
+   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"},
+   "subject": "A short straight double-edged steel sword: a broad blade tapering to a point with a raised central ridge, a brass crossguard whose arms sweep gently toward the point, a grip bound in red-brown leather and a flared brass pommel.",
+   "invent": "The guard is a brass bar, thicker at the centre. The blade is a flattened diamond in section. The grip is round in section and continuous from guard to pommel.",
+   "grip": {"part": "grip"},
+   "parts": [
+    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.0035, "ramp": 0.012, "faces": 800},
+    {"name": "guard", "class": "brass", "pick": "top", "shape": "flat", "profile": "round", "half": 0.007, "ramp": 0.004, "faces": 500},
+    {"name": "grip", "class": "leather", "shape": "lathe", "segments": 10, "smooth": 5},
+    {"name": "pommel", "class": "brass", "pick": "bottom", "shape": "lathe", "segments": 12, "smooth": 3}
+   ]
   },
   {
    "item": 117, "name": "wakizashi", "family": "curved-blade", "hands": 1, "length": 0.65,
    "records": [26, 27], "icon": 27,
-   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"}
+   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"},
+   "subject": "A short gently curved Japanese sword: a single-edged steel blade, a round brass tsuba guard with a brass collar, a long grip wrapped in crossed red-brown leather cord, and a brass end cap.",
+   "invent": "The tsuba is a flat round disc at right angles to the blade. The blade is thick at its back and thin at its edge. The grip is oval in section.",
+   "grip": {"part": "grip"},
+   "parts": [
+    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.0035, "ramp": 0.012, "faces": 800},
+    {"name": "tsuba", "class": "brass", "pick": "top", "shape": "disc", "half": 0.004},
+    {"name": "grip", "class": "leather", "shape": "lathe", "segments": 10, "smooth": 9},
+    {"name": "cap", "class": "brass", "pick": "bottom", "shape": "lathe", "segments": 10, "smooth": 3}
+   ]
   },
   {
    "item": 118, "name": "broadsword", "family": "straight-sword", "hands": 1, "length": 0.95,
    "records": [2, 3], "icon": 3,
-   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"}
+   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"},
+   "subject": "A straight double-edged steel broadsword: a long blade with a central ridge, a thin brass crossguard with a central block and small flared ends, a grip bound in red-brown leather and a small round brass pommel.",
+   "invent": "The guard is a narrow bar, rectangular in section. The blade is a flattened diamond in section. The grip is round in section and continuous from guard to pommel.",
+   "grip": {"part": "grip"},
+   "parts": [
+    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.003, "ramp": 0.012, "faces": 800},
+    {"name": "guard", "class": "brass", "pick": "top", "shape": "flat", "profile": "round", "half": 0.006, "ramp": 0.004, "faces": 500},
+    {"name": "grip", "class": "leather", "shape": "lathe", "segments": 10, "smooth": 5},
+    {"name": "pommel", "class": "brass", "pick": "bottom", "shape": "lathe", "segments": 12, "smooth": 3}
+   ]
   },
   {
    "item": 119, "name": "saber", "family": "curved-blade", "hands": 1, "length": 0.95,
    "records": [17, 18], "icon": 18,
-   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"}
+   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"},
+   "subject": "A curved single-edged steel saber: a slim blade sweeping back to a sharp point, a round brass bell guard around the blade's base, a brass knuckle bow curving down to the pommel, and a dark leather grip.",
+   "invent": "The bell is a shallow round brass cup at right angles to the blade, open toward the grip. The knuckle bow is a thin brass strip on the edge side. The grip is oval in section.",
+   "grip": {"part": "grip"},
+   "parts": [
+    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.0025, "ramp": 0.01, "faces": 800},
+    {"name": "bell", "class": "brass", "rows": [0, 735], "shape": "disc", "half": 0.01},
+    {"name": "bow", "class": "brass", "rows": [736, 887], "shape": "flat", "profile": "round", "half": 0.003, "ramp": 0.002, "faces": 300},
+    {"name": "grip", "class": "leather", "shape": "lathe", "segments": 10, "smooth": 5}
+   ]
   },
   {
    "item": 120, "name": "longsword", "family": "straight-sword", "hands": 1, "length": 1.10,
@@ -65,18 +116,45 @@
   },
   {
    "item": 121, "name": "katana", "family": "curved-blade", "hands": 1, "length": 1.00,
-   "records": [9, 10], "icon": 10,
-   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"}
+   "records": [9, 10], "icon": 9,
+   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"},
+   "subject": "A slender curved Japanese sword: a long single-edged steel blade, a small round brass tsuba guard, and a long grip wrapped in crossed red-brown leather cord.",
+   "invent": "The tsuba is a flat round disc at right angles to the blade. The blade is thick at its back and thin at its edge. The grip is oval in section and long enough for two hands.",
+   "grip": {"part": "grip"},
+   "parts": [
+    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.0035, "ramp": 0.012, "faces": 800},
+    {"name": "tsuba", "class": "brass", "pick": "top", "shape": "disc", "half": 0.004},
+    {"name": "grip", "class": "leather", "shape": "lathe", "segments": 10, "smooth": 9},
+    {"name": "cap", "class": "brass", "pick": "bottom", "shape": "lathe", "segments": 10, "smooth": 3}
+   ]
   },
   {
    "item": 122, "name": "claymore", "family": "straight-sword", "hands": 2, "length": 1.40,
    "records": [4], "icon": 4,
-   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"}
+   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"},
+   "subject": "A great two-handed steel sword: a long straight blade with a central ridge and a small pair of side lugs a hand's length above the guard, a wide thin brass crossguard ending in small balls, a long grip bound in red-brown leather and a small round brass pommel.",
+   "invent": "The guard is a straight thin bar. The lugs are small flat steel points on the blade's edges. The blade is a flattened diamond in section. The grip is round in section and long enough for two hands.",
+   "grip": {"part": "grip"},
+   "parts": [
+    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.0035, "ramp": 0.012, "faces": 900},
+    {"name": "guard", "class": "brass", "pick": "all", "rows": [0, 700], "shape": "flat", "profile": "round", "half": 0.006, "ramp": 0.004, "faces": 500},
+    {"name": "grip", "class": "leather", "shape": "lathe", "segments": 10, "smooth": 5},
+    {"name": "pommel", "class": "brass", "pick": "bottom", "shape": "lathe", "segments": 12, "smooth": 3}
+   ]
   },
   {
    "item": 123, "name": "dai-katana", "family": "curved-blade", "hands": 2, "length": 1.30,
    "records": [7], "icon": 7,
-   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"}
+   "firstPerson": {"cif": "WEAPON04", "use": "none", "why": "plain blade only"},
+   "subject": "A very long curved two-handed Japanese sword: a long single-edged steel blade, a small round brass tsuba guard with a brass collar, a long grip wrapped in crossed red-brown leather cord and a brass end cap.",
+   "invent": "The tsuba is a flat round disc at right angles to the blade. The blade is thick at its back and thin at its edge. The grip is oval in section and long enough for two hands.",
+   "grip": {"part": "grip"},
+   "parts": [
+    {"name": "blade", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.004, "ramp": 0.012, "faces": 800},
+    {"name": "tsuba", "class": "brass", "pick": "top", "shape": "disc", "half": 0.004},
+    {"name": "grip", "class": "leather", "shape": "lathe", "segments": 10, "smooth": 9},
+    {"name": "cap", "class": "brass", "pick": "bottom", "shape": "lathe", "segments": 10, "smooth": 3}
+   ]
   },
   {
    "item": 124, "name": "mace", "family": "blunt", "hands": 1, "length": 0.70,
@@ -111,39 +189,95 @@
    ]
   },
   {
-   "item": 125, "name": "flail", "family": "blunt", "hands": 2, "length": 0.95,
+   "item": 125, "name": "flail", "family": "blunt", "hands": 2, "length": 0.95, "axis": "haft",
    "records": [8], "icon": 8,
-   "firstPerson": {"cif": "WEAPON06", "use": "construction", "why": "chain links and socket"}
+   "firstPerson": {"cif": "WEAPON06", "use": "construction", "why": "chain links and socket"},
+   "subject": "A flail: a straight oiled wooden handle with a steel cap and ring at its end, a chain of oval iron links hanging from the ring, and a round iron ball studded all over with short conical spikes at the end of the chain.",
+   "invent": "The handle is round in section. The chain links are oval rings, each turned at right angles to the next. The ball has the same spikes on every side.",
+   "grip": {"part": "haft", "span": [0, 0.4]},
+   "parts": [
+    {"name": "haft", "class": "leather", "rows": [206, 769], "shape": "lathe", "segments": 10, "smooth": 41},
+    {"name": "butt", "class": "steel", "pick": "bottom", "shape": "lathe", "segments": 10, "smooth": 3},
+    {"name": "chain", "class": "steel", "rows": [0, 200], "shape": "chain", "on": "haft", "links": 7, "linkLength": 0.05, "linkWidth": 0.03, "wire": 0.006, "ball": 0.05, "light": 0.5, "spikes": {"count": 16, "length": 0.022, "base": 0.01}}
+   ]
   },
   {
-   "item": 126, "name": "warhammer", "family": "blunt", "hands": 2, "length": 1.10,
+   "item": 126, "name": "warhammer", "family": "blunt", "hands": 2, "length": 1.10, "axis": "haft",
    "records": [25], "icon": 25,
-   "firstPerson": {"cif": "WEAPON07", "use": "construction", "why": "head block and shaft rings"}
+   "firstPerson": {"cif": "WEAPON07", "use": "construction", "why": "head block and shaft rings"},
+   "subject": "A two-handed warhammer: a long straight oiled wooden haft with a leather-bound grip, and a heavy steel head set across its top: a flat square hammer face on one side and a thick pointed beak on the other.",
+   "invent": "The head is a solid block of steel, square in section, wider than it is tall, with the haft passing through a socket in its middle. The haft is round in section.",
+   "grip": {"part": "haft", "span": [0, 0.3]},
+   "parts": [
+    {"name": "head", "class": "any", "rows": [0, 140], "pick": "all", "slot": "metal", "shape": "flat", "profile": "round", "half": 0.03, "ramp": 0.012, "faces": 900},
+    {"name": "haft", "class": "leather", "rows": [141, 690], "pick": "all", "shape": "lathe", "segments": 10, "smooth": 41},
+    {"name": "butt", "class": "steel", "pick": "bottom", "shape": "lathe", "segments": 10, "smooth": 3}
+   ]
   },
   {
-   "item": 127, "name": "battle-axe", "family": "axe", "hands": 1, "length": 0.80,
+   "item": 127, "name": "battle-axe", "family": "axe", "hands": 1, "length": 0.80, "axis": "haft",
    "records": [0, 1], "icon": 1,
-   "firstPerson": {"cif": "WEAPON08", "use": "construction", "why": "head side profile, socket and shaft rings"}
+   "firstPerson": {"cif": "WEAPON08", "use": "construction", "why": "head side profile, socket and shaft rings"},
+   "subject": "A one-handed battle axe: a straight oiled wooden haft with a leather-bound grip, and a single broad bearded steel blade with a curved cutting edge, fixed to a steel socket at the top of the haft.",
+   "invent": "The blade is flat and thin at its edge, thickening toward the socket. The socket is a short steel sleeve around the haft. The haft is round in section.",
+   "grip": {"part": "haft", "span": [0, 0.3]},
+   "parts": [
+    {"name": "blade", "class": "any", "cols": [81, 416], "rows": [0, 345], "pick": "all", "slot": "metal", "shape": "flat", "profile": "ridge", "half": 0.006, "ramp": 0.03, "faces": 900},
+    {"name": "socket", "class": "any", "cols": [0, 80], "rows": [0, 340], "pick": "all", "slot": "metal", "shape": "lathe", "segments": 12, "smooth": 9},
+    {"name": "haft", "class": "leather", "rows": [341, 859], "shape": "lathe", "segments": 10, "smooth": 41}
+   ]
   },
   {
-   "item": 128, "name": "war-axe", "family": "axe", "hands": 2, "length": 1.20,
+   "item": 128, "name": "war-axe", "family": "axe", "hands": 2, "length": 1.20, "axis": "haft",
    "records": [24], "icon": 24,
-   "firstPerson": {"cif": "WEAPON08", "use": "construction", "why": "head side profile, socket and shaft rings"}
+   "firstPerson": {"cif": "WEAPON08", "use": "construction", "why": "head side profile, socket and shaft rings"},
+   "subject": "A two-handed war axe: a long straight oiled wooden haft, and a steel head with two opposed crescent blades and a pointed spike at the top, fixed to a steel socket.",
+   "invent": "The blades are flat and thin at their edges, thickening toward the socket. The socket is a short steel sleeve around the haft. The haft is round in section.",
+   "grip": {"part": "haft", "span": [0, 0.3]},
+   "parts": [
+    {"name": "head", "class": "any", "rows": [0, 165], "pick": "all", "slot": "metal", "shape": "flat", "profile": "ridge", "half": 0.006, "ramp": 0.02, "faces": 900},
+    {"name": "socket", "class": "any", "rows": [50, 150], "cols": [111, 144], "pick": "all", "slot": "metal", "shape": "lathe", "segments": 10, "smooth": 9},
+    {"name": "haft", "class": "leather", "rows": [170, 651], "shape": "lathe", "segments": 10, "smooth": 41, "bridge": true},
+    {"name": "butt", "class": "steel", "pick": "bottom", "shape": "lathe", "segments": 10, "smooth": 3}
+   ]
   },
   {
    "item": 129, "name": "short-bow", "family": "bow", "hands": 2, "length": 1.10,
    "records": [16], "icon": 16,
-   "firstPerson": {"cif": "WEAPON09", "use": "construction", "why": "grip wrap and rings"}
+   "firstPerson": {"cif": "WEAPON09", "use": "construction", "why": "grip wrap and rings"},
+   "subject": "A short recurve bow: one continuous curved wooden stave, thicker at a leather-wrapped central grip and tapering to both tips, strung with one straight thin pale string.",
+   "invent": "The stave is flattened in section and curves only in one plane. The string runs straight from tip to tip, and the bow is unstrung of any arrow.",
+   "grip": {"part": "stave", "span": [0.44, 0.56]},
+   "parts": [
+    {"name": "stave", "class": "any", "pick": "all", "shape": "flat", "profile": "round", "half": 0.009, "ramp": 0.006, "faces": 1200},
+    {"name": "string", "class": "brass", "shape": "string", "radius": 0.0015}
+   ]
   },
   {
    "item": 130, "name": "long-bow", "family": "bow", "hands": 2, "length": 1.70,
    "records": [11], "icon": 11,
-   "firstPerson": {"cif": "WEAPON09", "use": "construction", "why": "grip wrap and rings"}
+   "firstPerson": {"cif": "WEAPON09", "use": "construction", "why": "grip wrap and rings"},
+   "subject": "A tall plain longbow: one continuous long curved wooden stave, thicker at a leather-wrapped central grip and tapering to both tips, strung with one straight thin pale string.",
+   "invent": "The stave is D-shaped in section and curves only in one plane. The string runs straight from tip to tip, and the bow is unstrung of any arrow.",
+   "grip": {"part": "stave", "span": [0.44, 0.56]},
+   "parts": [
+    {"name": "stave", "class": "any", "pick": "all", "shape": "flat", "profile": "round", "half": 0.008, "ramp": 0.006, "faces": 1200},
+    {"name": "string", "class": "brass", "shape": "string", "radius": 0.0015}
+   ]
   },
   {
    "item": 131, "name": "arrow", "family": "bow", "hands": 0, "length": 0.75,
    "records": [], "icon": null,
-   "firstPerson": {"cif": "WEAPON09", "use": "construction", "why": "the nocked arrow; there is no paper-doll layer"}
+   "note": "No paper-doll layer: its design is the accepted refreshed ground icon, authoring/gen-raw/items/texture-207-record-016.",
+   "firstPerson": {"cif": "WEAPON09", "use": "construction", "why": "the nocked arrow; there is no paper-doll layer"},
+   "subject": "One straight arrow: a barbed steel broadhead bound to a thin straight brown wooden shaft, with green and yellow feather fletching and a dark nock at the far end.",
+   "invent": "The shaft is round in section. The broadhead is flat and thin at its edges. The feathers stand out from the shaft in three vanes spaced evenly round it.",
+   "grip": {"part": "shaft"},
+   "parts": [
+    {"name": "head", "class": "steel", "pick": "top", "shape": "flat", "profile": "ridge", "half": 0.002, "ramp": 0.008, "faces": 300},
+    {"name": "shaft", "class": "any", "rows": [130, 735], "cols": [46, 73], "pick": "all", "shape": "lathe", "segments": 8, "smooth": 41},
+    {"name": "fletching", "class": "any", "rows": [545, 738], "pick": "all", "slot": "trim", "shape": "flat", "profile": "ridge", "half": 0.0012, "ramp": 0.004, "faces": 500}
+   ]
   }
  ]
 }
