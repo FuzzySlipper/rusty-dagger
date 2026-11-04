@@ -18,7 +18,7 @@ round plate `half` metres either side of the centre of the icon's tilted ellipse
 `ball` with `spikes`. A `string` part is a cord of `radius` from tip to tip. Both take their colour from their piece of
 the icon. A lathe part with `bridge` always joins the run above it, across a gap in the icon. `reach` runs a flat part on to the named part it joins, and `root` thickens it by `gain` toward the part named `toward`.
 A lathe part's `radius` in metres replaces the icon's width, for an icon drawn fatter than the thing. A chain skins the model to joints that can swing it: see rigged(). A part's `slot` overrides its material (`any` parts default to `trim`). `spikes` sets cones on its widest ring's sphere: `count`, `length` and `base` in metres,
-spread evenly. A part's `light` and `shade` are passed to paint.py.
+spread evenly. A part's `light` and `shade` are passed to paint.py, and `coloursFrom` paints it in another part's colours.
 
 Writes OUT_DIR/reference.glb (the icon projected flat onto every part, the colour layout `palette_cells.py`
 classifies) and OUT_DIR/model.glb (the same mesh with unwrapped UVs and blank textures for it to paint). Both are
@@ -423,7 +423,7 @@ def chain(bm, part):
     bmesh.ops.translate(bm, verts=sphere['verts'], vec=centre)
     for v in sphere['verts'] + spikes(bm, centre, r, part['spikes']):
         v[joint] = part['links']
-    RIG.append(('ball', at + Vector((0, length * 0.8 * part['links'] + length * 0.08, 0))))
+    RIG.append(('ball', centre))   # at its centre, so a sphere on the joint collides as the ball does
     RIG.append(('end', centre + Vector((0, r, 0))))
 
 
@@ -582,8 +582,9 @@ def rigged():
     armature.select_set(True)
     bpy.context.view_layer.objects.active = armature
     bpy.ops.object.mode_set(mode='EDIT')
-    parent = armature.data.edit_bones.new('handle')
-    parent.head, parent.tail = Vector(), RIG[0][1]
+    parent = armature.data.edit_bones.new('handle')   # spans the whole haft, which the ball collides with
+    butt = max(rows_of([p['name']])[1] for p in weapon['parts'] if p['shape'] == 'lathe')
+    parent.head, parent.tail = place(ORIGIN[0], butt, 0), RIG[0][1]
     for (joint, at), (_, end) in zip(RIG, RIG[1:]):
         bone = armature.data.edit_bones.new(joint)
         bone.head, bone.tail, bone.parent = at, end, parent
@@ -640,7 +641,7 @@ def pieces(want):
 report = {'weapon': name, 'metresPerPixel': METRES, 'origin': ORIGIN,
           'pieces': {c: pieces(i) for c, i in (('steel', 1), ('brass', 2), ('leather', 3))},   # rows and pixels, top first
           'parts': {p['name']: {'slot': slot_of(p), 'seeds': seeds(masks[p['name']]),
-                                **{key: p[key] for key in ('light', 'shade') if key in p}} for p in weapon['parts']},
+                                **{key: p[key] for key in ('light', 'shade', 'coloursFrom') if key in p}} for p in weapon['parts']},
           'triangles': {o.name: sum(len(p.vertices) - 2 for p in o.data.polygons) for o in objects}}
 (out / 'build.json').write_text(json.dumps(report, indent=1) + '\n')
 print('BUILT', json.dumps(report))

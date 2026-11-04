@@ -44,7 +44,8 @@ def main():
         'sprite_ignore': [[0, 0, 0], [14, 14, 12]],   # the icon's ink outline
         'cell_size': args.cell,
         'targets': {slot: {'size': args.size, 'out': f'{slot}.png'} for slot in {p['slot'] for p in parts.values()}},
-        'regions': [{'name': name, 'objects': [name], 'generator': p['seeds'], 'sprite': p['seeds'], 'steps': args.steps,
+        'regions': [{'name': name, 'objects': [name], 'generator': p['seeds'], 'steps': args.steps,
+                     **({'palette_from': p['coloursFrom']} if 'coloursFrom' in p else {'sprite': p['seeds']}),
                      'light': {'weight': light(name), 'generator_weight': 1 - light(name), 'dither': args.dither},
                      **({'shade': p['shade']} if 'shade' in p else {})}
                     for name, p in parts.items()],
