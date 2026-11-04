@@ -237,7 +237,7 @@
       }
     },
     "guard": {
-      "staminaPerSecond": 32,
+      "staminaPerSecond": 5,
       "deflectionBonus": 25,
       "shieldDeflectionBonus": 15,
       "maximumChance": 85
@@ -263,7 +263,7 @@
       "commit": 0.12,
       "recovery": 0.4
     },
-    "kickStaminaCost": 64,
+    "kickStaminaCost": 10,
     "kickDamage": 1,
     "classes": {
       "short-blade": {
@@ -419,7 +419,7 @@
         35,
         70
       ],
-      "windedStamina": 128,
+      "windedStamina": 16,
       "windedTimeScale": 1.4,
       "windedDamageScale": 0.5,
       "backstabMinimum": 1.5,
@@ -428,6 +428,17 @@
       "rushDamageScale": 1.25,
       "improvedRushTimeScale": 0.75,
       "improvedRushDamageScale": 1.5
+    },
+    "stamina": {
+      "base": 20,
+      "perAttributePoint": 0.75,
+      "refillPerSecond": 8,
+      "quietSeconds": 1,
+      "fatiguePerSwing": 11,
+      "shrinkFromFatigue": 0.5,
+      "shrunkScale": 0.4,
+      "slowFromFatigue": 0.75,
+      "slowedScale": 0.5
     }
   },
   "enemyBehavior": {

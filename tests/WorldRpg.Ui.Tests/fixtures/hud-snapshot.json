@@ -140,7 +140,13 @@
     {
       "id": "stamina",
       "label": "Stamina",
-      "current": 87,
+      "current": 85,
+      "maximum": 85
+    },
+    {
+      "id": "fatigue",
+      "label": "Fatigue",
+      "current": 0,
       "maximum": 87
     },
     {
@@ -2185,9 +2191,16 @@
       {
         "id": "stamina",
         "label": "Stamina",
-        "current": 87,
+        "current": 85,
+        "maximum": 85,
+        "description": "Your wind in a fight. Attacks, kicks and guarding spend it, and it refills on its own. Near empty you are winded: your blows are slower and weaker, and you cannot kick, guard or land a power attack until it refills."
+      },
+      {
+        "id": "fatigue",
+        "label": "Fatigue",
+        "current": 0,
         "maximum": 87,
-        "description": "Fatigue. Running, jumping and fighting spend it, and resting restores it; when it runs out you collapse."
+        "description": "How worn out you are. Travel, running, jumping and fighting raise it, and only rest or magic lowers it. Past half, your stamina shrinks; past three quarters, it refills more slowly; when it fills you collapse."
       },
       {
         "id": "magicka",

@@ -31,7 +31,7 @@ internal sealed record DaggerfallContactTuning(
         },
         .4d, .4d, .2d, 10d, .5d,
         new Dictionary<HarmChannelId, double> { [new("edged")] = 1d, [new("piercing")] = .8d, [new("blunt")] = .6d, [new("physical")] = .8d },
-        32d, 25d, 15d, 85d, 2d, .8d, 1d, .3d, .75d, .4d, 1d);
+        5d, 25d, 15d, 85d, 2d, .8d, 1d, .3d, .75d, .4d, 1d);
 
     internal DaggerfallChannelDeflection? DeflectionFor(HarmChannelId channel) => Deflection.GetValueOrDefault(channel);
     internal double AbsorptionMultiplier(HarmChannelId channel) => AbsorptionMultipliers.GetValueOrDefault(channel);

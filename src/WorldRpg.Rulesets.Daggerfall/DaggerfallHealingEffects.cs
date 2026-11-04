@@ -39,7 +39,7 @@ internal static class DaggerfallHealingEffects
                         if (!matching) effect.InitialOutcome = DaggerfallEffectAdmissionOutcome.NoMatch;
                     }
                     else vitality.RestoreSpellTrack(effect.Target,
-                        TrackId.Parse(selected == 8 ? DaggerfallMechanicsIds.Health.Value : DaggerfallMechanicsIds.Stamina.Value),
+                        TrackId.Parse(selected == 8 ? DaggerfallMechanicsIds.Health.Value : DaggerfallMechanicsIds.Fatigue.Value),
                         selected == 9 ? DaggerfallFormulaPolicy.SpellFatigueDamage(state.Amount) : state.Amount);
                 }, Spell: new(10, selected, SpellMaker: true, SupportsMagnitude: true));
         }

@@ -14,17 +14,17 @@ public sealed class MenuHoldSessionTests
     {
         using var session = FreshSession();
         var before = DaggerfallSavePayload.Read(session.CaptureSave()).Calendar;
-        double fatigue = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current;
+        double fatigue = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")).Current;
         session.Update(new ProductUpdate(OuterUpdate(1) with { FixedDeltaSeconds = 1, AdmittedStepCount = 60 },
             [Ui("""{"action":"menu","open":true}""")]));
         Assert.Equal(before, DaggerfallSavePayload.Read(session.CaptureSave()).Calendar);
-        Assert.Equal(fatigue, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
+        Assert.Equal(fatigue, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")).Current);
         Assert.Empty(session.LastEnemyBehavior);
         Assert.Equal(ProductMode.Modal, session.PendingModeRequest);
         session.ApplyProductMode(ProductMode.Modal);
         session.Update(new ProductUpdate(OuterUpdate(61) with { FixedDeltaSeconds = 1, AdmittedStepCount = 60 }, []));
         Assert.Equal(before, DaggerfallSavePayload.Read(session.CaptureSave()).Calendar);
-        Assert.Equal(fatigue, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
+        Assert.Equal(fatigue, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")).Current);
         session.Update(new ProductUpdate(OuterUpdate(121), [Ui("""{"action":"menu","open":false}""")]));
         Assert.Equal(ProductMode.Playing, session.PendingModeRequest);
         session.ApplyProductMode(ProductMode.Playing);

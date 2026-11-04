@@ -106,7 +106,7 @@ internal static class DaggerfallRestPolicy
     {
         ArgumentNullException.ThrowIfNull(player);
         return Current(player, DaggerfallMechanicsIds.Health) >= Maximum(player, DaggerfallMechanicsIds.HealthMaximum)
-            && Current(player, DaggerfallMechanicsIds.Stamina) >= Maximum(player, DaggerfallMechanicsIds.StaminaMaximum)
+            && Current(player, DaggerfallMechanicsIds.Fatigue) >= Maximum(player, DaggerfallMechanicsIds.FatigueMaximum)
             && (noRegeneration || Current(player, DaggerfallMechanicsIds.Magicka) >= Maximum(player, DaggerfallMechanicsIds.MagickaMaximum));
     }
 

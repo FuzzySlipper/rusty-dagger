@@ -17,7 +17,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallExhaustionSessionTests
 {
     private static readonly TrackId Health = TrackId.Parse(DaggerfallMechanicsIds.Health.Value);
-    private static readonly TrackId Fatigue = TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value);
+    private static readonly TrackId Fatigue = TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value);
     private static readonly TrackId Magicka = TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value);
 
     [Fact]
@@ -53,7 +53,7 @@ public sealed class DaggerfallExhaustionSessionTests
             stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).ValueInt,
             stats.GetStat(StatId.Parse("medical")).ValueInt,
             stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value)).ValueInt,
-            stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.StaminaMaximum.Value)).ValueInt,
+            stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.FatigueMaximum.Value)).ValueInt,
             stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.MagickaMaximum.Value)).ValueInt,
             rapidHealing: false, noRegeneration: false);
 

@@ -38,7 +38,8 @@ internal sealed class DaggerfallMechanicsState(DaggerfallEnemySpells? enemySpell
             foreach (string school in DaggerfallEnemySpells.Schools.Where(school => !definition.Stats.Values.ContainsKey(new DaggerfallStatId(school))))
                 stats.Add(Stat(new DaggerfallStatId(school), 80));
 
-        Stat staminaMaximum = AddStat(stats, DaggerfallMechanicsIds.StaminaMaximum, vitals.StaminaMaximum);
+        Stat fatigueMaximum = AddStat(stats, DaggerfallMechanicsIds.FatigueMaximum, vitals.FatigueMaximum);
+        Stat staminaMaximum = AddStat(stats, DaggerfallMechanicsIds.StaminaMaximum, 0);
         Stat magickaMaximum = AddStat(stats, DaggerfallMechanicsIds.MagickaMaximum, vitals.MagickaMaximum);
         Stat healthMaximum = AddStat(stats, DaggerfallMechanicsIds.HealthMaximum, vitals.HealthMaximum);
         AddBoundedStat(stats, DaggerfallMechanicsIds.ResistanceFire, 0, MinimumResistanceValue, MaximumResistanceValue);
@@ -50,16 +51,22 @@ internal sealed class DaggerfallMechanicsState(DaggerfallEnemySpells? enemySpell
         AddBoundedStat(stats, DaggerfallMechanicsIds.ImmunityDisease, 0, 0, 1);
         StatsComponent result = new();
         foreach (var (id, stat) in stats) result.AddStat(id, stat);
-        // A maximum change on stamina or magicka never moves current by itself: the donor keeps
+        // A maximum change on fatigue or magicka never moves current by itself: the donor keeps
         // current where it is and rest restores, so those tracks state the preserve-current
         // policy rather than inheriting whatever the default happens to be today. Health keeps
         // preserve-missing-amount because level-up raises maximum and current equally through
-        // the track's own policy.
+        // the track's own policy. Stamina does too: only the player has any, DaggerfallPlayerStamina
+        // sets its maximum, and what the maximum gains or loses comes with it, so a new character
+        // starts full and a fight's losses stay lost as Fatigue squeezes the pool. It has no quantum,
+        // because a guard spends a fraction of a point each step.
         (TrackId Id, Track Value)[] tracks =
             [
-                (TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value), new Track(
-                    staminaMaximum, vitals.StaminaMaximum, MinimumStatValue, TrackMaximumChangePolicy.PreserveCurrent,
+                (TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value), new Track(
+                    fatigueMaximum, vitals.FatigueMaximum, MinimumStatValue, TrackMaximumChangePolicy.PreserveCurrent,
                     quantum: 1,
+                    rounding: MidpointRounding.ToZero, integerRounding: MidpointRounding.ToZero)),
+                (TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value), new Track(
+                    staminaMaximum, 0, MinimumStatValue, TrackMaximumChangePolicy.PreserveMissingAmount,
                     rounding: MidpointRounding.ToZero, integerRounding: MidpointRounding.ToZero)),
                 (TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value), new Track(
                     magickaMaximum, vitals.MagickaMaximum, MinimumStatValue, TrackMaximumChangePolicy.PreserveCurrent,
@@ -108,9 +115,9 @@ internal sealed class DaggerfallMechanicsState(DaggerfallEnemySpells? enemySpell
             throw new ArgumentOutOfRangeException(nameof(vitals), "Health maximum cannot be negative.");
         }
 
-        if (vitals.StaminaMaximum < 0)
+        if (vitals.FatigueMaximum < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(vitals), "Stamina maximum cannot be negative.");
+            throw new ArgumentOutOfRangeException(nameof(vitals), "Fatigue maximum cannot be negative.");
         }
 
         if (vitals.MagickaMaximum < 0)
@@ -119,7 +126,7 @@ internal sealed class DaggerfallMechanicsState(DaggerfallEnemySpells? enemySpell
         }
 
         if (vitals.HealthMaximum > MaximumStatValue
-            || vitals.StaminaMaximum > MaximumStatValue
+            || vitals.FatigueMaximum > MaximumStatValue
             || vitals.MagickaMaximum > MaximumStatValue)
         {
             throw new ArgumentOutOfRangeException(

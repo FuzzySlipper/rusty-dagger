@@ -56,7 +56,7 @@ internal sealed class DaggerfallRestRecoveryModule
         long elapsed = 0;
         int recoveryHours = 0;
         int healthBefore = Current(player, DaggerfallMechanicsIds.Health);
-        int fatigueBefore = Current(player, DaggerfallMechanicsIds.Stamina);
+        int fatigueBefore = Current(player, DaggerfallMechanicsIds.Fatigue);
         int spellBefore = Current(player, DaggerfallMechanicsIds.Magicka);
         DaggerfallRestInterruption interruption = DaggerfallRestInterruption.None;
 
@@ -107,7 +107,7 @@ internal sealed class DaggerfallRestRecoveryModule
             ElapsedSeconds: elapsed,
             RecoveryHours: recoveryHours,
             HealthRecovered: Current(player, DaggerfallMechanicsIds.Health) - healthBefore,
-            FatigueRecovered: Current(player, DaggerfallMechanicsIds.Stamina) - fatigueBefore,
+            FatigueRecovered: Current(player, DaggerfallMechanicsIds.Fatigue) - fatigueBefore,
             SpellPointsRecovered: Current(player, DaggerfallMechanicsIds.Magicka) - spellBefore,
             Interruption: interruption,
             Message: Message(request.Mode, interruption, elapsed, recoveryHours));
@@ -117,7 +117,7 @@ internal sealed class DaggerfallRestRecoveryModule
     internal static void RecoverForCautiousTravel(StatsComponent player, bool noRegeneration)
     {
         Recover(player, Maximum(player, DaggerfallMechanicsIds.HealthMaximum),
-            Maximum(player, DaggerfallMechanicsIds.StaminaMaximum),
+            Maximum(player, DaggerfallMechanicsIds.FatigueMaximum),
             noRegeneration ? 0 : Maximum(player, DaggerfallMechanicsIds.MagickaMaximum));
     }
 
@@ -131,7 +131,7 @@ internal sealed class DaggerfallRestRecoveryModule
         (int healthRate, int fatigueRate, int spellRate) = DaggerfallRestPolicy.RecoveryRates(
             endurance, medical,
             Maximum(player, DaggerfallMechanicsIds.HealthMaximum),
-            Maximum(player, DaggerfallMechanicsIds.StaminaMaximum),
+            Maximum(player, DaggerfallMechanicsIds.FatigueMaximum),
             Maximum(player, DaggerfallMechanicsIds.MagickaMaximum),
             rapidHealing, noRegeneration);
         Recover(player, healthRate, fatigueRate, spellRate);
@@ -140,7 +140,7 @@ internal sealed class DaggerfallRestRecoveryModule
     private static void Recover(StatsComponent player, int health, int fatigue, int spellPoints)
     {
         Add(player.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)), health);
-        Add(player.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)), fatigue);
+        Add(player.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)), fatigue);
         Add(player.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value)), spellPoints);
     }
 

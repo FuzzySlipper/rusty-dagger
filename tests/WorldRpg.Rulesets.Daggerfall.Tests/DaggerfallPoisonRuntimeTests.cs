@@ -146,7 +146,7 @@ public sealed class DaggerfallPoisonRuntimeTests
         Actor victim = AttributedActor(fixture);
         (DaggerfallPoisonRuntime poison, DaggerfallEffectLifecycle effects) = Runtime(fixture);
         double luck = Stat(victim, DaggerfallMechanicsIds.Luck);
-        double stamina = Track(victim, DaggerfallMechanicsIds.Stamina);
+        double fatigue = Track(victim, DaggerfallMechanicsIds.Fatigue);
 
         Assert.True(poison.Afflict(victim, 136));
         // Indulcet waits up to twelve minutes and acts for up to six, two arms to the minute. The helping
@@ -156,7 +156,7 @@ public sealed class DaggerfallPoisonRuntimeTests
 
         Tick(effects, 7);
         Assert.Equal(luck, Stat(victim, DaggerfallMechanicsIds.Luck));
-        Assert.True(Track(victim, DaggerfallMechanicsIds.Stamina) < stamina);
+        Assert.True(Track(victim, DaggerfallMechanicsIds.Fatigue) < fatigue);
         Assert.False(poison.IsAfflicted(victim));
     }
 
@@ -252,21 +252,21 @@ public sealed class DaggerfallPoisonRuntimeTests
         Actor player = session.State.Actors.Player.Actor;
         StatsComponent stats = player.Get<StatsComponent>();
         double endurance = stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).Value;
-        double maximum = stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.StaminaMaximum.Value)).Value;
+        double maximum = stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.FatigueMaximum.Value)).Value;
 
         Assert.True(session.State.Poisons.Afflict(player, 129));
         // Arsenic waits ten minutes and then drains endurance a point a minute.
         _ = session.AdvanceElapsedTime(15 * 60);
 
         Assert.True(stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).Value < endurance);
-        double drained = stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.StaminaMaximum.Value)).Value;
+        double drained = stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.FatigueMaximum.Value)).Value;
         Assert.True(drained < maximum);
 
         // And the same follows taking the arms off: a cure leaves a maximum that matches its attribute again,
         // rather than the drained one standing until something else happens to refresh it.
         Assert.True(session.State.Poisons.Cure(player));
         Assert.Equal(endurance, stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).Value);
-        Assert.Equal(maximum, stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.StaminaMaximum.Value)).Value);
+        Assert.Equal(maximum, stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.FatigueMaximum.Value)).Value);
     }
 
     [Fact]
@@ -661,7 +661,7 @@ public sealed class DaggerfallPoisonRuntimeTests
         DaggerfallSession session = fixture.Session;
         Actor player = session.State.Actors.Player.Actor;
         StatsComponent stats = player.Get<StatsComponent>();
-        double stamina = stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.StaminaMaximum.Value)).Value;
+        double fatigue = stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.FatigueMaximum.Value)).Value;
         double magicka = stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.MagickaMaximum.Value)).Value;
 
         Assert.True(session.State.Poisons.Afflict(player, 137));
@@ -671,7 +671,7 @@ public sealed class DaggerfallPoisonRuntimeTests
         Assert.Equal(DaggerfallPoisonPhase.Complete, session.State.Poisons.Affliction(player)!.Phase);
         Assert.True(session.State.Poisons.HasPersistingDamage(player));
 
-        Assert.Equal(stamina, stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.StaminaMaximum.Value)).Value);
+        Assert.Equal(fatigue, stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.FatigueMaximum.Value)).Value);
         Assert.True(stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.MagickaMaximum.Value)).Value < magicka);
     }
 

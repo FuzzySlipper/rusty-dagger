@@ -488,8 +488,9 @@
 .dagger-bar > span { position: absolute; inset: 0 auto 0 0; background: var(--bar, #c6a05a); transition: width .15s linear; }
 .dagger-vital[data-vital="health"] { --bar: #b8322a; }
 .dagger-vital[data-vital="stamina"] { --bar: #3f8f3a; }
+.dagger-vital[data-vital="fatigue"] { --bar: #b5762a; }
 .dagger-vital[data-vital="magicka"] { --bar: #3a6cc8; }
-.dagger-outcome { position: absolute; left: 1.5rem; bottom: 6.25rem; margin: 0; padding: 0; list-style: none; display: grid; gap: .25rem;
+.dagger-outcome { position: absolute; left: 1.5rem; bottom: 7.75rem; margin: 0; padding: 0; list-style: none; display: grid; gap: .25rem;
   max-width: min(43.75rem, calc(100vw - 3rem)); color: #f6ddb0; }
 .dagger-outcome li { text-shadow: 0 1px .1875rem #000; }
 .dagger-breath { position: absolute; left: 50%; bottom: 5.5rem; transform: translateX(-50%); display: grid; grid-template-columns: auto 10rem auto; gap: .5rem; align-items: center; color: #b9e5f7; font-size: .8rem; }

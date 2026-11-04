@@ -22,6 +22,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     private const long PlayerId = DaggerfallActorIdentity.PlayerEntityId;
     private const string HealthTrack = "health";
     private const string StaminaTrack = "stamina";
+    private const string FatigueTrack = "fatigue";
     private readonly IRandomService _random;
     internal CombatResolution Rules { get; }
     private readonly ActorsState _actors;
@@ -456,15 +457,16 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         .FirstOrDefault();
 
     /// <summary>
-    /// Charges the admitted swing's fatigue, clamped at zero. The donor (WeaponManager) never refuses a
-    /// swing for fatigue; a swing that empties the pool leaves the session's exhaustion owner to decide.
+    /// Charges the admitted swing its stamina and the donor's small fatigue, each clamped at zero. The donor
+    /// (WeaponManager) never refuses a swing for fatigue; a swing that empties that pool leaves the session's
+    /// exhaustion owner to decide.
     /// </summary>
     private void SpendPlayerStamina(Combatant player, int staminaCost)
     {
-        // An attack winds a character and spends no further: an empty pool near an enemy is fatal, and ordinary
-        // fatigue has to be left time to get there, not a last point to take.
         Track stamina = player.Stats.GetTrack(TrackId.Parse(StaminaTrack));
-        _ = stamina.Spend(Math.Max(0d, Math.Min(stamina.Current - _attackTuning.Combatant.WindedStamina, staminaCost)));
+        _ = stamina.Spend(Math.Min(stamina.Current, staminaCost));
+        Track fatigue = player.Stats.GetTrack(TrackId.Parse(FatigueTrack));
+        _ = fatigue.Spend(Math.Min(fatigue.Current, _attackTuning.Stamina.FatiguePerSwing));
     }
 
     private CombatParticipants Participants(long attacker, long target, string action) => new(
@@ -544,18 +546,18 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
 
     /// <summary>
     /// FormulaHelper applies this for each positive natural nymph/lamia slot, before health damage.
-    /// The separate track mutation and fact prevent a stamina consequence from being misreported as health loss.
+    /// The separate track mutation and fact prevent a fatigue consequence from being misreported as health loss.
     /// </summary>
     private void ApplyFatigueConsequence(long attacker, long target, int acceptedHealthDamage, ulong generation, ulong step, FactBuffer<IProductFact> facts)
     {
         if (acceptedHealthDamage <= 0) return;
         if (!TryResolve(target, out Combatant victim)) return;
 
-        Track stamina = victim.Stats.GetTrack(TrackId.Parse(StaminaTrack));
-        double before = stamina.Current;
+        Track fatigue = victim.Stats.GetTrack(TrackId.Parse(FatigueTrack));
+        double before = fatigue.Current;
         int calculated = DaggerfallFormulaPolicy.FatigueDamage(acceptedHealthDamage);
-        stamina.SetCurrent(Math.Max(stamina.Minimum, before - calculated), clamp: true);
-        double actual = before - stamina.Current;
+        fatigue.SetCurrent(Math.Max(fatigue.Minimum, before - calculated), clamp: true);
+        double actual = before - fatigue.Current;
         facts.Append(new FatigueAppliedFact(attacker, target, calculated, actual, generation, step));
     }
 
@@ -845,7 +847,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     bool IDaggerfallPhysicalHarmOperations.TargetUnaware(long target) => _targetUnaware(target);
     void IDaggerfallPhysicalHarmOperations.AlertTarget(long target) => _alertTarget(target);
     double IDaggerfallPhysicalHarmOperations.BackstabMultiplier(Combatant attacker) => _attackTuning.Combatant.BackstabMultiplier(ReadStat(attacker, new DaggerfallStatId("backstabbing")));
-    void IDaggerfallPhysicalHarmOperations.DrainStamina(AttackRequest request, long target, int damage, FactBuffer<IProductFact> facts) =>
+    void IDaggerfallPhysicalHarmOperations.DrainFatigue(AttackRequest request, long target, int damage, FactBuffer<IProductFact> facts) =>
         ApplyFatigueConsequence(request.AttackerId, target, damage, request.Generation, request.SimulationStep, facts);
     long? IDaggerfallPhysicalHarmOperations.TakeSweptTarget()
     {

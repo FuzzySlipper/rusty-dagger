@@ -172,7 +172,7 @@ public sealed class ProductModeSessionTests
     }
 
     [Fact]
-    public void Paused_mode_holds_enemy_facts_stamina_and_sprite_playback_until_play_resumes()
+    public void Paused_mode_holds_enemy_facts_fatigue_and_sprite_playback_until_play_resumes()
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
@@ -186,8 +186,8 @@ public sealed class ProductModeSessionTests
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
-        Track stamina = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina"));
-        stamina.SetCurrent(100, clamp: true);
+        Track fatigue = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue"));
+        fatigue.SetCurrent(100, clamp: true);
 
         session.ApplyProductMode(ProductMode.Paused);
         int factReactionsBefore = appearance.ControlRequests.Count;
@@ -199,7 +199,7 @@ public sealed class ProductModeSessionTests
         // enemy, deliver its EnemyAttackStartedFact into appearance, charge fatigue, or advance
         // any sprite playback.
         Assert.Empty(session.LastEnemyBehavior);
-        Assert.Equal(100d, stamina.Current);
+        Assert.Equal(100d, fatigue.Current);
         Assert.Equal(factReactionsBefore, appearance.ControlRequests.Count);
         Assert.Equal(playbackAdvancesBefore, appearance.AdvanceRequests.Count);
         Assert.Equal(snapshotBefore, appearance.Snapshots[^1]);

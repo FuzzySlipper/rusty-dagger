@@ -465,7 +465,7 @@ internal static class DaggerfallPoisonArms
                 vitality.RestoreSpellTrack(effect.Target,TrackId.Parse("health"),amount);
                 return;
             case DaggerfallPoisonTarget.Fatigue:
-                vitality.AdjustConditionTrack(effect.Source,effect.Target, TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value), arm.IsPositive ? amount : -amount);
+                vitality.AdjustConditionTrack(effect.Source,effect.Target, TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value), arm.IsPositive ? amount : -amount);
                 return;
             case DaggerfallPoisonTarget.Magicka:
                 vitality.AdjustConditionTrack(effect.Source,effect.Target, TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value), arm.IsPositive ? amount : -amount);

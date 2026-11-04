@@ -167,7 +167,7 @@ internal sealed partial class DaggerfallSession
         w.WriteNumber("yawDegrees", player.YawRadians * 180 / Math.PI); w.WriteNumber("pitchDegrees", player.PitchRadians * 180 / Math.PI);
         Vector(w, "viewpoint", _camera.Viewpoint.ToVector());
         w.WriteBoolean("dead", State.Actors.Player.IsDefeated);
-        foreach (string track in new[] { "health", "stamina", "magicka" })
+        foreach (string track in new[] { "health", "fatigue", "stamina", "magicka" })
             w.WriteNumber(track, State.Actors.Player.Stats.GetTrack(TrackId.Parse(track)).Current);
         w.WriteStartObject("movement"); w.WriteBoolean("grounded", player.Motion.Grounded);
         w.WriteString("stance", player.Motion.Stance.ToString()); Vector(w, "velocity", player.Motion.ControlledVelocity);
@@ -181,6 +181,7 @@ internal sealed partial class DaggerfallSession
         w.WriteNumber("attackTimeScale", attacks.TimeScale(DaggerfallAttackIds.Fast[0]));
         w.WriteNumber("attackChainLength", attacks.ChainLength);
         w.WriteBoolean("winded", attacks.Winded);
+        w.WriteNumber("staminaMaximum", State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Maximum.Value);
         w.WriteStartObject("attributes");
         foreach (DaggerfallStatId stat in new[] { DaggerfallMechanicsIds.Strength, DaggerfallMechanicsIds.Agility, DaggerfallMechanicsIds.Speed, DaggerfallMechanicsIds.Luck })
             w.WriteNumber(stat.Value, PlayerStat(stat.Value));

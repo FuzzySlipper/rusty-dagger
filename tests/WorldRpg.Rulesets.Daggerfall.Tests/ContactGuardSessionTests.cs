@@ -15,6 +15,23 @@ public sealed class ContactGuardSessionTests
     private static readonly ProductInputEvent ReleaseBlock = Input(InputEventKind.MappedDigital, InputEdge.Released, x: 0, phase: InputPhase.Released, intent: "block");
 
     [Fact]
+    public void A_second_of_guarding_costs_the_tuned_stamina_however_small_each_steps_share()
+    {
+        using Fixture f = new();
+        f.Step();
+        f.Session.State.WeaponDrawn = true;
+        f.Observe(HoldBlock);
+        for (int step = 0; step < 30 && !f.Session.PlayerGuardRaised; step++) f.Step();
+        Assert.True(f.Session.PlayerGuardRaised);
+        f.Step();
+
+        double raised = f.Stamina;
+        for (int step = 0; step < 60; step++) f.Step();
+
+        Assert.Equal(DaggerfallTuning.Defaults.Contact.GuardStaminaPerSecond, raised - f.Stamina, 3);
+    }
+
+    [Fact]
     public void Holding_block_while_action_driven_time_is_idle_runs_time_to_raise_the_guard_spend_stamina_and_settle_its_release()
     {
         using Fixture f = new();

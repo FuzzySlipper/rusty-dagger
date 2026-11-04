@@ -374,7 +374,7 @@ public sealed class SpatialMovementSessionTests
         _ = session.State.Effects.Start(new DaggerfallEffectRequest("levitation-instance", "levitation-test", "test-source",
             null, DaggerfallActorIdentity.PlayerEntityId, "classic", null, null, 1, 5, state.RootElement));
         spatial.StepResult = (step, result) => result with { Motion = result.Motion with { Grounded = false } };
-        double staminaBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current;
+        double fatigueBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).Current;
 
         session.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"action-driven-time","enabled":true}"""),
             Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.Space)]));
@@ -382,7 +382,7 @@ public sealed class SpatialMovementSessionTests
         Assert.True(session.State.Effects.GrantsLevitation(DaggerfallActorIdentity.PlayerEntityId));
         Assert.Equal(0f, spatial.StepRequests[^1].Config.Vertical.Gravity);
         Assert.Equal(4f, spatial.StepRequests[^1].Motion.ControlledVelocity.Y);
-        Assert.Equal(staminaBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
+        Assert.Equal(fatigueBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).Current);
 
         session.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.Key, InputEdge.Released, keyboard: KeyboardControl.Space)]));
         Assert.Equal(0f, spatial.StepRequests[^1].Motion.ControlledVelocity.Y);

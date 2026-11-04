@@ -35,7 +35,7 @@ internal sealed record DaggerfallAttackPathGroup(IReadOnlySet<int> Templates, IR
 /// <param name="MinimumTimeScale">The shortest an attack's time can be scaled to.</param>
 /// <param name="SkillDamagePerPoint">The damage each point of weapon skill adds, rounded down; unarmed damage scales with skill by its own formula.</param>
 /// <param name="ChainSkills">The skill each chain step past the second needs.</param>
-/// <param name="WindedStamina">At or below this much stamina a character is winded: no power attack, kick or guard.</param>
+/// <param name="WindedStamina">At or below this much stamina a character is winded: no power attack, kick or guard, until it refills past it.</param>
 /// <param name="WindedTimeScale">How much longer a winded character's attacks take.</param>
 /// <param name="WindedDamageScale">How much of its damage a winded character's blow does.</param>
 /// <param name="BackstabMinimum">The multiplier on an unaware target at no Backstabbing.</param>
@@ -48,7 +48,7 @@ internal sealed record DaggerfallCombatantTuning(double SpeedPerPointAbove50, do
     double SkillDamagePerPoint, IReadOnlyList<int> ChainSkills, double WindedStamina, double WindedTimeScale, double WindedDamageScale,
     double BackstabMinimum, double BackstabMaximum, double RushTimeScale, double RushDamageScale, double ImprovedRushTimeScale, double ImprovedRushDamageScale)
 {
-    internal static DaggerfallCombatantTuning Default { get; } = new(.004d, .15d, .004d, .5d, .05d, [35, 70], 128d, 1.4d, .5d, 1.5d, 3d, .85d, 1.25d, .75d, 1.5d);
+    internal static DaggerfallCombatantTuning Default { get; } = new(.004d, .15d, .004d, .5d, .05d, [35, 70], 16d, 1.4d, .5d, 1.5d, 3d, .85d, 1.25d, .75d, 1.5d);
 
     /// <summary>How many fast attacks a weapon skill chains: two, and one more for each skill step reached.</summary>
     internal int ChainLength(int skill) => Math.Min(DaggerfallAttackIds.Fast.Count, 2 + ChainSkills.Count(step => skill >= step));
@@ -67,6 +67,49 @@ internal sealed record DaggerfallCombatantTuning(double SpeedPerPointAbove50, do
         ? value : throw new InvalidOperationException($"Attack tuning '{name}' must not be negative.");
 }
 
+/// <summary>
+/// The player's combat Stamina: how big the pool is, how it refills, and how a rising Fatigue squeezes both. Fatigue
+/// here is the share of the classic pool used up, from 0 rested to 1 at collapse.
+/// </summary>
+/// <param name="Base">The pool before attributes.</param>
+/// <param name="PerAttributePoint">What each point of Strength and of Endurance adds to the pool.</param>
+/// <param name="RefillPerSecond">How fast Stamina refills.</param>
+/// <param name="QuietSeconds">How long after the last spend the refill starts.</param>
+/// <param name="FatiguePerSwing">The classic pool's cost of each attack, in its stored units.</param>
+/// <param name="ShrinkFromFatigue">The Fatigue past which the pool shrinks.</param>
+/// <param name="ShrunkScale">The share of the pool left at collapse.</param>
+/// <param name="SlowFromFatigue">The Fatigue past which the refill slows.</param>
+/// <param name="SlowedScale">The share of the refill rate left at collapse.</param>
+internal sealed record DaggerfallStaminaTuning(double Base, double PerAttributePoint, double RefillPerSecond, double QuietSeconds, double FatiguePerSwing,
+    double ShrinkFromFatigue, double ShrunkScale, double SlowFromFatigue, double SlowedScale)
+{
+    internal static DaggerfallStaminaTuning Default { get; } = new(20d, .75d, 8d, 1d, 11d, .5d, .4d, .75d, .5d);
+
+    /// <summary>The pool a character of these attributes has at this Fatigue.</summary>
+    internal int Maximum(int strength, int endurance, double fatigue) =>
+        (int)((Base + PerAttributePoint * (strength + endurance)) * Squeeze(fatigue, ShrinkFromFatigue, ShrunkScale));
+
+    /// <summary>The share of the refill rate left at this Fatigue.</summary>
+    internal double RefillScale(double fatigue) => Squeeze(fatigue, SlowFromFatigue, SlowedScale);
+
+    private static double Squeeze(double fatigue, double from, double scale) =>
+        1d - (1d - scale) * Math.Clamp((fatigue - from) / (1d - from), 0d, 1d);
+
+    internal static DaggerfallStaminaTuning Read(JsonElement root) => new(
+        NonNegative(root, "base"), NonNegative(root, "perAttributePoint"), Positive(root, "refillPerSecond"), NonNegative(root, "quietSeconds"),
+        NonNegative(root, "fatiguePerSwing"), Share(root, "shrinkFromFatigue"), Share(root, "shrunkScale"), Share(root, "slowFromFatigue"),
+        Positive(root, "slowedScale"));
+
+    private static double NonNegative(JsonElement parent, string name) => parent.GetProperty(name).GetDouble() is >= 0d and var value && double.IsFinite(value)
+        ? value : throw new InvalidOperationException($"Stamina tuning '{name}' must not be negative.");
+
+    private static double Positive(JsonElement parent, string name) => parent.GetProperty(name).GetDouble() is > 0d and var value && double.IsFinite(value)
+        ? value : throw new InvalidOperationException($"Stamina tuning '{name}' must be positive.");
+
+    private static double Share(JsonElement parent, string name) => parent.GetProperty(name).GetDouble() is >= 0d and < 1d and var value
+        ? value : throw new InvalidOperationException($"Stamina tuning '{name}' must be a share below one.");
+}
+
 /// <summary>The player's attack set: its timing per weapon class, and what a power attack and a kick cost and do.</summary>
 internal sealed record DaggerfallAttackTuning(
     double PowerThresholdSeconds, double PowerDamageMultiplier, double PowerStaminaMultiplier,
@@ -76,10 +119,11 @@ internal sealed record DaggerfallAttackTuning(
     IReadOnlyList<DaggerfallAttackPathGroup> PathGroups)
 {
     internal DaggerfallCombatantTuning Combatant { get; init; } = DaggerfallCombatantTuning.Default;
+    internal DaggerfallStaminaTuning Stamina { get; init; } = DaggerfallStaminaTuning.Default;
 
     private static readonly DaggerfallWeaponClassAttacks ShortBlade = new(new(.18d, .12d, .28d), .5d, new(.15d, .12d, .35d), 1.9f);
 
-    internal static DaggerfallAttackTuning Default { get; } = new(.2d, 2d, 2d, new(.25d, .12d, .4d), 64, 1, 1.7f,
+    internal static DaggerfallAttackTuning Default { get; } = new(.2d, 2d, 2d, new(.25d, .12d, .4d), 10, 1, 1.7f,
         new Dictionary<string, DaggerfallWeaponClassAttacks>(StringComparer.Ordinal)
         {
             [DaggerfallSkills.ShortBlade] = ShortBlade,
@@ -146,7 +190,7 @@ internal sealed record DaggerfallAttackTuning(
             groups.Add(new(group.GetProperty("templates").EnumerateArray().Select(template => template.GetInt32()).ToHashSet(), ReadPaths(group.GetProperty("paths"))));
         return new(Positive(root, "powerThresholdSeconds"), Positive(root, "powerDamageMultiplier"), Positive(root, "powerStaminaMultiplier"),
             ReadTiming(root.GetProperty("kick")), root.GetProperty("kickStaminaCost").GetInt32(), root.GetProperty("kickDamage").GetInt32(), (float)Positive(root, "kickReach"), classes, ReadPaths(root.GetProperty("paths")), groups)
-        { Combatant = DaggerfallCombatantTuning.Read(root.GetProperty("combatant")) };
+        { Combatant = DaggerfallCombatantTuning.Read(root.GetProperty("combatant")), Stamina = DaggerfallStaminaTuning.Read(root.GetProperty("stamina")) };
     }
 
     private static Dictionary<string, DaggerfallAttackPath> ReadPaths(JsonElement value)

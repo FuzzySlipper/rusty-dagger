@@ -6,7 +6,8 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
 /// The one player-only maximum-vitals policy. Health keeps its permanent career and level-roll
-/// sources; fatigue and spell points follow the current live attributes as the donor does.
+/// sources; fatigue and spell points follow the current live attributes as the donor does. Stamina
+/// is not here: it moves with Fatigue as well, so DaggerfallPlayerStamina keeps its maximum.
 /// </summary>
 internal static class DaggerfallPlayerVitals
 {
@@ -32,7 +33,7 @@ internal static class DaggerfallPlayerVitals
         int intelligence = Value(stats, DaggerfallMechanicsIds.Intelligence);
         int endurance = Value(stats, DaggerfallMechanicsIds.Endurance);
         stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value)).BaseValue = HealthBase(career);
-        stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.StaminaMaximum.Value)).BaseValue =
+        stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.FatigueMaximum.Value)).BaseValue =
             DaggerfallFormulaPolicy.MaxFatigue(strength, endurance);
         stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.MagickaMaximum.Value)).BaseValue =
             DaggerfallFormulaPolicy.SpellPoints(intelligence, career.SpellPointMultiplierMilli);

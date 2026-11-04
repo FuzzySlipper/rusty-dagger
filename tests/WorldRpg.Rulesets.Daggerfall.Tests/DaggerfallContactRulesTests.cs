@@ -378,7 +378,7 @@ public sealed class DaggerfallContactRulesTests
         using Fixture fixture = new();
         DaggerfallContactGuard guard = new(fixture.SeamInputs, Tuning);
         Track stamina = fixture.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value));
-        stamina.SetCurrent(100d);
+        stamina.SetCurrent(50d);
         FactBuffer<IProductFact> facts = new();
 
         guard.Step(.5d, canGuard: true, swinging: false, 1, 1, facts);
@@ -390,9 +390,9 @@ public sealed class DaggerfallContactRulesTests
         Assert.False(guard.Raised); // Never raised mid-swing.
         guard.Step(.5d, canGuard: true, swinging: false, 1, 4, facts);
         Assert.True(guard.Raised);
-        Assert.Equal(100d, stamina.Current); // Raising is free; holding is not.
+        Assert.Equal(50d, stamina.Current); // Raising is free; holding is not.
         guard.Step(.5d, canGuard: true, swinging: false, 1, 5, facts);
-        Assert.Equal(100d - Tuning.GuardStaminaPerSecond * .5d, stamina.Current, 6);
+        Assert.Equal(50d - Tuning.GuardStaminaPerSecond * .5d, stamina.Current, 6);
         guard.Step(.5d, canGuard: true, swinging: true, 1, 6, facts);
         Assert.False(guard.Raised); // A swing ends the block.
         guard.Step(.5d, canGuard: true, swinging: false, 1, 7, facts);

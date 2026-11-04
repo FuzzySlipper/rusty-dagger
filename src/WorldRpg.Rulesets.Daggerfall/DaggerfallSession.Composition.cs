@@ -335,6 +335,8 @@ internal sealed partial class DaggerfallSession
             DaggerfallComposedSeams seams = composition.Seams.Build(SeamInputs(), _tuning.Contact);
             _guard = seams.PlayerGuard;
             _attackClock = new DaggerfallPlayerAttackClock(_tuning.Attacks, this);
+            _stamina = new DaggerfallPlayerStamina(_tuning.Attacks.Stamina);
+            _stamina.Refresh(actors.Player.Stats);
             _harmPresentation = seams.HarmPresentation;
             _touch = seams.TouchDelivery(new(_contact, _spatial, () => _sites?.CharacterEnvironment(assembled.PlayerControl.Motion)));
             _combat = new DaggerCombatRules(_random, actors, equipmentCoordinator, actorInventories.InventoryFor, itemInstances, definitions, authored, targeting, use => skillUses.Record(use),

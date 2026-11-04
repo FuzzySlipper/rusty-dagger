@@ -108,7 +108,7 @@ public sealed class ItemCastTriggerSessionTests
         s.AdvanceElapsedTime(0);
         var refused = s.ApplyRest(new(DaggerfallRestMode.Timed, 1), new(false), _ => throw new InvalidOperationException());
         Assert.False(refused.Accepted);
-        foreach (string track in new[] { "health", "stamina", "magicka" })
+        foreach (string track in new[] { "health", "fatigue", "magicka" })
         {
             var value = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse(track));
             value.SetCurrent(value.Maximum.Value);

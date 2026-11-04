@@ -13,7 +13,7 @@ internal sealed class DaggerfallLocomotionPolicy
 {
     private static readonly StatId Speed = StatId.Parse(DaggerfallMechanicsIds.Speed.Value);
     private static readonly StatId Running = StatId.Parse(DaggerfallMechanicsIds.Running.Value);
-    private static readonly TrackId Stamina = TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value);
+    private static readonly TrackId Fatigue = TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value);
     private readonly DaggerfallLocomotionTuning _tuning;
     private FpsInput _input;
     private bool _jumpInFlight;
@@ -108,8 +108,8 @@ internal sealed class DaggerfallLocomotionPolicy
         bool rising = accepted.Motion.ControlledVelocity.Y > 0f && before.ControlledVelocity.Y <= 0f;
         if (!_jumpInFlight && step.JumpRequested && rising)
         {
-            Track stamina = stats.GetTrack(Stamina);
-            _ = stamina.Spend(Math.Min(stamina.Current, MovementFatigue(_tuning.JumpFatigueCost)));
+            Track fatigue = stats.GetTrack(Fatigue);
+            _ = fatigue.Spend(Math.Min(fatigue.Current, MovementFatigue(_tuning.JumpFatigueCost)));
             _jumpInFlight = true;
             recordSkillUse(new DaggerfallSkillUse(DaggerfallMechanicsIds.Jumping.Value, DaggerfallSkillUseReason.Jumping, DaggerfallSkillUseOutcome.Accepted));
         }
@@ -133,7 +133,7 @@ internal sealed class DaggerfallLocomotionPolicy
         if (after < before) throw new ArgumentOutOfRangeException(nameof(after));
         if (after == before) return;
         ArgumentNullException.ThrowIfNull(stats);
-        Track stamina = stats.GetTrack(Stamina);
+        Track fatigue = stats.GetTrack(Fatigue);
         long minutes = checked(after - before);
         long climbingMinutes = Math.Min(minutes, checked((long)Math.Ceiling(_climbingGameSeconds / DaggerfallCalendar.SecondsPerMinute)));
         long runningMinutes = Math.Min(minutes - climbingMinutes, checked((long)Math.Ceiling(_runningGameSeconds / DaggerfallCalendar.SecondsPerMinute)));
@@ -147,12 +147,12 @@ internal sealed class DaggerfallLocomotionPolicy
         // A swimming minute whose roll passed is an ordinary minute and pays the idle rate, as the donor's
         // default amount does, unless the caller suppresses newly incurred idle loss.
         long passedSwimmingMinutes = includeIdleFatigue ? swimmingMinutes - failedSwimmingMinutes : 0;
-        long fatigue = checked((climbingMinutes * MovementFatigue(_tuning.ClimbingFatiguePerGameMinute))
+        long spent = checked((climbingMinutes * MovementFatigue(_tuning.ClimbingFatiguePerGameMinute))
             + (runningMinutes * MovementFatigue(_tuning.RunningFatiguePerGameMinute))
             + (failedSwimmingMinutes * MovementFatigue(_tuning.SwimmingFatiguePerGameMinute))
             + (passedSwimmingMinutes * MovementFatigue(_tuning.IdleFatiguePerGameMinute))
             + (idleMinutes * MovementFatigue(_tuning.IdleFatiguePerGameMinute)));
-        _ = stamina.Spend(Math.Min(stamina.Current, fatigue));
+        _ = fatigue.Spend(Math.Min(fatigue.Current, spent));
         _runningGameSeconds = 0d;
         _climbingGameSeconds = 0d;
         _swimmingGameSeconds = 0d;

@@ -196,7 +196,7 @@ public sealed class VampirismSessionTests
         s.State.RacialOverrides.Select(DaggerfallRacialKind.Vampire, "vampire", Minute(s), vampireClan: 153);
         s.AdvanceElapsedTime(1441 * 60);
         long hungry = s.State.RacialOverrides.Current!.State.Vampire!.LastFedMinute;
-        var stamina = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")); stamina.SetCurrent(stamina.Maximum.Value);
+        var fatigue = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")); fatigue.SetCurrent(fatigue.Maximum.Value);
         var player = s.State.PlayerControl.Position!.Value; var enemy = s.State.Actors.Get(f.Enemy);
         enemy.ApplyPose(new(new WorldPoint(player.X,player.Y,player.Z-0.1f),0));
         s.State.Kit.Rules.RegisterAction(s.DefinitionsByActor[1].ActionId!, new OneDamage());

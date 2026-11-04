@@ -167,7 +167,7 @@ public sealed class DaggerfallDiseasePolicyTests
         Assert.Equal(40, Attribute(actors, DaggerfallMechanicsIds.Luck));
         Assert.Equal(50, BaseAttribute(actors, DaggerfallMechanicsIds.Strength));
         Assert.Equal(90, Track(actors, DaggerfallMechanicsIds.Health));
-        Assert.Equal(90, Track(actors, DaggerfallMechanicsIds.Stamina));
+        Assert.Equal(90, Track(actors, DaggerfallMechanicsIds.Fatigue));
         Assert.Equal(75, Track(actors, DaggerfallMechanicsIds.Magicka));
         Assert.Equal(System.Text.Json.JsonValueKind.Null,
             Assert.Single(effects.Active).State.GetProperty("daysOfSymptomsLeft").ValueKind);
@@ -575,10 +575,10 @@ public sealed class DaggerfallDiseasePolicyTests
         // This synthetic player uses a 75-HP career, so health remains its permanent
         // 25 + HPL base while the donor's live attributes govern fatigue and spell points.
         int healthMaximum = 100;
-        int staminaMaximum = (100 - ((strength + endurance) * damage)) * 64;
+        int fatigueMaximum = (100 - ((strength + endurance) * damage)) * 64;
         int magickaMaximum = (50 - (intelligence * damage)) * 2;
         Assert.Equal(TrackAfterMaximumRefresh(100, healthMaximum, health * damage), Track(actors, DaggerfallMechanicsIds.Health));
-        Assert.Equal(TrackAfterMaximumRefresh(100, staminaMaximum, fatigue * damage), Track(actors, DaggerfallMechanicsIds.Stamina));
+        Assert.Equal(TrackAfterMaximumRefresh(100, fatigueMaximum, fatigue * damage), Track(actors, DaggerfallMechanicsIds.Fatigue));
         Assert.Equal(TrackAfterMaximumRefresh(100, magickaMaximum, magicka * damage), Track(actors, DaggerfallMechanicsIds.Magicka));
         if (symptoms == 0)
             Assert.Equal(System.Text.Json.JsonValueKind.Null, Assert.Single(effects.Active).State.GetProperty("daysOfSymptomsLeft").ValueKind);
@@ -629,7 +629,7 @@ public sealed class DaggerfallDiseasePolicyTests
         stats.AddStat(StatId.Parse(DaggerfallMechanicsIds.ResistanceDiseaseOrPoison.Value), new Stat(0, -10_000, 10_000, quantum: 1, rounding: MidpointRounding.ToZero, integerRounding: MidpointRounding.ToZero));
         stats.AddStat(StatId.Parse(DaggerfallMechanicsIds.ImmunityDisease.Value), new Stat(0, 0, 1, quantum: 1, rounding: MidpointRounding.ToZero, integerRounding: MidpointRounding.ToZero));
         AddTrack(stats, DaggerfallMechanicsIds.HealthMaximum, DaggerfallMechanicsIds.Health);
-        AddTrack(stats, DaggerfallMechanicsIds.StaminaMaximum, DaggerfallMechanicsIds.Stamina);
+        AddTrack(stats, DaggerfallMechanicsIds.FatigueMaximum, DaggerfallMechanicsIds.Fatigue);
         AddTrack(stats, DaggerfallMechanicsIds.MagickaMaximum, DaggerfallMechanicsIds.Magicka);
         return stats;
     }

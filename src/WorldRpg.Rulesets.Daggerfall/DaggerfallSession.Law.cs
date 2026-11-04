@@ -310,7 +310,7 @@ internal sealed partial class DaggerfallSession
             if (State.Actors.TryGet(id, out _)) _roster.RemoveQuestActor(id);
             else RetireDetachedActor(id);
         }
-        foreach (string id in new[] { "health", "stamina", "magicka" })
+        foreach (string id in new[] { "health", "fatigue", "stamina", "magicka" })
         {
             var track = State.Actors.Player.Stats.GetTrack(TrackId.Parse(id)); track.SetCurrent(track.Maximum.Value);
         }

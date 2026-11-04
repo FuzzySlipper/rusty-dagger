@@ -299,7 +299,7 @@ internal sealed partial class DaggerfallCharacterState
     private string ResourceLine(DaggerfallHudResourceDefinition resource)
     {
         long maximum = _stats.GetTrack(TrackId.Parse(resource.Track.Value)).Maximum.ValueInt64;
-        return $"{resource.Label}: {(resource.Track == DaggerfallMechanicsIds.Stamina ? DaggerfallFormulaPolicy.DisplayFatigue(maximum) : maximum)}";
+        return $"{resource.Label}: {(resource.Track == DaggerfallMechanicsIds.Fatigue ? DaggerfallFormulaPolicy.DisplayFatigue(maximum) : maximum)}";
     }
 
     private static string ReflexLabel(DaggerfallCharacterReflexes reflexes) => reflexes switch

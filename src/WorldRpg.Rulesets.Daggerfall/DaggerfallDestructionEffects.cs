@@ -35,7 +35,7 @@ internal static class DaggerfallDestructionEffects
                         bool fatigue = selected == "damage-fatigue";
                         int amount = fatigue ? DaggerfallFormulaPolicy.SpellFatigueDamage(state.Amount) : state.Amount;
                         trackApplied(vitality.ResolveSpellTrack(effect.Source, effect.Target,
-                            TrackId.Parse(fatigue ? DaggerfallMechanicsIds.Stamina.Value : DaggerfallMechanicsIds.Magicka.Value), amount));
+                            TrackId.Parse(fatigue ? DaggerfallMechanicsIds.Fatigue.Value : DaggerfallMechanicsIds.Magicka.Value), amount));
                     }
                     // A DFU dungeon CastSpell bundle has no entity caster. Its admitted action
                     // source supplies the player-level power, while the target fallback above

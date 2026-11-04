@@ -183,10 +183,12 @@ fast attack, and another click during its recovery chains the next one. Holding
 the button charges a power attack, released when you let go. **Right mouse** holds
 a guard and **G** kicks with any weapon. Controls can rebind them all.
 
-Fighting spends stamina, and it comes back only through rest, travel and the
-exhaustion collapse's recovery hour. A winded character still swings, slower and
-weaker, but has no power attack, kick or guard until rested. Ordinary fatigue
-keeps draining what's left, and collapsing near an enemy is fatal.
+Fighting spends Stamina, which refills on its own a moment after you stop. Near
+empty you're winded: you still swing, slower and weaker, but have no power
+attack, kick or guard until it refills. Fatigue is the slow bar beneath it, which
+rises as you travel, run and fight and only falls with rest or magic. Past half
+it shrinks your Stamina, past three quarters it slows the refill, and when it
+fills you collapse, which is fatal near an enemy.
 
 Weapon art retains classic proportions and fits the bottom and authored side of
 the view. Engine input capture keeps gameplay

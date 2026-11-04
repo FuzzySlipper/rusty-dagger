@@ -23,7 +23,7 @@ public sealed class DaggerfallClimbingPolicyTests
     public void Accepted_checks_attach_then_slip_recover_and_detach_when_wall_is_lost()
     {
         DaggerfallClimbingPolicy policy = new(DaggerfallClimbingTuning.Classic);
-        StatsComponent stats = Stats(stamina: 200);
+        StatsComponent stats = Stats(fatigue: 200);
         DaggerfallLocomotionStep forward = Forward();
         List<DaggerfallSkillUse> uses = [];
         DaggerfallClimbStep start = policy.BeginStep(forward, default(CharacterMotion) with { Grounded = true },
@@ -56,7 +56,7 @@ public sealed class DaggerfallClimbingPolicyTests
     public void Falling_backstep_rappel_and_restored_wall_attachment_have_distinct_admitted_outcomes()
     {
         DaggerfallClimbingPolicy policy = new(DaggerfallClimbingTuning.Classic);
-        StatsComponent stats = Stats(stamina: 200);
+        StatsComponent stats = Stats(fatigue: 200);
         DaggerfallLocomotionStep back = Forward() with { ForwardIntent = -1f };
         List<DaggerfallSkillUse> uses = [];
         Assert.False(policy.BeginStep(back, default(CharacterMotion) with { Grounded = false, ControlledVelocity = Vector3.UnitY },
@@ -86,21 +86,21 @@ public sealed class DaggerfallClimbingPolicyTests
     [Fact]
     public void An_empty_fatigue_pool_keeps_the_hold_and_accepted_climbing_time_charges_the_calendar_owner_once()
     {
-        StatsComponent stats = Stats(stamina: 200);
+        StatsComponent stats = Stats(fatigue: 200);
         DaggerfallClimbingPolicy climbing = new(DaggerfallClimbingTuning.Classic);
         DaggerfallClimbStep attached = climbing.BeginStep(Forward(), default(CharacterMotion) with { Grounded = true },
             true, true, false, true, stats, false, false, .8f, () => 1);
         climbing.CompleteStep(attached, Receipt(.1f), _ => { });
         // The donor's climbing motor never lets go for fatigue; exhaustion is the session's collapse.
-        stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).SetCurrent(0);
+        stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).SetCurrent(0);
         Assert.True(climbing.BeginStep(Forward(), default, true, true, false, true, stats, false, false, .1f, () => 1).Climbing);
 
-        stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).SetCurrent(200);
+        stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).SetCurrent(200);
         DaggerfallLocomotionPolicy locomotion = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());
         locomotion.CompleteStep(Forward() with { Climbing = true }, default, Receipt(.1f), 60d, stats, _ => { });
         locomotion.AdvanceCalendarMinutes(0, 1, stats);
         locomotion.AdvanceCalendarMinutes(1, 2, stats);
-        Assert.Equal(167d, stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
+        Assert.Equal(167d, stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).Current);
     }
 
     private static DaggerfallLocomotionStep Forward() => new(new CharacterStepControls(ForwardSpeed: 3f),
@@ -112,12 +112,12 @@ public sealed class DaggerfallClimbingPolicyTests
         Motion = default(CharacterMotion) with { Grounded = false },
     };
 
-    private static StatsComponent Stats(int stamina)
+    private static StatsComponent Stats(int fatigue)
     {
         StatsComponent stats = new();
         stats.AddStat(StatId.Parse(DaggerfallMechanicsIds.Climbing.Value), new Stat(10));
         stats.AddStat(StatId.Parse(DaggerfallMechanicsIds.Luck.Value), new Stat(50));
-        stats.AddTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value), new Track(200, stamina));
+        stats.AddTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value), new Track(200, fatigue));
         return stats;
     }
 }

@@ -29,7 +29,7 @@ internal sealed partial class DaggerfallSession : IDaggerfallTransformationConsu
         foreach (var attribute in DaggerfallMechanicsIds.Attributes)
             DaggerfallAttributeDrainEffects.Heal(State.Effects, DaggerfallActorIdentity.PlayerEntityId, attribute,
                 int.MaxValue, () => State.Character.Career);
-        foreach (string track in new[] { "health", "stamina", "magicka" })
+        foreach (string track in new[] { "health", "fatigue", "stamina", "magicka" })
         {
             var value = State.Actors.Player.Stats.GetTrack(TrackId.Parse(track));
             value.SetCurrent(value.Maximum.Value);

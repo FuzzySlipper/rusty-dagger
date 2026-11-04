@@ -361,12 +361,14 @@ internal sealed class DaggerfallCharacterPresentation
         })
         .ToArray() ?? [];
 
+    /// <summary>A resource as the player reads it. Fatigue is stored as the classic pool that remains and shown as what is used up, so it rises and high is bad.</summary>
     internal static CharacterResourcePresentation Resource(PlayerActorState player, DaggerfallHudResourceDefinition resource)
     {
         Track value = player.Stats.GetTrack(TrackId.Parse(resource.Track.Value));
-        return new CharacterResourcePresentation(resource.Id, resource.Label,
-            resource.Track == DaggerfallMechanicsIds.Stamina ? DaggerfallFormulaPolicy.DisplayFatigue(value.ValueInt64) : value.ValueInt64,
-            resource.Track == DaggerfallMechanicsIds.Stamina ? DaggerfallFormulaPolicy.DisplayFatigue(value.Maximum.ValueInt64) : value.Maximum.ValueInt64);
+        if (resource.Track != DaggerfallMechanicsIds.Fatigue)
+            return new CharacterResourcePresentation(resource.Id, resource.Label, value.ValueInt64, value.Maximum.ValueInt64);
+        long maximum = DaggerfallFormulaPolicy.DisplayFatigue(value.Maximum.ValueInt64);
+        return new CharacterResourcePresentation(resource.Id, resource.Label, maximum - DaggerfallFormulaPolicy.DisplayFatigue(value.ValueInt64), maximum);
     }
 
 

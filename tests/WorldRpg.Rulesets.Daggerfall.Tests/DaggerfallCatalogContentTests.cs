@@ -15,7 +15,7 @@ public sealed class DaggerfallCatalogContentTests
 
         Assert.Equal(9, definitions.Vocabulary.Attributes.Count);
         Assert.Equal(35, definitions.Vocabulary.Skills.Count);
-        Assert.Equal(3, definitions.Vocabulary.Tracks.Count);
+        Assert.Equal(4, definitions.Vocabulary.Tracks.Count);
         Assert.Equal(7, definitions.Vocabulary.ArmorParts.Count);
         Assert.Equal(2, definitions.Vocabulary.Progression.Count);
         Assert.Equal(42, definitions.Actors.Values.Count(actor => actor.Kind == "monster"));
@@ -41,15 +41,15 @@ public sealed class DaggerfallCatalogContentTests
         Assert.Equal("both", definitions.Items[new DaggerfallItemId("iron-short-bow")].Weapon!.Handedness);
         Assert.Equal("right-hand", definitions.RequireActor(new DaggerfallActorId("player")).Loadout[0].EquipSlot!.Value.Value);
         Assert.Equal(8, definitions.RequireActor(new DaggerfallActorId("player")).HitPointsPerLevel);
-        // WeaponManager charges every swing, a bow shot included, 11 fatigue units.
-        Assert.Equal(11, definitions.Actions["melee-attack"].StaminaCost);
+        // Every swing, a bow shot included, costs the same stamina; attack tuning adds the classic's 11 fatigue units.
+        Assert.Equal(10, definitions.Actions["melee-attack"].StaminaCost);
         Assert.Equal(["archer-shot", "bow-shot", "enemy-class-equipped-melee", "melee-attack", "monster-strike", "skeleton-strike", "thief-strike"], definitions.Actions.Values.OrderBy(action => action.Id).Select(action => action.Id));
         // The player's bow: the archer's reach and skill, no authored cooldown (FORM-04 owns it) and the
-        // same fatigue cost a swing pays.
+        // same stamina cost a swing pays.
         Assert.Equal(10d, definitions.Actions["bow-shot"].Reach);
         Assert.Equal("archery", definitions.Actions["bow-shot"].Skill);
         Assert.Null(definitions.Actions["bow-shot"].CooldownSeconds);
-        Assert.Equal(11, definitions.Actions["bow-shot"].StaminaCost);
+        Assert.Equal(10, definitions.Actions["bow-shot"].StaminaCost);
         Assert.Equal(0, definitions.Actions["monster-strike"].AttackRangeIndex);
         Assert.Null(definitions.Actions["monster-strike"].MinimumDamage);
         Assert.Equal(.1, definitions.Actions["melee-attack"].CooldownSeconds);

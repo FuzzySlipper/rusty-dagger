@@ -58,14 +58,14 @@ public sealed class ControlsInputSessionTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         double before = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
-        double staminaBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current;
+        double fatigueBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")).Current;
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
         session.Touches(2000);
         session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d), [AttackDown, AttackDown, AttackUp]));
-        // Two copies of one press are one admitted swing and one stamina charge, and the damage itself
+        // Two copies of one press are one admitted swing and one fatigue charge, and the damage itself
         // waits for the end of the swing's windup.
         Assert.Equal(before, session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current);
-        Assert.True(session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current < staminaBefore);
+        Assert.True(session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")).Current < fatigueBefore);
         ulong step = 4;
         RunSeconds(session, ref step, DaggerfallTuning.Defaults.Attacks.For("long-blade").Fast.Windup + 2d / 60d);
         double after = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;

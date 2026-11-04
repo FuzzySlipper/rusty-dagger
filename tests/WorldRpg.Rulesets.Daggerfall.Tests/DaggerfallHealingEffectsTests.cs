@@ -35,7 +35,7 @@ public sealed class DaggerfallHealingEffectsTests
     }
 
     [Theory]
-    [InlineData(8, "health", 10)] [InlineData(9, "stamina", 640)]
+    [InlineData(8, "health", 10)] [InlineData(9, "fatigue", 640)]
     public void Vital_healing_uses_bounded_tracks_and_actual_initial_delivery(int subtype, string trackName, int amount)
     {
         using Fixture f = new(); var s = f.Session; var track = Track(s, trackName); track.Maximum.BaseValue = 1000; track.SetCurrent(1);
@@ -56,7 +56,7 @@ public sealed class DaggerfallHealingEffectsTests
         {
             var spell = TestPayload.Definitions.Magic.Spells.Values.First(spell => spell.Element == 4 && spell.RangeType == 0
                 && spell.Effects.Count == 1 && spell.Effects[0].Type == 10 && spell.Effects[0].SubType == subtype);
-            var track = Track(s, subtype == 8 ? "health" : "stamina"); track.SetCurrent(1); Fund(s); s.State.Character.LearnSpell(spell.Key);
+            var track = Track(s, subtype == 8 ? "health" : "fatigue"); track.SetCurrent(1); Fund(s); s.State.Character.LearnSpell(spell.Key);
             Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell(spell.Key).Outcome);
             var bundle = s.Casting.Release(1, true).Bundle!; s.Casting.Deliver(bundle, [1]);
             Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(bundle.Results).Outcome); Assert.True(track.Current > 1); Assert.Empty(s.State.Effects.Active);

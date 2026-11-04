@@ -17,10 +17,10 @@ public sealed class CalendarIntervalReconciliationTests
     {
         using var f = new SanguineRoseSessionTests.Fixture(definitions: QuestDiseaseTests.Definitions("train pc LongBlade"));
         DaggerfallSession s = f.Session;
-        Track stamina = Stamina(s);
-        double full = stamina.Maximum.Value;
-        Assert.True(full > 11 * 200, $"Stamina maximum {full} cannot show a doubled training charge.");
-        stamina.SetCurrent(full);
+        Track fatigue = Fatigue(s);
+        double full = fatigue.Maximum.Value;
+        Assert.True(full > 11 * 200, $"Fatigue maximum {full} cannot show a doubled training charge.");
+        fatigue.SetCurrent(full);
         long minuteBefore = Minute(s);
         long roundsBefore = s.State.Effects.MagicRounds;
         QuestDiseaseTests.Start(s);
@@ -30,7 +30,7 @@ public sealed class CalendarIntervalReconciliationTests
         long minutes = Minute(s) - minuteBefore;
         Assert.True(minutes >= 180, $"Training admitted {minutes} minutes.");
         // The source training cost is 180 idle minutes; every other minute of the update is idle.
-        Assert.Equal(full - (11d * minutes), stamina.Current);
+        Assert.Equal(full - (11d * minutes), fatigue.Current);
         Assert.Equal(minutes, s.State.Effects.MagicRounds - roundsBefore);
     }
 
@@ -39,10 +39,10 @@ public sealed class CalendarIntervalReconciliationTests
     {
         using var f = new SanguineRoseSessionTests.Fixture(definitions: QuestDiseaseTests.Definitions("train pc LongBlade"));
         DaggerfallSession s = f.Session;
-        Track stamina = Stamina(s);
-        double full = stamina.Maximum.Value;
-        Assert.True(full > 11 * 200, $"Stamina maximum {full} cannot show a doubled training charge.");
-        stamina.SetCurrent(full);
+        Track fatigue = Fatigue(s);
+        double full = fatigue.Maximum.Value;
+        Assert.True(full > 11 * 200, $"Fatigue maximum {full} cannot show a doubled training charge.");
+        fatigue.SetCurrent(full);
         long minuteBefore = Minute(s);
         long roundsBefore = s.State.Effects.MagicRounds;
         QuestDiseaseTests.Start(s);
@@ -52,7 +52,7 @@ public sealed class CalendarIntervalReconciliationTests
         Assert.Equal(minuteBefore + 1 + 180, Minute(s));
         Assert.Equal(181, s.State.Effects.MagicRounds - roundsBefore);
         // One elapsed idle minute plus the training's own 180-minute source cost.
-        Assert.Equal(full - (11d * 181), stamina.Current);
+        Assert.Equal(full - (11d * 181), fatigue.Current);
     }
 
     [Fact]
@@ -70,8 +70,8 @@ public sealed class CalendarIntervalReconciliationTests
         Assert.True(quest.Tasks.Single(task => task.Symbol == "hit").IsSet);
     }
 
-    private static Track Stamina(DaggerfallSession session) =>
-        session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value));
+    private static Track Fatigue(DaggerfallSession session) =>
+        session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value));
 
     private static long Minute(DaggerfallSession session)
     {

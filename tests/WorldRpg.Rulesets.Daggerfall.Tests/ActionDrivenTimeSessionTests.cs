@@ -55,13 +55,13 @@ public sealed class ActionDrivenTimeSessionTests
         Assert.NotEqual(System.Numerics.Vector2.Zero, f.Spatial.StepRequests.Last().Command.PlanarIntent);
         f.Observe(Input(InputEventKind.Key, InputEdge.Released, keyboard: KeyboardControl.KeyW));
         Assert.True(f.Session.PlayerTimeHeld);
-        double before = f.Session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current;
+        double before = f.Session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")).Current;
         f.Observe(AttackTap);
         f.Observe();
         Assert.False(f.Session.PlayerTimeHeld);
-        Assert.Equal(before, f.Session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
+        Assert.Equal(before, f.Session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")).Current);
         f.Step();
-        double after = f.Session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current;
+        double after = f.Session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")).Current;
         Assert.True(after < before);
         Assert.False(f.Session.PlayerTimeHeld);
         // Time runs through the attack's whole motion, by the rules' clock, and holds again once it has ended.
@@ -74,7 +74,7 @@ public sealed class ActionDrivenTimeSessionTests
         for (int step = 0; step < 6; step++) f.Step();
         Assert.True(f.Session.PlayerTimeHeld);
         f.Observe();
-        Assert.Equal(after, f.Session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
+        Assert.Equal(after, f.Session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")).Current);
         f.Observe(Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.Space));
         Assert.False(f.Session.PlayerTimeHeld);
         f.Observe(Input(InputEventKind.Key, InputEdge.Released, keyboard: KeyboardControl.Space));

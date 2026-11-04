@@ -20,7 +20,7 @@ public sealed class DaggerfallDestructionEffectsTests
 {
     [Theory]
     [InlineData(0, "health", 10)]
-    [InlineData(1, "stamina", 640)]
+    [InlineData(1, "fatigue", 640)]
     [InlineData(2, "magicka", 10)]
     public void Admitted_variants_apply_once_with_classic_fatigue_units_and_guarded_bounds(int subtype, string track, int amount)
     {
@@ -56,7 +56,7 @@ public sealed class DaggerfallDestructionEffectsTests
         h.Profile = h.Profile with { CareerTolerances = h.Profile.CareerTolerances with { Magic = DaggerfallMagicTolerance.Normal } };
         var bundle = h.Release(); h.Casting.Deliver(bundle, [2]);
         Assert.Equal(75, Assert.Single(bundle.Results).SavePercent);
-        Assert.Equal(1000 - (subtype == 1 ? 448 : 7), h.Track(2, subtype == 0 ? "health" : subtype == 1 ? "stamina" : "magicka").Current);
+        Assert.Equal(1000 - (subtype == 1 ? 448 : 7), h.Track(2, subtype == 0 ? "health" : subtype == 1 ? "fatigue" : "magicka").Current);
         Assert.Empty(h.Effects.Active);
     }
 
@@ -65,9 +65,9 @@ public sealed class DaggerfallDestructionEffectsTests
     {
         using Harness h = new(subtype: 1); h.Hostile = false;
         h.Casting.Deliver(h.Release(), [2]);
-        Assert.Equal(1000, h.Track(2, "stamina").Current); Assert.Empty(h.TrackResults); Assert.Empty(h.Attacks);
+        Assert.Equal(1000, h.Track(2, "fatigue").Current); Assert.Empty(h.TrackResults); Assert.Empty(h.Attacks);
         h.Casting.Deliver(h.Release(), [1]);
-        Assert.Equal(360, h.Track(1, "stamina").Current); Assert.Single(h.TrackResults);
+        Assert.Equal(360, h.Track(1, "fatigue").Current); Assert.Single(h.TrackResults);
     }
 
     [Fact]
@@ -76,7 +76,7 @@ public sealed class DaggerfallDestructionEffectsTests
         foreach (int subtype in new[] { 1, 2 })
         {
             using Harness h = new(subtype: subtype);
-            var track = h.Track(2, subtype == 1 ? "stamina" : "magicka");
+            var track = h.Track(2, subtype == 1 ? "fatigue" : "magicka");
             track.Maximum.BaseValue = 0; track.SetCurrent(0);
             h.Casting.Deliver(h.Release(), [2]);
             Assert.Equal(0, track.Current); Assert.Equal(0, Assert.Single(h.TrackResults).ActualLoss);
@@ -252,7 +252,7 @@ public sealed class DaggerfallDestructionEffectsTests
         private static StatsComponent Stats()
         {
             StatsComponent stats = new();
-            foreach (var key in new[] { "health", "magicka", "stamina" }) { var maximum = new Stat(1000); stats.AddStat(StatId.Parse(key+"-maximum"),maximum); stats.AddTrack(TrackId.Parse(key),new(maximum,1000)); }
+            foreach (var key in new[] { "health", "magicka", "fatigue" }) { var maximum = new Stat(1000); stats.AddStat(StatId.Parse(key+"-maximum"),maximum); stats.AddTrack(TrackId.Parse(key),new(maximum,1000)); }
             stats.AddStat(StatId.Parse("destruction"),new(100)); return stats;
         }
         public void Dispose() { Effects.Dispose(); Actors.Dispose(); }

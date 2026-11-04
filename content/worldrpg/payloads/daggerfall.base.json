@@ -57,6 +57,7 @@
     ],
     "tracks": [
       "health",
+      "fatigue",
       "stamina",
       "magicka"
     ],
@@ -2998,7 +2999,7 @@
       "reach": 10.0,
       "interpretation": "player-equipped-ranged",
       "skill": "archery",
-      "staminaCost": 64
+      "staminaCost": 10
     },
     {
       "id": "melee-attack",
@@ -3010,7 +3011,7 @@
       "cooldownSeconds": 0.1,
       "interpretation": "player-equipped-melee",
       "skill": "equipped",
-      "staminaCost": 64
+      "staminaCost": 10
     },
     {
       "id": "monster-strike",
@@ -3450,6 +3451,11 @@
       "id": "stamina",
       "label": "Stamina",
       "track": "stamina"
+    },
+    {
+      "id": "fatigue",
+      "label": "Fatigue",
+      "track": "fatigue"
     },
     {
       "id": "magicka",

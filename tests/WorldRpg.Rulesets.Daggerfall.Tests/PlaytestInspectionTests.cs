@@ -37,8 +37,8 @@ public sealed class PlaytestInspectionTests
         var session = fixture.Session;
         var position = session.State.PlayerControl.Position;
         var lastActivation = session.LastActivationTargeting;
-        var stamina = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina"));
-        double before = stamina.Current;
+        var fatigue = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue"));
+        double before = fatigue.Current;
         var module = new InteractionDebugModule(new WorldInteraction(new CurrentInteractionInspectionScene(session.CreateInteractionInspection), targetedUseEnabled: false));
         using var readout = JsonDocument.Parse(module.Inspect().Message);
         Assert.Equal("observation-only", readout.RootElement.GetProperty("assistance").GetString());
@@ -49,7 +49,7 @@ public sealed class PlaytestInspectionTests
         Assert.Equal(DebugCommandStatus.InvalidArguments, session.ReadSpatialGrid(16, 0, 1).Status);
         Assert.Equal(DebugCommandStatus.InvalidArguments, session.ReadJumpPlan(double.NaN, 0, 0).Status);
         Assert.Equal(position, session.State.PlayerControl.Position);
-        Assert.Equal(before, stamina.Current);
+        Assert.Equal(before, fatigue.Current);
         Assert.Same(lastActivation, session.LastActivationTargeting);
     }
 
@@ -59,13 +59,13 @@ public sealed class PlaytestInspectionTests
         using ConditionSessionFixture fixture = new();
         var session = fixture.Session;
         session.ApplyProductMode(ProductMode.Playing);
-        var stamina = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina"));
-        stamina.SetCurrent(0);
+        var fatigue = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue"));
+        fatigue.SetCurrent(0);
         // The donor never refuses a swing for fatigue; an empty pool is the exhaustion collapse's.
         var action = session.InspectPlaytestAction("attack");
         Assert.True(action.Available);
         Assert.Null(action.Reason);
-        Assert.Equal(0, stamina.Current);
+        Assert.Equal(0, fatigue.Current);
         Assert.Null(session.State.Actors.Player.Attack.Pending);
         session.ApplyProductMode(ProductMode.Modal);
         Assert.Contains("mode-Modal", session.InspectPlaytestAction("forward").Reason);
@@ -77,8 +77,8 @@ public sealed class PlaytestInspectionTests
         var (created, _, perception) = VisibleEnemySession([]);
         perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1, 1, PerceptionPairKind.Visible, 1));
         using var session = created;
-        var stamina = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina"));
-        double before = stamina.Current;
+        var fatigue = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue"));
+        double before = fatigue.Current;
         Assert.Equal("Primary", session.InspectPlaytestAction("attack").Key);
         DaggerfallControlSettings controls = new();
         controls.Rebind("attack", ["KeyB"]);
@@ -92,7 +92,7 @@ public sealed class PlaytestInspectionTests
         // The hold stays under the power threshold, so the action is a tap and the motion runs on from it.
         Assert.Equal(slow, fast);
         Assert.True(fast / 1000d < DaggerfallTuning.Defaults.Attacks.PowerThresholdSeconds);
-        Assert.Equal(before, stamina.Current);
+        Assert.Equal(before, fatigue.Current);
         Assert.Null(session.State.Actors.Player.Attack.Pending);
     }
 

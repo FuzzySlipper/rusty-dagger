@@ -13,6 +13,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
 {
     private DaggerfallPlayerAttackClock _attackClock = null!;
+    private DaggerfallPlayerStamina _stamina = null!;
     private readonly List<AttackImpactNotice> _playerImpacts = [];
     private (ulong Generation, ulong SimulationStep, double Seconds) _attackStep;
     private string? _attack;

@@ -62,7 +62,7 @@ internal sealed class DaggerfallQuestRuntime(
         instance.Succeeded = true;
         _training.Record(_calendar().ToAbsoluteSeconds());
         _advanceElapsed(TrainingSeconds);
-        Track fatigue = _stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value));
+        Track fatigue = _stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value));
         _ = fatigue.Spend(Math.Min(fatigue.Current, checked(_locomotion.IdleFatiguePerGameMinute * 180)));
         _progression.TallySkillUse(skill, checked(roll * multiplier), DaggerfallSkillUseReactions.MaximumSkillUses);
     }

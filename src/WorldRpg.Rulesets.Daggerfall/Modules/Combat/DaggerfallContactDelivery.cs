@@ -282,7 +282,7 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
             Mitigated = new DaggerfallHarmMitigation(mitigation.Deflected, mitigation.Absorbed),
         };
         ops.ApplyConnectedHarm(request with { TargetId = targetId }, targetId, connected, facts);
-        if (weapon.Skill == DaggerfallMechanicsIds.HandToHand.Value && !enemy) ops.DrainStamina(request, targetId, mitigation.Damage, facts);
+        if (weapon.Skill == DaggerfallMechanicsIds.HandToHand.Value && !enemy) ops.DrainFatigue(request, targetId, mitigation.Damage, facts);
     }
 
     /// <summary>
