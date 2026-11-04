@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# In-game contact sheet of a family's strikes, drawn by the game's own held viewmodel through the developer workbench
-# (scripts/fp-arms/README.md): for each strike, the view at rest and held every STEP seconds of the strike as play times
-# it, each tile labelled with its moment, phase and clip time, the hit's tile outlined. The host must run with
-# --live-debug, a 3D viewmodel style and local/first-person.rpak; the sheet holds world time and leaves the viewer off.
+# In-game contact sheet of a family's attacks, drawn by the game's own held viewmodel through the developer workbench
+# (scripts/fp-arms/README.md): for each attack, the view at rest and held every STEP seconds of the attack as the rules
+# time it, each tile labelled with its moment, phase and clip time, the hit's tile outlined. The host must run with
+# --live-debug, a 3D viewmodel style and local/first-person.rpak; the sheet holds world time while it
+# draws, then gives it back and leaves the viewer off.
 #
-#   scripts/fp-arms/sheet.sh ORIGIN LOOK OUT_DIR [STEP=0.05] [STRIKE...]
+#   scripts/fp-arms/sheet.sh ORIGIN LOOK OUT_DIR [STEP=0.05] [ATTACK...]
 #   scripts/fp-arms/sheet.sh http://127.0.0.1:39937 weapon.dagger.steel local/evidence/sheets
 set -euo pipefail
 origin=$1; look=$2; out=$3; step=${4:-0.05}; shift $(( $# < 4 ? $# : 4 ))
@@ -17,7 +18,7 @@ capture() {
     python3 -c "import sys; b = sys.stdin.buffer.read(); open(sys.argv[1], 'wb').write(b[b.find(b'\x89PNG'):])" "$1"
 }
 strikes=("$@")
-(( ${#strikes[@]} )) || strikes=(strikeDown strikeDownLeft strikeLeft strikeRight strikeDownRight strikeUp)
+(( ${#strikes[@]} )) || strikes=(fastA fastB fastC fastD powerIn powerOut kick)
 mkdir -p "$out"
 run engine.time.mode manual >/dev/null
 for strike in "${strikes[@]}"; do
@@ -37,6 +38,7 @@ for strike in "${strikes[@]}"; do
   echo "$hit" > "$dir/hit.txt"
 done
 run held.motion.off >/dev/null
+run engine.time.mode realtime >/dev/null
 python3 - "$out" "$look" "${strikes[@]}" <<'PY'
 import glob, os, re, sys
 from PIL import Image, ImageDraw

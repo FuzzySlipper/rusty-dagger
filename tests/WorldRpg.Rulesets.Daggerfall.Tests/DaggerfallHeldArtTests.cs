@@ -35,7 +35,8 @@ public sealed class DaggerfallHeldArtTests
             // The viewmodel times an attack by its family's weapon class.
             DaggerfallAttackTiming fast = DaggerfallAttackTuning.Default.For(family.Class).Fast;
             PhaseTiming timing = new((float)fast.Windup, (float)fast.Commit, (float)fast.Recovery);
-            Assert.Equal(DaggerfallAttackIds.Fast.Order(), family.Strikes.Keys.Order());
+            Assert.All(DaggerfallAttackIds.Fast, id => Assert.Contains(id, family.Strikes.Keys));
+            Assert.NotNull(family.PowerHold);
             foreach (var (action, clip) in family.Strikes)
             {
                 Assert.Empty(clip.Problems());
@@ -150,7 +151,7 @@ public sealed class DaggerfallHeldArtTests
         DaggerfallHeldArt art = DaggerfallHeldArt.Read(container, System.Text.Encoding.UTF8.GetBytes(Document().ToJsonString()));
 
         Assert.Equal(0u, art.MetalSlot("first-person/weapons/dagger.glb"));
-        Assert.Equal(1u, art.MetalSlot("first-person/weapons/club.glb"));
+        Assert.Equal(1u, art.MetalSlot("first-person/weapons/saber.glb"));
 
         Color white = DaggerfallHeldArt.MetalColor(new("#ffffff", 1));
         Color bright = DaggerfallHeldArt.MetalColor(new("#808080", 1.5));

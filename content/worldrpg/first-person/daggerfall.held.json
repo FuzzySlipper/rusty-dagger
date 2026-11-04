@@ -253,44 +253,78 @@
         "clip": "FPP_Dag_Idle",
         "seconds": 5.8
       },
+      "powerHold": {
+        "clip": "FPP_Dag_AttackHeavyD_Start",
+        "at": 1
+      },
       "strikes": {
         "fastA": {
-          "clip": "FPP_Dag_AttackD",
-          "marks": {
-            "start": 0,
-            "strike": 0.107,
-            "recover": 0.596,
-            "end": 0.84
-          },
-          "fade": 0.1
-        },
-        "fastB": {
-          "clip": "FPP_Dag_AttackL",
-          "marks": {
-            "start": 0,
-            "strike": 0.108,
-            "recover": 0.631,
-            "end": 0.892
-          },
-          "fade": 0.1
-        },
-        "fastC": {
           "clip": "FPP_Dag_AttackR",
           "marks": {
             "start": 0,
             "strike": 0.171,
-            "recover": 0.552,
+            "recover": 0.343,
             "end": 0.743
           },
           "fade": 0.1
         },
-        "fastD": {
+        "fastB": {
           "clip": "FPP_Dag_AttackLSlash",
           "marks": {
             "start": 0,
             "strike": 0.148,
-            "recover": 0.626,
+            "recover": 0.363,
             "end": 0.864
+          },
+          "fade": 0.1
+        },
+        "fastC": {
+          "clip": "FPP_Dag_AttackD",
+          "marks": {
+            "start": 0,
+            "strike": 0.107,
+            "recover": 0.327,
+            "end": 0.84
+          },
+          "fade": 0.1
+        },
+        "fastD": {
+          "clip": "FPP_Dag_AttackF",
+          "marks": {
+            "start": 0,
+            "strike": 0.164,
+            "recover": 0.326,
+            "end": 0.705
+          },
+          "fade": 0.1
+        },
+        "powerIn": {
+          "clip": "FPP_Dag_AttackHeavyD_Start",
+          "marks": {
+            "start": 0,
+            "strike": 0.867,
+            "recover": 1,
+            "end": 1
+          },
+          "fade": 0.1
+        },
+        "powerOut": {
+          "clip": "FPP_Dag_AttackHeavyD_End",
+          "marks": {
+            "start": 0,
+            "strike": 0.123,
+            "recover": 0.353,
+            "end": 0.889
+          },
+          "fade": 0.1
+        },
+        "kick": {
+          "clip": "FPP_Dag_Kick",
+          "marks": {
+            "start": 0,
+            "strike": 0.269,
+            "recover": 0.472,
+            "end": 0.946
           },
           "fade": 0.1
         }
@@ -322,44 +356,78 @@
         "clip": "FPP_Longs_Idle",
         "seconds": 4.4333
       },
+      "powerHold": {
+        "clip": "FPP_Longs_AttackHeavy_D_Idle",
+        "seconds": 4.4333
+      },
       "strikes": {
         "fastA": {
-          "clip": "FPP_Longs_Attack_D",
-          "marks": {
-            "start": 0,
-            "strike": 0.155,
-            "recover": 0.649,
-            "end": 0.897
-          },
-          "fade": 0.1
-        },
-        "fastB": {
-          "clip": "FPP_Longs_Attack_RD",
-          "marks": {
-            "start": 0,
-            "strike": 0.144,
-            "recover": 0.653,
-            "end": 0.907
-          },
-          "fade": 0.1
-        },
-        "fastC": {
           "clip": "FPP_Longs_Attack_R",
           "marks": {
             "start": 0,
             "strike": 0.165,
-            "recover": 0.612,
+            "recover": 0.366,
             "end": 0.835
           },
           "fade": 0.1
         },
-        "fastD": {
+        "fastB": {
           "clip": "FPP_Longs_Attack_L",
           "marks": {
             "start": 0,
             "strike": 0.196,
-            "recover": 0.663,
+            "recover": 0.406,
             "end": 0.897
+          },
+          "fade": 0.1
+        },
+        "fastC": {
+          "clip": "FPP_Longs_Attack_D",
+          "marks": {
+            "start": 0,
+            "strike": 0.155,
+            "recover": 0.378,
+            "end": 0.897
+          },
+          "fade": 0.1
+        },
+        "fastD": {
+          "clip": "FPP_Longs_Attack_F",
+          "marks": {
+            "start": 0,
+            "strike": 0.165,
+            "recover": 0.359,
+            "end": 0.812
+          },
+          "fade": 0.1
+        },
+        "powerIn": {
+          "clip": "FPP_Longs_AttackHeavy_D_Start",
+          "marks": {
+            "start": 0,
+            "strike": 0.953,
+            "recover": 1,
+            "end": 1
+          },
+          "fade": 0.1
+        },
+        "powerOut": {
+          "clip": "FPP_Longs_AttackHeavy_D_End",
+          "marks": {
+            "start": 0,
+            "strike": 0.121,
+            "recover": 0.364,
+            "end": 0.931
+          },
+          "fade": 0.1
+        },
+        "kick": {
+          "clip": "FPP_Longs_Kick",
+          "marks": {
+            "start": 0,
+            "strike": 0.181,
+            "recover": 0.395,
+            "end": 0.894
           },
           "fade": 0.1
         }
@@ -387,24 +455,28 @@
         "clip": "FPP_sns_Idle",
         "seconds": 4.6333
       },
+      "powerHold": {
+        "clip": "FPP_sns_AttackHeavyU_Loop",
+        "seconds": 4.6333
+      },
       "strikes": {
         "fastA": {
-          "clip": "FPP_sns_AttackHeavyU",
-          "marks": {
-            "start": 0,
-            "strike": 0.474,
-            "recover": 0.815,
-            "end": 0.985
-          },
-          "fade": 0.1
-        },
-        "fastB": {
           "clip": "FPP_sns_Attack_RD",
           "marks": {
             "start": 0,
             "strike": 0.167,
-            "recover": 0.633,
+            "recover": 0.377,
             "end": 0.867
+          },
+          "fade": 0.1
+        },
+        "fastB": {
+          "clip": "FPP_sns_Attack_LU",
+          "marks": {
+            "start": 0,
+            "strike": 0.233,
+            "recover": 0.45,
+            "end": 0.956
           },
           "fade": 0.1
         },
@@ -413,18 +485,48 @@
           "marks": {
             "start": 0,
             "strike": 0.244,
-            "recover": 0.674,
+            "recover": 0.438,
             "end": 0.889
           },
           "fade": 0.1
         },
         "fastD": {
-          "clip": "FPP_sns_Attack_LU",
+          "clip": "FPP_sns_Attack_F",
           "marks": {
             "start": 0,
-            "strike": 0.233,
-            "recover": 0.715,
-            "end": 0.956
+            "strike": 0.187,
+            "recover": 0.383,
+            "end": 0.84
+          },
+          "fade": 0.1
+        },
+        "powerIn": {
+          "clip": "FPP_sns_AttackHeavyU_Start",
+          "marks": {
+            "start": 0,
+            "strike": 0.757,
+            "recover": 1,
+            "end": 1
+          },
+          "fade": 0.1
+        },
+        "powerOut": {
+          "clip": "FPP_sns_AttackHeavyU_End",
+          "marks": {
+            "start": 0,
+            "strike": 0.149,
+            "recover": 0.375,
+            "end": 0.904
+          },
+          "fade": 0.1
+        },
+        "kick": {
+          "clip": "FPP_sns_Kick",
+          "marks": {
+            "start": 0,
+            "strike": 0.301,
+            "recover": 0.472,
+            "end": 0.871
           },
           "fade": 0.1
         }
@@ -453,44 +555,78 @@
         "seconds": 6.0333
       },
       "twoHanded": true,
+      "powerHold": {
+        "clip": "FPP_Halb_AttackHeavy_R_Loop",
+        "seconds": 4.5667
+      },
       "strikes": {
         "fastA": {
-          "clip": "FPP_Halb_Attack_D",
-          "marks": {
-            "start": 0,
-            "strike": 0.229,
-            "recover": 0.636,
-            "end": 0.84
-          },
-          "fade": 0.1
-        },
-        "fastB": {
-          "clip": "FPP_Halb_Attack_RDfast",
-          "marks": {
-            "start": 0,
-            "strike": 0.06,
-            "recover": 0.641,
-            "end": 0.932
-          },
-          "fade": 0.1
-        },
-        "fastC": {
           "clip": "FPP_Halb_Attack_R",
           "marks": {
             "start": 0,
             "strike": 0.275,
-            "recover": 0.686,
+            "recover": 0.46,
             "end": 0.892
           },
           "fade": 0.1
         },
-        "fastD": {
-          "clip": "FPP_Halb_AttackHeavy_L",
+        "fastB": {
+          "clip": "FPP_Halb_Attack_LD",
           "marks": {
             "start": 0,
-            "strike": 0.563,
-            "recover": 0.836,
-            "end": 0.973
+            "strike": 0.276,
+            "recover": 0.444,
+            "end": 0.835
+          },
+          "fade": 0.1
+        },
+        "fastC": {
+          "clip": "FPP_Halb_Attack_D",
+          "marks": {
+            "start": 0,
+            "strike": 0.229,
+            "recover": 0.412,
+            "end": 0.84
+          },
+          "fade": 0.1
+        },
+        "fastD": {
+          "clip": "FPP_Halb_Attack_F",
+          "marks": {
+            "start": 0,
+            "strike": 0.209,
+            "recover": 0.409,
+            "end": 0.876
+          },
+          "fade": 0.1
+        },
+        "powerIn": {
+          "clip": "FPP_Halb_AttackHeavy_R_Start",
+          "marks": {
+            "start": 0,
+            "strike": 0.933,
+            "recover": 1,
+            "end": 1
+          },
+          "fade": 0.1
+        },
+        "powerOut": {
+          "clip": "FPP_Halb_AttackHeavy_R_End",
+          "marks": {
+            "start": 0.481,
+            "strike": 0.571,
+            "recover": 0.679,
+            "end": 0.931
+          },
+          "fade": 0.1
+        },
+        "kick": {
+          "clip": "FPP_Halb_Kick",
+          "marks": {
+            "start": 0,
+            "strike": 0.385,
+            "recover": 0.538,
+            "end": 0.896
           },
           "fade": 0.1
         }
