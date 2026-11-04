@@ -388,6 +388,43 @@ public sealed class DaggerfallHeldArtTests
     }
 
     [Fact]
+    public void A_cast_with_the_weapon_sheathed_brings_up_the_bare_arms_for_the_cast_alone()
+    {
+        List<string> releases = [];
+        (DaggerfallSiteAppearance presentation, _, _) = Viewing(releases);
+        using (presentation)
+        {
+            presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: false);
+            Assert.Null(presentation.DrawnHeld);
+
+            presentation.React(new PlayerCastMotionFact(0, new(.3d, .02d, .3d), 1, 1));
+
+            Assert.Equal("unarmed", presentation.DrawnHeld!.Drawing.Family);
+            Assert.Equal(DaggerfallAttackIds.Cast, presentation.DrawnHeld!.Playing);
+
+            presentation.React(new PlayerAttackRestFact(1, 2));
+
+            Assert.Null(presentation.DrawnHeld);
+        }
+    }
+
+    [Fact]
+    public void A_weapon_drawn_during_a_sheathed_cast_takes_over_from_its_arms()
+    {
+        List<string> releases = [];
+        (DaggerfallSiteAppearance presentation, _, _) = Viewing(releases);
+        using (presentation)
+        {
+            presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: false);
+            presentation.React(new PlayerCastMotionFact(0, new(.3d, .02d, .3d), 1, 1));
+
+            presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
+
+            Assert.Equal("sns", presentation.DrawnHeld!.Drawing.Family);
+        }
+    }
+
+    [Fact]
     public void A_cast_cut_short_takes_its_element_off_the_palm()
     {
         List<string> releases = [];
@@ -440,7 +477,7 @@ public sealed class DaggerfallHeldArtTests
         engine.Animation.Joints = Joints(art.Document.Rig);
         engine.Animation.Clips = [.. art.Document.Families.Values.SelectMany(family => family.Strikes.Values.Select(clip => clip.Clip).Append(family.Idle.Clip).Concat(GuardClips(family.Guard!))).Concat(GuardClips(art.Document.Shield!.Guard)).Distinct()
             .Select(clip => new AnimationClipInfo(clip, clip, 1, true, 0))];
-        NormalizedClassicPresentation classic = ClassicWeapon() with { Effects = [.. ClassicEffects(fireSpell: true).Effects.Where(effect => effect.Name == "fireMissile")] };
+        NormalizedClassicPresentation classic = ClassicWeapon() with { Effects = [.. ClassicEffects(fireSpell: true).Effects.Where(effect => effect.Name == "fireMissile")], UnarmedVisual = "weapon.unarmed" };
         DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: classic));
         presentation.UseHeldArt(engine.Context, art, DaggerfallViewmodelStyle.Held, new Dictionary<string, DaggerfallDyeTint>(), _ => (120, DaggerfallHeldDrawing.Steel), shieldOf ?? (_ => null));
         return (presentation, appearance, engine);

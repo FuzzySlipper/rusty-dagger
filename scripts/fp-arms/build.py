@@ -27,7 +27,9 @@ import struct
 import sys
 from pathlib import Path
 
+import bmesh
 import bpy
+import numpy as np
 from mathutils import Matrix, Quaternion, Vector
 
 sources, definition_path, out = (Path(a) for a in sys.argv[sys.argv.index("--") + 1:])
@@ -37,11 +39,16 @@ ARMS = pack_root / "Meshes/FPArms_Male-Leather-Armor_LPR_LOD0.fbx"
 COLOUR = pack_root / "Textures/FPArms_Male-Leather-Armor_Medium_COL.png"
 NORMAL = pack_root / "Textures/FPArms_Male-Leather-Armor_NRM.png"
 TEXTURE = 1024
+# The legs' rings and their small plain textures: nothing of the pack's art goes into them.
+LEG_SIDES = 10
+LEG_TEXTURE = 32
 # The retro arms (heldRetro) draw the colour map alone, this small and unfiltered, as Daggerfall draws its world.
 RETRO_TEXTURE = 256
 # The clips' camera bone looks along its X with its Y up and its Z to the right; the baked view looks along +Y with +Z
 # up and +X to the right, which the Y-up export turns into the Engine's camera space (-Z ahead, +Y up, +X right).
 VIEW = Matrix(((0, 0, 1, 0), (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 0, 1)))
+# The pack's own clips have no camera bone: their camera_mount looks along its -Y with its X up and its Z to the right.
+PACK_EYE = Matrix(((0, -1, 0, 0), (1, 0, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)))
 # Blender world (view baked as above) into the Engine's camera space.
 TO_CAMERA = Matrix(((1, 0, 0), (0, 0, 1), (0, -1, 0)))
 # The pack's weapon bones carry the blade along +Z with its edge along +Y; a look's length runs along -Z with its up
@@ -120,7 +127,88 @@ def arms():
         if obj.type == "MESH":
             for slot in obj.material_slots:
                 texture(slot.material)
+    legs(rig, next(obj for obj in imported if obj.type == "MESH"))
     return rig
+
+
+def plain(name, colour):
+    """A rough material of `colour` (sRGB 0-1) on a small noisy texture, drawn nearest, labelled for retro()."""
+    random = np.random.default_rng(sum(name.encode()))
+    grain = 1 + random.normal(0, 0.09, (LEG_TEXTURE, LEG_TEXTURE, 1))
+    pixels = np.concatenate([np.clip(np.array(colour) * grain, 0, 1), np.ones((LEG_TEXTURE, LEG_TEXTURE, 1))], axis=2)
+    image = bpy.data.images.new(name, LEG_TEXTURE, LEG_TEXTURE)
+    image.pixels.foreach_set(pixels.ravel().astype(np.float32))
+    image.pack()
+    material = bpy.data.materials.new(name)
+    material.use_nodes = True
+    nodes = material.node_tree.nodes
+    bsdf = next(n for n in nodes if n.type == "BSDF_PRINCIPLED")
+    node = nodes.new("ShaderNodeTexImage")
+    node.label = "colour"
+    node.image = image
+    node.interpolation = "Closest"
+    material.node_tree.links.new(node.outputs["Color"], bsdf.inputs["Base Color"])
+    bsdf.inputs["Roughness"].default_value = 0.8
+    return material
+
+
+def legs(rig, body):
+    """
+    Grows a low leg and boot on each of the skeleton's legs and joins them to the arms' mesh `body`, as the Engine draws
+    one mesh for the arms: the pack has arms only, and a kick needs something to kick with. Rings of LEG_SIDES run down
+    each leg's bones, every ring on the bones given, so nothing here comes from the pack.
+    """
+    mesh = bpy.data.meshes.new("legs")
+    leg = bpy.data.objects.new("legs", mesh)
+    bpy.context.scene.collection.objects.link(leg)
+    leg.matrix_world = rig.matrix_world
+    bm = bmesh.new()
+    uv = bm.loops.layers.uv.new()
+    deform = bm.verts.layers.deform.verify()
+    groups = {}
+    for side in "lr":
+        bones = {n: rig.data.bones[f"{n}_{side}"] for n in ("thigh", "calf", "foot", "ball")}
+        for b in bones.values():
+            groups[b.name] = leg.vertex_groups.new(name=b.name).index
+        thigh, calf, foot, ball = (bones[n] for n in ("thigh", "calf", "foot", "ball"))
+        toe = ball.head_local + (ball.tail_local - ball.head_local).normalized() * 9
+        # (centre, half width, half depth, the bones it follows, boot?): cm in the skeleton's space.
+        rings = [(thigh.head_local, 9, 9.5, [thigh], False), (thigh.head_local.lerp(calf.head_local, .5), 7.5, 8, [thigh], False),
+                 (calf.head_local, 6, 6.5, [thigh, calf], False), (calf.head_local.lerp(foot.head_local, .35), 6, 6.5, [calf], False),
+                 (calf.head_local.lerp(foot.head_local, .55), 6.5, 7, [calf], True), (calf.head_local.lerp(foot.head_local, .9), 5.5, 6, [calf], True),
+                 (foot.head_local, 5.5, 7, [calf, foot], True), (foot.head_local.lerp(ball.head_local, .5), 5.5, 5, [foot], True),
+                 (ball.head_local, 6, 3.8, [foot, ball], True), (toe, 4.2, 2.4, [ball], True)]
+        previous = None
+        for at, (centre, wide, deep, follow, boot) in enumerate(rings):
+            ahead = (rings[min(at + 1, len(rings) - 1)][0] - rings[max(at - 1, 0)][0]).normalized()
+            across = ahead.cross(Vector((0, 1, 0)) if abs(ahead.y) < .9 else Vector((1, 0, 0))).normalized()
+            up = across.cross(ahead)
+            ring = []
+            for step in range(LEG_SIDES):
+                turn = 2 * math.pi * step / LEG_SIDES
+                vert = bm.verts.new(centre + across * math.cos(turn) * wide + up * math.sin(turn) * deep)
+                for b in follow:
+                    vert[deform][groups[b.name]] = 1 / len(follow)
+                ring.append(vert)
+            if previous:
+                for step in range(LEG_SIDES):
+                    face = bm.faces.new((previous[step], previous[(step + 1) % LEG_SIDES], ring[(step + 1) % LEG_SIDES], ring[step]))
+                    face.material_index = 1 if boot else 0
+                    for loop, u, v in zip(face.loops, (step, step + 1, step + 1, step), (at - 1, at - 1, at, at)):
+                        loop[uv].uv = (u / LEG_SIDES, v / len(rings))
+            previous = ring
+        bm.faces.new(reversed(previous)).material_index = 1
+    bm.normal_update()
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(mesh)
+    bm.free()
+    mesh.materials.append(plain("legs-cloth", (.32, .28, .23)))
+    mesh.materials.append(plain("legs-boot", (.3, .19, .11)))
+    bpy.ops.object.select_all(action="DESELECT")
+    leg.select_set(True)
+    body.select_set(True)
+    bpy.context.view_layer.objects.active = body
+    bpy.ops.object.join()
 
 
 def world(rig, bone):
@@ -131,10 +219,22 @@ def unscaled(matrix):
     return Matrix.LocRotScale(matrix.translation, matrix.to_quaternion(), None)
 
 
+def swapped(name):
+    """The bone on the other side of the body, or the bone itself on its middle."""
+    return name[:-1] + {"l": "r", "r": "l"}[name[-1]] if name.endswith(("_l", "_r")) else name
+
+
 def bake(rig, stem):
-    """Bakes clip `stem` onto the arms as an action of that name, as its camera bone sees it; returns its samples."""
-    imported = import_fbx(clip_file(stem))
+    """
+    Bakes clip `stem` onto the arms as an action of that name, as its camera bone sees it; returns its samples. A stem
+    ending in MIRRORED is the clip the other way round, for a pack with one punch and two fists. The pack's own clips have
+    no camera bone: they are made for the arms, whose camera_mount is the eye.
+    """
+    mirrored = stem.endswith(MIRRORED)
+    imported = import_fbx(clip_file(stem.removesuffix(MIRRORED)))
     source = next(o for o in imported if o.type == "ARMATURE")
+    eye = "camera" if "camera" in source.pose.bones else "camera_mount"
+    held = {side: f"weapon_{side}" if f"weapon_{side}" in source.pose.bones else f"hand_{side}" for side in "lr"}
     clip = source.animation_data.action
     first, last = (int(f) for f in clip.frame_range)
     bones = [b for b in rig.data.bones if b.name in source.pose.bones]
@@ -142,16 +242,26 @@ def bake(rig, stem):
     # from its own rest: its rest frame as the clip's bone at rest sees it.
     rest = {b.name: (source.matrix_world @ source.data.bones[b.name].matrix_local).inverted() @ rig.matrix_world @ b.matrix_local for b in bones}
     # The IK helper bones (ik_*) skin nothing and are placed apart in each file.
-    worst = max(((rig.matrix_world @ b.matrix_local).translation
-                 - (source.matrix_world @ source.data.bones[b.name].matrix_local).translation).length for b in bones if not b.name.startswith("ik_"))
-    if worst > 0.01:
-        raise SystemExit(f"clip '{stem}': its rest pose's joints lie up to {worst * 100:.1f} cm from the arms'")
+    if eye == "camera":
+        worst = max(((rig.matrix_world @ b.matrix_local).translation
+                     - (source.matrix_world @ source.data.bones[b.name].matrix_local).translation).length for b in bones if not b.name.startswith("ik_"))
+        if worst > 0.01:
+            raise SystemExit(f"clip '{stem}': its rest pose's joints lie up to {worst * 100:.1f} cm from the arms'")
+    else:
+        # The pack's own clips are the arms' own skeleton in another rest: each bone is simply where the clip puts it.
+        rest = {b.name: Matrix.Identity(4) for b in bones}
     unrig = rig.matrix_world.inverted()
+    # The view's left-right flip in the arms' space, and how each bone's own frame turns against its other side's at rest.
+    flip = unrig @ Matrix.Diagonal((-1, 1, 1, 1)) @ rig.matrix_world
+    body = Matrix.Diagonal((-1, 1, 1, 1)) if abs(rig.data.bones["clavicle_l"].head_local.x) > abs(rig.data.bones["clavicle_l"].head_local.y) else Matrix.Diagonal((1, -1, 1, 1))
+    turned = {b.name: (body @ rig.data.bones[swapped(b.name)].matrix_local).inverted() @ b.matrix_local for b in bones}
     frames, samples = [], []
     for frame in range(first, last + 1):
         bpy.context.scene.frame_set(frame)
-        view = VIEW @ unscaled(world(source, "camera")).inverted()
+        view = (VIEW if eye == "camera" else VIEW @ PACK_EYE) @ unscaled(world(source, eye)).inverted()
         posed = {b.name: unrig @ view @ world(source, b.name) @ rest[b.name] for b in bones}
+        if mirrored:
+            posed = {b.name: flip @ posed[swapped(b.name)] @ turned[b.name] for b in bones}
         basis = {}
         for b in bones:
             if b.parent is None or b.parent.name not in posed:
@@ -160,7 +270,7 @@ def bake(rig, stem):
                 local = b.parent.matrix_local.inverted() @ b.matrix_local
                 basis[b.name] = local.inverted() @ posed[b.parent.name].inverted() @ posed[b.name]
         frames.append(basis)
-        samples.append({name: rig.matrix_world @ m for name, m in posed.items()} | {"weapon_r": view @ world(source, "weapon_r"), "weapon_l": view @ world(source, "weapon_l")})
+        samples.append({name: rig.matrix_world @ m for name, m in posed.items()} | {"weapon_r": view @ world(source, held["r"]), "weapon_l": view @ world(source, held["l"])})
     remove(imported)
     bpy.data.actions.remove(clip)
 
@@ -230,6 +340,9 @@ def degrees(turn):
     return [round(math.degrees(a), 2) for a in (math.asin(max(-1, min(1, -cz.y))), math.atan2(cz.x, cz.z), math.atan2(cx.y, cy.y))]
 
 
+# The stem that names a clip played the other way round.
+MIRRORED = ".mirrored"
+
 # The commit's share of the time after the hit, which is close to this in every weapon class's tuning. A cast's commit
 # is the moment the spell leaves, so nearly all of its time after the hit is recovery.
 COMMIT_SHARE = 0.3
@@ -254,6 +367,14 @@ def marks(tips, speeds, commit_share=COMMIT_SHARE):
     last = len(tips) - 1
     end = next(i for i in range(strike, last + 1) if all((tips[j] - tips[-1]).length < 0.03 for j in range(i, last + 1)))
     return {"start": 0, "strike": round(strike / last, 3), "recover": round((strike + (end - strike) * commit_share) / last, 3), "end": round(end / last, 3)}
+
+
+def kicked(frames, suggested):
+    """A kick's marks: its strike where a foot reaches furthest ahead of the eye, the rest as `suggested`."""
+    reach = [max(-camera(s[f"ball_{side}"].translation).z for side in "lr") for s in frames]
+    strike = round(reach.index(max(reach)) / (len(frames) - 1), 3)
+    end = suggested["end"]
+    return {"start": 0, "strike": strike, "recover": round(strike + (end - strike) * COMMIT_SHARE, 3), "end": end}
 
 
 def rounded(v, places=4):
@@ -287,12 +408,16 @@ for name, family in families.items():
     look = axes @ LOOK_IN_BONE
     strikes = {}
     for action, clip in family["strikes"].items():
-        # A cast is the left hand's: its hit is the palm thrown forward, not a blade.
+        # A cast is the left hand's, and a punch its fist's: the hit is the hand thrown forward, not a blade.
         cast = action == "cast"
-        tips = [camera(s["hand_l"].translation) if cast else camera(s["weapon_r"].translation + s["weapon_r"].to_3x3().normalized().col[2] * 0.3) for s in samples[clip["clip"]]]
+        fist = "hand_l" if cast or clip["clip"].endswith(MIRRORED) else "hand_r" if family.get("class") == "hand-to-hand" else None
+        tips = [camera(s[fist].translation) if fist else camera(s["weapon_r"].translation + s["weapon_r"].to_3x3().normalized().col[2] * 0.3) for s in samples[clip["clip"]]]
         speeds = [round((tips[i + 1] - tips[i]).length * 60, 2) for i in range(len(tips) - 1)]
+        suggested = marks(tips, speeds, CAST_COMMIT_SHARE if cast else COMMIT_SHARE)
+        if action == "kick":
+            suggested = kicked(samples[clip["clip"]], suggested)
         strikes[action] = {"clip": clip["clip"], "frames": len(tips), "seconds": round((len(tips) - 1) / 60, 4),
-                           "marks": marks(tips, speeds, CAST_COMMIT_SHARE if cast else COMMIT_SHARE), "tipSpeed": speeds}
+                           "marks": suggested, "tipSpeed": speeds}
     measure["families"][name] = {
         "idleSeconds": round((len(samples[family["idle"]["clip"]]) - 1) / 60, 4),
         "powerHoldSeconds": round((len(samples[family["powerHold"]["clip"]]) - 1) / 60, 4),

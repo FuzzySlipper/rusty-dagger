@@ -12,7 +12,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// missile burning on the palm until the spell leaves. Otherwise the weapon rests and the element's classic casting hand
 /// draws over it for as long as the cast plays: its frames carry their own place on the classic screen, so it fills the
 /// view as the weapon sprite does. A data pack from before the hands were published draws no hand, and the spell still
-/// leaves.
+/// leaves. With the weapon sheathed no arms are drawn, so the bare hands' come up for the cast alone.
 /// </summary>
 internal sealed partial class DaggerfallSiteAppearance
 {
@@ -25,18 +25,37 @@ internal sealed partial class DaggerfallSiteAppearance
     private ViewmodelVisual? castHand;
     // The element burning on the held arms' palm, from the cast's start until the spell leaves.
     private EffectVisual? castGlow;
+    // Whether the arms drawn are only there for a cast made with the weapon sheathed.
+    private bool castArms;
 
     private void PlayCast(int element, DaggerfallAttackTiming timing)
     {
         RetireCastHand();
         // A cast can cut into a swing's recovery, which leaves that swing's motion playing.
         StartWeaponAction("idle");
+        DrawCastArms();
         if (held is not null && !heldViewed && held.Moves(DaggerfallAttackIds.Cast))
         {
             held.Attack(DaggerfallAttackIds.Cast, timing, CastReleaseFrame);
             StartCastGlow(element);
         }
         else PlayCastHand(element, timing);
+    }
+
+    private void DrawCastArms()
+    {
+        if (held is not null || viewmodel is not null || heldViewed || heldArt is not { } chosen || classicPresentation.UnarmedVisual is not { } bare
+            || chosen.Art.Drawing(bare, null, DaggerfallHeldDrawing.Steel) is not { } drawing) return;
+        held = NewHeld(drawing);
+        heldShowing = true;
+        castArms = true;
+    }
+
+    private void RetireCastArms()
+    {
+        if (!castArms) return;
+        castArms = false;
+        RetireHeld();
     }
 
     private void StartCastGlow(int element)
@@ -107,6 +126,7 @@ internal sealed partial class DaggerfallSiteAppearance
     private void RetireCastHand()
     {
         RetireCastGlow();
+        RetireCastArms();
         if (castHand is not { } hand) return;
         castHand = null;
         Retire(hand);
