@@ -120,6 +120,62 @@ public sealed class CivilianAimSessionTests
     }
 
     [Fact]
+    public void A_helpful_touch_reaches_a_civilian_it_wasnt_aimed_at()
+    {
+        using Stage stage = new();
+        stage.Ready(DaggerfallSpellTarget.ByTouch, harmful: false);
+        stage.Spatial.OverlapContactsResult = _ => Touching(stage.CivilianBody);
+        stage.Session.ReadyPlayerSpell(stage.Spell);
+
+        Assert.NotEqual(DaggerfallCastOutcome.Missed, stage.Session.ReleaseReadySpell(Player, -Vector3.UnitZ).Outcome);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void A_touch_reaches_an_ally_only_when_it_helps(bool harmful)
+    {
+        using Stage stage = new();
+        long ally = stage.Ally();
+        stage.Ready(DaggerfallSpellTarget.ByTouch, harmful);
+        stage.Spatial.OverlapContactsResult = _ => Touching(stage.Session.State.Actors.Get(ally).Actor.Entity.Value);
+        stage.Session.ReadyPlayerSpell(stage.Spell);
+
+        DaggerfallCastOutcome outcome = stage.Session.ReleaseReadySpell(Player, -Vector3.UnitZ, harmsCivilians: true).Outcome;
+
+        Assert.Equal(harmful, outcome == DaggerfallCastOutcome.Missed);
+    }
+
+    [Fact]
+    public void A_helpful_area_takes_in_a_civilian_it_wasnt_aimed_at()
+    {
+        using Stage stage = new();
+        stage.Ready(DaggerfallSpellTarget.AreaAroundCaster, harmful: false);
+        stage.Session.ReadyPlayerSpell(stage.Spell);
+        int queries = stage.Perception.Requests.Count;
+
+        stage.Session.ReleaseReadySpell(Player, -Vector3.UnitZ);
+
+        Assert.Contains(stage.Perception.Requests.Skip(queries).SelectMany(request => request.Targets.ToArray()), target => target.Entity == checked((ulong)stage.Civilian));
+    }
+
+    [Theory]
+    [InlineData(4, 0, true)] // Damage health.
+    [InlineData(1, 1, true)] // Continuous damage to fatigue.
+    [InlineData(0, -1, true)] // Paralyze.
+    [InlineData(11, 8, true)] // Transfer health.
+    [InlineData(10, 8, false)] // Heal health.
+    [InlineData(9, 0, false)] // Fortify strength.
+    [InlineData(3, 1, false)] // Cure poison.
+    [InlineData(35, -1, false)] // Shield.
+    public void Harm_is_read_from_the_effects_kind(int type, int subType, bool harms)
+    {
+        DaggerfallSpellEffectDefinition sample = TestPayload.Definitions.Magic.Spells.Values.SelectMany(spell => spell.Effects).First();
+
+        Assert.Equal(harms, DaggerfallMagicHarm.Harms(sample with { Type = type, SubType = subType }));
+    }
+
+    [Fact]
     public void Only_civilians_depend_on_the_aim()
     {
         using Stage stage = new();
@@ -164,6 +220,13 @@ public sealed class CivilianAimSessionTests
         internal ulong[] Bodies { get; set; } = [];
         internal string Spell { get; private set; } = "";
 
+        /// <summary>A summoned ally beside the enemy, through the roster that summons them in play.</summary>
+        internal long Ally()
+        {
+            var roster = (DaggerfallActorRoster)typeof(DaggerfallSession).GetField("_roster", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(Session)!;
+            return roster.Spawn("rat", Session.State.Actors.Get(Enemy).Pose, playerAllied: true);
+        }
+
         internal double Health(long actor) => Session.State.Actors.Get(actor).Stats.GetTrack(TrackId.Parse("health")).Current;
 
         /// <summary>A tap, run on until the attack has started and made up its mind.</summary>
@@ -178,11 +241,11 @@ public sealed class CivilianAimSessionTests
             for (int step = 0; step < steps; step++) Session.Update(new ProductUpdate(OuterUpdate(_step++), []));
         }
 
-        internal void Ready(DaggerfallSpellTarget target)
+        internal void Ready(DaggerfallSpellTarget target, bool harmful = true)
         {
             foreach (DaggerfallSpellDefinition spell in TestPayload.Definitions.Magic.Spells.Values.OrderBy(spell => spell.Key, StringComparer.Ordinal))
             {
-                if (DaggerfallMagicCostPolicy.TargetForRangeType(spell.RangeType) != target) continue;
+                if (DaggerfallMagicCostPolicy.TargetForRangeType(spell.RangeType) != target || spell.Effects.Any(DaggerfallMagicHarm.Harms) != harmful) continue;
                 Session.State.Character.LearnSpell(spell.Key);
                 if (Session.ReadyPlayerSpell(spell.Key).Outcome != DaggerfallCastOutcome.Ready) continue;
                 Spell = spell.Key;

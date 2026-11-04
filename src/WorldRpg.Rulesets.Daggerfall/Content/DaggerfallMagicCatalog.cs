@@ -15,6 +15,15 @@ internal static class DaggerfallMagicItemIds
 }
 
 /// <summary>One effect of a published spell, with the source's duration, chance and magnitude triples.</summary>
+/// <summary>Which classic spell effects do their target harm.</summary>
+internal static class DaggerfallMagicHarm
+{
+    // Paralyze, continuous damage, damage, disintegrate, drain, transfer, soul trap and silence.
+    private static readonly HashSet<int> HarmfulTypes = [0, 1, 4, 5, 7, 11, 12, 19];
+
+    internal static bool Harms(DaggerfallSpellEffectDefinition effect) => HarmfulTypes.Contains(effect.Type);
+}
+
 internal sealed record DaggerfallSpellEffectDefinition(
     string Key,
     int Type,
