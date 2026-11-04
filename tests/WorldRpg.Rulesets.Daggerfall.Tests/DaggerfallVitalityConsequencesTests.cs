@@ -15,7 +15,7 @@ public sealed class DaggerfallVitalityConsequencesTests
     public void Landing_uses_canonical_health_loss_and_only_the_first_landing_can_defeat()
     {
         using ActorsState actors = new();
-        StatsComponent stats = Stats(health: 3.75d, stamina: 100d);
+        StatsComponent stats = Stats(health: 3.75d, fatigue: 100d);
         PlayerActorState player = actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health", DaggerActorFactory.PlayerCapabilities);
         DaggerfallVitalityConsequences consequences = new(new CombatResolution());
 
@@ -31,7 +31,7 @@ public sealed class DaggerfallVitalityConsequencesTests
     public void Grace_distance_has_no_health_application()
     {
         using ActorsState actors = new();
-        StatsComponent stats = Stats(health: 20d, stamina: 100d);
+        StatsComponent stats = Stats(health: 20d, fatigue: 100d);
         PlayerActorState player = actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health", DaggerActorFactory.PlayerCapabilities);
 
         DamageResult? result = new DaggerfallVitalityConsequences(new CombatResolution())
@@ -45,7 +45,7 @@ public sealed class DaggerfallVitalityConsequencesTests
     public void Compiled_movement_protection_rejects_an_otherwise_damaging_landing()
     {
         using ActorsState actors = new();
-        StatsComponent stats = Stats(health: 20d, stamina: 100d);
+        StatsComponent stats = Stats(health: 20d, fatigue: 100d);
         PlayerActorState player = actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health", DaggerActorFactory.PlayerCapabilities);
 
         DamageResult? result = new DaggerfallVitalityConsequences(new CombatResolution())
@@ -55,15 +55,15 @@ public sealed class DaggerfallVitalityConsequencesTests
         Assert.Equal(20d, stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current);
     }
 
-    private static StatsComponent Stats(double health, double stamina)
+    private static StatsComponent Stats(double health, double fatigue)
     {
         Stat healthMaximum = new(100d);
-        Stat staminaMaximum = new(100d);
+        Stat fatigueMaximum = new(100d);
         StatsComponent stats = new();
         stats.AddStat(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value), healthMaximum);
-        stats.AddStat(StatId.Parse(DaggerfallMechanicsIds.StaminaMaximum.Value), staminaMaximum);
+        stats.AddStat(StatId.Parse(DaggerfallMechanicsIds.FatigueMaximum.Value), fatigueMaximum);
         stats.AddTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value), new Track(healthMaximum, health, 0d));
-        stats.AddTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value), new Track(staminaMaximum, stamina, 0d));
+        stats.AddTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value), new Track(fatigueMaximum, fatigue, 0d));
         return stats;
     }
 }

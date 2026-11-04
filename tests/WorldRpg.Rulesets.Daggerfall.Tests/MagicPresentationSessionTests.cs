@@ -96,10 +96,10 @@ public sealed class MagicPresentationSessionTests
         }
         using(Fixture f=new())
         {
-            var s=f.Session;var stamina=s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina"));stamina.SetCurrent(1);
+            var s=f.Session;var fatigue=s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue"));fatigue.SetCurrent(1);
             Assert.True(s.State.Poisons.Afflict(s.State.Actors.Player.Actor,138));s.State.Effects.AdvanceElapsedRounds(20);
-            Assert.Contains(Pending(s).OfType<SpellTrackRestoredFact>(),fact=>fact.Track=="stamina" && fact.Restored>0);
-            Assert.True(stamina.Current>1);
+            Assert.Contains(Pending(s).OfType<SpellTrackRestoredFact>(),fact=>fact.Track=="fatigue" && fact.Restored>0);
+            Assert.True(fatigue.Current>1);
         }
     }
 

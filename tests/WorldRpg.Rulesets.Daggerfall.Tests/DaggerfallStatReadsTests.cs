@@ -49,20 +49,20 @@ public sealed class DaggerfallStatReadsTests
         Stat endurance = mechanics.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value));
         Stat healthMaximum = mechanics.GetStat(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value));
         Track health = mechanics.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
-        Track stamina = mechanics.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value));
+        Track fatigue = mechanics.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value));
         int created = healthMaximum.ValueInt;
 
-        // Wounding first proves the two policies: stamina keeps current while its live ceiling
+        // Wounding first proves the two policies: fatigue keeps current while its live ceiling
         // moves, while career/level health is permanent and must not move with endurance.
         health.Current = health.Current - 10;
-        stamina.Current = stamina.Current - 10;
+        fatigue.Current = fatigue.Current - 10;
         double woundedHealth = health.Current;
-        double woundedStamina = stamina.Current;
+        double woundedFatigue = fatigue.Current;
         DaggerfallStatModifiers.AdjustPermanent(mechanics, DaggerfallMechanicsIds.Endurance, 10);
         Assert.Equal(50, endurance.ValueInt);
         DaggerfallStatModifiers.RefreshPlayerDerivedMaxima(mechanics, Career());
         Assert.Equal(created, healthMaximum.ValueInt);
-        Assert.Equal(woundedStamina, stamina.Current);
+        Assert.Equal(woundedFatigue, fatigue.Current);
         Assert.Equal(woundedHealth, health.Current);
 
         // Save and restore keep the changed base, the maxima and the wounds.

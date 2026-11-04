@@ -80,9 +80,11 @@ internal static class DaggerfallMechanicsIds
     internal static readonly DaggerfallStatId LongBlade = new("long-blade");
     internal static readonly DaggerfallStatId HandToHand = new("hand-to-hand");
     internal static readonly DaggerfallStatId HealthMaximum = new("health-maximum");
+    internal static readonly DaggerfallStatId FatigueMaximum = new("fatigue-maximum");
     internal static readonly DaggerfallStatId StaminaMaximum = new("stamina-maximum");
     internal static readonly DaggerfallStatId MagickaMaximum = new("magicka-maximum");
     internal static readonly DaggerfallTrackId Health = new("health");
+    internal static readonly DaggerfallTrackId Fatigue = new("fatigue");
     internal static readonly DaggerfallTrackId Stamina = new("stamina");
     internal static readonly DaggerfallTrackId Magicka = new("magicka");
     internal static readonly DaggerfallTrackId PhysicalDamage = new("physical");
@@ -98,7 +100,7 @@ internal sealed class DaggerfallStatBases(IReadOnlyDictionary<DaggerfallStatId, 
 }
 
 /// <summary>Product policy for turning authored Daggerfall bases into track maxima and initial values.</summary>
-internal sealed record DaggerfallVitalValues(int HealthMaximum, int StaminaMaximum, int MagickaMaximum);
+internal sealed record DaggerfallVitalValues(int HealthMaximum, int FatigueMaximum, int MagickaMaximum);
 
 internal sealed record DaggerfallVitalRange(int Minimum, int Maximum);
 internal sealed record DaggerfallCombatProfile(DaggerfallTrackId Health, DaggerfallTrackId? AttackCost);

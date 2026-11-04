@@ -767,7 +767,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         long source = checked((long)result.Source.Get<DurableEntityIdentity>().Identity.Value);
         long target = checked((long)result.Target.Get<DurableEntityIdentity>().Identity.Value);
         ulong generation = _latestUpdateGeneration ?? 1UL, step = _latestSimulationStep ?? 1UL;
-        _facts.Append(result.Track == TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)
+        _facts.Append(result.Track == TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)
             ? new FatigueAppliedFact(source, target, result.CalculatedLoss, result.ActualLoss, generation, step)
             : new SpellPointsAppliedFact(source, target, result.CalculatedLoss, result.ActualLoss, generation, step));
     }

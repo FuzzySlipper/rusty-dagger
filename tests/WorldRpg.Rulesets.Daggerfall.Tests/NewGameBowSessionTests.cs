@@ -26,7 +26,7 @@ public sealed class NewGameBowSessionTests
         using Fixture f = new(distance);
         var action = f.Game.InspectPlaytestAction("attack");
         Assert.True(action.Available, action.Reason);
-        double stamina = f.Game.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current;
+        double fatigue = f.Game.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")).Current;
 
         f.Attack();
 
@@ -35,7 +35,7 @@ public sealed class NewGameBowSessionTests
         Assert.Equal(TestPayload.Definitions.Actions["bow-shot"].Reach,
             targeting.Request.Observers.Span[0].MaximumDistance);
         Assert.Equal(23UL, f.Arrows().Quantity);
-        Assert.Equal(stamina - 11, f.Game.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
+        Assert.Equal(fatigue - 11, f.Game.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")).Current);
         Assert.NotNull(f.Game.State.Actors.Player.Attack.Pending);
     }
 
@@ -55,13 +55,13 @@ public sealed class NewGameBowSessionTests
     }
 
     [Fact]
-    public void A_new_archer_without_arrows_refuses_the_shot_before_spending_stamina()
+    public void A_new_archer_without_arrows_refuses_the_shot_before_spending_fatigue()
     {
         using Fixture f = new(4);
         InventoryStackId stack = f.Arrows().Id;
         f.Game.State.Inventory.Consume(new InventoryConsume(stack, 24));
         f.Game.State.ItemInstances.RemoveStack(DaggerfallItemOwner.Player, stack);
-        double stamina = f.Game.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current;
+        double fatigue = f.Game.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")).Current;
         var action = f.Game.InspectPlaytestAction("attack");
         Assert.False(action.Available);
         Assert.Equal("EmptyQuiver", action.Reason);
@@ -69,7 +69,7 @@ public sealed class NewGameBowSessionTests
         f.Attack();
 
         Assert.Null(f.Game.State.Actors.Player.Attack.Pending);
-        Assert.Equal(stamina, f.Game.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
+        Assert.Equal(fatigue, f.Game.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")).Current);
         using var observation = JsonDocument.Parse(f.Game.ReadPlaytestObservation().Message);
         Assert.Equal("AttackRejected:EmptyQuiver", observation.RootElement.GetProperty("lastCombatEvent").GetProperty("kind").GetString());
     }

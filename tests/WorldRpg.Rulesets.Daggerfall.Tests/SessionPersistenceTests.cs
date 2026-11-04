@@ -147,11 +147,11 @@ public sealed class SessionPersistenceTests
         Assert.False(restored.State.WeaponDrawn);
 
         // A sheathed weapon refuses the swing after the load as it did before the save.
-        Track stamina = restored.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina"));
-        double before = stamina.Current;
+        Track fatigue = restored.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue"));
+        double before = fatigue.Current;
         restored.Update(new ProductUpdate(OuterUpdate(2),
             [Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "attack")]));
-        Assert.Equal(before, stamina.Current);
+        Assert.Equal(before, fatigue.Current);
         Assert.Null(restored.State.Actors.Player.Attack.Pending);
 
         restored.Update(new ProductUpdate(OuterUpdate(3), [ToggleWeapon()]));
@@ -274,13 +274,13 @@ public sealed class SessionPersistenceTests
     public void Running_calendar_fatigue_pending_before_a_minute_boundary_survives_save_and_restores_once()
     {
         using DaggerfallSession session = FreshSession();
-        Track stamina = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value));
-        double maximum = stamina.MaximumValue;
+        Track fatigue = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value));
+        double maximum = fatigue.MaximumValue;
         session.Update(new ProductUpdate(
             new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 4d),
             [Input(InputEventKind.Key, InputEdge.Pressed, KeyboardControl.KeyW), PhysicalKey(KeyboardControl.KeyW), PhysicalKey(KeyboardControl.ShiftLeft)]));
 
-        Assert.Equal(maximum, stamina.Current);
+        Assert.Equal(maximum, fatigue.Current);
         RulesetSavePayload payload = session.CaptureSave();
 
         string root = TestData.RepositoryRoot;
@@ -298,7 +298,7 @@ public sealed class SessionPersistenceTests
             new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 2, 2, 60, 1, 0, 1d),
             [Input(InputEventKind.Key, InputEdge.Pressed, KeyboardControl.KeyW), PhysicalKey(KeyboardControl.KeyW), PhysicalKey(KeyboardControl.ShiftLeft)]));
 
-        Assert.Equal(maximum - 88d, restored.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
+        Assert.Equal(maximum - 88d, restored.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).Current);
 
         static ProductInputEvent PhysicalKey(KeyboardControl key) => Input(InputEventKind.Key, InputEdge.Pressed, key) with
         {

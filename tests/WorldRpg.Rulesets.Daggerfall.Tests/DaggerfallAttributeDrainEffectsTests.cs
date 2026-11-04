@@ -123,7 +123,7 @@ public sealed class DaggerfallAttributeDrainEffectsTests
     public void Player_derived_vital_maxima_follow_live_attributes_and_partial_healing(int subtype)
     {
         using Fixture f = new(); var s = f.Session;
-        string trackName = subtype == 1 ? "magicka" : "stamina";
+        string trackName = subtype == 1 ? "magicka" : "fatigue";
         var track = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse(trackName)); double before = track.Maximum.Value;
         Start(s, "vitals", subtype, 10); double reduced = track.Maximum.Value; Assert.True(reduced < before);
         Heal(s, subtype, 5); Assert.True(track.Maximum.Value > reduced); Assert.True(track.Maximum.Value < before);

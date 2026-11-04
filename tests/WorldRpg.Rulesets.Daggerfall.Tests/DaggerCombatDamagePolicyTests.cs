@@ -648,17 +648,19 @@ public sealed class DaggerCombatDamagePolicyTests
     }
 
     [Theory]
-    [InlineData(150d, 128d)] // Spends down to the winded threshold and no further.
-    [InlineData(100d, 100d)] // Already below it, a blow spends nothing.
-    public void An_attack_spends_no_stamina_past_the_winded_threshold(double before, double after)
+    [InlineData(50d, 40d)]
+    [InlineData(4d, 0d)] // Attacks may spend the pool to nothing: it refills, and only Fatigue can collapse.
+    public void An_attack_spends_its_stamina_to_zero_and_the_classic_swings_fatigue(double before, double after)
     {
         using DamagePolicyFixture fixture = new();
         fixture.SetPlayerStamina(before);
+        double fatigue = fixture.PlayerFatigue;
         fixture.Script(body: 0, damage: 11);
 
         _ = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
 
         Assert.Equal(after, fixture.PlayerStamina);
+        Assert.Equal(fatigue - DaggerfallAttackTuning.Default.Stamina.FatiguePerSwing, fixture.PlayerFatigue);
     }
 
     [Theory]
@@ -681,18 +683,18 @@ public sealed class DaggerCombatDamagePolicyTests
     }
 
     [Fact]
-    public void A_kick_trains_hand_to_hand_and_drains_the_targets_stamina_whatever_the_weapon()
+    public void A_kick_trains_hand_to_hand_and_drains_the_targets_fatigue_whatever_the_weapon()
     {
         using DamagePolicyFixture fixture = new();
         fixture.SelectPlayerAttack(DaggerfallAttackIds.Kick);
         fixture.Script(body: 0, deflect: null, damage: DaggerfallAttackTuning.Default.KickDamage, afterDamage: 100);
-        double before = fixture.Actors.Get(2).Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current;
+        double before = fixture.Actors.Get(2).Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).Current;
 
         BlowResolution result = fixture.Run(new AttackRequest(DaggerfallActorIdentity.PlayerEntityId, 2, 1, 1, .125d, Delayed: false));
 
         Assert.True(result.Outcome.Hit);
         Assert.Contains(fixture.SkillUses, use => use.Skill == DaggerfallMechanicsIds.HandToHand.Value);
-        Assert.True(fixture.Actors.Get(2).Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current < before);
+        Assert.True(fixture.Actors.Get(2).Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).Current < before);
     }
 
     [Theory]
@@ -755,8 +757,8 @@ public sealed class DaggerCombatDamagePolicyTests
             return (result.Outcome.Damage, before - fixture.PlayerStamina);
         }
 
-        Assert.Equal((13, 64d), Blow("fastA")); // 11 - 1 iron + 3 for skill 60
-        Assert.Equal((26, 128d), Blow(DaggerfallAttackIds.PowerOut));
+        Assert.Equal((13, 10d), Blow("fastA")); // 11 - 1 iron + 3 for skill 60
+        Assert.Equal((26, 20d), Blow(DaggerfallAttackIds.PowerOut));
     }
 
     [Fact]
@@ -861,6 +863,7 @@ public sealed class DaggerCombatDamagePolicyTests
             _actors = new ActorsState();
             PlayerActorState player = _actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId(playerDefinition.Id.Value),
                 new DaggerfallMechanicsState().CreateStats(playerDefinition, DaggerfallPlayerVitals.Initial(playerDefinition.Stats, definitions.Catalogs.RequireCareer("class00"))), "health", DaggerActorFactory.PlayerCapabilities);
+            new DaggerfallPlayerStamina(DaggerfallStaminaTuning.Default).Refresh(player.Stats);
             _playerEquipment = BuildEquipment(player.Actor.Entity, DaggerfallActorIdentity.PlayerEntityId, player.Actor);
             foreach (DaggerfallLoadoutEntry entry in playerDefinition.Loadout.Where(entry => entry.UniqueEntityId is not null))
             {
@@ -1022,6 +1025,8 @@ public sealed class DaggerCombatDamagePolicyTests
         }
 
         internal double PlayerStamina => _actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current;
+
+        internal double PlayerFatigue => _actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).Current;
 
         /// <summary>Interrupts an attacker's attack, as leaving attack state or losing its target does.</summary>
         internal void Interrupt(long attackerId, ulong generation) => _combat.Execution.Interrupt(attackerId, generation);

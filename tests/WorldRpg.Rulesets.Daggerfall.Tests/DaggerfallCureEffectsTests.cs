@@ -118,10 +118,10 @@ public sealed class DaggerfallCureEffectsTests
         // A completed damaging source and a live drug must both be selected by the same cure.
         Assert.True(s.State.Poisons.Afflict(s.State.Actors.Player.Actor, (int)DaggerfallPoisonVariant.Indulcet));
         s.AdvanceElapsedTime(13 * 60); Assert.True(luck.Value > baseLuck);
-        double health = Health(s, 1).Current, stamina = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current;
+        double health = Health(s, 1).Current, fatigue = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")).Current;
         Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(Cast(s, "spell.058").Results).Outcome);
         Assert.Equal(baseEndurance, endurance.Value); Assert.Equal(baseLuck, luck.Value); Assert.Equal(health, Health(s, 1).Current);
-        Assert.Equal(stamina, s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
+        Assert.Equal(fatigue, s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")).Current);
         Assert.False(s.State.Poisons.IsAfflicted(s.State.Actors.Player.Actor));
         using var restored = f.Restore(s.CaptureSave()); Assert.False(restored.State.Poisons.IsAfflicted(restored.State.Actors.Player.Actor));
         restored.AdvanceElapsedTime(600); Assert.Equal(baseLuck, restored.State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Luck.Value)).Value);
@@ -265,7 +265,7 @@ public sealed class DaggerfallCureEffectsTests
         {
             Session = DaggerfallSession.StartNew(Engine().Context, _composition);
             Session.State.Progression.AdvanceTo(0, 100);
-            foreach (string name in new[] { "health", "magicka", "stamina" })
+            foreach (string name in new[] { "health", "magicka", "fatigue" })
             { var track = Session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(name)); track.Maximum.BaseValue = 10000; track.SetCurrent(10000); }
         }
         private EngineContextFake Engine()

@@ -55,7 +55,7 @@ public sealed class DaggerfallConcealmentEffectsTests
         using Fixture f = new(); var s = f.Session;
         Start(s, "normal", 13, 0, 10); Start(s, "true", 13, 1, 10);
         var target = s.State.Actors.Get(2000).Stats;
-        foreach (string track in new[] { "health", "stamina", "magicka" }) { target.GetTrack(TrackId.Parse(track)).Maximum.BaseValue = 1000; target.GetTrack(TrackId.Parse(track)).SetCurrent(1000); }
+        foreach (string track in new[] { "health", "fatigue", "magicka" }) { target.GetTrack(TrackId.Parse(track)).Maximum.BaseValue = 1000; target.GetTrack(TrackId.Parse(track)).SetCurrent(1000); }
         if (type == 4 && subtype == 0) s.State.Effects.Start(new("shield", "shield", "spell.shield", 2000, 2000, "shield", "Magic", null, 1, 10, DaggerfallAlterationEffects.ShieldState(new(1000, 1000))));
         var setting = new DaggerfallSpellEffectDefinition("attack", type, subtype, 0, 0, 1, 100, 0, 1, 7, 7, 0, 0, 1);
         var spell = new DaggerfallSpellDefinition("attack.test", 1, false, "Attack", 4, 1, 0, 0, [setting]);

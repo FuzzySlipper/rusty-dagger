@@ -97,7 +97,7 @@ internal sealed class DaggerfallVitalityConsequences
     {
         ArgumentOutOfRangeException.ThrowIfNegative(magnitude);
         int amount = fatigue ? DaggerfallFormulaPolicy.SpellFatigueDamage(magnitude) : magnitude;
-        TrackId track = fatigue ? TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value) : HealthTrack;
+        TrackId track = fatigue ? TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value) : HealthTrack;
         DamageResult? health = fatigue ? null : ResolveSpellHealth(caster, target, amount, terminal: false);
         DaggerfallSpellTrackResult? loss = fatigue ? ResolveSpellTrack(caster, target, track, amount, permitsFatigueLoss) : null;
         // A reflected terminal self-hit cannot resurrect its caster after accepted death.

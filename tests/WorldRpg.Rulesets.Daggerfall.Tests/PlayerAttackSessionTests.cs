@@ -151,7 +151,7 @@ public sealed class PlayerAttackSessionTests
         List<IProductFact> emptySpace = [];
         facts.Deliver(emptySpace.Add);
 
-        Assert.Equal(staminaBefore - 64, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
+        Assert.Equal(staminaBefore - 10, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
         // A swing at empty space waits for its hit frame like any other, and only there meets nothing.
         PlayerAttackStartedFact started = Assert.Single(emptySpace.OfType<PlayerAttackStartedFact>());
         Assert.Equal(((long?)null, new DaggerfallStrikeFeedback(true, "sound.347")), (started.TargetId, started.Feedback));
@@ -172,7 +172,7 @@ public sealed class PlayerAttackSessionTests
         List<IProductFact> coolingDown = [];
         facts.Deliver(coolingDown.Add);
         Assert.Equal([new AttackRejectedFact(AttackRejection.Cooldown, DaggerfallActorIdentity.PlayerEntityId)], coolingDown);
-        Assert.Equal(staminaBefore - 64, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
+        Assert.Equal(staminaBefore - 10, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current);
 
         session.Touches(2000);
         combat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 8, 20, .125), facts);
@@ -778,11 +778,12 @@ public sealed class PlayerAttackSessionTests
         Track health = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health"));
         health.Maximum.BaseValue = 1000;
         health.SetCurrent(1000);
+        ulong step = 1;
+        RunSeconds(session, ref step, 1d / 60d); // The first update sizes the pool for the character.
         Track stamina = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina"));
         double staminaBefore = stamina.Current;
         DaggerfallWeaponClassAttacks attacks = DaggerfallTuning.Defaults.Attacks.For("long-blade");
 
-        ulong step = 1;
         if (power)
         {
             session.Update(new ProductUpdate(OuterUpdate(step++), [AttackDown]));
@@ -822,12 +823,13 @@ public sealed class PlayerAttackSessionTests
     {
         (DaggerfallSession session, Func<double> health) = WithoutViewmodel();
         using DaggerfallSession disposable = session;
+        ulong step = 1;
+        RunSeconds(session, ref step, 1d / 60d); // The first update sizes the pool for the character.
         Track stamina = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina"));
         double before = stamina.Current;
         int spent = 0;
         session.State.Kit.Rules.RegisterAction(session.DefinitionsByActor[1].ActionId!, new CountingBlow(() => spent++));
 
-        ulong step = 1;
         session.Update(new ProductUpdate(OuterUpdate(step++), [Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, phase: InputPhase.Pressed, intent: "kick")]));
         Assert.Equal(before - DaggerfallTuning.Defaults.Attacks.KickStaminaCost, stamina.Current);
         RunSeconds(session, ref step, DaggerfallTuning.Defaults.Attacks.Kick.Windup + 2d / 60d);
@@ -873,10 +875,11 @@ public sealed class PlayerAttackSessionTests
     {
         (DaggerfallSession session, Func<double> _) = WithoutViewmodel();
         using DaggerfallSession disposable = session;
+        ulong step = 1;
+        RunSeconds(session, ref step, 1d / 60d); // The first update sizes the pool for the character.
         Track stamina = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina"));
         double before = stamina.Current;
 
-        ulong step = 1;
         session.Update(new ProductUpdate(OuterUpdate(step++), [PadButton(ControllerButton.Button0, InputEdge.Pressed)]));
 
         // A hold spends nothing until it is released; a tap would have spent the swing already.

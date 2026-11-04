@@ -224,7 +224,7 @@ public sealed class DaggerfallRestSessionTests
         DaggerfallSavePayload restedSave;
         int medicalBefore;
         double healthBefore;
-        double staminaBefore;
+        double fatigueBefore;
         double magickaBefore;
         DaggerfallCalendarSave calendarBefore;
         using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults) {Sky = sky}))
@@ -238,13 +238,13 @@ public sealed class DaggerfallRestSessionTests
             // Exercise an eligible camp away from the dungeon's live enemy group.
             session.State.PlayerControl.MoveTo(new WorldPoint(1000f, 1f, 1000f).ToVector());
             Track health = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
-            Track stamina = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value));
+            Track fatigue = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value));
             Track magicka = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value));
             health.SetCurrent(health.MaximumValue - 10d, clamp: true);
-            stamina.SetCurrent(stamina.MaximumValue - 100d, clamp: true);
+            fatigue.SetCurrent(fatigue.MaximumValue - 100d, clamp: true);
             magicka.SetCurrent(magicka.MaximumValue - 10d, clamp: true);
             healthBefore = health.Current;
-            staminaBefore = stamina.Current;
+            fatigueBefore = fatigue.Current;
             magickaBefore = magicka.Current;
             medicalBefore = session.State.Progression.SkillUses["medical"];
             calendarBefore = DaggerfallSavePayload.Read(session.CaptureSave()).Calendar;
@@ -261,7 +261,7 @@ public sealed class DaggerfallRestSessionTests
             Assert.True(view.FatigueRecovered > 0);
             Assert.True(view.SpellPointsRecovered > 0);
             Assert.Equal(healthBefore + view.HealthRecovered, health.Current);
-            Assert.Equal(staminaBefore + view.FatigueRecovered, stamina.Current);
+            Assert.Equal(fatigueBefore + view.FatigueRecovered, fatigue.Current);
             Assert.Equal(magickaBefore + view.SpellPointsRecovered, magicka.Current);
             Assert.Equal(medicalBefore + 1, session.State.Progression.SkillUses["medical"]);
 

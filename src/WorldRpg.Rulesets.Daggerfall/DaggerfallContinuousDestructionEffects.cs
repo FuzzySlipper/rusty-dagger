@@ -29,7 +29,7 @@ internal static class DaggerfallContinuousDestructionEffects
                     if (selected == 1 && target != DaggerfallActorIdentity.PlayerEntityId && !hostile(target)) return;
                     if (selected == 0) healthApplied(new(vitality.ResolveSpellHealth(effect.Source, effect.Target, amount, terminal:false)));
                     else trackApplied(vitality.ResolveSpellTrack(effect.Source, effect.Target,
-                        TrackId.Parse(selected == 1 ? DaggerfallMechanicsIds.Stamina.Value : DaggerfallMechanicsIds.Magicka.Value),
+                        TrackId.Parse(selected == 1 ? DaggerfallMechanicsIds.Fatigue.Value : DaggerfallMechanicsIds.Magicka.Value),
                         selected == 1 ? DaggerfallFormulaPolicy.SpellFatigueDamage(amount) : amount));
                     if (effect.Context.Caster is { } caster) attacked(checked((long)caster.Value), target, effect.BundleId ?? effect.Context.Instance.Value);
                     if (health.Current <= 0) effect.ExpireAfterCurrentRound = true;

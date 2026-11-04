@@ -28,24 +28,24 @@ public sealed class DaggerCombatFatigueConsequencesTests
         Assert.Equal((2, DaggerfallActorIdentity.PlayerEntityId, 256, 256d),
             (fatigue.SourceActorId, fatigue.TargetActorId, fatigue.CalculatedFatigueLoss, fatigue.ActualFatigueLost));
         Assert.Equal((2, 2d), (health.CalculatedDamage, health.ActualHealthLost));
-        Assert.Equal(344d, fixture.Stamina);
+        Assert.Equal(344d, fixture.Fatigue);
         Assert.Equal(98d, fixture.Health);
 
         DaggerfallStatsSave saved = DaggerfallStatsSaveBoundary.Capture(fixture.Actors.Player.Stats, fixture.Actors.Player.Actor.Entity);
         DaggerfallRestoredStats restored = DaggerfallStatsSaveBoundary.Restore(saved, new EntityId(DaggerfallActorIdentity.PlayerEntityId));
-        Assert.Equal(344d, restored.Component.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
+        Assert.Equal(344d, restored.Component.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).Current);
     }
 
     [Fact]
     public void Fatigue_loss_reports_the_bounded_live_loss_when_the_target_is_nearly_exhausted()
     {
-        using DaggerCombatFixture fixture = new("nymph", playerStamina: 20d);
+        using DaggerCombatFixture fixture = new("nymph", playerFatigue: 20d);
 
         fixture.ApplyConnected(Attack(), Prepared());
 
         FatigueAppliedFact fatigue = Assert.Single(fixture.Deliver().OfType<FatigueAppliedFact>());
         Assert.Equal((256, 20d), (fatigue.CalculatedFatigueLoss, fatigue.ActualFatigueLost));
-        Assert.Equal(0d, fixture.Stamina);
+        Assert.Equal(0d, fixture.Fatigue);
     }
 
     private static AttackRequest Attack() =>

@@ -15,7 +15,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// </summary>
 internal sealed partial class DaggerfallSession
 {
-    private static readonly TrackId ExhaustionFatigueTrack = TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value);
+    private static readonly TrackId ExhaustionFatigueTrack = TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value);
     private static readonly TrackId ExhaustionHealthTrack = TrackId.Parse(DaggerfallMechanicsIds.Health.Value);
     private const string ExhaustedSafelyText = "1071";
     private const string ExhaustedNearEnemiesText = "1072";

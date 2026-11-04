@@ -351,7 +351,7 @@ internal static class DaggerfallDiseasePolicy
         AddAttributeLoss(losses, DaggerfallMechanicsIds.Luck, data.Luck, amount);
         ApplyAttributeContributions(effect, stats, losses, playerCareer);
         ApplyHealth(combat, effect, stats, data, amount, damageApplied);
-        ApplyTrack(effect, stats, DaggerfallMechanicsIds.Stamina, data.Fatigue, amount, conditionTrack);
+        ApplyTrack(effect, stats, DaggerfallMechanicsIds.Fatigue, data.Fatigue, amount, conditionTrack);
         ApplyTrack(effect, stats, DaggerfallMechanicsIds.Magicka, data.SpellPoints, amount, conditionTrack);
         return state with { AttributeLosses = losses };
     }

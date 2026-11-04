@@ -39,7 +39,7 @@ public sealed class DaggerfallRewardReactionTests
         DaggerfallVitalValues vitals = DaggerfallPlayerVitals.Initial(player.Stats, career);
         Assert.Equal(vitals.HealthMaximum, healthMaximum.Value);
         Assert.Equal(vitals.HealthMaximum, health.Current);
-        Assert.Equal(vitals.StaminaMaximum, mechanics.GetTrack(TrackId.Parse("stamina")).Current);
+        Assert.Equal(vitals.FatigueMaximum, mechanics.GetTrack(TrackId.Parse("fatigue")).Current);
     }
 
     [Fact]

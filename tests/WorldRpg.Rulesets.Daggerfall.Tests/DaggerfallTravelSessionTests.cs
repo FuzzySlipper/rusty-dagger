@@ -309,7 +309,7 @@ public sealed class DaggerfallTravelSessionTests
         fixture.AddGold(1000);
         var quote = fixture.Preview(inn: true, cautious: cautious);
         var stats = fixture.Session.State.Actors.Player.Stats;
-        foreach (string name in new[] { "health", "stamina", "magicka" }) stats.GetTrack(TrackId.Parse(name)).SetCurrent(1);
+        foreach (string name in new[] { "health", "fatigue", "magicka" }) stats.GetTrack(TrackId.Parse(name)).SetCurrent(1);
         fixture.Accept(quote);
         var result = Assert.IsType<DaggerfallTravelResult>(fixture.Session.State.Travel.LastResult);
         Assert.Equal(DaggerfallTravelOutcome.Arrived, result.Outcome);
@@ -320,9 +320,9 @@ public sealed class DaggerfallTravelSessionTests
 
         // Cautious recovery happens before travel. As in the donor, the journey's raised clock then
         // charges no per-minute fatigue loss, so a long trip cannot end in an exhaustion collapse.
-        Track stamina = stats.GetTrack(TrackId.Parse("stamina"));
+        Track fatigue = stats.GetTrack(TrackId.Parse("fatigue"));
         Assert.True(result.EndedSeconds > result.StartedSeconds);
-        Assert.Equal(cautious ? stamina.Maximum.Value : 1, stamina.Current);
+        Assert.Equal(cautious ? fatigue.Maximum.Value : 1, fatigue.Current);
     }
 
     [Theory]

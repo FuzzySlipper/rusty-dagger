@@ -113,7 +113,7 @@ internal interface IDaggerfallPhysicalHarmOperations
     /// <summary>What a backstab multiplies a blow by, from the attacker's Backstabbing.</summary>
     double BackstabMultiplier(Combatant attacker);
     /// <summary>An unarmed blow drains the target's stamina as well as its health.</summary>
-    void DrainStamina(AttackRequest request, long target, int damage, FactBuffer<IProductFact> facts);
+    void DrainFatigue(AttackRequest request, long target, int damage, FactBuffer<IProductFact> facts);
     int EnemyTypeBonus(Combatant attacker, Combatant target);
     EquipmentRead EquipmentOf(long owner);
     int AttackChanceModifier();

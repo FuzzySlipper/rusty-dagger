@@ -191,7 +191,7 @@ public sealed class HostSaveSlotTests
         NewGameSessionTests.Commit(ruleset.RequireSession());
         product.Begin();
         DaggerfallSession session = ruleset.RequireSession();
-        TrackId staminaId = TrackId.Parse("stamina");
+        TrackId fatigueId = TrackId.Parse("fatigue");
 
         // Loading an empty named slot is an honest outcome, not a session replacement.
         product.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"load-slot\",\"key\":\"slot-1\"}")]));

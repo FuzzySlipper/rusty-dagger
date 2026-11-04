@@ -239,6 +239,7 @@ internal sealed partial class DaggerfallSession
         StepPlayerAttack(update.DeltaSeconds, generation, simulationStep);
         // The guard follows the step's acts, so a swing begun this step keeps the guard down.
         StepGuard(update.DeltaSeconds, generation, simulationStep);
+        _stamina.Step(State.Actors.Player.Stats, update.DeltaSeconds);
         // Tasks consume the state committed by this admitted step. Clock actions mutate only the
         // quest clock state; elapsed duration is still consumed by the calendar owner above.
         State.Quests.Advance(State.Variables, _time.Calendar, update.DeltaSeconds);

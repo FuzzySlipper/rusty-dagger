@@ -51,7 +51,10 @@ internal static class DaggerfallCharacterSheetText
     private static string? Resource(CharacterResourcePresentation resource) => resource.Id switch
     {
         "health" => "You die when your health reaches zero. Rest, healing spells and potions restore it.",
-        "stamina" => "Fatigue. Running, jumping and fighting spend it, and resting restores it; when it runs out you collapse.",
+        "fatigue" => "How worn out you are. Travel, running, jumping and fighting raise it, and only rest or magic lowers it. "
+            + "Past half, your stamina shrinks; past three quarters, it refills more slowly; when it fills you collapse.",
+        "stamina" => "Your wind in a fight. Attacks, kicks and guarding spend it, and it refills on its own. Near empty you are winded: "
+            + "your blows are slower and weaker, and you cannot kick, guard or land a power attack until it refills.",
         "magicka" => "Spell points. Casting a spell spends its cost, and resting restores them.",
         _ => null,
     };

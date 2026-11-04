@@ -29,11 +29,11 @@ internal sealed class DaggerCombatFixture : IDisposable
 {
     private readonly SpatialMovementSystem _spatial;
 
-    internal DaggerCombatFixture(string sourceId, double playerHealth = 100d, double playerStamina = 600d)
+    internal DaggerCombatFixture(string sourceId, double playerHealth = 100d, double playerFatigue = 600d)
     {
         Definitions = TestPayload.Definitions;
         Actors = new ActorsState();
-        PlayerActorState player = Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), Stats(playerHealth, playerStamina), "health", DaggerActorFactory.PlayerCapabilities);
+        PlayerActorState player = Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), Stats(playerHealth, playerFatigue), "health", DaggerActorFactory.PlayerCapabilities);
         ActorState source = Actors.CreateActor(2, new EntityTypeId(sourceId), Stats(100d, 600d), new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
         Random = RandomMinimum.Create();
         Dictionary<long, DaggerfallActorDefinition> authored = new()
@@ -86,7 +86,7 @@ internal sealed class DaggerCombatFixture : IDisposable
 
     internal double Health => Track(DaggerfallMechanicsIds.Health.Value);
 
-    internal double Stamina => Track(DaggerfallMechanicsIds.Stamina.Value);
+    internal double Fatigue => Track(DaggerfallMechanicsIds.Fatigue.Value);
 
     /// <summary>Applies a blow that already connected with the request's target, through the application every delivery shares.</summary>
     internal void ApplyConnected(AttackRequest request, DaggerCombatRules.DaggerfallPreparedAttack attack) =>
@@ -99,15 +99,18 @@ internal sealed class DaggerCombatFixture : IDisposable
         return delivered;
     }
 
-    internal static StatsComponent Stats(double health, double stamina)
+    internal static StatsComponent Stats(double health, double fatigue)
     {
         Stat healthMaximum = new(1_000);
-        Stat staminaMaximum = new(1_000);
+        Stat fatigueMaximum = new(1_000);
+        Stat staminaMaximum = new(100);
         StatsComponent stats = new();
         stats.AddStat(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value), healthMaximum);
+        stats.AddStat(StatId.Parse(DaggerfallMechanicsIds.FatigueMaximum.Value), fatigueMaximum);
         stats.AddStat(StatId.Parse(DaggerfallMechanicsIds.StaminaMaximum.Value), staminaMaximum);
         stats.AddTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value), new Track(healthMaximum, health, 0d));
-        stats.AddTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value), new Track(staminaMaximum, stamina, 0d));
+        stats.AddTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value), new Track(fatigueMaximum, fatigue, 0d));
+        stats.AddTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value), new Track(staminaMaximum, 100d, 0d));
         return stats;
     }
 

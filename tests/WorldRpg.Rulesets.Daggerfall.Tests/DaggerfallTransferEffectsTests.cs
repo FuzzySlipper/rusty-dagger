@@ -17,7 +17,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallTransferEffectsTests
 {
     [Theory]
-    [InlineData(8, "health", 10)] [InlineData(9, "stamina", 640)]
+    [InlineData(8, "health", 10)] [InlineData(9, "fatigue", 640)]
     public void Transfer_uses_full_admitted_amount_after_bounded_target_loss_and_caster_overflow(int subtype, string track, int amount)
     {
         using Harness h = new(subtype);
@@ -48,10 +48,10 @@ public sealed class DaggerfallTransferEffectsTests
     [Fact]
     public void Peaceful_fatigue_target_has_no_loss_but_transfer_still_restores_and_requests_aggression()
     {
-        using Harness h = new(9); h.Hostile = false; h.Track(1, "stamina").SetCurrent(100);
+        using Harness h = new(9); h.Hostile = false; h.Track(1, "fatigue").SetCurrent(100);
         h.Casting.Deliver(h.Release(), [2]);
         Assert.Equal(0, Assert.Single(h.Results).ActualLoss); Assert.Equal(640, h.Results[0].Restored);
-        Assert.Equal(1000, h.Track(2, "stamina").Current); Assert.Single(h.Attacks);
+        Assert.Equal(1000, h.Track(2, "fatigue").Current); Assert.Single(h.Attacks);
         h.Hostile = true; h.Casting.Deliver(h.Release(), [2]); Assert.Equal(640, h.Results.Last().ActualLoss);
     }
 
@@ -118,7 +118,7 @@ public sealed class DaggerfallTransferEffectsTests
     }
 
     [Theory]
-    [InlineData("spell.049", "health", true)] [InlineData("spell.063", "stamina", false)]
+    [InlineData("spell.049", "health", true)] [InlineData("spell.063", "fatigue", false)]
     public void Published_transfer_delivers_through_real_session_and_restores_current_save_without_replay(string key, string track, bool lethal)
     {
         using Fixture f = new(); var s = f.Session; const long target = 2000;
@@ -205,7 +205,7 @@ public sealed class DaggerfallTransferEffectsTests
         private static StatsComponent Stats()
         {
             StatsComponent stats = new();
-            foreach (string name in new[] { "health", "stamina", "magicka" }) { var maximum = new Stat(1000); stats.AddStat(StatId.Parse(name + "-maximum"), maximum); stats.AddTrack(TrackId.Parse(name), new(maximum, 1000)); }
+            foreach (string name in new[] { "health", "fatigue", "magicka" }) { var maximum = new Stat(1000); stats.AddStat(StatId.Parse(name + "-maximum"), maximum); stats.AddTrack(TrackId.Parse(name), new(maximum, 1000)); }
             stats.AddStat(StatId.Parse("destruction"), new(100)); return stats;
         }
         public void Dispose() { Effects.Dispose(); Actors.Dispose(); }

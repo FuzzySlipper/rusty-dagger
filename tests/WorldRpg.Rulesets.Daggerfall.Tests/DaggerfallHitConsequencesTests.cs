@@ -172,7 +172,7 @@ public sealed class DaggerfallHitConsequencesTests
     [Fact]
     public void Each_natural_slot_uses_raw_damage_for_fatigue_before_a_lethal_aggregate_hit()
     {
-        using DaggerCombatFixture f = new("nymph", playerHealth: 1, playerStamina: 1000);
+        using DaggerCombatFixture f = new("nymph", playerHealth: 1, playerFatigue: 1000);
         var request = new AttackRequest(2, 1, 7, 13, .125, true);
         var prepared = new DaggerCombatRules.DaggerfallPreparedAttack(.5,
             new(true, true, 5), DaggerfallStrikeFeedback.Unarmed,
@@ -180,7 +180,7 @@ public sealed class DaggerfallHitConsequencesTests
         f.ApplyConnected(request, prepared);
         var facts = f.Deliver();
         Assert.Equal(new[] { 256, 384 }, facts.OfType<FatigueAppliedFact>().Select(value => value.CalculatedFatigueLoss));
-        Assert.Equal(360, f.Stamina);
+        Assert.Equal(360, f.Fatigue);
         Assert.Equal(0, f.Health);
         Assert.IsType<FatigueAppliedFact>(facts[0]);
         Assert.IsType<FatigueAppliedFact>(facts[1]);

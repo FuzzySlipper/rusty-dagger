@@ -265,7 +265,7 @@ public sealed class CareerPassiveSessionTests
     {
         Assert.Equal(11, DaggerfallTuning.Defaults.Locomotion.IdleFatiguePerGameMinute);
         using var session = Restore(null); SetPresetCareer(session, career);
-        var fatigue = Track(session, DaggerfallMechanicsIds.Stamina.Value);
+        var fatigue = Track(session, DaggerfallMechanicsIds.Fatigue.Value);
         double full = fatigue.Maximum.Value; fatigue.SetCurrent(full);
         Assert.True(full > 10 * 11);
         session.AdvanceElapsedTime(10 * 60);

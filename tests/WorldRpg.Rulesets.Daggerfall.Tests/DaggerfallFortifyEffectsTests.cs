@@ -56,12 +56,12 @@ public sealed class DaggerfallFortifyEffectsTests
     {
         using Fixture f = new(); var s = f.Session; var stat = Stat(s, 1, 0); stat.BaseValue = 50;
         DaggerfallStatModifiers.RefreshPlayerDerivedMaxima(s.State.Actors.Player.Stats, s.State.Character.Career);
-        var track = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")); double maximum = track.Maximum.Value;
+        var track = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")); double maximum = track.Maximum.Value;
         Fund(s); s.State.Character.LearnSpell("spell.075"); Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell("spell.075").Outcome);
         var bundle = s.Casting.Release(1, true).Bundle!; s.Casting.Deliver(bundle, [1]);
         Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(bundle.Results).Outcome); Assert.True(stat.Value > 50); Assert.True(track.Maximum.Value > maximum);
         using var restored = f.Restore(s.CaptureSave()); Assert.Equal(stat.Value, Stat(restored, 1, 0).Value);
-        Assert.Equal(track.Maximum.Value, restored.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Maximum.Value);
+        Assert.Equal(track.Maximum.Value, restored.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")).Maximum.Value);
         s.State.Effects.Cancel(EffectInstanceId.Parse(bundle.Results[0].Instance!)); Assert.Equal(50, stat.Value); Assert.Equal(maximum, track.Maximum.Value);
     }
 

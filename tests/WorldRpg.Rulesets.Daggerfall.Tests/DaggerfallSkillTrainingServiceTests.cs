@@ -55,7 +55,7 @@ public sealed class DaggerfallSkillTrainingServiceTests
 
         int currentSkillSum = f.SkillProgression.CurrentLevelUpSkillSum;
         ulong goldBefore = f.Currency.Read().Gold;
-        double fatigueBefore = f.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current;
+        double fatigueBefore = f.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).Current;
         long trainedAt = f.Calendar.ToAbsoluteSeconds();
         DaggerfallSkillTrainingQuote quote = Assert.IsType<DaggerfallSkillTrainingQuote>(f.TrainingService.Quote(request, skill).Quote);
         Assert.Equal(300UL, quote.Price);
@@ -77,7 +77,7 @@ public sealed class DaggerfallSkillTrainingServiceTests
         Assert.Equal(new(405, 5, 1, 2, 0, 0), f.Calendar);
         Assert.Equal(trainedAt + DaggerfallSkillTrainingPolicy.TrainingDurationSeconds, outcome.CompletedAtSecond);
         Assert.Equal(fatigueBefore - Math.Min(fatigueBefore, (long)f.Locomotion.IdleFatiguePerGameMinute * 180),
-            f.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
+            f.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).Current);
 
         DaggerfallSkillTrainingQuoteResult tooSoon = f.TrainingService.Quote(f.Request("train-second"), skill);
         Assert.Equal(DaggerfallSkillTrainingDenial.TrainingTooSoon, tooSoon.TrainingDenial);

@@ -186,7 +186,7 @@ internal sealed class DaggerfallSkillTrainingService
 
         _training.Record(nowSecond);
         _advanceElapsed(DaggerfallSkillTrainingPolicy.TrainingDurationSeconds);
-        Track fatigue = _stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value));
+        Track fatigue = _stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value));
         long fatigueCost = checked((long)_locomotion.IdleFatiguePerGameMinute * 180);
         _ = fatigue.Spend(Math.Min(fatigue.Current, fatigueCost));
         return new(true, DaggerfallSkillTrainingDenial.None, payment, quote.SkillId, trainedValue, _calendar().ToAbsoluteSeconds());

@@ -740,7 +740,7 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
         DaggerfallQuestSourceDefinition source = Source(Block("headless", 7, "train pc " + skill.Replace("-", string.Empty, StringComparison.Ordinal)));
         DaggerfallQuestRuntimeInstance instance = Runtime(source);
         DaggerfallQuestTaskOperation operation = Program(source).Tasks.Single().Operations.Single();
-        double fatigueBefore = stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current;
+        double fatigueBefore = stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).Current;
         runtime.Train(instance, operation);
 
         Assert.True(instance.Succeeded);
@@ -748,7 +748,7 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
         Assert.Equal(DaggerfallCalendar.Start.Advance(3 * 60 * 60, out _), calendar);
         Assert.Equal(10 * DaggerfallFormulaPolicy.SkillAdvancementMultiplier(skill), progression.SkillUses[skill]);
         Assert.Equal(training.Capture(), new DaggerfallQuestTrainingState(training.Capture()).Capture());
-        Assert.Equal(fatigueBefore - (11 * 180), stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
+        Assert.Equal(fatigueBefore - (11 * 180), stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).Current);
     }
 
     [Fact]
@@ -813,13 +813,13 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
         instances.Advance(variables, calendar);
         long trainedAt = training.LastSkillTrainingSecond!.Value;
         int skillUses = progression.SkillUses["long-blade"];
-        double fatigue = stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current;
+        double fatigue = stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).Current;
         instances.Advance(variables, calendar);
 
         Assert.Equal(DaggerfallCalendar.Start.Advance(3 * 60 * 60, out _), calendar);
         Assert.Equal(trainedAt, training.LastSkillTrainingSecond);
         Assert.Equal(skillUses, progression.SkillUses["long-blade"]);
-        Assert.Equal(fatigue, stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Current);
+        Assert.Equal(fatigue, stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).Current);
         Assert.Single(instances.Messages.Deliveries, delivery => delivery is { MessageId: 1004, Delivery: DaggerfallQuestMessageDelivery.Popup });
     }
 

@@ -20,7 +20,7 @@ public sealed class DaggerfallPlayerVitalsTests
 
         Assert.Equal(31, mageVitals.HealthMaximum);
         Assert.Equal(37, spellswordVitals.HealthMaximum);
-        Assert.Equal(5_760, mageVitals.StaminaMaximum);
+        Assert.Equal(5_760, mageVitals.FatigueMaximum);
         Assert.Equal(100, mageVitals.MagickaMaximum);
         Assert.Equal(75, spellswordVitals.MagickaMaximum);
         Assert.Equal(2_000, mage.SpellPointMultiplierMilli);
@@ -43,7 +43,7 @@ public sealed class DaggerfallPlayerVitalsTests
 
         Assert.Equal(31, stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value)).ValueInt);
         Assert.Equal(26, health.ValueInt);
-        Assert.Equal(5_120, stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.StaminaMaximum.Value)).ValueInt);
+        Assert.Equal(5_120, stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.FatigueMaximum.Value)).ValueInt);
         Assert.Equal(80, stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.MagickaMaximum.Value)).ValueInt);
 
         Assert.True(DaggerfallStatModifiers.RemoveMod(stats, DaggerfallMechanicsIds.Endurance, endurance));
@@ -52,7 +52,7 @@ public sealed class DaggerfallPlayerVitalsTests
 
         Assert.Equal(31, stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value)).ValueInt);
         Assert.Equal(26, health.ValueInt);
-        Assert.Equal(5_760, stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.StaminaMaximum.Value)).ValueInt);
+        Assert.Equal(5_760, stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.FatigueMaximum.Value)).ValueInt);
         Assert.Equal(100, stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.MagickaMaximum.Value)).ValueInt);
     }
 

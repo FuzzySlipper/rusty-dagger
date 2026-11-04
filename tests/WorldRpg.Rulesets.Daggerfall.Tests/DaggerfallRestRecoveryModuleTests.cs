@@ -9,13 +9,13 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallRestRecoveryModuleTests
 {
     private static readonly TrackId Health = TrackId.Parse(DaggerfallMechanicsIds.Health.Value);
-    private static readonly TrackId Stamina = TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value);
+    private static readonly TrackId Fatigue = TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value);
     private static readonly TrackId Magicka = TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value);
 
     [Fact]
     public void Timed_rest_uses_the_shared_ten_minute_interval_and_recovers_once_per_hour()
     {
-        StatsComponent player = PlayerStats(health: 40, stamina: 400, magicka: 20);
+        StatsComponent player = PlayerStats(health: 40, fatigue: 400, magicka: 20);
         DaggerfallRestRecoveryModule module = new();
         List<long> intervals = [];
         int medicalUses = 0;
@@ -46,14 +46,14 @@ public sealed class DaggerfallRestRecoveryModuleTests
         Assert.Equal(Enumerable.Repeat(600L, 12), intervals);
         Assert.Equal(2, medicalUses);
         Assert.Equal(58, player.GetTrack(Health).Current);
-        Assert.Equal(600, player.GetTrack(Stamina).Current);
+        Assert.Equal(600, player.GetTrack(Fatigue).Current);
         Assert.Equal(40, player.GetTrack(Magicka).Current);
     }
 
     [Fact]
     public void Later_recovery_hours_use_live_inputs_and_skills_advance_once_at_completion()
     {
-        StatsComponent player = PlayerStats(health: 1, stamina: 400, magicka: 20);
+        StatsComponent player = PlayerStats(health: 1, fatigue: 400, magicka: 20);
         int medical = 0;
         int hours = 0;
         int elapsedChecks = 0;
@@ -83,7 +83,7 @@ public sealed class DaggerfallRestRecoveryModuleTests
     [Fact]
     public void Encounter_stops_rest_after_applied_time_and_keeps_the_completed_hour()
     {
-        StatsComponent player = PlayerStats(health: 40, stamina: 400, magicka: 20);
+        StatsComponent player = PlayerStats(health: 40, fatigue: 400, magicka: 20);
         DaggerfallRestRecoveryModule module = new();
         int calls = 0;
         int medicalUses = 0;
@@ -113,7 +113,7 @@ public sealed class DaggerfallRestRecoveryModuleTests
     [Fact]
     public void Encounter_at_the_hour_boundary_interrupts_before_that_hour_recovers()
     {
-        StatsComponent player = PlayerStats(health: 40, stamina: 400, magicka: 20);
+        StatsComponent player = PlayerStats(health: 40, fatigue: 400, magicka: 20);
         int calls = 0;
         int medicalUses = 0;
 
@@ -141,7 +141,7 @@ public sealed class DaggerfallRestRecoveryModuleTests
     [Fact]
     public void Lethal_elapsed_effect_interrupts_until_healed_without_reviving_the_player()
     {
-        StatsComponent player = PlayerStats(health: 4, stamina: 400, magicka: 20);
+        StatsComponent player = PlayerStats(health: 4, fatigue: 400, magicka: 20);
         int calls = 0;
         int medicalUses = 0;
 
@@ -166,7 +166,7 @@ public sealed class DaggerfallRestRecoveryModuleTests
     [Fact]
     public void Loiter_advances_time_without_vitals_or_medical_skill_use()
     {
-        StatsComponent player = PlayerStats(health: 40, stamina: 400, magicka: 20);
+        StatsComponent player = PlayerStats(health: 40, fatigue: 400, magicka: 20);
         DaggerfallRestRecoveryModule module = new();
         int calls = 0;
         int medicalUses = 0;
@@ -194,7 +194,7 @@ public sealed class DaggerfallRestRecoveryModuleTests
     [Fact]
     public void Until_healed_stops_at_the_vital_caps_and_records_medical_once()
     {
-        StatsComponent player = PlayerStats(health: 91, stamina: 700, magicka: 70);
+        StatsComponent player = PlayerStats(health: 91, fatigue: 700, magicka: 70);
         DaggerfallRestRecoveryModule module = new();
         int calls = 0;
         int medicalUses = 0;
@@ -222,7 +222,7 @@ public sealed class DaggerfallRestRecoveryModuleTests
     [Fact]
     public void Ineligible_rest_does_not_advance_time_or_record_skill_use()
     {
-        StatsComponent player = PlayerStats(health: 40, stamina: 400, magicka: 20);
+        StatsComponent player = PlayerStats(health: 40, fatigue: 400, magicka: 20);
         int calls = 0;
         int medicalUses = 0;
         DaggerfallRestResult result = new DaggerfallRestRecoveryModule().Apply(
@@ -244,18 +244,18 @@ public sealed class DaggerfallRestRecoveryModuleTests
         Assert.Equal(40, player.GetTrack(Health).Current);
     }
 
-    private static StatsComponent PlayerStats(int health, int stamina, int magicka)
+    private static StatsComponent PlayerStats(int health, int fatigue, int magicka)
     {
         Stat healthMaximum = new(100, 0, 100);
-        Stat staminaMaximum = new(800, 0, 800);
+        Stat fatigueMaximum = new(800, 0, 800);
         Stat magickaMaximum = new(80, 0, 80);
         StatsComponent stats = new();
         stats.AddStat(StatId.Parse(DaggerfallMechanicsIds.HealthMaximum.Value), healthMaximum);
-        stats.AddStat(StatId.Parse(DaggerfallMechanicsIds.StaminaMaximum.Value), staminaMaximum);
+        stats.AddStat(StatId.Parse(DaggerfallMechanicsIds.FatigueMaximum.Value), fatigueMaximum);
         stats.AddStat(StatId.Parse(DaggerfallMechanicsIds.MagickaMaximum.Value), magickaMaximum);
         stats.AddStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value), new Stat(50, 0, 100));
         stats.AddTrack(Health, new Track(healthMaximum, health, 0, quantum: 1));
-        stats.AddTrack(Stamina, new Track(staminaMaximum, stamina, 0, quantum: 1));
+        stats.AddTrack(Fatigue, new Track(fatigueMaximum, fatigue, 0, quantum: 1));
         stats.AddTrack(Magicka, new Track(magickaMaximum, magicka, 0, quantum: 1));
         return stats;
     }

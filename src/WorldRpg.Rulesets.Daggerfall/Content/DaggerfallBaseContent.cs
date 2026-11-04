@@ -3508,7 +3508,7 @@ internal static partial class DaggerfallBaseContent
         foreach (DaggerfallActorDefinition actor in actors.Values.Where(actor => actor.Kind == "monster"))
             if (actor.MobileId is int mobile && !monsterMobileIds.Add(mobile)) diagnostics.Add($"Mobile '{mobile}' is assigned by more than one monster.");
         foreach (DaggerfallHudResourceDefinition resource in hud)
-            if (!ValidId(resource.Id) || string.IsNullOrWhiteSpace(resource.Label) || !vocabulary.Tracks.Contains(resource.Track) || resource.Track != DaggerfallMechanicsIds.Health && resource.Track != DaggerfallMechanicsIds.Stamina && resource.Track != DaggerfallMechanicsIds.Magicka) diagnostics.Add($"HUD resource '{resource.Id}' refers to an unsupported track or is malformed.");
+            if (!ValidId(resource.Id) || string.IsNullOrWhiteSpace(resource.Label) || !vocabulary.Tracks.Contains(resource.Track) || resource.Track != DaggerfallMechanicsIds.Health && resource.Track != DaggerfallMechanicsIds.Fatigue && resource.Track != DaggerfallMechanicsIds.Stamina && resource.Track != DaggerfallMechanicsIds.Magicka) diagnostics.Add($"HUD resource '{resource.Id}' refers to an unsupported track or is malformed.");
         foreach (DaggerfallItemDefinition item in items.Values)
         {
             if (item.Weapon is not null && (!DaggerfallFormulaPolicy.ClassicWeaponMaterialRanks.ContainsKey(item.Weapon.Material) || !vocabulary.Skills.Any(skill => skill.Value == item.Weapon.Skill))) diagnostics.Add($"Weapon '{item.Id.Value}' refers to an unknown classic weapon material or skill.");
@@ -3578,7 +3578,7 @@ internal static partial class DaggerfallBaseContent
         IReadOnlyList<DaggerfallTrackId> tracks = ReadIds(value, "tracks", diagnostics).Select(id => new DaggerfallTrackId(id)).ToArray();
         IReadOnlyList<string> armorParts = ReadIds(value, "armorParts", diagnostics);
         IReadOnlyList<DaggerfallStatId> progression = ReadIds(value, "progression", diagnostics).Select(id => new DaggerfallStatId(id)).ToArray();
-        if (attributes.Count != 9 || skills.Count != 35 || tracks.Count != 3 || armorParts.Count != 7 || progression.Count != 2) diagnostics.Add("Daggerfall vocabulary has an unexpected cardinality.");
+        if (attributes.Count != 9 || skills.Count != 35 || tracks.Count != 4 || armorParts.Count != 7 || progression.Count != 2) diagnostics.Add("Daggerfall vocabulary has an unexpected cardinality.");
         if (attributes.Concat(skills).Select(id => id.Value).Distinct(StringComparer.Ordinal).Count() != attributes.Count + skills.Count) diagnostics.Add("Daggerfall stat and skill ids must be unique.");
         return new(attributes, skills, tracks, armorParts, progression);
     }

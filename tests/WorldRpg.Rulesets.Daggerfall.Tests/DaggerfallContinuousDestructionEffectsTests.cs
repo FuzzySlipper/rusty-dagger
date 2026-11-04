@@ -14,7 +14,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallContinuousDestructionEffectsTests
 {
     [Theory]
-    [InlineData(0,"health",2)] [InlineData(1,"stamina",128)] [InlineData(2,"magicka",2)]
+    [InlineData(0,"health",2)] [InlineData(1,"fatigue",128)] [InlineData(2,"magicka",2)]
     public void All_tracks_share_normal_catchup_restore_and_cure_without_double_ticks(int subtype,string trackName,int perRound)
     {
         using Fixture f = new(); var s = f.Session; var track = Track(s,1,trackName); track.Maximum.BaseValue = 1000; track.SetCurrent(1000);
@@ -39,12 +39,12 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
     }
 
     [Theory]
-    [InlineData("spell.032",0,"health")] [InlineData("spell.048",1,"stamina")]
-    [InlineData("spell.050",1,"stamina")] [InlineData("spell.051",2,"magicka")]
+    [InlineData("spell.032",0,"health")] [InlineData("spell.048",1,"fatigue")]
+    [InlineData("spell.050",1,"fatigue")] [InlineData("spell.051",2,"magicka")]
     public void Published_spells_apply_real_periodic_tracks_and_save_does_not_repeat_the_initial_tick(string key,int subtype,string name)
     {
         using Fixture f = new(); var s = f.Session; const long target = 2000;
-        foreach (string track in new[] {"health","stamina","magicka"}) { var t=Track(s,target,track); t.Maximum.BaseValue=10000;t.SetCurrent(10000); }
+        foreach (string track in new[] {"health","fatigue","magicka"}) { var t=Track(s,target,track); t.Maximum.BaseValue=10000;t.SetCurrent(10000); }
         Fund(s); s.State.Character.LearnSpell(key);
         Assert.Equal(DaggerfallCastOutcome.Ready,s.ReadyPlayerSpell(key).Outcome);
         var bundle=s.Casting.Release(1,true).Bundle!; s.Casting.Deliver(bundle,[target]);
@@ -58,9 +58,9 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
 
     [Theory]
     [InlineData("spell.064",0,"health")] [InlineData("spell.065",0,"health")]
-    [InlineData("spell.066",0,"health")] [InlineData("spell.068",1,"stamina")]
+    [InlineData("spell.066",0,"health")] [InlineData("spell.068",1,"fatigue")]
     [InlineData("spell.069",0,"health")] [InlineData("spell.070",2,"magicka")]
-    [InlineData("spell.072",1,"stamina")]
+    [InlineData("spell.072",1,"fatigue")]
     public void Hidden_poison_spell_parameters_tick_through_the_compiled_owner_without_becoming_player_spells(string key,int subtype,string name)
     {
         using Fixture f = new(); var s=f.Session; Fund(s);
@@ -83,13 +83,13 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
         using Fixture f=new();var s=f.Session;const long target=2000;
         var memory=s.State.Actors.Get(target).Actor.Get<WorldRpg.Rulesets.Daggerfall.Modules.Behavior.DaggerfallEnemyPerceptionMemory>();
         memory.Pacified=true;
-        var stamina=Track(s,target,"stamina");stamina.Maximum.BaseValue=1000;stamina.SetCurrent(1000);
-        double before=stamina.Current;
+        var fatigue=Track(s,target,"fatigue");fatigue.Maximum.BaseValue=1000;fatigue.SetCurrent(1000);
+        double before=fatigue.Current;
         Start(s,"sleep",1,10,target:target,caster:1);
-        Assert.Equal(before,Track(s,target,"stamina").Current);Assert.True(memory.Pacified);Assert.False(memory.ForcedHostile);
-        s.State.Effects.AdvanceOrdinaryRound();Assert.Equal(before,Track(s,target,"stamina").Current);
+        Assert.Equal(before,Track(s,target,"fatigue").Current);Assert.True(memory.Pacified);Assert.False(memory.ForcedHostile);
+        s.State.Effects.AdvanceOrdinaryRound();Assert.Equal(before,Track(s,target,"fatigue").Current);
         Assert.Equal(2,DaggerfallPeriodicCast.Read(Assert.Single(s.State.Effects.Active).State,1,1).NextRound);
-        memory.Pacified=false;s.State.Effects.AdvanceOrdinaryRound();Assert.True(Track(s,target,"stamina").Current<before);
+        memory.Pacified=false;s.State.Effects.AdvanceOrdinaryRound();Assert.True(Track(s,target,"fatigue").Current<before);
         Assert.True(memory.ForcedHostile);
     }
 
@@ -164,7 +164,7 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
     }
 
     [Theory]
-    [InlineData(0,"health",1)] [InlineData(1,"stamina",64)] [InlineData(2,"magicka",1)]
+    [InlineData(0,"health",1)] [InlineData(1,"fatigue",64)] [InlineData(2,"magicka",1)]
     public void Saved_partial_resistance_applies_each_round_then_duration_expiry_stops_the_payload(int subtype,string name,int perRound)
     {
         using Fixture f=new();var s=f.Session;var track=Track(s,1,name);track.Maximum.BaseValue=1000;track.SetCurrent(1000);
@@ -178,7 +178,7 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
     }
 
     [Theory]
-    [InlineData(0,"health",2)] [InlineData(1,"stamina",128)] [InlineData(2,"magicka",2)]
+    [InlineData(0,"health",2)] [InlineData(1,"fatigue",128)] [InlineData(2,"magicka",2)]
     public void A_player_payload_survives_unloading_its_casters_site_and_resumes_its_saved_round(int subtype,string name,int perRound)
     {
         var source=ReadInputs(TestData.RepositoryRoot);
@@ -193,7 +193,7 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
         var track=Track(s,1,name);track.Maximum.BaseValue=1000;track.SetCurrent(1000);
         Start(s,"unloaded-caster",subtype,100);
         Assert.Equal(1000-perRound,track.Current);
-        int idleFatiguePerMinute = name == "stamina" ? DaggerfallTuning.Defaults.Locomotion.IdleFatiguePerGameMinute : 0;
+        int idleFatiguePerMinute = name == "fatigue" ? DaggerfallTuning.Defaults.Locomotion.IdleFatiguePerGameMinute : 0;
         double expectedAfterFirstElapsedMinute = 1000 - (2 * perRound) - idleFatiguePerMinute;
         double expectedAfterSecondElapsedMinute = 1000 - (3 * perRound) - (2 * idleFatiguePerMinute);
         Assert.True(s.TryTransitionTo(destination.ProfileKey));Assert.DoesNotContain(2000L,s.DefinitionsByActor.Keys);
