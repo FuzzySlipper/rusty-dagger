@@ -110,7 +110,9 @@ FRAME = 2.0
 
 def unframe(classic):
     """The classic with a bevel frame removed: where an axis's outer two lines on each side differ from the next line in
-    by more than FRAME times the neighbouring-pixel difference, those four lines are interpolated across the wrap."""
+    by more than FRAME times the neighbouring-pixel difference, and one side is lighter than the middle and the other
+    darker (a bevel lit from one side), those four lines are interpolated across the wrap. A joint the same on both sides
+    (dark or light grout) is the edge of the record's own slab and stays."""
     a = np.asarray(classic.convert("RGB"), np.float32)
     for axis in (0, 1):
         b = np.moveaxis(a, axis, 0)
@@ -119,7 +121,9 @@ def unframe(classic):
             continue
         inner = np.mean(np.abs(np.diff(b[2:n - 2], axis=0))) + 1
         edge = max(np.mean(np.abs(b[0] - b[2])), np.mean(np.abs(b[1] - b[2])), np.mean(np.abs(b[n - 1] - b[n - 3])), np.mean(np.abs(b[n - 2] - b[n - 3])))
-        if edge > FRAME * inner:
+        middle = b[2:n - 2].mean()
+        bevel = (b[:2].mean() - middle) * (b[n - 2:].mean() - middle) < 0
+        if edge > FRAME * inner and bevel:
             lo, hi = b[2].copy(), b[n - 3].copy()
             for k, i in enumerate((n - 2, n - 1, 0, 1), 1):
                 b[i] = hi + (lo - hi) * k / 5

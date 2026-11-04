@@ -12,7 +12,7 @@ from PIL import Image, ImageDraw
 
 AUTHORING = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from batch import OUT, classic, records  # noqa: E402
+from batch import CORRECTIONS, OUT, classic, records  # noqa: E402
 
 CELL = 192
 REVIEW = AUTHORING / "review/surfaces"
@@ -42,7 +42,7 @@ def main():
         for r in done:
             key = f"texture-{int(r['archive']):03d}-{int(r['record'])}"
             pair = [repeated(classic(r), CELL), repeated(Image.open(OUT / r["set"] / f"{key}.png"), CELL)]
-            cells.append((key, captions.get(key, "winter overlay" if r["set"].endswith("-snow") else ""), pair))
+            cells.append((key, CORRECTIONS.get(key, {}).get("caption") or captions.get(key, "winter overlay" if r["set"].endswith("-snow") else ""), pair))
         columns = 4
         cell_height = max(p[0].height for _, _, p in cells) + 46
         sheet = Image.new("RGB", (columns * (2 * CELL + 24) + 12, -(-len(cells) // columns) * cell_height + 12), (25, 25, 28))

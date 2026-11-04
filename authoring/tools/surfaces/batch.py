@@ -6,10 +6,12 @@ For each record, in order, each step skipped when its output exists:
   1. prepare  the classic record; a floor or ceiling (mostly flat planes) without its bevel frame (reduce.unframe).
      Seamless on an axis where the models repeat the record (texture coordinates spanning past it; 16 units a texel)
      and the classic itself wraps there (reduce.wraps); bands and storeys the classic draws stay as they are.
-  2. caption  Qwen3-VL (ComfyUI TextGenerate) says what the classic shows: materials, layout, colours.
+  2. caption  Qwen3-VL (ComfyUI TextGenerate) says what the classic shows: materials, layout, colours; or the authored
+     caption in corrections.json beside this script, for a record it misreads (plaster as wood, a slab as small stones).
   3. generate Z-Image base, image to image from the classic upscaled with wrap on its seamless axes, with
      CraftSurvive's Valheim painterly wording and the caption, seamless on those axes (ComfyUI-Universal-Seamless-Tiles),
-     denoise 0.55 where it tiles and 0.5 where it does not (a door, a painting).
+     denoise 0.55 where it tiles and 0.5 where it does not (a door, a painting), or the record's own in corrections.json
+     (0.4 keeps a fine-grained floor's grit, which higher denoise paints as broad blotches).
   4. reduce   reduce.crunch: twice the classic's size, its colours, a strong unsharp mask, an ART_PAL subset.
 A winter record (a set's snow archive, one above its summer) is its refreshed summer under the classic winter's own
 snow (reduce.winter); its summer is converted first even when only the winter is used. A winter record the classic
@@ -33,6 +35,7 @@ AP = Path(os.environ.get("ASSET_PIPELINE", Path.home() / "dev/asset-pipeline"))
 HOSTS = {"den-m5": "http://192.168.1.24:8188", "den-nimo": "http://192.168.1.23:8188"}
 RAW = AUTHORING / "df-raw/surfaces"
 OUT = AUTHORING / "gen-raw/surfaces"
+CORRECTIONS = json.loads((Path(__file__).resolve().parent / "corrections.json").read_text())
 TEXELS = 16  # ARCH3D texture-coordinate units per texel
 CAPTION = ("Describe this game texture in one sentence of at most 45 words: what surface or object it shows (materials, "
            "how they are laid out, any band, frame, window, door or carving and where it sits) and its main colours. "
@@ -98,6 +101,8 @@ def wrap_upscale(image, size, mode):
 
 
 def caption(comfy, image, cache, key):
+    if "caption" in CORRECTIONS.get(key, {}):
+        return CORRECTIONS[key]["caption"]
     if key in cache:
         return cache[key]
     with tempfile.TemporaryDirectory() as work:
@@ -177,7 +182,7 @@ def main():
             init = OUT / "raw" / f"{key}-init.png"
             wrap_upscale(image, size, mode).save(init)
             generate_raw(comfy, generate, text + " " + STYLE.format(tiling=TILING[mode]), init, size, mode,
-                         0.5 if mode == "disable" else 0.55, raw)
+                         CORRECTIONS.get(key, {}).get("denoise", 0.5 if mode == "disable" else 0.55), raw)
         reduce.crunch(raw, classic(row)).save(final)
         print(f"{key} {mode} {time.time() - started:.0f} s: {text}", flush=True)
     print("BATCH-DONE", sorted(families))
