@@ -119,6 +119,25 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
     }
 
     [Fact]
+    public void Contact_actions_are_found_by_the_volume_that_holds_a_point()
+    {
+        TriggerSpatialDouble spatial = TriggerSpatialDouble.Create();
+        ReferenceResolvingContentFake content = ReferenceResolvingContentFake.Create();
+        using SpatialMovementSystem movement = new(
+            spatial.Service,
+            content.Service,
+            new SpatialContentArtifact("spatial/action-triggers", new ContentSha256(1, 2, 3, 4), 1),
+            new SpatialTuning(.5d, 8, 8, 1));
+        using EntityDirectory entities = new();
+        DaggerfallDungeonActionDefinition action = Action("trap");
+        DaggerfallSiteProfile inputs = Inputs("profile-one", action);
+        using DaggerfallDungeonActionTriggerRuntime runtime = new(entities, spatial.Service, movement, [(inputs.ProfileKey, inputs)], inputs.ProfileKey);
+
+        Assert.Equal(action, Assert.Single(runtime.ContactActionsAt(Vector3.Zero)));
+        Assert.Empty(runtime.ContactActionsAt(new Vector3(50f, 0f, 0f)));
+    }
+
+    [Fact]
     public void Restored_player_inside_contact_does_not_replay_until_leave_and_reenter()
     {
         TriggerSpatialDouble spatial = TriggerSpatialDouble.Create();

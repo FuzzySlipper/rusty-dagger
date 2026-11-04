@@ -31,6 +31,9 @@ public sealed class ActorReactions(ActorNavigationCoordinator navigation)
 
     public bool Holds(long actorId) => _active.ContainsKey(actorId);
 
+    /// <summary>Every actor a blow is holding now.</summary>
+    public IReadOnlyList<long> Held => [.. _active.Keys.Order()];
+
     /// <summary>
     /// Holds an actor for <paramref name="seconds"/>, thrown at <paramref name="velocity"/> until <paramref name="deceleration"/>
     /// stops it. A swimmer is only held: the controller needs its water, and a blow doesn't carry through it.
