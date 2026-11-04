@@ -360,7 +360,10 @@ the classic publication stays the fallback. `authoring/tools/items/promote.py` w
   floors, ceilings and the exterior ground draw: an RGBA PNG each, repeated over the same faces or ground tiles
   as the record. A model material keeps its classic texture for each season the climate swap gives it (summer,
   winter, rain) and draws a season's refreshed surface where the set has one; a ground tile does the same for its
-  record. Changing the season or the art choice updates only the materials whose texture changes.
+  record. Changing the season or the art choice updates only the materials whose texture changes. Each surface is
+  its classic record redrawn and brought back to twice the classic's size in a subset of the world-texture palette
+  (`authoring/tools/surfaces`); a winter record that only adds snow is its refreshed summer under the classic's own
+  snow. The terrain ground tiles' records are left to the ground work.
 - **What the data container still carries.** Nothing classic is dropped yet: the paper doll's classic bodies, heads
   and worn items are the Classic art fallback, and armour in a dyed material (iron, ebony and the rest) is drawn
   classic, since the refreshed armour is steel, leather and chain.

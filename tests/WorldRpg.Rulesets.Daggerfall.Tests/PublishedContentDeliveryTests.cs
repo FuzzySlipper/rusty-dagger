@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -844,11 +845,22 @@ public sealed class PublishedContentDeliveryTests
         Assert.All(items.SelectMany(replacement => new[] { replacement.World, replacement.DyeMask?.World }).OfType<DaggerfallArtWorldImage>(), world =>
             Assert.Equal([8, 6, 0, 0, 0], content.ReadBytes(world.File.Path).Span[24..29].ToArray()));
 
+        // Refreshed walls, floors and ceilings stand in for classic texture records, each an 8-bit RGBA PNG of its stated size.
+        JsonElement[] surfaces = [.. section.GetProperty("surfaces").EnumerateArray()];
+        Assert.NotEmpty(surfaces);
+        Assert.Equal(surfaces.Length, art.Surfaces.Count);
+        Assert.All(art.Surfaces.Values, surface =>
+        {
+            ReadOnlySpan<byte> png = content.ReadBytes(surface.File.Path).Span;
+            Assert.Equal([8, 6, 0, 0, 0], png[24..29].ToArray());
+            Assert.Equal((surface.Width, surface.Height), (BinaryPrimitives.ReadInt32BigEndian(png[16..20]), BinaryPrimitives.ReadInt32BigEndian(png[20..24])));
+        });
+
         // The payload states the bytes of every refreshed file, and names every file the refreshed media carries.
         JsonElement[] owners = [.. images.SelectMany(image => image.TryGetProperty("dyeMask", out JsonElement mask) ? [image, mask] : new[] { image })];
         JsonElement[] files = [.. owners, .. owners.Where(owner => owner.TryGetProperty("world", out _)).Select(owner => owner.GetProperty("world")),
             .. section.GetProperty("effects").EnumerateArray(), section.GetProperty("effectGlow"),
-            .. section.GetProperty("meshes").EnumerateArray().DistinctBy(mesh => mesh.GetProperty("path").GetString())];
+            .. section.GetProperty("meshes").EnumerateArray().DistinctBy(mesh => mesh.GetProperty("path").GetString()), .. surfaces];
         foreach (JsonElement file in files)
         {
             byte[] bytes = content.ReadBytes(file.GetProperty("path").GetString()!).ToArray();
