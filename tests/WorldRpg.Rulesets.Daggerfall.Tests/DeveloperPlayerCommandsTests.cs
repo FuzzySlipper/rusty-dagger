@@ -59,6 +59,25 @@ public sealed class DeveloperPlayerCommandsTests
     }
 
     [Fact]
+    public void Morph_curses_and_changes_the_player_and_changes_them_back()
+    {
+        using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold);
+        DaggerfallSession session = run.Session;
+
+        Assert.Contains("no beast form", session.Morph("").Message, StringComparison.Ordinal);
+        Assert.Contains("no beast form", session.Morph("vampire").Message, StringComparison.Ordinal);
+
+        DebugCommandResult changed = session.Morph("wereboar");
+        Assert.True(changed.Succeeded, changed.Message);
+        Assert.Equal(DaggerfallRacialKind.Wereboar, session.State.RacialOverrides.Current!.State.Kind);
+        Assert.True(session.State.RacialOverrides.Current!.State.BeastForm);
+        Assert.Contains("already a wereboar", session.Morph("werewolf").Message, StringComparison.Ordinal);
+
+        Assert.True(session.Morph("").Succeeded);
+        Assert.False(session.State.RacialOverrides.Current!.State.BeastForm);
+    }
+
+    [Fact]
     public void Give_makes_items_by_label_template_name_or_index_and_refuses_what_it_cannot_name()
     {
         using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold);

@@ -151,6 +151,10 @@
     "male-chainmail": {
       "model": "first-person/arms-male-chainmail.glb",
       "retroModel": "first-person/arms-male-chainmail-retro.glb"
+    },
+    "claws": {
+      "model": "first-person/arms-claws.glb",
+      "retroModel": "first-person/arms-claws-retro.glb"
     }
   },
   "armsWorn": {
@@ -164,6 +168,10 @@
       "leather": "female-leather",
       "mail": "female-leather"
     }
+  },
+  "armsBeast": {
+    "werewolf": "claws",
+    "wereboar": "claws"
   },
   "arms": {
     "shoulder": [
@@ -773,6 +781,130 @@
         }
       },
       "class": "blunt-weapon"
+    },
+    "claws": {
+      "weapons": [
+        "weapon.werecreature"
+      ],
+      "twoHanded": true,
+      "class": "hand-to-hand",
+      "look": {
+        "model": null,
+        "grip": [
+          0,
+          0,
+          0
+        ],
+        "hold": [
+          6.98,
+          -87.91,
+          35.78
+        ]
+      },
+      "idle": {
+        "clip": "CHANM_FPArms_Unarmed_Idle",
+        "seconds": 2.8167
+      },
+      "powerHold": {
+        "clip": "FPP_Dag_AttackHeavyD_Start",
+        "at": 1
+      },
+      "guard": {
+        "raise": {
+          "clip": "FPP_sns_SwordBlockStart",
+          "seconds": 0.3
+        },
+        "hold": {
+          "clip": "FPP_sns_SwordBlockLoop",
+          "seconds": 4.6333
+        },
+        "lower": {
+          "clip": "FPP_sns_SwordBlockStop",
+          "seconds": 0.35
+        }
+      },
+      "strikes": {
+        "fastA": {
+          "clip": "FPP_Dag_AttackLSlash",
+          "marks": {
+            "start": 0.07,
+            "strike": 0.16,
+            "recover": 0.372,
+            "end": 0.62
+          },
+          "fade": 0.1
+        },
+        "fastB": {
+          "clip": "FPP_Dag_AttackLSlash.mirrored",
+          "marks": {
+            "start": 0.07,
+            "strike": 0.16,
+            "recover": 0.372,
+            "end": 0.62
+          },
+          "fade": 0.1
+        },
+        "fastC": {
+          "clip": "FPP_Dag_AttackR",
+          "marks": {
+            "start": 0.07,
+            "strike": 0.171,
+            "recover": 0.373,
+            "end": 0.62
+          },
+          "fade": 0.1
+        },
+        "fastD": {
+          "clip": "FPP_Dag_AttackR.mirrored",
+          "marks": {
+            "start": 0.07,
+            "strike": 0.171,
+            "recover": 0.373,
+            "end": 0.62
+          },
+          "fade": 0.1
+        },
+        "powerIn": {
+          "clip": "FPP_Dag_AttackHeavyD_Start",
+          "marks": {
+            "start": 0,
+            "strike": 0.867,
+            "recover": 1,
+            "end": 1
+          },
+          "fade": 0.1
+        },
+        "powerOut": {
+          "clip": "FPP_Dag_AttackHeavyD_End",
+          "marks": {
+            "start": 0,
+            "strike": 0.123,
+            "recover": 0.338,
+            "end": 0.62
+          },
+          "fade": 0.1
+        },
+        "kick": {
+          "clip": "FPP_sns_Kick",
+          "marks": {
+            "start": 0,
+            "strike": 0.269,
+            "recover": 0.453,
+            "end": 0.882
+          },
+          "fade": 0.1
+        },
+        "cast": {
+          "clip": "FPP_sns_Magic1",
+          "marks": {
+            "start": 0,
+            "strike": 0.138,
+            "recover": 0.182,
+            "end": 0.872
+          },
+          "fade": 0.1
+        }
+      }
     },
     "unarmed": {
       "weapons": [

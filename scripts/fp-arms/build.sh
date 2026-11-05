@@ -22,7 +22,7 @@ python3 - "$stage/first-person" <<'PY'
 import hashlib, json, pathlib, sys
 out = pathlib.Path(sys.argv[1])
 json.dump({
-    "asset": "first-person arms (the MedievalFPArms sets, medium colour) and the FPP melee clips the held definition plays",
+    "asset": "first-person arms (the MedievalFPArms sets, medium colour, and the claw arms build.py grows on their skeleton) and the FPP melee clips the held definition plays",
     "source": "the old Rift Riders game's Assets/MoreArt/FpMelee: Ironbelly Studios' AAA First Person Arm Pack and the FPP melee clips, Unity Asset Store purchases that ship inside the game and are never redistributed",
     "command": "scripts/fp-arms/build.sh (scripts/fp-arms/build.py under Blender 5)",
     "sha256": {str(p.relative_to(out.parent)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(out.rglob("*.glb"))},

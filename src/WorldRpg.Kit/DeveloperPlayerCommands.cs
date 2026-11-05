@@ -34,6 +34,9 @@ public interface IDeveloperPlayerSession
     /// <summary>Teaches the player a spell, named as the ruleset names it, as if learned.</summary>
     DebugCommandResult Spell(string spell);
 
+    /// <summary>Changes the player into a beast form the ruleset names, through the ordinary change; none names the way back.</summary>
+    DebugCommandResult Morph(string form);
+
     /// <summary>The items <see cref="Give"/> knows whose names contain <paramref name="filter"/>, and the skills <see cref="Skill"/> sets.</summary>
     DebugCommandResult Items(string filter);
 }
@@ -64,6 +67,9 @@ public sealed class DeveloperPlayerDebugModule(Func<IDeveloperPlayerSession> cur
 
     [DebugCommand("player.spell", Description = "Developer: teach the player SPELL, named or part of its name (quoted when it has spaces), as if learned.")]
     public DebugCommandResult Spell(string spell) => current().Spell(spell);
+
+    [DebugCommand("player.morph", Description = "Developer: change the player into beast FORM, cursing them with it if they aren't, or back with \"\".")]
+    public DebugCommandResult Morph(string form) => current().Morph(form);
 
     [DebugCommand("player.items", Description = "Developer: the item names player.give and player.hold take that contain FILTER (\"\" for all), and the skill ids player.skill takes.")]
     public DebugCommandResult Items(string filter) => current().Items(filter);

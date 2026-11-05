@@ -26,6 +26,7 @@ The game draws the arms from two parts:
   - `armsWorn`: the set each gender draws for what the arms wear. The ruleset reads what they wear from the armour in the
     gauntlet and pauldron slots (`DaggerfallArmWearPolicy`): nothing is `cloth`, leather is `leather`, and chain or plate
     is `mail`, the heaviest piece showing. The pack has no female mail, so `female.mail` draws the female leather set.
+  - `armsBeast`: the set each beast form draws, whatever is worn.
   - `arms`: the shoulder, where the clips' right upper arm sits from their camera bone at the start of the rig's clip,
     so the clips' eye is the game's; the elbow pole and the default hand closures.
   - `families`: each weapon family, by the clip set it plays. Its `weapons` are the classic weapon visuals it draws,
@@ -69,13 +70,29 @@ with the medium colour where a set has several) and bakes every clip onto each, 
 The cloth sets' fur is a second mesh, joined to the arms and cut by its alpha. The chainmail's colour map is lifted, as it
 is painted for metal shading. `held.arms SET` shows a set in the workbench.
 
+### The claw arms
+
+A transformed werewolf or wereboar draws the `claws` family on the `claws` set (`armsBeast`). The set comes from no pack
+mesh: `claws()` in `build.py` grows it on the skeleton, as `legs()` grows a leg, so it is the same joints and every clip
+plays on it. An arm and palm are fused from tubes down the bones, each digit is a tube with a curved nail, and shards of
+fur lie back along the arm. The texture is painted per texel in the colours of the classic WEAPON11 frames, 512 pixels a
+side and drawn nearest, so `held` and `heldRetro` differ only in its size. The mesh is our own, but its GLBs carry the
+clips, so they stay in the container like the rest.
+
+The set bakes every clip with its fingers held open (`open_hand`: `CLAW_CURL` and `CLAW_SPREAD`), so the family plays the
+dagger's cuts with the hand raking, not gripping. Both hands strike in turn: `fastB` and `fastD` are `fastA` and `fastC`
+the other way round. It idles on the pack's unarmed loop, which holds both hands up as the classic frames do. The dagger's
+clips start and end at its own idle, with the hand raised and the palm toward the eye, so the fast attacks' marks cut both
+ends off and the fade carries the arm between the loop and the cut. Like the bare hands, it borrows the sword-and-shield
+set's guard, kick and cast. The legs are `legs()`' plain rings in the fur's colours.
+
 `fastA` to `fastD` are the four fast attacks in the order a chain cycles them, so a cut from one side is followed by one
 from the other, then a downward blow and a thrust. Every plain clip starts and ends at its family's idle, so any can
 follow any. A chain cuts a clip's long tail at its recovery. `powerIn` plays a heavy clip's Start, `powerHold` holds it and
 `powerOut` plays its End; each family's heavy clip was chosen for meeting its own hold. The dagger's Start ends far from
 its hold clip, a plain idle, so its hold stays on Start's last frame. The halberd's End waits still for over a second
-before it swings, so its `start` mark skips the wait. `kick` plays the family's Kick, whose strike mark is where a foot reaches furthest. The bow and the werecreature have no
-fitting clip and keep their sprites.
+before it swings, so its `start` mark skips the wait. `kick` plays the family's Kick, whose strike mark is where a foot reaches furthest. The bow has no
+fitting clip and keeps its sprites.
 
 The pack has one punch, so a clip name ending `.mirrored` bakes it the other way round for the second fist. The bare hands
 borrow the sword-and-shield set's guard, kick and cast.
@@ -84,7 +101,7 @@ borrow the sword-and-shield set's guard, kick and cast.
 it, and the spell leaves at the clip's strike mark, the palm thrown forward. Until then the element's missile burns on the
 palm: `DaggerfallSiteAppearance` draws the same sprite the spell flies as, in the art chosen, on the viewmodel layer where
 `DaggerfallHeldViewmodel.CastPalm` samples the left hand in the clip. With the weapon sheathed the `unarmed` arms come up
-for the cast and go again. With no family drawn (a bow, a beast's claws) the element's classic casting hand draws instead.
+for the cast and go again. With no family drawn (a bow) the element's classic casting hand draws instead.
 
 A shield goes on the left hand with an Engine joint attachment, so the renderer carries it and nothing polls the joint.
 The arms skeleton's root is scaled 0.01 and its joints are in centimetres, so a `seat` is in centimetres with `scale` 100.

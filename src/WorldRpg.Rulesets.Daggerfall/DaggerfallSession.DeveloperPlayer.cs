@@ -141,6 +141,25 @@ internal sealed partial class DaggerfallSession : IDeveloperPlayerSession
         return DebugCommandResult.Success(State.Character.LearnSpell(named[0].Key) ? $"Learned {named[0].Value.Name}." : $"{named[0].Value.Name} is already known.");
     }
 
+    public DebugCommandResult Morph(string form)
+    {
+        if (DeveloperMoveRefusal() is { } refusal) return Refused(refusal);
+        DaggerfallRacialOverrideView? racial = State.RacialOverrides.Current;
+        if (string.IsNullOrEmpty(form))
+        {
+            if (racial is not { State.BeastForm: true }) return Refused("The player is in no beast form.");
+            MorphPlayer(forced: true);
+            return DebugCommandResult.Success("Back in human form.");
+        }
+        if (!Enum.TryParse(form, ignoreCase: true, out DaggerfallRacialKind kind) || kind == DaggerfallRacialKind.Vampire)
+            return Refused($"'{form}' is no beast form (werewolf, wereboar).");
+        if (racial is not null && racial.State.Kind != kind) return Refused($"The player is already a {racial.Name.ToLowerInvariant()}.");
+        if (racial is { State.BeastForm: true }) return DebugCommandResult.Success($"Already in {kind} form.");
+        if (racial is null) State.RacialOverrides.Select(kind, "lycanthropy:developer", MinuteIndex(_time.Calendar));
+        MorphPlayer(forced: true);
+        return DebugCommandResult.Success($"Changed into {kind} form.");
+    }
+
     public DebugCommandResult Items(string filter)
     {
         StringBuilder text = new();
