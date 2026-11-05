@@ -82,7 +82,7 @@ internal sealed partial class DaggerfallSiteAppearance
             throw new InvalidOperationException($"Refreshed flat '{art.File.Path}' has {art.Frames.Count} frames; its classic sprite has {sprite.Frames.Count}.");
         if (!decorationAtlases.TryGetValue(art.File.Path, out var atlas))
         {
-            var resource = appearance.OpenTexture(content, art.File.Path, art.File.Sha256, TextureFilter.Linear);
+            var resource = appearance.OpenTexture(content, art.File.Path, art.File.Sha256, TextureFilter.Nearest);
             decorationResources.Add(resource.Handle);
             atlas = appearance.CreateSpriteAtlas(new(resource.Handle, SpriteAtlasAdapter.ToAtlasFrames(art.Width, art.Height,
                 art.Frames.Select((frame, index) => new NormalizedSpriteFrame(sprite.Frames[index].Id, (int)frame.X, (int)frame.Y, (int)frame.Width, (int)frame.Height)).ToArray())));

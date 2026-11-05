@@ -403,25 +403,35 @@ def background_components(ground, source_open):
     return out
 
 
-def painted_ground(item, painted, bg):
-    """Ground left inside the object: patches of `painted` (the image before back-projection, which tints the ground
-    with the source) still flat and ground-coloured, mostly over the source's own transparency. A tree drawn narrower
-    than its classic encloses ground under its crown; a stone's shadow in the ground's colour lies over opaque cells."""
+def flat_ground(painted, bg):
+    """Where `painted` (the image before back-projection, which tints the ground with the source) is still flat ground."""
     d = np.abs(painted - bg).max(-1)
-    flat = (d < 0.03) & (np.sqrt(np.maximum(box(d ** 2, 3) - box(d, 3) ** 2, 0)) < 0.008)
-    opaque = np.zeros(d.shape)
-    s = item.scale
-    opaque[item.y:item.y + item.h * s, item.x:item.x + item.w * s] = np.kron(item.alpha, np.ones((s, s)))
+    return (d < 0.03) & (np.sqrt(np.maximum(box(d ** 2, 3) - box(d, 3) ** 2, 0)) < 0.008)
+
+
+def painted_ground(item, flat, opaque):
+    """Ground left inside the object: patches of `flat` mostly over the source's own transparency. A tree drawn narrower
+    than its classic encloses ground under its crown; a stone's shadow in the ground's colour lies over opaque cells."""
     labels, count = ndimage.label(flat)
     index = np.arange(1, count + 1)
     keep = (ndimage.sum(flat, labels, index) >= 60) & (ndimage.mean(opaque, labels, index) < 0.5)
     return np.isin(labels, index[keep])
 
 
+def solid_body(item, drawn, flat, opened, opaque):
+    """What the cut-out took from the source's solid body but is the object: dark stone near the ground's colour, which
+    joins the ground at the sprite's edge. Not flat ground, or mostly surrounded by object within two source cells."""
+    body = ndimage.binary_erosion(opaque > 0, iterations=item.scale)
+    solid = drawn | (body & ~flat)
+    for _ in range(8):
+        solid = solid | (body & ~opened & (box(solid.astype(np.float64), 2 * item.scale) > 0.5))
+    return solid & ~drawn
+
+
 def cutout(item, rgb, lo=0.035, hi=0.11, reach=4, painted=None):
     """RGBA icon: the flat generation ground (taken from the border) becomes transparent, edge pixels get
     a soft alpha beside the ground with the ground colour removed from their RGB. With `painted`, also the ground
-    painted_ground finds inside the object."""
+    painted_ground finds inside the object, and solid_body gives back what was taken from the object's body."""
     border = np.concatenate([rgb[:16].reshape(-1, 3), rgb[-16:].reshape(-1, 3),
                              rgb[:, :16].reshape(-1, 3), rgb[:, -16:].reshape(-1, 3)])
     bg = np.median(border, 0)
@@ -433,13 +443,18 @@ def cutout(item, rgb, lo=0.035, hi=0.11, reach=4, painted=None):
     open_ = np.asarray(Image.fromarray((opaque * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(2 * s + 1))) < 128
     ground = background_components(d < lo, open_)
     if painted is not None:
-        ground |= painted_ground(item, painted, bg)
+        flat = flat_ground(painted, bg)
+        opened = painted_ground(item, flat, opaque)
+        ground |= opened
     near = np.asarray(Image.fromarray((ground * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(2 * reach + 1))) > 0
     a = np.where(ground, 0.0, np.clip((d - lo) / (hi - lo), 0, 1))
     a = np.where(near, a, 1.0)
     a = np.clip(blur(a, 0.6), 0, 1)
     a = np.where(ground & (a < 0.02), 0, a)[..., None]
     colour = np.where(a > 0.02, (rgb - (1 - a) * bg) / np.maximum(a, 0.02), rgb)
+    if painted is not None:
+        kept = solid_body(item, a[..., 0] >= 0.5, flat, opened, opaque)[..., None]
+        a, colour = np.where(kept, 1.0, a), np.where(kept, rgb, colour)
     return np.concatenate([np.clip(colour, 0, 1), a], -1)
 
 

@@ -70,7 +70,7 @@ area's entries and files and keeps every other area's.
 
     promote.py --area paper-doll --area worn --area items --area spells --area effects --area surfaces --area terrain
 """
-import argparse, csv, hashlib, io, json, re, shutil
+import argparse, csv, hashlib, io, json, os, re, shutil, sys
 from pathlib import Path
 
 import numpy as np
@@ -78,6 +78,9 @@ from PIL import Image
 from scipy import ndimage
 
 from doll_preview import AUTHORING, doll_layer, placed, worn_layer
+
+sys.path.insert(0, str(AUTHORING / "tools/surfaces"))
+import reduce  # noqa: E402
 
 REPOSITORY = AUTHORING.parent
 CONTENT = REPOSITORY / "content"
@@ -112,7 +115,7 @@ WORLD_EFFECTS = {
 CANVAS, OCCUPANCY = 1024, 0.74   # the generation canvas and the share of it the classic frame filled (run.py)
 WORLD_ICON = 128                 # pixels on a dropped item's longer side: a small pile on the floor
 EFFECT_FRAME = 256               # pixels on an effect frame's longer side
-FLAT_FRAME = 256                 # pixels on a world billboard frame's longer side
+FLAT_CRUNCH = float(os.environ.get("FLAT_CRUNCH", "2"))   # a world billboard's pixels to a classic pixel
 GLOW = 64                        # pixels on the particle glow's side
 CLOTHING = range(235, 243)
 NEUTRAL = (14, 32)   # saturation (max less min channel, 0-255) over which a pixel fades from dyed cloth to its own colour
@@ -310,9 +313,10 @@ def classic_box(source):
     return x, y, x + w * scale, y + h * scale
 
 
-def frame_atlas(name, sources, finals, target, longest):
+def frame_atlas(name, sources, finals, target, longest=None, crunch=None):
     """One PNG atlas of a classic record's frames in order, all cropped to one box that holds every frame's art and the
-    classic frame's place on the generation canvas, at most `longest` pixels a side, and its entry without `replaces`."""
+    classic frame's place on the generation canvas, and its entry without `replaces`. Smooth at most `longest` pixels a
+    side, or with `crunch`, reduce's sprite crunch at that many pixels to a classic pixel."""
     boxes = {classic_box(source) for source in sources}
     if len(boxes) != 1:
         raise SystemExit(f"{name}: the classic frames differ in size, so no one box places them.")
@@ -323,14 +327,16 @@ def frame_atlas(name, sources, finals, target, longest):
         if (art := frame.getchannel("A").getbbox()) is not None:
             box = (min(box[0], art[0]), min(box[1], art[1]), max(box[2], art[2]), max(box[3], art[3]))
     width, height = box[2] - box[0], box[3] - box[1]
-    k = min(1, longest / max(width, height))
+    k = crunch * Image.open(sources[0]).width / (region[2] - region[0]) if crunch else min(1, longest / max(width, height))
     size = (max(1, round(width * k)), max(1, round(height * k)))
+    crops = [frame.crop(box) for frame in frames]
+    tiles = reduce.crunch_sprites(crops, size) if crunch else [crop.resize(size, Image.Resampling.LANCZOS) for crop in crops]
     columns = int(np.ceil(np.sqrt(len(frames))))
     atlas = Image.new("RGBA", (columns * size[0], int(np.ceil(len(frames) / columns)) * size[1]))
     rects = []
-    for index, frame in enumerate(frames):
+    for index, tile in enumerate(tiles):
         x, y = index % columns * size[0], index // columns * size[1]
-        atlas.paste(frame.crop(box).resize(size, Image.Resampling.LANCZOS), (x, y))
+        atlas.paste(tile, (x, y))
         rects.append({"x": x, "y": y, "width": size[0], "height": size[1]})
     buffer = io.BytesIO()
     atlas.save(buffer, "PNG", optimize=True)
@@ -435,7 +441,7 @@ def flats():
             classic.append(stem)
             continue
         entries.append({"replaces": {"archive": archive, "record": record},
-                        **frame_atlas(stem, sources, finals, f"{MEDIA}/flats/{stem}.png", FLAT_FRAME)})
+                        **frame_atlas(stem, sources, finals, f"{MEDIA}/flats/{stem}.png", crunch=FLAT_CRUNCH)})
     print(f"flats: {len(entries)} records refreshed, {len(classic)} stay classic")
     return entries
 
