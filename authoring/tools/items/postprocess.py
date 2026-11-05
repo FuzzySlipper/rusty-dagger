@@ -29,6 +29,7 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from scipy import ndimage
 
 FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 GUIDED_EPS = 2e-3
@@ -402,9 +403,25 @@ def background_components(ground, source_open):
     return out
 
 
-def cutout(item, rgb, lo=0.035, hi=0.11, reach=4):
+def painted_ground(item, painted, bg):
+    """Ground left inside the object: patches of `painted` (the image before back-projection, which tints the ground
+    with the source) still flat and ground-coloured, mostly over the source's own transparency. A tree drawn narrower
+    than its classic encloses ground under its crown; a stone's shadow in the ground's colour lies over opaque cells."""
+    d = np.abs(painted - bg).max(-1)
+    flat = (d < 0.03) & (np.sqrt(np.maximum(box(d ** 2, 3) - box(d, 3) ** 2, 0)) < 0.008)
+    opaque = np.zeros(d.shape)
+    s = item.scale
+    opaque[item.y:item.y + item.h * s, item.x:item.x + item.w * s] = np.kron(item.alpha, np.ones((s, s)))
+    labels, count = ndimage.label(flat)
+    index = np.arange(1, count + 1)
+    keep = (ndimage.sum(flat, labels, index) >= 60) & (ndimage.mean(opaque, labels, index) < 0.5)
+    return np.isin(labels, index[keep])
+
+
+def cutout(item, rgb, lo=0.035, hi=0.11, reach=4, painted=None):
     """RGBA icon: the flat generation ground (taken from the border) becomes transparent, edge pixels get
-    a soft alpha beside the ground with the ground colour removed from their RGB."""
+    a soft alpha beside the ground with the ground colour removed from their RGB. With `painted`, also the ground
+    painted_ground finds inside the object."""
     border = np.concatenate([rgb[:16].reshape(-1, 3), rgb[-16:].reshape(-1, 3),
                              rgb[:, :16].reshape(-1, 3), rgb[:, -16:].reshape(-1, 3)])
     bg = np.median(border, 0)
@@ -415,6 +432,8 @@ def cutout(item, rgb, lo=0.035, hi=0.11, reach=4):
     opaque[item.y:item.y + item.h * s, item.x:item.x + item.w * s] = np.kron(item.alpha, np.ones((s, s)))
     open_ = np.asarray(Image.fromarray((opaque * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(2 * s + 1))) < 128
     ground = background_components(d < lo, open_)
+    if painted is not None:
+        ground |= painted_ground(item, painted, bg)
     near = np.asarray(Image.fromarray((ground * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(2 * reach + 1))) > 0
     a = np.where(ground, 0.0, np.clip((d - lo) / (hi - lo), 0, 1))
     a = np.where(near, a, 1.0)
@@ -430,7 +449,7 @@ def cutouts(args):
     for d in sorted((run_dir / "images").iterdir()):
         image = d / f"{args.variant}.png"
         it = Item(study, d.name, image)
-        rgba = cutout(it, it.gen)
+        rgba = cutout(it, it.gen, painted=Item(study, d.name, d / "original.png").gen if args.painted_ground else None)
         Image.fromarray((rgba * 255 + 0.5).astype(np.uint8), "RGBA").save(out / f"{d.name}.png")
         print(d.name, f"transparent {1 - rgba[..., 3].mean():.0%}")
 
@@ -451,6 +470,7 @@ def main():
     t.add_argument("study", type=Path, help="study whose inputs/ give each source sprite and placement")
     t.add_argument("run", type=Path, help="post-process run directory holding images/<id>/<variant>.png")
     t.add_argument("--variant", default="bp-broad-half", choices=list(VARIANTS))
+    t.add_argument("--painted-ground", action="store_true", help="also open ground enclosed inside the object (world flats)")
     t.add_argument("--out", type=Path, required=True, help="directory for <id>.png (created if absent)")
     t.set_defaults(func=cutouts)
     c = sub.add_parser("compare", help="side-by-side sheets across run outputs")

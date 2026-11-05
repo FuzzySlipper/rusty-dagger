@@ -67,7 +67,9 @@ A spec copies the style card, collection rules, presentation, seed and routes fr
 
 `postprocess.py cutout` turns the flat background into alpha: the background is the border colour, enclosed
 ground regions are kept or removed by the source sprite's own alpha (so a glass jar stays solid and a chain loop
-stays open), and the edge is softened and decontaminated.
+stays open), and the edge is softened and decontaminated. World flats also take `--painted-ground`: a drawing
+narrower than its classic can enclose ground the source alpha doesn't reach, so flat ground-coloured patches of the
+image before back-projection open too when most of each lies over the source's transparency.
 
 ## Clean-up and source edits
 
