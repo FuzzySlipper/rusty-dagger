@@ -50,7 +50,8 @@
       "content": "One octagonal grey stone fountain, mossy and dry, with a tall dark central spout.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
-      "name": "flat-212-3 (78x64)"
+      "name": "flat-212-3 (78x64)",
+      "solid": true
     },
     {
       "id": "flat-212-4",

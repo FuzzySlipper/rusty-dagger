@@ -67,11 +67,11 @@ A spec copies the style card, collection rules, presentation, seed and routes fr
 
 `postprocess.py cutout` turns the flat background into alpha: the background is the border colour, enclosed
 ground regions are kept or removed by the source sprite's own alpha (so a glass jar stays solid and a chain loop
-stays open), and the edge is softened and decontaminated. World flats also take `--painted-ground`: a drawing
+stays open), and the edge is softened and decontaminated. World flats also take `--spec`: a drawing
 narrower than its classic can enclose ground the source alpha doesn't reach, so flat ground-coloured patches of the
 image before back-projection open too when most of each lies over the source's transparency. Dark stone near the
 ground's colour can join the ground at the sprite's edge, so what the cut-out took from the source's solid body comes
-back unless it is flat ground. `finalize.py` despeckles flats, whose stray flecks would otherwise stretch their atlas box.
+back unless it is flat ground, or whatever it is for an item marked `"solid": true`. `finalize.py` despeckles flats, whose stray flecks would otherwise stretch their atlas box.
 World flats promote through `reduce.crunch_sprites`: `FLAT_CRUNCH` pixels to a classic pixel (default 2), hard edges and
 one ART_PAL subset across a record's frames, drawn with nearest filtering so they sit with the terrain's crunch.
 

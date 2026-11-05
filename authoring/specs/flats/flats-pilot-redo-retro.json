@@ -32,7 +32,8 @@
       "content": "One round stone fountain with a tapering stone spire in a low octagonal basin of pale water, its outer wall a solid course of mid-grey stone blocks lit clearly down to the ground.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
-      "name": "flat-212-2"
+      "name": "flat-212-2",
+      "solid": true
     },
     {
       "id": "flat-504-9",
