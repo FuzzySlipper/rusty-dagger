@@ -6,9 +6,9 @@ usage: blender -b --factory-startup --python scripts/fp-arms/build.py -- SOURCES
 SOURCES is local/fp-melee (scripts/fp-arms/copy-sources.sh). DEFINITION is the held definition, which names every clip
 the game plays: the rig's own clip and each family's idle, power hold and attack clips, by their FBX file stems. Writes into OUT_DIR:
 
-- each of the definition's armSets: its model, the arms (mesh, skeleton, colour and normal maps; claws() grows the claw
-  arms on the skeleton instead, with a colour map alone) with every clip the definition names, and its retroModel, the same with its colour map alone, small and drawn nearest, which the heldRetro
-  style draws. The clips are the model's own, not clip packs: the Engine shares an opened model's clip packs between
+- each of the definition's armSets: its model, the arms (mesh, skeleton and a colour map painted by paint.py and drawn
+  nearest; claws() grows the claw arms on the skeleton instead, with a paint of their own) with every clip the definition
+  names, and its retroModel, the same at most RETRO_TEXTURE, which the heldRetro style draws. The clips are the model's own, not clip packs: the Engine shares an opened model's clip packs between
   everything that opens it, so a second set of arms on the same model (a weapon swapped, another site's viewmodel) could
   not associate its packs again.
 - measure.json: what the definition is fitted with, measured on the clips: where the right upper arm sits from the eye
@@ -32,11 +32,14 @@ import bpy
 import numpy as np
 from mathutils import Matrix, Quaternion, Vector
 
+sys.path.append(str(Path(__file__).parent))
+import paint as pixel_paint
+
 sources, definition_path, out = (Path(a) for a in sys.argv[sys.argv.index("--") + 1:])
 definition = json.loads(definition_path.read_text())
 pack_root = sources / "MedievalFPArms"
-# Each arm set's mesh file, the stem and colour of its textures in the pack, and how much its colour map is lifted: the
-# chainmail's is painted for metal shading, which the arms don't use, and would draw nearly black.
+# Each arm set's mesh file, the stem and colour of its textures in the pack, and how much its colour map is lifted before
+# the paint reads it: the chainmail's is made for metal shading and is nearly black.
 SOURCES = {
     "male-leather": ("FPArms_Male-Leather-Armor_LPR_LOD0", "FPArms_Male-Leather-Armor", "Medium_COL.png", 1),
     "female-leather": ("FPArms_Female-Leather-Armor_LOD0_LPR", "FPArms_Female-Leather-Armor", "Medium_COL.png", 1),
@@ -44,11 +47,15 @@ SOURCES = {
     "female-cloth": ("FPArms_Female-Medieval-Cloth_LOD0_LPR", "FPArms_Female-Medieval-Cloth", "Medium_COL.png", 1),
     "male-chainmail": ("FPArms_Male-Chainmail_LPR_LOD0", "FPArms_Male-Chainmail", "COL.png", 2.5),
 }
-TEXTURE = 1024
+# The painted arms' size, whose texels draw as big as the weapons' and the classic sprites', and the size of the pack's maps
+# the paint reads.
+TEXTURE = 256
+PAINT_SOURCE = 1024
+FUR_TEXTURE = 64
 # The legs' rings and their small plain textures: nothing of the pack's art goes into them.
 LEG_SIDES = 10
 LEG_TEXTURE = 32
-# The retro arms (heldRetro) draw the colour map alone, this small and unfiltered, as Daggerfall draws its world.
+# The most a retro model (heldRetro) draws, unfiltered, as Daggerfall draws its world; the painted arms already fit.
 RETRO_TEXTURE = 256
 # The arm sets grown on the skeleton (claws()) rather than taken from the pack, each with its fur from dark to light, and
 # the file whose skeleton they grow on. The first is in the colours of the classic WEAPON11 frames, the boar's in its hide's
@@ -150,67 +157,125 @@ def remove(objects):
         bpy.data.objects.remove(obj, do_unlink=True)
 
 
-def load(path, size, colour=True, lift=1):
-    """
-    An image scaled down to at most `size` a side, its colours multiplied by `lift`; its colour space is set first, as
-    setting it reloads the file.
-    """
+def pixels_of(image):
+    """`image` as an array of rows from the top, its channels as they are stored."""
+    pixels = np.empty(len(image.pixels), dtype=np.float32)
+    image.pixels.foreach_get(pixels)
+    return pixels.reshape(image.size[1], image.size[0], 4)[::-1]
+
+
+def pack_map(path, channels=slice(0, 1), lift=1):
+    """A map of the pack at PAINT_SOURCE, its values averaged: Blender's own scale would alias the cloth's weave into blotches."""
     image = bpy.data.images.load(str(path))
-    if not colour:
-        image.colorspace_settings.name = "Non-Color"
-    if max(image.size) > size:
-        image.scale(size, size)
-    if lift != 1:
-        pixels = np.empty(len(image.pixels), dtype=np.float32)
-        image.pixels.foreach_get(pixels)
-        rgba = pixels.reshape(-1, 4)
-        rgba[:, :3] = np.minimum(rgba[:, :3] * lift, 1)
-        image.pixels.foreach_set(pixels)
-        image.update()
+    image.colorspace_settings.name = "Non-Color"
+    values = pixel_paint.area(pixels_of(image)[..., channels], PAINT_SOURCE)
+    bpy.data.images.remove(image)
+    return np.minimum(values * lift, 1)
+
+
+def painted_image(name, colours, alpha=None):
+    """An image of `colours`, rows from the top, sRGB 0-1."""
+    size = colours.shape[0]
+    image = bpy.data.images.new(name, size, size, alpha=alpha is not None)
+    rgba = np.ones((size, size, 4), dtype=np.float32)
+    rgba[..., :3] = colours
+    if alpha is not None:
+        rgba[..., 3] = alpha
+    image.pixels.foreach_set(rgba[::-1].ravel())
+    image.update()
+    image.pack()
     return image
 
 
-def texture(material, colour_map, normal_map, lift=1):
+def baked_normals(meshes, normal_map):
+    """The meshes' object-space normals with the pack's normal map on them, as colours, black where no mesh covers."""
+    target = bpy.data.images.new("baked-normals", PAINT_SOURCE, PAINT_SOURCE, float_buffer=True, alpha=False)
+    target.colorspace_settings.name = "Non-Color"
+    normals = bpy.data.images.load(str(normal_map))
+    normals.colorspace_settings.name = "Non-Color"
+    added = []
+    for obj in meshes:
+        for slot in obj.material_slots:
+            nodes, links = slot.material.node_tree.nodes, slot.material.node_tree.links
+            bsdf = next(n for n in nodes if n.type == "BSDF_PRINCIPLED")
+            source, mapped, baked = nodes.new("ShaderNodeTexImage"), nodes.new("ShaderNodeNormalMap"), nodes.new("ShaderNodeTexImage")
+            source.image, baked.image = normals, target
+            links.new(source.outputs["Color"], mapped.inputs["Color"])
+            links.new(mapped.outputs["Normal"], bsdf.inputs["Normal"])
+            nodes.active = baked
+            added.append((nodes, (source, mapped, baked)))
+    scene = bpy.context.scene
+    scene.render.engine = "CYCLES"
+    scene.cycles.samples = 1
+    scene.render.bake.margin = 6
+    scene.render.bake.normal_space = "OBJECT"
+    bpy.ops.object.select_all(action="DESELECT")
+    for obj in meshes:
+        obj.select_set(True)
+    bpy.context.view_layer.objects.active = meshes[0]
+    bpy.ops.object.bake(type="NORMAL")
+    for nodes, created in added:
+        for node in created:
+            nodes.remove(node)
+    values = pixels_of(target)[..., :3].copy()
+    bpy.data.images.remove(target)
+    bpy.data.images.remove(normals)
+    return values
+
+
+def draw(material, image):
+    """Gives `material` the flat painted `image`, drawn nearest."""
     nodes, links = material.node_tree.nodes, material.node_tree.links
     bsdf = next(n for n in nodes if n.type == "BSDF_PRINCIPLED")
     colour = nodes.new("ShaderNodeTexImage")
     colour.label = "colour"
-    colour.image = load(colour_map, TEXTURE, lift=lift)
+    colour.image = image
+    colour.interpolation = "Closest"
     links.new(colour.outputs["Color"], bsdf.inputs["Base Color"])
-    bsdf.inputs["Roughness"].default_value = 0.75
-    bsdf.inputs["Metallic"].default_value = 0.0
-    if normal_map is None:
-        # Fur, which has no normal map: its alpha cuts its edges, a Greater Than node being how glTF's alpha mask exports.
+    bsdf.inputs["Roughness"].default_value = .85
+    bsdf.inputs["Metallic"].default_value = 0
+    return colour
+
+
+def paint_body(meshes, stem, colour, lift):
+    """Paints the arms from the pack's maps."""
+    textures = pack_root / "Textures"
+    image = painted_image(f"{stem}-paint", pixel_paint.paint(
+        pack_map(textures / f"{stem}_{colour}", slice(0, 3), lift), pack_map(textures / f"{stem}_AO.png"), pack_map(textures / f"{stem}_RGS.png"),
+        pack_map(textures / f"{stem}_MET.png"), baked_normals(meshes, textures / f"{stem}_NRM.png"), TEXTURE))
+    for obj in meshes:
+        for slot in obj.material_slots:
+            draw(slot.material, image)
+
+
+def paint_fur(obj, stem):
+    """The cloth sets' frayed cuffs, their alpha cut hard; a Greater Than node is how glTF's alpha mask exports."""
+    cut = pixel_paint.area(pack_map(pack_root / f"Textures/{stem}_Fur_COL.tga", slice(0, 4)), FUR_TEXTURE)
+    image = painted_image(f"{stem}-fur", pixel_paint.cloth(cut[..., :3]), cut[..., 3] > .5)
+    for slot in obj.material_slots:
+        nodes, links = slot.material.node_tree.nodes, slot.material.node_tree.links
+        colour = draw(slot.material, image)
         cut = nodes.new("ShaderNodeMath")
         cut.operation = "GREATER_THAN"
-        cut.inputs[1].default_value = 0.5
+        cut.inputs[1].default_value = .5
         links.new(colour.outputs["Alpha"], cut.inputs[0])
-        links.new(cut.outputs[0], bsdf.inputs["Alpha"])
-        return
-    normal = nodes.new("ShaderNodeTexImage")
-    normal.label = "normal"
-    normal.image = load(normal_map, TEXTURE, colour=False)
-    mapped = nodes.new("ShaderNodeNormalMap")
-    links.new(normal.outputs["Color"], mapped.inputs["Color"])
-    links.new(mapped.outputs["Normal"], bsdf.inputs["Normal"])
+        links.new(cut.outputs[0], next(n for n in nodes if n.type == "BSDF_PRINCIPLED").inputs["Alpha"])
 
 
 def retro():
-    """Turns the arms' materials into the retro arms': the colour map at RETRO_TEXTURE, drawn nearest, no normal map."""
+    """Turns the arms' materials into the retro arms': at most RETRO_TEXTURE, drawn nearest."""
     for obj in bpy.data.objects:
         if obj.type != "MESH":
             continue
         for slot in obj.material_slots:
-            nodes = slot.material.node_tree.nodes
-            for node in [n for n in nodes if n.type == "NORMAL_MAP" or n.label == "normal"]:
-                nodes.remove(node)
-            colour = next(n for n in nodes if n.label == "colour")
-            colour.image.scale(RETRO_TEXTURE, RETRO_TEXTURE)
+            colour = next(n for n in slot.material.node_tree.nodes if n.label == "colour")
+            if colour.image.size[0] > RETRO_TEXTURE:
+                colour.image.scale(RETRO_TEXTURE, RETRO_TEXTURE)
             colour.interpolation = "Closest"
 
 
 def arms(name):
-    """The arm set `name` with its textures, as one mesh; the pack's own unarmed clip is dropped."""
+    """The arm set `name`, painted, as one mesh; the pack's own unarmed clip is dropped."""
     mesh_file, stem, colour, lift = SOURCES[name]
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.context.scene.render.fps = 60
@@ -221,10 +286,10 @@ def arms(name):
     meshes = [obj for obj in imported if obj.type == "MESH"]
     for obj in meshes:
         obj.data.uv_layers[0].name = "UVMap"
-        fur = "_Fur" in obj.name
-        for slot in obj.material_slots:
-            texture(slot.material, pack_root / f"Textures/{stem}_Fur_COL.tga" if fur else pack_root / f"Textures/{stem}_{colour}",
-                    None if fur else pack_root / f"Textures/{stem}_NRM.png", lift)
+    fur = [obj for obj in meshes if "_Fur" in obj.name]
+    paint_body([obj for obj in meshes if obj not in fur], stem, colour, lift)
+    for obj in fur:
+        paint_fur(obj, stem)
     legs(rig, meshes)
     return rig
 
