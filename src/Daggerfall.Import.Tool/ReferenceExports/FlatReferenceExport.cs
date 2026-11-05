@@ -63,6 +63,9 @@ internal static class FlatReferenceExport
                         foreach (int archive in Nature.Keys) Exterior(archive, flat.TextureRecord, block.SourceKey);
                     else Exterior(flat.TextureArchive, flat.TextureRecord, block.SourceKey);
                 foreach (RmbFlatPlacement flat in rmb.MiscFlats.Where(Scenery)) Exterior(flat.TextureArchive, flat.TextureRecord, block.SourceKey);
+                // A ground scenery plant names only a record, which its location's climate set draws.
+                foreach (RmbGroundScenery plant in block.RmbHeader!.GroundScenery)
+                    foreach (int archive in Nature.Keys) Exterior(archive, plant.TextureRecord, block.SourceKey);
                 foreach (RmbFlatPlacement flat in rmb.Buildings.SelectMany(building => building.Interior.Flats)
                     .Where(flat => flat.TextureArchive != RdbSourceClassification.EditorFlatArchive))
                 {
@@ -116,7 +119,7 @@ internal static class FlatReferenceExport
 
         File.WriteAllText(Path.Combine(export.Root, "usage.csv"), csv.ToString());
         export.Finish("Daggerfall flat references", new { archives, records, placed },
-            new { note = "Usage counts distinct blocks and placements: RMB exteriors (a building's nature flat counts toward every nature set, since it draws its location's climate), RMB interiors and RDB dungeons. Scattered records are drawn by the terrain without any block placing them." },
+            new { note = "Usage counts distinct blocks and placements: RMB exteriors (a building's nature flat and a ground scenery plant count toward every nature set, since they draw their location's climate), RMB interiors and RDB dungeons. Scattered records are drawn by the terrain without any block placing them." },
             "Open index.html for the visual catalog, usage.csv for every record's size, placements, terrain scatter and light.\n" +
             "Each subject is one texture archive under its family: nature sets by climate, and props by what they hold.\n" +
             "Reproduce: dotnet run --project src/Daggerfall.Import.Tool -- export-flats --output authoring/df-raw/NEW_FLATS_DIRECTORY\n" +

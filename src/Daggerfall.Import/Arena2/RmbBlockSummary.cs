@@ -34,6 +34,12 @@ public sealed record RmbObjectCounts(int Objects, int Flats, int Sections, int P
 /// <summary>One source ground tile in an RMB block's fixed header.</summary>
 public sealed record RmbGroundTile(byte X, byte Y, byte TextureRecord, bool Rotated, bool Flipped);
 
+/// <summary>One plant the ground scenery grid in an RMB block's fixed header places.</summary>
+/// <param name="X">Its source grid column.</param>
+/// <param name="Y">Its source grid row.</param>
+/// <param name="TextureRecord">The record it draws from its location's climate nature archive.</param>
+public sealed record RmbGroundScenery(byte X, byte Y, byte TextureRecord);
+
 /// <summary>One building sub-record of an RMB block header: its slot data and both of its halves.</summary>
 /// <param name="Index">The slot's ordinal, which is the sub-record's ordinal in the block.</param>
 /// <param name="X">The donor sub-record's X position within its RMB block.</param>
@@ -96,6 +102,9 @@ public sealed record RmbBlockSummary(
     /// <summary>All 16-by-16 ground tiles read from the source FLD header.</summary>
     public IReadOnlyList<RmbGroundTile> GroundTiles { get; init; } = [];
 
+    /// <summary>The plants the source FLD header's 16-by-16 scenery grid places, in source order.</summary>
+    public IReadOnlyList<RmbGroundScenery> GroundScenery { get; init; } = [];
+
     /// <summary>The source 64-by-64 automap occupancy bytes used to conservatively retain outdoor ground.</summary>
     public IReadOnlyList<byte> AutoMapData { get; init; } = [];
 }
@@ -123,8 +132,8 @@ public sealed record RmbBlockSummary(
 /// </para>
 /// <para>
 /// This reader retains the ground tiles and automap because RMB exterior assembly needs their source
-/// collision/navigation facts. Ground scenery, the header's other name slots, and the placements inside
-/// either half remain outside this bounded header summary.
+/// collision/navigation facts, and the ground scenery because the plants it places are part of the
+/// exterior. The placements inside either half remain outside this bounded header summary.
 /// </para>
 /// </remarks>
 public static class RmbBlockSummaryReader
@@ -136,6 +145,8 @@ public static class RmbBlockSummaryReader
     public const int HeaderBytes = 6776;
     private const int GroundTilesOffset = 1739;
     private const int GroundTileCount = 16 * 16;
+    private const int GroundSceneryOffset = GroundTilesOffset + GroundTileCount;
+    private const int EmptyGroundScenery = 255;
     private const int AutoMapOffset = 2251;
     private const int AutoMapBytes = 64 * 64;
 
@@ -252,11 +263,16 @@ public static class RmbBlockSummaryReader
         }
 
         List<RmbGroundTile> groundTiles = new(GroundTileCount);
+        List<RmbGroundScenery> groundScenery = [];
         for (int y = 0; y < 16; y++)
         for (int x = 0; x < 16; x++)
         {
             byte bitfield = bytes[offset + GroundTilesOffset + (y * 16) + x];
             groundTiles.Add(new RmbGroundTile((byte)x, (byte)y, (byte)(bitfield & 0x3f), (bitfield & 0x40) != 0, (bitfield & 0x80) != 0));
+            // The donor's record is the bitfield's high six bits less one; below record 1 a cell holds no plant.
+            int scenery = bytes[offset + GroundSceneryOffset + (y * 16) + x];
+            int sceneryRecord = (scenery / 4) - 1;
+            if (scenery != EmptyGroundScenery && sceneryRecord >= 1) groundScenery.Add(new RmbGroundScenery((byte)x, (byte)y, (byte)sceneryRecord));
         }
         summary = new RmbBlockSummary(
             Text(bytes, offset + NameOffset, NameSlotBytes),
@@ -269,6 +285,7 @@ public static class RmbBlockSummaryReader
         {
             OtherNameSlots = Enumerable.Range(0, OtherNameSlots).Select(index => Text(bytes, offset + NameOffset + NameSlotBytes + (index * NameSlotBytes), NameSlotBytes)).ToArray(),
             GroundTiles = groundTiles,
+            GroundScenery = groundScenery,
             AutoMapData = bytes.Skip(offset + AutoMapOffset).Take(AutoMapBytes).ToArray(),
         };
         return true;

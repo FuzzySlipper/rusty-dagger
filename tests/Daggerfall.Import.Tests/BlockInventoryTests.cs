@@ -544,6 +544,21 @@ public sealed class BlockInventoryTests
         bytes[offset + 3] = (byte)(value >> 24);
     }
 
+    [Fact]
+    public void Ground_scenery_keeps_only_cells_that_place_a_plant()
+    {
+        const int grid = 1995;
+        byte[] bytes = Rmb(0, []);
+        bytes.AsSpan(grid, 256).Fill(255);
+        bytes[grid] = 3; // Record -1, though not the empty cell.
+        bytes[grid + 1] = 4; // Record 0, which the donor treats as a marker.
+        bytes[grid + 2] = 8; // Record 1.
+        bytes[grid + (15 * 16) + 15] = 117; // Record 28, with the bitfield's low bits set.
+
+        Assert.True(RmbBlockSummaryReader.TryRead(bytes, "test", 0, bytes.Length, out RmbBlockSummary? summary, out string reason), reason);
+        Assert.Equal([new RmbGroundScenery(2, 0, 1), new RmbGroundScenery(15, 15, 28)], summary!.GroundScenery);
+    }
+
     /// <summary>
     /// Builds a city block record of the given sub-record sizes, with each sub-record's two halves declaring
     /// nothing unless a count is asked for.
