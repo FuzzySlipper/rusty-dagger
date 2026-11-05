@@ -558,8 +558,8 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
 
     /// <summary>
     /// Draws one cell's nature as one batch per sprite record, as the donor's DaggerfallBillboardBatch draws a
-    /// terrain's nature in one batch per atlas. Each normalized record is its own atlas with its own pivot and world
-    /// size, which a batch shares, so the record is the batch: every sprite of it keeps its cell-local placement,
+    /// terrain's nature in one batch per atlas. Each normalized record is its own atlas with its own world size, which
+    /// a batch shares, so the record is the batch: every sprite of it stands on its cell-local placement by its foot,
     /// its record's initial frame and size, the cylindrical facing and the default depth and sprite material it
     /// had as a sprite of its own.
     /// </summary>
@@ -575,7 +575,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
                 (NatureSpriteKey key, NormalizedBillboardSprite sprite) = ResolveNatureSprite(group.First());
                 DaggerfallArtFlat? art = Art(group.First());
                 NatureSprite admitted = GetNatureSprite(key, sprite, art);
-                (Vector2 size, Vector2 pivot) = art?.Placed(sprite.Size, sprite.Pivot) ?? (sprite.Size, sprite.Pivot);
+                (Vector2 size, Vector2 pivot) = art?.Placed(sprite.Size, NatureFoot) ?? (sprite.Size, NatureFoot);
                 SpriteBatchInstance[] instances = [.. group.Select(placement =>
                     new SpriteBatchInstance(placement.LocalPosition, 1F, sprite.InitialFrameId))];
                 ulong objectId = NatureBatchObjectId(cell, key.Record);
@@ -597,6 +597,9 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         }
         return new(placements, _profile, [.. batches]);
     }
+
+    /// <summary>A nature placement is a point on the ground, so the sprite hangs from its foot, not the published centre.</summary>
+    private static readonly Vector2 NatureFoot = new(.5F, 0F);
 
     private NatureSprite GetNatureSprite(NatureSpriteKey key, NormalizedBillboardSprite sprite, DaggerfallArtFlat? art)
     {
