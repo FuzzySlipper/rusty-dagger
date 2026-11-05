@@ -17,7 +17,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 internal sealed partial class DaggerfallSiteAppearance
 {
     private (IEngineContext Engine, DaggerfallHeldArt Art, DaggerfallViewmodelStyle Style, IReadOnlyDictionary<string, DaggerfallDyeTint> Metals,
-        Func<UniqueInventoryItem, (int? Template, string Metal)> ItemOf, Func<EquipmentRead, (int Template, string Metal)?> ShieldOf,
+        Func<UniqueInventoryItem, (int? Template, string Metal, bool Enchanted)> ItemOf, Func<EquipmentRead, (int Template, string Metal)?> ShieldOf,
         Func<EquipmentRead, string> ArmsOf)? heldArt;
     private DaggerfallHeldViewmodel? held;
     // The item the hands wield, which the 3D weapon is drawn for; null for bare hands and a beast's claws.
@@ -37,7 +37,7 @@ internal sealed partial class DaggerfallSiteAppearance
     /// and metal, <paramref name="shieldOf"/> those of the shield worn, and <paramref name="armsOf"/> the arm set worn.
     /// </summary>
     internal void UseHeldArt(IEngineContext engine, DaggerfallHeldArt art, DaggerfallViewmodelStyle style, IReadOnlyDictionary<string, DaggerfallDyeTint> metals,
-        Func<UniqueInventoryItem, (int? Template, string Metal)> itemOf, Func<EquipmentRead, (int Template, string Metal)?> shieldOf, Func<EquipmentRead, string> armsOf)
+        Func<UniqueInventoryItem, (int? Template, string Metal, bool Enchanted)> itemOf, Func<EquipmentRead, (int Template, string Metal)?> shieldOf, Func<EquipmentRead, string> armsOf)
     {
         ArgumentNullException.ThrowIfNull(engine);
         ArgumentNullException.ThrowIfNull(art);
@@ -97,16 +97,17 @@ internal sealed partial class DaggerfallSiteAppearance
         var chosen = heldArt!.Value;
         return new DaggerfallHeldViewmodel(chosen.Engine, chosen.Art, drawing, chosen.Metals.GetValueOrDefault(drawing.Metal),
             drawing.ShieldMetal is { } metal ? chosen.Metals.GetValueOrDefault(metal) : null, chosen.Style,
-            DaggerfallPresentationObjectIds.TakeHeld(), DaggerfallPresentationObjectIds.TakeHeld(), DaggerfallPresentationObjectIds.TakeHeld(), DaggerfallPresentationObjectIds.TakeHeld());
+            DaggerfallPresentationObjectIds.TakeHeld(), DaggerfallPresentationObjectIds.TakeHeld(), DaggerfallPresentationObjectIds.TakeHeld(), DaggerfallPresentationObjectIds.TakeHeld(),
+            DaggerfallPresentationObjectIds.TakeHeld(), DaggerfallPresentationObjectIds.TakeHeld(), DaggerfallPresentationObjectIds.TakeHeld());
     }
 
     // What draws the wielded weapon: the item the hands hold chooses, its classic visual otherwise.
     private DaggerfallHeldDrawing? Drawing(NormalizedClassicWeapon weapon)
     {
         if (heldArt is not { } chosen) return null;
-        var (template, metal) = heldItem is { } item ? chosen.ItemOf(item) : (null, DaggerfallHeldDrawing.Steel);
+        var (template, metal, enchanted) = heldItem is { } item ? chosen.ItemOf(item) : (null, DaggerfallHeldDrawing.Steel, false);
         if (chosen.Art.Drawing(weapon.ResourceId, template, metal) is not { } drawing) return null;
-        return Dressed(heldShield is { } shield ? chosen.Art.WithShield(drawing, shield.Template, shield.Metal) : drawing);
+        return Dressed((heldShield is { } shield ? chosen.Art.WithShield(drawing, shield.Template, shield.Metal) : drawing) with { Enchanted = enchanted });
     }
 
     // A drawing in the arms the player wears, unless it names its own.

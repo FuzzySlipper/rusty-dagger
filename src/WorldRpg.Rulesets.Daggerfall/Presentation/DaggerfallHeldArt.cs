@@ -95,6 +95,21 @@ internal sealed class DaggerfallHeldArt
     internal DaggerfallHeldArmSet ArmSet(string? arms) =>
         arms is null ? Document.ArmSets.Values.First(set => set.Model == Document.Rig.Model) : Document.ArmSets[arms];
 
+    /// <summary>
+    /// What a model's lightning follows (<c>authoring/tools/weapons/arcs.py</c>) and the joint it rides, if it rides one;
+    /// null for a model with none.
+    /// </summary>
+    internal (HeldArcShape Shape, string? Joint)? Lightning(string model)
+    {
+        string path = Path.ChangeExtension(model, ".arcs.json");
+        if (!Container.Entries.ToArray().Any(entry => entry.Path == path)) return null;
+        DaggerfallHeldArcsFile file = JsonSerializer.Deserialize(Container.ReadBytes(path).Span, DaggerfallHeldArtJson.Default.DaggerfallHeldArcsFile)
+            ?? throw new InvalidDataException($"{path} is empty.");
+        static HeldArcPath[] Paths(List<DaggerfallHeldArcFilePath> paths) => [.. paths.Select(arc => new HeldArcPath(arc.Group, arc.Points))];
+        static Vector3[] Vectors(float[] flat) => [.. flat.Chunk(3).Select(v => new Vector3(v[0], v[1], v[2]))];
+        return (new(Paths(file.Paths), Paths(file.Sparks), new(Vectors(file.Hull.Points), Vectors(file.Hull.Normals), file.Hull.Corners)), file.Joint);
+    }
+
     /// <summary>The material slot of a model's <c>metal</c> material, which an item's metal tints; null when it has none.</summary>
     internal uint? MetalSlot(string model)
     {
@@ -208,7 +223,8 @@ internal sealed class DaggerfallHeldArt
         foreach (string name in document.Families.Where(family => family.Value.Bow is not null).Select(family => family.Key).Where(name => !document.Items.Values.Any(item => item.Family == name)))
             problems.Add($"families.{name}.bow: needs an item of the family to name the bow's model and draw.");
         IEnumerable<string> models = [.. document.ArmSets.Values.SelectMany(set => new[] { set.Model, set.RetroModel }), .. document.Families.Values.Select(family => family.Look.Model).OfType<string>(), .. document.Families.Values.Select(family => family.Bow?.Arrow).OfType<string>(),
-            .. document.Items.Values.Select(item => item.Model).OfType<string>(), .. document.Shield?.Items.Values.Select(item => item.Model) ?? []];
+            .. document.Items.Values.Select(item => item.Model).OfType<string>(), .. document.Shield?.Items.Values.Select(item => item.Model) ?? [],
+            .. document.Enchant is { } enchant ? new[] { enchant.Shader } : []];
         foreach (string model in models.Where(model => !container.Entries.ToArray().Any(entry => entry.Path == model)))
             problems.Add($"'{model}' is not in {ContainerName}.");
         return problems.Count == 0
@@ -230,7 +246,25 @@ internal sealed record DaggerfallHeldArtDocument(ArmRig Rig, Dictionary<string, 
     public Dictionary<int, DaggerfallHeldItem> Items { get; init; } = [];
     /// <summary>How a shield on the off arm draws; without one a shield is not drawn.</summary>
     public DaggerfallHeldShield? Shield { get; init; }
+    /// <summary>How an enchanted weapon's lightning draws; without it an enchanted weapon draws as a plain one.</summary>
+    public DaggerfallHeldEnchant? Enchant { get; init; }
 }
+
+/// <summary>An enchanted weapon's lightning: its shader (a container path), and how it draws in each style.</summary>
+internal sealed record DaggerfallHeldEnchant(string Shader, HeldArcLook Held, HeldArcLook Retro);
+
+/// <summary>A model's lightning, as <c>authoring/tools/weapons/arcs.py</c> writes it.</summary>
+internal sealed record DaggerfallHeldArcsFile(List<DaggerfallHeldArcFilePath> Paths, List<DaggerfallHeldArcFilePath> Sparks, DaggerfallHeldArcFileHull Hull)
+{
+    /// <summary>The model's joint it all rides, where it rides one.</summary>
+    public string? Joint { get; init; }
+}
+
+/// <summary>A model's welded surface, as flat lists of coordinates and corner indices.</summary>
+internal sealed record DaggerfallHeldArcFileHull(float[] Points, float[] Normals, uint[] Corners);
+
+/// <summary>One line of a model's lightning: its arc, and its points in the model's space.</summary>
+internal sealed record DaggerfallHeldArcFilePath(int Group, List<Vector3> Points);
 
 /// <summary>
 /// What draws one weapon: the family whose clips it plays, the item template that names its own look (null for the
@@ -240,6 +274,9 @@ internal sealed record DaggerfallHeldDrawing(string Family, int? Item, string Me
 {
     /// <summary>The arm set that draws it; null for the one the player wears.</summary>
     public string? Arms { get; init; }
+
+    /// <summary>Whether the weapon is enchanted, which draws its lightning.</summary>
+    public bool Enchanted { get; init; }
 
     /// <summary>The item template of the shield on the off arm, null for none, and its metal.</summary>
     public int? Shield { get; init; }
@@ -393,4 +430,5 @@ internal sealed class DaggerfallVector3Json : JsonConverter<Vector3>
     Converters = [typeof(DaggerfallVector3Json)], RespectRequiredConstructorParameters = true, RespectNullableAnnotations = true,
     UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow)]
 [JsonSerializable(typeof(DaggerfallHeldArtDocument))]
+[JsonSerializable(typeof(DaggerfallHeldArcsFile))]
 internal sealed partial class DaggerfallHeldArtJson : JsonSerializerContext;

@@ -30,6 +30,21 @@ public sealed class DeveloperPlayerCommandsTests
     }
 
     [Fact]
+    public void Hold_magic_wields_an_enchanted_weapon_drawn()
+    {
+        using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold);
+        DaggerfallSession session = run.Session;
+        session.State.WeaponDrawn = false;
+
+        DebugCommandResult held = session.HoldMagic();
+
+        Assert.True(held.Succeeded, held.Message);
+        Assert.True(session.State.WeaponDrawn);
+        var hand = Assert.Single(session.State.Equipment.Read().Assignments, assignment => assignment.Slot.Value == "right-hand");
+        Assert.Contains("magic-item", hand.Item.Definition.Value, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Equip_goes_through_the_ordinary_rules_and_tries_a_shield_on_the_off_arm()
     {
         using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold);

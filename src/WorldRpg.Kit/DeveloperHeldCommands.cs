@@ -37,6 +37,9 @@ public interface IDeveloperHeldSession
     /// <summary>Shows the viewer's look in the named arm set, or <c>worn</c> for what the player wears.</summary>
     DebugCommandResult ShowHeldArms(string set);
 
+    /// <summary>Shows the shown look enchanted, or plain.</summary>
+    DebugCommandResult ShowHeldEnchanted(bool on);
+
     /// <summary>Ends the viewer: the hands show what they wield again.</summary>
     DebugCommandResult EndHeldView();
 
@@ -77,6 +80,9 @@ public sealed class DeveloperHeldDebugModule(Func<IDeveloperHeldSession> current
 
     [DebugCommand("held.arms", Description = "Developer motion viewer: show the look in arm set SET, or worn for what the player wears.")]
     public DebugCommandResult Arms(string set) => current().ShowHeldArms(set);
+
+    [DebugCommand("held.enchant", Description = "Developer motion viewer: show the look enchanted (true) or plain (false).")]
+    public DebugCommandResult Enchant(bool on) => current().ShowHeldEnchanted(on);
 
     [DebugCommand("held.clip", Description = "Developer readout: what the drawn held art plays now, in play or in the viewer (for clip-led arms: the clip, its time and phase, and what fades out under it).")]
     public DebugCommandResult Read() => current().ReadHeld();

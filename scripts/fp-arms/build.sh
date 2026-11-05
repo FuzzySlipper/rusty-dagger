@@ -31,6 +31,7 @@ PY
 # The weapon models are the game's own art (authoring/tools/weapons), committed beside the definition; the
 # provenance above covers only the arms.
 cp -r content/worldrpg/first-person/weapons "$stage/first-person/weapons"
+cp -r content/worldrpg/first-person/effects "$stage/first-person/effects"
 for glb in $(find "$stage" -name '*.glb'); do rusty asset check "$glb" >/dev/null || { echo "rusty refuses $glb" >&2; exit 1; }; done
 rusty pack-content "$stage" --output local/first-person.rpak
 echo "BUILT local/first-person.rpak (fitting measured in local/fp-arms/measure.json)"

@@ -38,6 +38,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
     private string? strike;
     // The arm set shown; null for the one the player wears.
     private string? arms;
+    private bool enchanted;
     private int key = -1;
     // The strikes whose marks were set on the page, which it keeps binding (so Save writes them) after the viewer moves on.
     private readonly HashSet<string> edited = [];
@@ -59,7 +60,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
     /// <summary>The strikes the shown look's family has clips for (the first look's before one is shown), in the classic order.</summary>
     internal IReadOnlyList<string> Strikes => art is null ? [] : StrikesOf(look ?? Looks[0]);
 
-    private DaggerfallHeldDrawing Drawing => art!.Look(look!)! with { Arms = arms };
+    private DaggerfallHeldDrawing Drawing => art!.Look(look!)! with { Arms = arms, Enchanted = enchanted };
     private string Family => Drawing.Family;
     private ArmClip Clip => art!.Document.Families[Family].Strikes[strike!];
 
@@ -71,7 +72,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
         if (!art.Document.Families[drawing.Family].Strikes.ContainsKey(action))
             return Failure($"'{action}' has no clip for {heldLook}. Strikes with clips: {string.Join(", ", StrikesOf(heldLook))}; the others play their sprites.");
         if (AttackTiming(heldLook, action) is null) return Failure($"The rules don't time '{action}'.");
-        if (appearance().ViewHeld(drawing with { Arms = arms }) is not { } viewed) return Failure("The current site draws no 3D weapon.");
+        if (appearance().ViewHeld(drawing with { Arms = arms, Enchanted = enchanted }) is not { } viewed) return Failure("The current site draws no 3D weapon.");
         (look, strike, key) = (heldLook, action, -1);
         viewed.Rest(0);
         publish();
@@ -195,6 +196,15 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
                 $"Save writes content/{DaggerfallHeldArt.DocumentPath}."
             }.OfType<string>())
         };
+    }
+
+    /// <summary>Shows the shown look enchanted, or plain.</summary>
+    internal DebugCommandResult Enchant(bool on)
+    {
+        if (Unavailable is { } unavailable) return Failure(unavailable);
+        if (look is null || strike is null) return Unshown();
+        enchanted = on;
+        return Show(look, strike);
     }
 
     /// <summary>

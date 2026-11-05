@@ -59,6 +59,11 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     private readonly uint bowDraw;
     private readonly float bowDrawSeconds;
     private bool bowAttached;
+    // An enchanted look's lightning and outline; null on a plain one.
+    private readonly HeldArcs? arcs;
+    // The look's joint they ride, for a look part of which swings free, and whether they have been bound to it.
+    private readonly string? arcsJoint;
+    private bool arcsAttached;
     // How this drawing raises its guard, and how far into raising, holding or lowering it (seconds); null with no guard up.
     private readonly DaggerfallHeldGuard? guard;
     private float? guarding;
@@ -90,7 +95,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     private const string BowDrawClip = "draw";
     private const float StringSnap = .04F;
 
-    internal DaggerfallHeldViewmodel(IEngineContext engine, DaggerfallHeldArt art, DaggerfallHeldDrawing drawing, DaggerfallDyeTint? metal, DaggerfallDyeTint? shieldMetal, DaggerfallViewmodelStyle style, ulong weaponObject, ulong armsObject, ulong shieldObject, ulong arrowObject)
+    internal DaggerfallHeldViewmodel(IEngineContext engine, DaggerfallHeldArt art, DaggerfallHeldDrawing drawing, DaggerfallDyeTint? metal, DaggerfallDyeTint? shieldMetal, DaggerfallViewmodelStyle style, ulong weaponObject, ulong armsObject, ulong shieldObject, ulong arrowObject, ulong arcsObject, ulong sparksObject, ulong rimObject)
     {
         this.art = art;
         Drawing = drawing;
@@ -144,6 +149,12 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
             arrowModel = engine.Animation.OpenAnimatedMeshFromContent(new(arrowContent));
             arrowLook = engine.Animation.CreateAnimatedMeshAppearance(new(arrowModel));
             bowPose = engine.Animation.CreateInstance(new(look, weaponObject));
+        }
+        if (drawing.Enchanted && art.Document.Enchant is { } enchant && (item?.Model ?? family.Look.Model) is { } drawn && art.Lightning(drawn) is { } lightning)
+        {
+            using ContentReference shader = art.Container.OpenReference(enchant.Shader);
+            arcs = new HeldArcs(engine, shader, lightning.Shape, retro ? enchant.Retro : enchant.Held, arcsObject, sparksObject, rimObject);
+            arcsJoint = lightning.Joint;
         }
         guard = family.Guard;
         if (drawing.Shield is int shield && art.Document.Shield is { } shields)
@@ -283,6 +294,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
         }
         else facts.Add(new AppearanceFact(WeaponObject, false, 0, new Transform(at, turn, Vector3.One), look, shown && model is not null, RenderLayer.Viewmodel));
         if (shieldLook is not null) facts.Add(ShieldFact(shown));
+        arcs?.AppendFacts(facts, WeaponObject, shown, strike is { } swing && swing.Seconds <= swing.Timing.Duration);
     }
 
     // The bow's fact: a child of the arms, its transform local to the off hand's joint.
@@ -335,10 +347,21 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
         arms.Reach(MainAim(), OffAim());
         chain?.Published();
         DrawBow();
+        BindArcs();
         if (shieldLook is null || shieldAttached) return;
         // Once: a later snapshot keeps the binding, and the renderer moves the shield with the hand from then on.
         engine.Graphics.PublishChanges(new(new[] { ShieldFact(true) }, ReadOnlyMemory<ulong>.Empty, new MeshJointAttachment[] { new(ShieldObject, art.Document.Rig.Off.Hand) }));
         shieldAttached = true;
+    }
+
+    // Once, as a shield is bound: lightning that rides a joint of the look, which the renderer moves with it from then on.
+    private void BindArcs()
+    {
+        if (arcs is null || arcsJoint is null || arcsAttached) return;
+        List<AppearanceFact> bound = [];
+        arcs.AppendFacts(bound, WeaponObject, true, false);
+        engine.Graphics.PublishChanges(new(bound.ToArray(), ReadOnlyMemory<ulong>.Empty, arcs.Objects.Select(child => new MeshJointAttachment(child, arcsJoint)).ToArray()));
+        arcsAttached = true;
     }
 
     public void Dispose()
@@ -346,6 +369,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
         try
         {
             chain?.Dispose();
+            arcs?.Dispose();
             bowPose?.Dispose();
             arms.Dispose();
         }

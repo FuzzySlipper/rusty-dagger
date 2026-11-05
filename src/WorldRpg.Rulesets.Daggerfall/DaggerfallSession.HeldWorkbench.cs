@@ -37,6 +37,8 @@ internal sealed partial class DaggerfallSession : IDeveloperHeldSession
 
     public DebugCommandResult ShowHeldArms(string set) => Workbench.Arms(set);
 
+    public DebugCommandResult ShowHeldEnchanted(bool on) => Workbench.Enchant(on);
+
     public TunablesPage HeldWorkbench() => Workbench.Page();
 
     public string? ChooseHeld(string chooser, string value) => Workbench.Choose(chooser, value);
