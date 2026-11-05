@@ -6,8 +6,8 @@ usage: blender -b --factory-startup --python scripts/fp-arms/build.py -- SOURCES
 SOURCES is local/fp-melee (scripts/fp-arms/copy-sources.sh). DEFINITION is the held definition, which names every clip
 the game plays: the rig's own clip and each family's idle, power hold and attack clips, by their FBX file stems. Writes into OUT_DIR:
 
-- each of the definition's armSets: its model, the arms (mesh, skeleton, colour and normal maps) with every clip the
-  definition names, and its retroModel, the same with its colour map alone, small and drawn nearest, which the heldRetro
+- each of the definition's armSets: its model, the arms (mesh, skeleton, colour and normal maps; claws() grows the claw
+  arms on the skeleton instead, with a colour map alone) with every clip the definition names, and its retroModel, the same with its colour map alone, small and drawn nearest, which the heldRetro
   style draws. The clips are the model's own, not clip packs: the Engine shares an opened model's clip packs between
   everything that opens it, so a second set of arms on the same model (a weapon swapped, another site's viewmodel) could
   not associate its packs again.
@@ -50,6 +50,19 @@ LEG_SIDES = 10
 LEG_TEXTURE = 32
 # The retro arms (heldRetro) draw the colour map alone, this small and unfiltered, as Daggerfall draws its world.
 RETRO_TEXTURE = 256
+# The arm set grown on the skeleton (claws()) rather than taken from the pack, and the file whose skeleton it grows on.
+CLAWS = "claws"
+CLAW_SKELETON = "male-leather"
+# Its texture, at about the weapons' 2 mm cells, in the colours of the classic WEAPON11 frames: dark to light.
+CLAW_TEXTURE = 512
+FUR = ((.16, .1, .06), (.23, .15, .07), (.34, .22, .11), (.4, .25, .15), (.51, .31, .19), (.55, .34, .22))
+MOTTLE = ((.07, .07, .07), (.12, .12, .12))
+SKIN = ((.2, .14, .15), (.33, .2, .22), (.45, .28, .31), (.54, .34, .38))
+NAIL = ((.07, .07, .07), (.12, .12, .12), (.23, .23, .23), (.31, .31, .31))
+FINGERS = ("index", "middle", "ring", "pinky", "thumb")
+# How far the clips' hands stay open on the claw arms: each joint's curl in degrees, knuckle first, and the knuckle's spread.
+CLAW_CURL = (8, 28, 22)
+CLAW_SPREAD = 9
 # The clips' camera bone looks along its X with its Y up and its Z to the right; the baked view looks along +Y with +Z
 # up and +X to the right, which the Y-up export turns into the Engine's camera space (-Z ahead, +Y up, +X right).
 VIEW = Matrix(((0, 0, 1, 0), (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 0, 1)))
@@ -163,8 +176,14 @@ def plain(name, colour):
     """A rough material of `colour` (sRGB 0-1) on a small noisy texture, drawn nearest, labelled for retro()."""
     random = np.random.default_rng(sum(name.encode()))
     grain = 1 + random.normal(0, 0.09, (LEG_TEXTURE, LEG_TEXTURE, 1))
-    pixels = np.concatenate([np.clip(np.array(colour) * grain, 0, 1), np.ones((LEG_TEXTURE, LEG_TEXTURE, 1))], axis=2)
-    image = bpy.data.images.new(name, LEG_TEXTURE, LEG_TEXTURE)
+    return nearest(name, np.clip(np.array(colour) * grain, 0, 1))
+
+
+def nearest(name, colours):
+    """A rough material drawing `colours`, a square of sRGB 0-1 whose first row is the bottom, nearest, labelled for retro()."""
+    size = colours.shape[0]
+    pixels = np.concatenate([colours, np.ones((size, size, 1))], axis=2)
+    image = bpy.data.images.new(name, size, size)
     image.pixels.foreach_set(pixels.ravel().astype(np.float32))
     image.pack()
     material = bpy.data.materials.new(name)
@@ -180,7 +199,7 @@ def plain(name, colour):
     return material
 
 
-def legs(rig, meshes):
+def legs(rig, meshes, cloth=(.32, .28, .23), boots=(.3, .19, .11)):
     """
     Grows a low leg and boot on each of the skeleton's legs and joins them to the arms' `meshes`, as the Engine draws one
     mesh for the arms: the pack has arms only, and a kick needs something to kick with. Rings of LEG_SIDES run down each
@@ -230,14 +249,318 @@ def legs(rig, meshes):
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     bm.to_mesh(mesh)
     bm.free()
-    mesh.materials.append(plain("legs-cloth", (.32, .28, .23)))
-    mesh.materials.append(plain("legs-boot", (.3, .19, .11)))
+    mesh.materials.append(plain("legs-cloth", cloth))
+    mesh.materials.append(plain("legs-boot", boots))
     bpy.ops.object.select_all(action="DESELECT")
     leg.select_set(True)
     for obj in meshes:
         obj.select_set(True)
     bpy.context.view_layer.objects.active = max(meshes, key=lambda obj: len(obj.data.vertices))
     bpy.ops.object.join()
+
+
+def head(rig, bone):
+    return rig.data.bones[bone].head_local.copy()
+
+
+def digit(rig, side, finger):
+    """A digit's joints from the knuckle, and its tip past the last joint."""
+    joints = [head(rig, f"{finger}_0{i}_{side}") for i in (1, 2, 3)]
+    return [*joints, joints[2] + (joints[2] - joints[1]) * .9]
+
+
+def curling(rig, side, finger):
+    """The way a digit curls at rest: the fingers together, toward the palm, and the thumb its own way."""
+    bend = Vector()
+    for name in ("thumb",) if finger == "thumb" else FINGERS[:4]:
+        joints = digit(rig, side, name)
+        bend += (joints[2] - joints[1]).normalized() - (joints[1] - joints[0]).normalized()
+    return bend.normalized()
+
+
+def tube(bm, points, radii, sides, each=None):
+    """Closed rings of `radii` down `points`; each(vert, ring) marks a vertex of ring number `ring`."""
+    first = previous = None
+    for at, (centre, radius) in enumerate(zip(points, radii)):
+        ahead = (points[min(at + 1, len(points) - 1)] - points[max(at - 1, 0)]).normalized()
+        across = ahead.cross(Vector((0, 1, 0)) if abs(ahead.y) < .9 else Vector((1, 0, 0))).normalized()
+        up = across.cross(ahead)
+        ring = []
+        for step in range(sides):
+            turn = 2 * math.pi * step / sides
+            vert = bm.verts.new(centre + (across * math.cos(turn) + up * math.sin(turn)) * radius)
+            if each:
+                each(vert, at)
+            ring.append(vert)
+        if previous:
+            for step in range(sides):
+                bm.faces.new((previous[step], previous[(step + 1) % sides], ring[(step + 1) % sides], ring[step]))
+        first = first or ring
+        previous = ring
+    bm.faces.new(reversed(first))
+    bm.faces.new(previous)
+
+
+def arm_bones(rig, side):
+    """The arm's bones from shoulder to hand, each with the stretch of the arm it carries."""
+    shoulder, elbow, twist, wrist = (head(rig, f"{n}_{side}") for n in ("upperarm", "lowerarm", "lowerarm_twist_01", "hand"))
+    return [(f"upperarm_{side}", shoulder, elbow), (f"lowerarm_{side}", elbow, twist), (f"lowerarm_twist_01_{side}", twist, wrist),
+            (f"hand_{side}", wrist, head(rig, f"middle_01_{side}"))]
+
+
+def arm_weights(bones, at):
+    """Which of the arm's `bones` carry the point `at`: the nearest, shared with its neighbour near the joint between them."""
+    def along(a, b):
+        return min(max((at - a).dot(b - a) / (b - a).length_squared, 0), 1)
+    nearest_at = min(range(len(bones)), key=lambda i: (at - bones[i][1].lerp(bones[i][2], along(*bones[i][1:]))).length)
+    name, a, b = bones[nearest_at]
+    t = along(a, b)
+    if t < .25 and nearest_at > 0:
+        share = .5 + 2 * t
+        return {name: share, bones[nearest_at - 1][0]: 1 - share}
+    if t > .75 and nearest_at + 1 < len(bones):
+        share = .5 + 2 * (1 - t)
+        return {name: share, bones[nearest_at + 1][0]: 1 - share}
+    return {name: 1}
+
+
+def lattice_noise(points, cell, seed):
+    """Smooth noise from 0 to 1 at `points` (N, 3), its features about `cell` across on each axis."""
+    grid = np.random.default_rng(seed).random((64, 64, 64))
+    scaled = points / cell
+    low = np.floor(scaled).astype(int)
+    t = scaled - low
+    t = t * t * (3 - 2 * t)
+    total = np.zeros(len(points))
+    for corner in range(8):
+        offset = np.array([corner & 1, corner >> 1 & 1, corner >> 2 & 1])
+        at = (low + offset) % 64
+        share = np.prod(np.where(offset, t, 1 - t), axis=1)
+        total += share * grid[at[:, 0], at[:, 1], at[:, 2]]
+    return total
+
+
+def ramp(colours, value):
+    """`colours`' nearest step for `value` (N) from 0 to 1."""
+    table = np.array(colours)
+    return table[np.clip((value * len(table)).astype(int), 0, len(table) - 1)]
+
+
+def paint(mesh, surface, forearm):
+    """
+    Paints the claw arms' colours by what each texel is: `surface` holds each vertex's kind, 0 fur, 1 bare finger and 2 nail.
+    Fur streaks run down the arm (`forearm`, a rotation into a frame along it) and mottles black as the classic frames do.
+    """
+    size = CLAW_TEXTURE
+    where = np.zeros((size, size, 3))
+    kind = np.full((size, size), -1.0)
+    mesh.calc_loop_triangles()
+    uvs = mesh.uv_layers.active.data
+    for triangle in mesh.loop_triangles:
+        corners = np.array([uvs[i].uv for i in triangle.loops]) * size
+        low = np.maximum(np.floor(corners.min(axis=0)).astype(int) - 1, 0)
+        high = np.minimum(np.ceil(corners.max(axis=0)).astype(int) + 1, size - 1)
+        xs, ys = np.meshgrid(np.arange(low[0], high[0] + 1), np.arange(low[1], high[1] + 1))
+        a, b, c = corners
+        area = (b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])
+        if abs(area) < 1e-9:
+            continue
+        px, py = xs + .5, ys + .5
+        wb = ((px - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (py - a[1])) / area
+        wc = ((b[0] - a[0]) * (py - a[1]) - (px - a[0]) * (b[1] - a[1])) / area
+        wa = 1 - wb - wc
+        inside = (wa >= -.02) & (wb >= -.02) & (wc >= -.02)
+        verts = triangle.vertices
+        points = [np.array(mesh.vertices[v].co) for v in verts]
+        kinds = [surface[v] for v in verts]
+        rows, columns = ys[inside], xs[inside]
+        where[rows, columns] = wa[inside, None] * points[0] + wb[inside, None] * points[1] + wc[inside, None] * points[2]
+        kind[rows, columns] = wa[inside] * kinds[0] + wb[inside] * kinds[1] + wc[inside] * kinds[2]
+    filled = kind >= 0
+    points = where[filled].copy()
+    # Both arms read alike: the left's x folded onto the right's.
+    points[:, 0] = -np.abs(points[:, 0])
+    down = points @ np.array(forearm).T
+    streak = lattice_noise(down, np.array((.55, .55, 3.2)), 1)
+    tone = lattice_noise(down, np.array((5, 5, 9)), 2)
+    patch = lattice_noise(down, np.array((1.5, 1.5, 3.2)), 3)
+    fur = np.clip(streak * .75 + tone * .55 - .27, 0, .999)
+    colours = ramp(FUR, fur)
+    mottled = patch + (streak - .5) * .5 > .7
+    colours[mottled] = ramp(MOTTLE, streak[mottled])
+    kinds = kind[filled]
+    bare = (kinds >= .5) & (kinds < 1.5)
+    colours[bare] = ramp(SKIN, np.clip(tone[bare] * .6 + streak[bare] * .5, 0, .999))
+    nail = kinds >= 1.5
+    colours[nail] = ramp(NAIL, np.clip(streak[nail] * .9 - .1, 0, .999))
+    image = np.zeros((size, size, 3))
+    image[filled] = colours
+    # Cells beside an island take its colour, so the nearest sample at its edge never reads the empty sheet.
+    for _ in range(6):
+        grown = filled.copy()
+        for axis, shift in ((0, 1), (0, -1), (1, 1), (1, -1)):
+            near = np.roll(filled, shift, axis) & ~grown
+            image[near] = np.roll(image, shift, axis)[near]
+            grown |= near
+        filled = grown
+    return image
+
+
+def claws():
+    """
+    The beast's arms, grown on the skeleton as legs() grows a leg, so nothing here comes from the pack's art: an arm and
+    palm fused from tubes down the bones, a finger and curved nail on each digit and a shag of fur shards, with legs that
+    match. The skeleton is an arm set's, so every clip plays on it as it plays on the rest.
+    """
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    bpy.context.scene.render.fps = 60
+    imported = import_fbx(pack_root / f"Meshes/{SOURCES[CLAW_SKELETON][0]}.fbx")
+    for action in list(bpy.data.actions):
+        bpy.data.actions.remove(action)
+    rig = next(o for o in imported if o.type == "ARMATURE")
+    remove([o for o in imported if o.type == "MESH"])
+
+    mesh = bpy.data.meshes.new(CLAWS)
+    obj = bpy.data.objects.new(CLAWS, mesh)
+    bpy.context.scene.collection.objects.link(obj)
+    obj.parent = rig
+    bm = bmesh.new()
+    for side in "lr":
+        bones = arm_bones(rig, side)
+        shoulder, elbow, wrist = bones[0][1], bones[0][2], bones[3][1]
+        tube(bm, [shoulder.lerp(elbow, .35), shoulder.lerp(elbow, .7), elbow, elbow.lerp(wrist, .3), elbow.lerp(wrist, .6), elbow.lerp(wrist, .88), wrist],
+             [7, 6.6, 5.8, 6.2, 5.2, 4.2, 3.9], 10)
+        for finger in FINGERS[:4]:
+            knuckle = head(rig, f"{finger}_01_{side}")
+            tube(bm, [wrist, wrist.lerp(knuckle, .5), knuckle], [3.4, 3, 1.9], 8)
+        tube(bm, [wrist, head(rig, f"thumb_01_{side}")], [2.6, 1.9], 8)
+    bm.to_mesh(mesh)
+    bm.free()
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)
+    remesh = obj.modifiers.new("fuse", "REMESH")
+    remesh.mode = "VOXEL"
+    remesh.voxel_size = .45
+    bpy.ops.object.modifier_apply(modifier=remesh.name)
+    smooth = obj.modifiers.new("smooth", "SMOOTH")
+    smooth.iterations = 6
+    smooth.factor = .6
+    bpy.ops.object.modifier_apply(modifier=smooth.name)
+    decimate = obj.modifiers.new("low", "DECIMATE")
+    decimate.ratio = 3000 / len(mesh.polygons)
+    bpy.ops.object.modifier_apply(modifier=decimate.name)
+
+    groups = {}
+
+    def weigh(vert, weights):
+        for bone, share in weights.items():
+            if bone not in groups:
+                groups[bone] = obj.vertex_groups.new(name=bone).index
+            vert[deform][groups[bone]] = share
+
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    deform = bm.verts.layers.deform.verify()
+    kind = bm.verts.layers.float.new("kind")
+    bm.normal_update()
+    arm = list(bm.verts)
+    random = np.random.default_rng(11)
+    for vert in arm:
+        weigh(vert, arm_weights(arm_bones(rig, "l" if vert.co.x > 0 else "r"), vert.co))
+        vert[kind] = 0.0
+    # The shag: a three-sided shard on a random spot of the arm, lying back toward the hand, sharing the spot's weights.
+    faces = list(bm.faces)
+    shards = set()
+    for face in (faces[i] for i in random.integers(0, len(faces), 900)):
+        side = "l" if face.calc_center_median().x > 0 else "r"
+        bones = arm_bones(rig, side)
+        centre = face.calc_center_median()
+        down = (bones[3][1] - bones[1][1]).normalized() if (centre - bones[1][1]).dot(bones[3][1] - bones[1][1]) > 0 else (bones[0][2] - bones[0][1]).normalized()
+        out = face.normal
+        lie = (down * .95 + out * .3).normalized()
+        across = out.cross(down).normalized()
+        wide = random.uniform(.4, .7)
+        tip = bm.verts.new(centre + lie * random.uniform(1.2, 2.4))
+        base = [bm.verts.new(centre + across * wide * math.cos(turn) + down.cross(across) * wide * math.sin(turn) - out * .4)
+                for turn in (0, 2.1, 4.2)]
+        source = face.verts[0]
+        for vert in (tip, *base):
+            vert[deform] = source[deform]
+            vert[kind] = 0.0
+        for i in range(3):
+            shards.add(bm.faces.new((base[i], base[(i + 1) % 3], tip)))
+    for side in "lr":
+        hand = f"hand_{side}"
+        for finger in FINGERS:
+            bend = curling(rig, side, finger)
+            joints = digit(rig, side, finger)
+            names = [f"{finger}_0{i}_{side}" for i in (1, 2, 3)]
+            base = joints[0] - (joints[1] - joints[0]).normalized() * 1.2
+            # Each ring (where it sits, how thick, what carries it, what it is): fur to the first knuckle, bare beyond.
+            rings = [(base, 1.05, {hand: 1}, 0), (joints[0], 1.15, {hand: .5, names[0]: .5}, 0),
+                     (joints[0].lerp(joints[1], .5), 1, {names[0]: 1}, 0), (joints[1], 1.05, {names[0]: .5, names[1]: .5}, 1),
+                     (joints[1].lerp(joints[2], .5), .9, {names[1]: 1}, 1), (joints[2], .95, {names[1]: .5, names[2]: .5}, 1),
+                     (joints[2].lerp(joints[3], .5), .85, {names[2]: 1}, 1), (joints[3], .7, {names[2]: 1}, 1)]
+
+            def mark(vert, ring, rings=rings):
+                weigh(vert, rings[ring][2])
+                vert[kind] = float(rings[ring][3])
+
+            tube(bm, [r[0] for r in rings], [r[1] for r in rings], 8, mark)
+            ahead = (joints[3] - joints[2]).normalized()
+            length = 5.5 if finger == "thumb" else 7
+            steps = [i / 5 for i in range(6)]
+
+            def nail(vert, ring, last=names[2]):
+                weigh(vert, {last: 1})
+                vert[kind] = 1.2 if ring == 0 else 2.0
+
+            tube(bm, [joints[3] - ahead + ahead * length * t + bend * length * .45 * t * t for t in steps],
+                 [.8 * (1 - t) ** .8 + .03 for t in steps], 6, nail)
+    surface = [0.0] * len(bm.verts)
+    bm.verts.index_update()
+    for vert in bm.verts:
+        surface[vert.index] = vert[kind]
+    bm.verts.layers.float.remove(kind)
+    bm.normal_update()
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    for face in bm.faces:
+        face.smooth = face not in shards
+    bm.to_mesh(mesh)
+    bm.free()
+    obj.modifiers.new("rig", "ARMATURE").object = rig
+
+    mesh.uv_layers.new(name="UVMap")
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.uv.smart_project(island_margin=.004)
+    bpy.ops.object.mode_set(mode="OBJECT")
+    wrist, elbow = head(rig, "hand_r"), head(rig, "lowerarm_r")
+    down = (wrist - elbow).normalized()
+    across = down.cross(Vector((0, 1, 0))).normalized()
+    mesh.materials.append(nearest(CLAWS, paint(mesh, surface, Matrix((across, across.cross(down), down)))))
+    legs(rig, [obj], FUR[3], FUR[1])
+    return rig
+
+
+def open_hand(rig):
+    """The claw arms' fingers, by bone: their rest, curled by CLAW_CURL, each knuckle spread from the middle finger by CLAW_SPREAD."""
+    basis = {}
+    for side in "lr":
+        middle = head(rig, f"middle_01_{side}")
+        for finger in FINGERS:
+            bend = curling(rig, side, finger)
+            joints = digit(rig, side, finger)
+            for joint, curl in enumerate(CLAW_CURL):
+                bone = rig.data.bones[f"{finger}_0{joint + 1}_{side}"]
+                ahead = (joints[joint + 1] - joints[joint]).normalized()
+                local = bone.matrix_local.to_3x3().inverted()
+                turn = Matrix.Rotation(math.radians(curl), 4, local @ ahead.cross(bend).normalized())
+                if joint == 0 and finger != "middle":
+                    outward = joints[0] - middle
+                    turn = turn @ Matrix.Rotation(math.radians(CLAW_SPREAD), 4, local @ ahead.cross(outward).normalized())
+                basis[bone.name] = turn
+    return basis
 
 
 def world(rig, bone):
@@ -253,11 +576,12 @@ def swapped(name):
     return name[:-1] + {"l": "r", "r": "l"}[name[-1]] if name.endswith(("_l", "_r")) else name
 
 
-def bake(rig, stem):
+def bake(rig, stem, hands=None):
     """
     Bakes clip `stem` onto the arms as an action of that name, as its camera bone sees it; returns its samples. A stem
     ending in MIRRORED is the clip the other way round, for a pack with one punch and two fists. The pack's own clips have
-    no camera bone: they are made for the arms, whose camera_mount is the eye.
+    no camera bone: they are made for the arms, whose camera_mount is the eye. `hands` holds bones to a pose of their own
+    through the clip: the claw arms' open fingers, whatever a clip's hand grips.
     """
     mirrored = stem.endswith(MIRRORED)
     imported = import_fbx(clip_file(stem.removesuffix(MIRRORED)))
@@ -298,7 +622,7 @@ def bake(rig, stem):
             else:
                 local = b.parent.matrix_local.inverted() @ b.matrix_local
                 basis[b.name] = local.inverted() @ posed[b.parent.name].inverted() @ posed[b.name]
-        frames.append(basis)
+        frames.append(basis | (hands or {}))
         samples.append({name: rig.matrix_world @ m for name, m in posed.items()} | {"weapon_r": view @ world(source, held["r"]), "weapon_l": view @ world(source, held["l"])})
     remove(imported)
     bpy.data.actions.remove(clip)
@@ -423,8 +747,9 @@ stems = [rig_clip, *guard_stems(shield["guard"]), *(stem for family in families.
     family["idle"]["clip"], family["powerHold"]["clip"], *guard_stems(family["guard"]), *(clip["clip"] for clip in family["strikes"].values())))]
 # Every set's joints are the clips' (bake refuses others), so the samples of any set measure them all.
 for name, arm_set in definition["armSets"].items():
-    rig = arms(name)
-    samples = {stem: bake(rig, stem) for stem in dict.fromkeys(stems)}
+    rig = claws() if name == CLAWS else arms(name)
+    hands = open_hand(rig) if name == CLAWS else None
+    samples = {stem: bake(rig, stem, hands) for stem in dict.fromkeys(stems)}
     export(out / arm_set["model"], list(samples))
     retro()
     export(out / arm_set["retroModel"], list(samples))

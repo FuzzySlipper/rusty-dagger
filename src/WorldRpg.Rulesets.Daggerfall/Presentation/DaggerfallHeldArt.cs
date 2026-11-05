@@ -85,6 +85,9 @@ internal sealed class DaggerfallHeldArt
         return wear switch { DaggerfallArmWear.Leather => worn.Leather, DaggerfallArmWear.Mail => worn.Mail, _ => worn.Cloth };
     }
 
+    /// <summary>The arm set that draws the player transformed into <paramref name="beast"/>.</summary>
+    internal string Arms(DaggerfallRacialKind beast) => beast == DaggerfallRacialKind.Wereboar ? Document.ArmsBeast.Wereboar : Document.ArmsBeast.Werewolf;
+
     /// <summary>The models of the arm set <paramref name="arms"/>; with none named, of the set the rig was measured on.</summary>
     internal DaggerfallHeldArmSet ArmSet(string? arms) =>
         arms is null ? Document.ArmSets.Values.First(set => set.Model == Document.Rig.Model) : Document.ArmSets[arms];
@@ -150,6 +153,8 @@ internal sealed class DaggerfallHeldArt
         foreach (var (at, name) in new[] { ("male.cloth", document.ArmsWorn.Male.Cloth), ("male.leather", document.ArmsWorn.Male.Leather), ("male.mail", document.ArmsWorn.Male.Mail),
             ("female.cloth", document.ArmsWorn.Female.Cloth), ("female.leather", document.ArmsWorn.Female.Leather), ("female.mail", document.ArmsWorn.Female.Mail) })
             if (!document.ArmSets.ContainsKey(name)) problems.Add($"armsWorn.{at}: '{name}' is no arm set ({string.Join(", ", document.ArmSets.Keys)}).");
+        foreach (var (at, name) in new[] { ("werewolf", document.ArmsBeast.Werewolf), ("wereboar", document.ArmsBeast.Wereboar) })
+            if (!document.ArmSets.ContainsKey(name)) problems.Add($"armsBeast.{at}: '{name}' is no arm set ({string.Join(", ", document.ArmSets.Keys)}).");
         if (document.Families.Count == 0) problems.Add("families: names no weapon family.");
         foreach (var (name, family) in document.Families)
         {
@@ -206,9 +211,10 @@ internal sealed class DaggerfallHeldArt
 /// <param name="Rig">How to drive the arms; its model is the arm set it was measured on, a container path.</param>
 /// <param name="ArmSets">The arm sets by name, each carrying every clip the families play.</param>
 /// <param name="ArmsWorn">The arm set a player's gender and arm armour draw.</param>
+/// <param name="ArmsBeast">The arm set each beast form draws, whatever the player wears.</param>
 /// <param name="Arms">The shoulder (where the clips' right upper arm sits from the eye), elbow pole, default hold and hand closures.</param>
 /// <param name="Families">The weapon families by name, each playing its own clips.</param>
-internal sealed record DaggerfallHeldArtDocument(ArmRig Rig, Dictionary<string, DaggerfallHeldArmSet> ArmSets, DaggerfallHeldArmsWorn ArmsWorn, HeldArms Arms, Dictionary<string, DaggerfallHeldFamily> Families)
+internal sealed record DaggerfallHeldArtDocument(ArmRig Rig, Dictionary<string, DaggerfallHeldArmSet> ArmSets, DaggerfallHeldArmsWorn ArmsWorn, DaggerfallHeldArmsBeast ArmsBeast, HeldArms Arms, Dictionary<string, DaggerfallHeldFamily> Families)
 {
     /// <summary>The weapons a classic visual alone can't settle, by item template index.</summary>
     public Dictionary<int, DaggerfallHeldItem> Items { get; init; } = [];
@@ -241,6 +247,9 @@ internal sealed record DaggerfallHeldArmsWorn(DaggerfallHeldWornArms Male, Dagge
 
 /// <summary>The arm set drawn for what is worn on the arms, by name.</summary>
 internal sealed record DaggerfallHeldWornArms(string Cloth, string Leather, string Mail);
+
+/// <summary>The arm set each beast form draws, by name.</summary>
+internal sealed record DaggerfallHeldArmsBeast(string Werewolf, string Wereboar);
 
 /// <summary>
 /// A shield on the off arm: the family whose clips it was made for, which every one-handed weapon plays with a shield up;

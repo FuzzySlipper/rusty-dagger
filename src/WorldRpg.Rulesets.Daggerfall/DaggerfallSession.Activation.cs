@@ -50,6 +50,7 @@ internal sealed partial class DaggerfallSession
     // The arm set the 3D first-person art draws: the player's gender, and the heaviest armour on the arms.
     private string HeldArms(DaggerfallHeldArt art, EquipmentRead equipment)
     {
+        if (State.RacialOverrides.Current is { State.BeastForm: true } form) return art.Arms(form.State.Kind);
         List<string> worn = [];
         foreach (EquipmentAssignment assignment in equipment.Assignments)
         {

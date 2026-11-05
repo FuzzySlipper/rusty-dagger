@@ -372,6 +372,7 @@ public sealed class DaggerfallHeldArtTests
 
     [Theory]
     [InlineData("worn", "armsWorn.female.mail: 'female-plate' is no arm set")]
+    [InlineData("beast", "armsBeast.wereboar: 'boar-hide' is no arm set")]
     [InlineData("rig", "rig.model: 'first-person/lost.glb' is no arm set's model")]
     [InlineData("model", "'first-person/lost.glb' is not in first-person.rpak")]
     public void Arms_that_cannot_be_drawn_are_refused_by_field(string broken, string field)
@@ -380,11 +381,43 @@ public sealed class DaggerfallHeldArtTests
         switch (broken)
         {
             case "worn": document["armsWorn"]!["female"]!["mail"] = "female-plate"; break;
+            case "beast": document["armsBeast"]!["wereboar"] = "boar-hide"; break;
             case "rig": document["rig"]!["model"] = "first-person/lost.glb"; break;
             case "model": document["armSets"]!["male-cloth"]!["retroModel"] = "first-person/lost.glb"; break;
         }
 
         Assert.Contains(field, Assert.Throws<InvalidDataException>(() => Read(document)).Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("Werewolf")]
+    [InlineData("Wereboar")]
+    public void A_transformed_player_draws_the_claws_on_the_beast_arms_and_changes_back(string form)
+    {
+        List<string> releases = [];
+        DaggerfallRacialKind? beast = null;
+        DaggerfallHeldArt art = Read(Document());
+        (DaggerfallSiteAppearance presentation, _, EngineContextFake engine) = Viewing(releases,
+            arms: () => beast is { } kind ? art.Arms(kind) : "male-leather", beast: () => beast);
+        using (presentation)
+        {
+            void Update() => presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
+            Update();
+            string armed = presentation.DrawnHeld!.Drawing.Family;
+            Assert.NotEqual("claws", armed);
+
+            beast = Enum.Parse<DaggerfallRacialKind>(form);
+            Update();
+            Assert.Equal("claws", presentation.DrawnHeld!.Drawing.Family);
+            Assert.Equal("claws", presentation.DrawnHeld!.Drawing.Arms);
+            Assert.Null(presentation.DrawnHeld!.Drawing.Item);
+            Assert.Contains("first-person/arms-claws.glb", engine.Animation.OpenedPaths);
+
+            beast = null;
+            Update();
+            Assert.Equal(armed, presentation.DrawnHeld!.Drawing.Family);
+            Assert.Equal("male-leather", presentation.DrawnHeld!.Drawing.Arms);
+        }
     }
 
     [Fact]
@@ -547,10 +580,11 @@ public sealed class DaggerfallHeldArtTests
     // A site drawing the authored art through arms whose model has the rig's joints and every clip, whatever the hands
     // wield standing for a longsword (template 120).
     private static (DaggerfallSiteAppearance Presentation, AppearanceFake Appearance, EngineContextFake Engine) Viewing(List<string> releases, JsonObject? document = null,
-        Func<WorldRpg.Kit.Inventory.EquipmentRead, (int Template, string Metal)?>? shieldOf = null, Func<string>? arms = null)
+        Func<WorldRpg.Kit.Inventory.EquipmentRead, (int Template, string Metal)?>? shieldOf = null, Func<string>? arms = null, Func<DaggerfallRacialKind?>? beast = null)
     {
         ContentFake content = MediaContent(releases);
         content.Add("weapon/dagger.png", Hash);
+        content.Add("weapon/claws.png", Hash);
         content.Add("effect/fire-missile.png", Hash);
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(Hash, releases).Service, appearance, PerceptionFake.Create().Service);
@@ -559,7 +593,9 @@ public sealed class DaggerfallHeldArtTests
         engine.Animation.Clips = [.. art.Document.Families.Values.SelectMany(family => family.Strikes.Values.Select(clip => clip.Clip).Append(family.Idle.Clip).Concat(GuardClips(family.Guard!))).Concat(GuardClips(art.Document.Shield!.Guard)).Distinct()
             .Select(clip => new AnimationClipInfo(clip, clip, 1, true, 0))];
         NormalizedClassicPresentation classic = ClassicWeapon() with { Effects = [.. ClassicEffects(fireSpell: true).Effects.Where(effect => effect.Name == "fireMissile")], UnarmedVisual = "weapon.unarmed" };
+        classic = classic with { Weapons = new Dictionary<string, NormalizedClassicWeapon>(classic.Weapons) { ["weapon.werecreature"] = classic.Weapons["weapon.dagger.steel"] with { ResourceId = "weapon.werecreature", TexturePath = "weapon/claws.png" } } };
         DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: classic));
+        if (beast is not null) presentation.UsePlayerBeastForm(beast);
         presentation.UseHeldArt(engine.Context, art, DaggerfallViewmodelStyle.Held, new Dictionary<string, DaggerfallDyeTint>(), _ => (120, DaggerfallHeldDrawing.Steel), shieldOf ?? (_ => null), _ => arms?.Invoke() ?? "male-leather");
         return (presentation, appearance, engine);
     }
