@@ -77,8 +77,7 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
     double IDaggerfallPlayerAttacks.TimeScale(string attack)
     {
         DaggerfallCombatantTuning tuning = _tuning.Attacks.Combatant;
-        // A bow's shot already runs on the classic frame time, which Speed sets.
-        double speed = attack == DaggerfallAttackIds.Shot ? 0d : tuning.SpeedPerPointAbove50 * (PlayerStat(DaggerfallMechanicsIds.Speed.Value) - 50);
+        double speed = tuning.SpeedPerPointAbove50 * (PlayerStat(DaggerfallMechanicsIds.Speed.Value) - 50);
         double skill = attack == DaggerfallAttackIds.Cast ? 0d : tuning.SkillAt100 * Math.Clamp(PlayerStat(_combat.PlayerWeaponSkill()), 0, 100) / 100d;
         double scale = 1d - speed - skill;
         if (attack == DaggerfallAttackIds.PowerIn) scale -= tuning.StrengthPerPointAbove50 * (PlayerStat(DaggerfallMechanicsIds.Strength.Value) - 50);
@@ -89,15 +88,9 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
 
     private int PlayerStat(string stat) => State.Actors.Player.Stats.GetStat(StatId.Parse(stat)).ValueInt;
 
-    DaggerfallAttackTiming? IDaggerfallPlayerAttacks.ShotTiming
-    {
-        get
-        {
-            if (!_combat.PlayerHoldsBow()) return null;
-            double frame = _combat.InspectPlayerTiming().FrameSeconds;
-            return new(DaggerfallFormulaPolicy.BowWeaponHitFrame * frame, frame, frame);
-        }
-    }
+    DaggerfallShotTuning? IDaggerfallPlayerAttacks.Shot => _combat.PlayerHoldsBow() ? _tuning.Attacks.Shot : null;
+
+    bool IDaggerfallPlayerAttacks.ShotReady => _combat.InspectPlayerAttackRefusal() is null;
 
     /// <summary>
     /// Whether the view meets a civilian's body as an attack starts, allies and world aside. That one look decides for the

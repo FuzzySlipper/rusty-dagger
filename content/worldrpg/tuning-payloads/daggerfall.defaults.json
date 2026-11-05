@@ -270,6 +270,14 @@
       "commit": 0.02,
       "recovery": 0.3
     },
+    "shot": {
+      "draw": 0.6,
+      "release": {
+        "windup": 0.02,
+        "commit": 0.02,
+        "recovery": 0.45
+      }
+    },
     "kickDamage": 1,
     "classes": {
       "short-blade": {

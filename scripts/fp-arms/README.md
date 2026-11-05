@@ -70,6 +70,20 @@ with the medium colour where a set has several) and bakes every clip onto each, 
 The cloth sets' fur is a second mesh, joined to the arms and cut by its alpha. The chainmail's colour map is lifted, as it
 is painted for metal shading. `held.arms SET` shows a set in the workbench.
 
+### The bow
+
+The pack has no bow, so `bow_clip` in `build.py` makes the `bow` family's four clips on the skeleton: two-bone reaches of
+each arm from the rig's clip, to where the left hand carries the bow and the right draws the string (`BOW_AIM` and the
+rest, in cm in the view). `BOW_Idle` holds the bow low, `BOW_Draw` raises it and pulls, `BOW_Hold` is the aim, and
+`BOW_Loose` lets go and lowers it. The rules time them: a press plays `shotDraw` over the draw, `powerHold` keeps the aim
+while the button stays down, and `shot` plays once the bow is drawn and let go, the arrow leaving at its strike mark.
+
+The bow rides the left hand as a shield does, an Engine joint attachment at `bow.seat`, which `measure.json` reports as
+`bowSeat` from the clips, so changing where the clips aim means copying that across. The arrow rides the bow's `nock` joint
+at `bow.nock`, drawn from the draw to the release. The arms pull both bows to the same place, so a long bow bends less:
+an item's `drawn` is how far through the model's `draw` clip that is. The string follows the hand from `bow.pullFrom`, the
+same point in `BOW_Draw` where the hand takes it.
+
 ### The claw arms
 
 A transformed werewolf or wereboar draws the `claws` family, the werewolf on the `claws` set and the wereboar on
@@ -92,8 +106,7 @@ from the other, then a downward blow and a thrust. Every plain clip starts and e
 follow any. A chain cuts a clip's long tail at its recovery. `powerIn` plays a heavy clip's Start, `powerHold` holds it and
 `powerOut` plays its End; each family's heavy clip was chosen for meeting its own hold. The dagger's Start ends far from
 its hold clip, a plain idle, so its hold stays on Start's last frame. The halberd's End waits still for over a second
-before it swings, so its `start` mark skips the wait. `kick` plays the family's Kick, whose strike mark is where a foot reaches furthest. The bow has no
-fitting clip and keeps its sprites.
+before it swings, so its `start` mark skips the wait. `kick` plays the family's Kick, whose strike mark is where a foot reaches furthest.
 
 The pack has one punch, so a clip name ending `.mirrored` bakes it the other way round for the second fist. The bare hands
 borrow the sword-and-shield set's guard, kick and cast.
@@ -102,7 +115,7 @@ borrow the sword-and-shield set's guard, kick and cast.
 it, and the spell leaves at the clip's strike mark, the palm thrown forward. Until then the element's missile burns on the
 palm: `DaggerfallSiteAppearance` draws the same sprite the spell flies as, in the art chosen, on the viewmodel layer where
 `DaggerfallHeldViewmodel.CastPalm` samples the left hand in the clip. With the weapon sheathed the `unarmed` arms come up
-for the cast and go again. With no family drawn (a bow) the element's classic casting hand draws instead.
+for the cast and go again. A family with no `cast` clip (the bow) leaves its hands alone, and the element's classic casting hand draws instead.
 
 A shield goes on the left hand with an Engine joint attachment, so the renderer carries it and nothing polls the joint.
 The arms skeleton's root is scaled 0.01 and its joints are in centimetres, so a `seat` is in centimetres with `scale` 100.
@@ -170,7 +183,6 @@ place marks.
 
 ## Not yet
 
-- The bows draw their sprites: there are no clips for them yet, so their models wait for those.
 
 ## Weapon models
 

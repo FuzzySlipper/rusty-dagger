@@ -16,6 +16,9 @@ internal readonly record struct DaggerfallAttackTiming(double Windup, double Com
 /// <summary>A weapon class's attacks: the fast attack, the power attack's charge in seconds, its release, and how far they reach.</summary>
 internal sealed record DaggerfallWeaponClassAttacks(DaggerfallAttackTiming Fast, double PowerCharge, DaggerfallAttackTiming PowerRelease, float Reach);
 
+/// <summary>A bow's shot: how long the draw takes in seconds, and the release, whose windup ends as the arrow leaves.</summary>
+internal sealed record DaggerfallShotTuning(double Draw, DaggerfallAttackTiming Release);
+
 /// <summary>An attack's path in view space, as <see cref="SwingArc"/> takes it; its range comes from the weapon class.</summary>
 internal readonly record struct DaggerfallAttackPath(float Start, float End, float Tilt);
 
@@ -191,6 +194,9 @@ internal sealed record DaggerfallAttackTuning(
     /// <summary>The left hand's cast: its spell releases as the windup ends.</summary>
     internal DaggerfallAttackTiming Cast { get; init; } = new(.3d, .02d, .3d);
 
+    /// <summary>A bow's shot.</summary>
+    internal DaggerfallShotTuning Shot { get; init; } = new(.6d, new(.02d, .02d, .45d));
+
     private static readonly DaggerfallWeaponClassAttacks ShortBlade = new(new(.18d, .12d, .28d), .5d, new(.15d, .12d, .35d), 1.9f);
 
     internal static DaggerfallAttackTuning Default { get; } = new(.2d, 2d, 2d, new(.25d, .12d, .4d), 10, 1, 1.7f,
@@ -231,6 +237,8 @@ internal sealed record DaggerfallAttackTuning(
         DaggerfallWeaponClassAttacks weapon = For(skill);
         return attack switch
         {
+            DaggerfallAttackIds.ShotDraw => new(Shot.Draw, 0d, 0d),
+            DaggerfallAttackIds.Shot => Shot.Release,
             DaggerfallAttackIds.PowerIn => new(weapon.PowerCharge, 0d, 0d),
             DaggerfallAttackIds.PowerOut => weapon.PowerRelease,
             DaggerfallAttackIds.Kick => Kick,
@@ -261,7 +269,7 @@ internal sealed record DaggerfallAttackTuning(
             groups.Add(new(group.GetProperty("templates").EnumerateArray().Select(template => template.GetInt32()).ToHashSet(), ReadPaths(group.GetProperty("paths"))));
         return new(Positive(root, "powerThresholdSeconds"), Positive(root, "powerDamageMultiplier"), Positive(root, "powerStaminaMultiplier"),
             ReadTiming(root.GetProperty("kick")), root.GetProperty("kickStaminaCost").GetInt32(), root.GetProperty("kickDamage").GetInt32(), (float)Positive(root, "kickReach"), classes, ReadPaths(root.GetProperty("paths")), groups)
-        { Combatant = DaggerfallCombatantTuning.Read(root.GetProperty("combatant")), Stamina = DaggerfallStaminaTuning.Read(root.GetProperty("stamina")), Strike = DaggerfallStrikeTuning.Read(root.GetProperty("strike")), Cast = ReadTiming(root.GetProperty("cast")), AimRange = root.GetProperty("aimRange").GetDouble() };
+        { Shot = new(Positive(root.GetProperty("shot"), "draw"), ReadTiming(root.GetProperty("shot").GetProperty("release"))), Combatant = DaggerfallCombatantTuning.Read(root.GetProperty("combatant")), Stamina = DaggerfallStaminaTuning.Read(root.GetProperty("stamina")), Strike = DaggerfallStrikeTuning.Read(root.GetProperty("strike")), Cast = ReadTiming(root.GetProperty("cast")), AimRange = root.GetProperty("aimRange").GetDouble() };
     }
 
     private static Dictionary<string, DaggerfallAttackPath> ReadPaths(JsonElement value)

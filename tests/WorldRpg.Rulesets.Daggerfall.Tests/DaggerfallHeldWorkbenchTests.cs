@@ -52,7 +52,7 @@ public sealed class DaggerfallHeldWorkbenchTests
         Assert.Equal(["weapon.dagger.steel", "weapon.longblade", "weapon.axe", "weapon.flail", "weapon.warhammer", "weapon.mace", "weapon.staff"], workbench.Looks.Take(7));
         Assert.Contains("item.120", workbench.Looks);
         Assert.DoesNotContain("fastC", workbench.Strikes);
-        Assert.Contains("Looks: weapon.dagger.steel, weapon.longblade, weapon.axe", workbench.Show("weapon.bow", "fastA").Message, StringComparison.Ordinal);
+        Assert.Contains("Looks: weapon.dagger.steel, weapon.longblade, weapon.axe", workbench.Show("weapon.unknown", "fastA").Message, StringComparison.Ordinal);
         DebugCommandResult noClip = workbench.Show("weapon.dagger.steel", "fastC");
         Assert.False(noClip.Succeeded);
         Assert.Contains("Strikes with clips: fastA, fastB, fastD", noClip.Message, StringComparison.Ordinal);

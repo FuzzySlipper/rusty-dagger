@@ -58,13 +58,14 @@ public sealed class DaggerfallAttackPaceTests
     }
 
     [Fact]
-    public void A_shot_is_not_quickened_by_speed_twice()
+    public void Speed_quickens_a_shot_as_it_does_any_attack()
     {
         using DaggerfallSession session = FreshSession();
         IDaggerfallPlayerAttacks attacks = session;
         Average(session);
+        double average = attacks.TimeScale(DaggerfallAttackIds.ShotDraw);
         Stat(session, DaggerfallMechanicsIds.Speed.Value, 100);
-        Assert.Equal(1d, attacks.TimeScale(DaggerfallAttackIds.Shot), 6);
+        Assert.True(attacks.TimeScale(DaggerfallAttackIds.ShotDraw) < average);
     }
 
     [Fact]
