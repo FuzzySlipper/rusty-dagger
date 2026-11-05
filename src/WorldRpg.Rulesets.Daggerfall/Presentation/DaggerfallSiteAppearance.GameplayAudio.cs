@@ -1,3 +1,4 @@
+using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using System.Numerics;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -60,13 +61,14 @@ internal sealed partial class DaggerfallSiteAppearance
 
     /// <summary>PlayerFootsteps distance cadence over the accepted character step, never input intent.</summary>
     internal void AdvanceFootsteps(WorldPoint before, Vector3 after, bool wasGrounded, bool grounded,
-        bool wasSwimming, bool swimming, bool shallowWater, bool onFoot, bool snow)
+        bool wasSwimming, bool swimming, bool shallowWater, bool onFoot, bool snow, DaggerfallTransportMode ride = DaggerfallTransportMode.Foot)
     {
         bool landed = observedFootstepState && !wasGrounded && grounded;
         observedFootstepState = true;
         if (!wasSwimming && swimming) PlayGameplaySound(342, "water-entry", volume: audioTuning.FootstepVolumeScale);
-        if (!onFoot || !grounded && !swimming) { footstepDistance = 0; return; }
         Vector2 delta = new(after.X - before.X, after.Z - before.Z);
+        if (ride is DaggerfallTransportMode.Horse or DaggerfallTransportMode.Cart && grounded) { AdvanceHooves(delta.Length(), ride); return; }
+        if (!onFoot || !grounded && !swimming) { footstepDistance = 0; return; }
         footstepDistance += delta.Length();
         if (!landed && footstepDistance <= audioTuning.FootstepDistance) return;
         footstepDistance = 0;
@@ -78,6 +80,16 @@ internal sealed partial class DaggerfallSiteAppearance
         };
         alternateFootstep = !alternateFootstep;
         PlayGameplaySound(ordinal, swimming ? "swim-stroke" : "footstep", volume: audioTuning.FootstepVolumeScale);
+    }
+
+    // Riding's own cadence, by the ground covered: a horse's two clops in turn, or the cart's rumble.
+    private void AdvanceHooves(float distance, DaggerfallTransportMode ride)
+    {
+        footstepDistance += distance;
+        if (footstepDistance <= (ride == DaggerfallTransportMode.Cart ? audioTuning.CartDistance : audioTuning.HoofDistance)) return;
+        footstepDistance = 0;
+        alternateFootstep = !alternateFootstep;
+        PlayGameplaySound(ride == DaggerfallTransportMode.Cart ? 104 : alternateFootstep ? 97 : 298, "hoof", volume: audioTuning.FootstepVolumeScale);
     }
 
     internal void PlayPlayerPain(string race, bool female, double loss, double maximum)

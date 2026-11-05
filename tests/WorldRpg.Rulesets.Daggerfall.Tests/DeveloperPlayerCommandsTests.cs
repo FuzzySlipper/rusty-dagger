@@ -1,5 +1,6 @@
 using Rusty.Engine.Debugging;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -71,6 +72,25 @@ public sealed class DeveloperPlayerCommandsTests
         Assert.Contains("already known", session.Spell(spell.Value.Name).Message, StringComparison.Ordinal);
         Assert.False(session.Spell("no such spell").Succeeded);
         Assert.Contains("several spells", session.Spell("a").Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Ride_gives_and_mounts_a_horse_and_puts_the_weapon_away_and_refuses_what_is_no_mount()
+    {
+        using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold);
+        DaggerfallSession session = run.Session;
+        session.State.WeaponDrawn = true;
+
+        Assert.Contains("is no mount", session.Ride("dragon").Message, StringComparison.Ordinal);
+        Assert.Contains("is no mount", session.Ride("ship").Message, StringComparison.Ordinal);
+
+        DebugCommandResult mounted = session.Ride("horse");
+        Assert.True(mounted.Succeeded, mounted.Message);
+        Assert.Equal(DaggerfallTransportMode.Horse, session.State.Transport.Mode);
+        Assert.False(session.State.WeaponDrawn);
+
+        Assert.True(session.Ride("foot").Succeeded);
+        Assert.True(session.State.Transport.IsOnFoot);
     }
 
     [Fact]

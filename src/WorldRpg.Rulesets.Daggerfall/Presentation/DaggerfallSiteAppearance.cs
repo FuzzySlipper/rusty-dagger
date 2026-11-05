@@ -804,6 +804,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         if (viewmodel is { } weapon) { viewmodel = null; weapon.Dispose(ref failures); }
         if (castHand is { } hand) { castHand = null; hand.Dispose(ref failures); }
         if (held is { } drawn) { held = null; Dispose(drawn, ref failures); }
+        if (mount is { } ridden) { mount = null; Dispose(ridden, ref failures); }
         foreach (IDisposable value in nextRetired.AsEnumerable().Reverse()) Dispose(value, ref failures);
         foreach (IDisposable value in priorRetired.AsEnumerable().Reverse()) Dispose(value, ref failures);
         nextRetired.Clear(); priorRetired.Clear();

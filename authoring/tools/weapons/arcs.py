@@ -26,24 +26,24 @@ ROOT = Path(__file__).resolve().parents[3]
 MODELS = ROOT / "content/worldrpg/first-person/weapons"
 SPEC = ROOT / "authoring/specs/weapons/weapons.json"
 # Arcs per square metre of metal, and at least and at most this many.
-ARCS_PER_AREA = 900
-ARCS = (24, 96)
+ARCS_PER_AREA = 1500
+ARCS = (36, 150)
 # A step along an arc, how far one bends at each step, its length in steps, and a fork's chance and length.
 STEP = .008
 WANDER = .8
 TRUNK_STEPS = (9, 22)
-FORK_CHANCE = .42
-FORK_STEPS = (2, 6)
+FORK_CHANCE = .55
+FORK_STEPS = (3, 8)
 # How far from the surface a step still counts as on it, how far a tendril runs into the air, and how it curls.
 ON_SURFACE = .006
-TENDRIL_STEPS = (2, 6)
-TENDRIL_WANDER = 1.1
+TENDRIL_STEPS = (3, 10)
+TENDRIL_WANDER = 1.25
 # How high above the surface an arc runs.
 LIFT = .003
 # Sparks per arc, how far they fly from the surface, and how long a dash is.
-SPARKS_PER_ARC = .6
-SPARK_FLIGHT = (.015, .09)
-SPARK_LENGTH = .007
+SPARKS_PER_ARC = 1
+SPARK_FLIGHT = (.02, .14)
+SPARK_LENGTH = .006
 # How far apart hull vertices can be and still weld, and how much of a bow's length from the grip it and the arcs cover.
 WELD = .0005
 # How thick a slice along the model's length is, how near its ends a vertex leans past them, and how far the lean outweighs the normal.

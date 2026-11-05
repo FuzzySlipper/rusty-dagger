@@ -8,6 +8,7 @@ using WorldRpg.Kit.World;
 using EquipmentSlotId = WorldRpg.Kit.Inventory.EquipmentSlotId;
 using UniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 
@@ -154,6 +155,18 @@ internal sealed partial class DaggerfallSession : IDeveloperPlayerSession
         if (named.Length != 1)
             return Refused(named.Length == 0 ? $"No spell is named '{spell}'." : $"'{spell}' names several spells: {string.Join(", ", named.Select(pair => pair.Value.Name))}.");
         return DebugCommandResult.Success(State.Character.LearnSpell(named[0].Key) ? $"Learned {named[0].Value.Name}." : $"{named[0].Value.Name} is already known.");
+    }
+
+    public DebugCommandResult Ride(string mount)
+    {
+        if (DeveloperMoveRefusal() is { } refusal) return Refused(refusal);
+        if (!Enum.TryParse(mount, ignoreCase: true, out DaggerfallTransportMode mode) || mode == DaggerfallTransportMode.Ship)
+            return Refused($"'{mount}' is no mount (foot, horse, cart).");
+        if (mode != DaggerfallTransportMode.Foot && State.Transport.SelectMount(mode, State.Inventory.Read(), TransportAccess()).Rejection is DaggerfallTransportRejection.MissingHorse or DaggerfallTransportRejection.MissingCart
+            && Give(mode == DaggerfallTransportMode.Horse ? "94" : "93", 1) is { Succeeded: false } refused) return refused;
+        DaggerfallTransportActionResult result = State.Transport.SelectMount(mode, State.Inventory.Read(), TransportAccess());
+        AppliedTransport(result);
+        return result.Applied ? DebugCommandResult.Success(result.Message) : Refused(result.Message);
     }
 
     public DebugCommandResult Morph(string form)

@@ -25,6 +25,13 @@ internal sealed record DaggerfallWorldOriginTuning(float VerticalRebaseDistance)
 /// <summary>Pure product-side interpretation of the Engine WorldOrigin commit receipt.</summary>
 internal static class DaggerfallExteriorSessionOrigin
 {
+    // The donor's PlayerGPS stops the player this far inside each map edge, in metres, so the end of the
+    // world is not so visible: 10,000, 14,000, 18,000 and 10,000 of its 40-to-the-metre world units.
+    private const double WestMargin = 250;
+    private const double NorthMargin = 350;
+    private const double EastMargin = 450;
+    private const double SouthMargin = 250;
+
     /// <summary>
     /// Engine retains global positions while changing local origin. Existing local transforms move by
     /// the previous cell minus the committed cell, in the same world-unit frame used by Spatial.
@@ -42,9 +49,45 @@ internal static class DaggerfallExteriorSessionOrigin
     /// <summary>
     /// Converts a product local pose back to the durable map-pixel cell that contains it. Daggerfall
     /// terrain's negative local Z points toward decreasing map-pixel Y, matching the surface builder's
-    /// local translation and keeping boundary traversal deterministic on either side of zero.
+    /// local translation and keeping boundary traversal deterministic on either side of zero. A pose
+    /// past the map's edge belongs to the nearest edge pixel: only the player is held inside the world
+    /// edge, so a corpse or pile can still lie beyond it.
     /// </summary>
     internal static DaggerfallExteriorCellId CellForLocalPosition(
+        WorldPoint position,
+        DaggerfallExteriorWorldOrigin origin,
+        DaggerfallExteriorWorldBounds bounds)
+    {
+        RequireFrame(position, origin, bounds);
+        double offsetX = Math.Floor(((double)position.X - origin.Compensation.X) / DaggerfallExteriorCellResidency.CellSize);
+        double offsetY = Math.Floor((origin.Compensation.Z - (double)position.Z) / DaggerfallExteriorCellResidency.CellSize);
+        return new(
+            (int)Math.Clamp(origin.MapPixelX + offsetX, 0, bounds.Width - 1),
+            (int)Math.Clamp(origin.MapPixelY - offsetY, 0, bounds.Height - 1));
+    }
+
+    /// <summary>
+    /// The nearest local pose inside the world edge. Each axis stops at its own edge, so a player pressing
+    /// along the boundary slides rather than sticks.
+    /// </summary>
+    internal static WorldPoint InsideWorldEdge(
+        WorldPoint position,
+        DaggerfallExteriorWorldOrigin origin,
+        DaggerfallExteriorWorldBounds bounds)
+    {
+        RequireFrame(position, origin, bounds);
+        float cell = DaggerfallExteriorCellResidency.CellSize;
+        // Local X grows east from the origin pixel's west side, and local Z grows south from its north side.
+        double west = origin.Compensation.X - ((double)origin.MapPixelX * cell);
+        double north = origin.Compensation.Z - (((double)origin.MapPixelY + 1) * cell);
+        return position with
+        {
+            X = (float)Math.Clamp(position.X, west + WestMargin, west + ((double)bounds.Width * cell) - EastMargin),
+            Z = (float)Math.Clamp(position.Z, north + NorthMargin, north + ((double)bounds.Height * cell) - SouthMargin),
+        };
+    }
+
+    private static void RequireFrame(
         WorldPoint position,
         DaggerfallExteriorWorldOrigin origin,
         DaggerfallExteriorWorldBounds bounds)
@@ -59,21 +102,6 @@ internal static class DaggerfallExteriorSessionOrigin
         {
             throw new ArgumentOutOfRangeException(nameof(origin), "Exterior origin compensation must be finite.");
         }
-
-        double offsetX = Math.Floor(((double)position.X - origin.Compensation.X) / DaggerfallExteriorCellResidency.CellSize);
-        double offsetY = Math.Floor((origin.Compensation.Z - (double)position.Z) / DaggerfallExteriorCellResidency.CellSize);
-        double mapPixelX = origin.MapPixelX + offsetX;
-        double mapPixelY = origin.MapPixelY - offsetY;
-        if (!double.IsFinite(mapPixelX) || !double.IsFinite(mapPixelY)
-            || mapPixelX < int.MinValue || mapPixelX > int.MaxValue
-            || mapPixelY < int.MinValue || mapPixelY > int.MaxValue)
-        {
-            throw new InvalidOperationException("Exterior local position cannot be mapped to a durable map-pixel identity.");
-        }
-
-        DaggerfallExteriorCellId cell = new((int)mapPixelX, (int)mapPixelY);
-        bounds.Require(cell, nameof(position));
-        return cell;
     }
 
 }
