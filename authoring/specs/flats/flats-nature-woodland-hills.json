@@ -1,0 +1,319 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy world scenery: the trees, rocks, plants and town fixtures of a dark fantasy RPG, seen from standing height. Keep the source's silhouette, proportions, local colours and the arrangement of its parts: it replaces the source at the same size in the world. Restrained palette with distinct light, middle and dark families. Detail hierarchy: silhouette first, a few large masses second, sparse material marks third. Foliage reads as clumps of painted leaf masses, not individual leaves. Keep open gaps between branches, bars and posts open. No extra parts, gemstones, runes, faces, symbols or fantasy embellishment. Not pixel art, not a photoreal photograph, not a glossy mobile-game asset, not a dramatic scene. No text, labels, border, vignette, frame, hand, person, ground plane, scenery or second object.",
+  "presentation": "One isolated object on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no ground shadow, no background texture and no cast shadow outside the object. The whole object visible with breathing room, centred, its base where the source's base is. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Flats: nature-woodland-hills",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "flats",
+      "model": "qwen-edit",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "conditioning": "reference"
+    }
+  ],
+  "items": [
+    {
+      "id": "flat-506-1",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-001-frame-000-source.png",
+      "content": "One dark, jagged rock formation with rough, uneven surfaces and grayish-black tones, featuring lighter gray highlights.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-1 (30x49)"
+    },
+    {
+      "id": "flat-506-2",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-002-frame-000-source.png",
+      "content": "One leafy plant with green stems, purple and brown accents, and varied leaf shapes, resembling a wild, multi-branched vine.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-2 (17x15)"
+    },
+    {
+      "id": "flat-506-3",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-003-frame-000-source.png",
+      "content": "One moss-covered stone archway with green lichen, grey rock, and dark shadowed interior.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-3 (48x78)"
+    },
+    {
+      "id": "flat-506-4",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-004-frame-000-source.png",
+      "content": "One jagged, dark grey rock formation with rough, layered surfaces and hints of green moss at its base.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-4 (51x79)"
+    },
+    {
+      "id": "flat-506-5",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-005-frame-000-source.png",
+      "content": "One tall coniferous tree with layered green foliage and a brown trunk, showing branches and needles in varying shades of green.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-5 (27x75)"
+    },
+    {
+      "id": "flat-506-6",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-006-frame-000-source.png",
+      "content": "One jagged, grey stone spire with rough texture and dark crevices, resembling a weathered mountain peak or ancient tower fragment.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-6 (27x41)"
+    },
+    {
+      "id": "flat-506-7",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-007-frame-000-source.png",
+      "content": "One green tunic with long sleeves and a collar, made of fabric, featuring darker green accents and a central vertical seam.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-7 (16x15)"
+    },
+    {
+      "id": "flat-506-8",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-008-frame-000-source.png",
+      "content": "One ornate, curved staff with green and brown hues, featuring a dark base and intricate, leaf-like adornments.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-8 (30x38)"
+    },
+    {
+      "id": "flat-506-9",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-009-frame-000-source.png",
+      "content": "One ornate tree with a thick trunk, dense foliage of green, purple, and yellow leaves, and a rounded canopy.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-9 (42x47)"
+    },
+    {
+      "id": "flat-506-10",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-010-frame-000-source.png",
+      "content": "One gnarled tree with green foliage, brown trunk and roots, featuring a large grey stone at its base.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-10 (48x60)"
+    },
+    {
+      "id": "flat-506-11",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-011-frame-000-source.png",
+      "content": "One tall coniferous tree with layered green foliage and brown trunk, featuring a slender, upward-reaching form.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-11 (46x108)"
+    },
+    {
+      "id": "flat-506-12",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-012-frame-000-source.png",
+      "content": "One tall evergreen tree with layered green foliage, brown trunk, and visible roots, primarily green and brown.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-12 (35x113)"
+    },
+    {
+      "id": "flat-506-13",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-013-frame-000-source.png",
+      "content": "One tall coniferous tree with layered green needles, brown trunk, and hints of orange, standing upright.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-13 (77x147)"
+    },
+    {
+      "id": "flat-506-14",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-014-frame-000-source.png",
+      "content": "One tree with a thick trunk, layered branches, and green-yellow foliage.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-14 (83x123)"
+    },
+    {
+      "id": "flat-506-15",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-015-frame-000-source.png",
+      "content": "One tree with gnarled trunk, layered branches, and green-orange foliage, showing natural form and earthy tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-15 (83x107)"
+    },
+    {
+      "id": "flat-506-16",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-016-frame-000-source.png",
+      "content": "One tree with a curved trunk, dense green foliage speckled with orange, and brown bark.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-16 (123x141)"
+    },
+    {
+      "id": "flat-506-17",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-017-frame-000-source.png",
+      "content": "One jagged, dark grey rock with rough, uneven surfaces and subtle lighter grey striations.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-17 (43x46)"
+    },
+    {
+      "id": "flat-506-18",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-018-frame-000-source.png",
+      "content": "One dark grey, jagged-edged stone blade with a worn, textured surface and a pointed tip.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-18 (54x60)"
+    },
+    {
+      "id": "flat-506-19",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-019-frame-000-source.png",
+      "content": "One gnarled tree trunk with rough bark, twisted branches, and visible roots, primarily brown and grey.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-19 (49x55)"
+    },
+    {
+      "id": "flat-506-20",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-020-frame-000-source.png",
+      "content": "One gnarled tree trunk with twisted branches and rough bark, brown and grey in color, showing weathered texture and root structure.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-20 (66x57)"
+    },
+    {
+      "id": "flat-506-21",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-021-frame-000-source.png",
+      "content": "One tall plant with green stem, leaves, and pink blossoms arranged in clusters along its length.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-21 (13x34)"
+    },
+    {
+      "id": "flat-506-22",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-022-frame-000-source.png",
+      "content": "One blue gemstone set in a green leafy wreath, resembling a decorative pendant or amulet.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-22 (15x11)"
+    },
+    {
+      "id": "flat-506-23",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-023-frame-000-source.png",
+      "content": "One green, leafy plant with branching stems and curled tendrils, showing natural growth patterns in varying shades of green.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-23 (18x36)"
+    },
+    {
+      "id": "flat-506-24",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-024-frame-000-source.png",
+      "content": "One bare, gnarled tree with twisted branches and rough bark, mostly grey with hints of brown and green.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-24 (39x97)"
+    },
+    {
+      "id": "flat-506-25",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-025-frame-000-source.png",
+      "content": "One tall coniferous tree with green needle-like leaves and a brown trunk, rooted in earth, displaying classic evergreen form.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-25 (67x134)"
+    },
+    {
+      "id": "flat-506-26",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-026-frame-000-source.png",
+      "content": "One green plant with long stems and broad leaves, rooted in brown earth, showing natural growth and vibrant foliage.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-26 (31x26)"
+    },
+    {
+      "id": "flat-506-27",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-027-frame-000-source.png",
+      "content": "One leafy tree with brown trunk and branches, green foliage, and earthy base, showing natural growth and vibrant colors.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-27 (42x38)"
+    },
+    {
+      "id": "flat-506-28",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-028-frame-000-source.png",
+      "content": "One jagged, moss-covered stone pillar with dark grey rock and vibrant green vegetation clinging to its surface.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-28 (21x59)"
+    },
+    {
+      "id": "flat-506-29",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-029-frame-000-source.png",
+      "content": "One green leafy plant with long, arching fronds and brown base, showing natural growth and varied shades of green.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-29 (33x22)"
+    },
+    {
+      "id": "flat-506-30",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-030-frame-000-source.png",
+      "content": "One tall coniferous tree with layered green needles, brown trunk, and visible roots, primarily green and brown.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-30 (81x149)"
+    },
+    {
+      "id": "flat-506-31",
+      "directory": "nature-woodland-hills/texture-506",
+      "image": "flat/texture-506-record-031-frame-000-source.png",
+      "content": "One green plant with multiple branching stems and leafy fronds, featuring varying shades of green.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-506-31 (37x22)"
+    }
+  ]
+}

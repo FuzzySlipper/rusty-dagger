@@ -55,6 +55,7 @@ def subset_palette(image, colours=COLOURS):
     pixels = np.asarray(image.convert("RGB"), np.float32).reshape(-1, 3)
     rng = np.random.default_rng(9664)
     sample = pixels[rng.choice(len(pixels), min(len(pixels), 20000), replace=False)]
+    colours = min(colours, len(sample))
     centres = sample[rng.choice(len(sample), colours, replace=False)]
     for _ in range(16):
         owner = np.argmin(((sample[:, None] - centres[None]) ** 2).sum(-1), 1)

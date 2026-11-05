@@ -1,0 +1,319 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy world scenery: the trees, rocks, plants and town fixtures of a dark fantasy RPG, seen from standing height. Keep the source's silhouette, proportions, local colours and the arrangement of its parts: it replaces the source at the same size in the world. Restrained palette with distinct light, middle and dark families. Detail hierarchy: silhouette first, a few large masses second, sparse material marks third. Foliage reads as clumps of painted leaf masses, not individual leaves. Keep open gaps between branches, bars and posts open. No extra parts, gemstones, runes, faces, symbols or fantasy embellishment. Not pixel art, not a photoreal photograph, not a glossy mobile-game asset, not a dramatic scene. No text, labels, border, vignette, frame, hand, person, ground plane, scenery or second object.",
+  "presentation": "One isolated object on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no ground shadow, no background texture and no cast shadow outside the object. The whole object visible with breathing room, centred, its base where the source's base is. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Flats: nature-swamp",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "flats",
+      "model": "qwen-edit",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "conditioning": "reference"
+    }
+  ],
+  "items": [
+    {
+      "id": "flat-502-1",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-001-frame-000-source.png",
+      "content": "One ornate, curved staff with reddish-brown shaft, darkened tips, and decorative swirls, resembling a ceremonial or magical implement.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-1 (30x59)"
+    },
+    {
+      "id": "flat-502-2",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-002-frame-000-source.png",
+      "content": "One dark, rounded object with blue glowing orbs and green accents, resembling a mystical artifact or enchanted device.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-2 (39x27)"
+    },
+    {
+      "id": "flat-502-3",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-003-frame-000-source.png",
+      "content": "One moss-covered, four-legged stool with rounded seat and thick legs, primarily green and dark brown.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-3 (70x70)"
+    },
+    {
+      "id": "flat-502-4",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-004-frame-000-source.png",
+      "content": "One dark metallic bell with a rounded top, hanging from a central rod, supported by three curved legs.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-4 (28x75)"
+    },
+    {
+      "id": "flat-502-5",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-005-frame-000-source.png",
+      "content": "One dark, stacked cylindrical object with rounded top and base, made of black material with brownish base.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-5 (36x38)"
+    },
+    {
+      "id": "flat-502-6",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-006-frame-000-source.png",
+      "content": "One dark, cylindrical object with stacked, layered segments, appearing metallic or stone-like, in shades of black and grey.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-6 (33x75)"
+    },
+    {
+      "id": "flat-502-7",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-007-frame-000-source.png",
+      "content": "One green plant with curved leaves and a dark stem, showing natural growth with varying shades of green and brown.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-7 (36x27)"
+    },
+    {
+      "id": "flat-502-8",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-008-frame-000-source.png",
+      "content": "One ornate, curved staff with green and brown hues, featuring a dark base and intricate, leaf-like adornments.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-8 (30x38)"
+    },
+    {
+      "id": "flat-502-9",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-009-frame-000-source.png",
+      "content": "One ornate, dark-hued staff with curved, golden-tipped prongs and a central, textured grip.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-9 (34x59)"
+    },
+    {
+      "id": "flat-502-10",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-010-frame-000-source.png",
+      "content": "One moss-covered, stacked cylindrical object with dark green and brown hues, featuring layered, textured segments resembling aged stone or wood.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-10 (33x58)"
+    },
+    {
+      "id": "flat-502-11",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-011-frame-000-source.png",
+      "content": "One cluster of grey, lumpy, root-like growths with rough, spotted surfaces and brown earthy base.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-11 (88x52)"
+    },
+    {
+      "id": "flat-502-12",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-012-frame-000-source.png",
+      "content": "One mature tree with a thick brown trunk, sprawling roots, and a full canopy of green leaves.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-12 (70x73)"
+    },
+    {
+      "id": "flat-502-13",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-013-frame-000-source.png",
+      "content": "One mature tree with thick brown trunk, sprawling roots, and dense green foliage, standing tall and full.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-13 (126x137)"
+    },
+    {
+      "id": "flat-502-14",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-014-frame-000-source.png",
+      "content": "One green plant with broad leaves, a thick stem, and a bulbous root system, showing natural growth and earthy tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-14 (45x86)"
+    },
+    {
+      "id": "flat-502-15",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-015-frame-000-source.png",
+      "content": "One gnarled tree trunk with twisted roots and bare branches, textured in earthy browns and tans.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-15 (70x114)"
+    },
+    {
+      "id": "flat-502-16",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-016-frame-000-source.png",
+      "content": "One large tree with sprawling roots, thick trunk, and dense green canopy, featuring brown bark and vibrant foliage.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-16 (126x138)"
+    },
+    {
+      "id": "flat-502-17",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-017-frame-000-source.png",
+      "content": "One gnarled tree with thick brown trunk, twisted roots, and dense green canopy of leaves.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-17 (86x112)"
+    },
+    {
+      "id": "flat-502-18",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-018-frame-000-source.png",
+      "content": "One tall tree with thick brown trunk, sprawling roots, and dense green foliage.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-18 (84x168)"
+    },
+    {
+      "id": "flat-502-19",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-019-frame-000-source.png",
+      "content": "One gnarled tree trunk with twisted branches, covered in green moss and vines, showing brown bark and earthy tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-19 (42x49)"
+    },
+    {
+      "id": "flat-502-20",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-020-frame-000-source.png",
+      "content": "One tall green plant with branching stems, leaves, and roots, primarily green with brown earth tones at base.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-20 (46x60)"
+    },
+    {
+      "id": "flat-502-21",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-021-frame-000-source.png",
+      "content": "One green, bulbous plant with multiple curling tendrils and stems, rooted in earth, featuring dark and light green hues.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-21 (32x66)"
+    },
+    {
+      "id": "flat-502-22",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-022-frame-000-source.png",
+      "content": "One ornate, curved horn with dark metallic body, green mossy accents, and blue gemstone inlay.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-22 (50x36)"
+    },
+    {
+      "id": "flat-502-23",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-023-frame-000-source.png",
+      "content": "One green and black segmented, spiky, plant-like creature with bulbous head and trailing tendrils.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-23 (41x77)"
+    },
+    {
+      "id": "flat-502-24",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-024-frame-000-source.png",
+      "content": "One gnarled tree with twisted branches, mossy bark, and dangling vines, primarily dark brown and green.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-24 (70x103)"
+    },
+    {
+      "id": "flat-502-25",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-025-frame-000-source.png",
+      "content": "One gnarled tree stump with mossy green vines\u7f20\u7ed5, layered wooden rings, and dark brown bark.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-25 (40x48)"
+    },
+    {
+      "id": "flat-502-26",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-026-frame-000-source.png",
+      "content": "One green, elongated plant-like object with a bulbous base, stem, and leafy top, featuring shades of green and brown.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-26 (17x31)"
+    },
+    {
+      "id": "flat-502-27",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-027-frame-000-source.png",
+      "content": "One green plant with long, curved stems and broad leaves growing from brown soil.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-27 (37x45)"
+    },
+    {
+      "id": "flat-502-28",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-028-frame-000-source.png",
+      "content": "One green plant with broad leaves and a central stem, rooted in brown soil, showing natural growth form.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-28 (27x30)"
+    },
+    {
+      "id": "flat-502-29",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-029-frame-000-source.png",
+      "content": "One bushy plant with purple and brown leaves, green stems, and earthy roots, resembling a wild, tangled herb.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-29 (36x21)"
+    },
+    {
+      "id": "flat-502-30",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-030-frame-000-source.png",
+      "content": "One gnarled, leafless tree with twisted branches and rough bark, dark grey and black in color.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-30 (127x160)"
+    },
+    {
+      "id": "flat-502-31",
+      "directory": "nature-swamp/texture-502",
+      "image": "flat/texture-502-record-031-frame-000-source.png",
+      "content": "One green and black armored humanoid figure with helmet, gauntlets, and segmented torso, resembling a fantasy warrior or soldier.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-502-31 (22x37)"
+    }
+  ]
+}

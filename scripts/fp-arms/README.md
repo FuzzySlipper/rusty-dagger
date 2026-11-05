@@ -67,8 +67,24 @@ The arms change when the set worn changes, once they are at rest: a strike, a he
 it started on, and the new set takes the idle loop up at the same moment, so the pose carries over. A weapon or shield
 swapped redraws the arms at once, in the set worn. `build.py` names each set's mesh and textures in the pack (`SOURCES`,
 with the medium colour where a set has several) and bakes every clip onto each, so a build takes about two minutes a set.
-The cloth sets' fur is a second mesh, joined to the arms and cut by its alpha. The chainmail's colour map is lifted, as it
-is painted for metal shading. `held.arms SET` shows a set in the workbench.
+The cloth sets' fur is a second mesh, joined to the arms and cut by its alpha. `held.arms SET` shows a set in the workbench.
+
+### The pixel paint
+
+The pack's soft maps never reach the game. `paint.py` repaints each set as flat texels in hand-set ramps, so the arms sit
+with the weapons, the mounts and the classic sprites, and `build.py` hands it the pack's maps:
+
+- the roughness and metal maps and the colour say which material a texel is: skin, cloth, leather or metal;
+- the normals, with the normal map on them, are baked over the rest pose, where the backs of the arms face up. A light from
+  above paints the forms in, and the occlusion map darkens the creases. The colour map only nudges the tone: more of it
+  brings the pack's grime back as blotches;
+- each material's tone picks a step of its ramp, with a light ordered dither at the band edges. Mail adds rows of rings,
+  as the pack's own are too fine to survive.
+
+The texture is 256 pixels a side, drawn nearest, without a normal map, which draws a texel about as big as the weapons'
+and a classic sprite's at 1920x1080, so `held` and `heldRetro` draw the same paint. Average any map that goes in with
+`paint.area`: Blender's own scale aliases the cloth's weave into camouflage. The ramps sit at the top of `paint.py`, and
+the skin's follows the refreshed paper doll's arm. The paint derives from the pack, so like the arms it stays in `local/`.
 
 ### The bow
 
@@ -182,8 +198,7 @@ and build again. `build.py`:
 
 - grows a low leg and boot on each of the skeleton's legs and joins them to the arms' mesh: the pack has arms only, and a
   kick needs something to kick with. Rings run down the bones with small plain textures, so none of it is the pack's art;
-- imports each set of arms (LOD0) with its medium colour and normal maps at 1024 px; the retro arms carry the
-  colour map alone at 256 px, drawn nearest, as Daggerfall draws its world;
+- imports each set of arms (LOD0) and paints it from its medium colour and other maps ([The pixel paint](#the-pixel-paint));
 - bakes each clip as its own camera bone sees it (the pack's own clips have only `camera_mount`, with other axes, and take
   the arms' skeleton as it is): every frame the whole body is moved so the camera bone sits at the
   origin looking down the view, so the arms are placed with their origin at the game's eye and the clip carries only

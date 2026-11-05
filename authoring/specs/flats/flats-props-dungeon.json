@@ -1,0 +1,319 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy world scenery: the trees, rocks, plants and town fixtures of a dark fantasy RPG, seen from standing height. Keep the source's silhouette, proportions, local colours and the arrangement of its parts: it replaces the source at the same size in the world. Restrained palette with distinct light, middle and dark families. Detail hierarchy: silhouette first, a few large masses second, sparse material marks third. Foliage reads as clumps of painted leaf masses, not individual leaves. Keep open gaps between branches, bars and posts open. No extra parts, gemstones, runes, faces, symbols or fantasy embellishment. Not pixel art, not a photoreal photograph, not a glossy mobile-game asset, not a dramatic scene. No text, labels, border, vignette, frame, hand, person, ground plane, scenery or second object.",
+  "presentation": "One isolated object on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no ground shadow, no background texture and no cast shadow outside the object. The whole object visible with breathing room, centred, its base where the source's base is. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Flats: props-dungeon",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "flats",
+      "model": "qwen-edit",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "conditioning": "reference"
+    }
+  ],
+  "items": [
+    {
+      "id": "flat-211-1",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-001-frame-000-source.png",
+      "content": "One ornate sword with a curved blade, golden hilt, and dark grip, featuring silver, teal, and brown accents.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-1 (19x32)"
+    },
+    {
+      "id": "flat-211-2",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-002-frame-000-source.png",
+      "content": "One green, hooded cloak with a central emblem, featuring layered fabric and a textured, earthy color palette.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-2 (19x20)"
+    },
+    {
+      "id": "flat-211-3",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-003-frame-000-source.png",
+      "content": "One mossy, lumpy mound of earth with scattered brown patches and darker green tones, resembling a natural, irregular soil heap.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-3 (34x23)"
+    },
+    {
+      "id": "flat-211-4",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-004-frame-000-source.png",
+      "content": "One metallic chain with interlocking links and a circular ring at the bottom, grey in color.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-4 (13x78)"
+    },
+    {
+      "id": "flat-211-5",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-005-frame-000-source.png",
+      "content": "One metallic chain with interlocking links, featuring a central clasp and decorative end loops, in shades of grey and silver.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-5 (24x114)"
+    },
+    {
+      "id": "flat-211-6",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-006-frame-000-source.png",
+      "content": "One metallic chain with interlocking links and two circular weights at ends, grey in color.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-6 (27x114)"
+    },
+    {
+      "id": "flat-211-7",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-007-frame-000-source.png",
+      "content": "One metallic chain with interlocking links and a circular ring at one end, grey and silver in color.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-7 (13x114)"
+    },
+    {
+      "id": "flat-211-8",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-008-frame-000-source.png",
+      "content": "One teal-green, leafy plant with branching stems and clustered foliage, resembling a bush or shrub.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-8 (43x24)"
+    },
+    {
+      "id": "flat-211-9",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-009-frame-000-source.png",
+      "content": "One curved sword with a hilt and blade, metallic in appearance, featuring shades of teal and dark green.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-9 (22x11)"
+    },
+    {
+      "id": "flat-211-10",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-010-frame-000-source.png",
+      "content": "One ornate, multi-colored weapon with metallic and gem-like components, featuring green, gold, and dark hues.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-10 (29x11)"
+    },
+    {
+      "id": "flat-211-11",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-011-frame-000-source.png",
+      "content": "One dark, ornate helmet with pointed horns, metallic sheen, and green accents, featuring a visor and decorative straps.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-11 (19x51)"
+    },
+    {
+      "id": "flat-211-12",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-012-frame-000-source.png",
+      "content": "One ornate tripod with three slender legs, central column, and spherical top, featuring dark metal, green accents, and orange highlights.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-12 (63x62)"
+    },
+    {
+      "id": "flat-211-13",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-013-frame-000-source.png",
+      "content": "One conical tent with wooden poles, dark brown fabric, and a green rope tie at the top.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-13 (36x111)"
+    },
+    {
+      "id": "flat-211-14",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-014-frame-000-source.png",
+      "content": "One ornate trident with three prongs, dark shaft, green and gold accents, and silver tips.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-14 (38x116)"
+    },
+    {
+      "id": "flat-211-15",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-015-frame-000-source.png",
+      "content": "One coiled, moss-covered wooden staff with a dark central shaft and greenish-brown textured surface.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-15 (54x27)"
+    },
+    {
+      "id": "flat-211-16",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-016-frame-000-source.png",
+      "content": "One wooden wheel with a central axle, featuring dark brown and tan hues, showing a circular rim and spokes.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-16 (46x25)"
+    },
+    {
+      "id": "flat-211-17",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-017-frame-000-source.png",
+      "content": "One wooden wheel with a central axle, featuring dark brown and tan hues, showing a circular rim and spokes.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-17 (46x25)"
+    },
+    {
+      "id": "flat-211-18",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-018-frame-000-source.png",
+      "content": "One dark, curved blade with a worn wooden grip and metallic hilt, featuring black, brown, and grey tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-18 (48x32)"
+    },
+    {
+      "id": "flat-211-19",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-019-frame-000-source.png",
+      "content": "One dark, weathered wooden cart with metal wheels and iron axles, showing brown, black, and grey tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-19 (50x32)"
+    },
+    {
+      "id": "flat-211-20",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-020-frame-000-source.png",
+      "content": "One rustic scarecrow with straw body, wooden limbs, and twig arms, featuring earthy browns and yellows.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-20 (57x93)"
+    },
+    {
+      "id": "flat-211-26",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-026-frame-000-source.png",
+      "content": "One dark wooden chest with metal bands and a grid-patterned front panel, showing brown and black tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-26 (47x98)"
+    },
+    {
+      "id": "flat-211-29",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-029-frame-000-source.png",
+      "content": "One long, slender staff with a glowing red top and green accents, made of wood and metal, primarily red, brown, and green.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-29 (34x64)"
+    },
+    {
+      "id": "flat-211-30",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-030-frame-000-source.png",
+      "content": "One dark wooden staff with a golden band and ornate top, featuring a tapered handle and rounded head.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-30 (13x84)"
+    },
+    {
+      "id": "flat-211-31",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-031-frame-000-source.png",
+      "content": "One irregularly shaped log, textured with rough bark and earthy tones of brown and orange, showing natural wood grain and knots.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-31 (34x27)"
+    },
+    {
+      "id": "flat-211-33",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-033-frame-000-source.png",
+      "content": "One wooden beam suspended by chain holds a figure in green attire, arms raised, bound by ropes against a dark backdrop.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-33 (54x144)"
+    },
+    {
+      "id": "flat-211-34",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-034-frame-000-source.png",
+      "content": "One hanging metal lantern with a cage-like frame, chain, and glowing orange flame inside, primarily dark grey and black.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-34 (54x138)"
+    },
+    {
+      "id": "flat-211-35",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-035-frame-000-source.png",
+      "content": "One dark, bowl-shaped object with a wide rim and pedestal base, appearing metallic and black with subtle greenish highlights.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-35 (55x41)"
+    },
+    {
+      "id": "flat-211-40",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-040-frame-000-source.png",
+      "content": "One brown leather-bound book with silver clasps and a worn cover, showing signs of age and use.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-40 (29x24)"
+    },
+    {
+      "id": "flat-211-43",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-043-frame-000-source.png",
+      "content": "One dark, slender sword with a straight blade and simple hilt, appearing metallic and grey.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-43 (16x64)"
+    },
+    {
+      "id": "flat-211-44",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-044-frame-000-source.png",
+      "content": "One dark, flowing cloak with layered fabric and a hood, made of textured grey material.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-44 (15x63)"
+    },
+    {
+      "id": "flat-211-46",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-046-frame-000-source.png",
+      "content": "One long, dark green and black segmented whip with a curved handle and tattered end.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-46 (18x63)"
+    }
+  ]
+}
