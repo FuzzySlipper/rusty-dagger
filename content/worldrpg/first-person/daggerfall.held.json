@@ -1127,11 +1127,12 @@
   "enchant": {
     "shader": "first-person/effects/enchant.wgsl",
     "held": {
-      "width": 0.002,
-      "wander": 0.003,
+      "width": 0.0036,
+      "sparkWidth": 0.006,
+      "wander": 0.004,
       "rate": 10,
-      "share": 0.3,
-      "sparkShare": 0.5,
+      "share": 0.16,
+      "sparkShare": 0.8,
       "edge": [
         0.25,
         0.45,
@@ -1147,9 +1148,9 @@
         0.95,
         0.45
       ],
-      "hotShare": 0.35,
-      "rimWidth": 0.0026,
-      "rimBehind": 0.004,
+      "hotShare": 0.55,
+      "rimWidth": 0.0048,
+      "rimBehind": 0.003,
       "rim": [
         0.2,
         0.4,
@@ -1157,11 +1158,12 @@
       ]
     },
     "retro": {
-      "width": 0.0028,
-      "wander": 0.004,
+      "width": 0.0042,
+      "sparkWidth": 0.0072,
+      "wander": 0.005,
       "rate": 8,
-      "share": 0.3,
-      "sparkShare": 0.5,
+      "share": 0.16,
+      "sparkShare": 0.8,
       "edge": [
         0.25,
         0.45,
@@ -1177,9 +1179,9 @@
         0.95,
         0.45
       ],
-      "hotShare": 0.35,
-      "rimWidth": 0.0035,
-      "rimBehind": 0.004,
+      "hotShare": 0.55,
+      "rimWidth": 0.006,
+      "rimBehind": 0.003,
       "rim": [
         0.2,
         0.4,

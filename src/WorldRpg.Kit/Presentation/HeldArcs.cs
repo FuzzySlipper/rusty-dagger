@@ -7,12 +7,12 @@ namespace WorldRpg.Kit.Presentation;
 public sealed record HeldArcPath(int Group, IReadOnlyList<Vector3> Points);
 
 /// <summary>
-/// How a held look's arcs draw. <paramref name="Width"/> and <paramref name="RimWidth"/> are shares of the view's height,
+/// How a held look's arcs draw. <paramref name="Width"/>, <paramref name="SparkWidth"/> and <paramref name="RimWidth"/> are shares of the view's height,
 /// so a line keeps its weight however far off it is; <paramref name="Wander"/> is how far an arc strays from its path in
 /// metres, <paramref name="Rate"/> its redraws a second and <paramref name="Share"/> and <paramref name="SparkShare"/> how
 /// many arcs and sparks show at once, and <paramref name="HotShare"/> how many of them burn <paramref name="Hot"/>.
 /// </summary>
-public sealed record HeldArcLook(float Width, float Wander, float Rate, float Share, float SparkShare, Vector3 Edge, Vector3 Core, Vector3 Hot, float HotShare, float RimWidth, float RimBehind, Vector3 Rim);
+public sealed record HeldArcLook(float Width, float SparkWidth, float Wander, float Rate, float Share, float SparkShare, Vector3 Edge, Vector3 Core, Vector3 Hot, float HotShare, float RimWidth, float RimBehind, Vector3 Rim);
 
 /// <summary>The surface a held look's outline is grown from, welded with its normals smoothed across edges, in the model's space.</summary>
 public sealed record HeldArcHull(IReadOnlyList<Vector3> Points, IReadOnlyList<Vector3> Normals, IReadOnlyList<uint> Corners);
@@ -23,13 +23,18 @@ public sealed record HeldArcShape(IReadOnlyList<HeldArcPath> Paths, IReadOnlyLis
 /// <summary>
 /// Lines that crawl over a held look and an outline around it, drawn by a product shader rather than as particles: each
 /// path becomes a ribbon the shader holds at a fixed width on the screen and redraws at <see cref="HeldArcLook.Rate"/>, as a
-/// sprite redraws its frames, and the look's surface is drawn again a little larger behind itself. Sparks are shorter
-/// ribbons, shown while the look swings. All are children of the look.
+/// sprite redraws its frames, and the look's surface is drawn again a little larger behind itself. While the look swings
+/// it surges, as the classic's strike frames do: heavier arcs and a shower of sparks, which are short ribbons in the air
+/// around it. All are children of the look.
 /// </summary>
 public sealed class HeldArcs : IDisposable
 {
     // How far the shader may move a vertex from where it lies, for culling.
     private const float DisplacementBound = .1F;
+    // Where a strike's arcs number from, past the sparks, so they draw apart from the arcs always shown.
+    private const int SurgeGroups = 4096;
+    // Which of the arcs surge: one in this many.
+    private const int SurgeEvery = 4;
 
     private readonly RenderResource arcShader, rimShader;
     private readonly Material arcMaterial, sparkMaterial, rimMaterial;
@@ -56,10 +61,11 @@ public sealed class HeldArcs : IDisposable
         rimShader = engine.Graphics.OpenResourceFromContent(new(shader, TextureFilter.Linear, TextureWrap.Clamp, TextureColorSpace.Srgb, "RIM")).Handle;
         Vector4 edge = new(look.Edge, 0), core = new(look.Core, 0), hot = new(look.Hot, look.HotShare);
         arcMaterial = engine.Graphics.CreateMaterial(Shaded(new(arcShader, new Vector4(look.Width, look.Wander, look.Rate, look.Share), edge, core, hot, default, default, DisplacementBound)));
-        sparkMaterial = engine.Graphics.CreateMaterial(Shaded(new(arcShader, new Vector4(look.Width, look.Wander, look.Rate, look.SparkShare), edge, core, hot, default, default, DisplacementBound)));
+        sparkMaterial = engine.Graphics.CreateMaterial(Shaded(new(arcShader, new Vector4(look.SparkWidth, look.Wander, look.Rate, look.SparkShare), edge, core, hot, default, default, DisplacementBound)));
         rimMaterial = engine.Graphics.CreateMaterial(Shaded(new(rimShader, new Vector4(look.RimWidth, look.RimBehind, look.Rate, 0), new Vector4(look.Rim, 0), default, default, default, default, DisplacementBound)));
         arcMesh = engine.Graphics.CreateMeshResource(Ribbons(shape.Paths, arcMaterial));
-        sparkMesh = engine.Graphics.CreateMeshResource(Ribbons(shape.Sparks, sparkMaterial));
+        // A strike surges: the sparks, and some of the arcs again at the sparks' weight, over those always shown.
+        sparkMesh = engine.Graphics.CreateMeshResource(Ribbons([.. shape.Sparks, .. shape.Paths.Where(path => path.Group % SurgeEvery == 0).Select(path => path with { Group = path.Group + SurgeGroups })], sparkMaterial));
         rimMesh = engine.Graphics.CreateMeshResource(new(shape.Hull.Points.ToArray(), shape.Hull.Normals.ToArray(), default, default, shape.Hull.Corners.ToArray(),
             new MeshGroup[] { new(0, 0, (uint)shape.Hull.Corners.Count) }, new MeshMaterialBinding[] { new(0, rimMaterial) }));
         arcs = engine.Graphics.CreateMeshAppearance(arcMesh);
