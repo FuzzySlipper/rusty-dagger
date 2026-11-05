@@ -359,9 +359,9 @@ public sealed class DaggerfallHeldArtTests
     }
 
     [Theory]
-    [InlineData("Horse", 1)]
-    [InlineData("Cart", 2)]
-    public void Riding_draws_the_mount_and_the_hands_on_the_reins_and_they_go_on_foot(string ride, int models)
+    [InlineData("Horse", 1, "first-person/mounts/horse.glb")]
+    [InlineData("Cart", 2, "first-person/mounts/horse-harness.glb")]
+    public void Riding_draws_the_mount_and_the_hands_on_the_reins_and_they_go_on_foot(string ride, int models, string horse)
     {
         List<string> releases = [];
         DaggerfallTransportMode mode = Enum.Parse<DaggerfallTransportMode>(ride);
@@ -375,7 +375,7 @@ public sealed class DaggerfallHeldArtTests
             presentation.Publish(EmptyActors());
 
             Assert.Equal("reins", presentation.DrawnHeld!.Drawing.Family);
-            Assert.Contains("first-person/mounts/horse.glb", engine.Animation.OpenedPaths);
+            Assert.Contains(horse, engine.Animation.OpenedPaths);
             AppearanceFact[] Mount() => [.. appearance.Snapshots.Last().Where(fact => fact is { Layer: RenderLayer.Viewmodel, HasParentObject: false, Visible: true } && fact.ObjectId != presentation.DrawnHeld?.ArmsObject && fact.ObjectId != presentation.DrawnHeld?.WeaponObject)];
             Assert.Equal(models, Mount().Length);
             // Level whatever the view's pitch, so looking down looks at the horse.

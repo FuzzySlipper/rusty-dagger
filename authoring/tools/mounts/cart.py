@@ -2,8 +2,9 @@
 
 usage: blender -b --factory-startup --python-exit-code 1 --python authoring/tools/mounts/cart.py -- OUT.glb
 
-OUT holds a two-wheeled cart of planks, on its origin's ground with the seat over the origin and its shafts along -Z, and
-OUT-retro.glb beside it the same with a smaller texture. It is built from boxes and cylinders, in the art's wood colours.
+OUT holds a two-wheeled cart of planks, on its origin's ground with the seat over the origin and its shafts along -Z, with
+the reins from the driver's hands to the horse's own, and OUT-retro.glb beside it the same with a smaller texture. It is built
+from boxes and cylinders, in the art's wood colours.
 """
 import math
 import sys
@@ -20,6 +21,12 @@ RETRO_SIZE = 64
 # Wood from dark to light, and the iron of the tyres.
 WOOD = ((.2, .12, .06), (.3, .18, .09), (.4, .26, .13), (.5, .33, .18))
 IRON = ((.12, .12, .13), (.2, .2, .22))
+LEATHER = ((.22, .13, .07), (.3, .18, .1))
+# The driver's fists from the seat (`RIDE_HAND` in scripts/fp-arms/build.py on the seat's height, `mount.cartSeat` in the
+# held definition), and where the horse's own reins end from the seat (horse.py's REINS_ at `mount.cartHorse`), a little
+# past it so the two overlap as the horse moves.
+FIST = Vector((.07, .43, 1.46))
+REINS_END = Vector((.09, 3.0, 1.73))
 
 
 def texture(name, ramp, grain_along, size):
@@ -51,6 +58,20 @@ def box(bm, centre, size, slot=0, turn=None):
         face.material_index = slot
 
 
+def strap(bm, start, end):
+    """A flat strap from `start` to `end`, sagging a little between them."""
+    previous = None
+    steps = 10
+    for step in range(steps + 1):
+        t = step / steps
+        centre = start.lerp(end, t) + Vector((0, 0, -.1 * math.sin(t * math.pi)))
+        ring = [bm.verts.new(centre + Vector(corner)) for corner in ((.012, 0, .006), (-.012, 0, .006), (-.012, 0, -.006), (.012, 0, -.006))]
+        if previous:
+            for corner in range(4):
+                bm.faces.new((previous[corner], previous[(corner + 1) % 4], ring[(corner + 1) % 4], ring[corner])).material_index = 2
+        previous = ring
+
+
 def wheel(bm, x):
     made = bmesh.ops.create_cone(bm, cap_ends=True, segments=16, radius1=.55, radius2=.55, depth=.07)["verts"]
     bmesh.ops.transform(bm, matrix=Matrix.Translation((x, 0, .55)) @ Matrix.Rotation(math.pi / 2, 4, "Y"), verts=made)
@@ -74,6 +95,10 @@ def main():
     box(bm, (0, 0, .55), (1.4, .08, .08))
     wheel(bm, -.76)
     wheel(bm, .76)
+    # Everything so far is placed from the cart's middle, and the seat is .3 ahead of it.
+    bmesh.ops.translate(bm, vec=(0, -.3, 0), verts=bm.verts)
+    for side in (-1, 1):
+        strap(bm, Vector((FIST.x * side, FIST.y, FIST.z)), Vector((REINS_END.x * side, REINS_END.y, REINS_END.z)))
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     mesh = bpy.data.meshes.new("cart")
     uv = bm.loops.layers.uv.new()
@@ -86,12 +111,15 @@ def main():
     bm.free()
     obj = bpy.data.objects.new("cart", mesh)
     bpy.context.scene.collection.objects.link(obj)
-    # The seat over the origin.
-    mesh.transform(Matrix.Translation((0, -.3, 0)))
+    # Clearing the materials sets every face back to the first, so each face's slot is kept to restore.
+    slots = [polygon.material_index for polygon in mesh.polygons]
     for path, size in ((out_path, SIZE), (out_path.with_name(f"{out_path.stem}-retro.glb"), RETRO_SIZE)):
         mesh.materials.clear()
         mesh.materials.append(texture(f"wood{size}", WOOD, 0, size))
         mesh.materials.append(texture(f"iron{size}", IRON, 0, size))
+        mesh.materials.append(texture(f"leather{size}", LEATHER, 0, size))
+        mesh.polygons.foreach_set("material_index", slots)
+        mesh.update()
         path.parent.mkdir(parents=True, exist_ok=True)
         bpy.ops.export_scene.gltf(filepath=str(path), export_format="GLB", export_image_format="AUTO", export_yup=True, export_tangents=False)
     print("BUILT", out_path)
