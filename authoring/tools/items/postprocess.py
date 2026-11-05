@@ -418,17 +418,20 @@ def painted_ground(item, flat, opaque):
     return np.isin(labels, index[keep])
 
 
-def solid_body(item, drawn, flat, opened, opaque):
+def solid_body(item, drawn, flat, opened, opaque, whole=False):
     """What the cut-out took from the source's solid body but is the object: dark stone near the ground's colour, which
-    joins the ground at the sprite's edge. Not flat ground, or mostly surrounded by object within two source cells."""
+    joins the ground at the sprite's edge. Not flat ground, or mostly surrounded by object within two source cells; with
+    `whole`, for a record whose drawing left flat ground in its body, all of it."""
     body = ndimage.binary_erosion(opaque > 0, iterations=item.scale)
+    if whole:
+        return body & ~drawn
     solid = drawn | (body & ~flat)
     for _ in range(8):
         solid = solid | (body & ~opened & (box(solid.astype(np.float64), 2 * item.scale) > 0.5))
     return solid & ~drawn
 
 
-def cutout(item, rgb, lo=0.035, hi=0.11, reach=4, painted=None):
+def cutout(item, rgb, lo=0.035, hi=0.11, reach=4, painted=None, whole=False):
     """RGBA icon: the flat generation ground (taken from the border) becomes transparent, edge pixels get
     a soft alpha beside the ground with the ground colour removed from their RGB. With `painted`, also the ground
     painted_ground finds inside the object, and solid_body gives back what was taken from the object's body."""
@@ -453,7 +456,7 @@ def cutout(item, rgb, lo=0.035, hi=0.11, reach=4, painted=None):
     a = np.where(ground & (a < 0.02), 0, a)[..., None]
     colour = np.where(a > 0.02, (rgb - (1 - a) * bg) / np.maximum(a, 0.02), rgb)
     if painted is not None:
-        kept = solid_body(item, a[..., 0] >= 0.5, flat, opened, opaque)[..., None]
+        kept = solid_body(item, a[..., 0] >= 0.5, flat, opened, opaque, whole)[..., None]
         a, colour = np.where(kept, 1.0, a), np.where(kept, rgb, colour)
     return np.concatenate([np.clip(colour, 0, 1), a], -1)
 
@@ -461,10 +464,11 @@ def cutout(item, rgb, lo=0.035, hi=0.11, reach=4, painted=None):
 def cutouts(args):
     study, run_dir, out = args.study.resolve(), args.run.resolve(), args.out.resolve()
     out.mkdir(parents=True, exist_ok=True)
+    whole = {i["id"] for i in json.loads(args.spec.read_text())["items"] if i.get("solid")} if args.spec else set()
     for d in sorted((run_dir / "images").iterdir()):
         image = d / f"{args.variant}.png"
         it = Item(study, d.name, image)
-        rgba = cutout(it, it.gen, painted=Item(study, d.name, d / "original.png").gen if args.painted_ground else None)
+        rgba = cutout(it, it.gen, painted=Item(study, d.name, d / "original.png").gen if args.spec else None, whole=d.name in whole)
         Image.fromarray((rgba * 255 + 0.5).astype(np.uint8), "RGBA").save(out / f"{d.name}.png")
         print(d.name, f"transparent {1 - rgba[..., 3].mean():.0%}")
 
@@ -485,7 +489,7 @@ def main():
     t.add_argument("study", type=Path, help="study whose inputs/ give each source sprite and placement")
     t.add_argument("run", type=Path, help="post-process run directory holding images/<id>/<variant>.png")
     t.add_argument("--variant", default="bp-broad-half", choices=list(VARIANTS))
-    t.add_argument("--painted-ground", action="store_true", help="also open ground enclosed inside the object (world flats)")
+    t.add_argument("--spec", type=Path, help="world flats: open ground enclosed inside the object, keep its body, and fill all of it for an item marked `solid`")
     t.add_argument("--out", type=Path, required=True, help="directory for <id>.png (created if absent)")
     t.set_defaults(func=cutouts)
     c = sub.add_parser("compare", help="side-by-side sheets across run outputs")
