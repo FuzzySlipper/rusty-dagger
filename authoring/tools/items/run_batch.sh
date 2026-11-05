@@ -2,7 +2,7 @@
 # Convert one batch of source sprites end to end: Qwen painted reconstruction, Krea retro, back-projection,
 # transparent cut-out, compare sheets, then publish the finals to gen-raw/<area>.
 #   [AREA=items] run_batch.sh NAME HOST RESOURCE      e.g. AREA=spells run_batch.sh pilot-icons den-m5 m5-comfy
-# AREA (items, worn, paper-doll, spells, effects) picks the source root df-raw/AREA (worn reads df-raw/items), the spec directory specs/AREA and the finals gen-raw/AREA
+# AREA (items, worn, paper-doll, spells, effects, flats) picks the source root df-raw/AREA (worn reads df-raw/items), the spec directory specs/AREA and the finals gen-raw/AREA
 # (default items). NAME picks specs/AREA/PREFIX-NAME.json and PREFIX-NAME-retro.json, PREFIX being
 # items-icons for items and the area name otherwise. Qwen and retro both run on HOST
 # (den-m5 / m5-comfy or den-nimo / nimo-comfy; the owner's den-5090 has no resource, pass none). SOURCE=dir overrides the source root.
