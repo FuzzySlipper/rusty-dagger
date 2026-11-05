@@ -98,7 +98,8 @@ scattered, so `HeldArcs` draws those same marks with a product shader, `content/
   the arcs each time and shifting them by `wander`.
 - The outline is the welded surface grown by `rimWidth` and pushed `rimBehind` the weapon, so only its edge shows. A flat
   blade's normals lie across its thin side, so `arcs.py` leans them out from the model's length.
-- The sparks' ribbons show only while a strike plays.
+- A strike surges, as the frames do: the sparks show, and one arc in four is drawn again at `sparkWidth`. The punch comes
+  from a few bold forks, not many fine ones: a high `share` buries the blade in scribble.
 
 `enchant` in the held definition holds the shader and a look for each style. The ruleset reads the enchantment from the
 item (`DaggerfallItemInstanceMetadata.HasEnchantment`), and `held.enchant true` shows it in the workbench.
