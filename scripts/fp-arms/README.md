@@ -98,10 +98,23 @@ scattered, so `HeldArcs` draws those same marks with a product shader, `content/
   the arcs each time and shifting them by `wander`.
 - The outline is the welded surface grown by `rimWidth` and pushed `rimBehind` the weapon, so only its edge shows. A flat
   blade's normals lie across its thin side, so `arcs.py` leans them out from the model's length.
-- The sparks' ribbons show only while a strike plays.
+- A strike surges, as the frames do: the sparks show, and one arc in four is drawn again at `sparkWidth`. The punch comes
+  from a few bold forks, not many fine ones: a high `share` buries the blade in scribble.
 
 `enchant` in the held definition holds the shader and a look for each style. The ruleset reads the enchantment from the
 item (`DaggerfallItemInstanceMetadata.HasEnchantment`), and `held.enchant true` shows it in the workbench.
+
+### Riding
+
+`DaggerfallHeldMount` draws what the player rides in the held styles: the horse, or the cart with the horse ahead of it. The
+models are our own (`authoring/docs/mounts.md`). The view is the mount's, so the mount sits on the viewmodel layer at the
+`seat`, turned back against the view's pitch to stay level: looking down shows the saddle and flanks. Each gait in `mount.gaits`
+starts at its `from` speed in metres a second, plays at the speed it was made for, and fades into the next in step, and
+`bob` raises and lowers the eye on it. The eye rises to the seat through `MountEyeLift`.
+
+Mounting puts the weapon away. The arms draw the `reins` family, whose `RIDE_Idle` holds both fists on the reins, turned with
+the mount (`DaggerfallHeldViewmodel.Level`) so the hands stay on them. A cast plays from the saddle. `player.ride MOUNT` mounts
+and dismounts. The classic style draws nothing while riding.
 
 ### The claw arms
 

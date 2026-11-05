@@ -473,6 +473,107 @@ public sealed class ExteriorOriginSessionTests
         }
     }
 
+    [Theory]
+    [InlineData(1, 0, 999, null)]
+    [InlineData(-1, 0, 0, null)]
+    [InlineData(0, 1, null, 499)]
+    [InlineData(0, -1, null, 0)]
+    public void A_teleport_past_a_map_edge_stops_at_the_world_edge_and_the_session_runs_on(
+        int east, int south, int? edgeX, int? edgeY)
+    {
+        (DaggerfallSession session, SpatialFake _) = EdgeSession();
+        using (session)
+        {
+            float cell = DaggerfallExteriorCellResidency.CellSize;
+            WorldPoint start = session.State.PlayerControl.Position!.Value;
+            Assert.True(session.Teleport(start.X + (east * 1100 * cell), start.Y, start.Z + (south * 600 * cell), force: true).Succeeded);
+
+            for (ulong step = 1; step <= 3; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
+
+            DaggerfallExteriorCellId reached = session.Sites.CurrentExteriorCell();
+            if (edgeX is { } x) Assert.Equal(x, reached.X);
+            if (edgeY is { } y) Assert.Equal(y, reached.Y);
+        }
+    }
+
+    [Fact]
+    public void A_player_walking_into_the_world_edge_stops_there_and_slides_along_it()
+    {
+        (DaggerfallSession session, SpatialFake spatial) = EdgeSession();
+        using (session)
+        {
+            float cell = DaggerfallExteriorCellResidency.CellSize;
+            WorldPoint start = session.State.PlayerControl.Position!.Value;
+            Assert.True(session.Teleport(start.X + (1100 * cell), start.Y, start.Z, force: true).Succeeded);
+            spatial.StepResult = (request, result) => result with
+            {
+                Transform = result.Transform with { Translation = request.Position + new Vector3(3F, 0F, 2F) },
+            };
+            session.Update(new ProductUpdate(OuterUpdate(1), []));
+            Vector3 before = Global(session);
+
+            for (ulong step = 2; step <= 6; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
+
+            Vector3 after = Global(session);
+            Assert.Equal(before.X, after.X, 2);
+            Assert.Equal(before.Z + 10F, after.Z, 2);
+            Assert.Equal(999, session.Sites.CurrentExteriorCell().X);
+        }
+
+        static Vector3 Global(DaggerfallSession session) =>
+            session.State.PlayerControl.Position!.Value.ToVector() - session.Sites.LocalCompensation;
+    }
+
+    [Fact]
+    public void The_native_character_keeps_stepping_when_the_world_edge_holds_it_back()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior.json");
+        Dictionary<string, ReadOnlyMemory<byte>> files = PublishedUiArt(root)
+            .ToDictionary(entry => entry.Path, entry => (ReadOnlyMemory<byte>)entry.Bytes);
+        foreach ((string path, ReadOnlyMemory<byte> bytes) in PresentedFiles(root, exterior)) files[path] = bytes;
+        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
+        host.Call(engine =>
+        {
+            List<string> releases = [];
+            EngineContextFake context = EngineContextFake.Create(engine.Content, engine.Spatial, new AppearanceFake(releases),
+                worldOrigin: engine.WorldOrigin);
+            using DaggerfallSession session = DaggerfallSession.StartNew(context.Context,
+                new(definitions, exterior, DaggerfallTuning.Defaults));
+            float cell = DaggerfallExteriorCellResidency.CellSize;
+            WorldPoint start = session.State.PlayerControl.Position!.Value;
+
+            Assert.True(session.Teleport(start.X + (1100 * cell), start.Y, start.Z, force: true).Succeeded);
+            session.Update(new ProductUpdate(OuterUpdate(1), []));
+            Assert.Equal(999, session.Sites.CurrentExteriorCell().X);
+            WorldPoint held = session.State.PlayerControl.Position!.Value;
+
+            // Each step begins past the boundary, as one that has just walked over it does.
+            for (ulong step = 2; step <= 8; step++)
+            {
+                WorldPoint at = session.State.PlayerControl.Position!.Value;
+                session.State.PlayerControl.MoveTo(at.ToVector() + new Vector3(5F, 0F, 0F));
+                session.Update(new ProductUpdate(OuterUpdate(step), []));
+                Assert.Equal(held.X, session.State.PlayerControl.Position!.Value.X, 2);
+            }
+            Assert.Equal(999, session.Sites.CurrentExteriorCell().X);
+        });
+    }
+
+    private static (DaggerfallSession Session, SpatialFake Spatial) EdgeSession()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior.json");
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, exterior);
+        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        return (DaggerfallSession.StartNew(engine.Context, new DaggerfallSessionComposition(definitions, exterior, DaggerfallTuning.Defaults)), spatial);
+    }
+
     [Fact]
     public void An_ordinary_step_keeps_the_water_trigger_rows_beside_the_action_triggers_for_actor_navigation()
     {

@@ -241,6 +241,8 @@ internal sealed record DaggerfallTuning(
                 BeastBarkChancePercent = presentationAudio.GetProperty("beastBarkChancePercent").GetInt32(),
                 ContactPitch = presentationAudio.GetProperty("contactPitch").GetSingle(),
                 FootstepDistance = presentationAudio.GetProperty("footstepDistance").GetSingle(),
+                HoofDistance = presentationAudio.GetProperty("hoofDistance").GetSingle(),
+                CartDistance = presentationAudio.GetProperty("cartDistance").GetSingle(),
                 FootstepVolumeScale = presentationAudio.GetProperty("footstepVolumeScale").GetSingle(),
                 PlayerPainChancePercent = presentationAudio.GetProperty("playerPainChancePercent").GetInt32(),
             },
@@ -570,6 +572,8 @@ internal sealed record DaggerfallPresentationAudioTuning(float Volume, float Pit
     internal int BeastBarkChancePercent { get; init; } = 20;
     internal float ContactPitch { get; init; } = 1.1F;
     internal float FootstepDistance { get; init; } = 2.5F;
+    internal float HoofDistance { get; init; } = 1.8F;
+    internal float CartDistance { get; init; } = 6F;
     internal float FootstepVolumeScale { get; init; } = .7F;
     internal int PlayerPainChancePercent { get; init; } = 40;
     internal DaggerfallPresentationAudioTuning Validate()
@@ -585,6 +589,7 @@ internal sealed record DaggerfallPresentationAudioTuning(float Volume, float Pit
         if (BeastMinimumDelaySeconds < 0 || BeastMaximumDelaySeconds < BeastMinimumDelaySeconds
             || VampireAttackChancePercent is < 0 or > 100 || VampireBarkChancePercent is < 0 or > 100 || BeastAttackChancePercent is < 0 or > 100 || BeastBarkChancePercent is < 0 or > 100)
             throw new ArgumentOutOfRangeException(nameof(BeastMaximumDelaySeconds));
+        if (!float.IsFinite(HoofDistance) || HoofDistance <= 0 || !float.IsFinite(CartDistance) || CartDistance <= 0) throw new ArgumentOutOfRangeException(nameof(HoofDistance));
         if (!float.IsFinite(FootstepDistance) || FootstepDistance <= 0 || !float.IsFinite(FootstepVolumeScale)
             || FootstepVolumeScale < 0 || PlayerPainChancePercent is < 0 or > 100)
             throw new ArgumentOutOfRangeException(nameof(FootstepDistance));

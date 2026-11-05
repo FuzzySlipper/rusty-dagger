@@ -50,13 +50,22 @@ internal sealed partial class DaggerfallSession
             DaggerfallUiActionKind.TransportLeaveShip => LeavePropertyShip(),
             _ => throw new InvalidOperationException("Parsed transport action is not supported."),
         };
-        if (result.Applied)
-        {
-            _climbing.Detach();
-            if (result.Relocation is { } returnPose)
-                ApplyRelocation(returnPose.Position, returnPose.YawRadians, returnPose.PitchRadians);
-        }
+        AppliedTransport(result);
         Presentation.SetOutcome(result.Message);
+    }
+
+    private void AppliedTransport(DaggerfallTransportActionResult result)
+    {
+        if (!result.Applied) return;
+        _climbing.Detach();
+        if (!State.Transport.IsOnFoot && !State.Transport.OnShip)
+        {
+            // The reins take the hands, and the horse greets its rider.
+            State.WeaponDrawn = false;
+            _appearance.PlayGameplaySound(99, "neigh");
+        }
+        if (result.Relocation is { } returnPose)
+            ApplyRelocation(returnPose.Position, returnPose.YawRadians, returnPose.PitchRadians);
     }
 
     private void ChangeWagon(DaggerfallPlayerUiAction action)

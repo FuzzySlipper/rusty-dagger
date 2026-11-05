@@ -1,3 +1,4 @@
+using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using System.Numerics;
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
@@ -64,6 +65,18 @@ public sealed class GameplayAudioSessionTests
         Cue(f, 346, "swim-stroke");
         audio.AdvanceFootsteps(new(3, 0, 0), new(6, 0, 0), true, true, false, false, true, true, false);
         Cue(f, 334, "footstep");
+    }
+
+    [Fact]
+    public void Riding_trades_footsteps_for_hooves_by_the_ground_covered()
+    {
+        using var f = Fixture(); var audio = f.Session.Sites.Projection.Appearance;
+        audio.AdvanceFootsteps(new(0, 0, 0), new(3, 0, 0), true, true, false, false, false, false, false, DaggerfallTransportMode.Horse);
+        Cue(f, 97, "hoof");
+        audio.AdvanceFootsteps(new(3, 0, 0), new(6, 0, 0), true, true, false, false, false, false, false, DaggerfallTransportMode.Horse);
+        Cue(f, 298, "hoof");
+        audio.AdvanceFootsteps(new(6, 0, 0), new(13, 0, 0), true, true, false, false, false, false, false, DaggerfallTransportMode.Cart);
+        Cue(f, 104, "hoof");
     }
 
     [Fact]

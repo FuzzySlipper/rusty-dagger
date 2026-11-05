@@ -565,6 +565,8 @@
     "vampireBarkChancePercent": 20,
     "contactPitch": 1.1,
     "footstepDistance": 2.5,
+    "hoofDistance": 1.8,
+    "cartDistance": 6,
     "footstepVolumeScale": 0.7,
     "playerPainChancePercent": 40
   },

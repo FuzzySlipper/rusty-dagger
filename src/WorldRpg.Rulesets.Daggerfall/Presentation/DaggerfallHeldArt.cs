@@ -224,7 +224,8 @@ internal sealed class DaggerfallHeldArt
             problems.Add($"families.{name}.bow: needs an item of the family to name the bow's model and draw.");
         IEnumerable<string> models = [.. document.ArmSets.Values.SelectMany(set => new[] { set.Model, set.RetroModel }), .. document.Families.Values.Select(family => family.Look.Model).OfType<string>(), .. document.Families.Values.Select(family => family.Bow?.Arrow).OfType<string>(),
             .. document.Items.Values.Select(item => item.Model).OfType<string>(), .. document.Shield?.Items.Values.Select(item => item.Model) ?? [],
-            .. document.Enchant is { } enchant ? new[] { enchant.Shader } : []];
+            .. document.Enchant is { } enchant ? new[] { enchant.Shader } : [],
+            .. document.Mount is { } mount ? new[] { mount.Horse.Model, mount.Horse.RetroModel, mount.Harnessed.Model, mount.Harnessed.RetroModel, mount.Cart.Model, mount.Cart.RetroModel } : []];
         foreach (string model in models.Where(model => !container.Entries.ToArray().Any(entry => entry.Path == model)))
             problems.Add($"'{model}' is not in {ContainerName}.");
         return problems.Count == 0
@@ -248,7 +249,19 @@ internal sealed record DaggerfallHeldArtDocument(ArmRig Rig, Dictionary<string, 
     public DaggerfallHeldShield? Shield { get; init; }
     /// <summary>How an enchanted weapon's lightning draws; without it an enchanted weapon draws as a plain one.</summary>
     public DaggerfallHeldEnchant? Enchant { get; init; }
+    /// <summary>What the player rides; without it nothing is drawn while riding.</summary>
+    public DaggerfallHeldMountArt? Mount { get; init; }
 }
+
+/// <summary>
+/// The horse and cart a rider sees: their models and the horse without its saddle that pulls the cart, the eye's place above
+/// the ground on each (the model's origin at the ground under the middle of it), where the horse stands from the cart, and
+/// the horse's gaits, slowest first.
+/// </summary>
+internal sealed record DaggerfallHeldMountArt(DaggerfallHeldArmSet Horse, DaggerfallHeldArmSet Harnessed, DaggerfallHeldArmSet Cart, Vector3 Seat, Vector3 CartSeat, Vector3 CartHorse, List<DaggerfallHeldGait> Gaits);
+
+/// <summary>A gait: its loop's clip and seconds, the speed in metres a second it starts at and the speed it was made for, and how far it bobs the rider.</summary>
+internal sealed record DaggerfallHeldGait(string Clip, float Seconds, float From, float Speed, float Bob);
 
 /// <summary>An enchanted weapon's lightning: its shader (a container path), and how it draws in each style.</summary>
 internal sealed record DaggerfallHeldEnchant(string Shader, HeldArcLook Held, HeldArcLook Retro);

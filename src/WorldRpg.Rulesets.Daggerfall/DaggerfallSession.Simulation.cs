@@ -138,6 +138,7 @@ internal sealed partial class DaggerfallSession
         CharacterStepReceipt? movement = _spatial.Step(State.PlayerControl, update, doorEnvironment, locomotion.Controls);
         if (movement is not null && _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior)
         {
+            _sites.HoldPlayerInsideWorldEdge();
             _sites.UpdateExteriorResidency();
             // A player who has dropped beneath the terrain is stood back on it rather than falling for ever.
             _ = _sites.RecoverPlayerBelowTerrain();
@@ -171,7 +172,7 @@ internal sealed partial class DaggerfallSession
             _appearance.AdvanceFootsteps(previousPosition, acceptedMovement.Transform.Translation,
                 motionBefore.Grounded, State.PlayerControl.Motion.Grounded, wasSwimming, swimming.Swimming,
                 activeWater is not null && !swimming.Swimming, State.Transport.IsOnFoot && !climb.Climbing && !levitation.IsLevitating,
-                _time.Calendar.Season == DaggerfallSeason.Winter && CurrentClimate is not (224 or 225 or 227 or 229));
+                _time.Calendar.Season == DaggerfallSeason.Winter && CurrentClimate is not (224 or 225 or 227 or 229), State.Transport.Mode);
         if (landing is { } landed && DaggerfallFormulaPolicy.IsHardLanding(landed.Distance) && !swimming.Swimming && !slowfallDescending)
             _appearance.PlayGameplaySound(92, "hard-landing");
         if (swimming.Drowning)
@@ -187,7 +188,7 @@ internal sealed partial class DaggerfallSession
             ReconcileTriggers(_sites.CharacterEnvironment(State.PlayerControl.Motion), simulationStep, null);
         _camera.SettlePunch(update.DeltaSeconds, _tuning.Attacks.Strike.PunchSettleRate);
         if (_hitStopSteps > 0) _hitStopSteps--;
-        _camera.Update(State.PlayerControl);
+        _camera.Update(State.PlayerControl, _appearance.MountEyeLift(_tuning.Camera.EyeHeight));
         // An unloaded location has already destroyed its own actors (roster UnloadSite), so the
         // steps below see only live actors: wilderness spawns and resident neighbouring locations.
         // Location-scoped consumers (law, civilians, NPC projection, quest placements) keep their
@@ -278,7 +279,8 @@ internal sealed partial class DaggerfallSession
         foreach (string shortcut in acts.Shortcuts) ApplyShortcut(shortcut);
         // A menu/mode shortcut consumes this slice's attack and activation, just like a UI request.
         if (acts.Shortcuts.Length != 0) acts = acts with { Attack = false, Kick = false, Interact = false };
-        if (acts.ToggleWeapon) State.WeaponDrawn = !State.WeaponDrawn;
+        // The reins take the hands while riding: mounted combat is its own task.
+        if (acts.ToggleWeapon && (State.Transport.IsOnFoot || State.Transport.OnShip)) State.WeaponDrawn = !State.WeaponDrawn;
         _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);
         LookReceipt currentLook = _input.ResolveCurrentLook(State.PlayerControl);
         // Interaction owns this slice once requested. Direct semantic input can carry both intents

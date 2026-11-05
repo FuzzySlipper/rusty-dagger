@@ -56,6 +56,6 @@ fn shade(surface: Surface) -> vec4<f32> {
     // A share of the arcs burn hotter, as the frames' yellow runs do.
     let hot = scatter(vec2<f32>(arc, redraw() + 31.0)) < material.parameters[3].w;
     let core = select(material.parameters[2].rgb, material.parameters[3].rgb, hot);
-    return vec4<f32>(select(material.parameters[1].rgb, core, abs(surface.uv.x) < 0.4), 1.0);
+    return vec4<f32>(select(material.parameters[1].rgb, core, abs(surface.uv.x) < 0.55), 1.0);
 }
 #endif

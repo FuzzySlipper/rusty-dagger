@@ -7,6 +7,7 @@ using WorldRpg.Kit;
 using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
@@ -40,13 +41,13 @@ public sealed class DaggerfallHeldArtTests
             // The viewmodel times an attack by its family's weapon class.
             DaggerfallAttackTiming fast = DaggerfallAttackTuning.Default.For(family.Class).Fast;
             PhaseTiming timing = new((float)fast.Windup, (float)fast.Commit, (float)fast.Recovery);
-            if (family.Bow is null)
+            if (family.Bow is null && name != "reins")
             {
                 Assert.All(DaggerfallAttackIds.Fast, id => Assert.Contains(id, family.Strikes.Keys));
                 Assert.Contains(DaggerfallAttackIds.Cast, family.Strikes.Keys);
                 Assert.True(family.MovesLeft(DaggerfallAttackIds.Cast), $"{name}'s cast is the left hand's.");
             }
-            else Assert.Equal([DaggerfallAttackIds.Kick, DaggerfallAttackIds.Shot, DaggerfallAttackIds.ShotDraw], family.Strikes.Keys.Order());
+            else if (family.Bow is not null) Assert.Equal([DaggerfallAttackIds.Kick, DaggerfallAttackIds.Shot, DaggerfallAttackIds.ShotDraw], family.Strikes.Keys.Order());
             Assert.NotNull(family.PowerHold);
             foreach (var (action, clip) in family.Strikes)
             {
@@ -159,6 +160,8 @@ public sealed class DaggerfallHeldArtTests
         foreach (string file in Directory.GetFiles(weapons, "*.glb")) service.Add(DaggerfallHeldArt.ContainerName, $"first-person/weapons/{Path.GetFileName(file)}", File.ReadAllBytes(file));
         foreach (string model in ArmModels()) service.Add(DaggerfallHeldArt.ContainerName, model, [7]);
         service.Add(DaggerfallHeldArt.ContainerName, "first-person/effects/enchant.wgsl", [7]);
+        foreach (string mount in Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/first-person/mounts"), "*.glb"))
+            service.Add(DaggerfallHeldArt.ContainerName, $"first-person/mounts/{Path.GetFileName(mount)}", [7]);
         ProductContentBundle container = new ProductContent(Array.Empty<ProductContentFile>(), service).OpenContainer(DaggerfallHeldArt.ContainerName);
         DaggerfallHeldArt art = DaggerfallHeldArt.Read(container, System.Text.Encoding.UTF8.GetBytes(Document().ToJsonString()));
 
@@ -352,6 +355,39 @@ public sealed class DaggerfallHeldArtTests
             Assert.Null(presentation.DrawnHeld!.Drawing.Shield);
             presentation.Publish(EmptyActors());
             Assert.DoesNotContain(appearance.Snapshots.Last(), fact => fact.ObjectId == shielded.ShieldObject);
+        }
+    }
+
+    [Theory]
+    [InlineData("Horse", 1, "first-person/mounts/horse.glb")]
+    [InlineData("Cart", 2, "first-person/mounts/horse-harness.glb")]
+    public void Riding_draws_the_mount_and_the_hands_on_the_reins_and_they_go_on_foot(string ride, int models, string horse)
+    {
+        List<string> releases = [];
+        DaggerfallTransportMode mode = Enum.Parse<DaggerfallTransportMode>(ride);
+        float pitch = -.5F;
+        (DaggerfallSiteAppearance presentation, AppearanceFake appearance, EngineContextFake engine) = Viewing(releases);
+        using (presentation)
+        {
+            presentation.UsePlayerRide(() => (mode, 9, pitch));
+            presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: false);
+            presentation.Advance(OuterUpdate(1));
+            presentation.Publish(EmptyActors());
+
+            Assert.Equal("reins", presentation.DrawnHeld!.Drawing.Family);
+            Assert.Contains(horse, engine.Animation.OpenedPaths);
+            AppearanceFact[] Mount() => [.. appearance.Snapshots.Last().Where(fact => fact is { Layer: RenderLayer.Viewmodel, HasParentObject: false, Visible: true } && fact.ObjectId != presentation.DrawnHeld?.ArmsObject && fact.ObjectId != presentation.DrawnHeld?.WeaponObject)];
+            Assert.Equal(models, Mount().Length);
+            // Level whatever the view's pitch, so looking down looks at the horse.
+            Assert.Equal(Quaternion.CreateFromAxisAngle(Vector3.UnitX, .5F), Mount()[0].Transform.Rotation);
+            Assert.True(presentation.MountEyeLift(1.6F) > 0);
+
+            mode = DaggerfallTransportMode.Foot;
+            presentation.Advance(OuterUpdate(2));
+            presentation.Publish(EmptyActors());
+
+            Assert.Null(presentation.DrawnHeld);
+            Assert.Equal(0, presentation.MountEyeLift(1.6F));
         }
     }
 
@@ -706,7 +742,7 @@ public sealed class DaggerfallHeldArtTests
         EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(Hash, releases).Service, appearance, PerceptionFake.Create().Service);
         DaggerfallHeldArt art = Read(document ?? Document());
         engine.Animation.Joints = Joints(art.Document.Rig);
-        engine.Animation.Clips = [.. art.Document.Families.Values.SelectMany(family => family.Strikes.Values.Select(clip => clip.Clip).Append(family.Idle.Clip).Concat(family.PowerHold is { } hold ? [hold.Clip] : []).Concat(family.Guard is { } guard ? GuardClips(guard) : [])).Concat(GuardClips(art.Document.Shield!.Guard)).Append("draw").Distinct()
+        engine.Animation.Clips = [.. art.Document.Families.Values.SelectMany(family => family.Strikes.Values.Select(clip => clip.Clip).Append(family.Idle.Clip).Concat(family.PowerHold is { } hold ? [hold.Clip] : []).Concat(family.Guard is { } guard ? GuardClips(guard) : [])).Concat(GuardClips(art.Document.Shield!.Guard)).Append("draw").Concat(art.Document.Mount!.Gaits.Select(gait => gait.Clip)).Distinct()
             .Select(clip => new AnimationClipInfo(clip, clip, 1, true, 0))];
         NormalizedClassicPresentation classic = ClassicWeapon() with { Effects = [.. ClassicEffects(fireSpell: true).Effects.Where(effect => effect.Name == "fireMissile")], UnarmedVisual = "weapon.unarmed" };
         classic = classic with { Weapons = new Dictionary<string, NormalizedClassicWeapon>(classic.Weapons) { ["weapon.werecreature"] = classic.Weapons["weapon.dagger.steel"] with { ResourceId = "weapon.werecreature", TexturePath = "weapon/claws.png" } } };
@@ -756,6 +792,8 @@ public sealed class DaggerfallHeldArtTests
         service.Container(DaggerfallHeldArt.ContainerName);
         foreach (string model in models ?? [.. ArmModels(), .. Weapons()])
             service.Add(DaggerfallHeldArt.ContainerName, model, [7]);
+        foreach (string mount in Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/first-person/mounts"), "*.glb"))
+            service.Add(DaggerfallHeldArt.ContainerName, $"first-person/mounts/{Path.GetFileName(mount)}", [7]);
         service.Add(DaggerfallHeldArt.ContainerName, "first-person/effects/enchant.wgsl", [7]);
         foreach (string arcs in Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/first-person/weapons"), "*.arcs.json"))
             service.Add(DaggerfallHeldArt.ContainerName, $"first-person/weapons/{Path.GetFileName(arcs)}", File.ReadAllBytes(arcs));

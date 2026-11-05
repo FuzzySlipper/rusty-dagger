@@ -37,6 +37,9 @@ public interface IDeveloperPlayerSession
     /// <summary>Teaches the player a spell, named as the ruleset names it, as if learned.</summary>
     DebugCommandResult Spell(string spell);
 
+    /// <summary>Puts the player on a mount the ruleset names, giving them it if they have none, or back on foot.</summary>
+    DebugCommandResult Ride(string mount);
+
     /// <summary>Changes the player into a beast form the ruleset names, through the ordinary change; none names the way back.</summary>
     DebugCommandResult Morph(string form);
 
@@ -73,6 +76,9 @@ public sealed class DeveloperPlayerDebugModule(Func<IDeveloperPlayerSession> cur
 
     [DebugCommand("player.spell", Description = "Developer: teach the player SPELL, named or part of its name (quoted when it has spaces), as if learned.")]
     public DebugCommandResult Spell(string spell) => current().Spell(spell);
+
+    [DebugCommand("player.ride", Description = "Developer: put the player on MOUNT (horse, cart), giving them it if they have none, or back on foot.")]
+    public DebugCommandResult Ride(string mount) => current().Ride(mount);
 
     [DebugCommand("player.morph", Description = "Developer: change the player into beast FORM, cursing them with it if they aren't, or back with \"\".")]
     public DebugCommandResult Morph(string form) => current().Morph(form);
