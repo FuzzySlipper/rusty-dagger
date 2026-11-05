@@ -910,6 +910,98 @@
         }
       }
     },
+    "bow": {
+      "weapons": [
+        "weapon.bow"
+      ],
+      "twoHanded": true,
+      "bow": {
+        "arrow": "first-person/weapons/arrow.glb",
+        "seat": {
+          "at": [
+            5.409,
+            5.8001,
+            -3.9247
+          ],
+          "turn": [
+            34.0,
+            1.41,
+            -82.73
+          ],
+          "scale": 100
+        },
+        "joint": "nock",
+        "nock": {
+          "at": [
+            0,
+            0,
+            0
+          ],
+          "turn": [
+            90,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "arrowWidth": 0.45,
+        "pullFrom": 0.35
+      },
+      "class": "hand-to-hand",
+      "look": {
+        "model": null,
+        "grip": [
+          0,
+          0,
+          0
+        ],
+        "hold": [
+          0,
+          0,
+          0
+        ]
+      },
+      "idle": {
+        "clip": "BOW_Idle",
+        "seconds": 2
+      },
+      "powerHold": {
+        "clip": "BOW_Hold",
+        "seconds": 2
+      },
+      "strikes": {
+        "shotDraw": {
+          "clip": "BOW_Draw",
+          "marks": {
+            "start": 0,
+            "strike": 0.98,
+            "recover": 1,
+            "end": 1
+          },
+          "fade": 0.1
+        },
+        "shot": {
+          "clip": "BOW_Loose",
+          "marks": {
+            "start": 0,
+            "strike": 0.02,
+            "recover": 0.06,
+            "end": 1
+          },
+          "fade": 0.1
+        },
+        "kick": {
+          "clip": "FPP_sns_Kick",
+          "marks": {
+            "start": 0,
+            "strike": 0.269,
+            "recover": 0.453,
+            "end": 0.882
+          },
+          "fade": 0.1
+        }
+      }
+    },
     "unarmed": {
       "weapons": [
         "weapon.unarmed"
@@ -1033,6 +1125,16 @@
     }
   },
   "items": {
+    "129": {
+      "family": "bow",
+      "model": "first-person/weapons/short-bow.glb",
+      "drawn": 0.61
+    },
+    "130": {
+      "family": "bow",
+      "model": "first-person/weapons/long-bow.glb",
+      "drawn": 0.37
+    },
     "113": {
       "family": "dagger",
       "model": "first-person/weapons/dagger.glb"

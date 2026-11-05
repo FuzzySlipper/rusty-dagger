@@ -21,18 +21,26 @@ public sealed class WeaponStrikeDirectionTests
     /// the bow's four-frame up strike could not reach the bow hit frame. Every shot now plays the one fixed strike.
     /// </summary>
     [Fact]
-    public void A_bow_shot_plays_the_one_fixed_strike_with_its_hit_frame_at_the_release()
+    public void A_bow_draws_the_one_fixed_strike_up_to_its_hit_frame_and_looses_from_there()
     {
         using Stage stage = new(BowWeapon(), "short-bow");
 
         stage.Presentation.BeginAdmittedUpdate();
-        stage.Presentation.React(new PlayerAttackMotionFact(DaggerfallAttackIds.Shot, new(1.25d, .25d, .25d), 2, 3));
+        stage.Presentation.React(new PlayerAttackMotionFact(DaggerfallAttackIds.ShotDraw, new(1.25d, 0d, 0d), 2, 3));
         stage.Presentation.CompleteAdmittedUpdate();
 
-        SpritePlaybackCreateRequest strike = stage.Appearance.PlaybackRequests.Last();
-        Assert.Equal(7, strike.Frames.Length); // the bow's strikeDown, never its four-frame strikeUp
-        // The release falls on the bow's hit frame: the windup is that many frames.
-        Assert.All(strike.Frames.Span.ToArray(), frame => Assert.Equal(1.25d / DaggerfallFormulaPolicy.BowWeaponHitFrame, frame.DurationSeconds, 6));
+        SpritePlaybackCreateRequest draw = stage.Appearance.PlaybackRequests.Last();
+        Assert.Equal(DaggerfallFormulaPolicy.BowWeaponHitFrame, draw.Frames.Length); // of the bow's strikeDown, never its four-frame strikeUp
+        Assert.All(draw.Frames.Span.ToArray(), frame => Assert.Equal(1.25d / DaggerfallFormulaPolicy.BowWeaponHitFrame, frame.DurationSeconds, 6));
+
+        stage.Presentation.BeginAdmittedUpdate();
+        stage.Presentation.React(new PlayerAttackMotionFact(DaggerfallAttackIds.Shot, new(.25d, .25d, .25d), 3, 4));
+        stage.Presentation.CompleteAdmittedUpdate();
+
+        // The last drawn frame through the windup, then the hit frame and those after it.
+        SpritePlaybackCreateRequest loose = stage.Appearance.PlaybackRequests.Last();
+        Assert.Equal(7 - DaggerfallFormulaPolicy.BowWeaponHitFrame + 1, loose.Frames.Length);
+        Assert.Equal(.25d, loose.Frames.Span[0].DurationSeconds, 6);
     }
 
     [Fact]

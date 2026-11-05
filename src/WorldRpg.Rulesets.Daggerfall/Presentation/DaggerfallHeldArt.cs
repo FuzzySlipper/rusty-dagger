@@ -194,10 +194,15 @@ internal sealed class DaggerfallHeldArt
         {
             if (!document.Families.TryGetValue(item.Family, out DaggerfallHeldFamily? family))
                 problems.Add($"items.{template}.family: names no family ({string.Join(", ", document.Families.Keys)}).");
+            else if (family.Bow is not null)
+            {
+                if (item.Model is null) problems.Add($"items.{template}.model: a bow needs a model.");
+                if (item.Drawn is not (> 0F and <= 1F)) problems.Add($"items.{template}.drawn: a bow needs how much of its draw clip a full draw reaches (over 0, up to 1).");
+            }
             else if (DaggerfallAttackIds.Fast.Except(family.Strikes.Keys).ToArray() is { Length: > 0 } missing)
                 problems.Add($"items.{template}.family: {item.Family} has no clip for {string.Join(", ", missing)}.");
         }
-        IEnumerable<string> models = [.. document.ArmSets.Values.SelectMany(set => new[] { set.Model, set.RetroModel }), .. document.Families.Values.Select(family => family.Look.Model).OfType<string>(),
+        IEnumerable<string> models = [.. document.ArmSets.Values.SelectMany(set => new[] { set.Model, set.RetroModel }), .. document.Families.Values.Select(family => family.Look.Model).OfType<string>(), .. document.Families.Values.Select(family => family.Bow?.Arrow).OfType<string>(),
             .. document.Items.Values.Select(item => item.Model).OfType<string>(), .. document.Shield?.Items.Values.Select(item => item.Model) ?? []];
         foreach (string model in models.Where(model => !container.Entries.ToArray().Any(entry => entry.Path == model)))
             problems.Add($"'{model}' is not in {ContainerName}.");
@@ -280,6 +285,14 @@ internal sealed record DaggerfallHeldShieldItem(string Model)
     public DaggerfallHeldSeat? Seat { get; init; }
 }
 
+/// <summary>
+/// A family's bow, carried in the off hand rather than the main: its arrow's model (a container path), where the bow sits
+/// on the off hand's joint, the bow's joint the arrow rides and where it sits on that joint, how much of the arrow's width
+/// it keeps so close to the eye, and how far through the draw clip the string starts to come back, as the arms' hand takes
+/// it. An item of the family names the bow's own model.
+/// </summary>
+internal sealed record DaggerfallHeldBow(string Arrow, DaggerfallHeldSeat Seat, string Joint, DaggerfallHeldSeat Nock, float ArrowWidth, float PullFrom);
+
 /// <summary>A raised guard: the clip that raises it, the loop it holds on and the clip that lowers it, each over its seconds.</summary>
 internal sealed record DaggerfallHeldGuard(DaggerfallIdleClip Raise, DaggerfallIdleClip Hold, DaggerfallIdleClip Lower);
 
@@ -290,6 +303,8 @@ internal sealed record DaggerfallHeldGuard(DaggerfallIdleClip Raise, DaggerfallI
 internal sealed record DaggerfallHeldItem(string Family)
 {
     public string? Model { get; init; }
+    /// <summary>How much of a bow's draw clip a full draw reaches, as the arms pull a bow of its length to the same place.</summary>
+    public float? Drawn { get; init; }
     public HeldChainDefinition? Chain { get; init; }
     public Vector3? Grip { get; set; }
     public Vector3? Hold { get; set; }
@@ -304,6 +319,9 @@ internal sealed record DaggerfallHeldItem(string Family)
 internal sealed record DaggerfallHeldFamily(IReadOnlyList<string> Weapons, DaggerfallHeldLook Look, DaggerfallIdleClip Idle, Dictionary<string, ArmClip> Strikes)
 {
     public bool TwoHanded { get; init; }
+
+    /// <summary>How the family carries a bow, for one that does.</summary>
+    public DaggerfallHeldBow? Bow { get; init; }
     public string[]? LeftHand { get; init; }
     /// <summary>The weapon class the workbench times this family's attacks by, as play times them.</summary>
     public string Class { get; init; } = DaggerfallSkills.ShortBlade;

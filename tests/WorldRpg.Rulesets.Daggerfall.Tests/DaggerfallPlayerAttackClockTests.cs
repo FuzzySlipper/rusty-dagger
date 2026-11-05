@@ -15,6 +15,7 @@ public sealed class DaggerfallPlayerAttackClockTests
     private static readonly DaggerfallAttackTiming Fast = new(.25d, .25d, .25d);
     private static readonly DaggerfallAttackTiming Release = new(.25d, .25d, .5d);
     private static readonly DaggerfallAttackTiming Kick = new(.25d, .125d, .25d);
+    private static readonly DaggerfallShotTuning Bow = new(.25d, new(.125d, .125d, .375d));
     private static readonly DaggerfallAttackTuning Tuning = new(.25d, 2d, 2d, Kick, 6, 1, 1.7f,
         new Dictionary<string, DaggerfallWeaponClassAttacks> { ["short-blade"] = new(Fast, .5d, Release, 2f) },
         new Dictionary<string, DaggerfallAttackPath>(), []) { Cast = new(.25d, .125d, .25d) };
@@ -358,16 +359,16 @@ public sealed class DaggerfallPlayerAttackClockTests
     }
 
     [Fact]
-    public void A_buffered_shot_refused_as_the_last_one_ends_still_returns_the_bow_to_rest()
+    public void A_shot_refused_as_it_is_let_go_returns_the_bow_to_rest()
     {
-        Stage stage = new() { Shot = Fast };
+        Stage stage = new() { Shot = Bow };
         stage.Tap();
-        stage.Clock.Press(); // A shot takes no chain, so this waits for its end.
         stage.Refusing = true;
 
-        stage.Steps(6);
+        stage.Steps(3);
 
-        Assert.Equal("rest", stage.Log[^1]);
+        Assert.Equal(["motion shotDraw", "start shot", "rest"], stage.Log);
+        Assert.False(stage.Clock.Busy);
     }
 
     [Fact]
@@ -407,34 +408,79 @@ public sealed class DaggerfallPlayerAttackClockTests
     }
 
     [Fact]
-    public void A_bow_plays_its_shot_at_once_whether_or_not_the_button_is_held_and_never_charges()
+    public void A_bow_draws_and_holds_while_the_button_is_down_and_looses_when_it_is_let_go()
     {
-        Stage stage = new() { Shot = Fast };
+        Stage stage = new() { Shot = Bow };
         stage.Down();
         stage.Clock.Press();
 
         stage.Steps(1);
-        Assert.Equal(["start shot", "motion shot"], stage.Log);
+        Assert.Equal(["motion shotDraw"], stage.Log);
+        Assert.Equal(new DaggerfallAttackTiming(Bow.Draw, 0d, 0d), stage.Timings["shotDraw"]);
+
+        stage.Steps(20);
+        Assert.Equal(["motion shotDraw", "motion powerHold"], stage.Log);
+        Assert.Equal(0, stage.Count("impact"));
+
+        stage.Up();
+        stage.Steps(1);
+        Assert.Equal(["motion shotDraw", "motion powerHold", "start shot", "motion shot"], stage.Log);
+        Assert.Equal(Bow.Release, stage.Timings["shot"]);
 
         stage.Steps(12);
-        Assert.Equal(0, stage.Count("motion powerIn"));
         Assert.Equal(1, stage.Count("impact"));
+    }
+
+    [Fact]
+    public void A_bow_tapped_looses_only_once_it_is_drawn()
+    {
+        Stage stage = new() { Shot = Bow };
+        stage.Tap();
+        Assert.Equal(["motion shotDraw"], stage.Log);
+
+        stage.Steps(2);
+
+        Assert.Equal(["motion shotDraw", "start shot", "motion shot"], stage.Log);
+    }
+
+    [Fact]
+    public void A_shot_that_could_not_leave_is_not_drawn()
+    {
+        Stage stage = new() { Shot = Bow, Ready = false, Refusing = true };
+
+        stage.Tap();
+
+        Assert.Equal(["start shot"], stage.Log);
+    }
+
+    [Fact]
+    public void Input_lost_during_a_draw_abandons_it_with_no_shot()
+    {
+        Stage stage = new() { Shot = Bow };
+        stage.Down();
+        stage.Clock.Press();
+        stage.Steps(1);
+
+        stage.Clock.Observe([Input(InputEventKind.Clear, InputEdge.None)], []);
+        stage.Steps(10);
+
+        Assert.Equal(["motion shotDraw", "rest"], stage.Log);
     }
 
     [Fact]
     public void A_press_in_a_shots_recovery_does_not_chain_and_waits_for_its_end()
     {
-        Stage stage = new() { Shot = Fast };
+        Stage stage = new() { Shot = Bow };
         stage.Tap();
-        stage.Steps(4);
+        stage.Steps(5);
         Assert.False(stage.Clock.Free);
 
         stage.Clock.Press();
         stage.Steps(1);
-        Assert.Equal(1, stage.Count("start shot"));
+        Assert.Equal(1, stage.Count("motion shotDraw"));
 
-        stage.Steps(1);
-        Assert.Equal(2, stage.Count("start shot"));
+        stage.Steps(4);
+        Assert.Equal(2, stage.Count("motion shotDraw"));
         Assert.Equal(0, stage.Count("rest")); // One shot runs straight into the next.
         Assert.DoesNotContain(stage.Log, entry => entry.Contains("fast", StringComparison.Ordinal));
     }
@@ -565,7 +611,8 @@ public sealed class DaggerfallPlayerAttackClockTests
         internal List<string> Log { get; } = [];
         internal Dictionary<string, DaggerfallAttackTiming?> Timings { get; } = [];
         internal bool Refusing { get; set; }
-        internal DaggerfallAttackTiming? Shot { get; init; }
+        internal DaggerfallShotTuning? Shot { get; init; }
+        internal bool Ready { get; init; } = true;
 
         internal int Count(string entry) => Log.Count(value => value == entry);
 
@@ -597,7 +644,8 @@ public sealed class DaggerfallPlayerAttackClockTests
         int IDaggerfallPlayerAttacks.ChainLength => Chain;
         bool IDaggerfallPlayerAttacks.Winded => Tired;
         double IDaggerfallPlayerAttacks.TimeScale(string attack) => Scale;
-        DaggerfallAttackTiming? IDaggerfallPlayerAttacks.ShotTiming => Shot;
+        DaggerfallShotTuning? IDaggerfallPlayerAttacks.Shot => Shot;
+        bool IDaggerfallPlayerAttacks.ShotReady => Ready;
 
         bool IDaggerfallPlayerAttacks.Start(string attack)
         {

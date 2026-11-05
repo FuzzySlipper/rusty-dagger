@@ -12,7 +12,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// family's idle clip at rest and play an attack's clip fitted to the rules' timing, with the look riding the main
 /// hand where the clip holds it (<see cref="FirstPersonArms.Ride"/>). It draws only: the rules' attack clock delivers the
 /// hit, and the clip's strike mark lands with it as the windup ends. The clips play on world time
-/// (<see cref="Step"/>), so a held world holds them too.
+/// (<see cref="Step"/>), so a held world holds them too. A bow rides the off hand instead, bent as far as the string is
+/// drawn, with its arrow on the string from the draw to the release.
 /// </summary>
 /// <remarks>
 /// The clips are baked as their own camera saw them, with the eye at the model's origin, so the arms are placed with
@@ -49,6 +50,15 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     private readonly Appearance? shieldLook;
     private readonly DaggerfallHeldSeat? shieldSeat;
     private bool shieldAttached;
+    // A bow: how it is carried, its arrow's model and appearance, the instance that bends it, and its draw clip.
+    private readonly DaggerfallHeldBow? bow;
+    private readonly RenderResource? arrowModel;
+    private readonly Appearance? arrowLook;
+    private readonly AnimationInstance? bowPose;
+    private readonly AnimationLayerSet bowLayers = new();
+    private readonly uint bowDraw;
+    private readonly float bowDrawSeconds;
+    private bool bowAttached;
     // How this drawing raises its guard, and how far into raising, holding or lowering it (seconds); null with no guard up.
     private readonly DaggerfallHeldGuard? guard;
     private float? guarding;
@@ -76,8 +86,11 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     private float held;
     // The shortest phase a clip is fitted to: a power attack's charge is all windup.
     private const float MinimumPhase = .001F;
+    // The bow's draw clip by name, and how long a loosed string takes to snap back.
+    private const string BowDrawClip = "draw";
+    private const float StringSnap = .04F;
 
-    internal DaggerfallHeldViewmodel(IEngineContext engine, DaggerfallHeldArt art, DaggerfallHeldDrawing drawing, DaggerfallDyeTint? metal, DaggerfallDyeTint? shieldMetal, DaggerfallViewmodelStyle style, ulong weaponObject, ulong armsObject, ulong shieldObject)
+    internal DaggerfallHeldViewmodel(IEngineContext engine, DaggerfallHeldArt art, DaggerfallHeldDrawing drawing, DaggerfallDyeTint? metal, DaggerfallDyeTint? shieldMetal, DaggerfallViewmodelStyle style, ulong weaponObject, ulong armsObject, ulong shieldObject, ulong arrowObject)
     {
         this.art = art;
         Drawing = drawing;
@@ -118,6 +131,20 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
         }
         catch { armsPose.Dispose(); arms.Dispose(); throw; }
         ShieldObject = shieldObject;
+        ArrowObject = arrowObject;
+        bow = family.Bow;
+        if (bow is not null)
+        {
+            AnimationClipInfo[] clips = engine.Animation.ReadClips(model!).ToArray();
+            int draw = Array.FindIndex(clips, clip => clip.Id == BowDrawClip);
+            if (draw < 0) throw new InvalidDataException($"{DaggerfallHeldArt.DocumentPath}: items.{drawing.Item}.model has no '{BowDrawClip}' clip.");
+            bowDraw = (uint)draw;
+            bowDrawSeconds = (float)clips[draw].DurationSeconds;
+            using ContentReference arrowContent = art.Container.OpenReference(bow.Arrow);
+            arrowModel = engine.Animation.OpenAnimatedMeshFromContent(new(arrowContent));
+            arrowLook = engine.Animation.CreateAnimatedMeshAppearance(new(arrowModel));
+            bowPose = engine.Animation.CreateInstance(new(look, weaponObject));
+        }
         guard = family.Guard;
         if (drawing.Shield is int shield && art.Document.Shield is { } shields)
         {
@@ -137,6 +164,9 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
 
     /// <summary>The published object a shield is drawn on.</summary>
     internal ulong ShieldObject { get; }
+
+    /// <summary>The published object a bow's arrow is drawn on.</summary>
+    internal ulong ArrowObject { get; }
 
     /// <summary>The published object the weapon's look is drawn on.</summary>
     internal ulong WeaponObject { get; }
@@ -245,9 +275,54 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
         (Vector3 grip, Quaternion turn) = arms.Ride(MainAim());
         // The model's origin is its own grip; the hand holds the look's grip point.
         Vector3 at = grip - Vector3.Transform(item?.Grip ?? family.Look.Grip, turn);
-        facts.Add(new AppearanceFact(WeaponObject, false, 0, new Transform(at, turn, Vector3.One), look, shown && model is not null, RenderLayer.Viewmodel));
         facts.Add(arms.Fact(shown));
+        if (bow is not null)
+        {
+            facts.Add(BowFact(shown));
+            facts.Add(ArrowFact(shown));
+        }
+        else facts.Add(new AppearanceFact(WeaponObject, false, 0, new Transform(at, turn, Vector3.One), look, shown && model is not null, RenderLayer.Viewmodel));
         if (shieldLook is not null) facts.Add(ShieldFact(shown));
+    }
+
+    // The bow's fact: a child of the arms, its transform local to the off hand's joint.
+    private AppearanceFact BowFact(bool shown) => new(WeaponObject, true, arms.Object,
+        new Transform(bow!.Seat.At, HeldFrames.Turn(bow.Seat.Turn), new Vector3(bow.Seat.Scale)), look, shown, RenderLayer.Viewmodel);
+
+    // The arrow's fact: a child of the bow, its transform local to the string's joint, drawn while it is on the string.
+    private AppearanceFact ArrowFact(bool shown) => new(ArrowObject, true, WeaponObject,
+        new Transform(bow!.Nock.At, HeldFrames.Turn(bow.Nock.Turn), new Vector3(bow.ArrowWidth, bow.ArrowWidth, 1) * bow.Nock.Scale), arrowLook!, shown && Nocked, RenderLayer.Viewmodel);
+
+    // Whether an arrow is on the string: from the draw until it leaves as the shot's windup ends.
+    private bool Nocked => holding || strike is { Action: DaggerfallAttackIds.ShotDraw }
+        || strike is { Action: DaggerfallAttackIds.Shot } shot && shot.Seconds < shot.Timing.Windup;
+
+    // How far the string is drawn, 0 to 1 of a full draw: it comes back with the hand, and snaps home once loosed.
+    private float Pulled()
+    {
+        if (holding) return 1;
+        if (strike is not { } playing) return 0;
+        if (playing.Action == DaggerfallAttackIds.Shot) return 1 - Math.Clamp((playing.Seconds - playing.Timing.Windup) / StringSnap, 0, 1);
+        if (playing.Action != DaggerfallAttackIds.ShotDraw) return 0;
+        float pull = Math.Clamp((playing.Seconds / playing.Timing.Duration - bow!.PullFrom) / (1 - bow.PullFrom), 0, 1);
+        return pull * pull * (3 - 2 * pull);
+    }
+
+    // Once the snapshot is published: seats the bow and its arrow, then bends the bow as far as the string is drawn.
+    private void DrawBow()
+    {
+        if (bowPose is null) return;
+        if (!bowAttached)
+        {
+            // Once: a later snapshot keeps the bindings, and the renderer moves them with the hand from then on.
+            engine.Graphics.PublishChanges(new(new[] { BowFact(true), ArrowFact(true) }, ReadOnlyMemory<ulong>.Empty,
+                new MeshJointAttachment[] { new(WeaponObject, art.Document.Rig.Off.Hand), new(ArrowObject, bow!.Joint) }));
+            engine.Animation.SetPlayback(new(bowPose, AnimationPlaybackKind.Play, BowDrawClip, AnimationLoopMode.Repeat, 1, 1, true, 0, true, 0));
+            bowAttached = true;
+        }
+        bowLayers.Clear();
+        bowLayers.Override(bowDraw, Pulled() * item!.Drawn!.Value * bowDrawSeconds, 1);
+        engine.Animation.SetLayers(bowLayers.ToRequest(bowPose));
     }
 
     // The shield's fact: a child of the arms, its transform local to the joint the Engine binds it to.
@@ -259,6 +334,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     {
         arms.Reach(MainAim(), OffAim());
         chain?.Published();
+        DrawBow();
         if (shieldLook is null || shieldAttached) return;
         // Once: a later snapshot keeps the binding, and the renderer moves the shield with the hand from then on.
         engine.Graphics.PublishChanges(new(new[] { ShieldFact(true) }, ReadOnlyMemory<ulong>.Empty, new MeshJointAttachment[] { new(ShieldObject, art.Document.Rig.Off.Hand) }));
@@ -270,6 +346,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
         try
         {
             chain?.Dispose();
+            bowPose?.Dispose();
             arms.Dispose();
         }
         finally
@@ -278,6 +355,8 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
             model?.Dispose();
             shieldLook?.Dispose();
             shieldModel?.Dispose();
+            arrowLook?.Dispose();
+            arrowModel?.Dispose();
             armsPose.Dispose();
         }
     }
@@ -309,6 +388,9 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
             return lowering ? new(stance.Lower.Clip, up / stance.Lower.Seconds)
                 : up < stance.Raise.Seconds ? new(stance.Raise.Clip, up / stance.Raise.Seconds)
                 : new(stance.Hold.Clip, (up - stance.Raise.Seconds) / stance.Hold.Seconds % 1);
+        // A drawn bow waits on its last frame for the hold or release the rules send next, rather than dipping to the idle.
+        if (strike is { Action: DaggerfallAttackIds.ShotDraw } draw && draw.Seconds > draw.Timing.Duration)
+            return family.Strikes[draw.Action].At(draw.Timing, draw.Timing.Duration);
         if (strike is { } playing && playing.Seconds <= playing.Timing.Duration)
             return family.Strikes[playing.Action].At(playing.Timing, Sampled(playing.Seconds, playing.Frame, playing.Timing.Duration));
         double seconds = retro && idleFrame > 0 ? Math.Floor(idle / idleFrame) * idleFrame : idle;

@@ -28,7 +28,7 @@ public sealed class NewGameBowSessionTests
         Assert.True(action.Available, action.Reason);
         double fatigue = f.Game.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")).Current;
 
-        f.Attack();
+        f.Loose();
 
         TargetingEvidence targeting = Assert.IsType<TargetingEvidence>(f.Game.LastMeleeTargeting);
         Assert.Equal(Fixture.Target, targeting.SelectedTargetId);
@@ -45,7 +45,7 @@ public sealed class NewGameBowSessionTests
         using Fixture f = new(TestPayload.Definitions.Actions["bow-shot"].Reach!.Value + 1);
         double health = f.Game.State.Actors.Get(Fixture.Target).Stats.GetTrack(TrackId.Parse("health")).Current;
 
-        f.Attack();
+        f.Loose();
 
         Assert.Null(Assert.IsType<TargetingEvidence>(f.Game.LastMeleeTargeting).SelectedTargetId);
         // Nothing selected does not refuse the shot: the arrow is loosed along the look and meets what it meets.
@@ -81,10 +81,11 @@ public sealed class NewGameBowSessionTests
         f.Attack();
         var bow = f.Inputs.ClassicPresentation.Weapons["weapon.bow"];
         var strike = bow.Actions["strikeDown"];
-        Assert.Equal(strike.Sequence ?? Enumerable.Range(strike.FrameStart, strike.FrameCount).ToArray(),
+        // The draw plays the frames before the hit, and the shot looses once it is drawn and let go.
+        Assert.Equal((strike.Sequence ?? Enumerable.Range(strike.FrameStart, strike.FrameCount).ToArray()).Take(DaggerfallFormulaPolicy.BowWeaponHitFrame),
             f.Appearance.PlaybackRequests.Last().Frames.ToArray().Select(frame => (int)frame.FrameId));
 
-        // The shot looses when its windup ends: the bow's hit frame of the classic frame time.
+        f.Drawn();
         for (int step = 0; step < 240 && f.Game.State.Actors.Player.Attack.Pending is not null; step++) f.Advance();
         Assert.Null(f.Game.State.Actors.Player.Attack.Pending);
         var arrow = Assert.Single(f.Inputs.ClassicPresentation.WorldVisuals, visual => visual.MediaId == "visual.missile.arrow");
@@ -99,7 +100,7 @@ public sealed class NewGameBowSessionTests
         InventoryStackId stack = f.Arrows().Id;
         f.Game.State.Inventory.Consume(new InventoryConsume(stack, 23));
 
-        f.Attack();
+        f.Loose();
 
         Assert.DoesNotContain(f.Game.State.Inventory.Read().Stacks, item => item.Id == stack);
         Assert.Throws<InvalidOperationException>(() => f.Game.State.ItemInstances.RequireStack(DaggerfallItemOwner.Player, stack));
@@ -170,6 +171,19 @@ public sealed class NewGameBowSessionTests
 
         internal void Advance() => Game.Update(new ProductUpdate(OuterUpdate(++step), []));
         internal void Attack() => Game.Update(new ProductUpdate(OuterUpdate(++step), AttackTap));
+
+        /// <summary>Advances until the tapped bow is drawn and its shot admitted.</summary>
+        internal void Drawn()
+        {
+            for (int tick = 0; tick < 240 && Game.State.Actors.Player.Attack.Pending is null; tick++) Advance();
+        }
+
+        /// <summary>A tap, carried through the draw to the shot.</summary>
+        internal void Loose()
+        {
+            Attack();
+            Drawn();
+        }
 
         public void Dispose() { Game.Dispose(); title.Dispose(); }
     }

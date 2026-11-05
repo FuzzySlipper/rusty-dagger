@@ -79,6 +79,51 @@ TO_CAMERA = Matrix(((1, 0, 0), (0, 0, 1), (0, -1, 0)))
 LOOK_IN_BONE = Matrix(((-1, 0, 0), (0, 1, 0), (0, 0, -1)))
 
 
+# The bow's clips are made here (bow_clip): the pack has none. In the view: cm, +X right, +Y ahead, +Z up.
+BOW_AIM = Vector((-5, 54, -14))
+BOW_AIM_FORWARD = Vector((0, 1, 0))
+BOW_AIM_UP = Vector((.21, 0, 1))
+BOW_REST = Vector((-25, 38, -36))
+BOW_REST_FORWARD = Vector((.42, .85, -.2))
+BOW_REST_UP = Vector((.22, .2, .9))
+BOW_RIGHT_REST = Vector((24, 22, -62))
+# How far the string sits from the grip at rest, about the bows' mean; how far from the grip a full draw takes it, which
+# stops the nock just below the view and short of the camera's near plane, so the string runs out of the view rather than
+# ending in it; how far from wrist to string; and how far the hand follows through on the release.
+BOW_BRACE = 13
+BOW_FULL_DRAW = 37
+BOW_HOOK_REACH = 9
+# How far below the arrow the hand grips the bow, so the arrow lies over the hand and the arm under it.
+BOW_HAND_DROP = 5
+BOW_HOOK_RISE = Vector((-.15, 0, .7))
+BOW_FOLLOW = 7
+BOW_SWAY = .25
+BOW_GRIP = (62, 70, 45)
+BOW_HOOK = (50, 75, 50)
+BOW_OPEN = (10, 15, 10)
+
+
+def bow_idle(t):
+    return 0, 0, 0, t, 0
+
+
+def bow_draw(t):
+    return smooth(t / .45), smooth((t - .35) / .65), smooth(t / .4), 0, 0
+
+
+def bow_hold(t):
+    return 1, 1, 1, t, 0
+
+
+def bow_loose(t):
+    return 1 - smooth((t - .3) / .7), 1, 1 - smooth((t - .25) / .5), 0, min(t / .06, 1)
+
+
+# Each bow clip's frames at 60 a second, and what it does at each moment from 0 to 1: how far the bow is raised to the aim,
+# how far the string is drawn, how far the right hand has come to the string, where in its sway, and how far let go.
+BOW_CLIPS = {"BOW_Idle": (120, bow_idle), "BOW_Draw": (60, bow_draw), "BOW_Hold": (120, bow_hold), "BOW_Loose": (60, bow_loose)}
+
+
 def clip_file(stem):
     found = [p for p in sources.rglob(f"{stem}.fbx")]
     if len(found) != 1:
@@ -548,24 +593,156 @@ def claws(name):
     return rig
 
 
-def open_hand(rig):
-    """The claw arms' fingers, by bone: their rest, curled by CLAW_CURL, each knuckle spread from the middle finger by CLAW_SPREAD."""
+def hand_shape(rig, side, curls, spread=0):
+    """One hand's digits, by bone: their rest, each joint curled by `curls`, knuckle first, each knuckle spread from the middle finger by `spread`."""
     basis = {}
-    for side in "lr":
-        middle = head(rig, f"middle_01_{side}")
-        for finger in FINGERS:
-            bend = curling(rig, side, finger)
-            joints = digit(rig, side, finger)
-            for joint, curl in enumerate(CLAW_CURL):
-                bone = rig.data.bones[f"{finger}_0{joint + 1}_{side}"]
-                ahead = (joints[joint + 1] - joints[joint]).normalized()
-                local = bone.matrix_local.to_3x3().inverted()
-                turn = Matrix.Rotation(math.radians(curl), 4, local @ ahead.cross(bend).normalized())
-                if joint == 0 and finger != "middle":
-                    outward = joints[0] - middle
-                    turn = turn @ Matrix.Rotation(math.radians(CLAW_SPREAD), 4, local @ ahead.cross(outward).normalized())
-                basis[bone.name] = turn
+    middle = head(rig, f"middle_01_{side}")
+    for finger in FINGERS:
+        bend = curling(rig, side, finger)
+        joints = digit(rig, side, finger)
+        for joint, curl in enumerate(curls):
+            bone = rig.data.bones[f"{finger}_0{joint + 1}_{side}"]
+            ahead = (joints[joint + 1] - joints[joint]).normalized()
+            local = bone.matrix_local.to_3x3().inverted()
+            turn = Matrix.Rotation(math.radians(curl), 4, local @ ahead.cross(bend).normalized())
+            if joint == 0 and finger != "middle":
+                outward = joints[0] - middle
+                turn = turn @ Matrix.Rotation(math.radians(spread), 4, local @ ahead.cross(outward).normalized())
+            basis[bone.name] = turn
     return basis
+
+
+def open_hand(rig):
+    """The claw arms' fingers, held by CLAW_CURL and CLAW_SPREAD whatever a clip's hands do."""
+    return hand_shape(rig, "l", CLAW_CURL, CLAW_SPREAD) | hand_shape(rig, "r", CLAW_CURL, CLAW_SPREAD)
+
+
+def frame_of(forward, up):
+    """A rotation whose columns are a right-handed frame: `forward`, `up` squared against it, and their cross."""
+    forward = forward.normalized()
+    up = (up - forward * up.dot(forward)).normalized()
+    return Matrix((forward, up, forward.cross(up))).transposed()
+
+
+def hand_rest(rig, side):
+    """A hand's frame at rest (along the hand, toward its thumb), and its palm against the wrist, all in the arms' space."""
+    wrist, knuckle, thumb = (head(rig, f"{n}_{side}") for n in ("hand", "middle_01", "thumb_01"))
+    frame = frame_of(knuckle - wrist, thumb - wrist)
+    return frame, (knuckle - wrist) * .55 + curling(rig, side, "index") * 2.6
+
+
+def solve_arm(rig, base, side, wrist, turn, pole, shape):
+    """
+    Where `base`, a clip's frame, puts one arm to reach `wrist` with the hand turned to `turn` (the hand's frame in the
+    arms' space), the elbow bent toward `pole`, and the digits in `shape`: the bones of the arm, from the upper arm down.
+    """
+    names = {n: f"{n}_{side}" for n in ("upperarm", "lowerarm", "hand", "lowerarm_twist_01", "upperarm_twist_01")}
+    bones = rig.data.bones
+    shoulder = base[names["upperarm"]].to_translation()
+    upper = (bones[names["lowerarm"]].head_local - bones[names["upperarm"]].head_local).length
+    lower = (bones[names["hand"]].head_local - bones[names["lowerarm"]].head_local).length
+    reach = wrist - shoulder
+    distance = min(reach.length, (upper + lower) * .995)
+    along = reach.normalized()
+    wrist = shoulder + along * distance
+    # The elbow, in the plane of the reach and the pole.
+    near = (distance ** 2 + upper ** 2 - lower ** 2) / (2 * distance)
+    out = (pole - along * pole.dot(along)).normalized()
+    elbow = shoulder + along * near + out * math.sqrt(max(upper ** 2 - near ** 2, 0))
+
+    def placed(at, rotation):
+        return Matrix.Translation(at) @ rotation.to_4x4()
+
+    def swung(name, child, start, end):
+        was = (base[child].to_translation() - base[name].to_translation()).normalized()
+        return was.rotation_difference((end - start).normalized()).to_matrix() @ base[name].to_3x3().normalized()
+
+    upper_turn = swung(names["upperarm"], names["lowerarm"], shoulder, elbow)
+    forearm = swung(names["lowerarm"], names["hand"], elbow, wrist)
+    posed = {names["upperarm"]: placed(shoulder, upper_turn), names["lowerarm"]: placed(elbow, forearm)}
+    rest = {n: bones[names[n]].matrix_local.to_3x3() for n in names}
+    # The hand: `turn` in place of its frame at rest, and its roll shared with the forearm's twist joint.
+    hand = turn @ hand_rest(rig, side)[0].inverted() @ rest["hand"]
+    posed[names["hand"]] = placed(wrist, hand)
+    axis = (wrist - elbow).normalized()
+    fore_moved = forearm @ rest["lowerarm"].inverted()
+    drift = (fore_moved.inverted() @ hand @ rest["hand"].inverted()).to_quaternion()
+    roll = 2 * math.atan2(Vector(drift[1:]).dot(fore_moved.inverted() @ axis), drift.w)
+    posed[names["lowerarm_twist_01"]] = placed(elbow.lerp(wrist, .5), Matrix.Rotation(roll / 2, 3, axis) @ fore_moved @ rest["lowerarm_twist_01"])
+    posed[names["upperarm_twist_01"]] = placed(shoulder, upper_turn @ rest["upperarm"].inverted() @ rest["upperarm_twist_01"])
+    for finger in FINGERS:
+        parent = names["hand"]
+        for joint in (1, 2, 3):
+            name = f"{finger}_0{joint}_{side}"
+            local = bones[parent].matrix_local.inverted() @ bones[name].matrix_local
+            posed[name] = posed[parent] @ local @ shape.get(name, Matrix.Identity(4))
+            parent = name
+    return posed
+
+
+def smooth(t):
+    t = min(max(t, 0), 1)
+    return t * t * (3 - 2 * t)
+
+
+def bow_pose(fired):
+    """Where the bow's grip is and how it is turned (cm and a frame in the view), `fired` of the way from rest to the aim."""
+    at = BOW_REST.lerp(BOW_AIM, fired)
+    forward = BOW_REST_FORWARD.lerp(BOW_AIM_FORWARD, fired)
+    up = BOW_REST_UP.lerp(BOW_AIM_UP, fired)
+    return at, frame_of(forward, up)
+
+
+def bow_clip(rig, base, stem):
+    """
+    A clip the pack has no bow for, made on the skeleton from `base`, a frame of another clip: the left hand carries the
+    bow from where it rests to the aim, and the right draws the string to the eye. Returns the clip's samples, as bake() does.
+    """
+    length, shape = BOW_CLIPS[stem]
+    bones = [b for b in rig.data.bones if b.name in base]
+    left_hand, hook_hand, open_hand_r = hand_shape(rig, "l", BOW_GRIP), hand_shape(rig, "r", BOW_HOOK), hand_shape(rig, "r", BOW_OPEN)
+    rest_frame, palm = hand_rest(rig, "l")
+    unrig = rig.matrix_world.inverted()
+    start = {name: unrig @ m for name, m in base.items() if name in rig.data.bones}
+    frames, samples = [], []
+    for frame in range(length + 1):
+        fired, pull, hand_in, sway, loosed = shape(frame / length)
+        grip, turn = bow_pose(fired)
+        grip = grip + Vector((math.sin(sway * 2 * math.pi), 0, math.sin(sway * 4 * math.pi) * .7)) * BOW_SWAY
+        left = solve_arm(rig, start, "l", grip - turn.col[1] * BOW_HAND_DROP - turn @ rest_frame.inverted() @ palm, turn, Vector((-.6, -.2, -.8)), left_hand)
+        nock = grip - turn.col[0] * (BOW_BRACE + (BOW_FULL_DRAW - BOW_BRACE) * pull)
+        # The hand comes up to the string from below, so that at the aim all of it is out of view but its fingers.
+        right_turn = frame_of(turn.col[0] + BOW_HOOK_RISE, Vector((.2, -.5, 1)))
+        hook = nock - right_turn.col[0] * BOW_HOOK_REACH - turn.col[0] * loosed * BOW_FOLLOW
+        wrist = BOW_RIGHT_REST.lerp(hook, smooth(hand_in))
+        right = solve_arm(rig, start, "r", wrist, right_turn, Vector((.6, -.7, -.5)), mixed(open_hand_r, hook_hand, smooth(hand_in) * (1 - smooth(loosed))))
+        posed = start | left | right
+        frames.append(pose_basis(bones, posed))
+        samples.append({name: rig.matrix_world @ m for name, m in posed.items()} | {"weapon_r": rig.matrix_world @ posed["hand_r"], "weapon_l": rig.matrix_world @ posed["hand_l"]})
+    keyed(rig, stem, bones, frames)
+    return samples
+
+
+def bow_seat(sample):
+    """Where the aimed bow sits on the off hand's joint in the Engine's terms: cm, degrees for HeldFrames.Turn, and scale."""
+    to_gltf = Matrix(((1, 0, 0, 0), (0, 0, 1, 0), (0, -1, 0, 0), (0, 0, 0, 1)))
+    hand = to_gltf @ sample["hand_l"]
+    at, turn = bow_pose(1)
+    forward, up = turn.col[0], turn.col[1]
+    # The bow's own axes: +X the archer's left, +Y its belly, ahead, and -Z its upper limb.
+    model = Matrix((-forward.cross(up), forward, -up)).transposed().to_4x4()
+    model.translation = at / 100
+    seat = hand.inverted() @ to_gltf @ model
+    rotation = seat.to_3x3().normalized()
+    x, y, z = rotation.col[0], rotation.col[1], rotation.col[2]
+    degrees_of = [math.degrees(a) for a in (math.asin(max(-1, min(1, -z.y))), math.atan2(z.x, z.z), math.atan2(x.y, y.y))]
+    return {"at": rounded(seat.to_translation()), "turn": [round(d, 2) for d in degrees_of], "scale": round(seat.to_scale().x, 3)}
+
+
+def mixed(a, b, share):
+    """Two poses by bone, `share` of the way from `a` to `b`."""
+    return {name: a[name].to_quaternion().slerp(b[name].to_quaternion(), share).to_matrix().to_4x4() for name in a}
+
 
 
 def world(rig, bone):
@@ -620,18 +797,28 @@ def bake(rig, stem, hands=None):
         posed = {b.name: unrig @ view @ world(source, b.name) @ rest[b.name] for b in bones}
         if mirrored:
             posed = {b.name: flip @ posed[swapped(b.name)] @ turned[b.name] for b in bones}
-        basis = {}
-        for b in bones:
-            if b.parent is None or b.parent.name not in posed:
-                basis[b.name] = b.matrix_local.inverted() @ posed[b.name]
-            else:
-                local = b.parent.matrix_local.inverted() @ b.matrix_local
-                basis[b.name] = local.inverted() @ posed[b.parent.name].inverted() @ posed[b.name]
-        frames.append(basis | (hands or {}))
+        frames.append(pose_basis(bones, posed) | (hands or {}))
         samples.append({name: rig.matrix_world @ m for name, m in posed.items()} | {"weapon_r": view @ world(source, held["r"]), "weapon_l": view @ world(source, held["l"])})
     remove(imported)
     bpy.data.actions.remove(clip)
+    keyed(rig, stem, bones, frames)
+    return samples
 
+
+def pose_basis(bones, posed):
+    """Each of `bones`' pose against its rest, from where `posed` puts it in the arms' space."""
+    basis = {}
+    for b in bones:
+        if b.parent is None or b.parent.name not in posed:
+            basis[b.name] = b.matrix_local.inverted() @ posed[b.name]
+        else:
+            local = b.parent.matrix_local.inverted() @ b.matrix_local
+            basis[b.name] = local.inverted() @ posed[b.parent.name].inverted() @ posed[b.name]
+    return basis
+
+
+def keyed(rig, stem, bones, frames):
+    """`frames`, each bone's pose by name, as an action of the arms named `stem`."""
     action = bpy.data.actions.new(stem)
     rig.animation_data_create()
     rig.animation_data.action = action
@@ -654,7 +841,6 @@ def bake(rig, stem, hands=None):
                 curve.update()
     rig.animation_data.action = None
     action.use_fake_user = True
-    return samples
 
 
 def export(path, keep):
@@ -745,16 +931,17 @@ shield = definition["shield"]
 
 
 def guard_stems(guard):
-    return [guard[phase]["clip"] for phase in ("raise", "hold", "lower")]
+    return [guard[part]["clip"] for part in ("raise", "hold", "lower")] if guard else []
 
 
 stems = [rig_clip, *guard_stems(shield["guard"]), *(stem for family in families.values() for stem in (
-    family["idle"]["clip"], family["powerHold"]["clip"], *guard_stems(family["guard"]), *(clip["clip"] for clip in family["strikes"].values())))]
+    family["idle"]["clip"], family["powerHold"]["clip"], *guard_stems(family.get("guard")), *(clip["clip"] for clip in family["strikes"].values())))]
 # Every set's joints are the clips' (bake refuses others), so the samples of any set measure them all.
 for name, arm_set in definition["armSets"].items():
     rig = claws(name) if name in CLAW_FUR else arms(name)
     hands = open_hand(rig) if name in CLAW_FUR else None
-    samples = {stem: bake(rig, stem, hands) for stem in dict.fromkeys(stems)}
+    samples = {stem: bake(rig, stem, hands) for stem in dict.fromkeys(stems) if stem not in BOW_CLIPS}
+    samples |= {stem: bow_clip(rig, samples[rig_clip][0], stem) for stem in stems if stem in BOW_CLIPS}
     export(out / arm_set["model"], list(samples))
     retro()
     export(out / arm_set["retroModel"], list(samples))
@@ -787,11 +974,12 @@ for name, family in families.items():
         "strikes": strikes,
     }
 measure["palm"] = rounded(palm)
+measure["bowSeat"] = bow_seat(samples["BOW_Hold"][0])
 # Where the clips carry a shield: the weapon_l bone in hand_l's own frame, at the height of the raised guard.
 raised = samples[shield["guard"]["hold"]["clip"]][0]
 carried = raised["hand_l"].inverted() @ raised["weapon_l"]
 measure["shieldSeat"] = {"at": rounded(carried.translation), "turn": rounded(carried.to_euler("XYZ"))}
 measure["guardSeconds"] = {stem: round((len(samples[stem]) - 1) / 60, 4) for stem in dict.fromkeys(
-    [*guard_stems(shield["guard"]), *(stem for family in families.values() for stem in guard_stems(family["guard"]))])}
+    [*guard_stems(shield["guard"]), *(stem for family in families.values() for stem in guard_stems(family.get("guard")))])}
 (out / "measure.json").write_text(json.dumps(measure, indent=1))
 print("BUILT", out)

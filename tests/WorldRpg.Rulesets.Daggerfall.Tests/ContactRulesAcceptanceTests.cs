@@ -203,7 +203,7 @@ public sealed class ContactRulesAcceptanceTests
             : default;
         double health = Health(f.Game, NewGameBowSessionTests.Fixture.Target);
 
-        f.Attack();
+        f.Loose();
         Assert.NotNull(f.Game.State.Actors.Player.Attack.Pending);
         for (int step = 0; step < 240 && Health(f.Game, NewGameBowSessionTests.Fixture.Target) == health; step++) f.Advance();
 

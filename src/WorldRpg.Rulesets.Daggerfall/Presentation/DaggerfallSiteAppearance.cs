@@ -1235,13 +1235,13 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// <summary>
     /// Plays one attack motion to the rules' timing. The classic strike's frames are fitted to its phases, so the hit
     /// frame comes as the windup ends, when the rules deliver the blow: the frames before it share the windup, and it
-    /// and those after share the commit and recovery. A power attack's charge plays the frames before the hit, its hold
-    /// keeps the last of them, and its release stays on that pose through its windup before the hit.
+    /// and those after share the commit and recovery. A power attack's charge and a bow's draw play the frames before the
+    /// hit, the hold keeps the last of them, and the release stays on that pose through its windup before the hit.
     /// </summary>
     private void PlayAttackMotion(string attack, DaggerfallAttackTiming? timing)
     {
         if (viewmodel is null || !viewmodel.Weapon.Actions.TryGetValue(NormalizedClassicWeapon.PlayedStrike, out NormalizedClassicWeaponAction? strike)) return;
-        int hit = attack == DaggerfallAttackIds.Shot ? DaggerfallFormulaPolicy.BowWeaponHitFrame : DaggerfallFormulaPolicy.MeleeWeaponHitFrame;
+        int hit = attack is DaggerfallAttackIds.ShotDraw or DaggerfallAttackIds.Shot ? DaggerfallFormulaPolicy.BowWeaponHitFrame : DaggerfallFormulaPolicy.MeleeWeaponHitFrame;
         // Admission refuses art whose strikes end before the hit frame the rules use, so a strike that cannot reach it
         // is a broken composition.
         if (hit >= strike.PlayedFrameCount)
@@ -1250,8 +1250,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         double afterHit = (phases.Commit + phases.Recovery) / (strike.PlayedFrameCount - hit);
         double[] follow = [.. Enumerable.Repeat(afterHit, strike.PlayedFrameCount - hit)];
         double[] windup = [.. Enumerable.Repeat(phases.Windup / hit, hit)];
-        if (attack == DaggerfallAttackIds.PowerIn) StartWeaponAction(NormalizedClassicWeapon.PlayedStrike, frameLengths: windup);
-        else if (attack == DaggerfallAttackIds.PowerOut) StartWeaponAction(NormalizedClassicWeapon.PlayedStrike, firstFrame: hit - 1, frameLengths: [phases.Windup, .. follow]);
+        if (attack is DaggerfallAttackIds.PowerIn or DaggerfallAttackIds.ShotDraw) StartWeaponAction(NormalizedClassicWeapon.PlayedStrike, frameLengths: windup);
+        else if (attack is DaggerfallAttackIds.PowerOut or DaggerfallAttackIds.Shot) StartWeaponAction(NormalizedClassicWeapon.PlayedStrike, firstFrame: hit - 1, frameLengths: [phases.Windup, .. follow]);
         else StartWeaponAction(NormalizedClassicWeapon.PlayedStrike, frameLengths: [.. windup, .. follow]);
         PlayHeldAction(attack, phases, hit);
     }

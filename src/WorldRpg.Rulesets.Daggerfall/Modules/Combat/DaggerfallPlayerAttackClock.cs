@@ -10,6 +10,7 @@ internal static class DaggerfallAttackIds
     internal const string PowerHold = "powerHold";
     internal const string PowerOut = "powerOut";
     internal const string Kick = "kick";
+    internal const string ShotDraw = "shotDraw";
     internal const string Shot = "shot";
     internal const string Cast = "cast";
 
@@ -17,7 +18,7 @@ internal static class DaggerfallAttackIds
     internal static IReadOnlyList<string> Fast { get; } = ["fastA", "fastB", "fastC", "fastD"];
 
     /// <summary>Every motion a weapon can play. A cast isn't one: the left hand plays it and the weapon rests.</summary>
-    internal static IReadOnlyList<string> All { get; } = [.. Fast, PowerIn, PowerHold, PowerOut, Kick, Shot];
+    internal static IReadOnlyList<string> All { get; } = [.. Fast, PowerIn, PowerHold, PowerOut, Kick, ShotDraw, Shot];
 
     /// <summary>Every motion the held arms can have a clip for.</summary>
     internal static IReadOnlyList<string> Held { get; } = [.. All, Cast];
@@ -38,8 +39,11 @@ internal interface IDaggerfallPlayerAttacks
     /// <summary>What the character's attributes, skill and state scale an attack's time by.</summary>
     double TimeScale(string attack);
 
-    /// <summary>The timing of a bow's shot, or null when the hands hold no bow.</summary>
-    DaggerfallAttackTiming? ShotTiming { get; }
+    /// <summary>How a bow's shot is drawn and loosed, or null when the hands hold no bow.</summary>
+    DaggerfallShotTuning? Shot { get; }
+
+    /// <summary>Whether a shot could leave now, so that drawing one means something.</summary>
+    bool ShotReady { get; }
 
     /// <summary>Starts an attack through admission; false when it was refused and no motion plays.</summary>
     bool Start(string attack);
@@ -58,7 +62,8 @@ internal interface IDaggerfallPlayerAttacks
 }
 
 /// <summary>
-/// The player's attack as the rules time it. A press released before the power threshold is a fast attack and one
+/// The player's attack as the rules time it. With a bow a press draws, and the arrow leaves once it is drawn and let go.
+/// Otherwise a press released before the power threshold is a fast attack and one
 /// held past it charges a power attack, which holds until release. A press during a recovery chains the next fast
 /// attack at once, and one made earlier in a swing waits for the recovery; a swing that runs out resets the chain.
 /// The hit window opens as the windup ends and the attack sweeps through it, with or without anything drawing it, and
@@ -89,8 +94,8 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
     private int _chain;
     // A motion ended with a press about to follow, so the rest it owed waits on whether that press starts.
     private bool _restOwed;
-    // The weapon class a power attack started with, which its release keeps.
-    private DaggerfallWeaponClassAttacks? _power;
+    // What a drawn shot or charged power attack plays when let go, as it started.
+    private (string Attack, DaggerfallAttackTiming Timing)? _release;
 
     /// <summary>Whether a motion is playing or a press is waiting to become one.</summary>
     internal bool Busy => _playing is not null || _press is not null || _kick || _cast;
@@ -120,7 +125,7 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
     {
         Release();
         _press = null;
-        if (_playing is not { Attack: DaggerfallAttackIds.PowerIn or DaggerfallAttackIds.PowerHold }) return;
+        if (_playing is not { Attack: DaggerfallAttackIds.PowerIn or DaggerfallAttackIds.PowerHold or DaggerfallAttackIds.ShotDraw }) return;
         _playing = null;
         attacks.Rest();
     }
@@ -168,7 +173,7 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
             }
             else if (playing.Seconds >= playing.Timing!.Value.Duration)
             {
-                if (playing.Attack == DaggerfallAttackIds.PowerIn) Charged();
+                if (playing.Attack is DaggerfallAttackIds.PowerIn or DaggerfallAttackIds.ShotDraw) Charged();
                 else
                 {
                     _playing = null;
@@ -183,7 +188,7 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
         if (!Free || struck) return;
         if (_cast) StartCast();
         else if (_kick) StartKick();
-        else if (_press is double press && (!_held || press >= tuning.PowerThresholdSeconds && !attacks.Winded || attacks.ShotTiming is not null)) StartPressed(!_held);
+        else if (_press is double press && (!_held || press >= tuning.PowerThresholdSeconds && !attacks.Winded || attacks.Shot is not null)) StartPressed(!_held);
     }
 
     /// <summary>Whether a press or kick is about to start a motion, so the rest between them is skipped.</summary>
@@ -204,10 +209,15 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
     private void StartPressed(bool tapped)
     {
         _press = null;
-        if (attacks.ShotTiming is { } shot)
+        if (attacks.Shot is { } shot)
         {
             _pressSpent = _held;
-            Begin(DaggerfallAttackIds.Shot, shot, delivers: true);
+            // A shot that couldn't leave isn't drawn: the refusal says why.
+            if (!attacks.ShotReady) { Begin(DaggerfallAttackIds.Shot, shot.Release, delivers: true); return; }
+            _restOwed = false;
+            _release = (DaggerfallAttackIds.Shot, shot.Release);
+            _playing = new(DaggerfallAttackIds.ShotDraw, Scaled(DaggerfallAttackIds.ShotDraw, new(shot.Draw, 0d, 0d)), Delivers: false);
+            attacks.Motion(DaggerfallAttackIds.ShotDraw, _playing.Timing);
             return;
         }
         DaggerfallWeaponClassAttacks weapon = tuning.For(attacks.WeaponSkill);
@@ -219,7 +229,7 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
         }
         _pressSpent = true;
         _chain = 0;
-        _power = weapon;
+        _release = (DaggerfallAttackIds.PowerOut, weapon.PowerRelease);
         _playing = new(DaggerfallAttackIds.PowerIn, Scaled(DaggerfallAttackIds.PowerIn, new(weapon.PowerCharge, 0d, 0d)), Delivers: false);
         attacks.Motion(DaggerfallAttackIds.PowerIn, _playing.Timing);
     }
@@ -231,7 +241,7 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
         attacks.Motion(DaggerfallAttackIds.PowerHold, null);
     }
 
-    private void Loose() => Begin(DaggerfallAttackIds.PowerOut, _power!.PowerRelease, delivers: true);
+    private void Loose() => Begin(_release!.Value.Attack, _release.Value.Timing, delivers: true);
 
     /// <summary>
     /// Starts a delivering motion through admission. A refused attack leaves the swing it would have cut to finish, and
@@ -243,7 +253,7 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
         _restOwed = false;
         if (!attacks.Start(attack))
         {
-            if (_playing is { Attack: DaggerfallAttackIds.PowerIn or DaggerfallAttackIds.PowerHold }) { _playing = null; attacks.Rest(); }
+            if (_playing is { Attack: DaggerfallAttackIds.PowerIn or DaggerfallAttackIds.PowerHold or DaggerfallAttackIds.ShotDraw }) { _playing = null; attacks.Rest(); }
             else if (owed) attacks.Rest();
             return false;
         }
