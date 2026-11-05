@@ -52,6 +52,33 @@ public sealed class WorldBlockTests
         Assert.True(dungeonCount > 0);
     }
 
+    [CorpusFact("BLOCKS.BSA", "ARCH3D.BSA", "FACTION.TXT", "PAL.PAL")]
+    public void Ground_scenery_grid_places_climate_nature_where_the_donor_stands_it()
+    {
+        var sources = Sources();
+        var archive = BsaArchive.Parse(sources.Require("BLOCKS.BSA").Bytes.Span, "BLOCKS.BSA");
+        Assert.True(archive.TryGetByName("TVRNAL01.RMB", out BsaRecord? record));
+        byte[] bytes = archive.GetPayload(record!).ToArray();
+        const int grid = 1995, tile = 256;
+        const float scale = .025f;
+
+        // RMBLayout.AddNatureFlats reads GroundScenery[x, 15 - y] and stands it at (x, y + 1) tiles, skipping records below 1.
+        List<(string Sprite, NormalizedVector3 Position)> expected = [];
+        for (int row = 0; row < 16; row++)
+        for (int x = 0; x < 16; x++)
+        {
+            int cell = bytes[grid + (row * 16) + x];
+            if (cell == 255 || (cell / 4) - 1 < 1) continue;
+            expected.Add(($"sprite/texture-504-{(cell / 4) - 1}", new(x * tile * scale, -2 * scale, -(16 - row) * tile * scale)));
+        }
+        Assert.NotEmpty(expected);
+
+        var plants = new WorldBlockNormalizer(sources).RmbExterior("TVRNAL01.RMB").Block.Billboards
+            .Where(billboard => billboard.Id.Contains("/scenery-", StringComparison.Ordinal)).ToArray();
+        Assert.Equal(expected, plants.Select(plant => (plant.SpriteResourceId, plant.Position)));
+        Assert.All(plants, plant => Assert.True(plant.ClimateNature && plant.BaseAligned));
+    }
+
     [CorpusFact("MAPS.BSA", "BLOCKS.BSA", "ARCH3D.BSA", "CLIMATE.PAK", "FACTION.TXT", "PAL.PAL")]
     public void Castle_necromoghans_flooded_block_publishes_the_source_water_surface()
     {

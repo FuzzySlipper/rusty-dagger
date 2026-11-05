@@ -78,6 +78,9 @@ internal sealed record RmbBlockModel(RmbModelFrame Frame, int? BuildingIndex, in
 /// <summary>One RMB flat in its block's frame, with the source texture that classifies it.</summary>
 internal sealed record RmbBlockFlat(int Ordinal, int TextureArchive, int TextureRecord, Arena2ImportPoint Point, RmbFlatPlacement Source, int? BuildingIndex = null);
 
+/// <summary>One plant of the block's ground scenery grid in its block's frame.</summary>
+internal sealed record RmbBlockScenery(RmbGroundScenery Source, Arena2ImportPoint Point);
+
 /// <summary>One fixed RMB person placed by a building sub-record's outside half, in its block's frame.</summary>
 internal sealed record RmbBlockPerson(RmbPeoplePlacement Person, int BuildingIndex, int PersonIndex, Arena2ImportPoint Point, RmbBuildingSlot Slot);
 
@@ -97,6 +100,9 @@ internal sealed class RmbBlockContent
 {
     /// <summary>Raw RMB units per ground tile side.</summary>
     private const int GroundTileSide = 256;
+
+    /// <summary>The donor's source Y for the nature flats it stands on the ground grid.</summary>
+    private const int GroundSceneryY = 2;
 
     /// <summary>The source automap is one 64-by-64 grid per block.</summary>
     public const int AutomapSide = 64;
@@ -147,6 +153,9 @@ internal sealed class RmbBlockContent
                 clear.Add((sourceX, AutomapSide - 1 - sourceY));
         ClearOutdoorCells = clear;
         Ground = [.. summary.GroundTiles.Select(GroundTile)];
+        // RMBLayout stands a plant on its cell's corner nearest the block's far edge, with the source rows reversed.
+        GroundScenery = [.. summary.GroundScenery.Select(plant => new RmbBlockScenery(plant,
+            Arena2SourceTransform.ToRmbImportPoint(plant.X * GroundTileSide, GroundSceneryY, (16 - plant.Y) * GroundTileSide)))];
     }
 
     public string SourceKey { get; }
@@ -166,6 +175,9 @@ internal sealed class RmbBlockContent
 
     /// <summary>Every FLD ground tile, in source order.</summary>
     public IReadOnlyList<RmbBlockGroundTile> Ground { get; }
+
+    /// <summary>The plants the block's ground scenery grid places, in source order.</summary>
+    public IReadOnlyList<RmbBlockScenery> GroundScenery { get; }
 
     /// <summary>
     /// The block's clear automap cells: (x, z) on the 64-by-64 grid with z counted from the block's near
