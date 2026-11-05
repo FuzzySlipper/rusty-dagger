@@ -146,6 +146,7 @@ The keys are the clip's four marks: 0 start, 1 strike, 2 recover, 3 end.
 | `held.motion.next` / `held.motion.prev` | Holds the next or previous mark, through rest. |
 | `held.motion.play SPEED` | Plays the attack from rest at SPEED (1 as in play, 0.25 a quarter; 0.01 to 4). |
 | `held.motion.at SECONDS` | Shows the attack paused SECONDS after its start, with the clip time it plays there (`heldRetro` holds each frame's sample). |
+| `held.arms SET` | Shows the viewer's look in an arm set, or `worn` for what the player wears. |
 | `held.shield PART X Y Z TX TY TZ` | Moves a shield's `seat` on the hand joint or the hand's `carry` in the loaded art, to place it by eye, and answers with what to save. |
 | `held.clip` | What the drawn arms play now, in play or in the viewer: the clip, its time and phase, what fades out under it. |
 | `held.motion.off` | Gives the hands back what they wield. Closing the developer tools does this too. |

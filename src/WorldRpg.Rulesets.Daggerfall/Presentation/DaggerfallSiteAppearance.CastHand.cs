@@ -46,7 +46,7 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         if (held is not null || viewmodel is not null || heldViewed || heldArt is not { } chosen || classicPresentation.UnarmedVisual is not { } bare
             || chosen.Art.Drawing(bare, null, DaggerfallHeldDrawing.Steel) is not { } drawing) return;
-        held = NewHeld(drawing);
+        held = NewHeld(Dressed(drawing));
         heldShowing = true;
         castArms = true;
     }

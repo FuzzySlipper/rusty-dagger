@@ -8,6 +8,7 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
@@ -77,6 +78,17 @@ internal sealed class DaggerfallHeldArt
                 ? new(item.Family, template, DaggerfallHeldDrawing.Steel) : null
             : Drawing(look, null, DaggerfallHeldDrawing.Steel);
 
+    /// <summary>The arm set that draws a player of <paramref name="gender"/> with <paramref name="wear"/> on the arms.</summary>
+    internal string Arms(DaggerfallCharacterGender gender, DaggerfallArmWear wear)
+    {
+        DaggerfallHeldWornArms worn = gender == DaggerfallCharacterGender.Female ? Document.ArmsWorn.Female : Document.ArmsWorn.Male;
+        return wear switch { DaggerfallArmWear.Leather => worn.Leather, DaggerfallArmWear.Mail => worn.Mail, _ => worn.Cloth };
+    }
+
+    /// <summary>The models of the arm set <paramref name="arms"/>; with none named, of the set the rig was measured on.</summary>
+    internal DaggerfallHeldArmSet ArmSet(string? arms) =>
+        arms is null ? Document.ArmSets.Values.First(set => set.Model == Document.Rig.Model) : Document.ArmSets[arms];
+
     /// <summary>The material slot of a model's <c>metal</c> material, which an item's metal tints; null when it has none.</summary>
     internal uint? MetalSlot(string model)
     {
@@ -134,6 +146,10 @@ internal sealed class DaggerfallHeldArt
         List<string> problems = [];
         void Add(IEnumerable<HeldProblem> found, string under) => problems.AddRange(found.Select(problem => $"{problem.Under(under).Field}: {problem.Message}"));
         Add(document.Rig.Problems(), "rig");
+        if (!document.ArmSets.Values.Any(set => set.Model == document.Rig.Model)) problems.Add($"rig.model: '{document.Rig.Model}' is no arm set's model.");
+        foreach (var (at, name) in new[] { ("male.cloth", document.ArmsWorn.Male.Cloth), ("male.leather", document.ArmsWorn.Male.Leather), ("male.mail", document.ArmsWorn.Male.Mail),
+            ("female.cloth", document.ArmsWorn.Female.Cloth), ("female.leather", document.ArmsWorn.Female.Leather), ("female.mail", document.ArmsWorn.Female.Mail) })
+            if (!document.ArmSets.ContainsKey(name)) problems.Add($"armsWorn.{at}: '{name}' is no arm set ({string.Join(", ", document.ArmSets.Keys)}).");
         if (document.Families.Count == 0) problems.Add("families: names no weapon family.");
         foreach (var (name, family) in document.Families)
         {
@@ -176,7 +192,7 @@ internal sealed class DaggerfallHeldArt
             else if (DaggerfallAttackIds.Fast.Except(family.Strikes.Keys).ToArray() is { Length: > 0 } missing)
                 problems.Add($"items.{template}.family: {item.Family} has no clip for {string.Join(", ", missing)}.");
         }
-        IEnumerable<string> models = [document.Rig.Model, document.RetroModel, .. document.Families.Values.Select(family => family.Look.Model).OfType<string>(),
+        IEnumerable<string> models = [.. document.ArmSets.Values.SelectMany(set => new[] { set.Model, set.RetroModel }), .. document.Families.Values.Select(family => family.Look.Model).OfType<string>(),
             .. document.Items.Values.Select(item => item.Model).OfType<string>(), .. document.Shield?.Items.Values.Select(item => item.Model) ?? []];
         foreach (string model in models.Where(model => !container.Entries.ToArray().Any(entry => entry.Path == model)))
             problems.Add($"'{model}' is not in {ContainerName}.");
@@ -187,11 +203,12 @@ internal sealed class DaggerfallHeldArt
 }
 
 /// <summary>The held definition (<see cref="DaggerfallHeldArt.DocumentPath"/>).</summary>
-/// <param name="Rig">The arms model, which carries every clip the families play, and how to drive it; its model is a container path.</param>
-/// <param name="RetroModel">The same arms with the retro look (their colour map alone, small and drawn nearest), which the heldRetro style draws; a container path.</param>
+/// <param name="Rig">How to drive the arms; its model is the arm set it was measured on, a container path.</param>
+/// <param name="ArmSets">The arm sets by name, each carrying every clip the families play.</param>
+/// <param name="ArmsWorn">The arm set a player's gender and arm armour draw.</param>
 /// <param name="Arms">The shoulder (where the clips' right upper arm sits from the eye), elbow pole, default hold and hand closures.</param>
 /// <param name="Families">The weapon families by name, each playing its own clips.</param>
-internal sealed record DaggerfallHeldArtDocument(ArmRig Rig, string RetroModel, HeldArms Arms, Dictionary<string, DaggerfallHeldFamily> Families)
+internal sealed record DaggerfallHeldArtDocument(ArmRig Rig, Dictionary<string, DaggerfallHeldArmSet> ArmSets, DaggerfallHeldArmsWorn ArmsWorn, HeldArms Arms, Dictionary<string, DaggerfallHeldFamily> Families)
 {
     /// <summary>The weapons a classic visual alone can't settle, by item template index.</summary>
     public Dictionary<int, DaggerfallHeldItem> Items { get; init; } = [];
@@ -205,6 +222,9 @@ internal sealed record DaggerfallHeldArtDocument(ArmRig Rig, string RetroModel, 
 /// </summary>
 internal sealed record DaggerfallHeldDrawing(string Family, int? Item, string Metal)
 {
+    /// <summary>The arm set that draws it; null for the one the player wears.</summary>
+    public string? Arms { get; init; }
+
     /// <summary>The item template of the shield on the off arm, null for none, and its metal.</summary>
     public int? Shield { get; init; }
     public string? ShieldMetal { get; init; }
@@ -212,6 +232,15 @@ internal sealed record DaggerfallHeldDrawing(string Family, int? Item, string Me
     /// <summary>The bare metal the models are painted in, which no tint changes.</summary>
     internal const string Steel = "steel";
 }
+
+/// <summary>One set of arms: its model, and the same arms with the retro look (their colour map alone, small and drawn nearest), which the heldRetro style draws; container paths.</summary>
+internal sealed record DaggerfallHeldArmSet(string Model, string RetroModel);
+
+/// <summary>The arm set each gender draws.</summary>
+internal sealed record DaggerfallHeldArmsWorn(DaggerfallHeldWornArms Male, DaggerfallHeldWornArms Female);
+
+/// <summary>The arm set drawn for what is worn on the arms, by name.</summary>
+internal sealed record DaggerfallHeldWornArms(string Cloth, string Leather, string Mail);
 
 /// <summary>
 /// A shield on the off arm: the family whose clips it was made for, which every one-handed weapon plays with a shield up;

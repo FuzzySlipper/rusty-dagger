@@ -13,7 +13,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// weapon visual or a named item (its look, <c>item.120</c> for an item template) with one of its strikes, holds the strike's clip at any of its marks, plays the
 /// strike at any speed or shows it paused at any moment, all through the held viewmodel the game draws
 /// (<see cref="DaggerfallSiteAppearance.ViewHeld"/>), and never through the click attack's random strike. The Engine
-/// tunables page (<see cref="Page"/>) adds choosers for the look and strike, the strike's marks as its timeline, and the
+/// tunables page (<see cref="Page"/>) adds choosers for the look, strike and arm set, the strike's marks as its timeline, and the
 /// values the viewmodel draws by: the strike's marks and fade, the family's idle loop, the look's grip and hold, the
 /// arms' shoulder and the rig's palm. Each value applies to the loaded art at once and is saved to the held definition
 /// (<see cref="DaggerfallHeldArt.DocumentPath"/>) by the page's Save.
@@ -31,10 +31,13 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, DaggerfallAttackTuning attacks, DaggerfallViewmodelStyle style, Func<DaggerfallSiteAppearance> appearance, Action publish)
 {
     internal const string Title = "First-person workbench";
+    private const string WornArms = "worn";
     private static readonly string[] MarkNames = ["start", "strike", "recover", "end"];
 
     private string? look;
     private string? strike;
+    // The arm set shown; null for the one the player wears.
+    private string? arms;
     private int key = -1;
     // The strikes whose marks were set on the page, which it keeps binding (so Save writes them) after the viewer moves on.
     private readonly HashSet<string> edited = [];
@@ -56,7 +59,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
     /// <summary>The strikes the shown look's family has clips for (the first look's before one is shown), in the classic order.</summary>
     internal IReadOnlyList<string> Strikes => art is null ? [] : StrikesOf(look ?? Looks[0]);
 
-    private DaggerfallHeldDrawing Drawing => art!.Look(look!)!;
+    private DaggerfallHeldDrawing Drawing => art!.Look(look!)! with { Arms = arms };
     private string Family => Drawing.Family;
     private ArmClip Clip => art!.Document.Families[Family].Strikes[strike!];
 
@@ -68,7 +71,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
         if (!art.Document.Families[drawing.Family].Strikes.ContainsKey(action))
             return Failure($"'{action}' has no clip for {heldLook}. Strikes with clips: {string.Join(", ", StrikesOf(heldLook))}; the others play their sprites.");
         if (AttackTiming(heldLook, action) is null) return Failure($"The rules don't time '{action}'.");
-        if (appearance().ViewHeld(drawing) is not { } viewed) return Failure("The current site draws no 3D weapon.");
+        if (appearance().ViewHeld(drawing with { Arms = arms }) is not { } viewed) return Failure("The current site draws no 3D weapon.");
         (look, strike, key) = (heldLook, action, -1);
         viewed.Rest(0);
         publish();
@@ -172,7 +175,8 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
             Choosers =
             [
                 new("look", "Look", look!, Looks),
-                new("strike", "Strike", strike!, Strikes)
+                new("strike", "Strike", strike!, Strikes),
+                new("arms", "Arms", arms ?? WornArms, [WornArms, .. art.Document.ArmSets.Keys])
             ],
             Timeline = new([.. MarkNames.Select((name, i) => new TunableKey(i, name, marks[i]))], timing.Duration, key)
             {
@@ -193,11 +197,24 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
         };
     }
 
-    /// <summary>A chooser picks the look or the strike; null when it is shown, else why not.</summary>
+    /// <summary>
+    /// Shows the shown look in arm set <paramref name="set"/>, or in what the player wears (<see cref="WornArms"/>).
+    /// </summary>
+    internal DebugCommandResult Arms(string set)
+    {
+        if (Unavailable is { } unavailable) return Failure(unavailable);
+        if (look is null || strike is null) return Unshown();
+        if (set != WornArms && !art!.Document.ArmSets.ContainsKey(set)) return Failure($"No arm set '{set}'. Sets: {WornArms}, {string.Join(", ", art.Document.ArmSets.Keys)}.");
+        arms = set == WornArms ? null : set;
+        return Show(look, strike);
+    }
+
+    /// <summary>A chooser picks the look, the strike or the arm set; null when it is shown, else why not.</summary>
     internal string? Choose(string chooser, string value) => chooser switch
     {
         "look" => Refusal(Show(value, art?.Look(value) is not null && strike is not null && StrikesOf(value).Contains(strike) ? strike : StrikesOf(value).FirstOrDefault() ?? "")),
         "strike" => look is null ? "Choose a look first." : Refusal(Show(look, value)),
+        "arms" => Refusal(Arms(value)),
         _ => $"Unknown chooser '{chooser}'."
     };
 

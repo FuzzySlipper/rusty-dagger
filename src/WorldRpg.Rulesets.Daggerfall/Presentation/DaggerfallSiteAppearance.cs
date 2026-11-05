@@ -679,9 +679,11 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         bool sameItem = Equals(heldItem, item) && heldShield == shield;
         heldItem = item;
         heldShield = shield;
+        heldArms = heldArt?.ArmsOf(equipment);
         if (viewmodel?.Weapon.ResourceId == selected?.ResourceId)
         {
             if (!sameItem) RefreshHeld();
+            else DressHeld();
             return;
         }
         RetireViewmodel();

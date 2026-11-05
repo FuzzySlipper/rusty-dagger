@@ -6,6 +6,7 @@ using WorldRpg.Kit;
 using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
@@ -150,8 +151,7 @@ public sealed class DaggerfallHeldArtTests
         BundleContentFake service = new();
         service.Container(DaggerfallHeldArt.ContainerName);
         foreach (string file in Directory.GetFiles(weapons, "*.glb")) service.Add(DaggerfallHeldArt.ContainerName, $"first-person/weapons/{Path.GetFileName(file)}", File.ReadAllBytes(file));
-        service.Add(DaggerfallHeldArt.ContainerName, "first-person/arms.glb", [7]);
-        service.Add(DaggerfallHeldArt.ContainerName, "first-person/arms-retro.glb", [7]);
+        foreach (string model in ArmModels()) service.Add(DaggerfallHeldArt.ContainerName, model, [7]);
         ProductContentBundle container = new ProductContent(Array.Empty<ProductContentFile>(), service).OpenContainer(DaggerfallHeldArt.ContainerName);
         DaggerfallHeldArt art = DaggerfallHeldArt.Read(container, System.Text.Encoding.UTF8.GetBytes(Document().ToJsonString()));
 
@@ -182,9 +182,9 @@ public sealed class DaggerfallHeldArtTests
         JsonObject document = Document();
         document["families"]!["dagger"]!["look"]!["model"] = "first-person/dagger.glb";
 
-        Assert.Contains("'first-person/arms.glb' is not in first-person.rpak", Assert.Throws<InvalidDataException>(() => Read(Document(), models: [])).Message, StringComparison.Ordinal);
+        Assert.Contains("'first-person/arms-male-leather.glb' is not in first-person.rpak", Assert.Throws<InvalidDataException>(() => Read(Document(), models: [])).Message, StringComparison.Ordinal);
         Assert.Contains("'first-person/dagger.glb' is not in first-person.rpak", Assert.Throws<InvalidDataException>(() => Read(document)).Message, StringComparison.Ordinal);
-        Assert.Equal("first-person/dagger.glb", Read(document, models: ["first-person/arms.glb", "first-person/arms-retro.glb", "first-person/dagger.glb", .. Weapons()]).Document.Families["dagger"].Look.Model);
+        Assert.Equal("first-person/dagger.glb", Read(document, models: [.. ArmModels(), "first-person/dagger.glb", .. Weapons()]).Document.Families["dagger"].Look.Model);
     }
 
     [Fact]
@@ -261,7 +261,7 @@ public sealed class DaggerfallHeldArtTests
         {
             presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
             DaggerfallHeldDrawing wielded = presentation.DrawnHeld!.Drawing;
-            Assert.Equal(new DaggerfallHeldDrawing("sns", 120, DaggerfallHeldDrawing.Steel), wielded);
+            Assert.Equal(new DaggerfallHeldDrawing("sns", 120, DaggerfallHeldDrawing.Steel) { Arms = "male-leather" }, wielded);
             presentation.ViewHeld(new("longsword", null, DaggerfallHeldDrawing.Steel));
 
             presentation.EndHeldView();
@@ -328,7 +328,7 @@ public sealed class DaggerfallHeldArtTests
         {
             presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
             DaggerfallHeldViewmodel shielded = presentation.DrawnHeld!;
-            Assert.Equal(new DaggerfallHeldDrawing("sns", 120, DaggerfallHeldDrawing.Steel) { Shield = 110, ShieldMetal = "ebony" }, shielded.Drawing);
+            Assert.Equal(new DaggerfallHeldDrawing("sns", 120, DaggerfallHeldDrawing.Steel) { Arms = "male-leather", Shield = 110, ShieldMetal = "ebony" }, shielded.Drawing);
 
             presentation.Publish(EmptyActors());
             presentation.Publish(EmptyActors());
@@ -345,6 +345,87 @@ public sealed class DaggerfallHeldArtTests
             Assert.Null(presentation.DrawnHeld!.Drawing.Shield);
             presentation.Publish(EmptyActors());
             Assert.DoesNotContain(appearance.Snapshots.Last(), fact => fact.ObjectId == shielded.ShieldObject);
+        }
+    }
+
+    [Theory]
+    [InlineData("Male", "Cloth", "male-cloth")]
+    [InlineData("Male", "Leather", "male-leather")]
+    [InlineData("Male", "Mail", "male-chainmail")]
+    [InlineData("Female", "Cloth", "female-cloth")]
+    [InlineData("Female", "Leather", "female-leather")]
+    [InlineData("Female", "Mail", "female-leather")]
+    public void A_players_gender_and_arm_armour_choose_the_arm_set(string gender, string wear, string set)
+    {
+        Assert.Equal(set, Read(Document()).Arms(Enum.Parse<DaggerfallCharacterGender>(gender), Enum.Parse<DaggerfallArmWear>(wear)));
+    }
+
+    [Theory]
+    [InlineData(new string[0], "Cloth")]
+    [InlineData(new[] { "leather" }, "Leather")]
+    [InlineData(new[] { "chain" }, "Mail")]
+    [InlineData(new[] { "leather", "iron", "leather" }, "Mail")]
+    public void The_heaviest_armour_on_the_arms_shows(string[] materials, string wear)
+    {
+        Assert.Equal(Enum.Parse<DaggerfallArmWear>(wear), DaggerfallArmWearPolicy.Heaviest(materials));
+    }
+
+    [Theory]
+    [InlineData("worn", "armsWorn.female.mail: 'female-plate' is no arm set")]
+    [InlineData("rig", "rig.model: 'first-person/lost.glb' is no arm set's model")]
+    [InlineData("model", "'first-person/lost.glb' is not in first-person.rpak")]
+    public void Arms_that_cannot_be_drawn_are_refused_by_field(string broken, string field)
+    {
+        JsonObject document = Document();
+        switch (broken)
+        {
+            case "worn": document["armsWorn"]!["female"]!["mail"] = "female-plate"; break;
+            case "rig": document["rig"]!["model"] = "first-person/lost.glb"; break;
+            case "model": document["armSets"]!["male-cloth"]!["retroModel"] = "first-person/lost.glb"; break;
+        }
+
+        Assert.Contains(field, Assert.Throws<InvalidDataException>(() => Read(document)).Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Arms_open_the_set_worn_and_a_change_waits_for_rest_and_holds_the_pose()
+    {
+        List<string> releases = [];
+        string worn = "male-leather";
+        (DaggerfallSiteAppearance presentation, _, EngineContextFake engine) = Viewing(releases, arms: () => worn);
+        using (presentation)
+        {
+            void Update() => presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
+            Update();
+            Assert.Contains("first-person/arms-male-leather.glb", engine.Animation.OpenedPaths);
+            DaggerfallHeldViewmodel first = presentation.DrawnHeld!;
+            first.Step(.75F);
+            presentation.Publish(EmptyActors());
+            presentation.React(new PlayerAttackMotionFact("fastA", new(.2d, .1d, .1d), 1, 1));
+            first.Step(.3F);
+            presentation.Publish(EmptyActors());
+
+            worn = "male-chainmail";
+            Update();
+            Assert.Same(first, presentation.DrawnHeld);
+
+            first.Rest(0);
+            first.Step(.01F);
+            presentation.Publish(EmptyActors());
+            Update();
+            Assert.Same(first, presentation.DrawnHeld);
+
+            first.Step(1);
+            presentation.Publish(EmptyActors());
+            Update();
+            DaggerfallHeldViewmodel dressed = presentation.DrawnHeld!;
+            presentation.Publish(EmptyActors());
+
+            Assert.NotSame(first, dressed);
+            Assert.Equal("male-chainmail", dressed.Drawing.Arms);
+            Assert.Contains("first-person/arms-male-chainmail.glb", engine.Animation.OpenedPaths);
+            Assert.Equal(first.IdleSeconds, dressed.IdleSeconds);
+            Assert.Equal(1, dressed.Clip.Led);
         }
     }
 
@@ -466,7 +547,7 @@ public sealed class DaggerfallHeldArtTests
     // A site drawing the authored art through arms whose model has the rig's joints and every clip, whatever the hands
     // wield standing for a longsword (template 120).
     private static (DaggerfallSiteAppearance Presentation, AppearanceFake Appearance, EngineContextFake Engine) Viewing(List<string> releases, JsonObject? document = null,
-        Func<WorldRpg.Kit.Inventory.EquipmentRead, (int Template, string Metal)?>? shieldOf = null)
+        Func<WorldRpg.Kit.Inventory.EquipmentRead, (int Template, string Metal)?>? shieldOf = null, Func<string>? arms = null)
     {
         ContentFake content = MediaContent(releases);
         content.Add("weapon/dagger.png", Hash);
@@ -479,7 +560,7 @@ public sealed class DaggerfallHeldArtTests
             .Select(clip => new AnimationClipInfo(clip, clip, 1, true, 0))];
         NormalizedClassicPresentation classic = ClassicWeapon() with { Effects = [.. ClassicEffects(fireSpell: true).Effects.Where(effect => effect.Name == "fireMissile")], UnarmedVisual = "weapon.unarmed" };
         DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: classic));
-        presentation.UseHeldArt(engine.Context, art, DaggerfallViewmodelStyle.Held, new Dictionary<string, DaggerfallDyeTint>(), _ => (120, DaggerfallHeldDrawing.Steel), shieldOf ?? (_ => null));
+        presentation.UseHeldArt(engine.Context, art, DaggerfallViewmodelStyle.Held, new Dictionary<string, DaggerfallDyeTint>(), _ => (120, DaggerfallHeldDrawing.Steel), shieldOf ?? (_ => null), _ => arms?.Invoke() ?? "male-leather");
         return (presentation, appearance, engine);
     }
 
@@ -511,13 +592,17 @@ public sealed class DaggerfallHeldArtTests
     private static string[] Weapons() => Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/first-person/weapons"), "*.glb")
         .Select(path => $"first-person/weapons/{Path.GetFileName(path)}").ToArray();
 
+    // Both models of every arm set.
+    private static string[] ArmModels() => Document()["armSets"]!.AsObject()
+        .SelectMany(set => new[] { set.Value!["model"]!.GetValue<string>(), set.Value!["retroModel"]!.GetValue<string>() }).ToArray();
+
     // The definition read over a container that carries the given models (by default what scripts/fp-arms/build.sh
-    // packs: both arms and the committed weapon models).
+    // packs: every arm set and the committed weapon models).
     internal static DaggerfallHeldArt Read(JsonObject document, string[]? models = null)
     {
         BundleContentFake service = new();
         service.Container(DaggerfallHeldArt.ContainerName);
-        foreach (string model in models ?? ["first-person/arms.glb", "first-person/arms-retro.glb", .. Weapons()])
+        foreach (string model in models ?? [.. ArmModels(), .. Weapons()])
             service.Add(DaggerfallHeldArt.ContainerName, model, [7]);
         ProductContentBundle container = new ProductContent(Array.Empty<ProductContentFile>(), service).OpenContainer(DaggerfallHeldArt.ContainerName);
         return DaggerfallHeldArt.Read(container, System.Text.Encoding.UTF8.GetBytes(document.ToJsonString()));

@@ -1,6 +1,6 @@
 {
   "rig": {
-    "model": "first-person/arms.glb",
+    "model": "first-person/arms-male-leather.glb",
     "clip": "FPP_Dag_Idle",
     "turn": [
       0,
@@ -131,7 +131,40 @@
       }
     }
   },
-  "retroModel": "first-person/arms-retro.glb",
+  "armSets": {
+    "male-leather": {
+      "model": "first-person/arms-male-leather.glb",
+      "retroModel": "first-person/arms-male-leather-retro.glb"
+    },
+    "female-leather": {
+      "model": "first-person/arms-female-leather.glb",
+      "retroModel": "first-person/arms-female-leather-retro.glb"
+    },
+    "male-cloth": {
+      "model": "first-person/arms-male-cloth.glb",
+      "retroModel": "first-person/arms-male-cloth-retro.glb"
+    },
+    "female-cloth": {
+      "model": "first-person/arms-female-cloth.glb",
+      "retroModel": "first-person/arms-female-cloth-retro.glb"
+    },
+    "male-chainmail": {
+      "model": "first-person/arms-male-chainmail.glb",
+      "retroModel": "first-person/arms-male-chainmail-retro.glb"
+    }
+  },
+  "armsWorn": {
+    "male": {
+      "cloth": "male-cloth",
+      "leather": "male-leather",
+      "mail": "male-chainmail"
+    },
+    "female": {
+      "cloth": "female-cloth",
+      "leather": "female-leather",
+      "mail": "female-leather"
+    }
+  },
   "arms": {
     "shoulder": [
       0.171,

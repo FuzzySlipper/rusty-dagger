@@ -19,7 +19,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// their right upper arm at the definition's shoulder, where the clips' sits from the eye. The off hand rests below and
 /// behind the view, as Daggerfall draws one weapon hand, unless the family holds its look in both hands or the strike
 /// moves it. <see cref="DaggerfallViewmodelStyle.HeldRetro"/> samples the clips at a sprite's cadence and holds the
-/// sample for the frame, so the hit shows the strike mark, and draws the retro arms (their colour map alone,
+/// sample for the frame, so the hit shows the strike mark, and draws the set's retro arms (their colour map alone,
 /// small and unfiltered): the classic look without redrawing the weapon. The developer workbench plays a
 /// strike at any speed or shows it paused at a moment.
 /// </remarks>
@@ -67,6 +67,8 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     // World seconds at rest, which the idle loop plays on, and one classic idle frame.
     private double idle;
     private float idleFrame;
+    // Whether these arms have yet to be led since taking over from others, which they don't fade in from.
+    private bool takingOver;
     // World seconds since the arms were last led.
     private float since;
     // Whether the charged power attack is held, and for how long, which a looping hold plays on.
@@ -84,7 +86,8 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
         retro = style == DaggerfallViewmodelStyle.HeldRetro;
         WeaponObject = weaponObject;
         this.engine = engine;
-        using (ContentReference armsModel = art.Container.OpenReference(retro ? art.Document.RetroModel : art.Document.Rig.Model))
+        DaggerfallHeldArmSet armSet = art.ArmSet(drawing.Arms);
+        using (ContentReference armsModel = art.Container.OpenReference(retro ? armSet.RetroModel : armSet.Model))
         {
             arms = new FirstPersonArms(engine, art.Document.Arms, art.Document.Rig, armsObject, armsModel);
             armsPose = engine.Animation.OpenAnimatedMeshFromContent(new(armsModel));
@@ -143,6 +146,19 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
 
     /// <summary>The action whose clip the arms play now; null while they rest.</summary>
     internal string? Playing => strike?.Action;
+
+    /// <summary>Whether the arms are in a strike, a held charge or a guard, or fading back from one, which another set of arms would cut short.</summary>
+    internal bool Moving => strike is not null || holding || guarding is not null || arms.Clip.From is not null;
+
+    /// <summary>World seconds into the idle loop.</summary>
+    internal double IdleSeconds => idle;
+
+    /// <summary>Takes over from <paramref name="earlier"/> at rest: the same moment of the idle loop, led by it at once, so the arms hold their pose.</summary>
+    internal void TakeOver(DaggerfallHeldViewmodel earlier)
+    {
+        idle = earlier.idle;
+        takingOver = true;
+    }
 
     /// <summary>Where the off hand's palm is drawn (camera space) while a cast has yet to let its spell go; null otherwise.</summary>
     internal Vector3? CastPalm()
@@ -223,7 +239,8 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
         ArmClipFrame now = Frame();
         handMoved |= now != drawn;
         drawn = now;
-        arms.Lead(now, since);
+        arms.Lead(takingOver ? now with { Fade = 0 } : now, since);
+        takingOver = false;
         since = 0;
         (Vector3 grip, Quaternion turn) = arms.Ride(MainAim());
         // The model's origin is its own grip; the hand holds the look's grip point.
