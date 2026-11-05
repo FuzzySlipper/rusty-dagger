@@ -54,6 +54,10 @@ its family's folder under gen-raw/surfaces (tools/surfaces/batch.py), stands in 
 The `terrain` area does the same into `surfaces` for the ground tiles, from gen-raw/terrain (tools/terrain/ground.py). A
 record has one entry: a ground tile models also draw is marked superseded in the surfaces ledger.
 
+The `flats` area promotes the world's placed billboards and terrain nature (`flats`): each record in df-raw/flats/usage.csv
+whose every frame has an accepted final becomes one PNG atlas, as an effect does, and the game draws it at the classic
+sprite's size and anchor. A record an item also draws takes its accepted `items` final unless the area has its own.
+
 Icons are written at their area's ICON pixels on the longer side and carry no doll rect.
 
 A worn image and an item icon is also what a dropped item stands as on the ground, and the renderer reads PNG, so
@@ -66,7 +70,7 @@ area's entries and files and keeps every other area's.
 
     promote.py --area paper-doll --area worn --area items --area spells --area effects --area surfaces --area terrain
 """
-import argparse, hashlib, io, json, re
+import argparse, csv, hashlib, io, json, re, shutil
 from pathlib import Path
 
 import numpy as np
@@ -80,7 +84,7 @@ CONTENT = REPOSITORY / "content"
 MEDIA = "worldrpg/media/refreshed"
 PAYLOAD = CONTENT / "worldrpg/payloads/daggerfall.art-replacements.json"
 QUALITY = 90
-AREAS = ("paper-doll", "worn", "items", "spells", "effects", "surfaces", "terrain")
+AREAS = ("paper-doll", "worn", "items", "spells", "effects", "surfaces", "terrain", "flats")
 SURFACE = re.compile(r"texture-(\d{3})-(\d+)")
 ICON = {"items": 256, "spells": 128}   # pixels on an icon's longer side: an item slot, a spell glyph of about 3rem
 CLASSIC_MANIFEST = REPOSITORY / "local/import/staging/worldrpg/imports/shared/media/classic/manifest.json"
@@ -108,6 +112,7 @@ WORLD_EFFECTS = {
 CANVAS, OCCUPANCY = 1024, 0.74   # the generation canvas and the share of it the classic frame filled (run.py)
 WORLD_ICON = 128                 # pixels on a dropped item's longer side: a small pile on the floor
 EFFECT_FRAME = 256               # pixels on an effect frame's longer side
+FLAT_FRAME = 256                 # pixels on a world billboard frame's longer side
 GLOW = 64                        # pixels on the particle glow's side
 CLOTHING = range(235, 243)
 NEUTRAL = (14, 32)   # saturation (max less min channel, 0-255) over which a pixel fades from dyed cloth to its own colour
@@ -305,6 +310,39 @@ def classic_box(source):
     return x, y, x + w * scale, y + h * scale
 
 
+def frame_atlas(name, sources, finals, target, longest):
+    """One PNG atlas of a classic record's frames in order, all cropped to one box that holds every frame's art and the
+    classic frame's place on the generation canvas, at most `longest` pixels a side, and its entry without `replaces`."""
+    boxes = {classic_box(source) for source in sources}
+    if len(boxes) != 1:
+        raise SystemExit(f"{name}: the classic frames differ in size, so no one box places them.")
+    region = boxes.pop()
+    frames = [Image.open(final).convert("RGBA") for final in finals]
+    box = region
+    for frame in frames:
+        if (art := frame.getchannel("A").getbbox()) is not None:
+            box = (min(box[0], art[0]), min(box[1], art[1]), max(box[2], art[2]), max(box[3], art[3]))
+    width, height = box[2] - box[0], box[3] - box[1]
+    k = min(1, longest / max(width, height))
+    size = (max(1, round(width * k)), max(1, round(height * k)))
+    columns = int(np.ceil(np.sqrt(len(frames))))
+    atlas = Image.new("RGBA", (columns * size[0], int(np.ceil(len(frames) / columns)) * size[1]))
+    rects = []
+    for index, frame in enumerate(frames):
+        x, y = index % columns * size[0], index // columns * size[1]
+        atlas.paste(frame.crop(box).resize(size, Image.Resampling.LANCZOS), (x, y))
+        rects.append({"x": x, "y": y, "width": size[0], "height": size[1]})
+    buffer = io.BytesIO()
+    atlas.save(buffer, "PNG", optimize=True)
+    data = buffer.getvalue()
+    (CONTENT / target).parent.mkdir(parents=True, exist_ok=True)
+    (CONTENT / target).write_bytes(data)
+    return {"path": target, "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest(),
+            "width": atlas.width, "height": atlas.height, "frames": rects,
+            "classic": {"x": round((region[0] - box[0]) / width, 4), "y": round((region[1] - box[1]) / height, 4),
+                        "width": round((region[2] - region[0]) / width, 4), "height": round((region[3] - region[1]) / height, 4)}}
+
+
 def world_effects():
     """An atlas entry for every world effect whose every frame has an accepted final."""
     entries, classic = [], []
@@ -315,34 +353,7 @@ def world_effects():
         if not sources or None in finals:
             classic.append(media)
             continue
-        boxes = {classic_box(source) for source in sources}
-        if len(boxes) != 1:
-            raise SystemExit(f"{media}: the classic frames differ in size, so no one box places them.")
-        region = boxes.pop()
-        frames = [Image.open(final).convert("RGBA") for final in finals]
-        box = region
-        for frame in frames:
-            if (art := frame.getchannel("A").getbbox()) is not None:
-                box = (min(box[0], art[0]), min(box[1], art[1]), max(box[2], art[2]), max(box[3], art[3]))
-        width, height = box[2] - box[0], box[3] - box[1]
-        k = min(1, EFFECT_FRAME / max(width, height))
-        size = (max(1, round(width * k)), max(1, round(height * k)))
-        columns = int(np.ceil(np.sqrt(len(frames))))
-        atlas = Image.new("RGBA", (columns * size[0], int(np.ceil(len(frames) / columns)) * size[1]))
-        rects = []
-        for index, frame in enumerate(frames):
-            x, y = index % columns * size[0], index // columns * size[1]
-            atlas.paste(frame.crop(box).resize(size, Image.Resampling.LANCZOS), (x, y))
-            rects.append({"x": x, "y": y, "width": size[0], "height": size[1]})
-        buffer = io.BytesIO()
-        atlas.save(buffer, "PNG", optimize=True)
-        data = buffer.getvalue()
-        target = f"{MEDIA}/effects/{media.replace('.', '-')}.png"
-        (CONTENT / target).write_bytes(data)
-        entries.append({"replaces": media, "path": target, "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest(),
-                        "width": atlas.width, "height": atlas.height, "frames": rects,
-                        "classic": {"x": round((region[0] - box[0]) / width, 4), "y": round((region[1] - box[1]) / height, 4),
-                                    "width": round((region[2] - region[0]) / width, 4), "height": round((region[3] - region[1]) / height, 4)}})
+        entries.append({"replaces": media, **frame_atlas(media, sources, finals, f"{MEDIA}/effects/{media.replace('.', '-')}.png", EFFECT_FRAME)})
     if classic:
         print(f"effects: {len(classic)} effects stay classic, a frame has no accepted final: {', '.join(classic)}")
     return entries
@@ -409,6 +420,26 @@ def surfaces(area):
     return promoted
 
 
+def flats():
+    """An atlas entry for every placed classic record whose every frame has an accepted final: from the `flats` area, or,
+    for a record an item also draws, its accepted `items` final."""
+    entries, classic = [], []
+    area_notes = {area: ledger(area) for area in ("flats", "items")}
+    for row in csv.DictReader(open(AUTHORING / "df-raw/flats/usage.csv")):
+        archive, record = int(row["archive"]), int(row["record"])
+        stem = f"texture-{archive:03d}-record-{record:03d}"
+        sources = sorted((AUTHORING / "df-raw/flats" / row["family"] / f"texture-{archive:03d}/flat").glob(f"{stem}-frame-*-source.png"))
+        finals = [accepted_final("flats", area_notes["flats"], f"{stem}-frame-{frame:03d}")
+                  or accepted_final("items", area_notes["items"], f"{stem}-frame-{frame:03d}") for frame in range(len(sources))]
+        if not sources or None in finals:
+            classic.append(stem)
+            continue
+        entries.append({"replaces": {"archive": archive, "record": record},
+                        **frame_atlas(stem, sources, finals, f"{MEDIA}/flats/{stem}.png", FLAT_FRAME)})
+    print(f"flats: {len(entries)} records refreshed, {len(classic)} stay classic")
+    return entries
+
+
 def icon_entry(replaces, image, name, world=None):
     """An icon's entry; with its classic size, also its world PNG."""
     entry = {"replaces": replaces, "mediaId": f"refreshed.{replaces}", **webp(image, f"{MEDIA}/{name}.webp"),
@@ -446,6 +477,10 @@ def main():
             payload["artReplacements"].pop("corpseMesh", None)
             payload["artReplacements"]["meshes"] = world_meshes()
             print(f"effects: {len(effects)} effects, {sum(entry['byteLength'] for entry in effects) / 1e6:.1f} MB", flush=True)
+            continue
+        if area == "flats":
+            shutil.rmtree(CONTENT / MEDIA / "flats", ignore_errors=True)
+            payload["artReplacements"]["flats"] = flats()
             continue
         if area in ("surfaces", "terrain"):
             directory = CONTENT / MEDIA / area

@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Text.Json;
 using Rusty.Engine;
 
@@ -58,6 +59,21 @@ internal sealed record DaggerfallArtMesh(DaggerfallArtFile File, double Footprin
 internal sealed record DaggerfallArtSurface(DaggerfallArtFile File, int Width, int Height);
 
 /// <summary>
+/// A refreshed world billboard standing in for one classic texture record: a PNG atlas of its frames in classic order, each
+/// the same box, and where the classic frame sits in that box (fractions of the frame, top-down).
+/// </summary>
+internal sealed record DaggerfallArtFlat(DaggerfallArtFile File, int Width, int Height, IReadOnlyList<DaggerfallArtRect> Frames, DaggerfallArtRect Classic)
+{
+    /// <summary>
+    /// The world size and pivot that draw this art where the classic sprite stands: the box is larger than the classic frame
+    /// it holds, so the classic size grows by the share that frame takes, and the classic pivot (from the frame's bottom) moves into the box.
+    /// </summary>
+    internal (Vector2 Size, Vector2 Pivot) Placed(Vector2 size, Vector2 pivot) =>
+        (size / new Vector2((float)Classic.Width, (float)Classic.Height),
+            new((float)(Classic.X + pivot.X * Classic.Width), (float)(1 - Classic.Y - Classic.Height + pivot.Y * Classic.Height)));
+}
+
+/// <summary>
 /// How refreshed clothing, painted neutral, is drawn in one classic dye, or refreshed armour or a weapon, in bare
 /// steel, in one classic metal: its dye mask multiplied by <paramref name="Multiply"/> (a CSS colour), the image first
 /// brightened by <paramref name="Brightness"/> where the dye or metal is lighter than a multiply can reach.
@@ -77,10 +93,11 @@ internal sealed class DaggerfallArtReplacements
 
     private DaggerfallArtReplacements(Dictionary<string, DaggerfallArtReplacement> byClassic, IReadOnlyDictionary<string, DaggerfallDyeTint> tints,
         IReadOnlyDictionary<string, DaggerfallEffectArt> effects, DaggerfallArtFile? effectGlow, IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtMesh> meshes,
-        IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtSurface> surfaces)
+        IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtSurface> surfaces, IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtFlat> flats)
     {
         Meshes = meshes;
         Surfaces = surfaces;
+        Flats = flats;
         _byClassic = byClassic;
         _byMediaId = byClassic.Values.ToDictionary(replacement => replacement.MediaId, StringComparer.Ordinal);
         Tints = tints;
@@ -102,6 +119,9 @@ internal sealed class DaggerfallArtReplacements
 
     /// <summary>The refreshed surface textures, by the classic texture archive and record each replaces.</summary>
     internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtSurface> Surfaces { get; }
+
+    /// <summary>The refreshed world billboards, by the classic texture archive and record each replaces.</summary>
+    internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtFlat> Flats { get; }
 
     /// <summary>
     /// The refreshed surface for a classic texture record the importer published at <paramref name="texturePath"/>
@@ -148,6 +168,7 @@ internal sealed class DaggerfallArtReplacements
         DaggerfallArtFile? glow = null;
         Dictionary<(int Archive, int Record), DaggerfallArtMesh> meshes = [];
         Dictionary<(int Archive, int Record), DaggerfallArtSurface> surfaces = [];
+        Dictionary<(int Archive, int Record), DaggerfallArtFlat> flats = [];
         try
         {
             using JsonDocument document = JsonDocument.Parse(payload);
@@ -226,13 +247,27 @@ internal sealed class DaggerfallArtReplacements
                             DaggerfallContentHash.Parse(surface.GetProperty("sha256").GetString()!, $"The refreshed surface for {replaces.Item1}/{replaces.Item2}")), width, height)))
                         throw new InvalidOperationException($"Content pack '{packId}' names two surfaces for {replaces.Item1}/{replaces.Item2}.");
                 }
+            if (section.TryGetProperty("flats", out JsonElement flatArt))
+                foreach (JsonElement flat in flatArt.EnumerateArray())
+                {
+                    (int, int) replaces = (flat.GetProperty("replaces").GetProperty("archive").GetInt32(), flat.GetProperty("replaces").GetProperty("record").GetInt32());
+                    int width = flat.GetProperty("width").GetInt32(), height = flat.GetProperty("height").GetInt32();
+                    DaggerfallArtRect[] frames = [.. flat.GetProperty("frames").EnumerateArray().Select(Rect)];
+                    DaggerfallArtRect classic = Rect(flat.GetProperty("classic"));
+                    if (frames.Length == 0 || frames.Any(frame => frame.X < 0 || frame.Y < 0 || frame.Width <= 0 || frame.Height <= 0 || frame.X + frame.Width > width || frame.Y + frame.Height > height)
+                        || classic.Width <= 0 || classic.Height <= 0)
+                        throw new InvalidOperationException($"Content pack '{packId}' places the refreshed flat for {replaces.Item1}/{replaces.Item2} outside its atlas.");
+                    if (!flats.TryAdd(replaces, new(new(flat.GetProperty("path").GetString()!,
+                            DaggerfallContentHash.Parse(flat.GetProperty("sha256").GetString()!, $"The refreshed flat for {replaces.Item1}/{replaces.Item2}")), width, height, frames, classic)))
+                        throw new InvalidOperationException($"Content pack '{packId}' names two flats for {replaces.Item1}/{replaces.Item2}.");
+                }
         }
         catch (Exception exception) when (exception is JsonException or KeyNotFoundException or FormatException)
         {
             throw new InvalidOperationException($"Content pack '{packId}' carries an unreadable artReplacements section: {exception.Message}", exception);
         }
 
-        return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces);
+        return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, flats);
 
         DaggerfallArtWorldImage? World(JsonElement owner, string mediaId)
         {

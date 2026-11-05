@@ -30,6 +30,7 @@ default `~/dev/asset-pipeline`); host and model notes are in its `docs/asset-hos
 | `paper-doll` | `paper-doll/` bodies, faces, creature dolls | `bodies`, `faces` |
 | `spells` | `spells/` selector icons, targeting icons and element projectile/impact frames (the per-spell copies and casting hands are not converted) | `icons`, `fx` (from `effects`) |
 | `effects` | `effects/` TEXTURE.380 and 434 | `fx` |
+| `flats` | `flats/` world billboards from `export-flats`: nature sets and placed props, with `usage.csv` for placements, terrain scatter and light | `flats` |
 
 ## Run a batch
 

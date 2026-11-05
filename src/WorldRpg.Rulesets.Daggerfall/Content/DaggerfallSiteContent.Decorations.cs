@@ -5,8 +5,9 @@ using WorldRpg.Rulesets.Daggerfall.World;
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
 /// <param name="Source">The texture archive and record of its summer sprite.</param>
+/// <param name="WinterSource">The texture archive and record of its winter sprite.</param>
 internal sealed record DaggerfallSiteDecoration(string Id, WorldPoint Position, bool BaseAligned,
-    NormalizedBillboardSprite Summer, NormalizedBillboardSprite Winter, (int Archive, int Record) Source);
+    NormalizedBillboardSprite Summer, NormalizedBillboardSprite Winter, (int Archive, int Record) Source, (int Archive, int Record) WinterSource);
 
 internal static partial class DaggerfallSiteContent
 {
@@ -32,7 +33,7 @@ internal static partial class DaggerfallSiteContent
             if (!sprites.TryGetValue((summer, record), out var warm) || !sprites.TryGetValue((winter, record), out var cold))
             { diagnostics.Add($"Decoration '{id}' lacks shared sprite {summer}/{record} or {winter}/{record}."); continue; }
             var position = ObjectVector3(flat.GetProperty("position"), id, diagnostics);
-            result.Add(new(id, WorldPoint.From(position), OptionalBoolean(flat, "baseAligned", false, diagnostics), warm, cold, (summer, record)));
+            result.Add(new(id, WorldPoint.From(position), OptionalBoolean(flat, "baseAligned", false, diagnostics), warm, cold, (summer, record), (winter, record)));
         }
         return result;
     }

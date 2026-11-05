@@ -222,6 +222,72 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
     }
 
     /// <summary>
+    /// Nature draws its refreshed flats while refreshed art is drawn: the art's box holds the classic frame, so the batch
+    /// is larger by the share that frame takes and its pivot moves into the box, and choosing classic art redraws the classic batches.
+    /// </summary>
+    [Fact]
+    public void Nature_redraws_in_refreshed_flats_at_the_classic_size_and_back()
+    {
+        DaggerfallExteriorCellId cell = new(1, 0);
+        DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(cell);
+        GraphicsDouble graphics = new();
+        DaggerfallSiteProfile source = TestSessions.MediaInputs();
+        Dictionary<(int Archive, int Record), NormalizedTerrainTexture> textures = [];
+        for (int record = 0; record < 64; record++) textures[(302, record)] = new($"texture/terrain-302-{record}.png", TestSessions.Hash);
+        Dictionary<(int Archive, int Record), NormalizedBillboardSprite> billboards = [];
+        for (int record = 1; record <= 31; record++)
+            billboards[(504, record)] = new($"sprite/texture-504-{record}.png", TestSessions.Hash, 16, 32,
+                [new NormalizedAtlasFrame(7, 0, 0, 16, 32)], 7, new Vector2(.5F, 0F), new Vector2(3F, 6F));
+        DaggerfallSiteProfile profile = new(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook, [],
+            new Dictionary<long, NormalizedActorSprite>(), billboardSprites: billboards, terrainTextures: textures);
+        string flats = string.Join(",", Enumerable.Range(1, 31).Select(record => $$$"""
+            {"replaces": {"archive": 504, "record": {{{record}}}}, "path": "refreshed/flats/504-{{{record}}}.png", "byteLength": 1,
+             "sha256": "0000000000000001000000000000000200000000000000030000000000000004", "width": 64, "height": 64,
+             "frames": [{"x": 0, "y": 0, "width": 64, "height": 64}], "classic": {"x": 0.25, "y": 0.25, "width": 0.5, "height": 0.5}}
+            """));
+        for (int record = 1; record <= 31; record++) graphics.Content.Add($"refreshed/flats/504-{record}.png", TestSessions.Hash);
+        DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(System.Text.Encoding.UTF8.GetBytes(
+            $$$"""{"artReplacements": {"images": [], "flats": [{{{flats}}}]}}"""), "test.art");
+        bool refreshed = false;
+        using DaggerfallExteriorTerrainAppearance appearance = new(graphics.Content, graphics, graphics.Admit(profile));
+        appearance.UseArt(art, () => refreshed);
+        int dimension = DaggerfallTerrainSurfaceBuilder.SampleDimension;
+        DaggerfallTerrainSurface surface = new(cell.X, cell.Y,
+            Enumerable.Range(0, dimension * dimension).Select(index => new Vector3(index % dimension, 100F, index / dimension)).ToArray(),
+            [new Triangle(0, (uint)dimension + 1, 1)],
+            Enumerable.Repeat(100F / DaggerfallTerrainSurfaceBuilder.TerrainVerticalSize, dimension * dimension).ToArray())
+        {
+            SourceWorldHeight = 128,
+        };
+        DaggerfallSiteExterior location = new(1, 0, 1, 1, 0, 0, false, 2, 0, 1, 0, 1)
+        {
+            GroundTiles = DaggerfallGroundTileGrid.FromBytes(Enumerable.Repeat((byte)2, 128 * 128).ToArray(), "test"),
+        };
+        DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
+        environment.Reconcile([cell], origin, _ => surface, new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> { [cell] = location },
+            new DaggerfallWorldGridsSet(new DaggerfallClimateGridDefinition(3, 1, [0, 0, 231], [new(231, "Woodlands", DaggerfallClimateDisposition.Named)]), new(3, 1, [64, 64, 64], [])));
+        appearance.Reconcile([cell], origin, _ => surface, environment);
+        int batches = appearance.ActiveNatureBatchCount;
+        Assert.True(batches > 0);
+        Assert.All(graphics.BatchRequests, request => Assert.Equal(new Vector2(3F, 6F), request.Size));
+
+        refreshed = true;
+        appearance.AppendFacts([]);
+        Assert.Equal(batches, appearance.ActiveNatureBatchCount);
+        Assert.Equal(2 * batches, graphics.BatchRequests.Count);
+        Assert.All(graphics.BatchRequests.Skip(batches), request =>
+        {
+            Assert.Equal(new Vector2(6F, 12F), request.Size);
+            Assert.Equal(new Vector2(.5F, .25F), request.Pivot);
+        });
+
+        refreshed = false;
+        appearance.AppendFacts([]);
+        Assert.Equal(3 * batches, graphics.BatchRequests.Count);
+        Assert.All(graphics.BatchRequests.Skip(2 * batches), request => Assert.Equal(new Vector2(3F, 6F), request.Size));
+    }
+
+    /// <summary>
     /// A cell's nature is drawn as one sprite batch per sprite record, each holding every placement of that record at
     /// its cell-local position, placed by the cell's translation. Reconciling unchanged facts keeps the batches; a
     /// season's archive replaces them, and the replaced batches are released once a snapshot without them is accepted.
