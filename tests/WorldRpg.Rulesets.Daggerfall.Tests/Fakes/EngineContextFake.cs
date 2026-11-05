@@ -67,6 +67,10 @@ internal class EngineContextFake : DispatchProxy
     internal IReadOnlyList<RenderResource> SkyBackgrounds => ((CameraServiceFake)(object)camera).SkyBackgrounds;
     internal IReadOnlyList<SkyBackgroundBlendRequest> SkyBlends => ((CameraServiceFake)(object)camera).SkyBlends;
     internal IReadOnlyList<FogRequest> Fogs => ((CameraServiceFake)(object)camera).Fogs;
+    /// <summary>Whether a backdrop link stands, as the last call left it.</summary>
+    internal bool BackdropLinked => ((CameraServiceFake)(object)camera).BackdropLinked;
+    internal IReadOnlyList<CloudsRequest> Clouds => ((CameraServiceFake)(object)camera).Clouds;
+    private readonly IHeightfieldService heightfield = ServiceProxy<IHeightfieldService, HeightfieldServiceFake>.Create();
     private IWorldOriginService worldOrigin = null!;
     internal IReadOnlyList<WorldOriginCommitReceipt> OriginCommits => ((WorldOriginFake)(object)worldOrigin).Commits;
 
@@ -114,8 +118,17 @@ internal class EngineContextFake : DispatchProxy
         "get_Ui" => ui,
         "get_Persistence" => persistence,
         "get_WorldOrigin" => worldOrigin,
+        "get_Heightfield" => heightfield,
         _ => throw new NotSupportedException(method?.Name),
     };
+
+    /// <summary>A heightfield that asks for no tiles: nothing here draws, and every readout is empty.</summary>
+    private class HeightfieldServiceFake : DispatchProxy
+    {
+        protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name == nameof(IHeightfieldService.Create)
+            ? new Heightfield(new HeightfieldHandle(1), () => { })
+            : method!.ReturnType.IsValueType && method.ReturnType != typeof(void) ? Activator.CreateInstance(method.ReturnType) : null;
+    }
 
     private class WorldOriginFake : DispatchProxy
     {
@@ -192,6 +205,8 @@ internal class EngineContextFake : DispatchProxy
         internal List<FogRequest> Fogs { get; } = [];
         internal List<RenderResource> SkyBackgrounds { get; } = [];
         internal List<SkyBackgroundBlendRequest> SkyBlends { get; } = [];
+        internal bool BackdropLinked { get; private set; }
+        internal List<CloudsRequest> Clouds { get; } = [];
         internal ulong? ActiveCamera { get; private set; }
         private ulong nextCamera = 1;
 
@@ -213,6 +228,9 @@ internal class EngineContextFake : DispatchProxy
                 nameof(ICameraViewService.SetSkyBackground) => SetSky((RenderResource)arguments![0]!),
                 nameof(ICameraViewService.SetSkyBackgroundBlend) => SetBlend((SkyBackgroundBlendRequest)arguments![0]!),
                 nameof(ICameraViewService.SetFog) => SetFog((FogRequest)arguments![0]!),
+                nameof(ICameraViewService.SetBackdrop) => LinkBackdrop(true),
+                nameof(ICameraViewService.ClearBackdrop) => LinkBackdrop(false),
+                nameof(ICameraViewService.SetClouds) => SetClouds((CloudsRequest)arguments![0]!),
                 nameof(ICameraViewService.ReplaceCamera) => ReplaceCamera(((CameraUpdateRequest)arguments![0]!).Camera.Handle.Value),
                 _ => throw new NotSupportedException(method?.Name),
             };
@@ -221,6 +239,8 @@ internal class EngineContextFake : DispatchProxy
         private object? SetSky(RenderResource resource) {SkyBackgrounds.Add(resource); return null;}
         private object? SetBlend(SkyBackgroundBlendRequest request) {SkyBlends.Add(request); return null;}
         private object? SetFog(FogRequest request) { Fogs.Add(request); return null; }
+        private object? LinkBackdrop(bool linked) { BackdropLinked = linked; return null; }
+        private object? SetClouds(CloudsRequest request) { Clouds.Add(request); return null; }
 
         // Like the Engine, destroying the active camera clears it, and replacing it keeps the replacement active.
         private Camera NewCamera()

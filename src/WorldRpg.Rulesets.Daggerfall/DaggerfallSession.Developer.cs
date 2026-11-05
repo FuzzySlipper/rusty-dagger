@@ -131,6 +131,25 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
         });
     }
 
+    public DebugCommandResult Hour(int hour)
+    {
+        if (hour is < 0 or > 23) return Refused("An hour is from 0 to 23.");
+        const int secondsPerDay = 86_400;
+        int seconds = ((hour * 3_600) - (int)_time.Calendar.SecondOfDay + secondsPerDay) % secondsPerDay;
+        _ = AdvanceElapsedTime(seconds, idleFatigue: false);
+        return DebugCommandResult.Success($"It is {_time.Calendar.SecondOfDay / 3_600}:00, {_time.Calendar.Season}.");
+    }
+
+    public DebugCommandResult Horizon() => DebugCommandResult.Success(_horizon.Readout());
+
+    public DebugCommandResult HorizonSet(double lift, double fogDensity)
+    {
+        if (!double.IsFinite(lift) || lift < 1) return Refused("A lift is 1 (true height) or more.");
+        if (!double.IsFinite(fogDensity) || fogDensity <= 0) return Refused("A haze is a positive density per metre.");
+        _horizon.Adjust(lift, fogDensity);
+        return DebugCommandResult.Success(_horizon.Readout());
+    }
+
     public DebugCommandResult Find(string service)
     {
         if (_site.ActiveSite is not { } site) return Refused("The player is at no place with people.");

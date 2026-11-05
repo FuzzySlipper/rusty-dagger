@@ -44,6 +44,9 @@ internal sealed class DaggerfallTerrainSurface
     internal int SourceWorldHeight { get; init; }
 }
 
+/// <summary>The source samples behind one map pixel's surface: its small and large donor windows.</summary>
+internal sealed record DaggerfallTerrainWindow(int MapPixelX, int MapPixelY, float[] Small, float[] Large);
+
 /// <summary>
 /// The source-normalized rectangle the donor uses to flatten one exterior location. The values are
 /// in the containing 128-by-128 terrain tile and are divided by 128 by the blend pass.
@@ -101,41 +104,16 @@ internal static class DaggerfallTerrainSurfaceBuilder
         ArgumentNullException.ThrowIfNull(terrain);
         ValidateTerrain(terrain, mapPixelX, mapPixelY);
 
-        float[] smallHeightmap = ReadSmallHeightmap(terrain, mapPixelX, mapPixelY);
-        float[] largeHeightmap = ReadLargeHeightmap(terrain, mapPixelX, mapPixelY);
+        DaggerfallTerrainWindow window = ReadWindow(terrain, mapPixelX, mapPixelY);
         int sampleCount = checked(SampleDimension * SampleDimension);
         Vector3[] vertices = new Vector3[sampleCount];
         float[] normalizedHeights = new float[sampleCount];
-        float div = (SampleDimension - 1) / 3F;
 
         for (int y = 0; y < SampleDimension; y++)
         {
-            float ry = y / div;
-            int iy = (int)MathF.Floor(ry);
-            float sfracy = y / (float)(SampleDimension - 1);
-            float fracy = (y - (iy * div)) / div;
-
             for (int x = 0; x < SampleDimension; x++)
             {
-                float rx = x / div;
-                int ix = (int)MathF.Floor(rx);
-                float sfracx = x / (float)(SampleDimension - 1);
-                float fracx = (x - (ix * div)) / div;
-
-                float baseHeight = SampleSmallHeight(smallHeightmap, sfracx, sfracy);
-                float noiseHeight = SampleLargeHeight(largeHeightmap, ix, iy, fracx, fracy);
-                int noisex = checked((mapPixelX * WorldMapTileDimension) + x);
-                int noisey = checked(((MaxMapPixelY - mapPixelY) * WorldMapTileDimension) + y);
-                float lowFrequencyNoise = DonorNoise.GetNoise(noisex, noisey, .3F, .5F);
-                float highFrequencyNoise = DonorNoise.GetNoise(noisex, noisey, .9F, .5F);
-
-                float scaledHeight = (baseHeight * BaseHeightScale)
-                    + (noiseHeight * NoiseMapScale)
-                    + ((lowFrequencyNoise * highFrequencyNoise) * ExtraNoiseScale);
-                if (scaledHeight < OceanElevation)
-                    scaledHeight = OceanElevation;
-
-                float normalizedHeight = Math.Clamp(scaledHeight / MaxTerrainHeight, 0F, 1F);
+                float normalizedHeight = NormalizedHeight(window, x, y);
                 int index = Index(x, y, SampleDimension);
                 normalizedHeights[index] = normalizedHeight;
                 vertices[index] = new(
@@ -150,6 +128,45 @@ internal static class DaggerfallTerrainSurfaceBuilder
         {
             SourceWorldHeight = terrain.GetHeight(mapPixelX, mapPixelY),
         };
+    }
+
+    /// <summary>
+    /// The source samples one map pixel's surface is made from. Past the map they are the edge's, as
+    /// <see cref="DaggerfallTerrainSet"/> reads them, so a distant view runs on over the map's edge.
+    /// </summary>
+    internal static DaggerfallTerrainWindow ReadWindow(DaggerfallTerrainSet terrain, int mapPixelX, int mapPixelY) =>
+        new(mapPixelX, mapPixelY, ReadSmallHeightmap(terrain, mapPixelX, mapPixelY), ReadLargeHeightmap(terrain, mapPixelX, mapPixelY));
+
+    /// <summary>
+    /// The donor-normalized height of one vertex of a map pixel's surface, before any location flattening:
+    /// the one height function behind the walked ground and everything drawn beyond it.
+    /// </summary>
+    internal static float NormalizedHeight(DaggerfallTerrainWindow window, int x, int y)
+    {
+        float div = (SampleDimension - 1) / 3F;
+        float ry = y / div;
+        int iy = (int)MathF.Floor(ry);
+        float sfracy = y / (float)(SampleDimension - 1);
+        float fracy = (y - (iy * div)) / div;
+        float rx = x / div;
+        int ix = (int)MathF.Floor(rx);
+        float sfracx = x / (float)(SampleDimension - 1);
+        float fracx = (x - (ix * div)) / div;
+
+        float baseHeight = SampleSmallHeight(window.Small, sfracx, sfracy);
+        float noiseHeight = SampleLargeHeight(window.Large, ix, iy, fracx, fracy);
+        int noisex = checked((window.MapPixelX * WorldMapTileDimension) + x);
+        int noisey = checked(((MaxMapPixelY - window.MapPixelY) * WorldMapTileDimension) + y);
+        float lowFrequencyNoise = DonorNoise.GetNoise(noisex, noisey, .3F, .5F);
+        float highFrequencyNoise = DonorNoise.GetNoise(noisex, noisey, .9F, .5F);
+
+        float scaledHeight = (baseHeight * BaseHeightScale)
+            + (noiseHeight * NoiseMapScale)
+            + ((lowFrequencyNoise * highFrequencyNoise) * ExtraNoiseScale);
+        if (scaledHeight < OceanElevation)
+            scaledHeight = OceanElevation;
+
+        return Math.Clamp(scaledHeight / MaxTerrainHeight, 0F, 1F);
     }
 
     /// <summary>

@@ -12,22 +12,24 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
     private readonly DaggerfallSkyMedia? _media;
     private readonly DaggerfallWeatherTuning _weather;
     private readonly DaggerfallAmbientTuning _tuning;
+    private readonly DaggerfallHorizonTuning _horizon;
     private readonly DaggerfallAmbientPresentation _ambient;
     private readonly Dictionary<string, RenderResource> _sky = new(StringComparer.Ordinal);
     private readonly Dictionary<bool, RenderResource> _particles = [];
     private Color _skyColor = new(.5f,.5f,.5f,1);
+    private float _cloudCover;
     private bool _disposed;
 
     internal DaggerfallWeatherPresentation(IEngineContext engine, DaggerfallSkyMedia? media,
-        DaggerfallWeatherTuning weather, DaggerfallAmbientTuning tuning, DaggerfallPresentationAudioTuning audioTuning,
-        Func<DaggerfallWorldProfileKey, string, AudioClip?> openClip)
+        DaggerfallWeatherTuning weather, DaggerfallAmbientTuning tuning, DaggerfallHorizonTuning horizon,
+        DaggerfallPresentationAudioTuning audioTuning, Func<DaggerfallWorldProfileKey, string, AudioClip?> openClip)
     {
-        _engine = engine; _media = media; _weather = weather; _tuning = tuning.Validate();
+        _engine = engine; _media = media; _weather = weather; _tuning = tuning.Validate(); _horizon = horizon;
         _ambient = new(engine.Presentation, engine.Audio, engine.Random, tuning, openClip, Particle, audioTuning);
     }
 
     internal void Update(DaggerfallSiteProjection projection, DaggerfallCalendar calendar, int climate,
-        DaggerfallWeatherKind weather, int variant, Vector3 player, bool sheltered, double seconds, bool playing)
+        DaggerfallWeatherKind weather, int variant, Vector3 player, bool sheltered, double seconds, bool playing, float? horizonFog)
     {
         var inputs = projection.Inputs;
         var zones = inputs.AmbientZones.Where(zone => zone.Contains(player - projection.WorldOffset)).ToArray();
@@ -37,14 +39,27 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
         projection.Lighting.UpdateAmbient(calendar, _weather.Daylight(calendar, weather),
             castle || special ? _tuning.ZoneAmbient : null, _ambient.FlashIntensity);
         if (inputs.ProfileKind == DaggerfallWorldProfileKind.Exterior && _media is not null)
-            SelectSky(_media.Select(climate, calendar, weather, variant));
+        {
+            DaggerfallSkySelection sky = _media.Select(climate, calendar, weather, variant);
+            SelectSky(horizonFog is null ? sky : _media.Cleared(sky));
+        }
         else if (_sky.Count != 0)
         {
             _engine.CameraView.ClearSkyBackground(default);
             foreach (var resource in _sky.Values) resource.Dispose(); _sky.Clear();
             projection.Lighting.ApplyBackground();
         }
-        _engine.CameraView.SetFog(Fog(inputs.ProfileKind, weather));
+        _engine.CameraView.SetFog(Fog(inputs.ProfileKind, weather, horizonFog));
+        SetClouds(horizonFog is null ? 0 : weather is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy
+            ? _horizon.CloudCoverage : _horizon.StormCloudCoverage);
+    }
+
+    private void SetClouds(float cover)
+    {
+        if (cover == _cloudCover) return;
+        _cloudCover = cover;
+        _engine.CameraView.SetClouds(new(cover, _horizon.CloudDrift, _horizon.CloudAltitudeMetres, _horizon.CloudScaleMetres,
+            Vector3.One, 0, CloudKind.Cumulus, _horizon.CloudTwilightDegrees));
     }
 
     private RenderResourceReference Particle(bool snow)
@@ -82,7 +97,7 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
         { _sky[id].Dispose(); _sky.Remove(id); }
     }
 
-    private FogRequest Fog(DaggerfallWorldProfileKind kind, DaggerfallWeatherKind weather)
+    private FogRequest Fog(DaggerfallWorldProfileKind kind, DaggerfallWeatherKind weather, float? horizonFog)
     {
         if (kind != DaggerfallWorldProfileKind.Exterior)
             return new(FogMode.Exponential, new Color(0,0,0,1), 0, 0,
@@ -94,6 +109,8 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
             DaggerfallWeatherKind.Fog => _tuning.HeavyFogDensity, _ => 0,
         };
         Color color = density > _tuning.RainFogDensity ? new(.5f,.5f,.5f,1) : _skyColor;
+        // The classic's clear fog ends with the walked ground, which would close over a horizon past it.
+        if (density == 0 && horizonFog is { } haze) return new(FogMode.Exponential, color, 0, 0, haze);
         return density == 0 ? new(FogMode.Linear, color, 0, _tuning.ClearFogEnd, 0)
             : new(FogMode.Exponential, color, 0, 0, density);
     }
@@ -106,6 +123,7 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
         try {_ambient.Dispose();} catch (Exception error) {failures.Add(error);}
         try {if (_sky.Count != 0) _engine.CameraView.ClearSkyBackground(default);} catch (Exception error) {failures.Add(error);}
         try {_engine.CameraView.SetFog(new(FogMode.Off, new Color(0,0,0,1),0,0,0));} catch (Exception error) {failures.Add(error);}
+        try {SetClouds(0);} catch (Exception error) {failures.Add(error);}
         foreach (var resource in _sky.Values)
             try {resource.Dispose();} catch (Exception error) {failures.Add(error);}
         _sky.Clear();

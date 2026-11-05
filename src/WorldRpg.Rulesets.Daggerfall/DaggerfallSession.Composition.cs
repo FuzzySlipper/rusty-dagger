@@ -656,9 +656,12 @@ internal sealed partial class DaggerfallSession
                     _appearance.PlayEquip(definitions.RequireItem(new(equipped.Definition.Value)),
                         State.ItemInstances.RequireUnique(State.Inventory.GetDurableItemId(new(equipped.EntityId)).Value));
             };
-            _weatherPresentation = new DaggerfallWeatherPresentation(engine, composition.Sky, tuning.Weather, tuning.Ambient, tuning.PresentationAudio,
+            _weatherPresentation = new DaggerfallWeatherPresentation(engine, composition.Sky, tuning.Weather, tuning.Ambient, tuning.Horizon, tuning.PresentationAudio,
                 (profile, clip) => audioBundles?.Require(profile).OpenClip(engine.Audio, clip));
             partiallyConstructed.Add(_weatherPresentation);
+            _horizon = new DaggerfallHorizon(engine, new(definitions.Terrain,
+                (x, y) => definitions.Grids.ClimateAtWorldPixel(x, y).Value, tuning.Horizon), tuning.Horizon);
+            partiallyConstructed.Add(_horizon);
             effects.Completed += outcome => _facts.Append(new MagicEffectFact(outcome));
             crime.IncidentRecorded += AdmitLegalIncident;
             _vitality.PoisonDamageApplied += result=>AppendEffectDamage(new(result));
