@@ -155,6 +155,10 @@
     "claws": {
       "model": "first-person/arms-claws.glb",
       "retroModel": "first-person/arms-claws-retro.glb"
+    },
+    "claws-boar": {
+      "model": "first-person/arms-claws-boar.glb",
+      "retroModel": "first-person/arms-claws-boar-retro.glb"
     }
   },
   "armsWorn": {
@@ -171,7 +175,7 @@
   },
   "armsBeast": {
     "werewolf": "claws",
-    "wereboar": "claws"
+    "wereboar": "claws-boar"
   },
   "arms": {
     "shoulder": [

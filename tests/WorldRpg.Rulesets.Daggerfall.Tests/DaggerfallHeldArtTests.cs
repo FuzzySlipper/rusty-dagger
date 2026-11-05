@@ -390,9 +390,9 @@ public sealed class DaggerfallHeldArtTests
     }
 
     [Theory]
-    [InlineData("Werewolf")]
-    [InlineData("Wereboar")]
-    public void A_transformed_player_draws_the_claws_on_the_beast_arms_and_changes_back(string form)
+    [InlineData("Werewolf", "claws")]
+    [InlineData("Wereboar", "claws-boar")]
+    public void A_transformed_player_draws_the_claws_on_the_beast_arms_and_changes_back(string form, string arms)
     {
         List<string> releases = [];
         DaggerfallRacialKind? beast = null;
@@ -409,9 +409,9 @@ public sealed class DaggerfallHeldArtTests
             beast = Enum.Parse<DaggerfallRacialKind>(form);
             Update();
             Assert.Equal("claws", presentation.DrawnHeld!.Drawing.Family);
-            Assert.Equal("claws", presentation.DrawnHeld!.Drawing.Arms);
+            Assert.Equal(arms, presentation.DrawnHeld!.Drawing.Arms);
             Assert.Null(presentation.DrawnHeld!.Drawing.Item);
-            Assert.Contains("first-person/arms-claws.glb", engine.Animation.OpenedPaths);
+            Assert.Contains($"first-person/arms-{arms}.glb", engine.Animation.OpenedPaths);
 
             beast = null;
             Update();

@@ -72,14 +72,15 @@ is painted for metal shading. `held.arms SET` shows a set in the workbench.
 
 ### The claw arms
 
-A transformed werewolf or wereboar draws the `claws` family on the `claws` set (`armsBeast`). The set comes from no pack
-mesh: `claws()` in `build.py` grows it on the skeleton, as `legs()` grows a leg, so it is the same joints and every clip
-plays on it. An arm and palm are fused from tubes down the bones, each digit is a tube with a curved nail, and shards of
-fur lie back along the arm. The texture is painted per texel in the colours of the classic WEAPON11 frames, 512 pixels a
-side and drawn nearest, so `held` and `heldRetro` differ only in its size. The mesh is our own, but its GLBs carry the
-clips, so they stay in the container like the rest.
+A transformed werewolf or wereboar draws the `claws` family, the werewolf on the `claws` set and the wereboar on
+`claws-boar` (`armsBeast`), which is the same mesh in the darker, redder hide of its paper doll (`CLAW_FUR`). The sets come
+from no pack mesh: `claws()` in `build.py` grows them on the skeleton, as `legs()` grows a leg, so they have the same
+joints and every clip plays on them. An arm and palm are fused from tubes down the bones, each digit is a tube with a
+curved nail, and shards of fur lie back along the arm. The texture is painted per texel, the werewolf's in the colours of
+the classic WEAPON11 frames, 512 pixels a side and drawn nearest, so `held` and `heldRetro` differ only in its size. The
+mesh is our own, but its GLBs carry the clips, so they stay in the container like the rest.
 
-The set bakes every clip with its fingers held open (`open_hand`: `CLAW_CURL` and `CLAW_SPREAD`), so the family plays the
+Each set bakes every clip with its fingers held open (`open_hand`: `CLAW_CURL` and `CLAW_SPREAD`), so the family plays the
 dagger's cuts with the hand raking, not gripping. Both hands strike in turn: `fastB` and `fastD` are `fastA` and `fastC`
 the other way round. It idles on the pack's unarmed loop, which holds both hands up as the classic frames do. The dagger's
 clips start and end at its own idle, with the hand raised and the palm toward the eye, so the fast attacks' marks cut both
