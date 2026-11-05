@@ -4,7 +4,7 @@ using WorldRpg.Kit.World;
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
 /// <summary>
-/// The eroded landscape baked from WOODS (<c>authoring/tools/relief</c>): a lattice of heights in metres, and how much
+/// The eroded landscape the import bakes from WOODS: a lattice of heights in metres, and how much
 /// of the classic height stays at each node, which returns along the coast so shores don't move. Coordinates are in
 /// map pixels of the WOODS heightmap. The bake holds valleys and ridges down to its lattice; the erosion filter cuts
 /// the finer gullies and breaks the crests.

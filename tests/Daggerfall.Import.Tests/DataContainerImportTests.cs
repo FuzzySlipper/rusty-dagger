@@ -187,6 +187,16 @@ public sealed class DataContainerImportTests : IDisposable
     }
 
     [Fact]
+    public void The_relief_is_baked_after_the_sections_it_reads()
+    {
+        string[] labels = [.. ImportCommand.Steps(new("local/arena2", null, null, null), root).Select(step => step.Label)];
+
+        int relief = Array.IndexOf(labels, "relief");
+        Assert.True(relief > Array.IndexOf(labels, "locations"));
+        Assert.True(relief > Array.IndexOf(labels, "climate"));
+    }
+
+    [Fact]
     public void Every_step_is_a_tool_command_the_commands_own_grammar_accepts()
     {
         ImportCommand.Inputs inputs = new("local/arena2", "local/Sound", null, "variants.json");

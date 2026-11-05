@@ -44,18 +44,43 @@ public sealed class DaggerfallHorizonGroundTests
     }
 
     [Fact]
-    public void Only_ground_above_the_player_is_lifted_and_more_with_distance()
+    public void Ground_is_lifted_above_its_valley_floor_and_more_with_distance()
     {
         DaggerfallHorizonGround ground = Ground(Terrain(8, 8));
-        DaggerfallHorizonGround.Frame frame = new(0, 0, 100, 3, false);
         DaggerfallHorizonTuning tuning = DaggerfallHorizonTuning.Default;
+        DaggerfallHorizonGround.Frame frame = new(0, 0, 3, false);
+        double floor = ground.Floor(tuning.LiftFullMetres, 0), height = floor + 300;
 
-        Assert.Equal(50, ground.Lifted(50, tuning.LiftFullMetres, 0, frame));
-        Assert.Equal(400, ground.Lifted(400, tuning.LiftFromMetres, 0, frame));
-        Assert.Equal(100 + (300 * 3), ground.Lifted(400, tuning.LiftFullMetres, 0, frame), 6);
-        Assert.Equal(100 + (300 * 3), ground.Lifted(400, 0, -tuning.LiftFullMetres * 2, frame), 6);
-        double between = ground.Lifted(400, (tuning.LiftFromMetres + tuning.LiftFullMetres) / 2, 0, frame);
-        Assert.InRange(between, 400.5, 999.5);
+        Assert.Equal(floor - 50, ground.Lifted(floor - 50, tuning.LiftFullMetres, 0, frame));
+        Assert.Equal(ground.Floor(tuning.LiftFromMetres, 0) + 300, ground.Lifted(ground.Floor(tuning.LiftFromMetres, 0) + 300, tuning.LiftFromMetres, 0, frame), 6);
+        Assert.Equal(floor + (300 * 3), ground.Lifted(height, tuning.LiftFullMetres, 0, frame), 6);
+        double middle = (tuning.LiftFromMetres + tuning.LiftFullMetres) / 2, between = ground.Floor(middle, 0);
+        Assert.InRange(ground.Lifted(between + 300, middle, 0, frame), between + 300.5, between + 899.5);
+    }
+
+    [Fact]
+    public void A_valley_floor_lies_under_the_ground_and_is_fixed_on_the_map()
+    {
+        DaggerfallTerrainSet terrain = Terrain(8, 8);
+        DaggerfallHorizonGround ground = Ground(terrain);
+
+        for (int pixel = 1; pixel < 7; pixel++)
+            Assert.True(ground.Floor(pixel * Size, pixel * Size) <= ground.Height(pixel * Size, pixel * Size));
+        Assert.Equal(ground.Lifted(900, 50_000, 0, new(0, 0, 3, false)), ground.Lifted(900, 50_000, 0, new(0, 0, 3, true)));
+    }
+
+    [Fact]
+    public void Far_ground_sinks_under_the_walked_window_and_stands_at_its_height_past_it()
+    {
+        DaggerfallHorizonGround ground = Ground(Terrain(8, 8));
+        DaggerfallHorizonGround.Frame frame = new(0, 0, 3, false);
+        DaggerfallHorizonTuning tuning = DaggerfallHorizonTuning.Default;
+        double windowEdge = 3.5 * Size;
+
+        Assert.Equal(tuning.SinkMetres, ground.Sink(0, 0, frame));
+        Assert.Equal(tuning.SinkMetres, ground.Sink(windowEdge, 0, frame));
+        Assert.Equal(0, ground.Sink(tuning.SinkGoneMetres, 0, frame));
+        Assert.Equal(0, ground.Sink(0, -tuning.SinkGoneMetres, frame));
     }
 
     [Fact]
@@ -63,7 +88,7 @@ public sealed class DaggerfallHorizonGroundTests
     {
         DaggerfallHorizonGround ground = Ground(Terrain(8, 8));
 
-        Assert.Equal(400, ground.Lifted(400, 50_000, 0, new(0, 0, 100, 1, false)));
+        Assert.Equal(400, ground.Lifted(400, 50_000, 0, new(0, 0, 1, false)));
     }
 
     [Fact]

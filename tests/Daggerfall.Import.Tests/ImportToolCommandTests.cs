@@ -29,8 +29,9 @@ internal sealed class ImportToolDataFactAttribute : FactAttribute
 public sealed class ImportToolCommandTests
 {
     public static IEnumerable<object[]> Commands => ToolProgram.Commands.Keys.Select(name => new object[] { name });
+    // The relief takes minutes over the real map, three times here: ReliefBakeTests covers the bake on a small one.
     public static IEnumerable<object[]> UpdateCommands => ToolProgram.Commands.Values
-        .Where(command => command.Options.Any(option => option.Name == "--update"))
+        .Where(command => command.Options.Any(option => option.Name == "--update") && command.Name != "relief")
         .Select(command => new object[] { command.Name });
 
     [Theory]

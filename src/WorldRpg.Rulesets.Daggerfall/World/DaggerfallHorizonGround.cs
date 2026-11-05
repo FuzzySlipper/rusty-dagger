@@ -8,10 +8,12 @@ namespace WorldRpg.Rulesets.Daggerfall.World;
 /// The ground past the walked window, as the Engine's heightfield rings sample it on the streamer's workers. Every
 /// sample is a vertex of the walked ground's own surface (ring cells are whole multiples of its spacing) in the
 /// frame's coordinates: x east and z south in metres, map pixel (X, Y) spanning x from X and z back from Y, in
-/// <see cref="DaggerfallExteriorCellResidency.CellSize"/> steps. Ground above the player's is then lifted with
+/// <see cref="DaggerfallExteriorCellResidency.CellSize"/> steps. Ground above its own valley floor is then lifted with
 /// distance: the map's ranges stand a degree or two over the skyline at true height, where the classic's painted
-/// ones stood near thirty. It reads only the terrain and climate, which nothing changes, and the latest
-/// <see cref="Frame"/>, and calls no Engine service.
+/// ones stood near thirty. The floor is fixed on the map, so a player climbing changes nothing out on the horizon: a
+/// lift measured from the player would move every tile at once, and tiles sampled either side of the change tear the
+/// ranges until they are all sampled again. It reads only the terrain and climate, which nothing changes, and the
+/// latest <see cref="Frame"/>, and calls no Engine service.
 /// </summary>
 internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
 {
@@ -28,12 +30,18 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     /// <summary>In winter this share of the ground off the deserts is snow, whatever its height.</summary>
     private const float WinterSnow = .75F;
 
-    /// <summary>Where the lift is measured from, as the latest update left it.</summary>
-    internal sealed record Frame(double CentreX, double CentreZ, double BaseMetres, double Lift, bool Winter);
+    /// <summary>The map pixels either side a valley floor is the lowest ground of, about twenty kilometres.</summary>
+    private const int FloorReach = 24;
+    /// <summary>The map pixels either side the floor is then smoothed over, so it has no edges of its own.</summary>
+    private const int FloorSmoothing = 12;
+
+    /// <summary>Where the lift fades in about, as the latest update left it.</summary>
+    internal sealed record Frame(double CentreX, double CentreZ, double Lift, bool Winter);
 
     private readonly DaggerfallTerrainSet _terrain;
     private readonly Func<int, int, int> _climate;
     private readonly DaggerfallHorizonTuning _tuning;
+    private readonly float[] _floor;
     private Frame _frame;
 
     /// <param name="climate">The climate value at an in-bounds map pixel.</param>
@@ -42,10 +50,11 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         _terrain = terrain ?? throw new ArgumentNullException(nameof(terrain));
         _climate = climate ?? throw new ArgumentNullException(nameof(climate));
         _tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
-        _frame = new(0, 0, 0, tuning.Lift, false);
+        _frame = new(0, 0, tuning.Lift, false);
         // The samples are read on first use, which is content work no worker may do.
         _ = terrain.Samples;
         _ = terrain.Relief;
+        _floor = ValleyFloor(terrain);
     }
 
     /// <summary>The rings, finest first, in metres; the coarsest reaches past where the haze has closed.</summary>
@@ -71,7 +80,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
             double x = tile.SampleX(i), z = tile.SampleZ(j);
             double height = Height(x, z, tile.CellSize * 2, windows);
             ground[((j + 1) * heightSide) + i + 1] = height;
-            samples.SetHeight(i, j, (float)Lifted(height, x, z, now));
+            samples.SetHeight(i, j, (float)(Lifted(height, x, z, now) - Sink(x, z, now)));
         }
 
         for (int j = 0; j < side; j++)
@@ -88,15 +97,39 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     /// <summary>The walked ground's height at a point, before any location flattens it.</summary>
     internal double Height(double x, double z) => Height(x, z, Spacing * 2, []);
 
-    /// <summary>A height as the horizon draws it: only ground above the player's is lifted, more with distance.</summary>
+    /// <summary>A height as the horizon draws it: ground is lifted above its own valley floor, more with distance.</summary>
     internal double Lifted(double height, double x, double z, Frame frame)
     {
-        double above = height - frame.BaseMetres;
+        double floor = Floor(x, z), above = height - floor;
         if (above <= 0 || frame.Lift == 1) return height;
         double away = Math.Max(Math.Abs(x - frame.CentreX), Math.Abs(z - frame.CentreZ));
         double share = Math.Clamp((away - _tuning.LiftFromMetres) / (_tuning.LiftFullMetres - _tuning.LiftFromMetres), 0, 1);
         share = share * share * (3 - (2 * share));
-        return frame.BaseMetres + (above * (1 + ((frame.Lift - 1) * share)));
+        return floor + (above * (1 + ((frame.Lift - 1) * share)));
+    }
+
+    /// <summary>The valley floor at a point: the lowest ground about it, smoothed, read between map pixels.</summary>
+    internal double Floor(double x, double z)
+    {
+        // Heightmap pixel (X, Y) is vertex (0, 0) of map pixel (X + 1, Y).
+        double mapX = Math.Clamp((x / DaggerfallTerrainSurfaceBuilder.HorizontalSize) - 1, 0, _terrain.Width - 1.001);
+        double mapY = Math.Clamp(z / DaggerfallTerrainSurfaceBuilder.HorizontalSize, 0, _terrain.Height - 1.001);
+        int ix = (int)mapX, iy = (int)mapY, at = (iy * _terrain.Width) + ix;
+        double fx = mapX - ix, fy = mapY - iy;
+        double top = _floor[at] + ((_floor[at + 1] - _floor[at]) * fx);
+        double bottom = _floor[at + _terrain.Width] + ((_floor[at + _terrain.Width + 1] - _floor[at + _terrain.Width]) * fx);
+        return top + ((bottom - top) * fy);
+    }
+
+    /// <summary>
+    /// How far ground is sunk at a point. Under the walked window it isn't wanted, and at the walked ground's own height
+    /// it would poke through wherever the two differ, showing as slivers hung in the air. It eases out past the window.
+    /// </summary>
+    internal double Sink(double x, double z, Frame frame)
+    {
+        double away = Math.Max(Math.Abs(x - frame.CentreX), Math.Abs(z - frame.CentreZ));
+        double share = Math.Clamp((_tuning.SinkGoneMetres - away) / (_tuning.SinkGoneMetres - _tuning.SinkFromMetres), 0, 1);
+        return _tuning.SinkMetres * share * share * (3 - (2 * share));
     }
 
     /// <summary>The colour of far ground: the climate's own, bare where it is steep, white where it is high or wintry.</summary>
@@ -121,6 +154,39 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
             windows.Add((mapX, mapY), window = DaggerfallTerrainSurfaceBuilder.ReadWindow(_terrain, mapX, mapY));
         return DaggerfallTerrainSurfaceBuilder.NormalizedHeight(window, (int)(vertexX - ((long)mapX * TileDimension)),
             (int)(((long)mapY * TileDimension) - vertexZ), finestMetres) * DaggerfallTerrainSurfaceBuilder.TerrainVerticalSize;
+    }
+
+    private static float[] ValleyFloor(DaggerfallTerrainSet terrain)
+    {
+        int width = terrain.Width, height = terrain.Height;
+        float[] ground = new float[width * height];
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+            ground[(y * width) + x] = (float)Math.Max(OceanMetres, ((terrain.GetHeight(x, y) * DaggerfallTerrainSurfaceBuilder.BaseHeightScale)
+                + (terrain.Samples[(((y * width) + x) * 25) + 12] * DaggerfallTerrainSurfaceBuilder.NoiseMapScale)) * DaggerfallTerrainSurfaceBuilder.TerrainScale);
+        return Pass(Pass(Pass(Pass(ground, width, height, 1, 0, FloorReach, Math.Min), width, height, 0, 1, FloorReach, Math.Min),
+            width, height, 1, 0, FloorSmoothing, null), width, height, 0, 1, FloorSmoothing, null);
+    }
+
+    /// <summary>One direction of a separable filter: each cell the <paramref name="pick"/> of the cells about it, or their mean.</summary>
+    private static float[] Pass(float[] source, int width, int height, int stepX, int stepY, int reach, Func<float, float, float>? pick)
+    {
+        float[] result = new float[source.Length];
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+        {
+            float value = source[(y * width) + x], sum = 0;
+            for (int k = -reach; k <= reach; k++)
+            {
+                float other = source[(Math.Clamp(y + (k * stepY), 0, height - 1) * width) + Math.Clamp(x + (k * stepX), 0, width - 1)];
+                if (pick is null) sum += other;
+                else value = pick(value, other);
+            }
+
+            result[(y * width) + x] = pick is null ? sum / ((reach * 2) + 1) : value;
+        }
+
+        return result;
     }
 
     private static (int X, int Y) MapPixel(double x, double z) => (
