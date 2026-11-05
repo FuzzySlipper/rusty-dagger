@@ -104,6 +104,18 @@ scattered, so `HeldArcs` draws those same marks with a product shader, `content/
 `enchant` in the held definition holds the shader and a look for each style. The ruleset reads the enchantment from the
 item (`DaggerfallItemInstanceMetadata.HasEnchantment`), and `held.enchant true` shows it in the workbench.
 
+### Riding
+
+`DaggerfallHeldMount` draws what the player rides in the held styles: the horse, or the cart with the horse ahead of it. The
+models are our own (`authoring/docs/mounts.md`). The view is the mount's, so the mount sits on the viewmodel layer at the
+`seat`, turned back against the view's pitch to stay level: looking down shows the saddle and flanks. Each gait in `mount.gaits`
+starts at its `from` speed in metres a second, plays at the speed it was made for, and fades into the next in step, and
+`bob` raises and lowers the eye on it. The eye rises to the seat through `MountEyeLift`.
+
+Mounting puts the weapon away. The arms draw the `reins` family, whose `RIDE_Idle` holds both fists on the reins, turned with
+the mount (`DaggerfallHeldViewmodel.Level`) so the hands stay on them. A cast plays from the saddle. `player.ride MOUNT` mounts
+and dismounts. The classic style draws nothing while riding.
+
 ### The claw arms
 
 A transformed werewolf or wereboar draws the `claws` family, the werewolf on the `claws` set and the wereboar on

@@ -119,6 +119,14 @@ def bow_loose(t):
     return 1 - smooth((t - .3) / .7), 1, 1 - smooth((t - .25) / .5), 0, min(t / .06, 1)
 
 
+# The rider's hands on the reins (cm in the view, the right hand's; the left mirrors it), how far forward a fist points, and
+# how far they drift with the horse's stride.
+RIDE_CLIP = "RIDE_Idle"
+RIDE_HAND = Vector((9, 34, -48))
+RIDE_POINT = Vector((-.22, 1, -.12))
+RIDE_SWAY = .5
+
+
 # Each bow clip's frames at 60 a second, and what it does at each moment from 0 to 1: how far the bow is raised to the aim,
 # how far the string is drawn, how far the right hand has come to the string, where in its sway, and how far let go.
 BOW_CLIPS = {"BOW_Idle": (120, bow_idle), "BOW_Draw": (60, bow_draw), "BOW_Hold": (120, bow_hold), "BOW_Loose": (60, bow_loose)}
@@ -739,6 +747,26 @@ def bow_seat(sample):
     return {"at": rounded(seat.to_translation()), "turn": [round(d, 2) for d in degrees_of], "scale": round(seat.to_scale().x, 3)}
 
 
+def ride_clip(rig, base, stem, seconds=2):
+    """The hands on the reins, made as the bow's clips are: a loop of both fists held low ahead, drifting a little."""
+    bones = [b for b in rig.data.bones if b.name in base]
+    unrig = rig.matrix_world.inverted()
+    start = {name: unrig @ m for name, m in base.items() if name in rig.data.bones}
+    frames, samples = [], []
+    length = seconds * 60
+    for frame in range(length + 1):
+        drift = math.sin(frame / length * 2 * math.pi) * RIDE_SWAY
+        posed = dict(start)
+        for side, mirror in (("r", 1), ("l", -1)):
+            wrist = Vector((RIDE_HAND.x * mirror, RIDE_HAND.y - drift, RIDE_HAND.z + drift * mirror))
+            point = Vector((RIDE_POINT.x * mirror, RIDE_POINT.y, RIDE_POINT.z))
+            posed |= solve_arm(rig, start, side, wrist, frame_of(point, Vector((0, .2, 1))), Vector((.7 * mirror, -.4, -.6)), hand_shape(rig, side, BOW_GRIP))
+        frames.append(pose_basis(bones, posed))
+        samples.append({name: rig.matrix_world @ m for name, m in posed.items()} | {"weapon_r": rig.matrix_world @ posed["hand_r"], "weapon_l": rig.matrix_world @ posed["hand_l"]})
+    keyed(rig, stem, bones, frames)
+    return samples
+
+
 def mixed(a, b, share):
     """Two poses by bone, `share` of the way from `a` to `b`."""
     return {name: a[name].to_quaternion().slerp(b[name].to_quaternion(), share).to_matrix().to_4x4() for name in a}
@@ -940,8 +968,9 @@ stems = [rig_clip, *guard_stems(shield["guard"]), *(stem for family in families.
 for name, arm_set in definition["armSets"].items():
     rig = claws(name) if name in CLAW_FUR else arms(name)
     hands = open_hand(rig) if name in CLAW_FUR else None
-    samples = {stem: bake(rig, stem, hands) for stem in dict.fromkeys(stems) if stem not in BOW_CLIPS}
+    samples = {stem: bake(rig, stem, hands) for stem in dict.fromkeys(stems) if stem not in BOW_CLIPS and stem != RIDE_CLIP}
     samples |= {stem: bow_clip(rig, samples[rig_clip][0], stem) for stem in stems if stem in BOW_CLIPS}
+    samples[RIDE_CLIP] = ride_clip(rig, samples[rig_clip][0], RIDE_CLIP)
     export(out / arm_set["model"], list(samples))
     retro()
     export(out / arm_set["retroModel"], list(samples))

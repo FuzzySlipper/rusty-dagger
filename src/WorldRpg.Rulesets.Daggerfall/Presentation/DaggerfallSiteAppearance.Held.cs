@@ -2,6 +2,7 @@ using Rusty.Engine;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
@@ -30,6 +31,16 @@ internal sealed partial class DaggerfallSiteAppearance
     private bool heldShowing;
     // Whether the developer workbench views the art, which then owns the 3D weapon.
     private bool heldViewed;
+    // What the player rides, as the session reports it, and what is drawn for it.
+    private Func<(DaggerfallTransportMode Mode, float Speed, float Pitch)> playerRide = () => (DaggerfallTransportMode.Foot, 0, 0);
+    private DaggerfallHeldMount? mount;
+    private DaggerfallTransportMode? mounted;
+    // Whether the arms drawn are only there to hold the reins.
+    private bool reinArms;
+    private const string ReinsFamily = "reins";
+
+    /// <summary>Reads what the player rides, how fast in metres a second, and the view's pitch in radians, for the mount drawn in the held styles.</summary>
+    internal void UsePlayerRide(Func<(DaggerfallTransportMode Mode, float Speed, float Pitch)> ride) => playerRide = ride;
 
     /// <summary>
     /// Draws the weapons <paramref name="art"/> covers in 3D in <paramref name="style"/>, from the next weapon drawn,
@@ -117,7 +128,7 @@ internal sealed partial class DaggerfallSiteAppearance
     // the idle loop, so neither a swing nor the loop jumps.
     private void DressHeld()
     {
-        if (heldViewed || castArms || held is not { Moving: false } shown || shown.Drawing.Arms == heldArms) return;
+        if (heldViewed || castArms || reinArms || held is not { Moving: false } shown || shown.Drawing.Arms == heldArms) return;
         RefreshHeld();
         held?.TakeOver(shown);
     }
@@ -130,7 +141,7 @@ internal sealed partial class DaggerfallSiteAppearance
         if (heldViewed) return;
         if (viewmodel is not { } weapon)
         {
-            RetireHeld();
+            if (!reinArms) RetireHeld();
             return;
         }
         if (held is { } shown && shown.Drawing == Drawing(weapon.Weapon))
@@ -184,8 +195,51 @@ internal sealed partial class DaggerfallSiteAppearance
     private static float IdleFrame(NormalizedClassicWeapon weapon) =>
         weapon.Actions.TryGetValue("idle", out NormalizedClassicWeaponAction? idle) ? 1F / idle.FramesPerSecond : 0;
 
-    // The world seconds this update admitted, on which the arms' clips play.
-    private void StepHeld(ProductUpdateFacts update) => held?.Step((float)(update.FixedDeltaSeconds * update.AdmittedStepCount));
+    // The world seconds this update admitted, on which the arms' clips and the mount's gaits play.
+    private void StepHeld(ProductUpdateFacts update)
+    {
+        float seconds = (float)(update.FixedDeltaSeconds * update.AdmittedStepCount);
+        held?.Step(seconds);
+        StepMount(seconds);
+    }
+
+    // The mount follows what the player rides: drawn anew for a change, retired on foot.
+    private void StepMount(float seconds)
+    {
+        var (mode, speed, _) = playerRide();
+        DaggerfallTransportMode? wanted = heldArt is { Art.Document.Mount: not null } && mode is DaggerfallTransportMode.Horse or DaggerfallTransportMode.Cart ? mode : null;
+        if (wanted != mounted)
+        {
+            if (mount is not null) Retire(mount);
+            mount = null;
+            mounted = wanted;
+            if (wanted is not null && heldArt is { } chosen)
+                mount = new(chosen.Engine, chosen.Art, chosen.Art.Document.Mount!, wanted == DaggerfallTransportMode.Cart, chosen.Style == DaggerfallViewmodelStyle.HeldRetro,
+                    DaggerfallPresentationObjectIds.TakeHeld(), DaggerfallPresentationObjectIds.TakeHeld());
+        }
+        mount?.Step(seconds, speed);
+        DrawReins();
+    }
+
+    // A rider's hands hold the reins, the arms' whole job while the weapon is put away; they go with the mount.
+    private void DrawReins()
+    {
+        if (reinArms && mount is null)
+        {
+            reinArms = false;
+            RetireHeld();
+        }
+        else if (mount is not null && !reinArms && held is null && !heldViewed && viewmodel is null && heldArt is { } chosen)
+        {
+            held = NewHeld(Dressed(new DaggerfallHeldDrawing(ReinsFamily, null, DaggerfallHeldDrawing.Steel)));
+            held.Rest(0);
+            heldShowing = true;
+            reinArms = true;
+        }
+    }
+
+    /// <summary>How far above where it stands on foot the eye sits for what the player rides, <paramref name="standing"/> high on foot.</summary>
+    internal float MountEyeLift(float standing) => mount?.EyeLift(standing) ?? 0;
 
     // The sprite viewmodel, hidden while the 3D weapon draws, and the 3D weapon (alone while the workbench views it
     // and the hands wield no drawn weapon).
@@ -194,11 +248,17 @@ internal sealed partial class DaggerfallSiteAppearance
         bool sprite = held is null || !heldShowing;
         if (weapon is not null)
             facts.Add(new AppearanceFact(weapon.EntityId, false, 0, weapon.Transform, weapon.Appearance, sprite, RenderLayer.Viewmodel));
+        if (reinArms && mount is not null) held?.Level(mount.Level(playerRide().Pitch));
         held?.AppendFacts(facts, !sprite);
+        mount?.AppendFacts(facts, playerRide().Pitch, true);
         AppendCastGlowFact(facts);
         if (castHand is { } hand) facts.Add(new AppearanceFact(hand.EntityId, false, 0, hand.Transform, hand.Appearance, true, RenderLayer.Viewmodel));
     }
 
     // Once the snapshot is published: the arms are posed by their clip.
-    private void ReachHeld() => held?.Reach();
+    private void ReachHeld()
+    {
+        held?.Reach();
+        mount?.Posed();
+    }
 }

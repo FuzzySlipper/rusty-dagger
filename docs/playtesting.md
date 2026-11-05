@@ -125,6 +125,7 @@ earned. Like the movement commands they wait while a screen or question is open.
 | `player.skill SKILL VALUE` | Sets a skill (`short-blade`, …) within 0–100. |
 | `player.levelup` | Raises the career's level skills until the next level is due and opens the ordinary level-up on the character sheet. |
 | `player.heal` | Restores health, fatigue and magicka. |
+| `player.ride MOUNT` | Puts the player on `horse` or `cart`, giving them it if they have none, or back on `foot`. Riding needs the outdoors. |
 | `player.morph FORM` | Changes the player into `werewolf` or `wereboar`, cursing them with it if they have no curse, through the ordinary change; `""` changes them back. |
 
 For example, to reach the Temple of Kynareth's trainer from anywhere:
