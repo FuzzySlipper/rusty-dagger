@@ -1,0 +1,157 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy world scenery: the trees, rocks, plants and town fixtures of a dark fantasy RPG, seen from standing height. Keep the source's silhouette, proportions, local colours and the arrangement of its parts: it replaces the source at the same size in the world. Restrained palette with distinct light, middle and dark families. Detail hierarchy: silhouette first, a few large masses second, sparse material marks third. Foliage reads as clumps of painted leaf masses, not individual leaves. Keep open gaps between branches, bars and posts open. No extra parts, gemstones, runes, faces, symbols or fantasy embellishment. Not pixel art, not a photoreal photograph, not a glossy mobile-game asset, not a dramatic scene. No text, labels, border, vignette, frame, hand, person, ground plane, scenery or second object.",
+  "presentation": "One isolated object on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no ground shadow, no background texture and no cast shadow outside the object. The whole object visible with breathing room, centred, its base where the source's base is. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Flats: props-lights",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "flats",
+      "model": "qwen-edit",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "conditioning": "reference"
+    }
+  ],
+  "items": [
+    {
+      "id": "flat-190-3",
+      "directory": "props-lights/texture-190",
+      "image": "flat/texture-190-record-003-frame-000-source.png",
+      "content": "One flaming torch with a metallic skull head, wooden shaft, and orange-yellow fire atop a dark grey base.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-190-3 (29x97)"
+    },
+    {
+      "id": "flat-210-8",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-008-frame-000-source.png",
+      "content": "One ornate hanging lantern with a conical metal frame, curved arms, and a glowing blue-green glass dome.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-8 (59x97)"
+    },
+    {
+      "id": "flat-210-9",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-009-frame-000-source.png",
+      "content": "One ornate black metal chandelier with multiple lit candles hanging from curved arms and a central decorative frame.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-9 (56x110)"
+    },
+    {
+      "id": "flat-210-11",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-011-frame-000-source.png",
+      "content": "One hanging lantern with a glass dome, metal frame, and candle inside, glowing warmly with yellow light against dark surroundings.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-11 (29x61)"
+    },
+    {
+      "id": "flat-210-12",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-012-frame-000-source.png",
+      "content": "One dark spherical bell with teal accents, suspended by a metal chain, featuring ornate engravings and a central glowing gem.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-12 (36x54)"
+    },
+    {
+      "id": "flat-210-13",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-013-frame-000-source.png",
+      "content": "One hanging lantern with a metal chain, glass-like body, and warm orange-yellow glow from within.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-13 (36x53)"
+    },
+    {
+      "id": "flat-210-14",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-014-frame-000-source.png",
+      "content": "One tall lantern with a glowing amber glass shade, dark metal frame, and wooden pole, emitting warm light.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-14 (14x82)"
+    },
+    {
+      "id": "flat-210-15",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-015-frame-000-source.png",
+      "content": "One tall, slender torch with a glowing orange flame atop a metallic base and dark wooden shaft.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-15 (13x76)"
+    },
+    {
+      "id": "flat-210-22",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-022-frame-000-source.png",
+      "content": "One glowing lantern with a rounded glass body, metal frame, and hanging chain, emitting warm yellow light.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-22 (18x73)"
+    },
+    {
+      "id": "flat-210-23",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-023-frame-000-source.png",
+      "content": "One ornate metal chandelier with multiple candle holders and lit candles, featuring dark bronze and gold tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-23 (57x76)"
+    },
+    {
+      "id": "flat-210-27",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-027-frame-000-source.png",
+      "content": "One ornate lantern with a glowing amber light, black metal frame, and glass panels, featuring a hanging handle and base.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-27 (18x38)"
+    },
+    {
+      "id": "flat-210-28",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-028-frame-000-source.png",
+      "content": "One tall, slender lamp with a rounded base, curved support, and glowing amber glass shade.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-28 (19x101)"
+    },
+    {
+      "id": "flat-210-29",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-029-frame-000-source.png",
+      "content": "One tall, slender lamp post with a glowing amber lantern atop a metallic base, featuring dark grey and warm yellow hues.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-29 (14x107)"
+    }
+  ]
+}

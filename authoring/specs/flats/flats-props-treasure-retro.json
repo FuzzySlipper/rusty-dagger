@@ -1,0 +1,228 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy world scenery: the trees, rocks, plants and town fixtures of a dark fantasy RPG, seen from standing height. Keep the source's silhouette, proportions, local colours and the arrangement of its parts: it replaces the source at the same size in the world. Restrained palette with distinct light, middle and dark families. Detail hierarchy: silhouette first, a few large masses second, sparse material marks third. Foliage reads as clumps of painted leaf masses, not individual leaves. Keep open gaps between branches, bars and posts open. No extra parts, gemstones, runes, faces, symbols or fantasy embellishment. Not pixel art, not a photoreal photograph, not a glossy mobile-game asset, not a dramatic scene. No text, labels, border, vignette, frame, hand, person, ground plane, scenery or second object.",
+  "presentation": "One isolated object on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no ground shadow, no background texture and no cast shadow outside the object. The whole object visible with breathing room, centred, its base where the source's base is. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Flats: props-treasure / Qwen then retro",
+  "items": [
+    {
+      "id": "flat-216-0",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-000-frame-000-source.png",
+      "content": "One sack of gold coins, brown leather straps, yellow-gold coins spilling out, mostly brown and gold.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-0 (39x26)"
+    },
+    {
+      "id": "flat-216-3",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-003-frame-000-source.png",
+      "content": "One golden, elongated fish-shaped object with white speckles and a shiny, metallic texture.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-3 (27x19)"
+    },
+    {
+      "id": "flat-216-6",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-006-frame-000-source.png",
+      "content": "One ornate golden crown with intricate spikes and a central jewel, featuring hues of gold, brown, and orange.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-6 (21x18)"
+    },
+    {
+      "id": "flat-216-7",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-007-frame-000-source.png",
+      "content": "One ornate crown with metallic bands, jeweled accents, and gemstone inlays in silver, purple, green, and teal hues.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-7 (21x18)"
+    },
+    {
+      "id": "flat-216-8",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-008-frame-000-source.png",
+      "content": "One ornate, silver-topped potion bottle with green glass body and dark base, featuring a cork stopper and decorative band.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-8 (19x14)"
+    },
+    {
+      "id": "flat-216-10",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-010-frame-000-source.png",
+      "content": "One ornate, layered helmet with metallic silver and teal accents, featuring a curved visor and decorative ridges.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-10 (22x14)"
+    },
+    {
+      "id": "flat-216-19",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-019-frame-000-source.png",
+      "content": "One ornate, multi-part artifact with gem-like facets, metallic sheen, and hues of pink, teal, and gold.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-19 (38x27)"
+    },
+    {
+      "id": "flat-216-20",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-020-frame-000-source.png",
+      "content": "One ornate, multi-part crossbow with wooden stock, metal limbs, and gold accents, featuring a trigger, stock, and decorative elements.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-20 (60x25)"
+    },
+    {
+      "id": "flat-216-22",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-022-frame-000-source.png",
+      "content": "One ornate, multi-part crossbow with wooden stock, metal limbs, and gold accents, featuring a trigger, stock, and decorative elements.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-22 (60x25)"
+    },
+    {
+      "id": "flat-216-26",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-026-frame-000-source.png",
+      "content": "One wooden bow with curved limbs, string, and grip, featuring brown and yellow hues.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-26 (89x25)"
+    },
+    {
+      "id": "flat-216-28",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-028-frame-000-source.png",
+      "content": "One ornate, dark metallic chest with glowing golden coins scattered around its base, featuring intricate carvings and a sturdy, weathered appearance.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-28 (84x24)"
+    },
+    {
+      "id": "flat-216-33",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-033-frame-000-source.png",
+      "content": "One vial with green liquid, beside scattered gold coins and a dark, curved blade with metallic hilt.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-33 (92x23)"
+    },
+    {
+      "id": "flat-216-34",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-034-frame-000-source.png",
+      "content": "One ornate chest with golden coins, green and red accents, and a blue top, featuring a hinged lid and metallic sheen.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-34 (48x23)"
+    },
+    {
+      "id": "flat-216-36",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-036-frame-000-source.png",
+      "content": "One jagged, dark grey rock with scattered golden nuggets and white crystalline fragments at its base.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-36 (67x26)"
+    },
+    {
+      "id": "flat-216-37",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-037-frame-000-source.png",
+      "content": "One round, brown ceramic pot with a wide rim, surrounded by scattered golden coins.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-37 (63x34)"
+    },
+    {
+      "id": "flat-216-39",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-039-frame-000-source.png",
+      "content": "One irregularly shaped pile of gold coins, some with blue and red markings, gleaming with metallic yellow and hints of green.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-39 (72x24)"
+    },
+    {
+      "id": "flat-216-40",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-040-frame-000-source.png",
+      "content": "One wooden sled carries stacked logs bound with red straps, featuring green fabric and yellow accents.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-40 (61x31)"
+    },
+    {
+      "id": "flat-216-45",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-045-frame-000-source.png",
+      "content": "One round black bomb with fuse, brown sack with yellow rope, and glass bottle with green liquid, all resting on gold coins.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-45 (51x33)"
+    },
+    {
+      "id": "flat-216-46",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-046-frame-000-source.png",
+      "content": "One ornate golden crown with green gemstones and dark metallic accents, featuring a central cross and curved browband.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-46 (36x34)"
+    },
+    {
+      "id": "flat-216-47",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-047-frame-000-source.png",
+      "content": "One open wooden chest holds gold coins, a silver goblet, and a brown sack, with dark wood, gold, and silver as main colors.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-47 (49x53)"
+    }
+  ],
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "flats",
+      "model": "krea2-turbo",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ]
+}
