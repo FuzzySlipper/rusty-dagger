@@ -50,8 +50,8 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
             projection.Lighting.ApplyBackground();
         }
         _engine.CameraView.SetFog(Fog(inputs.ProfileKind, weather, horizonFog));
-        SetClouds(horizonFog is null ? 0 : weather is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy
-            ? _horizon.CloudCoverage : _horizon.StormCloudCoverage);
+        SetClouds(horizonFog is null || weather == DaggerfallWeatherKind.Fog ? 0
+            : weather is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy ? _horizon.CloudCoverage : _horizon.StormCloudCoverage);
     }
 
     private void SetClouds(float cover)
@@ -108,7 +108,9 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
             DaggerfallWeatherKind.Snow => _tuning.SnowFogDensity,
             DaggerfallWeatherKind.Fog => _tuning.HeavyFogDensity, _ => 0,
         };
-        Color color = density > _tuning.RainFogDensity ? new(.5f,.5f,.5f,1) : _skyColor;
+        // Over a cleared sky the fog meets the sky's own horizon: the panorama's colours are sRGB and a fog's are linear.
+        Color color = horizonFog is not null ? Color.FromSrgb(_skyColor.R, _skyColor.G, _skyColor.B)
+            : density > _tuning.RainFogDensity ? new(.5f,.5f,.5f,1) : _skyColor;
         // The classic's clear fog ends with the walked ground, which would close over a horizon past it.
         if (density == 0 && horizonFog is { } haze) return new(FogMode.Exponential, color, 0, 0, haze);
         return density == 0 ? new(FogMode.Linear, color, 0, _tuning.ClearFogEnd, 0)

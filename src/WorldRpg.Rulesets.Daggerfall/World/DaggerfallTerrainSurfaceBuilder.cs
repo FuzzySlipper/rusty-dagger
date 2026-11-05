@@ -105,6 +105,7 @@ internal static class DaggerfallTerrainSurfaceBuilder
         ValidateTerrain(terrain, mapPixelX, mapPixelY);
 
         DaggerfallTerrainWindow window = ReadWindow(terrain, mapPixelX, mapPixelY);
+        DaggerfallReliefPatch? patch = terrain.Relief is { } relief ? ReadPatch(relief, mapPixelX, mapPixelY) : null;
         int sampleCount = checked(SampleDimension * SampleDimension);
         Vector3[] vertices = new Vector3[sampleCount];
         float[] normalizedHeights = new float[sampleCount];
@@ -113,7 +114,8 @@ internal static class DaggerfallTerrainSurfaceBuilder
         {
             for (int x = 0; x < SampleDimension; x++)
             {
-                float normalizedHeight = NormalizedHeight(window, x, y);
+                float classic = ClassicNormalizedHeight(window, x, y);
+                float normalizedHeight = patch is null ? classic : patch.Blend(classic, x, y);
                 int index = Index(x, y, SampleDimension);
                 normalizedHeights[index] = normalizedHeight;
                 vertices[index] = new(
@@ -150,13 +152,57 @@ internal static class DaggerfallTerrainSurfaceBuilder
     {
         float classic = ClassicNormalizedHeight(window, x, y);
         if (window.Relief is not { } relief) return classic;
-        // Vertex (0, 0) of map pixel (X, Y) is heightmap pixel (X - 1, Y), and its rows run north to (X, Y - 1).
-        double mapX = window.MapPixelX - 1 + (x / (double)(SampleDimension - 1));
-        double mapY = window.MapPixelY - (y / (double)(SampleDimension - 1));
+        (double mapX, double mapY) = ReliefPoint(window.MapPixelX, window.MapPixelY, x, y);
         double share = relief.Share(mapX, mapY);
-        if (share <= 0) return classic;
-        float eroded = (float)(relief.Metres(mapX, mapY, finestMetres) / TerrainVerticalSize);
-        return Math.Max(OceanElevation / MaxTerrainHeight, classic + ((eroded - classic) * (float)share));
+        return share <= 0 ? classic : Blend(classic, (float)(relief.Metres(mapX, mapY, finestMetres) / TerrainVerticalSize), (float)share);
+    }
+
+    /// <summary>Vertex (0, 0) of map pixel (X, Y) is heightmap pixel (X - 1, Y), and its rows run north to (X, Y - 1).</summary>
+    private static (double X, double Y) ReliefPoint(int mapPixelX, int mapPixelY, double x, double y) =>
+        (mapPixelX - 1 + (x / (SampleDimension - 1)), mapPixelY - (y / (SampleDimension - 1)));
+
+    private static float Blend(float classic, float eroded, float share) =>
+        Math.Max(OceanElevation / MaxTerrainHeight, classic + ((eroded - classic) * share));
+
+    /// <summary>
+    /// The relief across one map pixel on a lattice coarser than its vertices: the erosion filter is the costly part of
+    /// a surface and its finest gully spans several vertices, so a surface reads it here between the lattice's nodes.
+    /// Neighbouring pixels share their edge nodes, so their edges meet.
+    /// </summary>
+    private static DaggerfallReliefPatch ReadPatch(DaggerfallTerrainRelief relief, int mapPixelX, int mapPixelY)
+    {
+        const int side = ((SampleDimension - 1) / DaggerfallReliefPatch.Stride) + 1;
+        float[] eroded = new float[side * side], share = new float[side * side];
+        for (int j = 0; j < side; j++)
+        for (int i = 0; i < side; i++)
+        {
+            (double mapX, double mapY) = ReliefPoint(mapPixelX, mapPixelY, i * DaggerfallReliefPatch.Stride, j * DaggerfallReliefPatch.Stride);
+            share[(j * side) + i] = (float)relief.Share(mapX, mapY);
+            eroded[(j * side) + i] = (float)(relief.Metres(mapX, mapY, SampleSpacing * 2) / TerrainVerticalSize);
+        }
+
+        return new(eroded, share, side);
+    }
+
+    private sealed record DaggerfallReliefPatch(float[] Eroded, float[] Share, int Side)
+    {
+        internal const int Stride = 4;
+
+        internal float Blend(float classic, int x, int y)
+        {
+            int i = Math.Min(x / Stride, Side - 2), j = Math.Min(y / Stride, Side - 2);
+            float fx = (x - (i * Stride)) / (float)Stride, fy = (y - (j * Stride)) / (float)Stride;
+            float share = Sample(Share, i, j, fx, fy);
+            return share <= 0 ? classic : DaggerfallTerrainSurfaceBuilder.Blend(classic, Sample(Eroded, i, j, fx, fy), share);
+        }
+
+        private float Sample(float[] values, int i, int j, float fx, float fy)
+        {
+            int at = (j * Side) + i;
+            float top = values[at] + ((values[at + 1] - values[at]) * fx);
+            float bottom = values[at + Side] + ((values[at + Side + 1] - values[at + Side]) * fx);
+            return top + ((bottom - top) * fy);
+        }
     }
 
     private static float ClassicNormalizedHeight(DaggerfallTerrainWindow window, int x, int y)

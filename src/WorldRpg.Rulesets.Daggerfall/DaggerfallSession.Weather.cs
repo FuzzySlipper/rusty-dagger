@@ -23,7 +23,9 @@ internal sealed partial class DaggerfallSession
             Vector3.UnitY, _tuning.Ambient.ShelterProbeHeight,
             _sites.CharacterEnvironment(State.PlayerControl.Motion)).Present;
         if (outside && !_controlSettings.ClassicArt && _sites.ActiveExteriorOrigin is { } origin)
-            _horizon.Show(_spatial.Session, origin, player, _time.Calendar.Season == DaggerfallSeason.Winter);
+            _horizon.Show(_spatial.Session, origin, player, _time.Calendar.Season == DaggerfallSeason.Winter,
+                _tuning.Weather.Daylight(_time.Calendar, CurrentWeather),
+                CurrentWeather is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy or DaggerfallWeatherKind.Overcast);
         else _horizon.Hide();
         _weatherPresentation.Update(_sites.Projection, _time.Calendar, CurrentClimate, CurrentWeather,
             _weather.SkyVariant(CurrentClimate), player, sheltered, seconds, playing, _horizon.FogDensity);

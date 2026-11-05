@@ -167,6 +167,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private readonly List<Material> locationMaterials = [];
     private readonly List<IDisposable> priorRetired = [];
     private readonly List<IDisposable> nextRetired = [];
+    private bool completesUpdates;
     // Each static mesh the profile draws, with its pose in the profile frame and its index in the profile geometry.
     private readonly List<(Appearance Appearance, Transform Pose, int Index)> world = [];
     // A resident neighbour's appearance never publishes: the active site's snapshot draws its location.
@@ -531,8 +532,10 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         // generated releases are staged in this new callback, not the one that
         // replaced their local role.
         // Direct presentation users may not call Complete between callbacks;
-        // promote that completed-call queue at the next admission boundary.
-        if (priorRetired.Count == 0 && nextRetired.Count > 0)
+        // promote that completed-call queue at the next admission boundary. A session
+        // does call it, and what it retires between updates (a developer teleport leaving
+        // a location) is still in the published snapshot, so it waits for that update's.
+        if (!completesUpdates && priorRetired.Count == 0 && nextRetired.Count > 0)
         {
             priorRetired.AddRange(nextRetired);
             nextRetired.Clear();
@@ -556,6 +559,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
 
     internal void CompleteAdmittedUpdate()
     {
+        completesUpdates = true;
         priorRetired.Clear();
         priorRetired.AddRange(nextRetired);
         nextRetired.Clear();

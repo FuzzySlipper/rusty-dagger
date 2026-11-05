@@ -92,6 +92,7 @@ public sealed class DaggerfallWeatherSessionTests
         session.Update(Update(1));
 
         Assert.True(fixture.Engine.BackdropLinked);
+        Assert.True(fixture.Engine.HeightfieldVisible);
         Assert.Equal(FogMode.Exponential, fixture.Engine.Fogs.Last().Mode);
         Assert.Equal(tuning.Horizon.FogDensity, fixture.Engine.Fogs.Last().Density);
         Assert.Equal(tuning.Horizon.CloudCoverage, fixture.Engine.Clouds.Last().Coverage);
@@ -140,6 +141,7 @@ public sealed class DaggerfallWeatherSessionTests
             Assert.Single(fixture.Engine.Particles.Updated);
             Assert.True(fixture.Engine.SkyBackgrounds.Count + fixture.Engine.SkyBlends.Count > 0);
             Assert.Equal(tuning.Ambient.RainFogDensity, fixture.Engine.Fogs.Last().Density);
+            Assert.False(fixture.Engine.HeightfieldVisible);
             fixture.Spatial.FloorHit = request => request.Direction.Y > .9f
                 ? default(SpatialHit) with {Present=true, Kind=SpatialHitKind.StaticMesh, Point=request.Origin+Vector3.UnitY, Normal=-Vector3.UnitY, Distance=1}
                 : default;

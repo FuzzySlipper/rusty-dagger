@@ -31,8 +31,13 @@ Engine heightfield in the backdrop that only draws.
   would float over the real skyline. Each panorama also ships cleared of it, and
   the Engine cloud layer stands in for the low cloud lost with it.
 - **Fog.** The classic's clear fog ends at the window's edge and would hide the
-  horizon, so clear weather uses thin exponential haze instead. Rain, snow and fog
-  keep their densities, which close over the far ground as they should.
+  horizon, so clear weather uses thin exponential haze instead, its colour the cleared
+  sky's own horizon. Rain, snow and fog keep their densities and hide the far ground:
+  they close within a kilometre or so, and ground the fog has wholly taken would
+  still stand out as a flat shape of the fog's colour. Fog also clears the cloud
+  layer, which would darken the sky just above it.
+- **Light.** The world's night lights keep far ground's bright vertex colours bright,
+  so far ground takes the day's light as a material tint, down to `nightTint`.
 
 The horizon stands only outdoors and only while classic art is off. Classic art
 shows the painted sky, classic fog and no cloud layer.
@@ -49,11 +54,13 @@ stand on it, through the same height function. Without it they stand on WOODS.
   It is a Python prototype: a player's import needs it in C#.
 - **Locations.** Every location gets a calmer pad in the bake, so its flattening
   doesn't stand on a cliff. Location heights are sampled at runtime, so they follow.
-- **Coast.** The bake's share falls to nothing within a few kilometres of the sea, so
-  the classic height returns there and shores stay where they were.
+- **Coast.** The bake's share falls to nothing within 300 m of the sea, so the classic
+  height returns there and shores stay where they were. The band is narrow because
+  the classic's terrace cliffs turn into sheer walls once the horizon lifts them.
 - **Detail.** The lattice holds nothing under about 800 m. Kit's `ErosionFilter` cuts
-  gullies below that and breaks high ground into peaks, evaluated per sample. Each
-  sampling skips what it can't hold, so far rings don't alias.
+  gullies below that and breaks high ground into peaks. Each sampling skips what it
+  can't hold, so far rings don't alias. A walked surface reads the relief from a
+  25.6 m patch rather than per vertex, since the filter is its costly part.
 
 ## Tuning by eye
 

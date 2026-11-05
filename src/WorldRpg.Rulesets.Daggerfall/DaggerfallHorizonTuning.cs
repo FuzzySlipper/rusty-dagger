@@ -12,6 +12,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="LiftFromMetres">Ground this far off is true height, so it meets the walked ground's edge.</param>
 /// <param name="LiftFullMetres">Ground this far off is fully lifted.</param>
 /// <param name="FogDensity">The clear-weather haze per metre, in place of the classic fog that ends with the walked ground.</param>
+/// <param name="NightTint">How bright far ground stands in the dark, as a share of its daylight colour.</param>
 /// <param name="FollowMetres">The player moves this far before the lift's centre follows.</param>
 /// <param name="BaseStepMetres">The player's ground changes this much before the lift's base follows.</param>
 /// <param name="SnowFromMetres">Snow starts on high ground here.</param>
@@ -24,12 +25,12 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="CloudScaleMetres">The size of one cloud.</param>
 /// <param name="CloudTwilightDegrees">How far below the horizon the sun still lights the clouds.</param>
 /// <param name="CloudDrift">The clouds' drift east and south, in metres a second.</param>
-internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres, float LiftFullMetres, float FogDensity,
+internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres, float LiftFullMetres, float FogDensity, float NightTint,
     float FollowMetres, float BaseStepMetres, float SnowFromMetres, float SnowFullMetres, float RockFromSlope, float RockFullSlope,
     float CloudCoverage, float StormCloudCoverage, float CloudAltitudeMetres, float CloudScaleMetres, float CloudTwilightDegrees, Vector2 CloudDrift,
     Color Sea, Color Rock, Color Snow, IReadOnlyDictionary<int, Color> Climates)
 {
-    internal static DaggerfallHorizonTuning Default { get; } = new(6, 3_000, 24_000, .00003f, 819.2f, 64, 900, 1_500, .08f, .3f,
+    internal static DaggerfallHorizonTuning Default { get; } = new(6, 3_000, 24_000, .00003f, .1f, 819.2f, 64, 900, 1_500, .25f, .7f,
         .45f, .9f, 3_500, 1_800, 8, new(14, 5),
         Color.FromSrgb(.16f, .24f, .32f), Color.FromSrgb(.42f, .38f, .34f), Color.FromSrgb(.86f, .87f, .9f),
         new Dictionary<int, Color>
@@ -44,6 +45,7 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
     {
         foreach (float value in new[] {Lift, LiftFullMetres, FogDensity, FollowMetres, BaseStepMetres, SnowFullMetres, RockFullSlope})
             if (!float.IsFinite(value) || value <= 0) throw new ArgumentException("Horizon values must be finite and positive.");
+        if (NightTint is < 0 or > 1) throw new ArgumentException("A horizon's night tint is from 0 to 1.");
         if (Lift < 1 || LiftFromMetres < 0 || LiftFromMetres >= LiftFullMetres
             || SnowFromMetres < 0 || SnowFromMetres >= SnowFullMetres || RockFromSlope < 0 || RockFromSlope >= RockFullSlope)
             throw new ArgumentException("A horizon's lift cannot fall, and its fades must rise from a start to a finish.");
@@ -58,7 +60,7 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
 
     internal static DaggerfallHorizonTuning Read(JsonElement e) => new(
         e.GetProperty("lift").GetSingle(), e.GetProperty("liftFromMetres").GetSingle(), e.GetProperty("liftFullMetres").GetSingle(),
-        e.GetProperty("fogDensity").GetSingle(), e.GetProperty("followMetres").GetSingle(), e.GetProperty("baseStepMetres").GetSingle(),
+        e.GetProperty("fogDensity").GetSingle(), e.GetProperty("nightTint").GetSingle(), e.GetProperty("followMetres").GetSingle(), e.GetProperty("baseStepMetres").GetSingle(),
         e.GetProperty("snowFromMetres").GetSingle(), e.GetProperty("snowFullMetres").GetSingle(),
         e.GetProperty("rockFromSlope").GetSingle(), e.GetProperty("rockFullSlope").GetSingle(),
         e.GetProperty("cloudCoverage").GetSingle(), e.GetProperty("stormCloudCoverage").GetSingle(),

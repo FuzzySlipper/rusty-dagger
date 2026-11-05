@@ -98,6 +98,29 @@ public sealed class PlayerViewmodelTests
     }
 
     [Fact]
+    public void What_a_developer_move_retires_between_updates_outlives_the_snapshot_that_still_holds_it()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        content.Add("weapon/dagger.png", Hash);
+        AppearanceFake appearance = new(releases);
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
+        presentation.BeginAdmittedUpdate();
+        presentation.Publish(EmptyActors());
+        presentation.CompleteAdmittedUpdate();
+        int before = releases.Count;
+
+        presentation.SuspendLocationResources();
+        presentation.BeginAdmittedUpdate();
+        Assert.Equal(before, releases.Count);
+
+        presentation.Publish(EmptyActors());
+        presentation.CompleteAdmittedUpdate();
+        presentation.BeginAdmittedUpdate();
+        Assert.True(releases.Count > before, "the retired location resources are released once a snapshot has dropped them");
+    }
+
+    [Fact]
     public void A_motion_plays_the_strike_rescaled_so_its_hit_frame_comes_as_the_windup_ends_and_delivers_nothing()
     {
         List<string> releases = [];
