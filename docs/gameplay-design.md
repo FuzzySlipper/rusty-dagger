@@ -245,7 +245,7 @@ Start new work from the current owners, not a stale filename in a task:
 | --- | --- |
 | Actor construction | `DaggerActorFactory`, Kit `ActorsState` / `EntityDirectory` |
 | Spawn, retire, site unload of actors | `DaggerfallActorRoster` |
-| Site transitions, inactive-site deltas, exterior window | `DaggerfallSiteLifecycle` |
+| Site transitions, inactive-site deltas, exterior window, holding the player at the world edge | `DaggerfallSiteLifecycle` |
 | World profiles: an authored closure by the id it overrides, else the location assembled from its blocks | `DaggerfallSiteProfiles`, `DaggerfallLocationAssembly`, `DaggerfallWorldBlocks`, ids from `DaggerfallWorldProfileIds` |
 | Places: every consumer names the profile id it means (travel, building entry, house, ship, court, cemetery, quest teleport, neighbour streaming); assembled doors are portals with landing anchors | `DaggerfallWorldProfileIds`, `DaggerfallSiteProfiles.TryGet`/`Contains`, `DaggerfallSitePortal.ArrivalAnchor` |
 | Arrival at a location from outside it (travel, court release) | `DaggerfallLocationArrival` |

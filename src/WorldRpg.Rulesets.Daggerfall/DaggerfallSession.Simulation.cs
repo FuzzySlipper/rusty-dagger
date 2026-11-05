@@ -138,6 +138,7 @@ internal sealed partial class DaggerfallSession
         CharacterStepReceipt? movement = _spatial.Step(State.PlayerControl, update, doorEnvironment, locomotion.Controls);
         if (movement is not null && _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior)
         {
+            _sites.HoldPlayerInsideWorldEdge();
             _sites.UpdateExteriorResidency();
             // A player who has dropped beneath the terrain is stood back on it rather than falling for ever.
             _ = _sites.RecoverPlayerBelowTerrain();
