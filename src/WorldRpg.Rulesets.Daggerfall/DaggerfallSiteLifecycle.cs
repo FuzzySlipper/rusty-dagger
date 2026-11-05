@@ -508,6 +508,7 @@ internal sealed class DaggerfallSiteLifecycle
             _host.RelocatePlayer(ProfileToLocal(pose.Position), pose.YawRadians, pose.PitchRadians);
             if (profile.Kind == DaggerfallWorldProfileKind.Exterior)
             {
+                HoldPlayerInsideWorldEdge();
                 _ = RebaseExteriorIfNeeded();
                 UpdateExteriorResidency();
             }
@@ -689,9 +690,7 @@ internal sealed class DaggerfallSiteLifecycle
             || _exteriorSurfaceFactory is not { } surfaces) return false;
         DaggerfallExteriorWorldOrigin origin = ActiveOrigin(residency);
         DaggerfallExteriorWorldBounds bounds = new(_definitions.Terrain.Width, _definitions.Terrain.Height);
-        DaggerfallExteriorCellId cell;
-        try { cell = DaggerfallExteriorSessionOrigin.CellForLocalPosition(local, origin, bounds); }
-        catch (Exception failure) when (failure is ArgumentOutOfRangeException or InvalidOperationException) { return false; }
+        DaggerfallExteriorCellId cell = DaggerfallExteriorSessionOrigin.CellForLocalPosition(local, origin, bounds);
         if (!residency.ResidentCells.Contains(cell)) return false;
         Vector3 corner = origin.LocalTranslation(cell);
         float x = Math.Clamp((local.X - corner.X) / DaggerfallExteriorCellResidency.CellSize, 0F, 1F);
@@ -1232,6 +1231,19 @@ internal sealed class DaggerfallSiteLifecycle
                 origin,
                 new DaggerfallExteriorWorldBounds(_definitions.Terrain.Width, _definitions.Terrain.Height))
             : site;
+    }
+
+    /// <summary>
+    /// Stops a player who has crossed the world edge at it, as the donor's <c>PlayerGPS</c> does, keeping their motion
+    /// so that a held key still walks them along it. Runs before anything reads the player's cell or moves the origin.
+    /// </summary>
+    internal void HoldPlayerInsideWorldEdge()
+    {
+        if (_state.PlayerControl.Position is not WorldPoint position
+            || _exteriorResidency is not { IsInitialized: true } residency) return;
+        WorldPoint held = DaggerfallExteriorSessionOrigin.InsideWorldEdge(position, ActiveOrigin(residency),
+            new DaggerfallExteriorWorldBounds(_definitions.Terrain.Width, _definitions.Terrain.Height));
+        if (held != position) ShiftPlayer(held.ToVector() - position.ToVector());
     }
 
     /// <summary>

@@ -101,7 +101,7 @@ report them; names with spaces are quoted.
 |---|---|
 | `world.where` | Current place, site, profile, building, feet and centre, facing, and the nearest targets with their ids. |
 | `world.teleport X Y Z` | Stands the player on feet `X Y Z` in the current scene. A spot with no floor within three metres below is refused (an interior is a box in empty space), and so is one the standing body would overlap, with the Engine's clearance facts. |
-| `world.teleport-force X Y Z` | The same, placed even with no floor or where the body overlaps collision. |
+| `world.teleport-force X Y Z` | The same, placed even with no floor or where the body overlaps collision. Outside, a spot past the world edge lands at the edge. |
 | `world.move DX DY DZ` | Moves by an offset from the current feet, refusing a spot as `world.teleport` does. |
 | `world.forward METRES` | Moves along the facing on the ground plane, refusing a spot as `world.teleport` does. |
 | `world.travel PLACE` | Lands at a map place, named (ranked as the travel search ranks: exact, prefix, contains, region) or as `region/index`. It lands as guild teleport does, with no time, cost or encounter. Several matches are listed with their ids. |

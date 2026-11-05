@@ -1,5 +1,6 @@
 using System.Numerics;
 using Rusty.Engine;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
@@ -44,6 +45,47 @@ public sealed class DaggerfallExteriorCellResidencyTests
 
         Assert.Equal(16, edge.ResidentCells.Count);
         Assert.Equal(16, Assert.Single(edgeSpatial.Requests).Instances.Length);
+    }
+
+    [Fact]
+    public void A_pose_past_the_map_belongs_to_the_nearest_edge_pixel()
+    {
+        DaggerfallExteriorWorldBounds bounds = DaggerfallExteriorWorldBounds.Daggerfall;
+        DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(new(990, 490));
+        float cell = DaggerfallExteriorCellResidency.CellSize;
+
+        Assert.Equal(new DaggerfallExteriorCellId(999, 497), DaggerfallExteriorSessionOrigin.CellForLocalPosition(
+            new WorldPoint(16 * cell, 0F, 7 * cell), origin, bounds));
+        Assert.Equal(new DaggerfallExteriorCellId(992, 499), DaggerfallExteriorSessionOrigin.CellForLocalPosition(
+            new WorldPoint(2.5F * cell, 0F, 40 * cell), origin, bounds));
+        Assert.Equal(new DaggerfallExteriorCellId(0, 0), DaggerfallExteriorSessionOrigin.CellForLocalPosition(
+            new WorldPoint(-2000 * cell, 0F, -2000 * cell), origin, bounds));
+    }
+
+    [Fact]
+    public void The_world_edge_stops_each_axis_at_the_donors_boundary_in_any_local_frame()
+    {
+        DaggerfallExteriorWorldBounds bounds = DaggerfallExteriorWorldBounds.Daggerfall;
+        float cell = DaggerfallExteriorCellResidency.CellSize;
+
+        // PlayerGPS's limits: world X 32,750,000 and world Z 10,000 of 32,768,000 and 16,384,000, at 40 units to the metre.
+        DaggerfallExteriorWorldOrigin southEast = new(990, 490, new Vector3(-3000F, 0F, 1500F));
+        WorldPoint east = DaggerfallExteriorSessionOrigin.InsideWorldEdge(new WorldPoint(100000F, 7F, 12F), southEast, bounds);
+        Assert.Equal(-3000F + (10 * cell) - 450F, east.X, 2);
+        Assert.Equal(7F, east.Y);
+        Assert.Equal(12F, east.Z);
+        WorldPoint south = DaggerfallExteriorSessionOrigin.InsideWorldEdge(new WorldPoint(12F, 7F, 100000F), southEast, bounds);
+        Assert.Equal(12F, south.X);
+        Assert.Equal(1500F + (9 * cell) - 250F, south.Z, 2);
+
+        // And world X 10,000 and world Z 16,370,000 on the other two sides.
+        DaggerfallExteriorWorldOrigin northWest = new(5, 5, new Vector3(800F, 0F, -600F));
+        WorldPoint corner = DaggerfallExteriorSessionOrigin.InsideWorldEdge(new WorldPoint(-100000F, 7F, -100000F), northWest, bounds);
+        Assert.Equal(800F - (5 * cell) + 250F, corner.X, 2);
+        Assert.Equal(-600F - (6 * cell) + 350F, corner.Z, 2);
+
+        WorldPoint inside = new(801F, 7F, -601F);
+        Assert.Equal(inside, DaggerfallExteriorSessionOrigin.InsideWorldEdge(inside, northWest, bounds));
     }
 
     [Fact]
