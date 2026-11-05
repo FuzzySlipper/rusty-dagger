@@ -549,11 +549,11 @@ public sealed class ExteriorOriginSessionTests
             Assert.Equal(999, session.Sites.CurrentExteriorCell().X);
             WorldPoint held = session.State.PlayerControl.Position!.Value;
 
-            // Each step begins past the boundary, as one that has just walked over it does.
+            // Each step begins past the boundary, as one that has just walked over it does, clear of ground that may rise there.
             for (ulong step = 2; step <= 8; step++)
             {
                 WorldPoint at = session.State.PlayerControl.Position!.Value;
-                session.State.PlayerControl.MoveTo(at.ToVector() + new Vector3(5F, 0F, 0F));
+                session.State.PlayerControl.MoveTo(at.ToVector() + new Vector3(5F, 8F, 0F));
                 session.Update(new ProductUpdate(OuterUpdate(step), []));
                 Assert.Equal(held.X, session.State.PlayerControl.Position!.Value.X, 2);
             }
