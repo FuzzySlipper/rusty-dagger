@@ -140,15 +140,22 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
         return DebugCommandResult.Success($"It is {_time.Calendar.SecondOfDay / 3_600}:00, {_time.Calendar.Season}.");
     }
 
+    public DebugCommandResult Weather(string kind)
+    {
+        if (!Enum.TryParse(kind, ignoreCase: true, out DaggerfallWeatherKind weather) || !Enum.IsDefined(weather))
+            return Refused($"The weather is one of {string.Join(", ", Enum.GetNames<DaggerfallWeatherKind>())}.");
+        _weather.Force(weather);
+        return DebugCommandResult.Success($"The weather is {weather}.");
+    }
+
     public DebugCommandResult Stand(double east, double south)
     {
         if (DeveloperMoveRefusal() is { } refusal) return Refused(refusal);
         if (_sites.ActiveExteriorOrigin is not { } origin || State.PlayerControl.Position is not { } position)
             return Refused("The player is not outdoors.");
-        Vector3 feet = position.ToVector();
-        Vector3 scene = _sites.LocalToProfile(feet);
-        double rise = _horizon.GroundRise(origin, feet, east, south);
-        return Teleport(scene.X + east, scene.Y + rise + .05, scene.Z + south, force: true);
+        Vector3 feet = PlayerFloor();
+        double rise = _horizon.GroundRise(origin, position.ToVector(), east, south);
+        return Teleport(feet.X + east, feet.Y + rise + .05, feet.Z + south, force: true);
     }
 
     public DebugCommandResult GroundSurvey() => DebugCommandResult.Success(_horizon.GroundSurvey(_definitions.Terrain));

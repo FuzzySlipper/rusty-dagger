@@ -310,6 +310,7 @@ public sealed class SkyMediaPublicationTests
         Assert.Equal(120, Level(500, height / 2));
         for (int y = SkyHorizonClearing.FromRow; y < height / 2; y++) Assert.InRange(Level(500, y), 110, 210);
         Assert.Equal(panorama.Length, cleared.Length);
+        Assert.Equal(120 / 255F, SkyHorizonClearing.HorizonColor(panorama)[0], 4);
     }
 
     private static int Paeth(int left, int up, int upLeft)

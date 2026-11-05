@@ -474,7 +474,7 @@ public sealed record SkyMediaPublication(
                     byte[] png = SkyPanoramaEncoder.Png(panorama);
                     artifacts.Add(new(path, png, mediaId: id));
                     cleared.Add(Cleared(artifacts, id, $"media/sky/resources/sky-{source.SkyIndex:00}-frame-{frame:00}{suffix}-clear.png",
-                        panorama, SkyPanoramaEncoder.ClearColor(document, frame, eastWestSwapped)));
+                        panorama));
                     resources.Add(new(
                         id,
                         path,
@@ -520,7 +520,7 @@ public sealed record SkyMediaPublication(
             byte[] panorama = SkyNightPanoramaEncoder.Pixels(rgba);
             byte[] png = SkyPanoramaEncoder.Png(panorama);
             artifacts.Add(new(path, png, mediaId: id));
-            cleared.Add(Cleared(artifacts, id, $"media/sky/resources/night-{source.NightIndex:00}-clear.png", panorama, SkyNightPanoramaEncoder.ClearColor(rgba)));
+            cleared.Add(Cleared(artifacts, id, $"media/sky/resources/night-{source.NightIndex:00}-clear.png", panorama));
             nightResources.Add(new(id, path, ContentDigest.Compute(png), png.LongLength, PanoramaWidth, PanoramaHeight,
                 NightWidth, NightHeight, source.NightIndex, source.SourcePath, ContentDigest.Compute(source.Bytes.Span), source.Bytes.Length,
                 nightPalette.SourcePath, nightPalette.SourceHash, nightPalette.ByteLength, SkyNightStarPolicy.Donor,
@@ -561,12 +561,12 @@ public sealed record SkyMediaPublication(
         return new(artifacts.OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal).ToArray(), manifest, provenance);
     }
 
-    private static SkyClearedResource Cleared(List<ImportPublicationArtifact> artifacts, string of, string path, byte[] panorama, IReadOnlyList<float> clearColor)
+    private static SkyClearedResource Cleared(List<ImportPublicationArtifact> artifacts, string of, string path, byte[] panorama)
     {
         string id = $"{of}/clear";
         byte[] png = SkyPanoramaEncoder.Png(SkyHorizonClearing.Clear(panorama));
         artifacts.Add(new(path, png, mediaId: id));
-        return new(id, of, path, ContentDigest.Compute(png), png.LongLength, PanoramaWidth, PanoramaHeight, clearColor);
+        return new(id, of, path, ContentDigest.Compute(png), png.LongLength, PanoramaWidth, PanoramaHeight, SkyHorizonClearing.HorizonColor(panorama));
     }
 
     private static byte[] ApplyDonorNightStars(ReadOnlySpan<byte> indexedPixels, SkyNightStarPolicy policy)
@@ -680,6 +680,17 @@ public static class SkyHorizonClearing
     /// <summary>Colour channels step by this, as the palette's ramps do.</summary>
     private const int ColourStep = 6;
     private static readonly int[] Dither = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+
+    /// <summary>The panorama's mean colour at the horizon: what haze must fade distant ground into to meet the sky.</summary>
+    public static IReadOnlyList<float> HorizonColor(byte[] panorama)
+    {
+        const int width = SkyMediaPublication.PanoramaWidth;
+        float[] sum = new float[3];
+        for (int x = 0; x < width; x++)
+        for (int channel = 0; channel < 3; channel++)
+            sum[channel] += panorama[(((HorizonRow * width) + x) * 4) + channel];
+        return [.. sum.Select(channel => channel / (width * 255F))];
+    }
 
     public static byte[] Clear(byte[] panorama)
     {

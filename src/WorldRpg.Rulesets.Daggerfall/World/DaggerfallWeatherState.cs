@@ -59,6 +59,9 @@ internal sealed class DaggerfallWeatherState
     internal int SkyVariant(int sourceClimate) => _skyVariants[ClimateGroup(sourceClimate)];
     internal DaggerfallWeatherSave Capture() => new([.. _climates], _nextDay) { SkyVariants = [.. _skyVariants] };
 
+    /// <summary>For a developer: every climate takes this weather until the day's next change.</summary>
+    internal void Force(DaggerfallWeatherKind weather) => Array.Fill(_climates, weather);
+
     internal void Advance(DaggerfallCalendar calendar)
     {
         if (calendar.DayNumber < _nextDay) return;

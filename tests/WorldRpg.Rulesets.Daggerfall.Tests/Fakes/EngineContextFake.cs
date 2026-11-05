@@ -71,6 +71,8 @@ internal class EngineContextFake : DispatchProxy
     internal bool BackdropLinked => ((CameraServiceFake)(object)camera).BackdropLinked;
     internal IReadOnlyList<CloudsRequest> Clouds => ((CameraServiceFake)(object)camera).Clouds;
     private readonly IHeightfieldService heightfield = ServiceProxy<IHeightfieldService, HeightfieldServiceFake>.Create();
+    /// <summary>Whether the far ground draws, as the last call left it.</summary>
+    internal bool HeightfieldVisible => ((HeightfieldServiceFake)(object)heightfield).Visible;
     private IWorldOriginService worldOrigin = null!;
     internal IReadOnlyList<WorldOriginCommitReceipt> OriginCommits => ((WorldOriginFake)(object)worldOrigin).Commits;
 
@@ -125,9 +127,15 @@ internal class EngineContextFake : DispatchProxy
     /// <summary>A heightfield that asks for no tiles: nothing here draws, and every readout is empty.</summary>
     private class HeightfieldServiceFake : DispatchProxy
     {
-        protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name == nameof(IHeightfieldService.Create)
-            ? new Heightfield(new HeightfieldHandle(1), () => { })
-            : method!.ReturnType.IsValueType && method.ReturnType != typeof(void) ? Activator.CreateInstance(method.ReturnType) : null;
+        internal bool Visible { get; private set; } = true;
+
+        protected override object? Invoke(MethodInfo? method, object?[]? arguments)
+        {
+            if (method?.Name == nameof(IHeightfieldService.SetVisible)) Visible = ((HeightfieldVisibilityRequest)arguments![0]!).Visible;
+            return method?.Name == nameof(IHeightfieldService.Create)
+                ? new Heightfield(new HeightfieldHandle(1), () => { })
+                : method!.ReturnType.IsValueType && method.ReturnType != typeof(void) ? Activator.CreateInstance(method.ReturnType) : null;
+        }
     }
 
     private class WorldOriginFake : DispatchProxy

@@ -19,6 +19,8 @@ internal sealed class DaggerfallHorizon : IDisposable
     /// <summary>How many sampled tiles are committed an update.</summary>
     private const int CommitsPerUpdate = 64;
     private const double CellSize = DaggerfallExteriorCellResidency.CellSize;
+    /// <summary>The far ground's tint follows the light in steps this small, too fine to see.</summary>
+    private const float TintStep = .01f;
 
     private readonly IEngineContext _engine;
     private readonly DaggerfallHorizonTuning _tuning;
@@ -27,6 +29,8 @@ internal sealed class DaggerfallHorizon : IDisposable
     private Heightfield? _heightfield;
     private HeightfieldStreamer? _streamer;
     private (SpatialSession Session, int MapX, int MapY)? _link;
+    private float _tint = 1;
+    private bool _seen = true;
     private double _lift;
     private float _fogDensity;
     private bool _disposed;
@@ -38,16 +42,25 @@ internal sealed class DaggerfallHorizon : IDisposable
         _tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
         _lift = tuning.Lift;
         _fogDensity = tuning.FogDensity;
-        _material = engine.Graphics.CreateMaterial(new MaterialRequest(new Color(1, 1, 1, 1), default(RenderResourceReference), 1,
-            new Color(1, 1, 1, 1), Vector3.Zero, 0, false));
+        _material = engine.Graphics.CreateMaterial(Tinted(1));
     }
 
     /// <summary>The clear-weather haze while the horizon stands, or none when the classic fog applies.</summary>
     internal float? FogDensity => _link is null ? null : _fogDensity;
 
     /// <summary>Stands the horizon about a player at <paramref name="local"/> in the exterior frame <paramref name="origin"/>.</summary>
-    internal void Show(SpatialSession session, DaggerfallExteriorWorldOrigin origin, Vector3 local, bool winter)
+    /// <param name="seen">Whether the weather lets the far ground show. Thick weather closes within a kilometre or so, and
+    /// ground that the fog has wholly taken would still stand out as a flat shape of the fog's colour against the sky.</param>
+    /// <param name="daylight">The day's light from 0 to 1: far ground takes it as a tint, since the world's night lights keep the ground's own colours bright.</param>
+    internal void Show(SpatialSession session, DaggerfallExteriorWorldOrigin origin, Vector3 local, bool winter, float daylight, bool seen)
     {
+        float tint = _tuning.NightTint + ((1 - _tuning.NightTint) * Math.Clamp(daylight, 0, 1));
+        if (Math.Abs(tint - _tint) >= TintStep)
+        {
+            _tint = tint;
+            _engine.Graphics.UpdateMaterial(new(_material, Tinted(tint)));
+        }
+
         if (_heightfield is null)
         {
             _heightfield = _engine.Heightfield.Create(new HeightfieldCreateRequest(DaggerfallHorizonGround.TileCells, DaggerfallHorizonGround.Rings,
@@ -63,12 +76,22 @@ internal sealed class DaggerfallHorizon : IDisposable
             _engine.CameraView.SetBackdrop(new(default, session, Global(-origin.MapPixelX * CellSize, 0, -origin.MapPixelY * CellSize), Vector3.Zero, Scale));
             _engine.Heightfield.SetVisible(new(_heightfield, true));
             _link = (session, origin.MapPixelX, origin.MapPixelY);
+            _seen = true;
+        }
+
+        if (seen != _seen)
+        {
+            _seen = seen;
+            _engine.Heightfield.SetVisible(new(_heightfield, seen));
         }
 
         Vector3 engineLocal = local - origin.Compensation;
         Follow(engineLocal.X + (origin.MapPixelX * CellSize), engineLocal.Z + (origin.MapPixelY * CellSize), engineLocal.Y, winter);
         _streamer!.Update();
     }
+
+    private static MaterialRequest Tinted(float tint) => new(new Color(tint, tint, tint, 1), default(RenderResourceReference), 1,
+        new Color(1, 1, 1, 1), Vector3.Zero, 0, false);
 
     /// <summary>Takes the horizon down, keeping its tiles for the next time outdoors.</summary>
     internal void Hide()
@@ -94,20 +117,29 @@ internal sealed class DaggerfallHorizon : IDisposable
         return _ground.Height(x + east, z + south) - _ground.Height(x, z);
     }
 
-    /// <summary>The steepest rise over one vertex step at random land points, and a surface's build time.</summary>
+    /// <summary>How steep the land is at walking scale, on this ground and the classic's, and where it is worst.</summary>
     internal string GroundSurvey(DaggerfallTerrainSet terrain)
+    {
+        DaggerfallTerrainSet classic = new(terrain.Width, terrain.Height, terrain.Heightmap, terrain.Samples);
+        return string.Join(" | ", Survey("relief", terrain, _ground), Survey("classic", classic, new(classic, (_, _) => 231, _tuning)));
+    }
+
+    private static string Survey(string name, DaggerfallTerrainSet terrain, DaggerfallHorizonGround ground)
     {
         const int points = 40_000;
         const double spacing = DaggerfallTerrainSurfaceBuilder.SampleSpacing;
         Random random = new(10_502);
         List<double> slopes = new(points);
+        (double Slope, double X, double Z, double Here) worst = default;
         while (slopes.Count < points)
         {
             double x = random.NextDouble() * terrain.Width * CellSize, z = random.NextDouble() * terrain.Height * CellSize;
-            double here = _ground.Height(x, z);
+            double here = ground.Height(x, z);
             if (here <= 42) continue;
-            double east = (_ground.Height(x + spacing, z) - here) / spacing, south = (_ground.Height(x, z + spacing) - here) / spacing;
-            slopes.Add(Math.Sqrt((east * east) + (south * south)));
+            double east = (ground.Height(x + spacing, z) - here) / spacing, south = (ground.Height(x, z + spacing) - here) / spacing;
+            double slope = Math.Sqrt((east * east) + (south * south));
+            slopes.Add(slope);
+            if (slope > worst.Slope) worst = (slope, x, z, here);
         }
 
         slopes.Sort();
@@ -116,7 +148,7 @@ internal sealed class DaggerfallHorizon : IDisposable
         for (int cell = 0; cell < 8; cell++) DaggerfallTerrainSurfaceBuilder.Build(terrain, 300 + cell, 200);
         double buildMs = System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds / 8;
         return string.Create(CultureInfo.InvariantCulture,
-            $"slope rise/run p50 {slopes[points / 2]:F3}, p90 {slopes[points * 9 / 10]:F3}, p99 {slopes[points * 99 / 100]:F3}, max {slopes[^1]:F3}; over 30 deg {Share(.577):P2}, over 45 deg {Share(1):P2}; surface build {buildMs:F1} ms");
+            $"{name}: rise/run p50 {slopes[points / 2]:F3}, p90 {slopes[points * 9 / 10]:F3}, p99 {slopes[points * 99 / 100]:F3}, over 30 deg {Share(.577):P2}, over 50 deg {Share(1.192):P2}, worst {worst.Slope:F2} at map ({worst.X / CellSize:F1}, {worst.Z / CellSize:F1}) {worst.Here:F0} m; build {buildMs:F1} ms");
     }
 
     internal string Readout()
