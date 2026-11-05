@@ -1,0 +1,319 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy world scenery: the trees, rocks, plants and town fixtures of a dark fantasy RPG, seen from standing height. Keep the source's silhouette, proportions, local colours and the arrangement of its parts: it replaces the source at the same size in the world. Restrained palette with distinct light, middle and dark families. Detail hierarchy: silhouette first, a few large masses second, sparse material marks third. Foliage reads as clumps of painted leaf masses, not individual leaves. Keep open gaps between branches, bars and posts open. No extra parts, gemstones, runes, faces, symbols or fantasy embellishment. Not pixel art, not a photoreal photograph, not a glossy mobile-game asset, not a dramatic scene. No text, labels, border, vignette, frame, hand, person, ground plane, scenery or second object.",
+  "presentation": "One isolated object on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no ground shadow, no background texture and no cast shadow outside the object. The whole object visible with breathing room, centred, its base where the source's base is. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Flats pilot: temperate woodland",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "flats",
+      "model": "qwen-edit",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "conditioning": "reference"
+    }
+  ],
+  "items": [
+    {
+      "id": "flat-504-1",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-001-frame-000-source.png",
+      "content": "One low dense bush of small dark leaves with dull purple-pink flowers.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-1 (57x42)"
+    },
+    {
+      "id": "flat-504-2",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-002-frame-000-source.png",
+      "content": "One tiny yellow wildflower sprig.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-2 (19x20)"
+    },
+    {
+      "id": "flat-504-3",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-003-frame-000-source.png",
+      "content": "One large mossy dark grey boulder cluster on a little dry earth.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-3 (83x44)"
+    },
+    {
+      "id": "flat-504-4",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-004-frame-000-source.png",
+      "content": "One large dark grey boulder cluster with a patch of moss and small plants.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-4 (81x39)"
+    },
+    {
+      "id": "flat-504-5",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-005-frame-000-source.png",
+      "content": "One small dark grey rock pile.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-5 (29x25)"
+    },
+    {
+      "id": "flat-504-6",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-006-frame-000-source.png",
+      "content": "One small low dark grey rock.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-6 (32x20)"
+    },
+    {
+      "id": "flat-504-7",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-007-frame-000-source.png",
+      "content": "One small green grass tuft with long bent blades.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-7 (36x27)"
+    },
+    {
+      "id": "flat-504-8",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-008-frame-000-source.png",
+      "content": "One small clump of dark green broad grass blades.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-8 (30x38)"
+    },
+    {
+      "id": "flat-504-9",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-009-frame-000-source.png",
+      "content": "One thin dark bare sapling with a few long drooping leaves.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-9 (34x59)"
+    },
+    {
+      "id": "flat-504-10",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-010-frame-000-source.png",
+      "content": "One small gnarled shrub tree with dark green foliage clumps on a mossy base.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-10 (48x60)"
+    },
+    {
+      "id": "flat-504-11",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-011-frame-000-source.png",
+      "content": "One slender tree with a thin curving trunk and layered flat clumps of green and russet leaves.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-11 (61x103)"
+    },
+    {
+      "id": "flat-504-12",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-012-frame-000-source.png",
+      "content": "One broad old tree with a thick twisted brown trunk and a wide green crown flecked with red.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-12 (121x100)"
+    },
+    {
+      "id": "flat-504-13",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-013-frame-000-source.png",
+      "content": "One tall narrow dark green conifer with a straight brown trunk.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-13 (77x147)"
+    },
+    {
+      "id": "flat-504-14",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-014-frame-000-source.png",
+      "content": "One slender tree with a thin grey trunk and rounded clumps of green and orange leaves.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-14 (83x123)"
+    },
+    {
+      "id": "flat-504-15",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-015-frame-000-source.png",
+      "content": "One slender tree with a curving trunk and scattered clumps of green and orange leaves.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-15 (83x107)"
+    },
+    {
+      "id": "flat-504-16",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-016-frame-000-source.png",
+      "content": "One leaning tree with a thin brown trunk and one large rounded green crown.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-16 (123x141)"
+    },
+    {
+      "id": "flat-504-17",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-017-frame-000-source.png",
+      "content": "One broad tree with a thin forked trunk and a wide olive and autumn orange crown.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-17 (126x139)"
+    },
+    {
+      "id": "flat-504-18",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-018-frame-000-source.png",
+      "content": "One large dark blue-green broadleaf tree with a dense rounded crown on a short trunk.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-18 (107x102)"
+    },
+    {
+      "id": "flat-504-19",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-019-frame-000-source.png",
+      "content": "One broken dead brown tree stump with jagged top and roots.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-19 (49x55)"
+    },
+    {
+      "id": "flat-504-20",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-020-frame-000-source.png",
+      "content": "One broad dead brown tree stump with short stubby broken branches and spreading roots.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-20 (66x57)"
+    },
+    {
+      "id": "flat-504-21",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-021-frame-000-source.png",
+      "content": "One thin stalk of small purple flowers above a few leaves.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-21 (13x34)"
+    },
+    {
+      "id": "flat-504-22",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-022-frame-000-source.png",
+      "content": "One tiny low pale blue flower.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-22 (15x11)"
+    },
+    {
+      "id": "flat-504-23",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-023-frame-000-source.png",
+      "content": "One single large tan mushroom with a pale stem.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-23 (23x37)"
+    },
+    {
+      "id": "flat-504-24",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-024-frame-000-source.png",
+      "content": "One tall dead grey leafless tree with thin bare branches.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-24 (39x97)"
+    },
+    {
+      "id": "flat-504-25",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-025-frame-000-source.png",
+      "content": "One tall dark green conifer, full and pointed, on a short trunk.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-25 (67x134)"
+    },
+    {
+      "id": "flat-504-26",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-026-frame-000-source.png",
+      "content": "One low spreading fern of long green fronds.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-26 (43x24)"
+    },
+    {
+      "id": "flat-504-27",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-027-frame-000-source.png",
+      "content": "One small round dark green leafy bush.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-27 (42x38)"
+    },
+    {
+      "id": "flat-504-28",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-028-frame-000-source.png",
+      "content": "One wide low dark green broadleaf bush on thin stems.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-28 (78x51)"
+    },
+    {
+      "id": "flat-504-29",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-029-frame-000-source.png",
+      "content": "One small spiky dark green plant.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-29 (33x22)"
+    },
+    {
+      "id": "flat-504-30",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-030-frame-000-source.png",
+      "content": "One tall dead brown leafless tree with many thin upward branches.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-30 (82x129)"
+    },
+    {
+      "id": "flat-504-31",
+      "directory": "nature-temperate-woodland/texture-504",
+      "image": "flat/texture-504-record-031-frame-000-source.png",
+      "content": "One fallen brown log with a broken stump and short snapped branches.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-504-31 (124x68)"
+    }
+  ]
+}
