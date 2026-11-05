@@ -140,6 +140,13 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
         return DebugCommandResult.Success($"It is {_time.Calendar.SecondOfDay / 3_600}:00, {_time.Calendar.Season}.");
     }
 
+    public DebugCommandResult GroundBlend(double contrast, double repeatMetres, double triplanarSharpness)
+    {
+        if (contrast < 0 || repeatMetres <= 0 || triplanarSharpness < 0) return Refused("A contrast and sharpness are 0 or more, and a repeat more than 0.");
+        _sites.UseGroundBlend(contrast == 0 ? null : new((float)Math.Max(contrast, 1), (float)repeatMetres, (float)triplanarSharpness));
+        return DebugCommandResult.Success(contrast == 0 ? "Open ground is tiled." : "Open ground blends.");
+    }
+
     public DebugCommandResult Weather(string kind)
     {
         if (!Enum.TryParse(kind, ignoreCase: true, out DaggerfallWeatherKind weather) || !Enum.IsDefined(weather))

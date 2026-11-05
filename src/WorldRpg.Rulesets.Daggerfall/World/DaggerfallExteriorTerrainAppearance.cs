@@ -27,6 +27,10 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     private DaggerfallArtReplacements? _art;
     private Func<bool> _drawRefreshed = () => false;
     private bool _refreshedDrawn;
+    private IAuthoredContentService? _authored;
+    private DaggerfallGroundBlendSettings? _blend;
+    private readonly Dictionary<int, DaggerfallGroundLayers> _groundLayers = [];
+    private readonly List<DaggerfallGroundLayers> _retiredLayers = [];
     private DaggerfallExteriorWorldOrigin _origin;
     private bool _hasOrigin;
     private bool _disposed;
@@ -58,6 +62,15 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     {
         _art = art;
         _drawRefreshed = refreshed;
+    }
+
+    /// <summary>Draws open ground blended by these settings wherever refreshed art is drawn, or tiled when they are null.</summary>
+    internal void UseBlend(IAuthoredContentService authored, DaggerfallGroundBlendSettings? settings)
+    {
+        _authored = authored;
+        _blend = settings;
+        _retiredLayers.AddRange(_groundLayers.Values);
+        _groundLayers.Clear();
     }
 
     internal int ActiveCellCount => _visuals.Count;
@@ -185,19 +198,22 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
                 if (_visuals.TryGetValue(cell, out TerrainVisual? current)
                     && ReferenceEquals(current.SourceTiles, terrainTiles)
                     && ReferenceEquals(current.Profile, _profile)
-                    && current.Variant == (hasVariant ? variant : null)) continue;
+                    && current.Variant == (hasVariant ? variant : null)
+                    && current.Blend == _blend) continue;
                 IReadOnlyList<TerrainTextureKey> textureKeys = hasVariant
                     ? ResolveTerrainTextures(variant, terrainTiles)
                     : [];
                 if (current is not null
+                    && current.Blend == _blend
                     && TextureKeysEqual(current.TextureKeys, textureKeys)
                     && current.TerrainTiles.SequenceEqual(terrainTiles))
                 {
                     _visuals[cell] = current with { SourceTiles = terrainTiles, Profile = _profile, Variant = hasVariant ? variant : null };
                     continue;
                 }
-                additions.Add((cell, CreateVisual(cell, surfaceFactory(cell), terrainTiles, textureKeys) with
+                additions.Add((cell, CreateVisual(cell, surfaceFactory(cell), terrainTiles, textureKeys, hasVariant ? GroundLayers(variant.GroundTextureArchive) : null) with
                 {
+                    Blend = _blend,
                     SourceTiles = terrainTiles,
                     Profile = _profile,
                     Variant = hasVariant ? variant : null,
@@ -331,6 +347,11 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         _terrainMaterials.Clear();
         try { _material.Dispose(); }
         catch (Exception exception) { (failures ??= []).Add(exception); }
+        foreach (DaggerfallGroundLayers layers in _groundLayers.Values.Concat(_retiredLayers))
+        {
+            try { layers.Dispose(); }
+            catch (Exception exception) { (failures ??= []).Add(exception); }
+        }
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
 
@@ -338,7 +359,8 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         DaggerfallExteriorCellId cell,
         DaggerfallTerrainSurface surface,
         IReadOnlyList<DaggerfallExteriorTerrainTile> terrainTiles,
-        IReadOnlyList<TerrainTextureKey> textureKeys)
+        IReadOnlyList<TerrainTextureKey> textureKeys,
+        DaggerfallGroundLayers? layers)
     {
         ArgumentNullException.ThrowIfNull(surface);
         if (surface.MapPixelX != cell.X || surface.MapPixelY != cell.Y)
@@ -355,6 +377,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         uint[] indices;
         MeshGroup[] groups;
         MeshMaterialBinding[] bindings;
+        Vector4[]? weights = null;
         if (textureKeys.Count == 0)
         {
             positions = surface.Vertices;
@@ -372,7 +395,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         }
         else
         {
-            (positions, normals, uvs, indices, groups, bindings) = BuildTiledMesh(surface, normals, terrainTiles, textureKeys);
+            (positions, normals, uvs, indices, groups, bindings, weights) = BuildTiledMesh(surface, normals, terrainTiles, textureKeys, layers);
         }
         MeshResource? mesh = null;
         try
@@ -383,7 +406,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
                 uvs,
                 indices,
                 groups,
-                bindings));
+                bindings) { LayerWeights = weights ?? default(ReadOnlyMemory<Vector4>) });
             Appearance appearance = _graphics.CreateMeshAppearance(mesh);
             return new(mesh, appearance, textureKeys.ToArray(), terrainTiles.ToArray());
         }
@@ -424,11 +447,12 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         first.Count == second.Count && first.SequenceEqual(second);
 
     private (Vector3[] Positions, Vector3[] Normals, Vector2[] Uvs, uint[] Indices,
-        MeshGroup[] Groups, MeshMaterialBinding[] Bindings) BuildTiledMesh(
+        MeshGroup[] Groups, MeshMaterialBinding[] Bindings, Vector4[]? Weights) BuildTiledMesh(
         DaggerfallTerrainSurface surface,
         Vector3[] sourceNormals,
         IReadOnlyList<DaggerfallExteriorTerrainTile> terrainTiles,
-        IReadOnlyList<TerrainTextureKey> textureKeys)
+        IReadOnlyList<TerrainTextureKey> textureKeys,
+        DaggerfallGroundLayers? layers)
     {
         const int tileDimension = DaggerfallTerrainSurfaceBuilder.SampleDimension - 1;
         if (terrainTiles.Count != tileDimension * tileDimension || textureKeys.Count != terrainTiles.Count)
@@ -438,6 +462,8 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         List<Vector3> normals = new(terrainTiles.Count * 4);
         List<Vector2> uvs = new(terrainTiles.Count * 4);
         Dictionary<TerrainTextureKey, List<uint>> groupedIndices = [];
+        List<uint> blendedIndices = [];
+        List<Vector4> weights = new(layers is null ? 0 : terrainTiles.Count * 4);
         for (int tileY = 0; tileY < tileDimension; tileY++)
         {
             for (int tileX = 0; tileX < tileDimension; tileX++)
@@ -445,7 +471,9 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
                 int tileIndex = (tileY * tileDimension) + tileX;
                 DaggerfallExteriorTerrainTile tile = terrainTiles[tileIndex];
                 TerrainTextureKey key = textureKeys[tileIndex];
-                if (!groupedIndices.TryGetValue(key, out List<uint>? tileIndices))
+                bool blended = layers is not null && tile.Blends;
+                List<uint>? tileIndices = blendedIndices;
+                if (!blended && !groupedIndices.TryGetValue(key, out tileIndices))
                     groupedIndices.Add(key, tileIndices = []);
 
                 int vertex = positions.Count;
@@ -459,7 +487,10 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
                 {
                     positions.Add(surface.Vertices[source[corner]]);
                     normals.Add(sourceNormals[source[corner]]);
-                    uvs.Add(TransformTileUv(tileUvs[corner], tile.Rotated, tile.Flipped));
+                    // Blended ground repeats by metres across the cell, so its textures run on from tile to tile.
+                    uvs.Add(blended ? new(surface.Vertices[source[corner]].X, -surface.Vertices[source[corner]].Z)
+                        : TransformTileUv(tileUvs[corner], tile.Rotated, tile.Flipped));
+                    if (layers is not null) weights.Add(GroundWeights(surface, sourceNormals, source[corner]));
                 }
                 tileIndices.AddRange([(uint)vertex, (uint)(vertex + 1), (uint)(vertex + 3),
                     (uint)vertex, (uint)(vertex + 3), (uint)(vertex + 2)]);
@@ -480,7 +511,44 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
             start = checked(start + (uint)tileIndices.Count);
             slot++;
         }
-        return (positions.ToArray(), normals.ToArray(), uvs.ToArray(), indices.ToArray(), groups.ToArray(), bindings.ToArray());
+        if (blendedIndices.Count != 0)
+        {
+            indices.AddRange(blendedIndices);
+            groups.Add(new MeshGroup(slot, start, checked((uint)blendedIndices.Count)));
+            bindings.Add(new MeshMaterialBinding(slot, layers!.Layered!));
+        }
+        return (positions.ToArray(), normals.ToArray(), uvs.ToArray(), indices.ToArray(), groups.ToArray(), bindings.ToArray(),
+            layers is null ? null : weights.ToArray());
+    }
+
+    private static Vector4 GroundWeights(DaggerfallTerrainSurface surface, Vector3[] normals, int vertex)
+    {
+        const int dimension = DaggerfallTerrainSurfaceBuilder.SampleDimension, tiles = dimension - 1;
+        float up = Math.Clamp(normals[vertex].Y, .05F, 1F);
+        int x = vertex % dimension, y = vertex / dimension;
+        float noise = DaggerfallTerrainSurfaceBuilder.DonorTerrainWeight((surface.MapPixelX * tiles) + x, 64_000 - (surface.MapPixelY * tiles) + y);
+        return DaggerfallGroundBlend.Weights(noise, MathF.Sqrt(1 - (up * up)) / up, surface.Vertices[vertex].Y);
+    }
+
+    /// <summary>The layers open ground of an archive blends, while blending and refreshed art are on.</summary>
+    private DaggerfallGroundLayers? GroundLayers(int archive)
+    {
+        if (_blend is not { } settings || _authored is null || _profile is null || !_drawRefreshed()) return null;
+        if (_groundLayers.TryGetValue(archive, out DaggerfallGroundLayers? layers)) return layers;
+        // A climate's snow is the grass of its winter archive, which ends in 3.
+        (int Archive, int Record)[] records = [(archive, 2), (archive, 1), (archive, 3), ((archive / 100 * 100) + 3, 2)];
+        List<(string Path, ContentSha256 Hash)> maps = [];
+        foreach ((int layerArchive, int record) in records)
+        {
+            if (!_profile.TerrainTextures.TryGetValue((layerArchive, record), out NormalizedTerrainTexture? texture)
+                && !_profile.TerrainTextures.TryGetValue((archive, 3), out texture))
+                throw new InvalidOperationException($"Ground archive {archive} has no texture for layer {layerArchive}/{record}.");
+            maps.Add(_art?.Surface(texture.TexturePath) is { } surface ? (surface.File.Path, surface.File.Sha256) : (texture.TexturePath, texture.TextureSha256));
+        }
+
+        layers = new(_authored, _graphics, _content, archive, maps, settings);
+        _groundLayers.Add(archive, layers);
+        return layers;
     }
 
     internal static Vector2 TransformTileUv(Vector2 uv, bool rotated, bool flipped)
@@ -757,6 +825,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     {
         /// <summary>The environment's tile list, media profile and variant the visual was last reconciled against.</summary>
         internal IReadOnlyList<DaggerfallExteriorTerrainTile>? SourceTiles { get; init; }
+        internal DaggerfallGroundBlendSettings? Blend { get; init; }
         internal DaggerfallSiteProfile? Profile { get; init; }
         internal DaggerfallExteriorTerrainVariant? Variant { get; init; }
     }
