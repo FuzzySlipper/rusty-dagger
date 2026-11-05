@@ -67,7 +67,7 @@ internal sealed class DaggerfallHorizon : IDisposable
                 new HeightfieldMaterial[] { new(0, _material) }, RenderLayer.Backdrop, Vector3.Zero, 1 / Scale, HeightfieldFocus.At(0, 0))
                 with { ShadowCasting = ShadowCasting.None });
             _streamer = new HeightfieldStreamer(_engine, _heightfield, _ground, CommitsPerUpdate);
-            _ground.Current = _ground.Current with { BaseMetres = double.NaN };
+            _ground.Current = _ground.Current with { CentreX = double.NaN, CentreZ = double.NaN };
         }
 
         if (_link is not { } link || link.Session != session || link.MapX != origin.MapPixelX || link.MapY != origin.MapPixelY)
@@ -86,7 +86,7 @@ internal sealed class DaggerfallHorizon : IDisposable
         }
 
         Vector3 engineLocal = local - origin.Compensation;
-        Follow(engineLocal.X + (origin.MapPixelX * CellSize), engineLocal.Z + (origin.MapPixelY * CellSize), engineLocal.Y, winter);
+        Follow(engineLocal.X + (origin.MapPixelX * CellSize), engineLocal.Z + (origin.MapPixelY * CellSize), winter);
         _streamer!.Update();
     }
 
@@ -157,7 +157,7 @@ internal sealed class DaggerfallHorizon : IDisposable
         string state = _link is null ? "hidden" : "shown";
         string tiles = _heightfield is null ? "not built" : Describe(_engine.Heightfield.Read(_heightfield));
         return string.Create(CultureInfo.InvariantCulture,
-            $"{state}: lift {frame.Lift:F2} above {frame.BaseMetres:F0} m about ({frame.CentreX:F0}, {frame.CentreZ:F0}), haze {_fogDensity:F6}/m; {tiles}");
+            $"{state}: lift {frame.Lift:F2} about ({frame.CentreX:F0}, {frame.CentreZ:F0}), haze {_fogDensity:F6}/m; {tiles}");
     }
 
     public void Dispose()
@@ -170,20 +170,22 @@ internal sealed class DaggerfallHorizon : IDisposable
     }
 
     /// <summary>
-    /// Moves the lift's centre and base once the player has left them, and the rings with them. The frame changes first,
-    /// so nothing invalidated is sampled by the old one. A new base or lift changes every lifted height; a new centre
-    /// only what lies inside the fade.
+    /// Moves the lift's centre once the player has left it, and the rings with it, in steps small enough that tiles sampled
+    /// either side of one barely differ. The frame changes first, so nothing invalidated is sampled by the old one. A move
+    /// changes only what lies inside the fade about either centre; a new lift or season changes every tile.
     /// </summary>
-    private void Follow(double x, double z, double feet, bool winter)
+    private void Follow(double x, double z, bool winter)
     {
         DaggerfallHorizonGround.Frame frame = _ground.Current;
-        bool rebased = !(Math.Abs(feet - frame.BaseMetres) < _tuning.BaseStepMetres) || frame.Lift != _lift || frame.Winter != winter;
+        bool everywhere = !double.IsFinite(frame.CentreX) || frame.Lift != _lift || frame.Winter != winter;
         bool moved = Math.Max(Math.Abs(x - frame.CentreX), Math.Abs(z - frame.CentreZ)) >= _tuning.FollowMetres;
-        if (!rebased && !moved) return;
-        _ground.Current = new(x, z, rebased ? feet : frame.BaseMetres, _lift, winter);
+        if (!everywhere && !moved) return;
+        _ground.Current = new(x, z, _lift, winter);
         _engine.Heightfield.SetFocus(new HeightfieldFocusRequest(_heightfield!, HeightfieldFocus.At(x, z)));
-        double extent = rebased ? DaggerfallHorizonGround.CoarseReachMetres * 2 : _tuning.LiftFullMetres + _tuning.FollowMetres;
-        _engine.Heightfield.Invalidate(new HeightfieldInvalidateRequest(_heightfield!, x - extent, z - extent, x + extent, z + extent));
+        double reach = everywhere ? DaggerfallHorizonGround.CoarseReachMetres * 2 : _tuning.LiftFullMetres;
+        double fromX = double.IsFinite(frame.CentreX) ? frame.CentreX : x, fromZ = double.IsFinite(frame.CentreZ) ? frame.CentreZ : z;
+        _engine.Heightfield.Invalidate(new HeightfieldInvalidateRequest(_heightfield!, Math.Min(x, fromX) - reach, Math.Min(z, fromZ) - reach,
+            Math.Max(x, fromX) + reach, Math.Max(z, fromZ) + reach));
     }
 
     private static string Describe(HeightfieldReadout read) => string.Create(CultureInfo.InvariantCulture,

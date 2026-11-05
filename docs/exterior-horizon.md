@@ -19,14 +19,16 @@ Engine heightfield in the backdrop that only draws.
   walked ground's 6.4 m spacing, so every far sample is a vertex of the walked
   surface, before any location flattens it. The finest ring's tile is one map pixel.
 - **Join.** The world draws over the backdrop, so only the walked ground shows
-  inside the window. Far ground there stands at true height, so it can't rise
-  above the walked ground it lies under.
+  inside the window. Far ground is sunk under the window and eases back out past it:
+  at the walked ground's own height it would poke through wherever the two differ.
 - **Lift.** The map's ranges rise only a degree or two over the skyline at true
-  height. Ground above the player's own is multiplied by `lift`, fading in between
-  `liftFromMetres` and `liftFullMetres`. Lift is measured from the player, so a
-  plateau the player stands on doesn't rear up around them. The centre follows
-  every `followMetres` and the base every `baseStepMetres`; a move resamples the
-  fade zone, a new base every tile.
+  height. Ground above its valley floor (the lowest ground within about 20 km,
+  smoothed) is multiplied by `lift`, fading in between `liftFromMetres` and
+  `liftFullMetres`. The floor is fixed on the map, not measured from the player: a
+  lift that follows the player moves every tile at once, and tiles sampled either
+  side of the change tear arches into the ranges until they are all sampled again.
+  The fade's centre follows every `followMetres`, small steps so tiles sampled either
+  side of one barely differ, and a move resamples only the fade zone.
 - **Sky.** The classic paints its horizon into the panorama's lower third, where it
   would float over the real skyline. Each panorama also ships cleared of it, and
   the Engine cloud layer stands in for the low cloud lost with it.
@@ -47,11 +49,11 @@ shows the painted sky, classic fog and no cloud layer.
 Where the data carries `worldrpg/terrain/relief.bin`, the walked and far ground both
 stand on it, through the same height function. Without it they stand on WOODS.
 
-- **Bake.** `authoring/tools/relief/bake.py` runs stream-power erosion over the map:
-  the coast is fixed, climate sets the rain, and uplift is calibrated back to WOODS's
-  own heights, so the land keeps its shape and gains valleys and ridges. Flow leaves
-  by a random slope weighted by steepness, which keeps valleys off the grid's axes.
-  It is a Python prototype: a player's import needs it in C#.
+- **Bake.** The import's `relief` step (`ReliefBake`) runs stream-power erosion over
+  the map: the coast is fixed, climate sets the rain, and uplift is calibrated back to
+  WOODS's own heights, so the land keeps its shape and gains valleys and ridges. Flow
+  leaves by a random slope weighted by steepness, which keeps valleys off the grid's
+  axes. All its noise comes from coordinate hashes, so a bake depends only on its input.
 - **Locations.** Every location gets a calmer pad in the bake, so its flattening
   doesn't stand on a cliff. Location heights are sampled at runtime, so they follow.
 - **Coast.** The bake's share falls to nothing within 300 m of the sea, so the classic
@@ -65,5 +67,5 @@ stand on it, through the same height function. Without it they stand on WOODS.
 ## Tuning by eye
 
 `world.horizon-set LIFT FOG` changes the lift and haze for one run, and
-`world.hour HOUR` sets the light. Lifts of 6 to 10 give layered ranges. Over bare
-WOODS its stepped heights make them mesas at any lift; the relief makes them peaks.
+`world.hour HOUR` sets the light. Over bare WOODS its stepped heights make ranges into
+mesas at any lift; the relief makes them peaks.
