@@ -9,7 +9,7 @@ authoring/
   tools/       scripts (items/ serves every area)
   specs/       tracked contract specs per area and batch (items, worn, paper-doll, spells, effects)
   ledger/      tracked status and notes per sprite
-  df-raw/      importer exports of the original game's art: items/, spells/, paper-doll/, effects/   (ignored)
+  df-raw/      importer exports of the original game's art: items/, spells/, paper-doll/, effects/, flats/   (ignored)
   gen-raw/     generated art: finals (one directory per area) and working runs (studies/)   (ignored)
   review/      generated review pages and spreadsheets            (ignored)
 ```

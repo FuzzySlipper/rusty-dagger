@@ -4,7 +4,7 @@ using Daggerfall.Import.Normalized;
 
 namespace Daggerfall.Import.Normalization;
 
-internal static class StaticNpcNormalization
+public static class StaticNpcNormalization
 {
     internal static IReadOnlyDictionary<(int, int), string> ReadGenders(DungeonLogicalSourceSet sources)
     {
@@ -24,7 +24,7 @@ internal static class StaticNpcNormalization
     }
 
     // RDBLayout.NPCFlatArchives: layout NPCs, independently of quest activation.
-    internal static bool IsDungeonNpc(int archive) => archive is 334 or 346 or 357 or >= 175 and <= 184;
+    public static bool IsDungeonNpc(int archive) => archive is 334 or 346 or 357 or >= 175 and <= 184;
 
     internal static DaggerfallWorldBlockStaticNpc Exterior(RmbBlockFlat flat, IReadOnlyDictionary<int, ClassicFaction> factions, IReadOnlyDictionary<(int, int), string> genders) =>
         new($"person/flat-{flat.Source.SourceOffset}", MeshGeometry.ToRightHanded(flat.Point), flat.TextureArchive, flat.TextureRecord,

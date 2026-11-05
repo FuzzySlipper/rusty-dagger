@@ -43,6 +43,13 @@ internal static class ReferenceExportCommands
         return 0;
     });
 
+    public static ToolCommand Flats { get; } = new("export-flats", [Arena2, Output], args =>
+    {
+        FlatReferenceExport.Run(args.Optional("--arena2") ?? "local/arena2",
+            args.Optional("--output") ?? "authoring/df-raw/flats");
+        return 0;
+    });
+
     public static ToolCommand Terrain { get; } = new("export-terrain", [Arena2, Output], args =>
     {
         TerrainReferenceExport.Run(args.Optional("--arena2") ?? "local/arena2",

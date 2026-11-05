@@ -4,9 +4,9 @@ using Daggerfall.Import.Normalized;
 namespace Daggerfall.Import.Normalization;
 
 /// <summary>DFU's interior-light flat policy, expressed as normalized source facts without Unity prefabs.</summary>
-internal static class DaggerfallInteriorLightFacts
+public static class DaggerfallInteriorLightFacts
 {
-    internal const ushort Archive = 210;
+    public const ushort Archive = 210;
 
     internal static bool TryProject(string id, RdbFlatSource flat, NormalizedVector3 position, float billboardHeight, out NormalizedLightPlacement light)
         => TryProject(id, flat.TextureArchive, flat.TextureRecord, position, billboardHeight, out light);
