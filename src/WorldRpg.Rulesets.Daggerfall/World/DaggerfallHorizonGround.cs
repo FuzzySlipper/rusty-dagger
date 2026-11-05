@@ -45,6 +45,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         _frame = new(0, 0, 0, tuning.Lift, false);
         // The samples are read on first use, which is content work no worker may do.
         _ = terrain.Samples;
+        _ = terrain.Relief;
     }
 
     /// <summary>The rings, finest first, in metres; the coarsest reaches past where the haze has closed.</summary>
@@ -68,7 +69,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         for (int i = -1; i <= side; i++)
         {
             double x = tile.SampleX(i), z = tile.SampleZ(j);
-            double height = Height(x, z, windows);
+            double height = Height(x, z, tile.CellSize * 2, windows);
             ground[((j + 1) * heightSide) + i + 1] = height;
             samples.SetHeight(i, j, (float)Lifted(height, x, z, now));
         }
@@ -85,7 +86,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     }
 
     /// <summary>The walked ground's height at a point, before any location flattens it.</summary>
-    internal double Height(double x, double z) => Height(x, z, []);
+    internal double Height(double x, double z) => Height(x, z, Spacing * 2, []);
 
     /// <summary>A height as the horizon draws it: only ground above the player's is lifted, more with distance.</summary>
     internal double Lifted(double height, double x, double z, Frame frame)
@@ -110,7 +111,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         return Mix(painted, _tuning.Snow, snow);
     }
 
-    private double Height(double x, double z, Dictionary<(int X, int Y), DaggerfallTerrainWindow> windows)
+    private double Height(double x, double z, double finestMetres, Dictionary<(int X, int Y), DaggerfallTerrainWindow> windows)
     {
         // The vertex the point falls on: a pixel's rows run north from its y, so its row 0 is the pixel's own z.
         long vertexX = (long)Math.Round(x / Spacing), vertexZ = (long)Math.Round(z / Spacing);
@@ -119,7 +120,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         if (!windows.TryGetValue((mapX, mapY), out DaggerfallTerrainWindow? window))
             windows.Add((mapX, mapY), window = DaggerfallTerrainSurfaceBuilder.ReadWindow(_terrain, mapX, mapY));
         return DaggerfallTerrainSurfaceBuilder.NormalizedHeight(window, (int)(vertexX - ((long)mapX * TileDimension)),
-            (int)(((long)mapY * TileDimension) - vertexZ)) * DaggerfallTerrainSurfaceBuilder.TerrainVerticalSize;
+            (int)(((long)mapY * TileDimension) - vertexZ), finestMetres) * DaggerfallTerrainSurfaceBuilder.TerrainVerticalSize;
     }
 
     private static (int X, int Y) MapPixel(double x, double z) => (

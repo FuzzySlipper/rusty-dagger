@@ -2526,7 +2526,8 @@ internal static partial class DaggerfallBaseContent
             return samples.Length == Width * Height * CellSamples
                 ? samples
                 : throw new DaggerfallContentException([$"The published terrain samples at '{path}' carry {samples.Length} bytes for {Width * Height} cells of {CellSamples}."]);
-        });
+        }, () => data is not null && data.Contains(DaggerfallTerrainRelief.Path)
+            ? DaggerfallTerrainRelief.Read(data.ReadBytes(DaggerfallTerrainRelief.Path).Span) : null);
     }
 
     /// <summary>

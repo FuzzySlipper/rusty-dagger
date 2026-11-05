@@ -37,8 +37,26 @@ Engine heightfield in the backdrop that only draws.
 The horizon stands only outdoors and only while classic art is off. Classic art
 shows the painted sky, classic fog and no cloud layer.
 
+## Relief
+
+Where the data carries `worldrpg/terrain/relief.bin`, the walked and far ground both
+stand on it, through the same height function. Without it they stand on WOODS.
+
+- **Bake.** `authoring/tools/relief/bake.py` runs stream-power erosion over the map:
+  the coast is fixed, climate sets the rain, and uplift is calibrated back to WOODS's
+  own heights, so the land keeps its shape and gains valleys and ridges. Flow leaves
+  by a random slope weighted by steepness, which keeps valleys off the grid's axes.
+  It is a Python prototype: a player's import needs it in C#.
+- **Locations.** Every location gets a calmer pad in the bake, so its flattening
+  doesn't stand on a cliff. Location heights are sampled at runtime, so they follow.
+- **Coast.** The bake's share falls to nothing within a few kilometres of the sea, so
+  the classic height returns there and shores stay where they were.
+- **Detail.** The lattice holds nothing under about 800 m. Kit's `ErosionFilter` cuts
+  gullies below that and breaks high ground into peaks, evaluated per sample. Each
+  sampling skips what it can't hold, so far rings don't alias.
+
 ## Tuning by eye
 
 `world.horizon-set LIFT FOG` changes the lift and haze for one run, and
-`world.hour HOUR` sets the light. Lifts of 6 to 10 give layered ranges; WOODS's
-stepped heights make them mesas at any lift.
+`world.hour HOUR` sets the light. Lifts of 6 to 10 give layered ranges. Over bare
+WOODS its stepped heights make them mesas at any lift; the relief makes them peaks.

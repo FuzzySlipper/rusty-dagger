@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Numerics;
 using Rusty.Engine;
 using Rusty.Engine.Heightfields;
+using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
@@ -83,6 +84,39 @@ internal sealed class DaggerfallHorizon : IDisposable
     {
         _lift = lift;
         _fogDensity = (float)fogDensity;
+    }
+
+    /// <summary>How much higher the ground stands at an offset from a player at <paramref name="local"/>.</summary>
+    internal double GroundRise(DaggerfallExteriorWorldOrigin origin, Vector3 local, double east, double south)
+    {
+        Vector3 engineLocal = local - origin.Compensation;
+        double x = engineLocal.X + (origin.MapPixelX * CellSize), z = engineLocal.Z + (origin.MapPixelY * CellSize);
+        return _ground.Height(x + east, z + south) - _ground.Height(x, z);
+    }
+
+    /// <summary>The steepest rise over one vertex step at random land points, and a surface's build time.</summary>
+    internal string GroundSurvey(DaggerfallTerrainSet terrain)
+    {
+        const int points = 40_000;
+        const double spacing = DaggerfallTerrainSurfaceBuilder.SampleSpacing;
+        Random random = new(10_502);
+        List<double> slopes = new(points);
+        while (slopes.Count < points)
+        {
+            double x = random.NextDouble() * terrain.Width * CellSize, z = random.NextDouble() * terrain.Height * CellSize;
+            double here = _ground.Height(x, z);
+            if (here <= 42) continue;
+            double east = (_ground.Height(x + spacing, z) - here) / spacing, south = (_ground.Height(x, z + spacing) - here) / spacing;
+            slopes.Add(Math.Sqrt((east * east) + (south * south)));
+        }
+
+        slopes.Sort();
+        double Share(double slope) => slopes.Count(value => value > slope) / (double)points;
+        long started = System.Diagnostics.Stopwatch.GetTimestamp();
+        for (int cell = 0; cell < 8; cell++) DaggerfallTerrainSurfaceBuilder.Build(terrain, 300 + cell, 200);
+        double buildMs = System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds / 8;
+        return string.Create(CultureInfo.InvariantCulture,
+            $"slope rise/run p50 {slopes[points / 2]:F3}, p90 {slopes[points * 9 / 10]:F3}, p99 {slopes[points * 99 / 100]:F3}, max {slopes[^1]:F3}; over 30 deg {Share(.577):P2}, over 45 deg {Share(1):P2}; surface build {buildMs:F1} ms");
     }
 
     internal string Readout()

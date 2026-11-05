@@ -108,6 +108,8 @@ report them; names with spaces are quoted.
 | `world.enter PLACE BUILDING` | Travels there if needed, stands at the building's door, and lands inside as the door would, without its greeting, hours or trespass. The building is named or given as `block-x/block-y/index`. Leaving returns to the doorstep. |
 | `world.find SERVICE` | The people of the current place offering a service (`training`, `food-drink`, `buy-spells`, `shop`, …): those loaded now with their target ids, and those placed in its buildings, each with the `world.enter` line that reaches it. |
 | `world.hour HOUR` | Lets world time run on to the next HOUR (0 to 23) of the clock, as resting would. |
+| `world.stand EAST SOUTH` | Stands the player on the ground that far away, inside the walked window: a way out into the wilderness. |
+| `world.ground-survey` | Slopes at walking scale from random land points, and what a surface costs to build. |
 | `world.horizon` | What the distant horizon is drawing: its lift and base, the haze, and its tiles. |
 | `world.horizon-set LIFT FOG` | Sets the horizon's lift (1 is true height) and haze per metre for this run, to judge them by eye. |
 | `world.goto TARGET` | Stands within reach of a loaded person, door or container, facing it. The target is a `navigation.targets` id or label. A door or portal is approached from its outside; other targets from the side nearest the player. The spot must fit the body, have floor below, and have a clear line from the eye to the target. |
