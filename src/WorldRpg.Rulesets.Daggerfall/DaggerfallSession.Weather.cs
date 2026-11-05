@@ -8,6 +8,7 @@ internal sealed partial class DaggerfallSession
 {
     private readonly DaggerfallWeatherState _weather;
     private readonly DaggerfallWeatherPresentation _weatherPresentation;
+    private readonly DaggerfallHorizon _horizon;
 
     private void SyncWeatherContext(double seconds = 0, bool playing = false)
     {
@@ -21,8 +22,11 @@ internal sealed partial class DaggerfallSession
         bool sheltered = outside && _spatial.CastRay(player + Vector3.UnitY * _tuning.Camera.EyeHeight,
             Vector3.UnitY, _tuning.Ambient.ShelterProbeHeight,
             _sites.CharacterEnvironment(State.PlayerControl.Motion)).Present;
+        if (outside && !_controlSettings.ClassicArt && _sites.ActiveExteriorOrigin is { } origin)
+            _horizon.Show(_spatial.Session, origin, player, _time.Calendar.Season == DaggerfallSeason.Winter);
+        else _horizon.Hide();
         _weatherPresentation.Update(_sites.Projection, _time.Calendar, CurrentClimate, CurrentWeather,
-            _weather.SkyVariant(CurrentClimate), player, sheltered, seconds, playing);
+            _weather.SkyVariant(CurrentClimate), player, sheltered, seconds, playing, _horizon.FogDensity);
     }
 
     /// <summary>The actual outdoor weather at this geography, also available to indoor services.</summary>

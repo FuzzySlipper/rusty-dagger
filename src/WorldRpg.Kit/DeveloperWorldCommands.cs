@@ -33,6 +33,15 @@ public interface IDeveloperWorldSession
 
     /// <summary>The people of the current place who offer a service, and where they stand.</summary>
     DebugCommandResult Find(string service);
+
+    /// <summary>Lets world time run on to the next time the clock reads <paramref name="hour"/>.</summary>
+    DebugCommandResult Hour(int hour);
+
+    /// <summary>What the distant horizon is drawing, and how it is set.</summary>
+    DebugCommandResult Horizon();
+
+    /// <summary>Sets the horizon's lift and haze for this run, for judging them by eye.</summary>
+    DebugCommandResult HorizonSet(double lift, double fogDensity);
 }
 
 /// <summary>The live-debug commands over <see cref="IDeveloperWorldSession"/>; the delegate follows session replacement.</summary>
@@ -64,4 +73,13 @@ public sealed class DeveloperWorldDebugModule(Func<IDeveloperWorldSession> curre
 
     [DebugCommand("world.find", Description = "Developer: the people of the current place offering SERVICE (for example training, food-drink, buy-spells), with their building and position.")]
     public DebugCommandResult Find(string service) => current().Find(service);
+
+    [DebugCommand("world.hour", Description = "Developer: let world time run on to the next HOUR (0 to 23) of the clock, as resting would.")]
+    public DebugCommandResult Hour(int hour) => current().Hour(hour);
+
+    [DebugCommand("world.horizon", Description = "Developer: what the distant horizon is drawing, and how it is set.")]
+    public DebugCommandResult Horizon() => current().Horizon();
+
+    [DebugCommand("world.horizon-set", Description = "Developer: set the horizon's LIFT (1 is true height) and haze per metre FOG for this run.")]
+    public DebugCommandResult HorizonSet(double lift, double fogDensity) => current().HorizonSet(lift, fogDensity);
 }

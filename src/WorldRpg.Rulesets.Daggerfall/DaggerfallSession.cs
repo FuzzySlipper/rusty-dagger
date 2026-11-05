@@ -707,7 +707,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         catch (Exception exception) { failure = exception; }
         try { _sites.RetireResidentExteriorLocations(capture: false); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
-        try { DisposeAll([.. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }, _hud, _camera, _spatial, State.Actors, _heldEnchantments, _sites.Projection, State.Effects, _sites.ActionTriggers, Infections, _weatherPresentation]); }
+        try { DisposeAll([.. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }, _hud, _camera, _spatial, State.Actors, _heldEnchantments, _sites.Projection, State.Effects, _sites.ActionTriggers, Infections, _horizon, _weatherPresentation]); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         try { _sites.RetireExteriorAppearance(); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }

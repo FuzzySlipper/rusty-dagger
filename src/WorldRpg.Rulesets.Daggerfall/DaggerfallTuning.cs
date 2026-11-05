@@ -41,6 +41,7 @@ internal sealed record DaggerfallTuning(
     internal DaggerfallSwimmingTuning Swimming { get; init; } = DaggerfallSwimmingTuning.Classic;
     internal DaggerfallWeatherTuning Weather { get; init; } = DaggerfallWeatherTuning.Classic;
     internal DaggerfallAmbientTuning Ambient { get; init; } = DaggerfallAmbientTuning.Classic;
+    internal DaggerfallHorizonTuning Horizon { get; init; } = DaggerfallHorizonTuning.Default;
     internal DaggerfallContactTuning Contact { get; init; } = DaggerfallContactTuning.Default;
     internal DaggerfallAttackTuning Attacks { get; init; } = DaggerfallAttackTuning.Default;
     internal DaggerfallHazardTuning Hazards { get; init; } = DaggerfallHazardTuning.Default;
@@ -119,6 +120,7 @@ internal sealed record DaggerfallTuning(
         Swimming = Swimming.Validate(),
         Weather = Weather.Validate(),
         Ambient = Ambient.Validate(),
+        Horizon = Horizon.Validate(),
         Lycanthropy = Lycanthropy.Validate(),
         Vampirism = Vampirism.Validate(),
         NormalLight = NormalLight.Validate(),
@@ -333,6 +335,7 @@ internal sealed record DaggerfallTuning(
                 : DaggerfallSwimmingTuning.Classic,
             Weather = DaggerfallWeatherTuning.Read(root.GetProperty("weather")),
             Ambient = DaggerfallAmbientTuning.Read(root.GetProperty("ambient")),
+            Horizon = DaggerfallHorizonTuning.Read(root.GetProperty("horizon")),
             Contact = DaggerfallContactTuning.Read(root.GetProperty("contact")),
             Attacks = DaggerfallAttackTuning.Read(root.GetProperty("attacks")),
             Hazards = DaggerfallHazardTuning.Read(root.GetProperty("hazards")),

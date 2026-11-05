@@ -861,6 +861,39 @@
       ]
     ]
   },
+  "horizon": {
+    "lift": 6,
+    "liftFromMetres": 3000,
+    "liftFullMetres": 24000,
+    "fogDensity": 0.00003,
+    "followMetres": 819.2,
+    "baseStepMetres": 64,
+    "snowFromMetres": 900,
+    "snowFullMetres": 1500,
+    "rockFromSlope": 0.08,
+    "rockFullSlope": 0.3,
+    "cloudCoverage": 0.45,
+    "stormCloudCoverage": 0.9,
+    "cloudAltitudeMetres": 3500,
+    "cloudScaleMetres": 1800,
+    "cloudTwilightDegrees": 8,
+    "cloudDrift": [14, 5],
+    "sea": [0.16, 0.24, 0.32],
+    "rock": [0.42, 0.38, 0.34],
+    "snow": [0.86, 0.87, 0.9],
+    "climates": {
+      "223": [0.34, 0.4, 0.24],
+      "224": [0.66, 0.56, 0.38],
+      "225": [0.62, 0.52, 0.36],
+      "226": [0.4, 0.38, 0.3],
+      "227": [0.2, 0.34, 0.18],
+      "228": [0.26, 0.3, 0.2],
+      "229": [0.42, 0.42, 0.24],
+      "230": [0.3, 0.36, 0.22],
+      "231": [0.28, 0.38, 0.2],
+      "232": [0.28, 0.3, 0.22]
+    }
+  },
   "ambient": {
     "clearFogEnd": 2400,
     "rainFogDensity": 0.003,

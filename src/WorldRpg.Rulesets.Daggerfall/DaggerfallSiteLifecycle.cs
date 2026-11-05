@@ -1076,6 +1076,11 @@ internal sealed class DaggerfallSiteLifecycle
     /// <summary>Whether the current spatial session has an admitted exterior window.</summary>
     internal bool ExteriorResidencyInitialized => _exteriorResidency?.IsInitialized == true;
 
+    /// <summary>The frame the exterior stands in while the player is outdoors in it, read back from the Engine origin.</summary>
+    internal DaggerfallExteriorWorldOrigin? ActiveExteriorOrigin =>
+        ActiveProfile.Kind == DaggerfallWorldProfileKind.Exterior && _exteriorResidency is { IsInitialized: true } residency
+            ? ActiveOrigin(residency) : null;
+
     /// <summary>
     /// Admits a constructed session's location artifact and, for an exterior, its terrain window.
     /// A saved unloaded location restores detached state without recreating native geometry until

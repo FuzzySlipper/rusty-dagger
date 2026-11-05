@@ -33,6 +33,25 @@ public sealed class DaggerfallSkyMediaTests
     }
 
     [Fact]
+    public void A_cleared_sky_is_the_same_frames_and_blend_without_their_painted_horizon()
+    {
+        var media = DaggerfallSkyMedia.Read(TestSessions.Data(Fixture().Content));
+        DaggerfallSkySelection sky = new("sky-3-9", "sky-3-10", .25f);
+
+        Assert.Equal(new DaggerfallSkySelection("sky-3-9-clear", "sky-3-10-clear", .25f), media.Cleared(sky));
+    }
+
+    [Fact]
+    public void A_frame_without_its_cleared_horizon_refuses_composition()
+    {
+        var fixture = Fixture();
+        var node = JsonNode.Parse(fixture.Manifest)!;
+        node["clearedResources"]!.AsArray().RemoveAt(0);
+
+        Assert.Throws<InvalidOperationException>(() => DaggerfallSkyMedia.Read(TestSessions.Data(fixture.WithManifest(node))));
+    }
+
+    [Fact]
     public void Missing_selection_night_or_wrong_artifact_refuses_composition()
     {
         var fixture = Fixture();
@@ -54,20 +73,27 @@ public sealed class DaggerfallSkyMediaTests
         byte[] body = [1];
         string digest = Convert.ToHexString(SHA256.HashData(body)).ToLowerInvariant();
         var resources = new List<object>(); var selections = new List<object>(); var nights = new List<object>(); var particles = new List<object>();
+        var cleared = new List<object>();
         object Resource(string id, int width, int height, int? night = null, string? kind = null)
         {
             service.Add(DaggerfallData.DataContainerName, DaggerfallSkyMedia.LogicalRoot + "/" + id + ".png", body);
             return new {id, relativePath="media/sky/resources/"+id+".png", contentHash=digest, byteLength=1,
                 width,height,nightIndex=night,kind,clearColor=new[]{.1f,.2f,.3f}};
         }
+        object Cleared(string of)
+        {
+            string id = of + "-clear";
+            service.Add(DaggerfallData.DataContainerName, DaggerfallSkyMedia.LogicalRoot + "/" + id + ".png", body);
+            return new {id, of, relativePath="media/sky/resources/"+id+".png", contentHash=digest, byteLength=1, width=1024, height=512, clearColor=new[]{.1f,.2f,.3f}};
+        }
         for (int sky=0;sky<32;sky++) for(int frame=0;frame<64;frame++)
         {
             string id=$"sky-{sky}-{frame}";
-            resources.Add(Resource(id,1024,512)); selections.Add(new {skyIndex=sky,timeFrame=frame,resourceId=id});
+            resources.Add(Resource(id,1024,512)); selections.Add(new {skyIndex=sky,timeFrame=frame,resourceId=id}); cleared.Add(Cleared(id));
         }
-        for (int night=0;night<4;night++) nights.Add(Resource($"night-{night}",1024,512,night));
+        for (int night=0;night<4;night++) { nights.Add(Resource($"night-{night}",1024,512,night)); cleared.Add(Cleared($"night-{night}")); }
         particles.Add(Resource("particle-rain",32,64,kind:"rain")); particles.Add(Resource("particle-snow",32,32,kind:"snow"));
-        byte[] manifest = JsonSerializer.SerializeToUtf8Bytes(new {resources,selections,nightResources=nights,weatherParticles=particles,
+        byte[] manifest = JsonSerializer.SerializeToUtf8Bytes(new {resources,selections,nightResources=nights,clearedResources=cleared,weatherParticles=particles,
             daylightFrameCurve=new[]{new{time=0f,value=0f,tangent=1f},new{time=.5f,value=.5f,tangent=1f},new{time=1f,value=1f,tangent=1f}}});
         return new(manifest,service);
     }

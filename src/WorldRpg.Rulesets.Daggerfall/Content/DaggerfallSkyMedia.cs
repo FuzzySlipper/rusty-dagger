@@ -16,19 +16,20 @@ internal sealed class DaggerfallSkyMedia
     private readonly IReadOnlyDictionary<string, DaggerfallSkyResource> _resources;
     private readonly IReadOnlyDictionary<(int Sky, int Frame), string> _frames;
     private readonly IReadOnlyDictionary<int, string> _nights;
+    private readonly IReadOnlyDictionary<string, string> _cleared;
     private readonly IReadOnlyDictionary<bool, string> _particles;
     private readonly float[][] _curve;
 
     private DaggerfallSkyMedia(DaggerfallData content, Dictionary<string, DaggerfallSkyResource> resources,
-        Dictionary<(int, int), string> frames, Dictionary<int, string> nights, Dictionary<bool, string> particles, float[][] curve)
-    { _content = content; _resources = resources; _frames = frames; _nights = nights; _particles = particles; _curve = curve; }
+        Dictionary<(int, int), string> frames, Dictionary<int, string> nights, Dictionary<string, string> cleared, Dictionary<bool, string> particles, float[][] curve)
+    { _content = content; _resources = resources; _frames = frames; _nights = nights; _cleared = cleared; _particles = particles; _curve = curve; }
 
     internal static DaggerfallSkyMedia Read(DaggerfallData content)
     {
         using var document = JsonDocument.Parse(content.ReadBytes(ManifestPath));
         JsonElement root = document.RootElement;
         Dictionary<string, DaggerfallSkyResource> resources = new(StringComparer.Ordinal);
-        foreach (string section in new[] {"resources", "nightResources", "weatherParticles"})
+        foreach (string section in new[] {"resources", "nightResources", "clearedResources", "weatherParticles"})
         foreach (JsonElement resource in root.GetProperty(section).EnumerateArray())
         {
             string id = resource.GetProperty("id").GetString()!;
@@ -63,6 +64,9 @@ internal sealed class DaggerfallSkyMedia
         Dictionary<int, string> nights = [];
         foreach (JsonElement night in root.GetProperty("nightResources").EnumerateArray())
             nights.Add(night.GetProperty("nightIndex").GetInt32(), night.GetProperty("id").GetString()!);
+        Dictionary<string, string> cleared = new(StringComparer.Ordinal);
+        foreach (JsonElement resource in root.GetProperty("clearedResources").EnumerateArray())
+            cleared.Add(resource.GetProperty("of").GetString()!, resource.GetProperty("id").GetString()!);
         Dictionary<bool, string> particles = [];
         foreach (JsonElement particle in root.GetProperty("weatherParticles").EnumerateArray())
         {
@@ -72,6 +76,8 @@ internal sealed class DaggerfallSkyMedia
         }
         float[][] curve = root.GetProperty("daylightFrameCurve").EnumerateArray().Select(knot => new[]
             {knot.GetProperty("time").GetSingle(), knot.GetProperty("value").GetSingle(), knot.GetProperty("tangent").GetSingle()}).ToArray();
+        if (frames.Values.Concat(nights.Values).Any(id => !cleared.ContainsKey(id)))
+            throw new InvalidOperationException("Sky publication has a frame without its cleared horizon.");
         if (frames.Count != 32 * 64 || nights.Count != 4 || Enumerable.Range(0,4).Any(index => !nights.ContainsKey(index))
             || particles.Count != 2 || curve.Length < 2 || curve[0][0] != 0 || curve[^1][0] != 1
             || curve.Any(knot => knot.Any(value => !float.IsFinite(value)) || knot[0] is < 0 or > 1 || knot[1] is < 0 or > 1)
@@ -82,7 +88,7 @@ internal sealed class DaggerfallSkyMedia
         foreach (var resource in resources.Values)
             if (!entries.TryGetValue(resource.RelativePath, out var entry) || entry.Sha256 != resource.Hash || entry.ByteLength != resource.ByteLength)
                 throw new InvalidOperationException($"Sky artifact '{resource.Id}' is absent or disagrees with its published digest/length.");
-        return new(content, resources, frames, nights, particles, curve);
+        return new(content, resources, frames, nights, cleared, particles, curve);
     }
 
     internal DaggerfallSkySelection Select(int climate, DaggerfallCalendar calendar, DaggerfallWeatherKind weather, int variant)
@@ -119,6 +125,10 @@ internal sealed class DaggerfallSkyMedia
         }
         return 1;
     }
+
+    /// <summary>The same sky with its painted horizon cleared, for drawing over real distant ground.</summary>
+    internal DaggerfallSkySelection Cleared(DaggerfallSkySelection selection) =>
+        selection with { First = _cleared[selection.First], Second = _cleared[selection.Second] };
 
     internal Color ClearColor(DaggerfallSkySelection selection)
     {

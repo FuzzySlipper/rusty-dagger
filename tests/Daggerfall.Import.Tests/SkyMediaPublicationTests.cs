@@ -288,6 +288,30 @@ public sealed class SkyMediaPublicationTests
         return pixels;
     }
 
+    [Fact]
+    public void Clearing_a_panorama_removes_its_painted_horizon_and_keeps_the_sky_above_and_the_ground_colour_below()
+    {
+        const int width = SkyMediaPublication.PanoramaWidth, height = SkyMediaPublication.PanoramaHeight;
+        byte[] panorama = new byte[width * height * 4];
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+        {
+            // Pale sky, a black peak standing from the horizon up to the clearing's first row, flat colour below.
+            bool peak = y is >= SkyHorizonClearing.FromRow and < height / 2 && x is > 400 and < 600;
+            byte level = peak ? (byte)0 : y >= height / 2 ? (byte)120 : (byte)200;
+            panorama.AsSpan(((y * width) + x) * 4, 4).Fill(level);
+            panorama[(((y * width) + x) * 4) + 3] = 255;
+        }
+
+        byte[] cleared = SkyHorizonClearing.Clear(panorama);
+        byte Level(int x, int y) => cleared[((y * width) + x) * 4];
+
+        Assert.Equal(200, Level(500, SkyHorizonClearing.FromRow - 1));
+        Assert.Equal(120, Level(500, height / 2));
+        for (int y = SkyHorizonClearing.FromRow; y < height / 2; y++) Assert.InRange(Level(500, y), 110, 210);
+        Assert.Equal(panorama.Length, cleared.Length);
+    }
+
     private static int Paeth(int left, int up, int upLeft)
     {
         int estimate = left + up - upLeft;

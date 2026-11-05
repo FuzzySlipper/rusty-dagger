@@ -73,6 +73,48 @@ public sealed class DaggerfallWeatherSessionTests
             source.QuestMarkers, source.BillboardSprites) {AmbientZones = zones};
 
     [Fact]
+    public void The_horizon_stands_outdoors_comes_down_indoors_and_gives_way_to_the_classic_sky_under_classic_art()
+    {
+        string root = TestData.RepositoryRoot;
+        var definitions = TestPayload.Definitions;
+        ProductContent admitted = FullContent(root);
+        var exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
+        var interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
+        var media = DaggerfallSkyMedia.Read(TestSessions.Data(DaggerfallSkyMediaTests.Fixture().Content));
+        var fairOdds = Enumerable.Range(0,24).Select(_ => new[]{100,0,0,0,0,0,0}).ToArray();
+        var tuning = DaggerfallTuning.Defaults with {Weather = DaggerfallWeatherTuning.Classic with {Odds = fairOdds}};
+        var composition = new DaggerfallSessionComposition(definitions, exterior, tuning)
+            {Profiles = new([exterior,interior]),Sky = media};
+        var fixture = Engine(exterior, interior);
+        using var session = DaggerfallSession.StartNew(fixture.Engine.Context, composition);
+        session.ApplyProductMode(ProductMode.Playing);
+        session.PublishInitial();
+        session.Update(Update(1));
+
+        Assert.True(fixture.Engine.BackdropLinked);
+        Assert.Equal(FogMode.Exponential, fixture.Engine.Fogs.Last().Mode);
+        Assert.Equal(tuning.Horizon.FogDensity, fixture.Engine.Fogs.Last().Density);
+        Assert.Equal(tuning.Horizon.CloudCoverage, fixture.Engine.Clouds.Last().Coverage);
+
+        Assert.True(session.TryTransitionTo(interior.ProfileKey));
+        session.Update(Update(2));
+        Assert.False(fixture.Engine.BackdropLinked);
+        Assert.Equal(tuning.Ambient.InteriorFogDensity, fixture.Engine.Fogs.Last().Density);
+        Assert.Equal(0, fixture.Engine.Clouds.Last().Coverage);
+
+        Assert.True(session.TryTransitionTo(exterior.ProfileKey));
+        session.Update(Update(3));
+        Assert.True(fixture.Engine.BackdropLinked);
+
+        session.Update(new ProductUpdate(new(ProductLifecycleState.Running, 4,1,4,4,60,1,0,1d/60d), [ClassicArt()]));
+        session.Update(Update(5));
+        Assert.False(fixture.Engine.BackdropLinked);
+        Assert.Equal(FogMode.Linear, fixture.Engine.Fogs.Last().Mode);
+        Assert.Equal(tuning.Ambient.ClearFogEnd, fixture.Engine.Fogs.Last().End);
+        Assert.Equal(0, fixture.Engine.Clouds.Last().Coverage);
+    }
+
+    [Fact]
     public void Real_exterior_shelter_indoor_return_pause_and_restore_keep_weather_and_retire_resources()
     {
         string root = TestData.RepositoryRoot;
@@ -142,6 +184,12 @@ public sealed class DaggerfallWeatherSessionTests
         var appearance = new AppearanceFake(releases);
         return (EngineContextFake.Create(content,spatial.Service,appearance),spatial,appearance);
     }
+    private static ProductInputEvent ClassicArt() => Input(InputEventKind.DirectDigital) with
+    {
+        ValueKind = InputValueKind.ProductPayload, PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+        PayloadData = "{\"action\":\"controls-classic-art\",\"enabled\":true}"u8.ToArray(),
+    };
+
     private static ProductUpdate Update(ulong step) => new(new(ProductLifecycleState.Running,
         step,1,step,step,60,1,0,1d/60d),[]);
 }
