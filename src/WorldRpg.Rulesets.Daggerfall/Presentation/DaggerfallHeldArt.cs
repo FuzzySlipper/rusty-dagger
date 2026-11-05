@@ -58,11 +58,14 @@ internal sealed class DaggerfallHeldArt
 
     /// <summary>
     /// What draws a weapon: an item template's entry if it has one, else the family of its classic visual
-    /// <paramref name="resourceId"/>, in <paramref name="metal"/>; null when neither draws it.
+    /// <paramref name="resourceId"/>, in <paramref name="metal"/>; null when neither draws it. A bow's model and draw are
+    /// its item's, so a bow family's visual alone draws the family's first item.
     /// </summary>
     internal DaggerfallHeldDrawing? Drawing(string resourceId, int? template, string metal) =>
         template is int index && Document.Items.TryGetValue(index, out DaggerfallHeldItem? item) ? new(item.Family, index, metal)
-        : Family(resourceId) is { } family ? new(family, null, metal) : null;
+        : Family(resourceId) is not { } family ? null
+        : Document.Families[family].Bow is null ? new(family, null, metal)
+        : new(family, Document.Items.Where(entry => entry.Value.Family == family).Min(entry => entry.Key), metal);
 
     /// <summary>
     /// What draws a weapon with a shield on the other arm: the shield's family, whose clips carry it, and the shield of
@@ -202,6 +205,8 @@ internal sealed class DaggerfallHeldArt
             else if (DaggerfallAttackIds.Fast.Except(family.Strikes.Keys).ToArray() is { Length: > 0 } missing)
                 problems.Add($"items.{template}.family: {item.Family} has no clip for {string.Join(", ", missing)}.");
         }
+        foreach (string name in document.Families.Where(family => family.Value.Bow is not null).Select(family => family.Key).Where(name => !document.Items.Values.Any(item => item.Family == name)))
+            problems.Add($"families.{name}.bow: needs an item of the family to name the bow's model and draw.");
         IEnumerable<string> models = [.. document.ArmSets.Values.SelectMany(set => new[] { set.Model, set.RetroModel }), .. document.Families.Values.Select(family => family.Look.Model).OfType<string>(), .. document.Families.Values.Select(family => family.Bow?.Arrow).OfType<string>(),
             .. document.Items.Values.Select(item => item.Model).OfType<string>(), .. document.Shield?.Items.Values.Select(item => item.Model) ?? []];
         foreach (string model in models.Where(model => !container.Entries.ToArray().Any(entry => entry.Path == model)))

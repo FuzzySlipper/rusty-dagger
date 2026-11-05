@@ -354,6 +354,23 @@ public sealed class DaggerfallHeldArtTests
     }
 
     [Theory]
+    [InlineData("weapon.bow", 129)]
+    [InlineData("item.129", 129)]
+    [InlineData("item.130", 130)]
+    public void Every_look_of_a_bow_opens_in_the_workbench_as_an_item_with_a_model_and_a_draw(string look, int template)
+    {
+        List<string> releases = [];
+        DaggerfallHeldArt art = Read(Document());
+        (DaggerfallSiteAppearance presentation, _, _) = Viewing(releases);
+        using (presentation)
+        {
+            DaggerfallHeldDrawing drawing = art.Look(look)!;
+            Assert.Equal(("bow", template), (drawing.Family, drawing.Item));
+            Assert.NotNull(presentation.ViewHeld(drawing));
+        }
+    }
+
+    [Theory]
     [InlineData(129)]
     [InlineData(130)]
     public void A_bow_rides_the_off_hand_with_its_arrow_on_the_string_from_the_draw_to_the_release(int template)
@@ -423,6 +440,7 @@ public sealed class DaggerfallHeldArtTests
     [InlineData("worn", "armsWorn.female.mail: 'female-plate' is no arm set")]
     [InlineData("beast", "armsBeast.wereboar: 'boar-hide' is no arm set")]
     [InlineData("bow", "items.130.drawn: a bow needs how much of its draw clip")]
+    [InlineData("no-bow", "families.bow.bow: needs an item of the family")]
     [InlineData("rig", "rig.model: 'first-person/lost.glb' is no arm set's model")]
     [InlineData("model", "'first-person/lost.glb' is not in first-person.rpak")]
     public void Arms_that_cannot_be_drawn_are_refused_by_field(string broken, string field)
@@ -433,6 +451,7 @@ public sealed class DaggerfallHeldArtTests
             case "worn": document["armsWorn"]!["female"]!["mail"] = "female-plate"; break;
             case "beast": document["armsBeast"]!["wereboar"] = "boar-hide"; break;
             case "bow": document["items"]!["130"]!.AsObject().Remove("drawn"); break;
+            case "no-bow": foreach (string bow in new[] { "129", "130" }) document["items"]!.AsObject().Remove(bow); break;
             case "rig": document["rig"]!["model"] = "first-person/lost.glb"; break;
             case "model": document["armSets"]!["male-cloth"]!["retroModel"] = "first-person/lost.glb"; break;
         }
