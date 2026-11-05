@@ -1,3 +1,4 @@
+using System.Numerics;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using System.Text.Json.Nodes;
 using Rusty.Engine;
@@ -157,6 +158,7 @@ public sealed class DaggerfallHeldArtTests
         service.Container(DaggerfallHeldArt.ContainerName);
         foreach (string file in Directory.GetFiles(weapons, "*.glb")) service.Add(DaggerfallHeldArt.ContainerName, $"first-person/weapons/{Path.GetFileName(file)}", File.ReadAllBytes(file));
         foreach (string model in ArmModels()) service.Add(DaggerfallHeldArt.ContainerName, model, [7]);
+        service.Add(DaggerfallHeldArt.ContainerName, "first-person/effects/enchant.wgsl", [7]);
         ProductContentBundle container = new ProductContent(Array.Empty<ProductContentFile>(), service).OpenContainer(DaggerfallHeldArt.ContainerName);
         DaggerfallHeldArt art = DaggerfallHeldArt.Read(container, System.Text.Encoding.UTF8.GetBytes(Document().ToJsonString()));
 
@@ -350,6 +352,50 @@ public sealed class DaggerfallHeldArtTests
             Assert.Null(presentation.DrawnHeld!.Drawing.Shield);
             presentation.Publish(EmptyActors());
             Assert.DoesNotContain(appearance.Snapshots.Last(), fact => fact.ObjectId == shielded.ShieldObject);
+        }
+    }
+
+    [Fact]
+    public void Every_models_lightning_reads_and_makes_ribbons_the_Engine_admits()
+    {
+        DaggerfallHeldArt art = Read(Document());
+        string[] models = [.. art.Document.Items.Values.Select(item => item.Model).OfType<string>().Distinct()];
+        Assert.Contains("first-person/weapons/short-bow.glb", models);
+        foreach (string model in models)
+        {
+            HeldArcShape shape = art.Lightning(model)!.Value.Shape;
+            Assert.NotEmpty(shape.Paths);
+            Assert.Equal(shape.Hull.Points.Count, shape.Hull.Normals.Count);
+            Assert.True(shape.Hull.Corners.All(corner => corner < shape.Hull.Points.Count), model);
+            foreach (IReadOnlyList<HeldArcPath> paths in new[] { shape.Paths, shape.Sparks })
+                Assert.All(HeldArcs.Ribbons(paths, null!).Normals.ToArray(), normal => Assert.True(float.IsFinite(normal.Length()) && normal != Vector3.Zero, model));
+        }
+    }
+
+    [Fact]
+    public void An_enchanted_weapon_draws_its_outline_and_arcs_and_throws_sparks_only_in_a_strike()
+    {
+        foreach (bool enchanted in new[] { false, true })
+        {
+            List<string> releases = [];
+            (DaggerfallSiteAppearance presentation, AppearanceFake appearance, _) = Viewing(releases, enchanted: enchanted);
+            using (presentation)
+            {
+                presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
+                DaggerfallHeldViewmodel weapon = presentation.DrawnHeld!;
+                Assert.Equal(enchanted, weapon.Drawing.Enchanted);
+                AppearanceFact[] Lightning() => [.. appearance.Snapshots.Last().Where(fact => fact.HasParentObject && fact.ParentObjectId == weapon.WeaponObject)];
+
+                presentation.Publish(EmptyActors());
+                Assert.Equal(enchanted ? 3 : 0, Lightning().Length);
+                if (!enchanted) continue;
+                Assert.Equal(2, Lightning().Count(fact => fact.Visible));
+
+                weapon.Attack("fastA", new(.2d, .1d, .1d), 3);
+                weapon.Step(.05F);
+                presentation.Publish(EmptyActors());
+                Assert.All(Lightning(), fact => Assert.True(fact.Visible));
+            }
         }
     }
 
@@ -650,7 +696,7 @@ public sealed class DaggerfallHeldArtTests
     // A site drawing the authored art through arms whose model has the rig's joints and every clip, whatever the hands
     // wield standing for a longsword (template 120).
     private static (DaggerfallSiteAppearance Presentation, AppearanceFake Appearance, EngineContextFake Engine) Viewing(List<string> releases, JsonObject? document = null,
-        Func<WorldRpg.Kit.Inventory.EquipmentRead, (int Template, string Metal)?>? shieldOf = null, Func<string>? arms = null, Func<DaggerfallRacialKind?>? beast = null, int template = 120)
+        Func<WorldRpg.Kit.Inventory.EquipmentRead, (int Template, string Metal)?>? shieldOf = null, Func<string>? arms = null, Func<DaggerfallRacialKind?>? beast = null, int template = 120, bool enchanted = false)
     {
         ContentFake content = MediaContent(releases);
         content.Add("weapon/dagger.png", Hash);
@@ -666,7 +712,7 @@ public sealed class DaggerfallHeldArtTests
         classic = classic with { Weapons = new Dictionary<string, NormalizedClassicWeapon>(classic.Weapons) { ["weapon.werecreature"] = classic.Weapons["weapon.dagger.steel"] with { ResourceId = "weapon.werecreature", TexturePath = "weapon/claws.png" } } };
         DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: classic));
         if (beast is not null) presentation.UsePlayerBeastForm(beast);
-        presentation.UseHeldArt(engine.Context, art, DaggerfallViewmodelStyle.Held, new Dictionary<string, DaggerfallDyeTint>(), _ => (template, DaggerfallHeldDrawing.Steel), shieldOf ?? (_ => null), _ => arms?.Invoke() ?? "male-leather");
+        presentation.UseHeldArt(engine.Context, art, DaggerfallViewmodelStyle.Held, new Dictionary<string, DaggerfallDyeTint>(), _ => (template, DaggerfallHeldDrawing.Steel, enchanted), shieldOf ?? (_ => null), _ => arms?.Invoke() ?? "male-leather");
         return (presentation, appearance, engine);
     }
 
@@ -710,6 +756,9 @@ public sealed class DaggerfallHeldArtTests
         service.Container(DaggerfallHeldArt.ContainerName);
         foreach (string model in models ?? [.. ArmModels(), .. Weapons()])
             service.Add(DaggerfallHeldArt.ContainerName, model, [7]);
+        service.Add(DaggerfallHeldArt.ContainerName, "first-person/effects/enchant.wgsl", [7]);
+        foreach (string arcs in Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/first-person/weapons"), "*.arcs.json"))
+            service.Add(DaggerfallHeldArt.ContainerName, $"first-person/weapons/{Path.GetFileName(arcs)}", File.ReadAllBytes(arcs));
         ProductContentBundle container = new ProductContent(Array.Empty<ProductContentFile>(), service).OpenContainer(DaggerfallHeldArt.ContainerName);
         return DaggerfallHeldArt.Read(container, System.Text.Encoding.UTF8.GetBytes(document.ToJsonString()));
     }

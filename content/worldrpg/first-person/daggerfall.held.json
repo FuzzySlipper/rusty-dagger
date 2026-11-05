@@ -1124,6 +1124,69 @@
       }
     }
   },
+  "enchant": {
+    "shader": "first-person/effects/enchant.wgsl",
+    "held": {
+      "width": 0.002,
+      "wander": 0.003,
+      "rate": 10,
+      "share": 0.3,
+      "sparkShare": 0.5,
+      "edge": [
+        0.25,
+        0.45,
+        1.0
+      ],
+      "core": [
+        0.85,
+        0.93,
+        1.0
+      ],
+      "hot": [
+        1.0,
+        0.95,
+        0.45
+      ],
+      "hotShare": 0.35,
+      "rimWidth": 0.0026,
+      "rimBehind": 0.004,
+      "rim": [
+        0.2,
+        0.4,
+        1.0
+      ]
+    },
+    "retro": {
+      "width": 0.0028,
+      "wander": 0.004,
+      "rate": 8,
+      "share": 0.3,
+      "sparkShare": 0.5,
+      "edge": [
+        0.25,
+        0.45,
+        1.0
+      ],
+      "core": [
+        0.85,
+        0.93,
+        1.0
+      ],
+      "hot": [
+        1.0,
+        0.95,
+        0.45
+      ],
+      "hotShare": 0.35,
+      "rimWidth": 0.0035,
+      "rimBehind": 0.004,
+      "rim": [
+        0.2,
+        0.4,
+        1.0
+      ]
+    }
+  },
   "items": {
     "129": {
       "family": "bow",

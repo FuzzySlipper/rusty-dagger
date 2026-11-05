@@ -16,6 +16,9 @@ public interface IDeveloperPlayerSession
     /// <summary>Gives the player one of an item and wields it in the main hand, drawn, through the ordinary equip rules.</summary>
     DebugCommandResult Hold(string item);
 
+    /// <summary>Gives the player a magic weapon and wields it in the main hand, drawn, through the ordinary equip rules.</summary>
+    DebugCommandResult HoldMagic();
+
     /// <summary>Gives the player one of an item and wears it in the first slot that takes it, a shield on the off arm, through the ordinary equip rules.</summary>
     DebugCommandResult Equip(string item);
 
@@ -49,6 +52,9 @@ public sealed class DeveloperPlayerDebugModule(Func<IDeveloperPlayerSession> cur
 
     [DebugCommand("player.hold", Description = "Developer: give the player one ITEM and wield it in the main hand, drawn, through the ordinary equip rules (what was there stays in the pack).")]
     public DebugCommandResult Hold(string item) => current().Hold(item);
+
+    [DebugCommand("player.hold.magic", Description = "Developer: give the player a magic weapon and wield it in the main hand, drawn, through the ordinary equip rules.")]
+    public DebugCommandResult HoldMagic() => current().HoldMagic();
 
     [DebugCommand("player.equip", Description = "Developer: give the player one ITEM and wear it through the ordinary equip rules, a shield on the off arm (what was there stays in the pack).")]
     public DebugCommandResult Equip(string item) => current().Equip(item);

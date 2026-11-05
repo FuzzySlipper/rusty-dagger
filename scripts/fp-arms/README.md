@@ -84,6 +84,25 @@ at `bow.nock`, drawn from the draw to the release. The arms pull both bows to th
 an item's `drawn` is how far through the model's `draw` clip that is. The string follows the hand from `bow.pullFrom`, the
 same point in `BOW_Draw` where the hand takes it.
 
+### Enchanted weapons
+
+The classic enchanted frames (`WEAPO1xx`) don't glow: they give the blade a hard blue outline and draw thin forked
+lightning over it and off its edges, redrawn every frame, with sparks thrown off in a swing. Particles would be soft and
+scattered, so `HeldArcs` draws those same marks with a product shader, `content/worldrpg/first-person/effects/enchant.wgsl`:
+
+- `authoring/tools/weapons/arcs.py` writes each model's `NAME.arcs.json`: arcs walked over its metal and off its edges,
+  spark dashes around it, and its surface welded for the outline. A flail's ride its ball's joint. A bow's stay near the
+  grip, which the draw barely bends. Rerun it when a model changes.
+- Each arc is a ribbon the shader's `displace` stage turns to face the eye and holds at a share of the view's height, so a
+  line keeps its weight at any distance, as a sprite's does. The shader redraws at `rate`, showing a different `share` of
+  the arcs each time and shifting them by `wander`.
+- The outline is the welded surface grown by `rimWidth` and pushed `rimBehind` the weapon, so only its edge shows. A flat
+  blade's normals lie across its thin side, so `arcs.py` leans them out from the model's length.
+- The sparks' ribbons show only while a strike plays.
+
+`enchant` in the held definition holds the shader and a look for each style. The ruleset reads the enchantment from the
+item (`DaggerfallItemInstanceMetadata.HasEnchantment`), and `held.enchant true` shows it in the workbench.
+
 ### The claw arms
 
 A transformed werewolf or wereboar draws the `claws` family, the werewolf on the `claws` set and the wereboar on

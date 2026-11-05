@@ -27,11 +27,11 @@ internal sealed partial class DaggerfallSession
     private DaggerfallDialogueService? _dialogue;
 
     // A wielded item's template and metal, which choose how the 3D first-person art draws it.
-    private (int? Template, string Metal) HeldItem(UniqueInventoryItem item)
+    private (int? Template, string Metal, bool Enchanted) HeldItem(UniqueInventoryItem item)
     {
         DaggerfallItemDefinition definition = _definitions.RequireItem(new DaggerfallItemId(item.Definition.Value));
-        return (_definitions.SourceTemplateFor(definition)?.Index,
-            _inventoryUi.EquippedMetadata(item.EntityId)?.Material ?? definition.Weapon?.Material ?? DaggerfallHeldDrawing.Steel);
+        var metadata = _inventoryUi.EquippedMetadata(item.EntityId);
+        return (_definitions.SourceTemplateFor(definition)?.Index, metadata?.Material ?? definition.Weapon?.Material ?? DaggerfallHeldDrawing.Steel, metadata?.HasEnchantment == true);
     }
 
     // The shield worn on the off arm: its template and metal, which the 3D first-person art draws it by.

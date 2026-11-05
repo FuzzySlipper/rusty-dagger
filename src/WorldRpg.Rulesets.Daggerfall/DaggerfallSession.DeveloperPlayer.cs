@@ -59,6 +59,21 @@ internal sealed partial class DaggerfallSession : IDeveloperPlayerSession
         try { created = CreateDeveloperItems(template!, material, 1).Single(); }
         catch (ArgumentException refused) { return Refused($"{template!.Name} cannot be made: {refused.Message}"); }
         if (created.Stackable) return Refused($"{template!.Name} stacks; player.hold wields one item, so give it with player.give.");
+        return Wield(created);
+    }
+
+    public DebugCommandResult HoldMagic()
+    {
+        if (DeveloperMoveRefusal() is { } refusal) return Refused(refusal);
+        // The regular magic templates of the weapons' base group.
+        if (_definitions.Magic.MagicItems.Values.Where(magic => magic is { Type: 0, Group: 2 }).MinBy(magic => magic.Key) is not { } weapon)
+            return Refused("No magic template makes a weapon.");
+        return Wield(new DaggerfallItemFactory(_definitions, _random).Create(new("Magic", $"developer.{++_developerGrants}", DaggerfallItemOwner.Player,
+            Level: Math.Max(1, State.Progression.Level), MagicItemKey: weapon.Key)));
+    }
+
+    private DebugCommandResult Wield(DaggerfallCreatedItem created)
+    {
         if (Grant(created, out DurableIdentityReference? identity) is { } failed) return Refused(failed);
         EquipmentMoveResult held = EquipmentMoves.MoveToSlot(new UniqueInventoryItem(State.Actors.Entities.Resolve(identity!.Value).Value, created.Item),
             new EquipmentSlotId("right-hand"));

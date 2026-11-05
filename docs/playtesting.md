@@ -118,6 +118,7 @@ earned. Like the movement commands they wait while a screen or question is open.
 | `player.items FILTER` | The item names `player.give` and `player.hold` take that contain FILTER (`""` for all), the weapon and armour materials, and the skill ids. |
 | `player.give ITEM COUNT` | Gives COUNT of an item, named as the game labels it (`"Steel Dagger"`), by template name or index, with an optional material first (`"ebony 113"`); a weapon or armour without a material takes one rolled for the player's level. A stackable item comes as one stack. |
 | `player.hold ITEM` | Gives one item and wields it in the main hand, drawn, through the ordinary equip rules: the quickest way to test a weapon's first-person view or animation. |
+| `player.hold.magic` | Gives a magic weapon, its base chosen as loot's is, and wields it: an enchanted weapon's look in play. |
 | `player.equip ITEM` | Gives one item and wears it through the ordinary equip rules: a shield goes on the off arm, anything else in the first slot that takes it. |
 | `player.gold AMOUNT` | Gives gold. |
 | `player.spell SPELL` | Teaches a spell, by its name or a part only it has. |
