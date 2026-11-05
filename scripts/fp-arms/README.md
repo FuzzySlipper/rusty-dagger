@@ -1,7 +1,7 @@
 # First-person arms
 
 3D first-person arms for the held viewmodel (`viewmodel.style` `held` or `heldRetro`): Ironbelly's MedievalFPArms
-(the AAA First Person Arm Pack's male leather armour arms) playing the FPP melee clips that came with the old Rift
+(the AAA First Person Arm Pack's five sets of arms) playing the FPP melee clips that came with the old Rift
 Riders Unity game, both on the UE4 mannequin skeleton. The arms are clip-led: each weapon family loops its idle clip at
 rest and plays a clip for every attack, fitted to the attack's timing in the rules so the hit lands on the clip's strike
 mark. The item wielded chooses the family and the look, and its metal tints the look. The classic sprite style (`classic`) is untouched.
@@ -18,10 +18,14 @@ definition and the measured values in it (marks, holds, the shoulder) are the ga
 The game draws the arms from two parts:
 
 - **The held definition**, `content/worldrpg/first-person/daggerfall.held.json`: tracked, authored content.
-  - `rig`: the arms model (`first-person/arms.glb`), the clip it is first measured on, the joints (forearm twist
+  - `rig`: the arm set it was measured on (`first-person/arms-male-leather.glb`), the clip it is first measured on, the joints (forearm twist
     `lowerarm_twist_01_*`, share 0.5), the palm (where the dagger clips' weapon bone sits in the hand) and the grip
     calibration of the digits.
-  - `retroModel`: the same arms with the retro look (`first-person/arms-retro.glb`), which `heldRetro` draws.
+  - `armSets`: each set of arms by name: its `model`, and its `retroModel`, the same arms with the retro look, which
+    `heldRetro` draws. Every set's joints are the clips', so one rig, shoulder and palm fit them all.
+  - `armsWorn`: the set each gender draws for what the arms wear. The ruleset reads what they wear from the armour in the
+    gauntlet and pauldron slots (`DaggerfallArmWearPolicy`): nothing is `cloth`, leather is `leather`, and chain or plate
+    is `mail`, the heaviest piece showing. The pack has no female mail, so `female.mail` draws the female leather set.
   - `arms`: the shoulder, where the clips' right upper arm sits from their camera bone at the start of the rig's clip,
     so the clips' eye is the game's; the elbow pole and the default hand closures.
   - `families`: each weapon family, by the clip set it plays. Its `weapons` are the classic weapon visuals it draws,
@@ -36,7 +40,7 @@ The game draws the arms from two parts:
     `items` each shield's model by item template, with its own `seat` where it differs.
   - `items`: what an item template changes, keyed by template index: its `family`, and its `model`, `grip` and `hold`
     where they differ from that family's look. A template not listed draws its classic visual's family and look.
-- **The container**, `local/first-person.rpak` (ignored): both arms GLBs, each carrying every clip the definition names
+- **The container**, `local/first-person.rpak` (ignored): every set's two arms GLBs, each carrying every clip the definition names
   (not clip packs: the Engine shares an opened model's packs between everything that opens it, so a second set of
   arms, a weapon swapped or another site's viewmodel, could not associate them again), and `provenance.json`.
 
@@ -55,6 +59,15 @@ chained attack is a new clip fading in over the recovery. An attack a family has
 | `sns` | `weapon.mace` | `FPP_SnS` (sword and shield; the shield hand rests out of view): Attack_RD, _LU, _RU, _F | AttackHeavyU | Magic1 | one |
 | `halberd` | `weapon.staff` | `FPP_Halberd`: Attack_R, _LD, _D, _F | AttackHeavy_R | Magic | both |
 | `unarmed` | `weapon.unarmed` | `CHANM_FPArms_Unarmed_Punch`, then the same `.mirrored`, turn about | the punch, held drawn back | `FPP_sns_Magic1` | both |
+
+### Arm sets
+
+The arms change when the set worn changes, once they are at rest: a strike, a held charge or a guard plays out on the arms
+it started on, and the new set takes the idle loop up at the same moment, so the pose carries over. A weapon or shield
+swapped redraws the arms at once, in the set worn. `build.py` names each set's mesh and textures in the pack (`SOURCES`,
+with the medium colour where a set has several) and bakes every clip onto each, so a build takes about two minutes a set.
+The cloth sets' fur is a second mesh, joined to the arms and cut by its alpha. The chainmail's colour map is lifted, as it
+is painted for metal shading. `held.arms SET` shows a set in the workbench.
 
 `fastA` to `fastD` are the four fast attacks in the order a chain cycles them, so a cut from one side is followed by one
 from the other, then a downward blow and a thrust. Every plain clip starts and ends at its family's idle, so any can
@@ -106,7 +119,7 @@ and build again. `build.py`:
 
 - grows a low leg and boot on each of the skeleton's legs and joins them to the arms' mesh: the pack has arms only, and a
   kick needs something to kick with. Rings run down the bones with small plain textures, so none of it is the pack's art;
-- imports the male leather arms (LOD0) with their medium colour and normal maps at 1024 px; the retro arms carry the
+- imports each set of arms (LOD0) with its medium colour and normal maps at 1024 px; the retro arms carry the
   colour map alone at 256 px, drawn nearest, as Daggerfall draws its world;
 - bakes each clip as its own camera bone sees it (the pack's own clips have only `camera_mount`, with other axes, and take
   the arms' skeleton as it is): every frame the whole body is moved so the camera bone sits at the
@@ -139,8 +152,6 @@ place marks.
 
 ## Not yet
 
-- The other arm sets (female leather, male and female cloth, male chainmail) are not built: a set chosen by the
-  player's gender and armour needs its own bake where its skeleton's rest differs.
 - The bows draw their sprites: there are no clips for them yet, so their models wait for those.
 
 ## Weapon models

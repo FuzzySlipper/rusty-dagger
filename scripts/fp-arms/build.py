@@ -6,11 +6,11 @@ usage: blender -b --factory-startup --python scripts/fp-arms/build.py -- SOURCES
 SOURCES is local/fp-melee (scripts/fp-arms/copy-sources.sh). DEFINITION is the held definition, which names every clip
 the game plays: the rig's own clip and each family's idle, power hold and attack clips, by their FBX file stems. Writes into OUT_DIR:
 
-- first-person/arms.glb: the male leather armour arms (mesh, skeleton, colour and normal maps) with every clip the
-  definition names, and first-person/arms-retro.glb, the same with its colour map alone, small and drawn nearest, which
-  the heldRetro style draws. The clips are the model's own, not clip packs: the Engine shares an opened model's clip packs
-  between everything that opens it, so a second set of arms on the same model (a weapon swapped, another site's
-  viewmodel) could not associate its packs again.
+- each of the definition's armSets: its model, the arms (mesh, skeleton, colour and normal maps) with every clip the
+  definition names, and its retroModel, the same with its colour map alone, small and drawn nearest, which the heldRetro
+  style draws. The clips are the model's own, not clip packs: the Engine shares an opened model's clip packs between
+  everything that opens it, so a second set of arms on the same model (a weapon swapped, another site's viewmodel) could
+  not associate its packs again.
 - measure.json: what the definition is fitted with, measured on the clips: where the right upper arm sits from the eye
   at the start of the rig's clip (arms.shoulder), where the dagger family's weapon bone sits in the hand (rig.palm),
   each family's look grip and hold at that palm, and each attack clip's frames with the weapon's speed per frame.
@@ -35,9 +35,15 @@ from mathutils import Matrix, Quaternion, Vector
 sources, definition_path, out = (Path(a) for a in sys.argv[sys.argv.index("--") + 1:])
 definition = json.loads(definition_path.read_text())
 pack_root = sources / "MedievalFPArms"
-ARMS = pack_root / "Meshes/FPArms_Male-Leather-Armor_LPR_LOD0.fbx"
-COLOUR = pack_root / "Textures/FPArms_Male-Leather-Armor_Medium_COL.png"
-NORMAL = pack_root / "Textures/FPArms_Male-Leather-Armor_NRM.png"
+# Each arm set's mesh file, the stem and colour of its textures in the pack, and how much its colour map is lifted: the
+# chainmail's is painted for metal shading, which the arms don't use, and would draw nearly black.
+SOURCES = {
+    "male-leather": ("FPArms_Male-Leather-Armor_LPR_LOD0", "FPArms_Male-Leather-Armor", "Medium_COL.png", 1),
+    "female-leather": ("FPArms_Female-Leather-Armor_LOD0_LPR", "FPArms_Female-Leather-Armor", "Medium_COL.png", 1),
+    "male-cloth": ("FPArms_Male-Cloth-LOD0_LPR", "FPArms_Male-Medieval-Cloth", "Medium_COL.png", 1),
+    "female-cloth": ("FPArms_Female-Medieval-Cloth_LOD0_LPR", "FPArms_Female-Medieval-Cloth", "Medium_COL.png", 1),
+    "male-chainmail": ("FPArms_Male-Chainmail_LPR_LOD0", "FPArms_Male-Chainmail", "COL.png", 2.5),
+}
 TEXTURE = 1024
 # The legs' rings and their small plain textures: nothing of the pack's art goes into them.
 LEG_SIDES = 10
@@ -74,28 +80,46 @@ def remove(objects):
         bpy.data.objects.remove(obj, do_unlink=True)
 
 
-def load(path, size, colour=True):
-    """An image scaled down to at most `size` a side; its colour space is set first, as setting it reloads the file."""
+def load(path, size, colour=True, lift=1):
+    """
+    An image scaled down to at most `size` a side, its colours multiplied by `lift`; its colour space is set first, as
+    setting it reloads the file.
+    """
     image = bpy.data.images.load(str(path))
     if not colour:
         image.colorspace_settings.name = "Non-Color"
     if max(image.size) > size:
         image.scale(size, size)
+    if lift != 1:
+        pixels = np.empty(len(image.pixels), dtype=np.float32)
+        image.pixels.foreach_get(pixels)
+        rgba = pixels.reshape(-1, 4)
+        rgba[:, :3] = np.minimum(rgba[:, :3] * lift, 1)
+        image.pixels.foreach_set(pixels)
+        image.update()
     return image
 
 
-def texture(material):
+def texture(material, colour_map, normal_map, lift=1):
     nodes, links = material.node_tree.nodes, material.node_tree.links
     bsdf = next(n for n in nodes if n.type == "BSDF_PRINCIPLED")
     colour = nodes.new("ShaderNodeTexImage")
     colour.label = "colour"
-    colour.image = load(COLOUR, TEXTURE)
+    colour.image = load(colour_map, TEXTURE, lift=lift)
     links.new(colour.outputs["Color"], bsdf.inputs["Base Color"])
     bsdf.inputs["Roughness"].default_value = 0.75
     bsdf.inputs["Metallic"].default_value = 0.0
+    if normal_map is None:
+        # Fur, which has no normal map: its alpha cuts its edges, a Greater Than node being how glTF's alpha mask exports.
+        cut = nodes.new("ShaderNodeMath")
+        cut.operation = "GREATER_THAN"
+        cut.inputs[1].default_value = 0.5
+        links.new(colour.outputs["Alpha"], cut.inputs[0])
+        links.new(cut.outputs[0], bsdf.inputs["Alpha"])
+        return
     normal = nodes.new("ShaderNodeTexImage")
     normal.label = "normal"
-    normal.image = load(NORMAL, TEXTURE, colour=False)
+    normal.image = load(normal_map, TEXTURE, colour=False)
     mapped = nodes.new("ShaderNodeNormalMap")
     links.new(normal.outputs["Color"], mapped.inputs["Color"])
     links.new(mapped.outputs["Normal"], bsdf.inputs["Normal"])
@@ -115,19 +139,23 @@ def retro():
             colour.interpolation = "Closest"
 
 
-def arms():
-    """The arms with their textures; the pack's own unarmed clip is dropped."""
+def arms(name):
+    """The arm set `name` with its textures, as one mesh; the pack's own unarmed clip is dropped."""
+    mesh_file, stem, colour, lift = SOURCES[name]
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.context.scene.render.fps = 60
-    imported = import_fbx(ARMS)
+    imported = import_fbx(pack_root / f"Meshes/{mesh_file}.fbx")
     for action in list(bpy.data.actions):
         bpy.data.actions.remove(action)
     rig = next(o for o in imported if o.type == "ARMATURE")
-    for obj in imported:
-        if obj.type == "MESH":
-            for slot in obj.material_slots:
-                texture(slot.material)
-    legs(rig, next(obj for obj in imported if obj.type == "MESH"))
+    meshes = [obj for obj in imported if obj.type == "MESH"]
+    for obj in meshes:
+        obj.data.uv_layers[0].name = "UVMap"
+        fur = "_Fur" in obj.name
+        for slot in obj.material_slots:
+            texture(slot.material, pack_root / f"Textures/{stem}_Fur_COL.tga" if fur else pack_root / f"Textures/{stem}_{colour}",
+                    None if fur else pack_root / f"Textures/{stem}_NRM.png", lift)
+    legs(rig, meshes)
     return rig
 
 
@@ -152,11 +180,11 @@ def plain(name, colour):
     return material
 
 
-def legs(rig, body):
+def legs(rig, meshes):
     """
-    Grows a low leg and boot on each of the skeleton's legs and joins them to the arms' mesh `body`, as the Engine draws
-    one mesh for the arms: the pack has arms only, and a kick needs something to kick with. Rings of LEG_SIDES run down
-    each leg's bones, every ring on the bones given, so nothing here comes from the pack.
+    Grows a low leg and boot on each of the skeleton's legs and joins them to the arms' `meshes`, as the Engine draws one
+    mesh for the arms: the pack has arms only, and a kick needs something to kick with. Rings of LEG_SIDES run down each
+    leg's bones, every ring on the bones given, so nothing here comes from the pack.
     """
     mesh = bpy.data.meshes.new("legs")
     leg = bpy.data.objects.new("legs", mesh)
@@ -206,8 +234,9 @@ def legs(rig, body):
     mesh.materials.append(plain("legs-boot", (.3, .19, .11)))
     bpy.ops.object.select_all(action="DESELECT")
     leg.select_set(True)
-    body.select_set(True)
-    bpy.context.view_layer.objects.active = body
+    for obj in meshes:
+        obj.select_set(True)
+    bpy.context.view_layer.objects.active = max(meshes, key=lambda obj: len(obj.data.vertices))
     bpy.ops.object.join()
 
 
@@ -392,11 +421,13 @@ def guard_stems(guard):
 
 stems = [rig_clip, *guard_stems(shield["guard"]), *(stem for family in families.values() for stem in (
     family["idle"]["clip"], family["powerHold"]["clip"], *guard_stems(family["guard"]), *(clip["clip"] for clip in family["strikes"].values())))]
-rig = arms()
-samples = {stem: bake(rig, stem) for stem in dict.fromkeys(stems)}
-export(out / "first-person/arms.glb", list(samples))
-retro()
-export(out / "first-person/arms-retro.glb", list(samples))
+# Every set's joints are the clips' (bake refuses others), so the samples of any set measure them all.
+for name, arm_set in definition["armSets"].items():
+    rig = arms(name)
+    samples = {stem: bake(rig, stem) for stem in dict.fromkeys(stems)}
+    export(out / arm_set["model"], list(samples))
+    retro()
+    export(out / arm_set["retroModel"], list(samples))
 
 measure = {"shoulder": rounded(camera(samples[rig_clip][0]["upperarm_r"].translation)), "families": {}}
 palm = None

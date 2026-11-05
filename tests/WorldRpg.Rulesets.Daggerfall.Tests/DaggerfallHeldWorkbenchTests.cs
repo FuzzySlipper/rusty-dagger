@@ -81,6 +81,14 @@ public sealed class DaggerfallHeldWorkbenchTests
     }
 
     [Fact]
+    public void An_arm_set_needs_a_look_shown_and_a_set_the_art_has()
+    {
+        DaggerfallHeldWorkbench workbench = new(DaggerfallHeldArtTests.Read(DaggerfallHeldArtTests.Document()), DaggerfallAttackTuning.Default, DaggerfallViewmodelStyle.Held, Unreached, () => { });
+
+        Assert.Contains("Choose a look first", workbench.Arms("female-cloth").Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void A_value_set_on_the_page_changes_the_loaded_art_and_redraws()
     {
         DaggerfallHeldArt art = DaggerfallHeldArtTests.Read(DaggerfallHeldArtTests.Document());
