@@ -1,0 +1,319 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy world scenery: the trees, rocks, plants and town fixtures of a dark fantasy RPG, seen from standing height. Keep the source's silhouette, proportions, local colours and the arrangement of its parts: it replaces the source at the same size in the world. Restrained palette with distinct light, middle and dark families. Detail hierarchy: silhouette first, a few large masses second, sparse material marks third. Foliage reads as clumps of painted leaf masses, not individual leaves. Keep open gaps between branches, bars and posts open. No extra parts, gemstones, runes, faces, symbols or fantasy embellishment. Not pixel art, not a photoreal photograph, not a glossy mobile-game asset, not a dramatic scene. No text, labels, border, vignette, frame, hand, person, ground plane, scenery or second object.",
+  "presentation": "One isolated object on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no ground shadow, no background texture and no cast shadow outside the object. The whole object visible with breathing room, centred, its base where the source's base is. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Flats: nature-rainforest",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "flats",
+      "model": "qwen-edit",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "conditioning": "reference"
+    }
+  ],
+  "items": [
+    {
+      "id": "flat-500-1",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-001-frame-000-source.png",
+      "content": "One green, leafy plant with broad, textured fronds and yellowish highlights, resembling a tropical fern or palm.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-1 (70x45)"
+    },
+    {
+      "id": "flat-500-2",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-002-frame-000-source.png",
+      "content": "One tall plant with green stems, pink flowers, and brown roots, featuring slender leaves and a natural, organic form.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-2 (27x43)"
+    },
+    {
+      "id": "flat-500-3",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-003-frame-000-source.png",
+      "content": "One twisted tree trunk with green foliage, brown bark, and earthy roots, standing upright.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-3 (46x87)"
+    },
+    {
+      "id": "flat-500-4",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-004-frame-000-source.png",
+      "content": "One dark, hooded figure with flowing robes, primarily black with subtle brown accents at the base.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-4 (57x64)"
+    },
+    {
+      "id": "flat-500-5",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-005-frame-000-source.png",
+      "content": "One green, elongated plant-like object with a bulbous base, stem, and leafy top, featuring shades of green and brown.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-5 (17x31)"
+    },
+    {
+      "id": "flat-500-6",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-006-frame-000-source.png",
+      "content": "One tall green plant with purple flowers and brown stems grows from a patch of earth.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-6 (18x42)"
+    },
+    {
+      "id": "flat-500-7",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-007-frame-000-source.png",
+      "content": "One green plant with curved leaves and a dark stem, showing natural growth with varying shades of green and brown.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-7 (36x27)"
+    },
+    {
+      "id": "flat-500-8",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-008-frame-000-source.png",
+      "content": "One ornate, curved staff with green and brown hues, featuring a dark base and intricate, leaf-like adornments.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-8 (30x38)"
+    },
+    {
+      "id": "flat-500-9",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-009-frame-000-source.png",
+      "content": "One tall green plant with branching stems and leafy fronds, rooted in brown soil, displaying vibrant green hues.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-9 (47x58)"
+    },
+    {
+      "id": "flat-500-10",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-010-frame-000-source.png",
+      "content": "One green plant with branching stems, leaves, and roots, featuring varying shades of green and blue.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-10 (46x41)"
+    },
+    {
+      "id": "flat-500-11",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-011-frame-000-source.png",
+      "content": "One green plant with broad leaves, a thick stem, and a bulbous root system, showing natural growth and earthy tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-11 (45x86)"
+    },
+    {
+      "id": "flat-500-12",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-012-frame-000-source.png",
+      "content": "One palm tree with green fronds, brown trunk, and roots, featuring shades of green, brown, and yellow.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-12 (69x109)"
+    },
+    {
+      "id": "flat-500-13",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-013-frame-000-source.png",
+      "content": "One twisted tree trunk with green leaves and vines, showing bark texture, primarily brown and green.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-13 (70x109)"
+    },
+    {
+      "id": "flat-500-14",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-014-frame-000-source.png",
+      "content": "One palm tree with green fronds, brown trunk, and textured crown, standing tall with naturalistic form and earthy tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-14 (85x99)"
+    },
+    {
+      "id": "flat-500-15",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-015-frame-000-source.png",
+      "content": "One tall palm tree with green fronds, textured brown trunk, and a fibrous, tan-colored crown.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-15 (98x152)"
+    },
+    {
+      "id": "flat-500-16",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-016-frame-000-source.png",
+      "content": "One twisted tree trunk with green spiky foliage and brown bark, showing roots at base, in shades of green and brown.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-16 (58x89)"
+    },
+    {
+      "id": "flat-500-17",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-017-frame-000-source.png",
+      "content": "One dark, jagged staff with green moss and brown roots clinging to its surface, featuring a rough, textured material.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-17 (53x96)"
+    },
+    {
+      "id": "flat-500-18",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-018-frame-000-source.png",
+      "content": "One mature tree with a thick brown trunk, sprawling roots, and a full canopy of green leaves.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-18 (70x73)"
+    },
+    {
+      "id": "flat-500-19",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-019-frame-000-source.png",
+      "content": "One green vine plant with pink flowers, slender stems, and leaves, featuring a mix of green and pink hues.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-19 (41x68)"
+    },
+    {
+      "id": "flat-500-20",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-020-frame-000-source.png",
+      "content": "One tall plant with green stem and leaves, bearing clusters of purple flowers, rooted in brown earth.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-20 (37x66)"
+    },
+    {
+      "id": "flat-500-21",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-021-frame-000-source.png",
+      "content": "One tall green palm tree with blue flowers at its crown, featuring a slender trunk and fronds extending outward.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-21 (38x42)"
+    },
+    {
+      "id": "flat-500-22",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-022-frame-000-source.png",
+      "content": "One tall plant with green stem and leaves, bearing clusters of purple flowers, rooted in brown earth.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-22 (37x66)"
+    },
+    {
+      "id": "flat-500-23",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-023-frame-000-source.png",
+      "content": "One green, bulbous plant with multiple twisting stems and leafy tips, resembling a fantastical, organic growth.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-23 (32x61)"
+    },
+    {
+      "id": "flat-500-24",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-024-frame-000-source.png",
+      "content": "One green and black segmented, spiky, plant-like creature with bulbous head and trailing tendrils.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-24 (41x77)"
+    },
+    {
+      "id": "flat-500-25",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-025-frame-000-source.png",
+      "content": "One tree with green foliage and brown roots growing from a dark, rough-textured base.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-25 (63x82)"
+    },
+    {
+      "id": "flat-500-26",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-026-frame-000-source.png",
+      "content": "One green plant with long, curved stems and leafy base, rooted in brown soil, showing natural growth form.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-26 (25x43)"
+    },
+    {
+      "id": "flat-500-27",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-027-frame-000-source.png",
+      "content": "One palm tree with green fronds, blue center, and brown trunk, showing natural growth and tropical appearance.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-27 (34x41)"
+    },
+    {
+      "id": "flat-500-28",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-028-frame-000-source.png",
+      "content": "One dark, rounded object with blue glowing orbs and green accents, resembling a mystical artifact or enchanted device.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-28 (39x27)"
+    },
+    {
+      "id": "flat-500-29",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-029-frame-000-source.png",
+      "content": "One ornate, curved horn with dark metallic body, green mossy accents, and blue gemstone inlay.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-29 (50x36)"
+    },
+    {
+      "id": "flat-500-30",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-030-frame-000-source.png",
+      "content": "One tall tree with thick brown trunk, sprawling roots, and dense green foliage.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-30 (84x168)"
+    },
+    {
+      "id": "flat-500-31",
+      "directory": "nature-rainforest/texture-500",
+      "image": "flat/texture-500-record-031-frame-000-source.png",
+      "content": "One cluster of grey, lumpy, root-like growths with rough, spotted surfaces and brown earthy base.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-500-31 (88x52)"
+    }
+  ]
+}
