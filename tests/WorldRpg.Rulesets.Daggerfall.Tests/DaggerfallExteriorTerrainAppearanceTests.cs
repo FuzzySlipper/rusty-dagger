@@ -237,7 +237,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         Dictionary<(int Archive, int Record), NormalizedBillboardSprite> billboards = [];
         for (int record = 1; record <= 31; record++)
             billboards[(504, record)] = new($"sprite/texture-504-{record}.png", TestSessions.Hash, 16, 32,
-                [new NormalizedAtlasFrame(7, 0, 0, 16, 32)], 7, new Vector2(.5F, 0F), new Vector2(3F, 6F));
+                [new NormalizedAtlasFrame(7, 0, 0, 16, 32)], 7, new Vector2(.5F, .5F), new Vector2(3F, 6F));
         DaggerfallSiteProfile profile = new(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook, [],
             new Dictionary<long, NormalizedActorSprite>(), billboardSprites: billboards, terrainTextures: textures);
         string flats = string.Join(",", Enumerable.Range(1, 31).Select(record => $$$"""
@@ -307,7 +307,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         foreach (int archive in new[] { 504, 505 })
             for (int record = 1; record <= 31; record++)
                 billboards[(archive, record)] = new($"sprite/texture-{archive}-{record}.png", TestSessions.Hash, 16, 32,
-                    [new NormalizedAtlasFrame(7, 0, 0, 16, 32)], 7, new Vector2(.5F, 0F), new Vector2(record, 2F * record));
+                    [new NormalizedAtlasFrame(7, 0, 0, 16, 32)], 7, new Vector2(.5F, .5F), new Vector2(record, 2F * record));
         DaggerfallSiteProfile profile = new(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook, [],
             new Dictionary<long, NormalizedActorSprite>(), billboardSprites: billboards, terrainTextures: textures);
         using DaggerfallExteriorTerrainAppearance appearance = new(graphics.Content, graphics, graphics.Admit(profile));
