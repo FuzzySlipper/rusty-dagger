@@ -323,8 +323,9 @@ def frame_atlas(name, sources, finals, target, longest=None, crunch=None):
     region = boxes.pop()
     frames = [Image.open(final).convert("RGBA") for final in finals]
     box = region
+    edge = 127 if crunch else 0   # the crunch hardens alpha at half, so fainter haze holds no art
     for frame in frames:
-        if (art := frame.getchannel("A").getbbox()) is not None:
+        if (art := frame.getchannel("A").point(lambda alpha: alpha > edge and 255).getbbox()) is not None:
             box = (min(box[0], art[0]), min(box[1], art[1]), max(box[2], art[2]), max(box[3], art[3]))
     width, height = box[2] - box[0], box[3] - box[1]
     k = crunch * Image.open(sources[0]).width / (region[2] - region[0]) if crunch else min(1, longest / max(width, height))
