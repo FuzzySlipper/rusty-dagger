@@ -7,7 +7,7 @@ the study's `inputs/<id>/input.json`, and the spec's canvas size.
 
     finalize.py SPEC.json CUTOUT_DIR [--area items] [--finals DIR] [--study STUDY_DIR]
 """
-import argparse, json, shutil
+import argparse, json, shutil, subprocess, sys
 from pathlib import Path
 
 from art_key import art_key
@@ -28,6 +28,8 @@ spec = json.load(open(a.spec))
 for i in spec["items"]:
     target = finals / (art_key(a.area, i["directory"], i["image"]) + ".png")
     shutil.copyfile(Path(a.cutout) / (i["id"] + ".png"), target)
+    if a.area == "flats":
+        subprocess.run([sys.executable, Path(__file__).with_name("despeckle.py"), target], check=True)
     if a.area in DOLL_AREAS:
         given = json.load(open(a.study / "inputs" / i["id"] / "input.json"))
         rect = generation_rect(given["export_entry"], spec["size"], given["integer_scale"], given["placement"])

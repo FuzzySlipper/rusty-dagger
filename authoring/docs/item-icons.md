@@ -69,7 +69,11 @@ A spec copies the style card, collection rules, presentation, seed and routes fr
 ground regions are kept or removed by the source sprite's own alpha (so a glass jar stays solid and a chain loop
 stays open), and the edge is softened and decontaminated. World flats also take `--painted-ground`: a drawing
 narrower than its classic can enclose ground the source alpha doesn't reach, so flat ground-coloured patches of the
-image before back-projection open too when most of each lies over the source's transparency.
+image before back-projection open too when most of each lies over the source's transparency. Dark stone near the
+ground's colour can join the ground at the sprite's edge, so what the cut-out took from the source's solid body comes
+back unless it is flat ground. `finalize.py` despeckles flats, whose stray flecks would otherwise stretch their atlas box.
+World flats promote through `reduce.crunch_sprites`: `FLAT_CRUNCH` pixels to a classic pixel (default 2), hard edges and
+one ART_PAL subset across a record's frames, drawn with nearest filtering so they sit with the terrain's crunch.
 
 ## Clean-up and source edits
 

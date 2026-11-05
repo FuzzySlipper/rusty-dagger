@@ -73,6 +73,27 @@ def crunch(raw, classic):
     return Image.fromarray(palette[nearest].reshape(pixels.shape).astype(np.uint8))
 
 
+def crunch_sprites(frames, size):
+    """Transparent art crunched for a world billboard: each RGBA frame at `size`, a strong unsharp mask, hard edges, and one
+    ART_PAL subset across the frames, so an animation doesn't flicker between palettes."""
+    colour, solid = [], []
+    for frame in frames:
+        channels = np.asarray(frame.convert("RGBA"), np.float32) / 255
+        channels[..., :3] *= channels[..., 3:]
+        small = np.dstack([np.asarray(Image.fromarray(channels[..., i]).resize(size, Image.Resampling.LANCZOS)) for i in range(4)])
+        rgb = np.clip(small[..., :3] / np.maximum(small[..., 3:], 0.02), 0, 1)
+        colour.append(np.asarray(Image.fromarray((rgb * 255).astype(np.uint8)).filter(ImageFilter.UnsharpMask(radius=1, percent=140, threshold=1)), np.float32))
+        solid.append(small[..., 3] > 0.5)
+    palette = subset_palette(Image.fromarray(np.concatenate([c[s] for c, s in zip(colour, solid)])[None].astype(np.uint8)))
+    out = []
+    for pixels, mask in zip(colour, solid):
+        image = np.zeros((*mask.shape, 4), np.uint8)
+        image[mask, :3] = palette[np.argmin(((pixels[mask][:, None] - palette[None]) ** 2).sum(-1), 1)]
+        image[mask, 3] = 255
+        out.append(Image.fromarray(image, "RGBA"))
+    return out
+
+
 def winter(summer_refreshed, summer_classic, winter_classic):
     """The refreshed summer with the classic winter's snow and ice laid over it, pixels doubled square."""
     s = np.asarray(summer_classic.convert("RGB"), np.int16)

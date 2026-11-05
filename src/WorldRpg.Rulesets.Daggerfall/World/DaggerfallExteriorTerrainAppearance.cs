@@ -607,7 +607,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         try
         {
             resource = art is null ? _graphics.OpenTexture(_content, sprite.TexturePath, sprite.TextureSha256).Handle
-                : _graphics.OpenTexture(_content, art.File.Path, art.File.Sha256, TextureFilter.Linear).Handle;
+                : _graphics.OpenTexture(_content, art.File.Path, art.File.Sha256, TextureFilter.Nearest).Handle;
             SpriteAtlasFrame[] frames = art is null
                 ? SpriteAtlasAdapter.ToAtlasFrames(sprite.AtlasWidth, sprite.AtlasHeight, sprite.Frames.Select(frame => new NormalizedSpriteFrame(
                     frame.Id, frame.X, frame.Y, frame.Width, frame.Height)).ToArray())
