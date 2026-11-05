@@ -79,6 +79,17 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         _profile = profile ?? throw new ArgumentNullException(nameof(profile));
     }
 
+    /// <summary>Redraws every resident cell's nature in the art now drawn: a batch shares one atlas, so its record's art change is a new batch.</summary>
+    private void RedrawNature()
+    {
+        foreach ((DaggerfallExteriorCellId cell, NatureCell nature) in _natureCells.ToArray())
+        {
+            NatureCell redrawn = CreateNatureCell(cell, nature.Source);
+            _retiredNature.AddRange(nature.Batches);
+            _natureCells[cell] = redrawn;
+        }
+    }
+
     /// <summary>
     /// Appends the current terrain facts to the complete product snapshot assembled by the
     /// presentation owner. Duplicate object identities are rejected before Engine publication.
@@ -92,6 +103,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
             _refreshedDrawn = !_refreshedDrawn;
             foreach (TerrainMaterial material in _terrainMaterials.Values.Where(material => material.Refreshed is not null))
                 _graphics.UpdateMaterial(new MaterialUpdateRequest(material.Material, Ground(_refreshedDrawn ? material.Refreshed! : material.Resource)));
+            if (_art is { Flats.Count: > 0 }) RedrawNature();
         }
         HashSet<ulong> ids = [];
         foreach (AppearanceFact fact in baseFacts)
@@ -524,9 +536,13 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         if (_profile is null
             || !_profile.BillboardSprites.TryGetValue((placement.SpriteArchive, placement.SpriteRecord), out sprite))
             return false;
-        key = new(placement.SpriteArchive, placement.SpriteRecord, sprite.TexturePath);
+        key = new(placement.SpriteArchive, placement.SpriteRecord, Art(placement)?.File.Path ?? sprite.TexturePath);
         return true;
     }
+
+    /// <summary>The refreshed art a nature placement draws now, if any.</summary>
+    private DaggerfallArtFlat? Art(DaggerfallExteriorNaturePlacement placement) =>
+        _refreshedDrawn && _art?.Flats.GetValueOrDefault((placement.SpriteArchive, placement.SpriteRecord)) is { } art ? art : null;
 
     private (NatureSpriteKey Key, NormalizedBillboardSprite Sprite) ResolveNatureSprite(
         DaggerfallExteriorNaturePlacement placement)
@@ -557,7 +573,9 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
                 .OrderBy(group => group.Key.Record).ThenBy(group => group.Key.Archive))
             {
                 (NatureSpriteKey key, NormalizedBillboardSprite sprite) = ResolveNatureSprite(group.First());
-                NatureSprite admitted = GetNatureSprite(key, sprite);
+                DaggerfallArtFlat? art = Art(group.First());
+                NatureSprite admitted = GetNatureSprite(key, sprite, art);
+                (Vector2 size, Vector2 pivot) = art?.Placed(sprite.Size, sprite.Pivot) ?? (sprite.Size, sprite.Pivot);
                 SpriteBatchInstance[] instances = [.. group.Select(placement =>
                     new SpriteBatchInstance(placement.LocalPosition, 1F, sprite.InitialFrameId))];
                 ulong objectId = NatureBatchObjectId(cell, key.Record);
@@ -566,8 +584,8 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
                 Appearance appearance = _graphics.CreateSpriteBatch(new SpriteBatchRequest(
                     admitted.Atlas,
                     instances,
-                    sprite.Pivot,
-                    sprite.Size,
+                    pivot,
+                    size,
                     BillboardMode.Cylindrical));
                 batches.Add(new(objectId, key, appearance, instances.Length));
             }
@@ -580,7 +598,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         return new(placements, _profile, [.. batches]);
     }
 
-    private NatureSprite GetNatureSprite(NatureSpriteKey key, NormalizedBillboardSprite sprite)
+    private NatureSprite GetNatureSprite(NatureSpriteKey key, NormalizedBillboardSprite sprite, DaggerfallArtFlat? art)
     {
         if (_natureSprites.TryGetValue(key, out NatureSprite? existing)) return existing;
 
@@ -588,12 +606,13 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         SpriteAtlas? atlas = null;
         try
         {
-            resource = _graphics.OpenTexture(_content, sprite.TexturePath, sprite.TextureSha256).Handle;
-            SpriteAtlasFrame[] frames = SpriteAtlasAdapter.ToAtlasFrames(
-                sprite.AtlasWidth,
-                sprite.AtlasHeight,
-                sprite.Frames.Select(frame => new NormalizedSpriteFrame(
-                    frame.Id, frame.X, frame.Y, frame.Width, frame.Height)).ToArray());
+            resource = art is null ? _graphics.OpenTexture(_content, sprite.TexturePath, sprite.TextureSha256).Handle
+                : _graphics.OpenTexture(_content, art.File.Path, art.File.Sha256, TextureFilter.Linear).Handle;
+            SpriteAtlasFrame[] frames = art is null
+                ? SpriteAtlasAdapter.ToAtlasFrames(sprite.AtlasWidth, sprite.AtlasHeight, sprite.Frames.Select(frame => new NormalizedSpriteFrame(
+                    frame.Id, frame.X, frame.Y, frame.Width, frame.Height)).ToArray())
+                : SpriteAtlasAdapter.ToAtlasFrames(art.Width, art.Height, art.Frames.Select((frame, index) => new NormalizedSpriteFrame(
+                    sprite.Frames[index].Id, (int)frame.X, (int)frame.Y, (int)frame.Width, (int)frame.Height)).ToArray());
             atlas = _graphics.CreateSpriteAtlas(new SpriteAtlasCreateRequest(resource, frames));
             NatureSprite created = new(key, resource, atlas);
             _natureSprites.Add(key, created);

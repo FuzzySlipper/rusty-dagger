@@ -366,6 +366,11 @@ the classic publication stays the fallback. `authoring/tools/items/promote.py` w
   snow. Ground tiles (`authoring/tools/terrain`) keep the classic's tile and transition layout: each climate and
   season is a few shared materials, and a transition fades between the materials it joins along the classic's contour,
   taking the classic's own colours at the shore. A rain set is its summer's materials in the classic rain colours.
+- **Flats.** The payload's `flats` replace classic texture records that the world draws as billboards: placed
+  decorations in exteriors, interiors and dungeons, and the nature the terrain scatters. Each is a PNG atlas of the
+  record's frames in classic order with where the classic frame sits in its box, from which the game draws it at the
+  classic sprite's world size and anchor. A season draws its own record's flat, and a record the set has no flat for
+  stays classic. A light flat's light comes from its placement, not its art, so a redrawn flat keeps its light.
 - **What the data container still carries.** Nothing classic is dropped yet: the paper doll's classic bodies, heads
   and worn items are the Classic art fallback, and armour in a dyed material (iron, ebony and the rest) is drawn
   classic, since the refreshed armour is steel, leather and chain.

@@ -31,7 +31,10 @@ public sealed class SpellEffectPresentationTests
           "effectGlow": {"path": "refreshed/glow.png", "byteLength": 1, "sha256": "HASH"},
           "meshes": [
             {"replaces": {"archive": 380, "record": 1}, "path": "refreshed/corpse-bones.glb", "byteLength": 1, "sha256": "HASH", "footprint": 2.15},
-            {"replaces": {"archive": 380, "record": 4}, "path": "refreshed/corpse-bones.glb", "byteLength": 1, "sha256": "HASH", "footprint": 2.15}]}}
+            {"replaces": {"archive": 380, "record": 4}, "path": "refreshed/corpse-bones.glb", "byteLength": 1, "sha256": "HASH", "footprint": 2.15}],
+          "flats": [
+            {"replaces": {"archive": 212, "record": 0}, "path": "refreshed/well.png", "byteLength": 1, "sha256": "HASH", "width": 32, "height": 32,
+             "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}], "classic": {"x": 0.25, "y": 0.5, "width": 0.5, "height": 0.5}}]}}
         """)), "test.art");
 
     private static (DaggerfallSiteAppearance Presentation, AppearanceFake Graphics, PresentationRecorder Particles) Compose(Func<bool> refreshed,
@@ -44,6 +47,8 @@ public sealed class SpellEffectPresentationTests
         content.Add("refreshed/glow.png", Hash);
         content.Add("refreshed/corpse-bones.glb", Hash);
         content.Add("sprite/corpse.png", Hash);
+        content.Add("sprite/well.png", Hash);
+        content.Add("refreshed/well.png", Hash);
         AppearanceFake graphics = new(releases);
         DaggerfallSiteAppearance presentation = new(content, graphics, MediaInputs(classic: ClassicEffects(fireSpell: true), corpse: corpse, decorations: decorations));
         PresentationRecorder particles = PresentationRecorder.Create();
@@ -170,7 +175,7 @@ public sealed class SpellEffectPresentationTests
         bool refreshed = true;
         AnimationRecorder animation = AnimationRecorder.Create();
         NormalizedBillboardSprite bones = new("sprite/corpse.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, .5F), new Vector2(1.075F, .725F));
-        DaggerfallSiteDecoration pile = new("flat-1", new WorldPoint(4, .5F, 6), false, bones, bones, (380, 4));
+        DaggerfallSiteDecoration pile = new("flat-1", new WorldPoint(4, .5F, 6), false, bones, bones, (380, 4), (380, 4));
         var (presentation, graphics, _) = Compose(() => refreshed, animation: animation, decorations: [pile]);
         using DaggerfallSiteAppearance owned = presentation;
         using ActorsState actors = ActorsWithNpc(11, HealthyMechanics(), new(2, 0, 3));
@@ -187,6 +192,25 @@ public sealed class SpellEffectPresentationTests
         refreshed = false;
         Publish(presentation, actors);
         Assert.DoesNotContain(graphics.Snapshots[^1], fact => fact.Appearance == mesh);
+    }
+
+    [Fact]
+    public void A_placed_flat_draws_its_refreshed_sprite_in_refreshed_art_and_its_classic_one_otherwise()
+    {
+        bool refreshed = true;
+        NormalizedBillboardSprite well = new("sprite/well.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, .5F), new Vector2(2F, 3F));
+        DaggerfallSiteDecoration placed = new("flat-1", new WorldPoint(4, .5F, 6), true, well, well, (212, 0), (212, 0));
+        var (presentation, graphics, _) = Compose(() => refreshed, decorations: [placed]);
+        using DaggerfallSiteAppearance owned = presentation;
+        using ActorsState actors = ActorsWithNpc(11, HealthyMechanics(), new(2, 0, 3));
+
+        Publish(presentation, actors);
+        Appearance drawn = Assert.Single(graphics.Snapshots[^1], fact => fact.Transform.Translation == new Vector3(4, .5F, 6)).Appearance;
+
+        refreshed = false;
+        Publish(presentation, actors);
+        Appearance classic = Assert.Single(graphics.Snapshots[^1], fact => fact.Transform.Translation == new Vector3(4, .5F, 6)).Appearance;
+        Assert.NotEqual(drawn, classic);
     }
 
     [Fact]
