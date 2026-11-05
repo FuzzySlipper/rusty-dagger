@@ -5,7 +5,8 @@ usage: blender -b --factory-startup --python-exit-code 1 --python authoring/tool
 MESH is a generated horse (TRELLIS.2 from the refreshed inventory art). ICON is that art, whose colours the crunch repaint
 keeps. OUT holds the horse standing on its origin's ground, nose along -Z, with the saddle over the origin: a skeleton found
 from the mesh, a saddle draped on it, and the clips Stand, Walk, Trot and Gallop, whose loops are made here from each gait's
-footfalls. OUT-retro.glb beside it is the same with a small texture, for the heldRetro style.
+footfalls. OUT-retro.glb beside it is the same with a small texture, for the heldRetro style, and OUT-harness.glb and its
+retro are the horse with no saddle, for a cart's shafts.
 """
 import json
 import math
@@ -319,14 +320,12 @@ def flat(name, colour):
     return material
 
 
-def saddle(obj, armature):
+def saddle(obj, armature, seat_y):
     """
     A saddle on a blanket, draped over the back from the horse's own surface: the grid's heights are the highest vertices
-    under each point, with a pommel and cantle raised on the seat. Returns the seat's place along the horse.
+    under each point, with a pommel and cantle raised on the seat.
     """
     points = np.array([v.co for v in obj.data.vertices])
-    spine = armature.data.bones["spine"]
-    seat_y = float(spine.tail_local.y - .3)
     columns, rows = 19, 13
     half_width, half_length = .33, .34
     bm = bmesh.new()
@@ -372,7 +371,6 @@ def saddle(obj, armature):
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
     bpy.ops.object.join()
-    return seat_y
 
 
 def reins(obj, armature, seat_y):
@@ -427,7 +425,7 @@ def main():
     lower(obj)
     armature = rig(obj)
     paint(obj)
-    seat_y = saddle(obj, armature)
+    seat_y = float(armature.data.bones["spine"].tail_local.y - .3)
     reins(obj, armature, seat_y)
     keyed(armature, "Stand", None, 3)
     for gait, values in GAITS.items():
@@ -435,14 +433,39 @@ def main():
     # The seat over the origin, so the rider's place is only a height.
     armature.location.y -= seat_y
     bpy.context.view_layer.update()
-    bpy.ops.object.select_all(action="DESELECT")
-    obj.select_set(True)
-    armature.select_set(True)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
+    harness = out_path.with_name(f"{out_path.stem}-harness.glb")
+    select(obj, armature)
+    export(harness)
+    # The saddle is draped in the armature's own space, before the horse moves under the seat.
+    armature.location.y += seat_y
+    bpy.context.view_layer.update()
+    saddle(obj, armature, seat_y)
+    armature.location.y -= seat_y
+    bpy.context.view_layer.update()
+    select(obj, armature)
     export(out_path)
     obj.data.materials[0].node_tree.nodes["Image Texture"].image.scale(RETRO_TEXTURE, RETRO_TEXTURE)
     export(out_path.with_name(f"{out_path.stem}-retro.glb"))
+    unsaddle(obj)
+    select(obj, armature)
+    export(harness.with_name(f"{harness.stem}-retro.glb"))
     print("BUILT", out_path, out_path.stat().st_size // 1024, "KB", len(obj.data.polygons), "faces, seat", round(seat_y, 3))
+
+
+def select(obj, armature):
+    bpy.ops.object.select_all(action="DESELECT")
+    obj.select_set(True)
+    armature.select_set(True)
+
+
+def unsaddle(obj):
+    """Takes the saddle back off, for the horse in a cart's shafts."""
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    slots = [index for index, material in enumerate(obj.data.materials) if material.name.startswith(("blanket", "leather"))]
+    bmesh.ops.delete(bm, geom=[face for face in bm.faces if face.material_index in slots], context="FACES")
+    bm.to_mesh(obj.data)
+    bm.free()
 
 
 def export(path):

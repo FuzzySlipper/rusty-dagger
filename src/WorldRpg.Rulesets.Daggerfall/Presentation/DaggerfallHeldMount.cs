@@ -37,7 +37,8 @@ internal sealed class DaggerfallHeldMount : IDisposable
         this.horseObject = horseObject;
         this.cartObject = cartObject;
         seat = cart ? mount.CartSeat : mount.Seat;
-        using (ContentReference content = art.Container.OpenReference(retro ? mount.Horse.RetroModel : mount.Horse.Model))
+        DaggerfallHeldArmSet drawn = cart ? mount.Harnessed : mount.Horse;
+        using (ContentReference content = art.Container.OpenReference(retro ? drawn.RetroModel : drawn.Model))
             horseModel = engine.Animation.OpenAnimatedMeshFromContent(new(content));
         horse = engine.Animation.CreateAnimatedMeshAppearance(new(horseModel));
         horsePose = engine.Animation.CreateInstance(new(horse, horseObject));

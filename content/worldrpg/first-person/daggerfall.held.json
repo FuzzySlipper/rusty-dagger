@@ -1169,6 +1169,10 @@
       "model": "first-person/mounts/horse.glb",
       "retroModel": "first-person/mounts/horse-retro.glb"
     },
+    "harnessed": {
+      "model": "first-person/mounts/horse-harness.glb",
+      "retroModel": "first-person/mounts/horse-harness-retro.glb"
+    },
     "cart": {
       "model": "first-person/mounts/cart.glb",
       "retroModel": "first-person/mounts/cart-retro.glb"
