@@ -140,6 +140,19 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
         return DebugCommandResult.Success($"It is {_time.Calendar.SecondOfDay / 3_600}:00, {_time.Calendar.Season}.");
     }
 
+    public DebugCommandResult Stand(double east, double south)
+    {
+        if (DeveloperMoveRefusal() is { } refusal) return Refused(refusal);
+        if (_sites.ActiveExteriorOrigin is not { } origin || State.PlayerControl.Position is not { } position)
+            return Refused("The player is not outdoors.");
+        Vector3 feet = position.ToVector();
+        Vector3 scene = _sites.LocalToProfile(feet);
+        double rise = _horizon.GroundRise(origin, feet, east, south);
+        return Teleport(scene.X + east, scene.Y + rise + .05, scene.Z + south, force: true);
+    }
+
+    public DebugCommandResult GroundSurvey() => DebugCommandResult.Success(_horizon.GroundSurvey(_definitions.Terrain));
+
     public DebugCommandResult Horizon() => DebugCommandResult.Success(_horizon.Readout());
 
     public DebugCommandResult HorizonSet(double lift, double fogDensity)

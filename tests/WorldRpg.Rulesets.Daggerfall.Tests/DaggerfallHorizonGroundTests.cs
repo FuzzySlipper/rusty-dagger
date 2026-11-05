@@ -89,10 +89,52 @@ public sealed class DaggerfallHorizonGroundTests
         Assert.Contains("999", Assert.Throws<InvalidOperationException>(() => ground.Paint(999, 200, 0, false)).Message);
     }
 
+    [Fact]
+    public void Where_the_relief_gives_way_the_classic_height_stands()
+    {
+        DaggerfallTerrainSet classic = Terrain(8, 8);
+        DaggerfallTerrainSet shore = Terrain(8, 8, Relief(metres: 900, share: 0));
+
+        Assert.Equal(DaggerfallTerrainSurfaceBuilder.Build(classic, 3, 3).Vertices, DaggerfallTerrainSurfaceBuilder.Build(shore, 3, 3).Vertices);
+    }
+
+    [Fact]
+    public void Walked_and_far_ground_stand_on_the_relief_alike_and_run_on_across_map_pixels()
+    {
+        DaggerfallTerrainSet terrain = Terrain(8, 8, Relief(metres: 500, share: 255));
+        DaggerfallTerrainSurface west = DaggerfallTerrainSurfaceBuilder.Build(terrain, 3, 3), east = DaggerfallTerrainSurfaceBuilder.Build(terrain, 4, 3);
+
+        Assert.Equal(500, west.Vertices[64 + (64 * 129)].Y, 1);
+        Assert.Equal(500, Ground(terrain).Height((3 * Size) + 400, (3 * Size) - 400), 1);
+        for (int y = 0; y <= 128; y += 16) Assert.Equal(west.Vertices[128 + (y * 129)].Y, east.Vertices[y * 129].Y, 3);
+    }
+
+    [Fact]
+    public void A_relief_of_the_wrong_length_is_refused()
+    {
+        byte[] bytes = Relief(metres: 900, share: 255);
+
+        Assert.Throws<InvalidOperationException>(() => DaggerfallTerrainRelief.Read(bytes.AsSpan(0, bytes.Length - 1)));
+    }
+
+    /// <summary>A flat relief over the whole map: flat ground takes no gullies, so a height reads back as written.</summary>
+    private static byte[] Relief(float metres, byte share)
+    {
+        const int width = 2_000, height = 1_000;
+        byte[] bytes = new byte[12 + (width * height * 5)];
+        "RLF1"u8.CopyTo(bytes);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(4), width);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(8), height);
+        for (int i = 0; i < width * height; i++)
+            System.Buffers.Binary.BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(12 + (i * 4)), metres);
+        bytes.AsSpan(12 + (width * height * 4)).Fill(share);
+        return bytes;
+    }
+
     private static DaggerfallHorizonGround Ground(DaggerfallTerrainSet terrain) =>
         new(terrain, (_, _) => 231, DaggerfallHorizonTuning.Default);
 
-    private static DaggerfallTerrainSet Terrain(int width, int height)
+    private static DaggerfallTerrainSet Terrain(int width, int height, byte[]? relief = null)
     {
         byte[] heights = new byte[width * height];
         byte[] samples = new byte[width * height * 25];
@@ -105,6 +147,7 @@ public sealed class DaggerfallHorizonGroundTests
                 samples[(cell * 25) + sample] = checked((byte)(20 + (x * 3) + (y * 5) + sample));
         }
 
-        return new DaggerfallTerrainSet(width, height, heights, samples);
+        return new DaggerfallTerrainSet(width, height, heights, () => samples,
+            relief is null ? null : () => DaggerfallTerrainRelief.Read(relief));
     }
 }

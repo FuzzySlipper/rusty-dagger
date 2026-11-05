@@ -37,6 +37,12 @@ public interface IDeveloperWorldSession
     /// <summary>Lets world time run on to the next time the clock reads <paramref name="hour"/>.</summary>
     DebugCommandResult Hour(int hour);
 
+    /// <summary>Stands the player on the ground <paramref name="east"/> and <paramref name="south"/> metres away, as far as the walked window reaches.</summary>
+    DebugCommandResult Stand(double east, double south);
+
+    /// <summary>Slopes at walking scale from random points across the land, and what a map pixel's surface costs to build.</summary>
+    DebugCommandResult GroundSurvey();
+
     /// <summary>What the distant horizon is drawing, and how it is set.</summary>
     DebugCommandResult Horizon();
 
@@ -76,6 +82,12 @@ public sealed class DeveloperWorldDebugModule(Func<IDeveloperWorldSession> curre
 
     [DebugCommand("world.hour", Description = "Developer: let world time run on to the next HOUR (0 to 23) of the clock, as resting would.")]
     public DebugCommandResult Hour(int hour) => current().Hour(hour);
+
+    [DebugCommand("world.stand", Description = "Developer: stand the player on the ground EAST and SOUTH metres away, inside the walked window.")]
+    public DebugCommandResult Stand(double east, double south) => current().Stand(east, south);
+
+    [DebugCommand("world.ground-survey", Description = "Developer: slopes at walking scale from random points across the land, and what a surface costs to build.")]
+    public DebugCommandResult GroundSurvey() => current().GroundSurvey();
 
     [DebugCommand("world.horizon", Description = "Developer: what the distant horizon is drawing, and how it is set.")]
     public DebugCommandResult Horizon() => current().Horizon();

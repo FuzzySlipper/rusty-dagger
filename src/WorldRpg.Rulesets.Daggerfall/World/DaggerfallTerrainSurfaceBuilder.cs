@@ -45,7 +45,7 @@ internal sealed class DaggerfallTerrainSurface
 }
 
 /// <summary>The source samples behind one map pixel's surface: its small and large donor windows.</summary>
-internal sealed record DaggerfallTerrainWindow(int MapPixelX, int MapPixelY, float[] Small, float[] Large);
+internal sealed record DaggerfallTerrainWindow(int MapPixelX, int MapPixelY, float[] Small, float[] Large, DaggerfallTerrainRelief? Relief);
 
 /// <summary>
 /// The source-normalized rectangle the donor uses to flatten one exterior location. The values are
@@ -135,13 +135,31 @@ internal static class DaggerfallTerrainSurfaceBuilder
     /// <see cref="DaggerfallTerrainSet"/> reads them, so a distant view runs on over the map's edge.
     /// </summary>
     internal static DaggerfallTerrainWindow ReadWindow(DaggerfallTerrainSet terrain, int mapPixelX, int mapPixelY) =>
-        new(mapPixelX, mapPixelY, ReadSmallHeightmap(terrain, mapPixelX, mapPixelY), ReadLargeHeightmap(terrain, mapPixelX, mapPixelY));
+        new(mapPixelX, mapPixelY, ReadSmallHeightmap(terrain, mapPixelX, mapPixelY), ReadLargeHeightmap(terrain, mapPixelX, mapPixelY), terrain.Relief);
 
     /// <summary>
     /// The donor-normalized height of one vertex of a map pixel's surface, before any location flattening:
-    /// the one height function behind the walked ground and everything drawn beyond it.
+    /// the one height function behind the walked ground and everything drawn beyond it. Where the data carries an
+    /// eroded relief the ground stands on that, returning to the classic height along the coast.
     /// </summary>
-    internal static float NormalizedHeight(DaggerfallTerrainWindow window, int x, int y)
+    /// <param name="window">The map pixel's source samples.</param>
+    /// <param name="x">The vertex column.</param>
+    /// <param name="y">The vertex row.</param>
+    /// <param name="finestMetres">The finest relief detail this sampling can hold.</param>
+    internal static float NormalizedHeight(DaggerfallTerrainWindow window, int x, int y, double finestMetres = SampleSpacing * 2)
+    {
+        float classic = ClassicNormalizedHeight(window, x, y);
+        if (window.Relief is not { } relief) return classic;
+        // Vertex (0, 0) of map pixel (X, Y) is heightmap pixel (X - 1, Y), and its rows run north to (X, Y - 1).
+        double mapX = window.MapPixelX - 1 + (x / (double)(SampleDimension - 1));
+        double mapY = window.MapPixelY - (y / (double)(SampleDimension - 1));
+        double share = relief.Share(mapX, mapY);
+        if (share <= 0) return classic;
+        float eroded = (float)(relief.Metres(mapX, mapY, finestMetres) / TerrainVerticalSize);
+        return Math.Max(OceanElevation / MaxTerrainHeight, classic + ((eroded - classic) * (float)share));
+    }
+
+    private static float ClassicNormalizedHeight(DaggerfallTerrainWindow window, int x, int y)
     {
         float div = (SampleDimension - 1) / 3F;
         float ry = y / div;
