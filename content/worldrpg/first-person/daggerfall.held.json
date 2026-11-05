@@ -1002,6 +1002,46 @@
         }
       }
     },
+    "reins": {
+      "weapons": [
+        "weapon.reins"
+      ],
+      "twoHanded": true,
+      "class": "hand-to-hand",
+      "look": {
+        "model": null,
+        "grip": [
+          0,
+          0,
+          0
+        ],
+        "hold": [
+          0,
+          0,
+          0
+        ]
+      },
+      "idle": {
+        "clip": "RIDE_Idle",
+        "seconds": 2
+      },
+      "powerHold": {
+        "clip": "RIDE_Idle",
+        "at": 0
+      },
+      "strikes": {
+        "cast": {
+          "clip": "FPP_sns_Magic1",
+          "marks": {
+            "start": 0,
+            "strike": 0.138,
+            "recover": 0.182,
+            "end": 0.872
+          },
+          "fade": 0.1
+        }
+      }
+    },
     "unarmed": {
       "weapons": [
         "weapon.unarmed"
@@ -1123,6 +1163,61 @@
         }
       }
     }
+  },
+  "mount": {
+    "horse": {
+      "model": "first-person/mounts/horse.glb",
+      "retroModel": "first-person/mounts/horse-retro.glb"
+    },
+    "cart": {
+      "model": "first-person/mounts/cart.glb",
+      "retroModel": "first-person/mounts/cart-retro.glb"
+    },
+    "seat": [
+      0,
+      2.2,
+      0
+    ],
+    "cartSeat": [
+      0,
+      1.95,
+      0
+    ],
+    "cartHorse": [
+      0,
+      0,
+      -2.5
+    ],
+    "gaits": [
+      {
+        "clip": "Stand",
+        "seconds": 3,
+        "from": 0,
+        "speed": 0,
+        "bob": 0
+      },
+      {
+        "clip": "Walk",
+        "seconds": 1.1,
+        "from": 0.3,
+        "speed": 1.8,
+        "bob": 0.012
+      },
+      {
+        "clip": "Trot",
+        "seconds": 0.72,
+        "from": 3,
+        "speed": 6.8,
+        "bob": 0.03
+      },
+      {
+        "clip": "Gallop",
+        "seconds": 0.56,
+        "from": 8,
+        "speed": 9,
+        "bob": 0.05
+      }
+    ]
   },
   "enchant": {
     "shader": "first-person/effects/enchant.wgsl",

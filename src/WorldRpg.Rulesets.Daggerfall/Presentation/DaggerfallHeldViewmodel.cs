@@ -173,6 +173,9 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     /// <summary>What this weapon is drawn as: its family, its item's look and its metal.</summary>
     internal DaggerfallHeldDrawing Drawing { get; }
 
+    /// <summary>The published object the arms are drawn on.</summary>
+    internal ulong ArmsObject => arms.Object;
+
     /// <summary>The published object a shield is drawn on.</summary>
     internal ulong ShieldObject { get; }
 
@@ -211,6 +214,13 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
         Vector3 palm = (joints[(int)hand.Wrist].Model.Translation + joints[(int)hand.Middle[0]].Model.Translation) / 2;
         Transform placed = arms.Fact(true).Transform;
         return placed.Translation + Vector3.Transform(palm * placed.Scale, placed.Rotation);
+    }
+
+    /// <summary>Turns the arms about the eye, as the mount's level turn does, so the hands stay on the reins as the view moves.</summary>
+    internal void Level(Quaternion turn)
+    {
+        arms.CarryTurn = turn;
+        arms.Carry = Vector3.Transform(art.Document.Arms.Shoulder, turn) - art.Document.Arms.Shoulder;
     }
 
     /// <summary>Whether the family has a clip for a classic strike action.</summary>
