@@ -1,0 +1,454 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy world scenery: the trees, rocks, plants and town fixtures of a dark fantasy RPG, seen from standing height. Keep the source's silhouette, proportions, local colours and the arrangement of its parts: it replaces the source at the same size in the world. Restrained palette with distinct light, middle and dark families. Detail hierarchy: silhouette first, a few large masses second, sparse material marks third. Foliage reads as clumps of painted leaf masses, not individual leaves. Keep open gaps between branches, bars and posts open. No extra parts, gemstones, runes, faces, symbols or fantasy embellishment. Not pixel art, not a photoreal photograph, not a glossy mobile-game asset, not a dramatic scene. No text, labels, border, vignette, frame, hand, person, ground plane, scenery or second object.",
+  "presentation": "One isolated object on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no ground shadow, no background texture and no cast shadow outside the object. The whole object visible with breathing room, centred, its base where the source's base is. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Flats: props-remains",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "flats",
+      "model": "qwen-edit",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "conditioning": "reference"
+    }
+  ],
+  "items": [
+    {
+      "id": "flat-96-3",
+      "directory": "props-remains/texture-096",
+      "image": "flat/texture-096-record-003-frame-000-source.png",
+      "content": "One bloodied, armored torso with green boots, red and blue fabric, and visible limbs lying on a red surface.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-96-3 (108x47)"
+    },
+    {
+      "id": "flat-96-4",
+      "directory": "props-remains/texture-096",
+      "image": "flat/texture-096-record-004-frame-000-source.png",
+      "content": "One muscular humanoid figure with light skin, wearing blue pants and red accents, wielding a large axe.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-96-4 (71x46)"
+    },
+    {
+      "id": "flat-100-0",
+      "directory": "props-remains/texture-100",
+      "image": "flat/texture-100-record-000-frame-000-source.png",
+      "content": "One red, jagged-edged object with glowing core and dark, textured surface resembling a fiery, crystalline shard.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-100-0 (61x10)"
+    },
+    {
+      "id": "flat-100-1",
+      "directory": "props-remains/texture-100",
+      "image": "flat/texture-100-record-001-frame-000-source.png",
+      "content": "One curved, metallic blade with a dark hilt and red gemstone, featuring a sharp edge and worn surface.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-100-1 (47x8)"
+    },
+    {
+      "id": "flat-100-2",
+      "directory": "props-remains/texture-100",
+      "image": "flat/texture-100-record-002-frame-000-source.png",
+      "content": "One ornate, multi-part weapon with metallic and gem-like elements, featuring silver, green, and hints of blue and purple.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-100-2 (40x11)"
+    },
+    {
+      "id": "flat-100-4",
+      "directory": "props-remains/texture-100",
+      "image": "flat/texture-100-record-004-frame-000-source.png",
+      "content": "One suspended metal cage with wooden beams, holding two figures, featuring dark grey, brown, and green hues.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-100-4 (72x141)"
+    },
+    {
+      "id": "flat-100-5",
+      "directory": "props-remains/texture-100",
+      "image": "flat/texture-100-record-005-frame-000-source.png",
+      "content": "One metallic chain with interlocking links and a circular ring at the bottom, grey in color.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-100-5 (13x78)"
+    },
+    {
+      "id": "flat-100-6",
+      "directory": "props-remains/texture-100",
+      "image": "flat/texture-100-record-006-frame-000-source.png",
+      "content": "One metallic chain with interlocking links, featuring a central clasp and decorative end loops, in shades of grey and silver.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-100-6 (24x114)"
+    },
+    {
+      "id": "flat-100-7",
+      "directory": "props-remains/texture-100",
+      "image": "flat/texture-100-record-007-frame-000-source.png",
+      "content": "One metallic chain with interlocking links and two circular weights at ends, grey in color.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-100-7 (27x114)"
+    },
+    {
+      "id": "flat-100-8",
+      "directory": "props-remains/texture-100",
+      "image": "flat/texture-100-record-008-frame-000-source.png",
+      "content": "One metallic chain with interlocking links and a circular ring at one end, grey and silver in color.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-100-8 (13x114)"
+    },
+    {
+      "id": "flat-100-9",
+      "directory": "props-remains/texture-100",
+      "image": "flat/texture-100-record-009-frame-000-source.png",
+      "content": "One ornate helmet with curved horns, metallic sheen, green accents, and dark base tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-100-9 (43x34)"
+    },
+    {
+      "id": "flat-100-13",
+      "directory": "props-remains/texture-100",
+      "image": "flat/texture-100-record-013-frame-000-source.png",
+      "content": "One long, slender staff with a glowing red top and green accents, made of wood and metal, primarily red, brown, and green.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-100-13 (34x64)"
+    },
+    {
+      "id": "flat-100-17",
+      "directory": "props-remains/texture-100",
+      "image": "flat/texture-100-record-017-frame-000-source.png",
+      "content": "One skeletal figure composed of gray bones, featuring skull head, ribcage, limbs, and a single bone at its feet.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-100-17 (62x32)"
+    },
+    {
+      "id": "flat-100-18",
+      "directory": "props-remains/texture-100",
+      "image": "flat/texture-100-record-018-frame-000-source.png",
+      "content": "One ornate, multi-pronged weapon with metallic sheen and dark, curved blades, featuring silver, gold, and green accents.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-100-18 (58x32)"
+    },
+    {
+      "id": "flat-100-19",
+      "directory": "props-remains/texture-100",
+      "image": "flat/texture-100-record-019-frame-000-source.png",
+      "content": "One gnarled, twisted root with rough, brown bark and darker patches, showing natural branching and texture.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-100-19 (13x65)"
+    },
+    {
+      "id": "flat-100-20",
+      "directory": "props-remains/texture-100",
+      "image": "flat/texture-100-record-020-frame-000-source.png",
+      "content": "One twisted, gnarled root with rough, brown bark and branching offshoots, showing natural texture and earthy tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-100-20 (34x75)"
+    },
+    {
+      "id": "flat-100-21",
+      "directory": "props-remains/texture-100",
+      "image": "flat/texture-100-record-021-frame-000-source.png",
+      "content": "One gnarled, twisted root system with branching tendrils, brownish in color, resembling organic, earthy material.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-100-21 (37x87)"
+    },
+    {
+      "id": "flat-100-22",
+      "directory": "props-remains/texture-100",
+      "image": "flat/texture-100-record-022-frame-000-source.png",
+      "content": "One twisted, gnarled root with rough, brown bark and darker patches, branching irregularly into smaller offshoots.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-100-22 (27x66)"
+    },
+    {
+      "id": "flat-100-23",
+      "directory": "props-remains/texture-100",
+      "image": "flat/texture-100-record-023-frame-000-source.png",
+      "content": "One metallic helmet with a rounded top, visor, and chin guard, featuring silver and dark grey tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-100-23 (13x13)"
+    },
+    {
+      "id": "flat-100-24",
+      "directory": "props-remains/texture-100",
+      "image": "flat/texture-100-record-024-frame-000-source.png",
+      "content": "One skull-topped staff with a long wooden shaft, featuring bone-like head and dark, earthy tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-100-24 (20x77)"
+    },
+    {
+      "id": "flat-100-25",
+      "directory": "props-remains/texture-100",
+      "image": "flat/texture-100-record-025-frame-000-source.png",
+      "content": "One metallic, helmeted creature with glowing green accents and dark, textured armor.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-100-25 (53x34)"
+    },
+    {
+      "id": "flat-206-0",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-000-frame-000-source.png",
+      "content": "One metallic helmet with a rounded top, visor, and chin guard, featuring silver and dark grey tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-0 (13x13)"
+    },
+    {
+      "id": "flat-206-1",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-001-frame-000-source.png",
+      "content": "One metallic helmet with a rounded top, visor, and chin guard, featuring silver and dark grey tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-1 (13x15)"
+    },
+    {
+      "id": "flat-206-2",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-002-frame-000-source.png",
+      "content": "One skull-topped staff with a long wooden shaft, featuring bone-like head and dark, earthy tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-2 (20x77)"
+    },
+    {
+      "id": "flat-206-3",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-003-frame-000-source.png",
+      "content": "One metallic, helmeted creature with glowing green accents and dark, textured armor.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-3 (53x34)"
+    },
+    {
+      "id": "flat-206-4",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-004-frame-000-source.png",
+      "content": "One ornate, curved sword with a dark hilt, metallic guard, and blade featuring green, brown, and purple accents.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-4 (18x23)"
+    },
+    {
+      "id": "flat-206-5",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-005-frame-000-source.png",
+      "content": "One helmet with curved visor, metallic sheen, and ornate brow ridge, featuring silver, gold, and pink accents.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-5 (17x27)"
+    },
+    {
+      "id": "flat-206-6",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-006-frame-000-source.png",
+      "content": "One metallic helmet with a rounded top, visor, and cheek guards, featuring silver, black, and gold accents.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-6 (25x17)"
+    },
+    {
+      "id": "flat-206-7",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-007-frame-000-source.png",
+      "content": "One crossed bone staff topped with two skulls, featuring gray bone, greenish moss, and hints of pink and purple.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-7 (48x79)"
+    },
+    {
+      "id": "flat-206-8",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-008-frame-000-source.png",
+      "content": "One skeletal figure composed of gray bones, featuring skull head, ribcage, limbs, and a single bone at its feet.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-8 (62x32)"
+    },
+    {
+      "id": "flat-206-11",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-011-frame-000-source.png",
+      "content": "One emaciated humanoid figure with blue loincloth, holding a bird with red beak and white eye, standing on a green root.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-11 (47x96)"
+    },
+    {
+      "id": "flat-206-12",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-012-frame-000-source.png",
+      "content": "One humanoid figure with brown skin, yellow loincloth, and dark hair, holding a staff, standing upright.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-12 (36x81)"
+    },
+    {
+      "id": "flat-206-13",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-013-frame-000-source.png",
+      "content": "One humanoid figure with elongated limbs, wearing a green top and purple loincloth, has brown skin and dark hair.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-13 (39x84)"
+    },
+    {
+      "id": "flat-206-14",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-014-frame-000-source.png",
+      "content": "One fallen warrior with dark hair, bloodied torso, and red-stained ground, rendered in earthy browns and stark reds.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-14 (87x40)"
+    },
+    {
+      "id": "flat-206-17",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-017-frame-000-source.png",
+      "content": "One bloodied staff with a dark, face-like top, dripping red liquid, and a wooden shaft with greenish base.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-17 (43x87)"
+    },
+    {
+      "id": "flat-206-18",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-018-frame-000-source.png",
+      "content": "One bloodied human head mounted on a wooden pole, with reddish hair and skin, dripping dark red liquid.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-18 (45x89)"
+    },
+    {
+      "id": "flat-206-24",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-024-frame-000-source.png",
+      "content": "One grotesque, multi-limbed, decaying humanoid mass with matted hair, exposed bone, and dark, earthy tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-24 (122x76)"
+    },
+    {
+      "id": "flat-206-25",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-025-frame-000-source.png",
+      "content": "One grotesque, multi-limbed humanoid figure with skeletal features, dark grey skin, and tangled limbs.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-25 (122x76)"
+    },
+    {
+      "id": "flat-206-26",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-026-frame-000-source.png",
+      "content": "One suspended metal cage with wooden beams, holding two figures, featuring dark grey, brown, and green hues.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-26 (72x141)"
+    },
+    {
+      "id": "flat-206-27",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-027-frame-000-source.png",
+      "content": "One long, slender staff with a glowing red top and green accents, made of wood and metal, primarily red, brown, and green.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-27 (34x64)"
+    },
+    {
+      "id": "flat-206-29",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-029-frame-000-source.png",
+      "content": "One ornate, multi-pronged weapon with metallic sheen and dark, curved blades, featuring silver, gold, and green accents.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-29 (58x32)"
+    },
+    {
+      "id": "flat-206-30",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-030-frame-000-source.png",
+      "content": "One ornate, multi-part weapon with metallic and gem-like elements, featuring silver, green, and hints of blue and purple.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-30 (40x11)"
+    },
+    {
+      "id": "flat-206-31",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-031-frame-000-source.png",
+      "content": "One curved, metallic blade with a worn hilt and guard, showing silver and dark grey tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-31 (31x12)"
+    },
+    {
+      "id": "flat-206-32",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-032-frame-000-source.png",
+      "content": "One ornate helmet with curved horns, metallic sheen, green accents, and dark base tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-32 (43x34)"
+    },
+    {
+      "id": "flat-206-35",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-035-frame-000-source.png",
+      "content": "One grotesque, decaying humanoid figure with exposed internal organs, dark skin, and red viscera, lying prone on the ground.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-35 (68x38)"
+    },
+    {
+      "id": "flat-206-36",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-036-frame-000-source.png",
+      "content": "One hooded figure in grey tunic and brown trousers, hanging from a rope, with muted earth tones and dark shading.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-36 (31x115)"
+    }
+  ]
+}

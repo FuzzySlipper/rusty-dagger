@@ -1,0 +1,264 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy world scenery: the trees, rocks, plants and town fixtures of a dark fantasy RPG, seen from standing height. Keep the source's silhouette, proportions, local colours and the arrangement of its parts: it replaces the source at the same size in the world. Restrained palette with distinct light, middle and dark families. Detail hierarchy: silhouette first, a few large masses second, sparse material marks third. Foliage reads as clumps of painted leaf masses, not individual leaves. Keep open gaps between branches, bars and posts open. No extra parts, gemstones, runes, faces, symbols or fantasy embellishment. Not pixel art, not a photoreal photograph, not a glossy mobile-game asset, not a dramatic scene. No text, labels, border, vignette, frame, hand, person, ground plane, scenery or second object.",
+  "presentation": "One isolated object on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no ground shadow, no background texture and no cast shadow outside the object. The whole object visible with breathing room, centred, its base where the source's base is. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Flats: props-crops / Qwen then retro",
+  "items": [
+    {
+      "id": "flat-301-0",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-000-frame-000-source.png",
+      "content": "One bundled sheaf of dried, brown stalks tied with dark band, topped with sparse purple flowers.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-0 (35x58)"
+    },
+    {
+      "id": "flat-301-1",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-001-frame-000-source.png",
+      "content": "One gnarled tree with twisted branches, rough bark, and sparse leaves, mostly brown with hints of green and purple.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-1 (36x58)"
+    },
+    {
+      "id": "flat-301-2",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-002-frame-000-source.png",
+      "content": "One tall green plant with leaves and budding flowers, showing stems, branches, and foliage in shades of green and brown.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-2 (21x68)"
+    },
+    {
+      "id": "flat-301-3",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-003-frame-000-source.png",
+      "content": "One tall sunflower plant with large yellow petals, dark brown center, and green leaves.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-3 (36x72)"
+    },
+    {
+      "id": "flat-301-4",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-004-frame-000-source.png",
+      "content": "One tall sunflower plant with large yellow petals, dark brown center, green leaves, and brown stem.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-4 (37x70)"
+    },
+    {
+      "id": "flat-301-5",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-005-frame-000-source.png",
+      "content": "One dense, bushy evergreen tree with vibrant red berries, featuring green foliage and a conical shape.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-5 (78x54)"
+    },
+    {
+      "id": "flat-301-6",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-006-frame-000-source.png",
+      "content": "One mossy, hooded cloak with a dark belt, featuring earthy greens, browns, and hints of tan in its textured fabric.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-6 (36x39)"
+    },
+    {
+      "id": "flat-301-7",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-007-frame-000-source.png",
+      "content": "One tall, slender plant with green leaves and brown stem, featuring a small orange fruit at its base.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-7 (19x64)"
+    },
+    {
+      "id": "flat-301-8",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-008-frame-000-source.png",
+      "content": "One tall, slender tree with layered green foliage and brown trunk, showing branches and leaves in varying shades of green.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-8 (26x62)"
+    },
+    {
+      "id": "flat-301-9",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-009-frame-000-source.png",
+      "content": "One tall, leafy tree with dark green foliage, reddish-brown accents, and a slender trunk, standing upright.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-9 (17x40)"
+    },
+    {
+      "id": "flat-301-10",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-010-frame-000-source.png",
+      "content": "One dense green bush with brown roots and stems, featuring leafy branches and small round fruits.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-10 (76x23)"
+    },
+    {
+      "id": "flat-301-11",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-011-frame-000-source.png",
+      "content": "One conical evergreen tree with dense green foliage and scattered red berries or pinecones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-11 (37x26)"
+    },
+    {
+      "id": "flat-301-12",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-012-frame-000-source.png",
+      "content": "One curved, leafy vine with purple blossoms and brown stems, showing natural organic form and earthy tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-12 (51x15)"
+    },
+    {
+      "id": "flat-301-13",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-013-frame-000-source.png",
+      "content": "One coniferous tree with dense green foliage, brown trunk, and pale yellow accents on branches.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-13 (19x28)"
+    },
+    {
+      "id": "flat-301-14",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-014-frame-000-source.png",
+      "content": "One mossy, leafy creature with red accents and teal highlights, resembling a green, textured monster with glowing eyes.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-14 (19x26)"
+    },
+    {
+      "id": "flat-301-15",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-015-frame-000-source.png",
+      "content": "One bushy plant with blue flowers and green stems, featuring varied shades of blue and green foliage.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-15 (19x28)"
+    },
+    {
+      "id": "flat-301-16",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-016-frame-000-source.png",
+      "content": "One flowering plant with yellow blooms and green stems, featuring layered petals and leafy foliage.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-16 (19x26)"
+    },
+    {
+      "id": "flat-301-17",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-017-frame-000-source.png",
+      "content": "One ornate, leafy plant with purple flowers and green stems, featuring varied shades of green and purple.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-17 (12x26)"
+    },
+    {
+      "id": "flat-301-18",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-018-frame-000-source.png",
+      "content": "One mossy, rounded object with textured green and brown surfaces, resembling a lichen-covered rock or fungal growth.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-18 (23x17)"
+    },
+    {
+      "id": "flat-301-19",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-019-frame-000-source.png",
+      "content": "One tall, leafy plant with brown stems and green-yellow foliage, resembling a wheat stalk or reed.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-19 (22x53)"
+    },
+    {
+      "id": "flat-301-20",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-020-frame-000-source.png",
+      "content": "One leafy branch with green foliage and brown accents, showing natural texture and organic form.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-20 (24x15)"
+    },
+    {
+      "id": "flat-301-21",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-021-frame-000-source.png",
+      "content": "One tall, leafy plant with green and yellow hues, featuring a thick stem and branching foliage.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-21 (23x53)"
+    },
+    {
+      "id": "flat-301-22",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-022-frame-000-source.png",
+      "content": "One dense clump of green grass with slender blades and scattered white flowers, showing natural texture and varied shades of green.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-22 (48x26)"
+    },
+    {
+      "id": "flat-301-23",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-023-frame-000-source.png",
+      "content": "One curved, leafy branch with green foliage and blue accents, resembling a magical vine or enchanted plant.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-23 (69x13)"
+    }
+  ],
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "flats",
+      "model": "krea2-turbo",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ]
+}

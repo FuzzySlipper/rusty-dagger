@@ -1,0 +1,220 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy world scenery: the trees, rocks, plants and town fixtures of a dark fantasy RPG, seen from standing height. Keep the source's silhouette, proportions, local colours and the arrangement of its parts: it replaces the source at the same size in the world. Restrained palette with distinct light, middle and dark families. Detail hierarchy: silhouette first, a few large masses second, sparse material marks third. Foliage reads as clumps of painted leaf masses, not individual leaves. Keep open gaps between branches, bars and posts open. No extra parts, gemstones, runes, faces, symbols or fantasy embellishment. Not pixel art, not a photoreal photograph, not a glossy mobile-game asset, not a dramatic scene. No text, labels, border, vignette, frame, hand, person, ground plane, scenery or second object.",
+  "presentation": "One isolated object on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no ground shadow, no background texture and no cast shadow outside the object. The whole object visible with breathing room, centred, its base where the source's base is. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Flats: props-containers",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "flats",
+      "model": "qwen-edit",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "conditioning": "reference"
+    }
+  ],
+  "items": [
+    {
+      "id": "flat-205-0",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-000-frame-000-source.png",
+      "content": "One round wooden barrel with metal bands, featuring brown staves and silver hoops, showing natural wood grain and metallic sheen.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-0 (33x37)"
+    },
+    {
+      "id": "flat-205-2",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-002-frame-000-source.png",
+      "content": "One teal-hued, glowing magical potion bottle with a stopper, dark base, and light-emitting liquid inside.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-2 (24x29)"
+    },
+    {
+      "id": "flat-205-5",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-005-frame-000-source.png",
+      "content": "One amber glass bottle with a teal stopper and cork, featuring a rounded body and narrow neck.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-5 (24x29)"
+    },
+    {
+      "id": "flat-205-7",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-007-frame-000-source.png",
+      "content": "One glass bottle with a stopper, featuring a purple body and teal neck, containing a glowing pink liquid.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-7 (24x29)"
+    },
+    {
+      "id": "flat-205-8",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-008-frame-000-source.png",
+      "content": "One wooden bucket with two handles, featuring a dark brown body and lighter brown rim, crafted from wood.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-8 (31x16)"
+    },
+    {
+      "id": "flat-205-9",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-009-frame-000-source.png",
+      "content": "One woven basket with a single handle, made of brown and dark brown materials, showing a rounded, open-top container shape.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-9 (38x31)"
+    },
+    {
+      "id": "flat-205-10",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-010-frame-000-source.png",
+      "content": "One woven basket with a handle, made of brown and green materials, holding assorted items.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-10 (46x31)"
+    },
+    {
+      "id": "flat-205-19",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-019-frame-000-source.png",
+      "content": "One worn leather sack with a drawstring top, showing faded brown and tan hues, slightly bulging from contents.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-19 (31x33)"
+    },
+    {
+      "id": "flat-205-20",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-020-frame-000-source.png",
+      "content": "One brown leather-bound book with a worn cover, purple gemstone, and metallic clasp, showing aged pages and a slightly curved spine.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-20 (27x27)"
+    },
+    {
+      "id": "flat-205-26",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-026-frame-000-source.png",
+      "content": "One wooden chest with green mossy lid, metal hinges, and a small lock, showing brown, green, and metallic tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-26 (83x38)"
+    },
+    {
+      "id": "flat-205-27",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-027-frame-000-source.png",
+      "content": "One wooden cart with two wheels, metal axle, handlebars, and a flatbed, primarily brown and dark green.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-27 (66x35)"
+    },
+    {
+      "id": "flat-205-28",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-028-frame-000-source.png",
+      "content": "One wooden cart with curved handles, two wheels, and a rectangular tray, primarily brown and dark grey.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-28 (68x37)"
+    },
+    {
+      "id": "flat-205-29",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-029-frame-000-source.png",
+      "content": "One wooden bucket with metal rim and handle, showing worn brown and dark grey tones, featuring a curved spout and sturdy construction.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-29 (36x42)"
+    },
+    {
+      "id": "flat-205-30",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-030-frame-000-source.png",
+      "content": "One wooden bucket with two handles, showing worn brown and greenish hues, featuring a sturdy, utilitarian design.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-30 (35x42)"
+    },
+    {
+      "id": "flat-205-31",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-031-frame-000-source.png",
+      "content": "One glass bottle with cork stopper, holding multicolored liquid, featuring green, blue, orange, and purple hues.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-31 (48x23)"
+    },
+    {
+      "id": "flat-205-36",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-036-frame-000-source.png",
+      "content": "One dark-hooded figure with brown and green tunic, wielding a staff, standing in a dynamic pose.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-36 (17x14)"
+    },
+    {
+      "id": "flat-205-37",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-037-frame-000-source.png",
+      "content": "One potted plant with long green leaves and a teal pot, featuring a rounded base and upward-sweeping foliage.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-37 (58x45)"
+    },
+    {
+      "id": "flat-205-38",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-038-frame-000-source.png",
+      "content": "One green leafy plant with a blue glowing orb at its base, featuring broad leaves and a rounded stem.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-38 (60x34)"
+    },
+    {
+      "id": "flat-205-40",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-040-frame-000-source.png",
+      "content": "One potted plant with green leaves and brown soil, shaped like a bushy tree with a rounded canopy and sturdy stem.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-40 (28x34)"
+    },
+    {
+      "id": "flat-205-41",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-041-frame-000-source.png",
+      "content": "One green, hooded cloak with a central emblem, featuring layered fabric and a textured, earthy color palette.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-41 (19x20)"
+    }
+  ]
+}

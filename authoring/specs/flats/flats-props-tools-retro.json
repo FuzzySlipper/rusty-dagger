@@ -1,0 +1,138 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy world scenery: the trees, rocks, plants and town fixtures of a dark fantasy RPG, seen from standing height. Keep the source's silhouette, proportions, local colours and the arrangement of its parts: it replaces the source at the same size in the world. Restrained palette with distinct light, middle and dark families. Detail hierarchy: silhouette first, a few large masses second, sparse material marks third. Foliage reads as clumps of painted leaf masses, not individual leaves. Keep open gaps between branches, bars and posts open. No extra parts, gemstones, runes, faces, symbols or fantasy embellishment. Not pixel art, not a photoreal photograph, not a glossy mobile-game asset, not a dramatic scene. No text, labels, border, vignette, frame, hand, person, ground plane, scenery or second object.",
+  "presentation": "One isolated object on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no ground shadow, no background texture and no cast shadow outside the object. The whole object visible with breathing room, centred, its base where the source's base is. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Flats: props-tools / Qwen then retro",
+  "items": [
+    {
+      "id": "flat-214-1",
+      "directory": "props-tools/texture-214",
+      "image": "flat/texture-214-record-001-frame-000-source.png",
+      "content": "One wooden staff with a broad, flat, brown head, tapering to a long handle, primarily brown with darker accents.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-214-1 (85x20)"
+    },
+    {
+      "id": "flat-214-2",
+      "directory": "props-tools/texture-214",
+      "image": "flat/texture-214-record-002-frame-000-source.png",
+      "content": "One curved blade with dark metallic hilt and brown wooden grip, featuring a sharp edge and guard, primarily black and brown.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-214-2 (17x11)"
+    },
+    {
+      "id": "flat-214-5",
+      "directory": "props-tools/texture-214",
+      "image": "flat/texture-214-record-005-frame-000-source.png",
+      "content": "One cylindrical metal container with a long handle, featuring rusted brown and dark grey tones, topped with a curved metal rod.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-214-5 (19x70)"
+    },
+    {
+      "id": "flat-214-6",
+      "directory": "props-tools/texture-214",
+      "image": "flat/texture-214-record-006-frame-000-source.png",
+      "content": "One curved pickaxe with a dark metal head and wooden handle, featuring brown and grey tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-214-6 (46x19)"
+    },
+    {
+      "id": "flat-214-7",
+      "directory": "props-tools/texture-214",
+      "image": "flat/texture-214-record-007-frame-000-source.png",
+      "content": "One wooden-handled scythe with curved metallic blade, featuring brown handle and silver-grey blade.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-214-7 (80x28)"
+    },
+    {
+      "id": "flat-214-8",
+      "directory": "props-tools/texture-214",
+      "image": "flat/texture-214-record-008-frame-000-source.png",
+      "content": "One coiled, segmented serpent with dark scales and yellow accents, showing head, body, and tail.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-214-8 (159x20)"
+    },
+    {
+      "id": "flat-214-10",
+      "directory": "props-tools/texture-214",
+      "image": "flat/texture-214-record-010-frame-000-source.png",
+      "content": "One rustic broom with a long wooden handle and bundled straw bristles, primarily brown and tan.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-214-10 (28x100)"
+    },
+    {
+      "id": "flat-214-13",
+      "directory": "props-tools/texture-214",
+      "image": "flat/texture-214-record-013-frame-000-source.png",
+      "content": "One dark metallic key with a looped bow and elongated shaft, featuring worn edges and subtle grey highlights.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-214-13 (42x12)"
+    },
+    {
+      "id": "flat-214-14",
+      "directory": "props-tools/texture-214",
+      "image": "flat/texture-214-record-014-frame-000-source.png",
+      "content": "One ornate, metallic sword with a curved blade, hilt, and guard, featuring silver, gold, and dark blue accents.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-214-14 (40x9)"
+    },
+    {
+      "id": "flat-214-15",
+      "directory": "props-tools/texture-214",
+      "image": "flat/texture-214-record-015-frame-000-source.png",
+      "content": "One curved, wooden bow with dark brown limbs and a black grip, featuring a simple, rustic design.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-214-15 (30x14)"
+    }
+  ],
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "flats",
+      "model": "krea2-turbo",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ]
+}
