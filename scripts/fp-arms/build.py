@@ -50,12 +50,16 @@ LEG_SIDES = 10
 LEG_TEXTURE = 32
 # The retro arms (heldRetro) draw the colour map alone, this small and unfiltered, as Daggerfall draws its world.
 RETRO_TEXTURE = 256
-# The arm set grown on the skeleton (claws()) rather than taken from the pack, and the file whose skeleton it grows on.
-CLAWS = "claws"
+# The arm sets grown on the skeleton (claws()) rather than taken from the pack, each with its fur from dark to light, and
+# the file whose skeleton they grow on. The first is in the colours of the classic WEAPON11 frames, the boar's in its hide's
+# on the refreshed paper doll.
+CLAW_FUR = {
+    "claws": ((.16, .1, .06), (.23, .15, .07), (.34, .22, .11), (.4, .25, .15), (.51, .31, .19), (.55, .34, .22)),
+    "claws-boar": ((.08, .06, .06), (.14, .1, .09), (.22, .15, .13), (.3, .2, .17), (.38, .25, .21), (.45, .31, .26)),
+}
 CLAW_SKELETON = "male-leather"
-# Its texture, at about the weapons' 2 mm cells, in the colours of the classic WEAPON11 frames: dark to light.
+# Their texture, at about the weapons' 2 mm cells, and the colours they share.
 CLAW_TEXTURE = 512
-FUR = ((.16, .1, .06), (.23, .15, .07), (.34, .22, .11), (.4, .25, .15), (.51, .31, .19), (.55, .34, .22))
 MOTTLE = ((.07, .07, .07), (.12, .12, .12))
 SKIN = ((.2, .14, .15), (.33, .2, .22), (.45, .28, .31), (.54, .34, .38))
 NAIL = ((.07, .07, .07), (.12, .12, .12), (.23, .23, .23), (.31, .31, .31))
@@ -346,9 +350,9 @@ def ramp(colours, value):
     return table[np.clip((value * len(table)).astype(int), 0, len(table) - 1)]
 
 
-def paint(mesh, surface, forearm):
+def paint(mesh, surface, forearm, fur_ramp):
     """
-    Paints the claw arms' colours by what each texel is: `surface` holds each vertex's kind, 0 fur, 1 bare finger and 2 nail.
+    Paints the claw arms' colours by what each texel is, the fur in `fur_ramp`: `surface` holds each vertex's kind, 0 fur, 1 bare finger and 2 nail.
     Fur streaks run down the arm (`forearm`, a rotation into a frame along it) and mottles black as the classic frames do.
     """
     size = CLAW_TEXTURE
@@ -385,7 +389,7 @@ def paint(mesh, surface, forearm):
     tone = lattice_noise(down, np.array((5, 5, 9)), 2)
     patch = lattice_noise(down, np.array((1.5, 1.5, 3.2)), 3)
     fur = np.clip(streak * .75 + tone * .55 - .27, 0, .999)
-    colours = ramp(FUR, fur)
+    colours = ramp(fur_ramp, fur)
     mottled = patch + (streak - .5) * .5 > .7
     colours[mottled] = ramp(MOTTLE, streak[mottled])
     kinds = kind[filled]
@@ -406,9 +410,9 @@ def paint(mesh, surface, forearm):
     return image
 
 
-def claws():
+def claws(name):
     """
-    The beast's arms, grown on the skeleton as legs() grows a leg, so nothing here comes from the pack's art: an arm and
+    A beast's arms, the set `name`, grown on the skeleton as legs() grows a leg, so nothing here comes from the pack's art: an arm and
     palm fused from tubes down the bones, a finger and curved nail on each digit and a shag of fur shards, with legs that
     match. The skeleton is an arm set's, so every clip plays on it as it plays on the rest.
     """
@@ -420,8 +424,8 @@ def claws():
     rig = next(o for o in imported if o.type == "ARMATURE")
     remove([o for o in imported if o.type == "MESH"])
 
-    mesh = bpy.data.meshes.new(CLAWS)
-    obj = bpy.data.objects.new(CLAWS, mesh)
+    mesh = bpy.data.meshes.new(name)
+    obj = bpy.data.objects.new(name, mesh)
     bpy.context.scene.collection.objects.link(obj)
     obj.parent = rig
     bm = bmesh.new()
@@ -538,8 +542,9 @@ def claws():
     wrist, elbow = head(rig, "hand_r"), head(rig, "lowerarm_r")
     down = (wrist - elbow).normalized()
     across = down.cross(Vector((0, 1, 0))).normalized()
-    mesh.materials.append(nearest(CLAWS, paint(mesh, surface, Matrix((across, across.cross(down), down)))))
-    legs(rig, [obj], FUR[3], FUR[1])
+    fur = CLAW_FUR[name]
+    mesh.materials.append(nearest(name, paint(mesh, surface, Matrix((across, across.cross(down), down)), fur)))
+    legs(rig, [obj], fur[3], fur[1])
     return rig
 
 
@@ -747,8 +752,8 @@ stems = [rig_clip, *guard_stems(shield["guard"]), *(stem for family in families.
     family["idle"]["clip"], family["powerHold"]["clip"], *guard_stems(family["guard"]), *(clip["clip"] for clip in family["strikes"].values())))]
 # Every set's joints are the clips' (bake refuses others), so the samples of any set measure them all.
 for name, arm_set in definition["armSets"].items():
-    rig = claws() if name == CLAWS else arms(name)
-    hands = open_hand(rig) if name == CLAWS else None
+    rig = claws(name) if name in CLAW_FUR else arms(name)
+    hands = open_hand(rig) if name in CLAW_FUR else None
     samples = {stem: bake(rig, stem, hands) for stem in dict.fromkeys(stems)}
     export(out / arm_set["model"], list(samples))
     retro()
