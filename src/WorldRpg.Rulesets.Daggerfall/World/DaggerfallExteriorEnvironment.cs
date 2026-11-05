@@ -90,6 +90,9 @@ internal readonly record struct DaggerfallExteriorWaterVolume(
 /// </summary>
 internal readonly record struct DaggerfallExteriorTerrainTile(int TextureRecord, bool Rotated, bool Flipped)
 {
+    /// <summary>Open ground, which can blend: not a location's authored tile and not touching water.</summary>
+    internal bool Blends { get; init; }
+
     internal byte Bitfield => checked((byte)(TextureRecord | (Rotated ? 0x40 : 0) | (Flipped ? 0x80 : 0)));
 }
 
@@ -455,7 +458,7 @@ internal sealed class DaggerfallExteriorEnvironment
                 int shape = (b0 & 1) | ((b1 & 1) << 1) | ((b2 & 1) << 2) | ((b3 & 1) << 3);
                 int ring = (b0 + b1 + b2 + b3) >> 2;
                 byte bitfield = lookup[shape | (ring << 4)];
-                result.Add(new(bitfield & 0x3F, (bitfield & 0x40) != 0, (bitfield & 0x80) != 0));
+                result.Add(new(bitfield & 0x3F, (bitfield & 0x40) != 0, (bitfield & 0x80) != 0) { Blends = b0 != 0 && b1 != 0 && b2 != 0 && b3 != 0 });
             }
         }
         return result;

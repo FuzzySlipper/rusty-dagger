@@ -2013,6 +2013,13 @@ internal sealed class DaggerfallSiteLifecycle
             DeferredCollision());
     }
 
+    /// <summary>Blends open exterior ground by these settings, or tiles it when they are null, rebuilding what is resident.</summary>
+    internal void UseGroundBlend(DaggerfallGroundBlendSettings? settings)
+    {
+        _exteriorTerrainAppearance?.UseBlend(_engine.AuthoredContent, settings);
+        if (_exteriorResidency is { IsInitialized: true } residency) ReconcileExteriorTerrainAppearance(residency);
+    }
+
     /// <summary>Draws the exterior ground in the refreshed art set's surfaces while <paramref name="refreshed"/> answers it is drawn.</summary>
     internal void UseGroundArt(DaggerfallArtReplacements art, Func<bool> refreshed)
     {
