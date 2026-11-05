@@ -71,6 +71,7 @@ internal static class Program
         ReferenceExportCommands.PaperDoll,
         ReferenceExportCommands.Effects,
         ReferenceExportCommands.Surfaces,
+        ReferenceExportCommands.Flats,
         ReferenceExportCommands.Terrain,
         ReferenceExportCommands.DirectionalSprites,
     }.ToDictionary(command => command.Name, StringComparer.Ordinal);
