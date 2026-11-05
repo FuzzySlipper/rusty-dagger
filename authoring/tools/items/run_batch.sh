@@ -25,7 +25,8 @@ RUN "$AREA batch $N Qwen" python3 $TOOLS/run.py generate $Q --host $H
 python3 $TOOLS/run.py prepare --spec $SPEC/$PFX-$N-retro.json --source $RAW --out $R --upstream $Q --host $H
 RUN "$AREA batch $N retro" python3 $TOOLS/run.py generate $R --host $H
 python3 $TOOLS/postprocess.py run $R --route qwen-retro --palette "$PAL" --out $B --variants original bp-broad-half
-python3 $TOOLS/postprocess.py cutout $R $B --out $B/cutout
+CUT=(); if [[ $AREA == flats ]]; then CUT=(--painted-ground); fi
+python3 $TOOLS/postprocess.py cutout $R $B "${CUT[@]}" --out $B/cutout
 python3 $TOOLS/postprocess.py compare --study $R --out $ST/$PFX-$N-compare-$D --title "$AREA batch $N: source, retro, BP 0.5" --column "Retro=$B:original" --column "BP 0.5=$B:bp-broad-half"
 if [[ $N == frames-* ]]; then python3 $TOOLS/composite.py $SPEC/$PFX-$N-retro.json $R $B/cutout
 else python3 $TOOLS/finalize.py $SPEC/$PFX-$N-retro.json $B/cutout --area $AREA --study $R; fi
