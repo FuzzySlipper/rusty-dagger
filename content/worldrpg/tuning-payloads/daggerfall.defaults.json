@@ -598,7 +598,33 @@
     "horseBaseClassicUnits": 375,
     "cartBaseClassicUnits": 250,
     "wagonCapacityClassicUnits": 300000,
-    "wagonAccessRange": 5.0
+    "wagonAccessRange": 5.0,
+    "horseRide": {
+      "walkShare": 0.2,
+      "trotShare": 0.6,
+      "acceleration": 3,
+      "coasting": 2.5,
+      "braking": 9,
+      "reverseSpeed": 1.2,
+      "standingTurnDegrees": 150,
+      "fullTurnDegrees": 65,
+      "lookRangeDegrees": 40,
+      "uphillDrag": 0.6,
+      "waterShare": 0.5
+    },
+    "cartRide": {
+      "walkShare": 0.2,
+      "trotShare": 0.6,
+      "acceleration": 2,
+      "coasting": 1.8,
+      "braking": 6,
+      "reverseSpeed": 0.8,
+      "standingTurnDegrees": 60,
+      "fullTurnDegrees": 40,
+      "lookRangeDegrees": 50,
+      "uphillDrag": 0.8,
+      "waterShare": 0.4
+    }
   },
   "siteLighting": {
     "mobileGlowRange": 4,

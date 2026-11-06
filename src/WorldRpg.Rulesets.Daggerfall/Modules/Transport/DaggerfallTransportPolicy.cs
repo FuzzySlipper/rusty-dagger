@@ -143,7 +143,9 @@ internal sealed record DaggerfallTransportTuning(
     int HorseBaseClassicUnits,
     int CartBaseClassicUnits,
     int WagonCapacityClassicUnits,
-    float WagonAccessRange)
+    float WagonAccessRange,
+    RideTuning HorseRide,
+    RideTuning CartRide)
 {
     internal DaggerfallTransportTuning Validate()
     {
@@ -152,6 +154,8 @@ internal sealed record DaggerfallTransportTuning(
             || HorseBaseClassicUnits < 0 || CartBaseClassicUnits < 0 || WagonCapacityClassicUnits <= 0
             || !float.IsFinite(WagonAccessRange) || WagonAccessRange < 0f)
             throw new ArgumentOutOfRangeException(nameof(WagonCapacityClassicUnits), "Transport tuning must contain positive travel and capacity values.");
+        HorseRide.Validate();
+        CartRide.Validate();
         return this;
     }
 }
@@ -305,6 +309,17 @@ internal sealed class DaggerfallTransportPolicy
 
     internal int OceanMinutesPerMapPixel() => _onShip ? _tuning.ShipOceanMinutes : _tuning.FootOceanMinutes;
 
+    /// <summary>The motion of the mount under the player, which stands idle on foot and at sea.</summary>
+    internal RideMotion Ride { get; } = new();
+
+    /// <summary>How the mount under the player moves, if there is one.</summary>
+    internal RideTuning? RideTuning => _onShip ? null : _mode switch
+    {
+        DaggerfallTransportMode.Horse => _tuning.HorseRide,
+        DaggerfallTransportMode.Cart => _tuning.CartRide,
+        _ => null,
+    };
+
     internal int MovementBaseClassicUnits() => _mode switch
     {
         DaggerfallTransportMode.Horse => _tuning.HorseBaseClassicUnits,
@@ -329,6 +344,7 @@ internal sealed class DaggerfallTransportPolicy
     {
         ArgumentNullException.ThrowIfNull(saved);
         saved.Validate();
+        Ride.Reset();
         _mode = saved.Mode;
         _onShip = saved.OnShip;
         ShipReturnProfile = saved.ShipReturnProfile?.Require();

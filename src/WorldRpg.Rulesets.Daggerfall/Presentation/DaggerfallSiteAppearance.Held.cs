@@ -32,15 +32,15 @@ internal sealed partial class DaggerfallSiteAppearance
     // Whether the developer workbench views the art, which then owns the 3D weapon.
     private bool heldViewed;
     // What the player rides, as the session reports it, and what is drawn for it.
-    private Func<(DaggerfallTransportMode Mode, float Speed, float Pitch)> playerRide = () => (DaggerfallTransportMode.Foot, 0, 0);
+    private Func<(DaggerfallTransportMode Mode, float Speed, float Pitch, float Turn)> playerRide = () => (DaggerfallTransportMode.Foot, 0, 0, 0);
     private DaggerfallHeldMount? mount;
     private DaggerfallTransportMode? mounted;
     // Whether the arms drawn are only there to hold the reins.
     private bool reinArms;
     private const string ReinsFamily = "reins";
 
-    /// <summary>Reads what the player rides, how fast in metres a second, and the view's pitch in radians, for the mount drawn in the held styles.</summary>
-    internal void UsePlayerRide(Func<(DaggerfallTransportMode Mode, float Speed, float Pitch)> ride) => playerRide = ride;
+    /// <summary>Reads what the player rides, how fast in metres a second, the view's pitch and how far the mount's heading lies from the view in radians, for the mount drawn in the held styles.</summary>
+    internal void UsePlayerRide(Func<(DaggerfallTransportMode Mode, float Speed, float Pitch, float Turn)> ride) => playerRide = ride;
 
     /// <summary>
     /// Draws the weapons <paramref name="art"/> covers in 3D in <paramref name="style"/>, from the next weapon drawn,
@@ -206,7 +206,7 @@ internal sealed partial class DaggerfallSiteAppearance
     // The mount follows what the player rides: drawn anew for a change, retired on foot.
     private void StepMount(float seconds)
     {
-        var (mode, speed, _) = playerRide();
+        var (mode, speed, _, _) = playerRide();
         DaggerfallTransportMode? wanted = heldArt is { Art.Document.Mount: not null } && mode is DaggerfallTransportMode.Horse or DaggerfallTransportMode.Cart ? mode : null;
         if (wanted != mounted)
         {
@@ -248,9 +248,10 @@ internal sealed partial class DaggerfallSiteAppearance
         bool sprite = held is null || !heldShowing;
         if (weapon is not null)
             facts.Add(new AppearanceFact(weapon.EntityId, false, 0, weapon.Transform, weapon.Appearance, sprite, RenderLayer.Viewmodel));
-        if (reinArms && mount is not null) held?.Level(mount.Level(playerRide().Pitch));
+        var ride = playerRide();
+        if (reinArms && mount is not null) held?.Level(mount.Level(ride.Pitch, ride.Turn));
         held?.AppendFacts(facts, !sprite);
-        mount?.AppendFacts(facts, playerRide().Pitch, true);
+        mount?.AppendFacts(facts, ride.Pitch, ride.Turn, true);
         AppendCastGlowFact(facts);
         if (castHand is { } hand) facts.Add(new AppearanceFact(hand.EntityId, false, 0, hand.Transform, hand.Appearance, true, RenderLayer.Viewmodel));
     }

@@ -54,9 +54,20 @@ internal sealed partial class DaggerfallSession
         Presentation.SetOutcome(result.Message);
     }
 
+    // The mount under the player, if there is one, takes the step: the sprint key urges it on and the crouch key reins it in.
+    private DaggerfallLocomotionStep Ride(DaggerfallLocomotionStep step, ProductUpdateState update, bool inWater)
+    {
+        if (State.Transport.RideTuning is not { } tuning) return step;
+        bool mayGallop = State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).Current > 0d;
+        RideStep ride = State.Transport.Ride.Step(tuning, step.Controls.ForwardSpeed!.Value,
+            new RideIntent(update.PlanarIntent, step.SprintHeld, step.CrouchHeld, mayGallop, inWater), State.PlayerControl, update.DeltaSeconds);
+        return step with { Controls = ride.Apply(step.Controls), Galloping = ride.Galloping };
+    }
+
     private void AppliedTransport(DaggerfallTransportActionResult result)
     {
         if (!result.Applied) return;
+        State.Transport.Ride.Reset();
         _climbing.Detach();
         if (!State.Transport.IsOnFoot && !State.Transport.OnShip)
         {

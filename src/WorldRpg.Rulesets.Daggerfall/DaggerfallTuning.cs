@@ -95,7 +95,11 @@ internal sealed record DaggerfallTuning(
             HorseBaseClassicUnits: 375,
             CartBaseClassicUnits: 250,
             WagonCapacityClassicUnits: 300_000,
-            WagonAccessRange: 5f));
+            WagonAccessRange: 5f,
+            HorseRide: new(WalkShare: .2f, TrotShare: .6f, Acceleration: 3f, Coasting: 2.5f, Braking: 9f, ReverseSpeed: 1.2f,
+                StandingTurnDegrees: 150f, FullTurnDegrees: 65f, LookRangeDegrees: 40f, UphillDrag: .6f, WaterShare: .5f),
+            CartRide: new(WalkShare: .2f, TrotShare: .6f, Acceleration: 2f, Coasting: 1.8f, Braking: 6f, ReverseSpeed: .8f,
+                StandingTurnDegrees: 60f, FullTurnDegrees: 40f, LookRangeDegrees: 50f, UphillDrag: .8f, WaterShare: .4f)));
 
     internal DaggerfallTuning Validate() => this with
     {
@@ -289,7 +293,9 @@ internal sealed record DaggerfallTuning(
                 transport.GetProperty("horseBaseClassicUnits").GetInt32(),
                 transport.GetProperty("cartBaseClassicUnits").GetInt32(),
                 transport.GetProperty("wagonCapacityClassicUnits").GetInt32(),
-                transport.GetProperty("wagonAccessRange").GetSingle()))
+                transport.GetProperty("wagonAccessRange").GetSingle(),
+                ReadRide(transport.GetProperty("horseRide")),
+                ReadRide(transport.GetProperty("cartRide"))))
         {
             StrikeEnchantments = new(root.GetProperty("strikeEnchantments").GetProperty("damageAdjustment").GetInt32(),
                 root.GetProperty("strikeEnchantments").GetProperty("vampiricRange").GetDouble()),
@@ -346,6 +352,19 @@ internal sealed record DaggerfallTuning(
             Rest = DaggerfallRestTuning.Read(root.GetProperty("rest")),
         }.Validate();
     }
+
+    private static RideTuning ReadRide(JsonElement ride) => new(
+        ride.GetProperty("walkShare").GetSingle(),
+        ride.GetProperty("trotShare").GetSingle(),
+        ride.GetProperty("acceleration").GetSingle(),
+        ride.GetProperty("coasting").GetSingle(),
+        ride.GetProperty("braking").GetSingle(),
+        ride.GetProperty("reverseSpeed").GetSingle(),
+        ride.GetProperty("standingTurnDegrees").GetSingle(),
+        ride.GetProperty("fullTurnDegrees").GetSingle(),
+        ride.GetProperty("lookRangeDegrees").GetSingle(),
+        ride.GetProperty("uphillDrag").GetSingle(),
+        ride.GetProperty("waterShare").GetSingle());
 
     private static DaggerfallShipArrivalAnchor ReadShipArrival(JsonElement anchor) => new(
         anchor.GetProperty("mapPixelX").GetInt32(),

@@ -94,6 +94,30 @@ public sealed class DeveloperPlayerCommandsTests
     }
 
     [Fact]
+    public void A_horse_takes_the_step_along_its_own_heading_and_holds_the_view_in_range()
+    {
+        using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold);
+        DaggerfallSession session = run.Session;
+        float start = session.State.PlayerControl.YawRadians;
+        Assert.True(session.Ride("horse").Succeeded);
+        run.Step();
+
+        session.State.PlayerControl.YawRadians = start + 2f;
+        run.Step();
+
+        float heading = run.Spatial.StepRequests[^1].Command.HeadingYawRadians;
+        Assert.InRange(MathF.Abs(MathF.IEEERemainder(heading - start, MathF.Tau)), 0f, .2f);
+        float past = MathF.IEEERemainder(session.State.PlayerControl.YawRadians - heading, MathF.Tau);
+        Assert.Equal(DaggerfallTuning.Defaults.Transport.HorseRide.LookRangeDegrees * MathF.PI / 180f, past, .001f);
+        Assert.Contains("Horse at 0.0 m/s", session.RideState().Message, StringComparison.Ordinal);
+
+        Assert.True(session.Ride("foot").Succeeded);
+        Assert.Contains("rides nothing", session.RideState().Message, StringComparison.Ordinal);
+        run.Step();
+        Assert.Equal(session.State.PlayerControl.YawRadians, run.Spatial.StepRequests[^1].Command.HeadingYawRadians);
+    }
+
+    [Fact]
     public void Morph_curses_and_changes_the_player_and_changes_them_back()
     {
         using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold);

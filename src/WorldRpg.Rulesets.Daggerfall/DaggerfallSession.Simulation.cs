@@ -127,6 +127,7 @@ internal sealed partial class DaggerfallSession
                 JumpRequested = false,
             };
         }
+        locomotion = Ride(locomotion, update, activeWater is not null);
         locomotion = locomotion with { Controls = restrictions.Restrict(locomotion.Controls) };
         // Slowfall is a passive descent constraint, not voluntary movement. Engine still owns
         // the accepted pose and collision. Climb, levitation and water support take precedence.
@@ -136,6 +137,7 @@ internal sealed partial class DaggerfallSession
             locomotion = locomotion with { Controls = locomotion.Controls with { VerticalVelocity = -_tuning.Locomotion.SlowfallDescentSpeed } };
         bool releasedVerticalDrive = _spatial.IsVerticalDriven && !locomotion.Controls.VerticalVelocity.HasValue;
         CharacterStepReceipt? movement = _spatial.Step(State.PlayerControl, update, doorEnvironment, locomotion.Controls);
+        if (movement is { } ridden) State.Transport.Ride.Moved(ridden.Displacement, update.DeltaSeconds, ridden.Motion.Grounded);
         if (movement is not null && _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior)
         {
             _sites.HoldPlayerInsideWorldEdge();

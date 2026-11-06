@@ -6,8 +6,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>
 /// What the player rides, drawn around the eye in the held styles: the horse, and for a cart the cart with the horse in
-/// front of it. The view turns with the mount, so it is drawn on the viewmodel layer and turned back against the view's
-/// pitch, which leaves it level: looking down shows the saddle and flanks. Its gait follows the player's speed.
+/// front of it. The view rides with the mount, so it is drawn on the viewmodel layer and turned back against the view's
+/// pitch, which leaves it level: looking down shows the saddle and flanks. It turns about the eye by as far as its heading
+/// lies from the view. Its gait follows the player's speed.
 /// </summary>
 internal sealed class DaggerfallHeldMount : IDisposable
 {
@@ -80,13 +81,14 @@ internal sealed class DaggerfallHeldMount : IDisposable
         phase = (phase + seconds * rate / now.Seconds) % 1;
     }
 
-    /// <summary>The turn that keeps the mount level whatever the view's <paramref name="pitch"/>.</summary>
-    internal Quaternion Level(float pitch) => Quaternion.CreateFromAxisAngle(Vector3.UnitX, -pitch);
+    /// <summary>The turn that keeps the mount level whatever the view's <paramref name="pitch"/>, its heading <paramref name="turn"/> right of the view.</summary>
+    internal Quaternion Level(float pitch, float turn) =>
+        Quaternion.CreateFromAxisAngle(Vector3.UnitX, -pitch) * Quaternion.CreateFromAxisAngle(Vector3.UnitY, -turn);
 
-    /// <summary>Adds the mount, level whatever the view's <paramref name="pitch"/>, with the eye on its seat.</summary>
-    internal void AppendFacts(List<AppearanceFact> facts, float pitch, bool shown)
+    /// <summary>Adds the mount, level whatever the view's <paramref name="pitch"/> and <paramref name="turn"/> right of it, with the eye on its seat.</summary>
+    internal void AppendFacts(List<AppearanceFact> facts, float pitch, float turn, bool shown)
     {
-        Quaternion level = Level(pitch);
+        Quaternion level = Level(pitch, turn);
         Vector3 at = Vector3.Transform(-seat, level);
         if (cart is null)
         {

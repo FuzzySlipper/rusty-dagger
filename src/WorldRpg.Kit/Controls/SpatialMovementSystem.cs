@@ -68,7 +68,8 @@ public readonly record struct CharacterStepControls(
     float? JumpSpeed = null,
     Vector2? PlanarIntent = null,
     float? VerticalVelocity = null,
-    CharacterMovementRequest? Movement = null)
+    CharacterMovementRequest? Movement = null,
+    float? HeadingRadians = null)
 {
     internal CharacterControllerConfig ApplyTo(CharacterControllerConfig defaults) => defaults with
     {
@@ -211,7 +212,7 @@ public sealed class SpatialMovementSystem : IDisposable
         CharacterControllerCommand command = new(
             selected.Movement ?? default,
             selected.PlanarIntent ?? update.PlanarIntent,
-            player.YawRadians,
+            selected.HeadingRadians ?? player.YawRadians,
             verticalDriveSelected ? false : selected.JumpPressed,
             verticalDriveSelected ? false : selected.JumpHeld,
             selected.CrouchRequested,

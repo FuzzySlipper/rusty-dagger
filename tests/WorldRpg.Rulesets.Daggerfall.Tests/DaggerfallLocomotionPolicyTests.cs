@@ -71,6 +71,25 @@ public sealed class DaggerfallLocomotionPolicyTests
     }
 
     [Fact]
+    public void A_gallop_tires_the_rider_as_a_run_does_and_trains_no_skill()
+    {
+        StatsComponent stats = Stats(speed: 50, running: 40, fatigue: 100);
+        DaggerfallLocomotionPolicy policy = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());
+        CharacterStepReceipt moved = default(CharacterStepReceipt) with
+        {
+            Displacement = new Vector3(.2f, 0f, 0f),
+            Motion = default(CharacterMotion) with { Grounded = true },
+        };
+        List<DaggerfallSkillUse> uses = [];
+
+        policy.CompleteStep(new DaggerfallLocomotionStep(default, false, false, Galloping: true), default, moved, 1d, stats, uses.Add);
+        policy.AdvanceCalendarMinutes(0, 1, stats);
+
+        Assert.Empty(uses);
+        Assert.Equal(100d - DaggerfallLocomotionTuning.Classic.RunningFatiguePerGameMinute, stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).Current);
+    }
+
+    [Fact]
     public void Low_or_empty_fatigue_never_refuses_a_run_or_a_jump_and_the_jump_charge_clamps_at_zero()
     {
         StatsComponent stats = Stats(speed: 50, running: 40, fatigue: 0);
