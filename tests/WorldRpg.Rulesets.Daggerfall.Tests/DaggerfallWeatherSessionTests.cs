@@ -125,11 +125,12 @@ public sealed class DaggerfallWeatherSessionTests
         var definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
         var exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
+        var interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
         var media = DaggerfallSkyMedia.Read(TestSessions.Data(DaggerfallSkyMediaTests.Fixture().Content));
         var fairOdds = Enumerable.Range(0,24).Select(_ => new[]{100,0,0,0,0,0,0}).ToArray();
         var tuning = DaggerfallTuning.Defaults with {Weather = DaggerfallWeatherTuning.Classic with {Odds = fairOdds}};
-        var composition = new DaggerfallSessionComposition(definitions, exterior, tuning) {Profiles = new([exterior]),Sky = media};
-        var fixture = Engine(exterior);
+        var composition = new DaggerfallSessionComposition(definitions, exterior, tuning) {Profiles = new([exterior,interior]),Sky = media};
+        var fixture = Engine(exterior, interior);
         using var session = DaggerfallSession.StartNew(fixture.Engine.Context, composition);
         session.ApplyProductMode(ProductMode.Playing);
         session.PublishInitial();
@@ -147,15 +148,27 @@ public sealed class DaggerfallWeatherSessionTests
         }
         Assert.Equal(cleared + 1, fixture.Engine.ClearedSkyBackgrounds);
 
+        // The first update out of closed weather already leaves the panorama up, under either art.
         session.Weather("Sunny");
         session.Update(Update(3));
-        Assert.True(fixture.Engine.SkyBackgrounds.Count + fixture.Engine.SkyBlends.Count > panoramas);
+        Assert.Equal("panorama", fixture.Engine.Background);
 
-        panoramas = fixture.Engine.SkyBackgrounds.Count + fixture.Engine.SkyBlends.Count;
-        session.Update(new ProductUpdate(new(ProductLifecycleState.Running, 4,1,4,4,60,1,0,1d/60d), [ClassicArt()]));
         session.Weather("Rain");
-        session.Update(Update(5));
-        Assert.True(fixture.Engine.SkyBackgrounds.Count + fixture.Engine.SkyBlends.Count > panoramas, "Classic art keeps its painted sky in the rain.");
+        session.Update(Update(4));
+        Assert.Equal("colour", fixture.Engine.Background);
+        session.Update(new ProductUpdate(new(ProductLifecycleState.Running, 5,1,5,5,60,1,0,1d/60d), [ClassicArt()]));
+        Assert.Equal("panorama", fixture.Engine.Background);
+        session.Update(Update(6));
+        Assert.Equal("panorama", fixture.Engine.Background);
+        session.Update(new ProductUpdate(new(ProductLifecycleState.Running, 7,1,7,7,60,1,0,1d/60d), [ClassicArt(false)]));
+        session.Update(Update(8));
+        Assert.Equal("colour", fixture.Engine.Background);
+
+        // Indoors the closed sky gives way to the dark of a room.
+        Assert.True(session.TryTransitionTo(interior.ProfileKey));
+        session.Update(Update(9));
+        Assert.Equal("colour", fixture.Engine.Background);
+        Assert.Equal(new Color(0,0,0,1), fixture.Engine.BackgroundColors.Last());
     }
 
     [Fact]
@@ -235,10 +248,10 @@ public sealed class DaggerfallWeatherSessionTests
         var appearance = new AppearanceFake(releases);
         return (EngineContextFake.Create(content,spatial.Service,appearance),spatial,appearance);
     }
-    private static ProductInputEvent ClassicArt() => Input(InputEventKind.DirectDigital) with
+    private static ProductInputEvent ClassicArt(bool enabled = true) => Input(InputEventKind.DirectDigital) with
     {
         ValueKind = InputValueKind.ProductPayload, PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
-        PayloadData = "{\"action\":\"controls-classic-art\",\"enabled\":true}"u8.ToArray(),
+        PayloadData = System.Text.Encoding.UTF8.GetBytes($"{{\"action\":\"controls-classic-art\",\"enabled\":{(enabled ? "true" : "false")}}}"),
     };
 
     private static ProductUpdate Update(ulong step) => new(new(ProductLifecycleState.Running,

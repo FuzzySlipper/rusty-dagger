@@ -55,12 +55,16 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
             DaggerfallSkySelection sky = _media.Select(climate, calendar, weather, variant);
             SelectSky(horizonFog is null ? sky : _media.Cleared(sky));
         }
-        else if (ClearSky() && !closed) projection.Lighting.ApplyBackground();
+        else
+        {
+            // A panorama selected above replaces whatever stood; only a sky that goes without one needs its background put back.
+            bool cleared = ClearSky();
+            if (!closed && (cleared || _closed)) projection.Lighting.ApplyBackground();
+        }
         air = (air * MathF.Max(daylight, _horizon.NightAir)) + new Vector3(_ambient.FlashIntensity * _horizon.FlashAir);
         Color airColor = new(air.X, air.Y, air.Z, 1);
         _engine.CameraView.SetFog(Fog(inputs.ProfileKind, weather, horizonFog, closed ? airColor : null));
         if (closed) _engine.CameraView.SetBackgroundColor(new(airColor));
-        else if (_closed) projection.Lighting.ApplyBackground();
         _closed = closed;
         Vector2 wind = Blowing(conditions);
         SetClouds(horizonFog is null || weather == DaggerfallWeatherKind.Fog ? 0

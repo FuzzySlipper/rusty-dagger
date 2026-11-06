@@ -28,6 +28,8 @@ internal class EngineContextFake : DispatchProxy
     internal int OpenedMusicClips => ((AudioServiceFake)(object)audio).OpenedMusicClips;
     internal int ReleasedMusicClips => ((AudioServiceFake)(object)audio).ReleasedMusicClips;
     internal IReadOnlyList<Color> BackgroundColors => ((CameraServiceFake)(object)camera).BackgroundColors;
+    /// <summary>What the camera's background is left as: the last of its panorama, colour and clear calls.</summary>
+    internal string? Background => ((CameraServiceFake)(object)camera).Background;
 
     /// <summary>Read one named field of the last published projection, or null when none was.</summary>
     internal string? PublishedField(string key) => ((UiServiceFake)(object)ui).Field(key);
@@ -219,6 +221,7 @@ internal class EngineContextFake : DispatchProxy
         internal bool FailNextUpdate { get; set; }
         internal int ClearedSkyBackgrounds { get; private set; }
         internal List<Color> BackgroundColors { get; } = [];
+        internal string? Background { get; private set; }
         internal List<FogRequest> Fogs { get; } = [];
         internal List<RenderResource> SkyBackgrounds { get; } = [];
         internal List<SkyBackgroundBlendRequest> SkyBlends { get; } = [];
@@ -244,8 +247,8 @@ internal class EngineContextFake : DispatchProxy
                 nameof(ICameraViewService.CreateCamera) => NewCamera(),
                 nameof(ICameraViewService.SetActiveCamera) => SetActive(((Camera)arguments![0]!).Handle.Value),
                 nameof(ICameraViewService.ClearActiveCamera) => SetActive(null),
-                nameof(ICameraViewService.ClearSkyBackground) => ClearSkyBackground(),
-                nameof(ICameraViewService.SetBackgroundColor) => SetBackgroundColor(arguments),
+                nameof(ICameraViewService.ClearSkyBackground) => Left("cleared", ClearSkyBackground()),
+                nameof(ICameraViewService.SetBackgroundColor) => Left("colour", SetBackgroundColor(arguments)),
                 nameof(ICameraViewService.UpdateCamera) => null,
                 nameof(ICameraViewService.SetToneMapping) => null,
                 nameof(ICameraViewService.SetBloom) => null,
@@ -253,8 +256,8 @@ internal class EngineContextFake : DispatchProxy
                 nameof(ICameraViewService.SetWetness) => Record(Wetness, arguments),
                 nameof(ICameraViewService.SetSnow) => Record(Snow, arguments),
                 nameof(ICameraViewService.SetWind) => Record(Wind, arguments),
-                nameof(ICameraViewService.SetSkyBackground) => SetSky((RenderResource)arguments![0]!),
-                nameof(ICameraViewService.SetSkyBackgroundBlend) => SetBlend((SkyBackgroundBlendRequest)arguments![0]!),
+                nameof(ICameraViewService.SetSkyBackground) => Left("panorama", SetSky((RenderResource)arguments![0]!)),
+                nameof(ICameraViewService.SetSkyBackgroundBlend) => Left("panorama", SetBlend((SkyBackgroundBlendRequest)arguments![0]!)),
                 nameof(ICameraViewService.SetFog) => SetFog((FogRequest)arguments![0]!),
                 nameof(ICameraViewService.SetBackdrop) => LinkBackdrop(true),
                 nameof(ICameraViewService.ClearBackdrop) => LinkBackdrop(false),
@@ -296,6 +299,12 @@ internal class EngineContextFake : DispatchProxy
         {
             ClearedSkyBackgrounds++;
             return null;
+        }
+
+        private object? Left(string background, object? result)
+        {
+            Background = background;
+            return result;
         }
 
         private static object? Record<T>(List<T> requests, object?[]? arguments)
