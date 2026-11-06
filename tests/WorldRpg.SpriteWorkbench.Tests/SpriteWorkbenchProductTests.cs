@@ -787,6 +787,7 @@ public sealed class SpriteWorkbenchProductTests
         public Appearance ReplaceSpriteFromAtlas(SpriteFromAtlasReplaceRequest request) => CreateAppearance(request.Replacement.Tint, request.Replacement.FrameId);
 
         public void SetSpriteFrame(SpriteFrameUpdateRequest request) => DoSetFrame(request);
+        public void SetSpriteEmission(SpriteEmissionUpdateRequest request) => throw new NotSupportedException();
         public SpriteReadout ReadSprite(Appearance appearance) => default;
 
         public SpritePlayback CreateSpritePlayback(SpritePlaybackCreateRequest request)

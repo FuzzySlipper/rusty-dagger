@@ -249,4 +249,13 @@ public sealed class DaggerfallCalendarTests
     [InlineData(17, true)]
     public void City_lamps_and_windows_share_their_hours(int hour, bool on) =>
         Assert.Equal(on, Presentation.DaggerfallSiteLighting.CityLightsOn(new DaggerfallCalendar(405, 11, 21, hour, 0, 0)));
+
+    [Fact]
+    public void Lamps_go_out_by_day_only_outdoors()
+    {
+        DaggerfallCalendar noon = new(405, 11, 21, 12, 0, 0);
+        Assert.False(Presentation.DaggerfallSiteLighting.LampsLit(Content.DaggerfallWorldProfileKind.Exterior, noon));
+        Assert.True(Presentation.DaggerfallSiteLighting.LampsLit(Content.DaggerfallWorldProfileKind.Interior, noon));
+        Assert.True(Presentation.DaggerfallSiteLighting.LampsLit(Content.DaggerfallWorldProfileKind.Dungeon, noon));
+    }
 }
