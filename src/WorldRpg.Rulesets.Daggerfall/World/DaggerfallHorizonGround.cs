@@ -59,7 +59,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     private readonly System.Collections.Concurrent.ConcurrentDictionary<(int X, int Y), float> _cellMeans = new();
 
     /// <param name="climate">The climate value at an in-bounds map pixel.</param>
-    /// <param name="locations">The locations by the map pixel they stand on: near ground levels under them and wears their tiles.</param>
+    /// <param name="locations">The locations by the map pixel they stand on: all ground levels under them and near ground wears their tiles.</param>
     internal DaggerfallHorizonGround(DaggerfallTerrainSet terrain, Func<int, int, int> climate, DaggerfallHorizonTuning tuning, DaggerfallGroundTuning groundTuning,
         IReadOnlyDictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> locations)
     {
@@ -115,7 +115,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         for (int i = -1; i <= side; i++)
         {
             double x = tile.SampleX(i), z = tile.SampleZ(j);
-            double height = Height(x, z, tile.CellSize * 2, windows);
+            double height = Ground(x, z, tile.CellSize * 2, windows);
             ground[((j + 1) * heightSide) + i + 1] = height;
             samples.SetHeight(i, j, (float)(Lifted(height, x, z, now) - Sink(x, z, now)));
         }
@@ -250,7 +250,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         {
             if (lattice.TryGetValue((vx, vz), out double known)) return known;
             double px = vx * Spacing, pz = vz * Spacing;
-            return lattice[(vx, vz)] = Flattened(Height(px, pz, finestMetres, windows), px, pz);
+            return lattice[(vx, vz)] = Ground(px, pz, finestMetres, windows);
         }
 
         double fx = x / Spacing, fz = z / Spacing;
@@ -269,6 +269,10 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         int mapX = (int)Math.Floor(vertexX / (double)TileDimension), mapY = (int)Math.Ceiling(vertexZ / (double)TileDimension);
         return (mapX, mapY, (int)(vertexX - ((long)mapX * TileDimension)), (int)(((long)mapY * TileDimension) - vertexZ));
     }
+
+    /// <summary>The ground at a vertex, near or far: its height with its location's flattening.</summary>
+    private double Ground(double x, double z, double finestMetres, Dictionary<(int X, int Y), DaggerfallTerrainWindow> windows) =>
+        Flattened(Height(x, z, finestMetres, windows), x, z);
 
     /// <summary>A height with its location's flattening: a location levels its whole map pixel, not only its own footprint.</summary>
     private double Flattened(double height, double x, double z)

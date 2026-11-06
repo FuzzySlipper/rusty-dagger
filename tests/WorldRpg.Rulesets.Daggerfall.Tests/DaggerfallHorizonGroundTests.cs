@@ -1,4 +1,6 @@
+using System.Reflection;
 using Rusty.Engine;
+using Rusty.Engine.Heightfields;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
@@ -163,6 +165,33 @@ public sealed class DaggerfallHorizonGroundTests
         Assert.Equal(500, Ground(terrain).Height((3 * Size) + 400, (3 * Size) - 400), 1);
         for (int y = 0; y <= 128; y += 16) Assert.Equal(west.Vertices[128 + (y * 129)].Y, east.Vertices[y * 129].Y, 3);
     }
+
+    [Fact]
+    public void Far_and_near_ground_stand_on_the_same_flattened_location()
+    {
+        DaggerfallTerrainSet terrain = Terrain(8, 8);
+        DaggerfallSiteExterior location = new(3, 3, 1, 1, 0, 0, false, 0, 32, 96, 32, 96);
+        DaggerfallHorizonGround ground = new(terrain, (_, _) => 231, DaggerfallHorizonTuning.Default, DaggerfallGroundTuning.Default,
+            new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> { [new(3, 3)] = location }) { Materials = Materials };
+        // Far from the player and with no lift, far ground draws its ground as it stands.
+        ground.Current = new(-1_000_000, -1_000_000, 1, false);
+        const double step = DaggerfallTerrainSurfaceBuilder.SampleSpacing * 8;
+        const double x = 3 * Size, z = (3 * Size) - (step * 16);
+        HeightfieldTileSamples far = Samples(new(16, 0, 0, 0, 0, x, z, step));
+        HeightfieldTileSamples near = Samples(new(16, 0, 0, 0, 0, x, z, step));
+        ground.Sample(far.Tile, far);
+        ground.SampleNear(near.Tile, near, 0, 0);
+
+        Assert.Equal(near.Heights, far.Heights);
+        DaggerfallTerrainSurface flattened = DaggerfallTerrainSurfaceBuilder.ApplyLocationFlattening(
+            DaggerfallTerrainSurfaceBuilder.Build(terrain, 3, 3), DaggerfallLocationTerrainFrame.Flattening(location));
+        Assert.NotEqual(ground.Height(x + (step * 8), z + (step * 8)), far.Heights[(9 * far.Tile.HeightSide) + 9], 1);
+        Assert.Equal(flattened.Vertices[64 + (64 * 129)].Y, far.Heights[(9 * far.Tile.HeightSide) + 9], 1);
+    }
+
+    /// <summary>Samples for a tile: the Engine makes them, and a fixture has no Engine to ask.</summary>
+    private static HeightfieldTileSamples Samples(HeightfieldTileRequest tile) =>
+        (HeightfieldTileSamples)Activator.CreateInstance(typeof(HeightfieldTileSamples), BindingFlags.NonPublic | BindingFlags.Instance, null, [tile], null)!;
 
     [Fact]
     public void A_relief_of_the_wrong_length_is_refused()

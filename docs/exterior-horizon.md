@@ -8,6 +8,7 @@ and nature stay with the walked window's cells; neither heightfield collides.
 | Part | Owner |
 | --- | --- |
 | The height function, shared by walked and far ground | `DaggerfallTerrainSurfaceBuilder.NormalizedHeight` |
+| Ground at a vertex with its location's flattening, shared by near and far ground | `DaggerfallHorizonGround.Ground` |
 | What ground is at a point: height, rings, lift, paint | `DaggerfallHorizonGround` |
 | Both heightfields, backdrop link, following the player | `DaggerfallHorizon` |
 | Haze, cloud layer, which sky draws, falling weather, wet ground and snow | `DaggerfallWeatherPresentation` |
