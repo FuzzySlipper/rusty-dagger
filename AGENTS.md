@@ -22,7 +22,7 @@ and don't invent task records or infer completion from source or Git.
 - Gameplay and persistence design: [docs/gameplay-design.md](docs/gameplay-design.md)
 - Actors and mechanics owners: [docs/actors-and-mechanics.md](docs/actors-and-mechanics.md)
 - Game UI: [docs/game-ui.md](docs/game-ui.md)
-- Exterior horizon, far ground, open ground blending and cleared skies: [docs/exterior-horizon.md](docs/exterior-horizon.md)
+- Exterior horizon, light, far ground, open ground blending and cleared skies: [docs/exterior-horizon.md](docs/exterior-horizon.md)
 - Coverage direction: `docs/daggerfall-coverage-plan.md`; scope contract and
   decisions: `docs/daggerfall-task-preparation.md`; stable inventory IDs:
   `docs/coverage/` (`content-scope.md` names each content section's owner)

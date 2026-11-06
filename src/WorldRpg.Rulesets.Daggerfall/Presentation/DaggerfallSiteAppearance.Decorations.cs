@@ -33,8 +33,8 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         foreach (var flat in inputs.Decorations)
         {
-            var summer = CreateDecorationSprite(flat.Summer, flat.BaseAligned);
-            var winter = flat.Summer == flat.Winter ? summer : CreateDecorationSprite(flat.Winter, flat.BaseAligned);
+            var summer = CreateDecorationSprite(flat.Summer, flat.BaseAligned, Material(flat));
+            var winter = flat.Summer == flat.Winter ? summer : CreateDecorationSprite(flat.Winter, flat.BaseAligned, Material(flat));
             DecorationVisual visual = new(flat, summer, winter, NextLocationVisualOrdinal());
             AttachDecorationMesh(visual);
             AttachDecorationFlats(visual);
@@ -42,7 +42,11 @@ internal sealed partial class DaggerfallSiteAppearance
         }
     }
 
-    private DecorationSprite CreateDecorationSprite(NormalizedBillboardSprite sprite, bool baseAligned)
+    /// <summary>A decoration takes the light around it, unless it is a lamp: a light source shows at its own brightness.</summary>
+    private static SpriteMaterialDescriptor Material(DaggerfallSiteDecoration flat) =>
+        flat.Source.Archive == LightFlatArchive ? UnlitSprite : LitSprite;
+
+    private DecorationSprite CreateDecorationSprite(NormalizedBillboardSprite sprite, bool baseAligned, SpriteMaterialDescriptor material)
     {
         if (!decorationAtlases.TryGetValue(sprite.TexturePath, out var atlas))
         {
@@ -56,7 +60,7 @@ internal sealed partial class DaggerfallSiteAppearance
         }
         var result = new DecorationSprite(appearance.CreateSpriteFromAtlas(new(atlas, sprite.InitialFrameId,
             baseAligned ? new Vector2(.5f, 0f) : sprite.Pivot, sprite.Size, BillboardMode.Cylindrical,
-            SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f))));
+            SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f), material)));
         decorationSprites.Add(result);
         StartDecorationPlayback(result, atlas, sprite);
         return result;
@@ -68,15 +72,15 @@ internal sealed partial class DaggerfallSiteAppearance
         if (surfaceArt is null) return;
         DaggerfallSiteDecoration definition = flat.Definition;
         if (flat.RefreshedSummer is null && surfaceArt.Flats.TryGetValue(definition.Source, out DaggerfallArtFlat? summer))
-            flat.RefreshedSummer = CreateRefreshedDecorationSprite(definition.Summer, summer, definition.BaseAligned);
+            flat.RefreshedSummer = CreateRefreshedDecorationSprite(definition.Summer, summer, definition.BaseAligned, Material(definition));
         if (flat.RefreshedWinter is null && surfaceArt.Flats.TryGetValue(definition.WinterSource, out DaggerfallArtFlat? winter))
             flat.RefreshedWinter = definition.WinterSource == definition.Source ? flat.RefreshedSummer
-                : CreateRefreshedDecorationSprite(definition.Winter, winter, definition.BaseAligned);
+                : CreateRefreshedDecorationSprite(definition.Winter, winter, definition.BaseAligned, Material(definition));
     }
 
     /// <exception cref="InvalidOperationException">The refreshed flat does not have its classic sprite's frame count,
     /// so the classic frame identities would name the wrong frames.</exception>
-    private DecorationSprite CreateRefreshedDecorationSprite(NormalizedBillboardSprite sprite, DaggerfallArtFlat art, bool baseAligned)
+    private DecorationSprite CreateRefreshedDecorationSprite(NormalizedBillboardSprite sprite, DaggerfallArtFlat art, bool baseAligned, SpriteMaterialDescriptor material)
     {
         if (art.Frames.Count != sprite.Frames.Count)
             throw new InvalidOperationException($"Refreshed flat '{art.File.Path}' has {art.Frames.Count} frames; its classic sprite has {sprite.Frames.Count}.");
@@ -90,7 +94,7 @@ internal sealed partial class DaggerfallSiteAppearance
         }
         (Vector2 size, Vector2 pivot) = art.Placed(sprite.Size, baseAligned ? new Vector2(.5f, 0f) : sprite.Pivot);
         var result = new DecorationSprite(appearance.CreateSpriteFromAtlas(new(atlas, sprite.InitialFrameId, pivot, size,
-            BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f))));
+            BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f), material)));
         decorationSprites.Add(result);
         StartDecorationPlayback(result, atlas, sprite);
         return result;

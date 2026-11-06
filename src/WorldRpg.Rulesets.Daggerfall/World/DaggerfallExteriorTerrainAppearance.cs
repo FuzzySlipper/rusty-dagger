@@ -677,7 +677,11 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
                     instances,
                     pivot,
                     size,
-                    BillboardMode.Cylindrical));
+                    BillboardMode.Cylindrical,
+                    0,
+                    SpriteDepthPolicy.Default,
+                    new Color(1F, 1F, 1F, 1F),
+                    DaggerfallSiteAppearance.LitSprite));
                 batches.Add(new(objectId, key, appearance, instances.Length));
             }
         }

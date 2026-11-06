@@ -32,13 +32,13 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
 {
     internal static DaggerfallHorizonTuning Default { get; } = new(4.5f, 3_000, 24_000, .00003f, 150, 2_900, 3_700, .1f, 204.8f, .25f, .7f,
         .45f, .9f, 3_500, 1_800, 8, new(14, 5),
-        Color.FromSrgb(.16f, .24f, .32f), Color.FromSrgb(.24f, .24f, .25f), Color.FromSrgb(.6f, .6f, .63f),
+        Color.FromSrgb(.16f, .24f, .32f), Color.FromSrgb(.28f, .28f, .29f), Color.FromSrgb(.78f, .78f, .81f),
         new Dictionary<int, Color>
         {
-            [223] = Color.FromSrgb(.2f, .19f, .15f), [224] = Color.FromSrgb(.46f, .35f, .24f), [225] = Color.FromSrgb(.46f, .35f, .24f),
-            [226] = Color.FromSrgb(.19f, .21f, .15f), [227] = Color.FromSrgb(.2f, .19f, .15f), [228] = Color.FromSrgb(.2f, .19f, .15f),
-            [229] = Color.FromSrgb(.46f, .35f, .24f), [230] = Color.FromSrgb(.19f, .21f, .15f), [231] = Color.FromSrgb(.2f, .26f, .17f),
-            [232] = Color.FromSrgb(.2f, .26f, .17f),
+            [223] = Color.FromSrgb(.27f, .24f, .18f), [224] = Color.FromSrgb(.54f, .41f, .29f), [225] = Color.FromSrgb(.54f, .41f, .29f),
+            [226] = Color.FromSrgb(.25f, .26f, .2f), [227] = Color.FromSrgb(.27f, .24f, .18f), [228] = Color.FromSrgb(.27f, .24f, .18f),
+            [229] = Color.FromSrgb(.54f, .41f, .29f), [230] = Color.FromSrgb(.25f, .26f, .2f), [231] = Color.FromSrgb(.24f, .3f, .2f),
+            [232] = Color.FromSrgb(.24f, .3f, .2f),
         });
 
     internal DaggerfallHorizonTuning Validate()

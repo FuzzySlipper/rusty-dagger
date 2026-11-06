@@ -80,7 +80,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
                     new LightDescriptor(
                         LightKind.Point,
                         light.Color,
-                        light.Intensity,
+                        light.Intensity * Scale,
                         true,
                         light.Position.ToVector(),
                         Vector3.Zero,
@@ -92,7 +92,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
                         LightShadowIntent.Disabled));
                 if (light.CityLight)
                 {
-                    _cityIntensities.Add(lightId, light.Intensity);
+                    _cityIntensities.Add(lightId, light.Intensity * Scale);
                     request = CityRequest(request, calendar);
                 }
                 Light point = graphics.CreateLight(request);
@@ -358,7 +358,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
 
     private LightRequest AmbientRequest(float level) => new(
         _ambientId, false, 0,
-        new LightDescriptor(LightKind.Ambient, Vector3.One, level, true,
+        new LightDescriptor(LightKind.Ambient, AmbientColor(level), level * Scale, true,
             Vector3.Zero, Vector3.Zero, false, 0F, 0F, 0F, 0F, LightShadowIntent.Disabled));
 
     private LightRequest SunRequest(DaggerfallCalendar calendar, float daylight)
@@ -367,8 +367,20 @@ internal sealed class DaggerfallSiteLighting : IDisposable
             / ((DaggerfallCalendar.DuskHour - DaggerfallCalendar.DawnHour) * 60f);
         Vector3 direction = Vector3.Normalize(new(MathF.Cos(phase * MathF.PI), -MathF.Sin(phase * MathF.PI), 0f));
         return new(_sunId, false, 0, new LightDescriptor(LightKind.Directional, Vector3.One,
-            daylight, true, Vector3.Zero, direction, false, 0f, 0f, 0f, 0f, LightShadowIntent.Disabled));
+            daylight * _tuning.ExteriorSun, true, Vector3.Zero, direction, false, 0f, 0f, 0f, 0f, LightShadowIntent.Disabled));
     }
+
+    /// <summary>What this kind of place multiplies its lights by.</summary>
+    private float Scale => _profileKind switch
+    {
+        DaggerfallWorldProfileKind.Exterior => _tuning.ExteriorScale,
+        DaggerfallWorldProfileKind.Interior => _tuning.InteriorScale,
+        _ => _tuning.DungeonScale,
+    };
+
+    /// <summary>The ambient's colour at a level: outdoors it cools toward the night's, and indoors it stays white.</summary>
+    private Vector3 AmbientColor(float level) => _profileKind != DaggerfallWorldProfileKind.Exterior ? Vector3.One
+        : Vector3.Lerp(_tuning.NightColor, Vector3.One, Math.Clamp((level - _tuning.ExteriorNight) / (_tuning.ExteriorNoon - _tuning.ExteriorNight), 0, 1));
 
     private float AmbientLevel(DaggerfallCalendar calendar)
     {
