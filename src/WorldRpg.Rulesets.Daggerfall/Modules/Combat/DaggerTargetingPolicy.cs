@@ -9,7 +9,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 internal sealed class DaggerTargetingPolicy(IReadOnlyDictionary<long, DaggerfallActorDefinition> definitions,
     DaggerfallMeleeTargetingTuning tuning, Func<DaggerfallSiteProfile> currentInputs,
-    Func<long, bool>? actorGameplayActive = null) : ITargetingPolicy
+    Func<long, bool>? actorGameplayActive = null, Func<long, double?>? personSightHeight = null) : ITargetingPolicy
 {
     private readonly Func<long, bool> _actorGameplayActive = actorGameplayActive ?? (_ => true);
 
@@ -22,6 +22,8 @@ internal sealed class DaggerTargetingPolicy(IReadOnlyDictionary<long, Daggerfall
     {
         Vector3 basePosition = actor.Position.ToVector();
         DaggerfallActorDefinition definition = definitions[actor.DurableId];
+        if (definition.Kind == DaggerfallActorKinds.Civilian && personSightHeight?.Invoke(actor.DurableId) is double sight)
+            return basePosition + Vector3.UnitY * (float)sight;
         if (!definition.GroundOnSpawn) return basePosition;
 
         // Grounded actor poses name the sprite base at the floor contact. A visibility ray to that

@@ -56,9 +56,7 @@ internal sealed record DaggerfallStaticNpcPlacement(string Id, WorldPoint Positi
                 definitions, sourceFaction, type, buildingFaction, "person");
             result.Add(new(id, position, new(race ?? string.Empty, gender, archive, record,
                 person.GetProperty("nameSeed").GetInt32(), faction), role,
-                services, new(billboard.TexturePath, billboard.TextureSha256,
-                    billboard.AtlasWidth, billboard.AtlasHeight, billboard.Frames, billboard.InitialFrameId,
-                    new System.Numerics.Vector2(.5F, 0F), billboard.Size)));
+                services, billboard.Standing()));
         }
         return result;
     }

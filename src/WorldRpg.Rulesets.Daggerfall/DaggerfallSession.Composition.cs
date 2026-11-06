@@ -228,7 +228,7 @@ internal sealed partial class DaggerfallSession
             _camera = new FirstPersonCameraSystem(engine.CameraView, assembled.PlayerControl, tuning.Camera);
             partiallyConstructed.Add(_camera);
             TargetingService targeting = new(engine.Perception, _spatial, actors,
-                new DaggerTargetingPolicy(authored, tuning.MeleeTargeting, () => _sites.Projection.Inputs, npcs.IsGameplayActive));
+                new DaggerTargetingPolicy(authored, tuning.MeleeTargeting, () => _sites.Projection.Inputs, npcs.IsGameplayActive, PersonSightHeight));
             CombatResolution combatRules = new();
             _combatResolution = combatRules;
             _vitality = new DaggerfallVitalityConsequences(combatRules);
