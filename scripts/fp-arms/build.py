@@ -52,6 +52,8 @@ SOURCES = {
 TEXTURE = 256
 PAINT_SOURCE = 1024
 FUR_TEXTURE = 64
+# How far a face may follow the pack's `sleeve` bone and stay: more, and it belongs to the cloth sets' loose left cuff.
+FLAP_WEIGHT = .25
 # The legs' rings and their small plain textures: nothing of the pack's art goes into them.
 LEG_SIDES = 10
 LEG_TEXTURE = 32
@@ -274,6 +276,21 @@ def retro():
             colour.interpolation = "Closest"
 
 
+def cut_flap(meshes):
+    """Cuts the loose cuff that hangs from the `sleeve` bone: the torn sleeve stays, but this piece breaks the arm's outline."""
+    for obj in meshes:
+        group = obj.vertex_groups.get("sleeve")
+        if group is None:
+            continue
+        mesh = bmesh.new()
+        mesh.from_mesh(obj.data)
+        weights = mesh.verts.layers.deform.verify()
+        flap = [face for face in mesh.faces if max(vert[weights].get(group.index, 0) for vert in face.verts) > FLAP_WEIGHT]
+        bmesh.ops.delete(mesh, geom=flap, context="FACES")
+        mesh.to_mesh(obj.data)
+        mesh.free()
+
+
 def arms(name):
     """The arm set `name`, painted, as one mesh; the pack's own unarmed clip is dropped."""
     mesh_file, stem, colour, lift = SOURCES[name]
@@ -286,6 +303,7 @@ def arms(name):
     meshes = [obj for obj in imported if obj.type == "MESH"]
     for obj in meshes:
         obj.data.uv_layers[0].name = "UVMap"
+    cut_flap(meshes)
     fur = [obj for obj in meshes if "_Fur" in obj.name]
     paint_body([obj for obj in meshes if obj not in fur], stem, colour, lift)
     for obj in fur:
