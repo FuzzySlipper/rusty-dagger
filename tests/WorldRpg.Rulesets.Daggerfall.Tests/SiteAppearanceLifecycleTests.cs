@@ -511,6 +511,74 @@ public sealed class SiteAppearanceLifecycleTests
         presentation.CompleteAdmittedUpdate();
     }
 
+    /// <summary>
+    /// Leaving a location suspends it and disposes it with no admitted update between. An actor that changed state in the
+    /// last update, finished or still running, left its old playback queued, where it still holds the actor's sprite.
+    /// </summary>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void A_location_left_just_after_an_actor_changed_state_releases_the_old_playback_first(bool updateCompleted, bool suspended)
+    {
+        List<string> releases = [];
+        AppearanceFake appearance = new(releases);
+        DaggerfallSiteAppearance presentation = new(MediaContent(releases), appearance, MediaInputs());
+        presentation.React(new EnemyAttackStartedFact(11, 12, true, 1, 2));
+        if (updateCompleted) presentation.CompleteAdmittedUpdate();
+        if (suspended)
+        {
+            presentation.RetireAllActors();
+            presentation.SuspendLocationResources();
+        }
+
+        presentation.Dispose();
+
+        AssertEverySpriteReleased(appearance);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_location_left_just_after_an_actor_died_releases_its_playback_before_its_sprite(bool updateCompleted)
+    {
+        List<string> releases = [];
+        AppearanceFake appearance = new(releases);
+        DaggerfallSiteAppearance presentation = new(MediaContent(releases), appearance, MediaInputs());
+        presentation.React(new ActorDiedFact(11, DaggerfallActorIdentity.PlayerEntityId, DaggerfallDamageCause.PhysicalAttack, 10, 2, 1, 2));
+        if (updateCompleted) presentation.CompleteAdmittedUpdate();
+        presentation.RetireAllActors();
+        presentation.SuspendLocationResources();
+
+        presentation.Dispose();
+
+        AssertEverySpriteReleased(appearance);
+    }
+
+    [Fact]
+    public void A_location_left_just_after_the_weapon_changed_action_releases_the_old_playback_first()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        content.Add("weapon/dagger.png", Hash);
+        AppearanceFake appearance = new(releases);
+        DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
+        presentation.React(new PlayerAttackRestFact(1, 2));
+
+        presentation.Dispose();
+
+        AssertEverySpriteReleased(appearance);
+    }
+
+    private static void AssertEverySpriteReleased(AppearanceFake appearance)
+    {
+        Assert.Equal(appearance.CreatedPlaybacks.Count, appearance.DisposedPlaybacks);
+        Assert.Equal(appearance.CreatedAppearances, appearance.DisposedAppearances);
+        Assert.Equal(appearance.CreatedAtlases, appearance.DisposedAtlases);
+    }
+
     private static DaggerfallSiteProfile SkyExterior() => new(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
         DaggerfallSiteGeometry.Closure(new SpatialContentArtifact("spatial/exterior.json", Hash, 1), new ContentArtifact("mesh/exterior.json", Hash)),
         new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene), new PlayerInitialLook(0, 0), [], new Dictionary<long, NormalizedActorSprite>(),
