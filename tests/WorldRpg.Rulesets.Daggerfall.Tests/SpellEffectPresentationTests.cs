@@ -34,6 +34,11 @@ public sealed class SpellEffectPresentationTests
             {"replaces": {"archive": 380, "record": 4}, "path": "refreshed/corpse-bones.glb", "byteLength": 1, "sha256": "HASH", "footprint": 2.15}],
           "flats": [
             {"replaces": {"archive": 212, "record": 0}, "path": "refreshed/well.png", "byteLength": 1, "sha256": "HASH", "width": 32, "height": 32,
+             "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}], "classic": {"x": 0.25, "y": 0.5, "width": 0.5, "height": 0.5}},
+            {"replaces": {"archive": 210, "record": 14}, "path": "refreshed/lamp.png", "byteLength": 1, "sha256": "HASH", "width": 32, "height": 32,
+             "emission": {"path": "refreshed/lamp-glow.png", "byteLength": 1, "sha256": "HASH"},
+             "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}], "classic": {"x": 0.25, "y": 0.5, "width": 0.5, "height": 0.5}},
+            {"replaces": {"archive": 210, "record": 12}, "path": "refreshed/orb.png", "byteLength": 1, "sha256": "HASH", "width": 32, "height": 32,
              "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}], "classic": {"x": 0.25, "y": 0.5, "width": 0.5, "height": 0.5}}]}}
         """)), "test.art");
 
@@ -49,6 +54,9 @@ public sealed class SpellEffectPresentationTests
         content.Add("sprite/corpse.png", Hash);
         content.Add("sprite/well.png", Hash);
         content.Add("refreshed/well.png", Hash);
+        content.Add("refreshed/lamp.png", Hash);
+        content.Add("refreshed/lamp-glow.png", Hash);
+        content.Add("refreshed/orb.png", Hash);
         AppearanceFake graphics = new(releases);
         DaggerfallSiteAppearance presentation = new(content, graphics, MediaInputs(classic: ClassicEffects(fireSpell: true), corpse: corpse, decorations: decorations));
         PresentationRecorder particles = PresentationRecorder.Create();
@@ -167,39 +175,6 @@ public sealed class SpellEffectPresentationTests
         presentation.RetireActor(11);
         presentation.BeginAdmittedUpdate(); presentation.CompleteAdmittedUpdate(); presentation.BeginAdmittedUpdate();
         Assert.Equal(1, animation.ReleasedAppearances);
-    }
-
-    /// <summary>A lamp takes the light around it and shines through its own art, so its flame glows and its iron doesn't; an ordinary flat only takes the light.</summary>
-    [Fact]
-    public void A_lamp_shines_through_its_own_art_until_it_goes_out()
-    {
-        NormalizedBillboardSprite art = new("sprite/corpse.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, .5F), new Vector2(1F, 1F));
-        DaggerfallSiteDecoration lamp = new("lamp", new WorldPoint(4, .5F, 6), false, art, art, (210, 1), (210, 1));
-        var (presentation, graphics, _) = Compose(() => false, decorations: [lamp]);
-        using DaggerfallSiteAppearance owned = presentation;
-        SpriteFromAtlasRequest shining = Assert.Single(graphics.SpriteRequests, request => !request.Material.EmissionMap.Equals(default(RenderResourceReference)));
-        Assert.Equal(SpriteLightingMode.Synthetic, shining.Material.Lighting);
-
-        presentation.UpdateLamps(1.3F);
-        presentation.UpdateLamps(1.3F);
-        Assert.Equal(1.3F, Assert.Single(graphics.SpriteEmissions).Intensity);
-
-        presentation.UpdateLamps(0F);
-        Assert.Equal(0F, graphics.SpriteEmissions[^1].Intensity);
-    }
-
-    [Fact]
-    public void An_ordinary_flat_takes_the_light_and_emits_nothing()
-    {
-        NormalizedBillboardSprite art = new("sprite/corpse.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, .5F), new Vector2(1F, 1F));
-        DaggerfallSiteDecoration flat = new("flat", new WorldPoint(4, .5F, 6), false, art, art, (211, 1), (211, 1));
-        var (presentation, graphics, _) = Compose(() => false, decorations: [flat]);
-        using DaggerfallSiteAppearance owned = presentation;
-
-        Assert.Contains(graphics.SpriteRequests, request => request.Material.Lighting == SpriteLightingMode.Synthetic);
-        Assert.DoesNotContain(graphics.SpriteRequests, request => !request.Material.EmissionMap.Equals(default(RenderResourceReference)));
-        presentation.UpdateLamps(1.3F);
-        Assert.Empty(graphics.SpriteEmissions);
     }
 
     [Fact]

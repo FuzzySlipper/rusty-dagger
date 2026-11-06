@@ -60,9 +60,11 @@ internal sealed record DaggerfallArtSurface(DaggerfallArtFile File, int Width, i
 
 /// <summary>
 /// A refreshed world billboard standing in for one classic texture record: a PNG atlas of its frames in classic order, each
-/// the same box, and where the classic frame sits in that box (fractions of the frame, top-down).
+/// the same box, and where the classic frame sits in that box (fractions of the frame, top-down). A flat that gives light
+/// names its emission map, an atlas of the same layout holding only what glows.
 /// </summary>
-internal sealed record DaggerfallArtFlat(DaggerfallArtFile File, int Width, int Height, IReadOnlyList<DaggerfallArtRect> Frames, DaggerfallArtRect Classic)
+internal sealed record DaggerfallArtFlat(DaggerfallArtFile File, int Width, int Height, IReadOnlyList<DaggerfallArtRect> Frames, DaggerfallArtRect Classic,
+    DaggerfallArtFile? Emission = null)
 {
     /// <summary>
     /// The world size and pivot that draw this art where the classic sprite stands: the box is larger than the classic frame
@@ -257,8 +259,11 @@ internal sealed class DaggerfallArtReplacements
                     if (frames.Length == 0 || frames.Any(frame => frame.X < 0 || frame.Y < 0 || frame.Width <= 0 || frame.Height <= 0 || frame.X + frame.Width > width || frame.Y + frame.Height > height)
                         || classic.Width <= 0 || classic.Height <= 0)
                         throw new InvalidOperationException($"Content pack '{packId}' places the refreshed flat for {replaces.Item1}/{replaces.Item2} outside its atlas.");
+                    DaggerfallArtFile? emission = flat.TryGetProperty("emission", out JsonElement map)
+                        ? new(map.GetProperty("path").GetString()!, DaggerfallContentHash.Parse(map.GetProperty("sha256").GetString()!, $"The emission map for {replaces.Item1}/{replaces.Item2}"))
+                        : null;
                     if (!flats.TryAdd(replaces, new(new(flat.GetProperty("path").GetString()!,
-                            DaggerfallContentHash.Parse(flat.GetProperty("sha256").GetString()!, $"The refreshed flat for {replaces.Item1}/{replaces.Item2}")), width, height, frames, classic)))
+                            DaggerfallContentHash.Parse(flat.GetProperty("sha256").GetString()!, $"The refreshed flat for {replaces.Item1}/{replaces.Item2}")), width, height, frames, classic, emission)))
                         throw new InvalidOperationException($"Content pack '{packId}' names two flats for {replaces.Item1}/{replaces.Item2}.");
                 }
         }

@@ -20,6 +20,7 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     internal List<StaticMeshMaterialFactorsRequest> StaticMeshFactorUpdates { get; } = [];
     internal List<SpriteAtlasCreateRequest> AtlasRequests { get; } = [];
     internal List<SpriteFromAtlasRequest> SpriteRequests { get; } = [];
+    internal List<SpriteEmissionUpdateRequest> EmissionUpdates { get; } = [];
     internal List<SpritePlaybackCreateRequest> PlaybackRequests { get; } = [];
     internal List<SpritePlaybackControlRequest> ControlRequests { get; } = [];
     internal List<SpritePlaybackAdvanceRequest> AdvanceRequests { get; } = [];
@@ -92,8 +93,6 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     public Material CreateAuthoredMaterial(AuthoredMaterialAppearanceRequest request) => CreateMaterial(default);
     internal List<MaterialUpdateRequest> MaterialUpdates { get; } = [];
     public void UpdateMaterial(MaterialUpdateRequest request) { MaterialUpdates.Add(request); }
-    internal List<SpriteEmissionUpdateRequest> SpriteEmissions { get; } = [];
-    public void SetSpriteEmission(SpriteEmissionUpdateRequest request) => SpriteEmissions.Add(request);
     public Material ReplaceMaterial(MaterialUpdateRequest request) => CreateMaterial(request.Replacement);
     public Appearance CreatePrimitive(PrimitiveAppearanceRequest request) => CreateAppearance();
     public Appearance ReplacePrimitive(PrimitiveAppearanceReplaceRequest request) => CreateAppearance();
@@ -151,6 +150,7 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     public void SetSpriteViewport(SpriteViewportUpdateRequest request) => ViewportRequests.Add(request);
     internal List<SpriteViewportUpdateRequest> ViewportRequests { get; } = [];
     public void SetSpriteFrame(SpriteFrameUpdateRequest request) => SetFrameRequests.Add(request);
+    public void SetSpriteEmission(SpriteEmissionUpdateRequest request) => EmissionUpdates.Add(request);
     public SpriteReadout ReadSprite(Appearance appearance) => default;
     public SpritePlayback CreateSpritePlayback(SpritePlaybackCreateRequest request)
     {

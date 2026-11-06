@@ -66,17 +66,18 @@ off, and that is what `bloom` spreads.
   would cool the lamps too.
 - **Sprites.** Flats, nature, people and items take the light around them
   (`SpriteLightingMode.Synthetic`), so they fall with the day.
-- **Lamps.** A lamp (archive 210) takes the light too, and shines through its own art:
-  its texture is its emission map, so the flame shines at `lampLevel` while the dark iron
-  takes the night, with no mask to paint. Each carries an Engine point light from the
-  importer, as a sprite's emission lights nothing. A town's lamps go out by day with its
-  windows; those indoors and underground stay lit.
 - **Windows.** Building windows glow on the city lamps' hours through mesh emission. The
   importer publishes each window texture's glass as a mask beside it, and the location's
   material holds that mask as its emission map, so nightfall changes only the emission's
   level (`windowColor`, `windowLevel`). Refreshed walls keep the classic's window layout,
   so the classic's mask serves both art sets. Glass outshines the night rather than
   lighting the street: windows carry no lights.
+- **Lamps.** A refreshed flat that gives light takes the light around it like any flat, and
+  its flame or glass shines through sprite emission. `promote.py` cuts the emission map from
+  the flat's own crunched atlas, in the same layout, so no second painting exists. Outdoors
+  the level (`lampLevel`) follows the city lamps' hours; under a roof it never drops. Classic
+  lamps stay unlit, showing whole at their own brightness as the donor's do. Emission lights
+  nothing else: the placed point lights do that.
 - **First person.** The viewmodel layer doesn't take the scene's lights, so the view takes a
   tint from the light the eye stands in (`DaggerfallViewLight`): the sky plus any lamp, glowing
   mobile, spell or magic candle in reach, by the renderer's own falloff. `viewFull` is the light
