@@ -116,6 +116,11 @@ CANVAS, OCCUPANCY = 1024, 0.74   # the generation canvas and the share of it the
 WORLD_ICON = 128                 # pixels on a dropped item's longer side: a small pile on the floor
 EFFECT_FRAME = 256               # pixels on an effect frame's longer side
 FLAT_CRUNCH = float(os.environ.get("FLAT_CRUNCH", "2"))   # a world billboard's pixels to a classic pixel
+# The flats that give light, as Daggerfall Unity's emissive list names them, each with an emission map cut from its own art.
+# 210-8 is the one blue glass; every other record glows warm.
+GLOWING = {(190, 3), (190, 4), (190, 5), (200, 7), (200, 8), (200, 9), (200, 10), (202, 2), (208, 2),
+           *((210, record) for record in (0, 1, 2, 3, 4, 5, 6, 8, 9, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29))}
+COOL_GLOW = {(210, 8)}
 GLOW = 64                        # pixels on the particle glow's side
 CLOTHING = range(235, 243)
 NEUTRAL = (14, 32)   # saturation (max less min channel, 0-255) over which a pixel fades from dyed cloth to its own colour
@@ -313,10 +318,21 @@ def classic_box(source):
     return x, y, x + w * scale, y + h * scale
 
 
-def frame_atlas(name, sources, finals, target, longest=None, crunch=None):
+def png_file(image, target):
+    """Writes an image as PNG content and names it: its path, length and hash."""
+    buffer = io.BytesIO()
+    image.save(buffer, "PNG", optimize=True)
+    data = buffer.getvalue()
+    (CONTENT / target).parent.mkdir(parents=True, exist_ok=True)
+    (CONTENT / target).write_bytes(data)
+    return {"path": target, "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+
+
+def frame_atlas(name, sources, finals, target, longest=None, crunch=None, glow=None):
     """One PNG atlas of a classic record's frames in order, all cropped to one box that holds every frame's art and the
     classic frame's place on the generation canvas, and its entry without `replaces`. Smooth at most `longest` pixels a
-    side, or with `crunch`, reduce's sprite crunch at that many pixels to a classic pixel."""
+    side, or with `crunch`, reduce's sprite crunch at that many pixels to a classic pixel. `glow`, a function of a tile, also
+    writes an emission map of the same layout beside it."""
     boxes = {classic_box(source) for source in sources}
     if len(boxes) != 1:
         raise SystemExit(f"{name}: the classic frames differ in size, so no one box places them.")
@@ -334,18 +350,21 @@ def frame_atlas(name, sources, finals, target, longest=None, crunch=None):
     tiles = reduce.crunch_sprites(crops, size) if crunch else [crop.resize(size, Image.Resampling.LANCZOS) for crop in crops]
     columns = int(np.ceil(np.sqrt(len(frames))))
     atlas = Image.new("RGBA", (columns * size[0], int(np.ceil(len(frames) / columns)) * size[1]))
+    glowing = atlas.copy()
     rects = []
     for index, tile in enumerate(tiles):
         x, y = index % columns * size[0], index // columns * size[1]
         atlas.paste(tile, (x, y))
+        if glow:
+            glowing.paste(glow(tile), (x, y))
         rects.append({"x": x, "y": y, "width": size[0], "height": size[1]})
-    buffer = io.BytesIO()
-    atlas.save(buffer, "PNG", optimize=True)
-    data = buffer.getvalue()
-    (CONTENT / target).parent.mkdir(parents=True, exist_ok=True)
-    (CONTENT / target).write_bytes(data)
-    return {"path": target, "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest(),
-            "width": atlas.width, "height": atlas.height, "frames": rects,
+    emission = {}
+    if glow:
+        if glowing.getbbox() is None:
+            print(f"{name}: no pixel of this light glows, so it stays dark at night")
+        else:
+            emission = {"emission": png_file(glowing, target.removesuffix(".png") + "-glow.png")}
+    return {**png_file(atlas, target), **emission, "width": atlas.width, "height": atlas.height, "frames": rects,
             "classic": {"x": round((region[0] - box[0]) / width, 4), "y": round((region[1] - box[1]) / height, 4),
                         "width": round((region[2] - region[0]) / width, 4), "height": round((region[3] - region[1]) / height, 4)}}
 
@@ -427,6 +446,13 @@ def surfaces(area):
     return promoted
 
 
+def glow_of(archive, record):
+    """How to cut a flat's emission map from a tile, for a flat that gives light."""
+    if (archive, record) in GLOWING:
+        return lambda tile: reduce.glow(tile, cool=(archive, record) in COOL_GLOW)
+    return None
+
+
 def flats():
     """An atlas entry for every placed classic record whose every frame has an accepted final: from the `flats` area, or,
     for a record an item also draws, its accepted `items` final."""
@@ -442,7 +468,7 @@ def flats():
             classic.append(stem)
             continue
         entries.append({"replaces": {"archive": archive, "record": record},
-                        **frame_atlas(stem, sources, finals, f"{MEDIA}/flats/{stem}.png", crunch=FLAT_CRUNCH)})
+                        **frame_atlas(stem, sources, finals, f"{MEDIA}/flats/{stem}.png", crunch=FLAT_CRUNCH, glow=glow_of(archive, record))})
     print(f"flats: {len(entries)} records refreshed, {len(classic)} stay classic")
     return entries
 

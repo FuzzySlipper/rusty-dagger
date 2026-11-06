@@ -11,7 +11,8 @@ internal sealed partial class DaggerfallSiteAppearance
     private readonly List<DecorationSprite> decorationSprites = [];
     private readonly Dictionary<string, SpriteAtlas> decorationAtlases = new(StringComparer.Ordinal);
     private readonly List<RenderResource> decorationResources = [];
-    private readonly Dictionary<string, RenderResource> decorationTextures = [];
+    private readonly Dictionary<string, RenderResource> decorationGlowMaps = new(StringComparer.Ordinal);
+    private readonly List<Appearance> glowingDecorations = [];
     private float lampLevel;
 
     private sealed record DecorationVisual(DaggerfallSiteDecoration Definition, DecorationSprite Summer,
@@ -25,11 +26,9 @@ internal sealed partial class DaggerfallSiteAppearance
         internal DecorationSprite? RefreshedWinter { get; set; }
     }
 
-    private sealed class DecorationSprite(Appearance visual, bool lamp)
+    private sealed class DecorationSprite(Appearance visual)
     {
         internal Appearance Visual { get; } = visual;
-        /// <summary>Whether it shines through its own art while the lamps are lit.</summary>
-        internal bool Lamp { get; } = lamp;
         internal SpritePlayback? Playback { get; set; }
     }
 
@@ -37,8 +36,8 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         foreach (var flat in inputs.Decorations)
         {
-            var summer = CreateDecorationSprite(flat.Summer, flat.BaseAligned, IsLamp(flat));
-            var winter = flat.Summer == flat.Winter ? summer : CreateDecorationSprite(flat.Winter, flat.BaseAligned, IsLamp(flat));
+            var summer = CreateDecorationSprite(flat.Summer, flat.BaseAligned, Material(flat));
+            var winter = flat.Summer == flat.Winter ? summer : CreateDecorationSprite(flat.Winter, flat.BaseAligned, Material(flat));
             DecorationVisual visual = new(flat, summer, winter, NextLocationVisualOrdinal());
             AttachDecorationMesh(visual);
             AttachDecorationFlats(visual);
@@ -46,31 +45,16 @@ internal sealed partial class DaggerfallSiteAppearance
         }
     }
 
-    private static bool IsLamp(DaggerfallSiteDecoration flat) => flat.Source.Archive == LightFlatArchive;
+    /// <summary>A decoration takes the light around it, unless it is a lamp: a light source shows at its own brightness.</summary>
+    private static SpriteMaterialDescriptor Material(DaggerfallSiteDecoration flat) =>
+        flat.Source.Archive == LightFlatArchive ? UnlitSprite : LitSprite;
 
-    /// <summary>
-    /// A decoration takes the light around it. A lamp does too, and shines through its own art besides: emission
-    /// multiplies the texture's colour, so the flame shines while the dark iron takes the night, with no mask to paint.
-    /// </summary>
-    private SpriteMaterialDescriptor DecorationMaterial(RenderResource texture, bool lamp) => !lamp ? LitSprite
-        : LitSprite with { EmissionColor = Vector3.One, EmissionIntensity = lampLevel, EmissionMap = new RenderResourceReference(texture) };
-
-    /// <summary>Lights the location's lamps at a level, which is zero while they are out.</summary>
-    internal void UpdateLamps(float level)
-    {
-        if (level == lampLevel) return;
-        lampLevel = level;
-        foreach (DecorationSprite sprite in decorationSprites.Where(sprite => sprite.Lamp))
-            appearance.SetSpriteEmission(new(sprite.Visual, level));
-    }
-
-    private DecorationSprite CreateDecorationSprite(NormalizedBillboardSprite sprite, bool baseAligned, bool lamp)
+    private DecorationSprite CreateDecorationSprite(NormalizedBillboardSprite sprite, bool baseAligned, SpriteMaterialDescriptor material)
     {
         if (!decorationAtlases.TryGetValue(sprite.TexturePath, out var atlas))
         {
             var resource = appearance.OpenTexture(content, sprite.TexturePath, sprite.TextureSha256);
             decorationResources.Add(resource.Handle);
-            decorationTextures.Add(sprite.TexturePath, resource.Handle);
             var frames = SpriteAtlasAdapter.ToAtlasFrames(sprite.AtlasWidth, sprite.AtlasHeight,
                 sprite.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y,
                     frame.Width, frame.Height, frame.DisplaySize)).ToArray());
@@ -79,7 +63,7 @@ internal sealed partial class DaggerfallSiteAppearance
         }
         var result = new DecorationSprite(appearance.CreateSpriteFromAtlas(new(atlas, sprite.InitialFrameId,
             baseAligned ? new Vector2(.5f, 0f) : sprite.Pivot, sprite.Size, BillboardMode.Cylindrical,
-            SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f), DecorationMaterial(decorationTextures[sprite.TexturePath], lamp))), lamp);
+            SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f), material)));
         decorationSprites.Add(result);
         StartDecorationPlayback(result, atlas, sprite);
         return result;
@@ -91,15 +75,15 @@ internal sealed partial class DaggerfallSiteAppearance
         if (surfaceArt is null) return;
         DaggerfallSiteDecoration definition = flat.Definition;
         if (flat.RefreshedSummer is null && surfaceArt.Flats.TryGetValue(definition.Source, out DaggerfallArtFlat? summer))
-            flat.RefreshedSummer = CreateRefreshedDecorationSprite(definition.Summer, summer, definition.BaseAligned, IsLamp(definition));
+            flat.RefreshedSummer = CreateRefreshedDecorationSprite(definition.Summer, summer, definition.BaseAligned, Material(definition));
         if (flat.RefreshedWinter is null && surfaceArt.Flats.TryGetValue(definition.WinterSource, out DaggerfallArtFlat? winter))
             flat.RefreshedWinter = definition.WinterSource == definition.Source ? flat.RefreshedSummer
-                : CreateRefreshedDecorationSprite(definition.Winter, winter, definition.BaseAligned, IsLamp(definition));
+                : CreateRefreshedDecorationSprite(definition.Winter, winter, definition.BaseAligned, Material(definition));
     }
 
     /// <exception cref="InvalidOperationException">The refreshed flat does not have its classic sprite's frame count,
     /// so the classic frame identities would name the wrong frames.</exception>
-    private DecorationSprite CreateRefreshedDecorationSprite(NormalizedBillboardSprite sprite, DaggerfallArtFlat art, bool baseAligned, bool lamp)
+    private DecorationSprite CreateRefreshedDecorationSprite(NormalizedBillboardSprite sprite, DaggerfallArtFlat art, bool baseAligned, SpriteMaterialDescriptor material)
     {
         if (art.Frames.Count != sprite.Frames.Count)
             throw new InvalidOperationException($"Refreshed flat '{art.File.Path}' has {art.Frames.Count} frames; its classic sprite has {sprite.Frames.Count}.");
@@ -107,17 +91,39 @@ internal sealed partial class DaggerfallSiteAppearance
         {
             var resource = appearance.OpenTexture(content, art.File.Path, art.File.Sha256, TextureFilter.Nearest);
             decorationResources.Add(resource.Handle);
-            decorationTextures.Add(art.File.Path, resource.Handle);
             atlas = appearance.CreateSpriteAtlas(new(resource.Handle, SpriteAtlasAdapter.ToAtlasFrames(art.Width, art.Height,
                 art.Frames.Select((frame, index) => new NormalizedSpriteFrame(sprite.Frames[index].Id, (int)frame.X, (int)frame.Y, (int)frame.Width, (int)frame.Height)).ToArray())));
             decorationAtlases.Add(art.File.Path, atlas);
         }
         (Vector2 size, Vector2 pivot) = art.Placed(sprite.Size, baseAligned ? new Vector2(.5f, 0f) : sprite.Pivot);
         var result = new DecorationSprite(appearance.CreateSpriteFromAtlas(new(atlas, sprite.InitialFrameId, pivot, size,
-            BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f), DecorationMaterial(decorationTextures[art.File.Path], lamp))), lamp);
+            BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f),
+            art.Emission is { } emission ? GlowingSprite(emission) : material)));
+        if (art.Emission is not null) glowingDecorations.Add(result.Visual);
         decorationSprites.Add(result);
         StartDecorationPlayback(result, atlas, sprite);
         return result;
+    }
+
+    /// <summary>A lamp's material: it takes the light around it like any flat, and what its emission map holds shines at the lamps' level.</summary>
+    private SpriteMaterialDescriptor GlowingSprite(DaggerfallArtFile emission)
+    {
+        if (!decorationGlowMaps.TryGetValue(emission.Path, out RenderResource? map))
+        {
+            map = appearance.OpenTexture(content, emission.Path, emission.Sha256, TextureFilter.Nearest).Handle;
+            decorationResources.Add(map);
+            decorationGlowMaps.Add(emission.Path, map);
+        }
+        return LitSprite with { EmissionColor = Vector3.One, EmissionIntensity = lampLevel, EmissionMap = new RenderResourceReference(map) };
+    }
+
+    /// <summary>Lights the refreshed lamps at a level, which is zero while they are out.</summary>
+    internal void UpdateLampGlow(float level)
+    {
+        if (level == lampLevel) return;
+        lampLevel = level;
+        foreach (Appearance lamp in glowingDecorations)
+            appearance.SetSpriteEmission(new(lamp, level));
     }
 
     private void StartDecorationPlayback(DecorationSprite result, SpriteAtlas atlas, NormalizedBillboardSprite sprite)
@@ -177,7 +183,8 @@ internal sealed partial class DaggerfallSiteAppearance
         decorationSprites.Clear();
         decorationAtlases.Clear();
         decorationResources.Clear();
-        decorationTextures.Clear();
+        decorationGlowMaps.Clear();
+        glowingDecorations.Clear();
         return values;
     }
 }

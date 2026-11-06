@@ -1,0 +1,336 @@
+{
+  "seed": 27303,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy world scenery: the trees, rocks, plants and town fixtures of a dark fantasy RPG, seen from standing height. Keep the source's silhouette, proportions, local colours and the arrangement of its parts: it replaces the source at the same size in the world. Restrained palette with distinct light, middle and dark families. Detail hierarchy: silhouette first, a few large masses second, sparse material marks third. Foliage reads as clumps of painted leaf masses, not individual leaves. Keep open gaps between branches, bars and posts open. No extra parts, gemstones, runes, faces, symbols or fantasy embellishment. Not pixel art, not a photoreal photograph, not a glossy mobile-game asset, not a dramatic scene. No text, labels, border, vignette, frame, hand, person, ground plane, scenery or second object.",
+  "presentation": "One isolated object on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no ground shadow, no background texture and no cast shadow outside the object. The whole object visible with breathing room, centred, its base where the source's base is. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Flats: subjects the captions misread",
+  "items": [
+    {
+      "id": "flat-503-2",
+      "directory": "nature-desert/texture-503",
+      "image": "flat/texture-503-record-002-frame-000-source.png",
+      "content": "One low rounded smooth sandstone boulder, tan and brown, no carving.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-503-2 (15x9)"
+    },
+    {
+      "id": "flat-503-21",
+      "directory": "nature-desert/texture-503",
+      "image": "flat/texture-503-record-021-frame-000-source.png",
+      "content": "One low dark boulder with a tan sunlit top, plain natural rock, no carving.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-503-21 (10x5)"
+    },
+    {
+      "id": "flat-503-22",
+      "directory": "nature-desert/texture-503",
+      "image": "flat/texture-503-record-022-frame-000-source.png",
+      "content": "One low dark boulder with a tan sunlit top, plain natural rock, no carving.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-503-22 (7x4)"
+    },
+    {
+      "id": "flat-205-20",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-020-frame-000-source.png",
+      "content": "One lumpy tan burlap sack slumped on the ground, tied at the neck, coarse woven cloth.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-20 (27x27)"
+    },
+    {
+      "id": "flat-205-36",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-036-frame-000-source.png",
+      "content": "One small dark leather pouch tied with a drawstring, its cord trailing out to the right.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-36 (17x14)"
+    },
+    {
+      "id": "flat-205-40",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-040-frame-000-source.png",
+      "content": "One fern with long arching green fronds in a small round brown clay pot.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-40 (28x34)"
+    },
+    {
+      "id": "flat-205-41",
+      "directory": "props-containers/texture-205",
+      "image": "flat/texture-205-record-041-frame-000-source.png",
+      "content": "One round dark green glazed ceramic urn with a short domed lid, smooth glossy pottery.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-205-41 (19x20)"
+    },
+    {
+      "id": "flat-301-1",
+      "directory": "props-crops/texture-301",
+      "image": "flat/texture-301-record-001-frame-000-source.png",
+      "content": "One upright sheaf of dried brown wheat bound at the waist, stalks fanned at the base, seed heads drooping at the top.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-301-1 (36x58)"
+    },
+    {
+      "id": "flat-211-2",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-002-frame-000-source.png",
+      "content": "One round dark green glazed ceramic urn with a short domed lid, smooth glossy pottery.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-2 (19x20)"
+    },
+    {
+      "id": "flat-211-11",
+      "directory": "props-dungeon/texture-211",
+      "image": "flat/texture-211-record-011-frame-000-source.png",
+      "content": "One bundle of dark dried herbs hanging head-down from a thin cord, tied with a band near the top, its stems splayed.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-211-11 (19x51)"
+    },
+    {
+      "id": "flat-210-15",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-015-frame-000-source.png",
+      "content": "One tall thin bronze lamp post topped by a small glowing orange glass orb held in a round metal ring.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-15 (13x76)"
+    },
+    {
+      "id": "flat-213-5",
+      "directory": "props-plants/texture-213",
+      "image": "flat/texture-213-record-005-frame-000-source.png",
+      "content": "One fern with long arching green fronds in a small round brown clay pot.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-213-5 (28x34)"
+    },
+    {
+      "id": "flat-100-1",
+      "directory": "props-remains/texture-100",
+      "image": "flat/texture-100-record-001-frame-000-source.png",
+      "content": "One thin low smear of dark red spilled blood lying flat on the ground, irregular, with small splatter drops. No object, only blood.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-100-1 (47x8)"
+    },
+    {
+      "id": "flat-100-23",
+      "directory": "props-remains/texture-100",
+      "image": "flat/texture-100-record-023-frame-000-source.png",
+      "content": "One bleached human skull facing the viewer, dark round eye sockets, nasal hole and upper teeth, pale grey-white bone.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-100-23 (13x13)"
+    },
+    {
+      "id": "flat-206-0",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-000-frame-000-source.png",
+      "content": "One bleached human skull facing the viewer, dark round eye sockets, nasal hole and upper teeth, pale grey-white bone.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-0 (13x13)"
+    },
+    {
+      "id": "flat-206-1",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-001-frame-000-source.png",
+      "content": "One bleached human skull with its jaw, facing the viewer, dark round eye sockets, nasal hole and teeth, pale grey-white bone.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-1 (13x15)"
+    },
+    {
+      "id": "flat-300-6",
+      "directory": "props-stalagmites/texture-300",
+      "image": "flat/texture-300-record-006-frame-000-source.png",
+      "content": "One tall thin stalagmite of smooth wet tan limestone flowstone, natural cave rock with soft melted drips, pale highlights and warm brown creases.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-300-6 (20x45)"
+    },
+    {
+      "id": "flat-300-7",
+      "directory": "props-stalagmites/texture-300",
+      "image": "flat/texture-300-record-007-frame-000-source.png",
+      "content": "One sharp stalagmite with a wide flared base and a small second spike of smooth wet tan limestone flowstone, natural cave rock with soft melted drips, pale highlights and warm brown creases.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-300-7 (54x50)"
+    },
+    {
+      "id": "flat-300-8",
+      "directory": "props-stalagmites/texture-300",
+      "image": "flat/texture-300-record-008-frame-000-source.png",
+      "content": "One short conical stalagmite of smooth wet tan limestone flowstone, natural cave rock with soft melted drips, pale highlights and warm brown creases.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-300-8 (20x25)"
+    },
+    {
+      "id": "flat-300-9",
+      "directory": "props-stalagmites/texture-300",
+      "image": "flat/texture-300-record-009-frame-000-source.png",
+      "content": "One stalagmite with rounded bulging tiers and a flared base of smooth wet tan limestone flowstone, natural cave rock with soft melted drips, pale highlights and warm brown creases.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-300-9 (35x48)"
+    },
+    {
+      "id": "flat-300-10",
+      "directory": "props-stalagmites/texture-300",
+      "image": "flat/texture-300-record-010-frame-000-source.png",
+      "content": "One tall stalagmite with rounded bulging tiers and a flared base of smooth wet tan limestone flowstone, natural cave rock with soft melted drips, pale highlights and warm brown creases.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-300-10 (30x68)"
+    },
+    {
+      "id": "flat-300-11",
+      "directory": "props-stalagmites/texture-300",
+      "image": "flat/texture-300-record-011-frame-000-source.png",
+      "content": "One low wide stalagmite mound of smooth wet tan limestone flowstone, natural cave rock with soft melted drips, pale highlights and warm brown creases.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-300-11 (54x38)"
+    },
+    {
+      "id": "flat-300-12",
+      "directory": "props-stalagmites/texture-300",
+      "image": "flat/texture-300-record-012-frame-000-source.png",
+      "content": "One lumpy knobbly leaning stalagmite of smooth wet tan limestone flowstone, natural cave rock with soft melted drips, pale highlights and warm brown creases.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-300-12 (13x18)"
+    },
+    {
+      "id": "flat-300-13",
+      "directory": "props-stalagmites/texture-300",
+      "image": "flat/texture-300-record-013-frame-000-source.png",
+      "content": "One low wide stalagmite mound of smooth wet tan limestone flowstone, natural cave rock with soft melted drips, pale highlights and warm brown creases.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-300-13 (54x32)"
+    },
+    {
+      "id": "flat-300-14",
+      "directory": "props-stalagmites/texture-300",
+      "image": "flat/texture-300-record-014-frame-000-source.png",
+      "content": "One short conical stalagmite of smooth wet tan limestone flowstone, natural cave rock with soft melted drips, pale highlights and warm brown creases.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-300-14 (20x22)"
+    },
+    {
+      "id": "flat-300-15",
+      "directory": "props-stalagmites/texture-300",
+      "image": "flat/texture-300-record-015-frame-000-source.png",
+      "content": "One short conical stalagmite of smooth wet tan limestone flowstone, natural cave rock with soft melted drips, pale highlights and warm brown creases.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-300-15 (21x22)"
+    },
+    {
+      "id": "flat-214-8",
+      "directory": "props-tools/texture-214",
+      "image": "flat/texture-214-record-008-frame-000-source.png",
+      "content": "One long low bundle of dark woven rope netting lying on the ground, tapering to a thin cord at the right.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-214-8 (159x20)"
+    },
+    {
+      "id": "flat-214-15",
+      "directory": "props-tools/texture-214",
+      "image": "flat/texture-214-record-015-frame-000-source.png",
+      "content": "One flat brown wooden board lying on the ground with a raised arched wooden handle on top.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-214-15 (30x14)"
+    },
+    {
+      "id": "flat-216-8",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-008-frame-000-source.png",
+      "content": "One green glass flask with a narrow neck and red stopper, resting on a low spread of folded dark grey cloth.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-8 (19x14)"
+    },
+    {
+      "id": "flat-216-10",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-010-frame-000-source.png",
+      "content": "One low oval heap of small pale ice-blue and white crystal gems.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-10 (22x14)"
+    },
+    {
+      "id": "flat-216-28",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-028-frame-000-source.png",
+      "content": "One low spread of dark armour and folded brown leather lying on the ground, gold coins scattered along its front edge.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-28 (84x24)"
+    },
+    {
+      "id": "flat-216-33",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-033-frame-000-source.png",
+      "content": "One low spread of folded brown leather on grey cloth, a glass vial of green liquid standing on it, gold coins and a dark dagger at its front.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-216-33 (92x23)"
+    }
+  ],
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "flats",
+      "model": "krea2-turbo",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ]
+}

@@ -669,8 +669,8 @@ internal sealed record DaggerfallSiteLightingTuning(
     /// <summary>The linear colour and level of lit window glass, whose emission adds to the light the wall takes.</summary>
     internal Vector3 WindowColor { get; init; } = new(1f, .47f, .04f);
     internal float WindowLevel { get; init; } = .8f;
-    /// <summary>How brightly a lamp flat shines through its own art, its flame far more than its dark iron. Above 1, it can bloom.</summary>
-    internal float LampLevel { get; init; } = 1.3f;
+    /// <summary>How brightly a refreshed lamp's flame or glass shines over its painted colour, added to the light the lamp takes.</summary>
+    internal float LampLevel { get; init; } = 1f;
     /// <summary>How much of the light above 1 spreads as a glow; 0 for none.</summary>
     internal float Bloom { get; init; } = .25f;
     internal static DaggerfallSiteLightingTuning Classic { get; } = new(
@@ -684,11 +684,12 @@ internal sealed record DaggerfallSiteLightingTuning(
             if (!float.IsFinite(scale) || scale <= 0) throw new ArgumentOutOfRangeException(nameof(ExteriorScale), "A site's light scale is finite and positive.");
         if (!float.IsFinite(NightColor.X + NightColor.Y + NightColor.Z) || NightColor.X < 0 || NightColor.Y < 0 || NightColor.Z < 0)
             throw new ArgumentOutOfRangeException(nameof(NightColor), "The night's colour is finite and not negative.");
-        if (!float.IsFinite(LampLevel) || LampLevel < 0 || !float.IsFinite(Bloom) || Bloom < 0)
-            throw new ArgumentOutOfRangeException(nameof(LampLevel), "A lamp's level and the bloom are finite and not negative.");
+        if (!float.IsFinite(Bloom) || Bloom < 0) throw new ArgumentOutOfRangeException(nameof(Bloom), "The bloom is finite and not negative.");
         if (!float.IsFinite(WindowColor.X + WindowColor.Y + WindowColor.Z + WindowLevel)
             || WindowColor.X < 0 || WindowColor.Y < 0 || WindowColor.Z < 0 || WindowLevel < 0)
             throw new ArgumentOutOfRangeException(nameof(WindowColor), "Window glass's colour and level are finite and not negative.");
+        if (!float.IsFinite(LampLevel) || LampLevel < 0)
+            throw new ArgumentOutOfRangeException(nameof(LampLevel), "A lamp's level is finite and not negative.");
         if (!float.IsFinite(MobileGlowRange) || MobileGlowRange <= 0 || !float.IsFinite(MobileGlowIntensity) || MobileGlowIntensity < 0)
             throw new ArgumentOutOfRangeException(nameof(DaggerfallSiteLightingTuning), "Mobile glow requires a positive finite range and nonnegative finite intensity.");
         if (!float.IsFinite(SpellLightRange) || SpellLightRange <= 0 || !float.IsFinite(SpellLightIntensity) || SpellLightIntensity < 0)
