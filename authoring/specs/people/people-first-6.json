@@ -1,0 +1,265 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Highly detailed lurid pulp-fantasy character painting in the manner of 1970s and 80s paperback cover art (Frank Frazetta, Boris Vallejo): glossy airbrushed oil rendering, strongly modelled features with defined brows, eyes, nose, lips and cheekbones, fine skin detail and sheen, individual strands of hair and beard, every fold of cloth, seam, buckle and link defined, warm rim light against deep shadow, sharp specular highlights, rich saturated colour. Crisp, confident, finely detailed forms rather than flat broad shapes; keep the original local colours. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent cast of grounded fantasy RPG character art. Keep the source's pose, skin tone, hair, proportions, build, costume, garment colours and everything the person holds: it replaces the source at the same size in the world. Keep open gaps between arms, legs and held objects open. No extra clothing, weapon, armour, text, border, scenery, shadow or second figure.",
+  "presentation": "One isolated full-length person on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no ground shadow, no background texture and no cast shadow outside the figure. The whole figure visible with breathing room, centred, feet where the source's feet are. Preserve the source view and pose. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "People first pass 6",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "flats",
+      "model": "qwen-edit",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "conditioning": "reference"
+    }
+  ],
+  "items": [
+    {
+      "id": "person-176-4",
+      "directory": "people-dark-brotherhood/texture-176",
+      "image": "person/texture-176-record-004-frame-000-source.png",
+      "content": "One small adult woman with dark hair tied back, in a pale grey top and a thin gold-trimmed loincloth, tan skin, leaning forward with one arm out, gold cuffs, bare feet. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-176-4 (71x106)"
+    },
+    {
+      "id": "person-177-3",
+      "directory": "people-mages/texture-177",
+      "image": "person/texture-177-record-003-frame-000-source.png",
+      "content": "One blonde curly-haired woman in a pink blouse with billowing sleeves, black trousers and black heeled boots, one hand raised under a floating round red stone. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-177-3 (50x96)"
+    },
+    {
+      "id": "person-178-3",
+      "directory": "people-necromancers/texture-178",
+      "image": "person/texture-178-record-003-frame-000-source.png",
+      "content": "One standing worshipper in red and dark hooded robes and baggy trousers with gold trim and a gold skull amulet, face hidden, bare forearms raised and pressed together before the hood, bare feet. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-178-3 (29x82)"
+    },
+    {
+      "id": "person-179-2",
+      "directory": "people-witches/texture-179",
+      "image": "person/texture-179-record-002-frame-000-source.png",
+      "content": "One slim blonde woman with long wavy hair in a long green dress with a high thigh slit, holding a tall twisted vine staff, bare feet. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-179-2 (77x105)"
+    },
+    {
+      "id": "person-181-3",
+      "directory": "people-temple/texture-181",
+      "image": "person/texture-181-record-003-frame-000-source.png",
+      "content": "One bald priest with a long dark braid, in long blue robes, seen from behind and to the side, one arm raised holding a tall gold staff topped with a blue and gold jewel. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-181-3 (36x77)"
+    },
+    {
+      "id": "person-182-1",
+      "directory": "people-common/texture-182",
+      "image": "person/texture-182-record-001-frame-000-source.png",
+      "content": "One broad dark-skinned tavern keeper, bald and clean-shaven, in a long tan apron over a pale shirt, wiping a tankard with a white towel, with green and red bottles at his feet. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-182-1 (61x117)"
+    },
+    {
+      "id": "person-182-7",
+      "directory": "people-common/texture-182",
+      "image": "person/texture-182-record-007-frame-000-source.png",
+      "content": "One older dark-skinned man with white hair and a white beard, in a long tan apron over a pale shirt, brown boots, holding a wide wooden bowl. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-182-7 (62x118)"
+    },
+    {
+      "id": "person-182-13",
+      "directory": "people-common/texture-182",
+      "image": "person/texture-182-record-013-frame-000-source.png",
+      "content": "One man in a wide brown hat and a fur-trimmed brown coat, squatting on a low wooden crate, holding out a teal bottle, with more bottles around him. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-182-13 (75x79)"
+    },
+    {
+      "id": "person-182-19",
+      "directory": "people-common/texture-182",
+      "image": "person/texture-182-record-019-frame-000-source.png",
+      "content": "One slim dark-haired person in a grey hood, a white laced blouse, a brown belt with a red pouch, black leggings and brown shoes. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-182-19 (70x127)"
+    },
+    {
+      "id": "person-182-25",
+      "directory": "people-common/texture-182",
+      "image": "person/texture-182-record-025-frame-000-source.png",
+      "content": "One bearded man in a red cap and red belted tunic, a brown strap across the chest and a leather satchel, brown hose and boots, hand on hip. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-182-25 (69x128)"
+    },
+    {
+      "id": "person-182-35",
+      "directory": "people-common/texture-182",
+      "image": "person/texture-182-record-035-frame-000-source.png",
+      "content": "One man with a red cap, dark beard and gold earring, in a tan tunic with a wide black belt and square gold buckle, olive trousers and brown boots. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-182-35 (73x128)"
+    },
+    {
+      "id": "person-182-41",
+      "directory": "people-common/texture-182",
+      "image": "person/texture-182-record-041-frame-000-source.png",
+      "content": "One small woman with long wavy black hair, in a purple draped gown, one arm out and the other holding a thin gold staff topped with a white jewel. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-182-41 (131x137)"
+    },
+    {
+      "id": "person-182-47",
+      "directory": "people-common/texture-182",
+      "image": "person/texture-182-record-047-frame-000-source.png",
+      "content": "One blonde woman with long curled hair, in a long pink-purple gown with a ruffled neckline, seen from the side looking over her shoulder. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-182-47 (65x127)"
+    },
+    {
+      "id": "person-182-55",
+      "directory": "people-common/texture-182",
+      "image": "person/texture-182-record-055-frame-000-source.png",
+      "content": "One long-haired person in a grey hood, an open grey coat over a black tunic, tan hose and tall black boots, hands at the waist. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-182-55 (67x125)"
+    },
+    {
+      "id": "person-183-4",
+      "directory": "people-noble/texture-183",
+      "image": "person/texture-183-record-004-frame-000-source.png",
+      "content": "One bearded brown-haired knight with no helmet, wearing a tabard quartered grey and tan over mail sleeves, black gauntlets, plate legs, a dark sword at the hip. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-183-4 (79x166)"
+    },
+    {
+      "id": "person-183-17",
+      "directory": "people-noble/texture-183",
+      "image": "person/texture-183-record-017-frame-000-source.png",
+      "content": "One hunched figure with long pale hair, in ragged olive hooded robes with a knotted rope belt. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-183-17 (114x163)"
+    },
+    {
+      "id": "person-184-3",
+      "directory": "people-common-2/texture-184",
+      "image": "person/texture-184-record-003-frame-000-source.png",
+      "content": "One big bald man playing a long wooden pipe held up to his mouth, in a pink shirt, a gold belt, dark green breeches and wrapped brown boots. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-184-3 (29x74)"
+    },
+    {
+      "id": "person-184-10",
+      "directory": "people-common-2/texture-184",
+      "image": "person/texture-184-record-010-frame-000-source.png",
+      "content": "One blonde adult woman in a black two-piece with a green hanging cloth, a long dark cape and tall black boots, one hand behind her head. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-184-10 (40x75)"
+    },
+    {
+      "id": "person-184-17",
+      "directory": "people-common-2/texture-184",
+      "image": "person/texture-184-record-017-frame-000-source.png",
+      "content": "One dark-skinned woman with short black hair, in a white top with pink sleeves, green breeches and wrapped brown boots, arms crossed. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-184-17 (31x80)"
+    },
+    {
+      "id": "person-184-23",
+      "directory": "people-common-2/texture-184",
+      "image": "person/texture-184-record-023-frame-000-source.png",
+      "content": "One blonde woman in a pink blouse with big sleeves, a gold belt, green breeches and wrapped brown boots. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-184-23 (31x80)"
+    },
+    {
+      "id": "person-184-30",
+      "directory": "people-common-2/texture-184",
+      "image": "person/texture-184-record-030-frame-000-source.png",
+      "content": "One dark-skinned adult woman with black hair, in a black two-piece, a grey hanging cloth, bare legs and dark boots. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-184-30 (27x82)"
+    },
+    {
+      "id": "person-334-11",
+      "directory": "people-daggerfall/texture-334",
+      "image": "person/texture-334-record-011-frame-000-source.png",
+      "content": "One hooded man in a brown short tunic and grey hose, one foot up on a small dark wooden chest, playing a lute. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-334-11 (78x120)"
+    },
+    {
+      "id": "person-346-0",
+      "directory": "people-wayrest/texture-346",
+      "image": "person/texture-346-record-000-frame-000-source.png",
+      "content": "One grey-skinned woman with long dark hair and pale eyes, in a long red gown with a green jewelled belt, a dark cat sitting at her feet. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-346-0 (76x130)"
+    },
+    {
+      "id": "person-346-18",
+      "directory": "people-wayrest/texture-346",
+      "image": "person/texture-346-record-018-frame-000-source.png",
+      "content": "One curly brown-haired young person in a short pale grey-blue tunic with a gold-buckled belt and pouch, tan hose, holding up a round gold-rimmed tambourine and a small stick. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-346-18 (53x97)"
+    },
+    {
+      "id": "person-357-7",
+      "directory": "people-sentinel/texture-357",
+      "image": "person/texture-357-record-007-frame-000-source.png",
+      "content": "One dark-haired person sitting cross-legged on the ground in a tan tunic and tan leggings, a brown satchel at the side. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-357-7 (80x76)"
+    }
+  ]
+}
