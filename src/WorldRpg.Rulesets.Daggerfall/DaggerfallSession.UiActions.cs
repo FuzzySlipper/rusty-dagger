@@ -27,7 +27,7 @@ internal sealed partial class DaggerfallSession
         _uiInput = parsed;
         // Quick start commits its character in this update's actions, before the product begins from it.
         if (parsed.Contains(DaggerfallUiActionKind.CharacterQuickStart)) return true;
-        if (parsed.Contains(DaggerfallUiActionKind.Begin) && State.Character.Pending is not null)
+        if (parsed.Contains(DaggerfallUiActionKind.Begin) && State.Character.Pending is not null && !_definitions.NewGame.QuickEntry)
         {
             Presentation.SetOutcome("Commit or cancel character choices before beginning play.");
             return false;
@@ -102,6 +102,8 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.DaedraAnswer:
                 ChangeSummoning(action); break;
             case DaggerfallUiActionKind.Begin:
+                if (_definitions.NewGame.QuickEntry) QuickStartCharacter();
+                break;
             // A running game already has its content; only the unavailable session imports it.
             case DaggerfallUiActionKind.ContentImport:
             case DaggerfallUiActionKind.ContentImportCancel:

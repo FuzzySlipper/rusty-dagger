@@ -18,6 +18,8 @@ internal sealed record DaggerfallNewGameDefinition(int Gold, int SpellbookTempla
 
     /// <summary>The hour of the first day a new game begins at; the corpus calendar starts at midnight.</summary>
     internal int StartHour { get; init; }
+    /// <summary>Begin starts play at once: a character is quick-started and the opening cinematics are skipped.</summary>
+    internal bool QuickEntry { get; init; }
 }
 
 internal static partial class DaggerfallBaseContent
@@ -112,8 +114,9 @@ internal static partial class DaggerfallBaseContent
                 diagnostics.Add($"New-game start pack '{packId}' must name distinct quest sources.");
             int startHour = OptionalInteger(root, "startHour", diagnostics) ?? baseline.StartHour;
             if (startHour is < 0 or >= DaggerfallCalendar.HoursPerDay) diagnostics.Add($"New-game start pack '{packId}' names start hour {startHour}, outside the day.");
+            bool quickEntry = root.TryGetProperty("quickEntry", out JsonElement quick) && quick.GetBoolean();
             diagnostics.ThrowIfAny();
-            return baseline with { Gold = gold, StartSitePack = startSite, Quests = quests, StartHour = startHour };
+            return baseline with { Gold = gold, StartSitePack = startSite, Quests = quests, StartHour = startHour, QuickEntry = quickEntry };
         }
         catch (JsonException error)
         {

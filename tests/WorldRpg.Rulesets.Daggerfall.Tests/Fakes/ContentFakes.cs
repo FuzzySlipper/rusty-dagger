@@ -67,6 +67,8 @@ internal sealed class ContentFake : IContentService
     public ContentReference ResolveReference(ContentResolveRequest request)
     {
         ResolveCalls++;
+        // Bundles carry the art replacements, whose hundreds of files no profile lists: a session asks for them by the art pack's digests.
+        if (request.Path.StartsWith("worldrpg/media/refreshed/", StringComparison.Ordinal)) values.TryAdd(request.Path, request.Sha256);
         if (!values.TryGetValue(request.Path, out ContentSha256 known) || known != request.Sha256) throw new InvalidOperationException($"Unexpected content reference '{request.Path}'{(values.ContainsKey(request.Path) ? " with another digest" : "")}.");
         ulong value = nextHandle++;
         references.Add(value, new KeyValuePair<string, ContentSha256>(request.Path, known));

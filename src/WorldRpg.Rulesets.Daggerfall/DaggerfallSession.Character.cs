@@ -81,6 +81,17 @@ internal sealed partial class DaggerfallSession
     }
 
     /// <summary>The name a quick-started character takes when the draft has none.</summary>
+    /// <summary>Quick-starts the character the draft stands at, for a start that begins play with one press.</summary>
+    private void QuickStartCharacter()
+    {
+        if (State.Character.Pending is null) State.Character.BeginFreshChoices(_random);
+        if (State.Character.CreationMode == "character-generation") State.Character.BackToClassPick();
+        DaggerfallCharacterCreationChoices draft = State.Character.Pending!;
+        State.Character.ReplacePending(State.Character.WithCompletedBackground(
+            string.IsNullOrWhiteSpace(draft.Name) ? draft with { Name = QuickStartName } : draft, _random));
+        State.Character.CommitChoices(replaceCommitted: true);
+    }
+
     private const string QuickStartName = "Adventurer";
 
     private void RequireCharacterDraft()

@@ -7,6 +7,6 @@
     { "id": "daggerfall.base" },
     { "id": "daggerfall.charing-exterior" }
   ],
-  "description": "Developer start: a new game begins in Charing's streets at nine in the morning with gold for its shops, trainers and inn, and no opening quests.",
+  "description": "Developer start: a new game begins in Charing's streets at nine in the morning with gold for its shops, trainers and inn, and no opening quests. Begin starts play at once, with a quick-started character and no opening cinematics.",
   "payload": "worldrpg/payloads/daggerfall.town-start.json"
 }

@@ -8,6 +8,7 @@ internal sealed partial class DaggerfallSession
 {
     public EntryScreenStartupResult StartEntry()
     {
+        if (_definitions.NewGame.QuickEntry) return EntryScreenStartupResult.ReadyForPlay;
         EntryScreenStartupResult result = _openingCinematics.Start();
         if (result == EntryScreenStartupResult.Failed)
             Presentation.SetOutcome(_openingCinematics.Failure?.Failure ?? "The opening cinematic could not start.");

@@ -659,7 +659,6 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         {
             ApplyPlayerPreferences(replacement);
             OfferBundles(replacement);
-            replacement.PublishInitial();
         }
         catch
         {
@@ -667,9 +666,12 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             throw;
         }
 
+        // The sessions share one camera view: the old one lets go of its sky, backdrop and weather before the new
+        // one puts up its own, or a game that starts outdoors loses them to the title session it replaced.
         IGameSession previous = _session;
         _session = replacement;
         previous.Dispose();
+        replacement.PublishInitial();
         ProductMode from = _mode;
         _mode = mode;
         if (_session is IModeAwareGameSession aware) aware.ApplyProductMode(mode);

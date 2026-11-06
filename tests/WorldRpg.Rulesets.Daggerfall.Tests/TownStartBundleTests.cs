@@ -21,6 +21,38 @@ public sealed class TownStartBundleTests
     private static readonly DaggerfallSiteBuildingId GeneralStore = new(2, 1, 0); // GENRAL01
 
     [Fact]
+    public void Begin_alone_starts_a_town_game_with_a_quick_started_character_and_no_opening_cinematics()
+    {
+        string root = TestData.RepositoryRoot;
+        ProductContent full = FullContent(root);
+        DaggerfallSiteProfile exterior = ReadProfile(root, full, TestPayload.Definitions, "daggerfall.charing-exterior.json");
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, exterior);
+        foreach (DaggerfallSiteProfile near in new AssembledWorld().NearbyExteriors(exterior.Site!.Value)) AssembledWorldRun.Admit(content, near);
+        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        spatial.KeepPosition = true;
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
+        ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
+        CapturingDaggerfallRuleset ruleset = new(videosEnabled: true, variants: DaggerfallVariants.All);
+        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, full, input), ruleset, new GameBundleId(Bundle));
+        product.Start();
+
+        product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"begin"}""")]));
+        FinishLoading(product, 1);
+
+        Assert.Equal(ProductMode.Playing, product.Mode);
+        DaggerfallSession game = ruleset.RequireSession();
+        Assert.Equal(exterior.ProfileKey, game.Sites.ActiveProfile);
+        Assert.False(string.IsNullOrWhiteSpace(game.State.Character.Capture().Name));
+        Assert.True(game.State.Currency.Read().Gold >= 5000UL);
+
+        // The title session's end leaves the sky a game that starts outdoors has already put up.
+        Assert.True(engine.BackdropLinked);
+        Assert.True(engine.Clouds.Last().Coverage > 0);
+    }
+
+    [Fact]
     public void A_quick_started_town_game_begins_in_charing_and_walks_into_an_open_shop_with_a_merchant()
     {
         string root = TestData.RepositoryRoot;
