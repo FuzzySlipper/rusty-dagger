@@ -280,6 +280,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _lootUi.CloseAll();
         State.PlayerControl.YawRadians = yawRadians;
         State.PlayerControl.PitchRadians = pitchRadians;
+        State.Transport.Ride.Reset();
         _spatial.Relocate(State.PlayerControl, position);
         _camera.Update(State.PlayerControl);
     }

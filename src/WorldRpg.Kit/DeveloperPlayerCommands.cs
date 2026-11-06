@@ -40,6 +40,9 @@ public interface IDeveloperPlayerSession
     /// <summary>Puts the player on a mount the ruleset names, giving them it if they have none, or back on foot.</summary>
     DebugCommandResult Ride(string mount);
 
+    /// <summary>Reports the mount under the player: its speed and heading and how far the view looks past it.</summary>
+    DebugCommandResult RideState();
+
     /// <summary>Changes the player into a beast form the ruleset names, through the ordinary change; none names the way back.</summary>
     DebugCommandResult Morph(string form);
 
@@ -79,6 +82,9 @@ public sealed class DeveloperPlayerDebugModule(Func<IDeveloperPlayerSession> cur
 
     [DebugCommand("player.ride", Description = "Developer: put the player on MOUNT (horse, cart), giving them it if they have none, or back on foot.")]
     public DebugCommandResult Ride(string mount) => current().Ride(mount);
+
+    [DebugCommand("player.ride.state", Description = "Developer: the mount under the player, its speed in metres a second, its heading and how far the view looks past it.")]
+    public DebugCommandResult RideState() => current().RideState();
 
     [DebugCommand("player.morph", Description = "Developer: change the player into beast FORM, cursing them with it if they aren't, or back with \"\".")]
     public DebugCommandResult Morph(string form) => current().Morph(form);

@@ -290,3 +290,17 @@ Magical concealment composes six normal/true duration-only variants in the exist
 Mysticism composes language comprehension into the current perception and dialogue projections. Dispel Magic holds a paid, saveable player choice and cancels the selected active bundle through the effect lifecycle. Creature dispel uses Engine distance queries and ruleset enemy groups; roster banishment removes actors without death or loot, and authored absence survives save and site return.
 
 Lock and Open remain ready in the effect lifecycle until dungeon-door activation consumes them. Lock precedes Open and ordinary lockpick/bash; current actor level controls lock strength and opening, with the Skeleton Key's interior exemption. The canonical door owner projects motion, collision and lock state, and the existing site/save owners retain both doors and ready effects. A building's entrance is not its RMB model's lock: each activation sets it from `DaggerfallBuildingEntryPolicy` (the donor's `BuildingIsUnlocked` by building type and hour, Sun's Rest for shops, guild hall access, guild houses, owned houses and ships, quest residences), locked at the building's quality over two, and lockpick, bash and Open act on that.
+
+## Riding
+
+`RideMotion` in the Kit is a mount's motion under its rider, and `DaggerfallTransportPolicy` holds one with the horse's and
+the cart's `RideTuning`. Forward trots, the sprint key urges the mount to its top speed, which is the classic mount speed,
+and the crouch key reins it to a walk. It builds speed and carries it: released it coasts, held back it brakes and then
+backs. A wall takes what it could not carry, a rising slope takes some of its pace, and so does water.
+
+The mount has a heading of its own, which the character step follows. The heading chases the view at a rate that falls with
+speed, and the view can look only so far past it, so a hard turn of the view waits for the mount. Turning keys rein it round
+directly and carry the view with it. Motion and heading aren't saved: a mount stands still facing the view after a load, a
+relocation or a change of mount.
+
+A gallop tires the rider as a run does but trains no skill, and a rider with no fatigue left gets no gallop.

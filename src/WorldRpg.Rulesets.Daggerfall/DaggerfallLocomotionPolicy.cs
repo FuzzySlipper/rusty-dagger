@@ -83,7 +83,7 @@ internal sealed class DaggerfallLocomotionPolicy
             StrafeSpeed: groundSpeed,
             JumpSpeed: JumpSpeed(jumpingSkill, crouching, enhancedJumping));
         return new(controls, running, canMove && onFoot && !slowfall && (frame.JumpPressed || frame.JumpHeld),
-            frame.Movement.Y, frame.CrouchHeld, UpHeld: frame.JumpHeld, DownHeld: frame.CrouchHeld);
+            frame.Movement.Y, frame.CrouchHeld, UpHeld: frame.JumpHeld, DownHeld: frame.CrouchHeld, SprintHeld: frame.SprintHeld);
     }
 
     /// <summary>Charges and records only accepted Engine motion, never an input request that Engine kept grounded or blocked.</summary>
@@ -102,6 +102,8 @@ internal sealed class DaggerfallLocomotionPolicy
             _runningGameSeconds += gameSeconds;
             recordSkillUse(new DaggerfallSkillUse(DaggerfallMechanicsIds.Running.Value, DaggerfallSkillUseReason.Running, DaggerfallSkillUseOutcome.Accepted));
         }
+        // A gallop tires the rider as a run does, but it is the horse's legs that train.
+        if (step.Galloping && moved) _runningGameSeconds += gameSeconds;
         if (swimming && !step.Climbing)
             _swimmingGameSeconds += gameSeconds;
 
@@ -225,7 +227,8 @@ internal sealed class DaggerfallLocomotionPolicy
 }
 
 internal readonly record struct DaggerfallLocomotionStep(CharacterStepControls Controls, bool Running, bool JumpRequested,
-    float ForwardIntent = 0f, bool CrouchHeld = false, bool Climbing = false, bool UpHeld = false, bool DownHeld = false);
+    float ForwardIntent = 0f, bool CrouchHeld = false, bool Climbing = false, bool UpHeld = false, bool DownHeld = false,
+    bool SprintHeld = false, bool Galloping = false);
 
 /// <summary>
 /// One actual airborne-to-supported transition reported by the Engine character controller.

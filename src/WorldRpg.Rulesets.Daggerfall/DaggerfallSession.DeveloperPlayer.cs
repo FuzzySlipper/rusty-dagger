@@ -1,8 +1,10 @@
+using System.Globalization;
 using System.Text;
 using Rusty.Engine;
 using Rusty.Engine.Debugging;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.World;
 using EquipmentSlotId = WorldRpg.Kit.Inventory.EquipmentSlotId;
@@ -167,6 +169,16 @@ internal sealed partial class DaggerfallSession : IDeveloperPlayerSession
         DaggerfallTransportActionResult result = State.Transport.SelectMount(mode, State.Inventory.Read(), TransportAccess());
         AppliedTransport(result);
         return result.Applied ? DebugCommandResult.Success(result.Message) : Refused(result.Message);
+    }
+
+    public DebugCommandResult RideState()
+    {
+        if (DeveloperMoveRefusal() is { } refusal) return Refused(refusal);
+        if (State.Transport.RideTuning is null) return Refused("The player rides nothing.");
+        RideMotion ride = State.Transport.Ride;
+        float yaw = State.PlayerControl.YawRadians;
+        return DebugCommandResult.Success(string.Create(CultureInfo.InvariantCulture,
+            $"{State.Transport.Mode} at {ride.Speed:0.0} m/s, heading {(ride.HeadingRadians ?? yaw) * 180 / MathF.PI:0}, the view {-ride.TurnFrom(yaw) * 180 / MathF.PI:0} degrees past it."));
     }
 
     public DebugCommandResult Morph(string form)

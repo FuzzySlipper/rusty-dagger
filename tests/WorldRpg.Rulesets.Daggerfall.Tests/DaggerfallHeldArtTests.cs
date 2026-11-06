@@ -365,11 +365,11 @@ public sealed class DaggerfallHeldArtTests
     {
         List<string> releases = [];
         DaggerfallTransportMode mode = Enum.Parse<DaggerfallTransportMode>(ride);
-        float pitch = -.5F;
+        float pitch = -.5F, turn = 0;
         (DaggerfallSiteAppearance presentation, AppearanceFake appearance, EngineContextFake engine) = Viewing(releases);
         using (presentation)
         {
-            presentation.UsePlayerRide(() => (mode, 9, pitch));
+            presentation.UsePlayerRide(() => (mode, 9, pitch, turn));
             presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: false);
             presentation.Advance(OuterUpdate(1));
             presentation.Publish(EmptyActors());
@@ -381,6 +381,12 @@ public sealed class DaggerfallHeldArtTests
             // Level whatever the view's pitch, so looking down looks at the horse.
             Assert.Equal(Quaternion.CreateFromAxisAngle(Vector3.UnitX, .5F), Mount()[0].Transform.Rotation);
             Assert.True(presentation.MountEyeLift(1.6F) > 0);
+
+            // A mount whose heading lies right of the view is drawn turned that way, its nose to the right.
+            turn = .3F;
+            presentation.Publish(EmptyActors());
+            Assert.True(Vector3.Transform(-Vector3.UnitZ, Mount()[0].Transform.Rotation).X > 0);
+            turn = 0;
 
             mode = DaggerfallTransportMode.Foot;
             presentation.Advance(OuterUpdate(2));
