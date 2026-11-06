@@ -71,6 +71,7 @@ internal class EngineContextFake : DispatchProxy
     internal bool BackdropLinked => ((CameraServiceFake)(object)camera).BackdropLinked;
     internal IReadOnlyList<CloudsRequest> Clouds => ((CameraServiceFake)(object)camera).Clouds;
     private readonly IHeightfieldService heightfield = ServiceProxy<IHeightfieldService, HeightfieldServiceFake>.Create();
+    private readonly IAuthoredContentService authored = ServiceProxy<IAuthoredContentService, AuthoredContentFake>.Create();
     /// <summary>Whether the far ground draws, as the last call left it.</summary>
     internal bool HeightfieldVisible => ((HeightfieldServiceFake)(object)heightfield).Visible;
     private IWorldOriginService worldOrigin = null!;
@@ -121,6 +122,7 @@ internal class EngineContextFake : DispatchProxy
         "get_Persistence" => persistence,
         "get_WorldOrigin" => worldOrigin,
         "get_Heightfield" => heightfield,
+        "get_AuthoredContent" => authored,
         _ => throw new NotSupportedException(method?.Name),
     };
 
@@ -515,6 +517,18 @@ internal sealed class InputServiceFake : IInputService
         if (Outcome == InputMappingReplacementOutcome.Staged) Mappings = mappings.ToArray();
         return Outcome;
     }
+}
+
+/// <summary>Admits every catalog: nothing here reads one back.</summary>
+internal class AuthoredContentFake : DispatchProxy
+{
+    private ulong _next = 1;
+
+    protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
+    {
+        nameof(IAuthoredContentService.AdmitCatalogPayload) => new AuthoredCatalog(new AuthoredCatalogHandle(_next++), () => { }),
+        _ => throw new NotSupportedException(method?.Name),
+    };
 }
 
 internal class ServiceProxy<TService, TProxy> : DispatchProxy where TService : class where TProxy : DispatchProxy

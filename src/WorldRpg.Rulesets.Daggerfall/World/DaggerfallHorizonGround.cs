@@ -41,15 +41,17 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     private readonly DaggerfallTerrainSet _terrain;
     private readonly Func<int, int, int> _climate;
     private readonly DaggerfallHorizonTuning _tuning;
+    private readonly DaggerfallGroundTuning _groundTuning;
     private readonly float[] _floor;
     private Frame _frame;
 
     /// <param name="climate">The climate value at an in-bounds map pixel.</param>
-    internal DaggerfallHorizonGround(DaggerfallTerrainSet terrain, Func<int, int, int> climate, DaggerfallHorizonTuning tuning)
+    internal DaggerfallHorizonGround(DaggerfallTerrainSet terrain, Func<int, int, int> climate, DaggerfallHorizonTuning tuning, DaggerfallGroundTuning groundTuning)
     {
         _terrain = terrain ?? throw new ArgumentNullException(nameof(terrain));
         _climate = climate ?? throw new ArgumentNullException(nameof(climate));
         _tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
+        _groundTuning = groundTuning ?? throw new ArgumentNullException(nameof(groundTuning));
         _frame = new(0, 0, tuning.Lift, false);
         // The samples are read on first use, which is content work no worker may do.
         _ = terrain.Samples;
@@ -60,6 +62,9 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     /// <summary>The rings, finest first, in metres; the coarsest reaches past where the haze has closed.</summary>
     internal static HeightfieldRing[] Rings { get; } =
         [new(FineCellMetres, FineReachMetres), new(MiddleCellMetres, MiddleReachMetres), new(CoarseCellMetres, CoarseReachMetres)];
+
+    /// <summary>The ground values the far ground shares with the walked ground.</summary>
+    internal DaggerfallGroundTuning GroundTuning => _groundTuning;
 
     /// <summary>The frame the workers sample by; set before the tiles it changes are invalidated.</summary>
     internal Frame Current
@@ -139,7 +144,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         if (!_tuning.Climates.TryGetValue(climate, out Color ground))
             throw new InvalidOperationException($"The horizon has no colour for climate {climate}.");
         Color painted = Mix(ground, _tuning.Rock, Share(slope, _tuning.RockFromSlope, _tuning.RockFullSlope));
-        float snow = Share(height, _tuning.SnowFromMetres, _tuning.SnowFullMetres);
+        float snow = DaggerfallGroundBlend.Snow(_groundTuning, (float)height);
         if (winter && climate is not (224 or 225)) snow = Math.Max(snow, WinterSnow);
         return Mix(painted, _tuning.Snow, snow);
     }

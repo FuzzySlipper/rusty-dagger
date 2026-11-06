@@ -35,7 +35,9 @@ internal sealed partial class DaggerfallSession
         InputMappingReplacementOutcome outcome = _controlEngine!.Input.ReplacePhysicalMappings(settings.PhysicalMappings());
         if (outcome != InputMappingReplacementOutcome.Staged)
             throw new InvalidOperationException($"Control bindings were not applied: {outcome}.");
+        bool artChanged = settings.ClassicArt != _controlSettings.ClassicArt;
         _controlSettings = settings;
+        if (artChanged) _sites?.RedrawGround();
         PlayerTime.Select(settings.ActionDrivenTime);
         _input.ConfigureLook(_tuning.PlayerControl.LookSensitivity * settings.LookSensitivity, settings.InvertVertical);
         // Direct key observations and Engine-mapped directions share the chosen bindings.

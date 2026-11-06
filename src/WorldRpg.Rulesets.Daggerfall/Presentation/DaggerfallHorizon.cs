@@ -121,7 +121,7 @@ internal sealed class DaggerfallHorizon : IDisposable
     internal string GroundSurvey(DaggerfallTerrainSet terrain)
     {
         DaggerfallTerrainSet classic = new(terrain.Width, terrain.Height, terrain.Heightmap, terrain.Samples);
-        return string.Join(" | ", Survey("relief", terrain, _ground), Survey("classic", classic, new(classic, (_, _) => 231, _tuning)));
+        return string.Join(" | ", Survey("relief", terrain, _ground), Survey("classic", classic, new(classic, (_, _) => 231, _tuning, _ground.GroundTuning)));
     }
 
     private static string Survey(string name, DaggerfallTerrainSet terrain, DaggerfallHorizonGround ground)

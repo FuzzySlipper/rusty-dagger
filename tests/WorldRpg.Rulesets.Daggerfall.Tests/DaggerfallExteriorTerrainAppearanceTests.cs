@@ -222,6 +222,99 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
     }
 
     /// <summary>
+    /// Open ground blends its four layers while refreshed art is drawn and tiles again under classic art, a new mesh
+    /// either way, since a tile's uvs and a layer's are not the same. Replaced layers are released once a snapshot
+    /// without them is accepted.
+    /// </summary>
+    [Fact]
+    public void Open_ground_blends_under_refreshed_art_and_tiles_under_classic_art()
+    {
+        DaggerfallExteriorCellId cell = new(1, 0);
+        DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(cell);
+        GraphicsDouble graphics = new();
+        (DaggerfallExteriorTerrainAppearance appearance, DaggerfallTerrainSurface surface, DaggerfallExteriorEnvironment environment, Action<bool> draw) =
+            OpenGround(graphics, cell, origin, [(302, 1), (302, 2), (302, 3), (303, 2)]);
+        using DaggerfallExteriorTerrainAppearance owned = appearance;
+
+        appearance.Reconcile([cell], origin, _ => surface, environment);
+        Assert.Equal(1, graphics.MeshRequests[^1].LayerWeights.Length / (double)graphics.MeshRequests[^1].Positions.Length);
+        Assert.Single(graphics.TerrainLayerMaterialRequests);
+
+        draw(false);
+        appearance.Reconcile([cell], origin, _ => surface, environment);
+        Assert.Equal(2, graphics.MeshRequests.Count);
+        Assert.True(graphics.MeshRequests[^1].LayerWeights.IsEmpty);
+
+        draw(true);
+        appearance.Reconcile([cell], origin, _ => surface, environment);
+        Assert.Equal(3, graphics.MeshRequests.Count);
+        Assert.False(graphics.MeshRequests[^1].LayerWeights.IsEmpty);
+        Assert.Single(graphics.TerrainLayerMaterialRequests);
+
+        appearance.UseBlend(ServiceProxy<IAuthoredContentService, AuthoredContentFake>.Create(), DaggerfallGroundTuning.Default, null);
+        appearance.Reconcile([cell], origin, _ => surface, environment);
+        Assert.True(graphics.MeshRequests[^1].LayerWeights.IsEmpty);
+        int released = graphics.Releases.Count;
+        appearance.CompleteAcceptedSnapshot();
+        Assert.True(graphics.Releases.Count > released);
+    }
+
+    /// <summary>An archive the art set doesn't cover whole keeps its tiles, where a missing layer would draw nothing.</summary>
+    [Fact]
+    public void An_archive_missing_a_refreshed_layer_keeps_its_tiles()
+    {
+        DaggerfallExteriorCellId cell = new(1, 0);
+        DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(cell);
+        GraphicsDouble graphics = new();
+        (DaggerfallExteriorTerrainAppearance appearance, DaggerfallTerrainSurface surface, DaggerfallExteriorEnvironment environment, _) =
+            OpenGround(graphics, cell, origin, [(302, 1), (302, 2), (302, 3)]);
+        using DaggerfallExteriorTerrainAppearance owned = appearance;
+
+        appearance.Reconcile([cell], origin, _ => surface, environment);
+
+        Assert.True(graphics.MeshRequests[^1].LayerWeights.IsEmpty);
+        Assert.Empty(graphics.TerrainLayerMaterialRequests);
+    }
+
+    private static (DaggerfallExteriorTerrainAppearance, DaggerfallTerrainSurface, DaggerfallExteriorEnvironment, Action<bool>) OpenGround(
+        GraphicsDouble graphics, DaggerfallExteriorCellId cell, DaggerfallExteriorWorldOrigin origin, (int Archive, int Record)[] refreshedLayers)
+    {
+        DaggerfallSiteProfile source = TestSessions.MediaInputs();
+        Dictionary<(int Archive, int Record), NormalizedTerrainTexture> textures = [];
+        for (int record = 0; record < 64; record++) textures[(302, record)] = new($"terrain/texture-302-{record}.png", TestSessions.Hash);
+        textures[(303, 2)] = new("terrain/texture-303-2.png", TestSessions.Hash);
+        Dictionary<(int Archive, int Record), NormalizedBillboardSprite> billboards = [];
+        for (int record = 1; record <= 31; record++)
+            billboards[(504, record)] = new($"sprite/texture-504-{record}.png", TestSessions.Hash, 16, 32,
+                [new NormalizedAtlasFrame(7, 0, 0, 16, 32)], 7, new Vector2(.5F, .5F), new Vector2(3F, 6F));
+        DaggerfallSiteProfile profile = new(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook, [],
+            new Dictionary<long, NormalizedActorSprite>(), billboardSprites: billboards, terrainTextures: textures);
+        string surfaces = string.Join(",", refreshedLayers.Select(layer => $$$"""
+            {"replaces": {"archive": {{{layer.Archive}}}, "record": {{{layer.Record}}}}, "path": "refreshed/surfaces/texture-{{{layer.Archive}}}-{{{layer.Record}}}.png",
+             "byteLength": 1, "sha256": "0000000000000001000000000000000200000000000000030000000000000004", "width": 128, "height": 128}
+            """));
+        foreach ((int archive, int record) in refreshedLayers) graphics.Content.Add($"refreshed/surfaces/texture-{archive}-{record}.png", TestSessions.Hash);
+        DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(System.Text.Encoding.UTF8.GetBytes(
+            $$$"""{"artReplacements": {"images": [], "surfaces": [{{{surfaces}}}]}}"""), "test.art");
+        bool refreshed = true;
+        DaggerfallExteriorTerrainAppearance appearance = new(graphics.Content, graphics, graphics.Admit(profile));
+        appearance.UseArt(art, () => refreshed);
+        appearance.UseBlend(ServiceProxy<IAuthoredContentService, AuthoredContentFake>.Create(), DaggerfallGroundTuning.Default, DaggerfallGroundTuning.Default.Blend);
+        int dimension = DaggerfallTerrainSurfaceBuilder.SampleDimension;
+        DaggerfallTerrainSurface surface = new(cell.X, cell.Y,
+            Enumerable.Range(0, dimension * dimension).Select(index => new Vector3(index % dimension, 100F, index / dimension)).ToArray(),
+            [new Triangle(0, (uint)dimension + 1, 1)],
+            Enumerable.Repeat(100F / DaggerfallTerrainSurfaceBuilder.TerrainVerticalSize, dimension * dimension).ToArray())
+        {
+            SourceWorldHeight = 128,
+        };
+        DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
+        environment.Reconcile([cell], origin, _ => surface, new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior>(),
+            new DaggerfallWorldGridsSet(new DaggerfallClimateGridDefinition(3, 1, [0, 0, 231], [new(231, "Woodlands", DaggerfallClimateDisposition.Named)]), new(3, 1, [64, 64, 64], [])));
+        return (appearance, surface, environment, drawn => refreshed = drawn);
+    }
+
+    /// <summary>
     /// Nature draws its refreshed flats while refreshed art is drawn: the art's box holds the classic frame, so the batch
     /// is larger by the share that frame takes and its pivot moves into the box, and choosing classic art redraws the classic batches.
     /// </summary>
@@ -506,7 +599,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         public SpritePlaybackReadout ReadSpritePlayback(SpritePlayback playback) => throw new NotSupportedException();
 
         public void PublishSnapshot(ReadOnlySpan<AppearanceFact> values) => Snapshots.Add(values.ToArray());
-        public Material CreateAuthoredMaterial(AuthoredMaterialAppearanceRequest request) => throw new NotSupportedException();
+        public Material CreateAuthoredMaterial(AuthoredMaterialAppearanceRequest request) => CreateMaterial(default);
         public Light CreateLight(LightRequest request) => throw new NotSupportedException();
         public void UpdateLight(LightUpdateRequest request) => throw new NotSupportedException();
         public Light ReplaceLight(LightUpdateRequest request) => throw new NotSupportedException();

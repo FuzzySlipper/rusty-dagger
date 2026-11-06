@@ -6,7 +6,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
 /// How the world past the walked ground is drawn: how far ground above the player is lifted toward the skyline,
-/// the haze over it, and the colours the far ground wears.
+/// the haze over it, and the colours the far ground wears, which are the walked ground's own as noon lights it.
 /// </summary>
 /// <param name="Lift">How many times ground above its valley floor stands taller once fully lifted; 1 draws true height.</param>
 /// <param name="LiftFromMetres">Ground this far off is true height, so it meets the walked ground's edge.</param>
@@ -17,10 +17,8 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="SinkGoneMetres">Far ground stands at its height from here, past the window however far the player has moved from the centre.</param>
 /// <param name="NightTint">How bright far ground stands in the dark, as a share of its daylight colour.</param>
 /// <param name="FollowMetres">The player moves this far before the lift's centre follows.</param>
-/// <param name="SnowFromMetres">Snow starts on high ground here.</param>
-/// <param name="SnowFullMetres">High ground is white from here.</param>
-/// <param name="RockFromSlope">Ground turns to rock from this slope (rise over run).</param>
-/// <param name="RockFullSlope">Ground is bare rock from this slope.</param>
+/// <param name="RockFromSlope">Far ground turns to rock from this slope (rise over run); its coarse cells smooth a slope below the walked ground's.</param>
+/// <param name="RockFullSlope">Far ground is bare rock from this slope.</param>
 /// <param name="CloudCoverage">How much of a fair sky is cloud (0 to 1), now the painted low cloud is cleared with the horizon.</param>
 /// <param name="StormCloudCoverage">How much of a foul sky is cloud.</param>
 /// <param name="CloudAltitudeMetres">The cloud layer's height, above the map's highest ground.</param>
@@ -28,30 +26,30 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="CloudTwilightDegrees">How far below the horizon the sun still lights the clouds.</param>
 /// <param name="CloudDrift">The clouds' drift east and south, in metres a second.</param>
 internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres, float LiftFullMetres, float FogDensity, float SinkMetres, float SinkFromMetres, float SinkGoneMetres, float NightTint,
-    float FollowMetres, float SnowFromMetres, float SnowFullMetres, float RockFromSlope, float RockFullSlope,
+    float FollowMetres, float RockFromSlope, float RockFullSlope,
     float CloudCoverage, float StormCloudCoverage, float CloudAltitudeMetres, float CloudScaleMetres, float CloudTwilightDegrees, Vector2 CloudDrift,
     Color Sea, Color Rock, Color Snow, IReadOnlyDictionary<int, Color> Climates)
 {
-    internal static DaggerfallHorizonTuning Default { get; } = new(4.5f, 3_000, 24_000, .00003f, 150, 2_900, 3_700, .1f, 204.8f, 1_500, 2_200, .25f, .7f,
+    internal static DaggerfallHorizonTuning Default { get; } = new(4.5f, 3_000, 24_000, .00003f, 150, 2_900, 3_700, .1f, 204.8f, .25f, .7f,
         .45f, .9f, 3_500, 1_800, 8, new(14, 5),
-        Color.FromSrgb(.16f, .24f, .32f), Color.FromSrgb(.42f, .38f, .34f), Color.FromSrgb(.86f, .87f, .9f),
+        Color.FromSrgb(.16f, .24f, .32f), Color.FromSrgb(.24f, .24f, .25f), Color.FromSrgb(.6f, .6f, .63f),
         new Dictionary<int, Color>
         {
-            [223] = Color.FromSrgb(.34f, .4f, .24f), [224] = Color.FromSrgb(.66f, .56f, .38f), [225] = Color.FromSrgb(.62f, .52f, .36f),
-            [226] = Color.FromSrgb(.3f, .33f, .24f), [227] = Color.FromSrgb(.2f, .34f, .18f), [228] = Color.FromSrgb(.26f, .3f, .2f),
-            [229] = Color.FromSrgb(.42f, .42f, .24f), [230] = Color.FromSrgb(.3f, .36f, .22f), [231] = Color.FromSrgb(.28f, .38f, .2f),
-            [232] = Color.FromSrgb(.28f, .3f, .22f),
+            [223] = Color.FromSrgb(.2f, .19f, .15f), [224] = Color.FromSrgb(.46f, .35f, .24f), [225] = Color.FromSrgb(.46f, .35f, .24f),
+            [226] = Color.FromSrgb(.19f, .21f, .15f), [227] = Color.FromSrgb(.2f, .19f, .15f), [228] = Color.FromSrgb(.2f, .19f, .15f),
+            [229] = Color.FromSrgb(.46f, .35f, .24f), [230] = Color.FromSrgb(.19f, .21f, .15f), [231] = Color.FromSrgb(.2f, .26f, .17f),
+            [232] = Color.FromSrgb(.2f, .26f, .17f),
         });
 
     internal DaggerfallHorizonTuning Validate()
     {
-        foreach (float value in new[] {Lift, LiftFullMetres, FogDensity, FollowMetres, SnowFullMetres, RockFullSlope})
+        foreach (float value in new[] {Lift, LiftFullMetres, FogDensity, FollowMetres, RockFullSlope})
             if (!float.IsFinite(value) || value <= 0) throw new ArgumentException("Horizon values must be finite and positive.");
         if (SinkMetres < 0 || SinkFromMetres < 0 || SinkFromMetres >= SinkGoneMetres)
             throw new ArgumentException("A horizon's sink is at least nothing, and eases out from a start to a finish.");
         if (NightTint is < 0 or > 1) throw new ArgumentException("A horizon's night tint is from 0 to 1.");
         if (Lift < 1 || LiftFromMetres < 0 || LiftFromMetres >= LiftFullMetres
-            || SnowFromMetres < 0 || SnowFromMetres >= SnowFullMetres || RockFromSlope < 0 || RockFromSlope >= RockFullSlope)
+            || RockFromSlope < 0 || RockFromSlope >= RockFullSlope)
             throw new ArgumentException("A horizon's lift cannot fall, and its fades must rise from a start to a finish.");
         foreach (float value in new[] {CloudAltitudeMetres, CloudScaleMetres})
             if (!float.IsFinite(value) || value <= 0) throw new ArgumentException("A horizon's clouds stand above the ground and have a size.");
@@ -66,7 +64,6 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
         e.GetProperty("lift").GetSingle(), e.GetProperty("liftFromMetres").GetSingle(), e.GetProperty("liftFullMetres").GetSingle(),
         e.GetProperty("fogDensity").GetSingle(), e.GetProperty("sinkMetres").GetSingle(), e.GetProperty("sinkFromMetres").GetSingle(),
         e.GetProperty("sinkGoneMetres").GetSingle(), e.GetProperty("nightTint").GetSingle(), e.GetProperty("followMetres").GetSingle(),
-        e.GetProperty("snowFromMetres").GetSingle(), e.GetProperty("snowFullMetres").GetSingle(),
         e.GetProperty("rockFromSlope").GetSingle(), e.GetProperty("rockFullSlope").GetSingle(),
         e.GetProperty("cloudCoverage").GetSingle(), e.GetProperty("stormCloudCoverage").GetSingle(),
         e.GetProperty("cloudAltitudeMetres").GetSingle(), e.GetProperty("cloudScaleMetres").GetSingle(),
