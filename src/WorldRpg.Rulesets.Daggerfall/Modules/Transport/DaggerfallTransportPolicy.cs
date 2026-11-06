@@ -145,7 +145,8 @@ internal sealed record DaggerfallTransportTuning(
     int WagonCapacityClassicUnits,
     float WagonAccessRange,
     RideTuning HorseRide,
-    RideTuning CartRide)
+    RideTuning CartRide,
+    double GallopFatigueReserve)
 {
     internal DaggerfallTransportTuning Validate()
     {
@@ -156,6 +157,7 @@ internal sealed record DaggerfallTransportTuning(
             throw new ArgumentOutOfRangeException(nameof(WagonCapacityClassicUnits), "Transport tuning must contain positive travel and capacity values.");
         HorseRide.Validate();
         CartRide.Validate();
+        if (!(GallopFatigueReserve >= 0d && GallopFatigueReserve < 1d)) throw new ArgumentOutOfRangeException(nameof(GallopFatigueReserve));
         return this;
     }
 }

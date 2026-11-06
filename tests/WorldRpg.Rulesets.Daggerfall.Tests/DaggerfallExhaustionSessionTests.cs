@@ -1,6 +1,7 @@
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
+using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Policies;
@@ -19,6 +20,7 @@ public sealed class DaggerfallExhaustionSessionTests
     private static readonly TrackId Health = TrackId.Parse(DaggerfallMechanicsIds.Health.Value);
     private static readonly TrackId Fatigue = TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value);
     private static readonly TrackId Magicka = TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value);
+    private static readonly SharedFixture<AssembledWorld> World = new(() => new AssembledWorld());
 
     [Fact]
     public void Idle_real_time_returns_no_fatigue()
@@ -109,6 +111,55 @@ public sealed class DaggerfallExhaustionSessionTests
     }
 
     [Fact]
+    public void A_gallop_beside_an_enemy_ends_at_a_trot_short_of_the_collapse()
+    {
+        using AssembledWorldRun run = World.Value.Start(AssembledWorld.PrivateersHold);
+        DaggerfallSession session = run.Session;
+        run.Spatial.KeepPosition = false;
+        Assert.True(session.Ride("horse").Succeeded);
+        WorldPoint here = session.State.PlayerControl.Position!.Value;
+        session.SpawnActor("rat", new ActorPose(new WorldPoint(here.X + 2f, here.Y, here.Z), 0f));
+        StatsComponent stats = session.State.Actors.Player.Stats;
+        Track fatigue = stats.GetTrack(Fatigue), health = stats.GetTrack(Health);
+        fatigue.SetCurrent(fatigue.MaximumValue * DaggerfallTuning.Defaults.Transport.GallopFatigueReserve + 1d, clamp: true);
+
+        double before = fatigue.Current;
+        float peak = 0;
+
+        // Half a minute of the clock's five real seconds a game minute: it gallops, pays for it, and holds a trot.
+        Ride(session, 300, Held(KeyboardControl.KeyW), Held(KeyboardControl.ShiftLeft), () =>
+        {
+            health.SetCurrent(health.MaximumValue, clamp: true);
+            peak = MathF.Max(peak, session.State.Transport.Ride.Speed);
+        });
+
+        float top = (float)session.State.Transport.MovementSpeed(stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Speed.Value)).ValueInt,
+            DaggerfallTuning.Defaults.Locomotion.ClassicToEngineSpeedRatio);
+        float trot = top * DaggerfallTuning.Defaults.Transport.HorseRide.TrotShare;
+        Assert.True(peak > trot, $"it never galloped: {peak}");
+        Assert.True(fatigue.Current <= before - DaggerfallLocomotionTuning.Classic.RunningFatiguePerGameMinute, "the gallop cost nothing");
+        Assert.False(session.State.Actors.Player.IsDefeated);
+        Assert.True(fatigue.Current > 0d, "the gallop emptied the pool");
+        Assert.Equal(trot, session.State.Transport.Ride.Speed, .01f);
+    }
+
+    [Fact]
+    public void A_rider_who_collapses_stops_where_they_fall()
+    {
+        using AssembledWorldRun run = World.Value.Start(AssembledWorld.PrivateersHold);
+        DaggerfallSession session = run.Session;
+        run.Spatial.KeepPosition = false;
+        Assert.True(session.Ride("horse").Succeeded);
+        Ride(session, 10, Held(KeyboardControl.KeyW), Held(KeyboardControl.KeyW), () => { });
+        Assert.True(session.State.Transport.Ride.Speed > 0f);
+
+        session.State.Actors.Player.Stats.GetTrack(Fatigue).SetCurrent(0);
+        session.ResolveExhaustion();
+
+        Assert.Equal(0f, session.State.Transport.Ride.Speed);
+    }
+
+    [Fact]
     public void Collapsing_in_water_kills_the_player_with_the_watery_grave_text()
     {
         using DaggerfallSession session = FreshSession();
@@ -141,6 +192,24 @@ public sealed class DaggerfallExhaustionSessionTests
         for (long minute = 0; minute < 20; minute++)
             Assert.Equal(charged, session.SwimmingFatigueApplies(minute));
     }
+
+    private static void Ride(DaggerfallSession session, ulong updates, ProductInputEvent forward, ProductInputEvent urge, Action eachUpdate)
+    {
+        for (ulong step = 1_000; step < 1_000 + updates; step++)
+        {
+            session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, step, step, 60, 1, 0, .1d), [forward, urge]));
+            eachUpdate();
+        }
+    }
+
+    private static ProductInputEvent Held(KeyboardControl key) => Input(InputEventKind.Key, InputEdge.Pressed, key) with
+    {
+        Device = InputDevice.Keyboard,
+        Channel = InputChannel.Button,
+        ValueKind = InputValueKind.Digital,
+        Phase = InputPhase.Pressed,
+        Provenance = InputProvenance.Physical,
+    };
 
     private static void MoveAwayFromEnemies(DaggerfallSession session) =>
         session.State.PlayerControl.MoveTo(new WorldPoint(1000f, 1f, 1000f).ToVector());

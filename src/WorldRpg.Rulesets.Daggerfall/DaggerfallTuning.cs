@@ -99,7 +99,8 @@ internal sealed record DaggerfallTuning(
             HorseRide: new(WalkShare: .2f, TrotShare: .6f, Acceleration: 3f, Coasting: 2.5f, Braking: 9f, ReverseSpeed: 1.2f,
                 StandingTurnDegrees: 150f, FullTurnDegrees: 65f, LookRangeDegrees: 40f, UphillDrag: .6f, WaterShare: .5f),
             CartRide: new(WalkShare: .2f, TrotShare: .6f, Acceleration: 2f, Coasting: 1.8f, Braking: 6f, ReverseSpeed: .8f,
-                StandingTurnDegrees: 60f, FullTurnDegrees: 40f, LookRangeDegrees: 50f, UphillDrag: .8f, WaterShare: .4f)));
+                StandingTurnDegrees: 60f, FullTurnDegrees: 40f, LookRangeDegrees: 50f, UphillDrag: .8f, WaterShare: .4f),
+            GallopFatigueReserve: .1d));
 
     internal DaggerfallTuning Validate() => this with
     {
@@ -295,7 +296,8 @@ internal sealed record DaggerfallTuning(
                 transport.GetProperty("wagonCapacityClassicUnits").GetInt32(),
                 transport.GetProperty("wagonAccessRange").GetSingle(),
                 ReadRide(transport.GetProperty("horseRide")),
-                ReadRide(transport.GetProperty("cartRide"))))
+                ReadRide(transport.GetProperty("cartRide")),
+                transport.GetProperty("gallopFatigueReserve").GetDouble()))
         {
             StrikeEnchantments = new(root.GetProperty("strikeEnchantments").GetProperty("damageAdjustment").GetInt32(),
                 root.GetProperty("strikeEnchantments").GetProperty("vampiricRange").GetDouble()),

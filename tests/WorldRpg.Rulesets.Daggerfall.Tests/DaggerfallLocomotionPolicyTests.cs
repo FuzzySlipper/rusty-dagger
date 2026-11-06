@@ -89,6 +89,19 @@ public sealed class DaggerfallLocomotionPolicyTests
         Assert.Equal(100d - DaggerfallLocomotionTuning.Classic.RunningFatiguePerGameMinute, stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).Current);
     }
 
+    [Theory]
+    [InlineData(1000, .1, true)]
+    [InlineData(100, .1, false)]
+    [InlineData(101, 0d, true)]
+    public void A_gallop_needs_more_fatigue_than_the_reserve_and_a_minute_of_itself(int fatigue, double reserve, bool expected)
+    {
+        StatsComponent stats = Stats(speed: 50, running: 40, fatigue: 1000);
+        stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).SetCurrent(fatigue, clamp: true);
+        DaggerfallLocomotionPolicy policy = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());
+
+        Assert.Equal(expected, policy.CanGallop(stats, reserve));
+    }
+
     [Fact]
     public void Low_or_empty_fatigue_never_refuses_a_run_or_a_jump_and_the_jump_charge_clamps_at_zero()
     {

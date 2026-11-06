@@ -303,4 +303,6 @@ speed, and the view can look only so far past it, so a hard turn of the view wai
 directly and carry the view with it. Motion and heading aren't saved: a mount stands still facing the view after a load, a
 relocation or a change of mount.
 
-A gallop tires the rider as a run does but trains no skill, and a rider with no fatigue left gets no gallop.
+A gallop tires the rider as a run does but trains no skill. An empty pool is a collapse, or a death with enemies near, so the
+mount drops to a trot while the rider still holds `gallopFatigueReserve` of their fatigue, with time left to rest. A rider
+who collapses anyway stops where they fall.

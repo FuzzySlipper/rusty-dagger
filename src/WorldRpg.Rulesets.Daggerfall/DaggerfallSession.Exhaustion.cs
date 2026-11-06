@@ -56,6 +56,7 @@ internal sealed partial class DaggerfallSession
         // The donor cancels movement as the player drops.
         _input.Neutralize();
         _locomotion.Neutralize(); NeutralizeGuard();
+        State.Transport.Ride.Reset();
         bool swimming = State.Swimming.IsSwimming;
         bool enemiesNearby = HasNearbyRestEnemy();
         if (swimming || enemiesNearby)

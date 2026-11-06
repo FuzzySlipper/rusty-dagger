@@ -50,6 +50,9 @@ public sealed class RideMotionTests
         RideStep tired = Ride(Gallop with { MayGallop = false }, 5f);
         Assert.Equal(6f, tired.Speed, .01f);
         Assert.False(tired.Galloping);
+
+        Ride(Gallop, 5f);
+        Assert.False(ride.Step(Tuning, Top, Gallop with { MayGallop = false }, player, Step).Galloping);
     }
 
     [Fact]
