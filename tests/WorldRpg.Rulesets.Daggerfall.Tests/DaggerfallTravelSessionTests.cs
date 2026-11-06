@@ -138,7 +138,10 @@ public sealed class DaggerfallTravelSessionTests
         // A travel destination is authored in its site's local frame. The active exterior keeps
         // the map-pixel translation in the current local origin, so this owner converts the live
         // pose back to that frame instead of comparing it with a raw global local pose.
-        Assert.Equal(destination, fixture.Session.Sites.ExteriorSitePosition(liveDestination));
+        // The anchor names the place and the floor beneath it: terrain above that floor stands the arrival on the ground.
+        WorldPoint arrived = fixture.Session.Sites.ExteriorSitePosition(liveDestination);
+        Assert.Equal((destination.X, destination.Z), (arrived.X, arrived.Z));
+        Assert.True(arrived.Y >= destination.Y, $"The arrival stands at {arrived.Y}, beneath its anchor's floor at {destination.Y}.");
         WorldPoint savedProfileDestination = WorldPoint.From(fixture.Session.Sites.LocalToProfile(
             liveDestination.ToVector()));
         Assert.True(result.ElapsedSeconds >= quote.TravelSeconds);
@@ -153,7 +156,7 @@ public sealed class DaggerfallTravelSessionTests
         WorldPoint restoredDestination = restored.State.PlayerControl.Position
             ?? throw new InvalidOperationException("The restored travel session has no arrival position.");
         Assert.Equal(savedDestination, restoredDestination);
-        Assert.Equal(destination, restored.Sites.ExteriorSitePosition(restoredDestination));
+        Assert.Equal(arrived, restored.Sites.ExteriorSitePosition(restoredDestination));
         Assert.Equal(savedProfileDestination, WorldPoint.From(restored.Sites.LocalToProfile(
             restoredDestination.ToVector())));
         Assert.Null(restored.ReadTravelPresentation().Quote);

@@ -100,7 +100,7 @@ public sealed class DaggerfallRaceExposureTests
         JsonObject payload = TestPayload.Sections("catalogs");
         foreach (JsonNode? race in payload["catalogs"]!["races"]!.AsArray())
             race!["immunityFlags"] = flag;
-        var definitions = DaggerfallBaseContent.Read(TestPayload.Splice(payload.AsObject()));
+        var definitions = DaggerfallBaseContent.Read(TestPayload.Splice(payload.AsObject()), TestPayload.Data);
         var profile = ReadInputs(TestData.RepositoryRoot);
         List<string> releases = [];
         ContentFake content = new(releases); PopulateContent(content, profile);

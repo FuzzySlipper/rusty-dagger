@@ -55,7 +55,7 @@ public sealed class EnemySetupSessionTests
         var section = TestPayload.Sections("mobiles");
         var shaman = section["mobiles"]!["mobiles"]!.AsArray().Single(row => row!["donorId"]!.GetValue<int>() == 21)!;
         shaman["soulPoints"] = 4321;
-        var definitions = DaggerfallBaseContent.Read(TestPayload.Splice(section));
+        var definitions = DaggerfallBaseContent.Read(TestPayload.Splice(section), TestPayload.Data);
         var gem = definitions.RequireItem(new("template-274"));
         using var f = new SanguineRoseSessionTests.Fixture(definitions: definitions);
         var identity = f.Session.UniqueItemAllocator.AllocateReference();
