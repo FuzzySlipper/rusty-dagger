@@ -95,6 +95,7 @@ internal sealed class DaggerfallSiteLifecycle
     private Dictionary<DaggerfallSiteId, DaggerfallExteriorCellId>? _exteriorCellsBySite;
     private Dictionary<DaggerfallExteriorCellId, DaggerfallSiteId>? _exteriorSitesByCell;
     private readonly Dictionary<DaggerfallExteriorCellId, DaggerfallTerrainSurface> _exteriorSurfaceCache = [];
+    private readonly Dictionary<DaggerfallExteriorCellId, float> _exteriorLocationHeights = [];
     private readonly HashSet<ulong> _exteriorWaterTriggers = [];
     private readonly Dictionary<DaggerfallWorldProfileKey, ResidentExteriorLocation> _residentExteriorLocations = [];
     // A retired neighbour's drawn location stays in the last accepted snapshot until the next one is accepted
@@ -1404,13 +1405,28 @@ internal sealed class DaggerfallSiteLifecycle
         return (checked(tileX * DaggerfallLocationTerrainFrame.NavigationCellsPerTile), checked(-tileY * DaggerfallLocationTerrainFrame.NavigationCellsPerTile));
     }
 
+    /// <summary>
+    /// The height a location's frame stands at. It never changes, and every update asks it through
+    /// <see cref="LocalToProfile"/>, so it outlives the surface it came from: past the window that cell's surface is gone
+    /// and would be built whole for each asking.
+    /// </summary>
     private float ExteriorLocationSampleHeight(DaggerfallSiteProfile profile)
     {
-        DaggerfallTerrainSurface surface = ExteriorSurface(profile);
-        return DaggerfallTerrainSurfaceBuilder.SampleWorldHeight(surface,
+        if (!TryExteriorProfileCell(profile, out DaggerfallExteriorCellId cell))
+            throw new InvalidOperationException($"Exterior profile '{profile.ProfileKey.LogicalId}' has no normalized map-pixel identity.");
+        if (_exteriorLocationHeights.TryGetValue(cell, out float height)) return height;
+        height = DaggerfallTerrainSurfaceBuilder.SampleWorldHeight(ExteriorSurface(profile),
             DaggerfallTerrainSurfaceBuilder.LocationSampleCoordinate,
             DaggerfallTerrainSurfaceBuilder.LocationSampleCoordinate);
+        _exteriorLocationHeights.Add(cell, height);
+        return height;
     }
+
+    /// <summary>Whether a cell's surface is built and held. The window keeps only its own cells'.</summary>
+    internal bool HoldsExteriorSurface(DaggerfallExteriorCellId cell) => _exteriorSurfaceCache.ContainsKey(cell);
+
+    /// <summary>The cells the walked window holds.</summary>
+    internal IReadOnlyCollection<DaggerfallExteriorCellId> ResidentExteriorCells => _exteriorResidency?.ResidentCells ?? [];
 
     private DaggerfallTerrainSurface ExteriorSurface(DaggerfallSiteProfile profile)
     {
