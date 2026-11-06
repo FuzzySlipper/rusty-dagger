@@ -75,6 +75,13 @@ back unless it is flat ground, or whatever it is for an item marked `"solid": tr
 World flats promote through `reduce.crunch_sprites`: `FLAT_CRUNCH` pixels to a classic pixel (default 2), hard edges and
 one ART_PAL subset across a record's frames, drawn with nearest filtering so they sit with the terrain's crunch.
 
+A world flat's subject is a design choice, not always a copy. Gore translates to gothic Halloween content in the same rough
+outline and place: bodies on stakes become skeletons, severed heads become skulls, heaps of corpses become heaps of bones, in
+clean dry bone with no flesh or blood. This is about tone, not a blood filter: simple blood smears and stained stakes stay,
+and only what reads as a recent massacre translates. Loose treasure heaps become tidy piles of recognisable objects. A sensible subject beats
+matching a low-resolution shape. Spec items that replace their subject say so in `invention`. Captions from `flat_specs.py` are
+a first draft: small sprites are often misread, so check the subject against the classic before accepting a final.
+
 ## Clean-up and source edits
 
 - `tools/items/despeckle.py FINAL.png` removes small detached flecks from a final (not for effects that carry embers).
