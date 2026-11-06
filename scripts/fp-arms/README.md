@@ -78,6 +78,8 @@ with the weapons, the mounts and the classic sprites, and `build.py` hands it th
 - the normals, with the normal map on them, are baked over the rest pose, where the backs of the arms face up. A light from
   above paints the forms in, and the occlusion map darkens the creases. The colour map only nudges the tone: more of it
   brings the pack's grime back as blotches;
+- cloth and leather draw that tone wide and low (`FOLDS`), blurred inside their own texels with its contrast eased, or the
+  sleeve's creases break into camouflage;
 - each material's tone picks a step of its ramp, with a light ordered dither at the band edges. Mail adds rows of rings,
   as the pack's own are too fine to survive.
 
@@ -198,7 +200,8 @@ and build again. `build.py`:
 
 - grows a low leg and boot on each of the skeleton's legs and joins them to the arms' mesh: the pack has arms only, and a
   kick needs something to kick with. Rings run down the bones with small plain textures, so none of it is the pack's art;
-- imports each set of arms (LOD0) and paints it from its medium colour and other maps ([The pixel paint](#the-pixel-paint));
+- imports each set of arms (LOD0), cuts the cloth sets' loose left cuff (the faces that follow the pack's `sleeve` bone) and
+  paints it from its medium colour and other maps ([The pixel paint](#the-pixel-paint));
 - bakes each clip as its own camera bone sees it (the pack's own clips have only `camera_mount`, with other axes, and take
   the arms' skeleton as it is): every frame the whole body is moved so the camera bone sits at the
   origin looking down the view, so the arms are placed with their origin at the game's eye and the clip carries only
