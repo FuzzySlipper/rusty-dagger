@@ -1,0 +1,426 @@
+{
+  "seed": 27304,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy world scenery: the trees, rocks, plants and town fixtures of a dark fantasy RPG, seen from standing height. Keep the source's silhouette, proportions, local colours and the arrangement of its parts: it replaces the source at the same size in the world. Restrained palette with distinct light, middle and dark families. Detail hierarchy: silhouette first, a few large masses second, sparse material marks third. Foliage reads as clumps of painted leaf masses, not individual leaves. Keep open gaps between branches, bars and posts open. No extra parts, gemstones, runes, faces, symbols or fantasy embellishment. Not pixel art, not a photoreal photograph, not a glossy mobile-game asset, not a dramatic scene. No text, labels, border, vignette, frame, hand, person, ground plane, scenery or second object.",
+  "presentation": "One isolated object on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no ground shadow, no background texture and no cast shadow outside the object. The whole object visible with breathing room, centred, its base where the source's base is. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Flats: Patch review, translated content and fuller descriptions",
+  "items": [
+    {
+      "id": "flat-511-22",
+      "directory": "nature-mountains-snow/texture-511",
+      "image": "flat/texture-511-record-022-frame-000-source.png",
+      "content": "One small low rock capped with white snow, a little green moss at its base. Only a snowy rock.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-511-22 (18x9)"
+    },
+    {
+      "id": "flat-210-28",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-028-frame-000-source.png",
+      "content": "One perfectly straight, symmetrical grey iron street lamp post: a vertical round column with moulded rings, two small scrolled brackets under a round glowing orange glass globe, and a stepped round foot. Upright and rigid, no curve or bend anywhere.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-28 (19x101)"
+    },
+    {
+      "id": "flat-96-3",
+      "directory": "props-remains/texture-096",
+      "image": "flat/texture-096-record-003-frame-000-source.png",
+      "content": "One old skeleton lying on its back on the ground wearing worn green leather boots, its arms flung out. Gothic Halloween spookiness: clean dry old bone, no flesh, no blood, no gore.",
+      "uncertainty": "",
+      "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",
+      "name": "flat-96-3 (108x47)"
+    },
+    {
+      "id": "flat-96-4",
+      "directory": "props-remains/texture-096",
+      "image": "flat/texture-096-record-004-frame-000-source.png",
+      "content": "One old skeleton sprawled over a low dark rock wearing one worn teal leather boot, bare leg bones raised. Gothic Halloween spookiness: clean dry old bone, no flesh, no blood, no gore.",
+      "uncertainty": "",
+      "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",
+      "name": "flat-96-4 (71x46)"
+    },
+    {
+      "id": "flat-100-17",
+      "directory": "props-remains/texture-100",
+      "image": "flat/texture-100-record-017-frame-000-source.png",
+      "content": "One low heap of old skulls and long bones, three skulls on top, bones sticking out at each end. Gothic Halloween spookiness: clean dry old bone, no flesh, no blood, no gore.",
+      "uncertainty": "",
+      "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",
+      "name": "flat-100-17 (62x32)"
+    },
+    {
+      "id": "flat-206-4",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-004-frame-000-source.png",
+      "content": "One old cat-like beast skull seen from the side, the jaws gaping wide open with fangs and nothing in the mouth, pale grey bone.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-4 (18x23)"
+    },
+    {
+      "id": "flat-206-5",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-005-frame-000-source.png",
+      "content": "One plain simple human skull facing the viewer, big dark round eye sockets, a nose hole and a row of teeth, grey bone. Only a skull.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-5 (17x27)"
+    },
+    {
+      "id": "flat-206-6",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-006-frame-000-source.png",
+      "content": "One plain simple human skull lying on its side, big dark round eye sockets, grey bone. Only a skull.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-206-6 (25x17)"
+    },
+    {
+      "id": "flat-206-8",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-008-frame-000-source.png",
+      "content": "One low heap of old skulls and long bones, three skulls on top, bones sticking out at each end. Gothic Halloween spookiness: clean dry old bone, no flesh, no blood, no gore.",
+      "uncertainty": "",
+      "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",
+      "name": "flat-206-8 (62x32)"
+    },
+    {
+      "id": "flat-206-11",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-011-frame-000-source.png",
+      "content": "One old skeleton lashed upright to a leaning wooden stake, ragged teal loincloth at its hips, a black raven perched on the top of the stake. Gothic Halloween spookiness: clean dry old bone, no flesh, no blood, no gore.",
+      "uncertainty": "",
+      "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",
+      "name": "flat-206-11 (47x96)"
+    },
+    {
+      "id": "flat-206-12",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-012-frame-000-source.png",
+      "content": "One old skeleton lashed upright to a leaning wooden stake, head bowed, a ragged yellow cloth at its hips. Gothic Halloween spookiness: clean dry old bone, no flesh, no blood, no gore.",
+      "uncertainty": "",
+      "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",
+      "name": "flat-206-12 (36x81)"
+    },
+    {
+      "id": "flat-206-13",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-013-frame-000-source.png",
+      "content": "One old skeleton lashed upright to a wooden post, tattered green and pink rags hanging from its ribs and hips. Gothic Halloween spookiness: clean dry old bone, no flesh, no blood, no gore.",
+      "uncertainty": "",
+      "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",
+      "name": "flat-206-13 (39x84)"
+    },
+    {
+      "id": "flat-206-14",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-014-frame-000-source.png",
+      "content": "One long low heap of old skulls and bones lying on the ground, wisps of dark cobweb among them. Gothic Halloween spookiness: clean dry old bone, no flesh, no blood, no gore.",
+      "uncertainty": "",
+      "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",
+      "name": "flat-206-14 (87x40)"
+    },
+    {
+      "id": "flat-206-17",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-017-frame-000-source.png",
+      "content": "One old skull on top of a tall thin leaning wooden pike, wisps of long dark hair hanging from it. Gothic Halloween spookiness: clean dry old bone, no flesh, no blood, no gore.",
+      "uncertainty": "",
+      "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",
+      "name": "flat-206-17 (43x87)"
+    },
+    {
+      "id": "flat-206-18",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-018-frame-000-source.png",
+      "content": "One old skull on top of a tall thin leaning wooden pike, wisps of rust-red hair hanging from it. Gothic Halloween spookiness: clean dry old bone, no flesh, no blood, no gore.",
+      "uncertainty": "",
+      "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",
+      "name": "flat-206-18 (45x89)"
+    },
+    {
+      "id": "flat-206-24",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-024-frame-000-source.png",
+      "content": "One wide low heap of tangled brown old skeletons lying on the ground, ribs and long arm bones reaching out of it. Gothic Halloween spookiness: clean dry old bone, no flesh, no blood, no gore.",
+      "uncertainty": "",
+      "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",
+      "name": "flat-206-24 (122x76)"
+    },
+    {
+      "id": "flat-206-25",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-025-frame-000-source.png",
+      "content": "One wide low heap of tangled dark grey old skeletons lying on the ground, ribs and long arm bones reaching out of it. Gothic Halloween spookiness: clean dry old bone, no flesh, no blood, no gore.",
+      "uncertainty": "",
+      "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",
+      "name": "flat-206-25 (122x76)"
+    },
+    {
+      "id": "flat-206-35",
+      "directory": "props-remains/texture-206",
+      "image": "flat/texture-206-record-035-frame-000-source.png",
+      "content": "One low heap of old animal bones with a large rib cage, a broken wooden stake standing up out of it. Gothic Halloween spookiness: clean dry old bone, no flesh, no blood, no gore.",
+      "uncertainty": "",
+      "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",
+      "name": "flat-206-35 (68x38)"
+    },
+    {
+      "id": "flat-53-21",
+      "directory": "props-signs/texture-053",
+      "image": "flat/texture-053-record-021-frame-000-source.png",
+      "content": "One tall perfectly straight slim grey iron post on a small round foot. At the very top it holds a flat rectangular wooden sign board, and on the board is painted a green glass alchemist's flask over a small flame.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-53-21 (51x114)"
+    },
+    {
+      "id": "flat-53-24",
+      "directory": "props-signs/texture-053",
+      "image": "flat/texture-053-record-024-frame-000-source.png",
+      "content": "One tall perfectly straight slim grey iron post on a small round foot. At the very top it holds a flat rectangular wooden sign board, and on the board is painted a brown money bag sitting on a heap of gold coins.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-53-24 (51x115)"
+    },
+    {
+      "id": "flat-97-0",
+      "directory": "props-statues/texture-097",
+      "image": "flat/texture-097-record-000-frame-000-source.png",
+      "content": "One grey stone statue of a hooded monk in heavy folded robes, a bearded face under the hood, hands at the waist, on a low rectangular grey stone plinth. A carved statue, one single material all over, not a living person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-97-0 (54x88)"
+    },
+    {
+      "id": "flat-97-1",
+      "directory": "props-statues/texture-097",
+      "image": "flat/texture-097-record-001-frame-000-source.png",
+      "content": "One grey stone statue of a bearded nobleman standing with one hand on his hip, in a doublet with checkered panels, breeches and tall boots, on a low rectangular grey stone plinth. A carved statue, one single material all over, not a living person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-97-1 (47x90)"
+    },
+    {
+      "id": "flat-97-2",
+      "directory": "props-statues/texture-097",
+      "image": "flat/texture-097-record-002-frame-000-source.png",
+      "content": "One rose-pink marble statue of a woman in profile with long wavy hair, in a gown draped around her hips, on a low rectangular rose-pink marble plinth. A carved statue, one single material all over, not a living person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-97-2 (39x91)"
+    },
+    {
+      "id": "flat-97-3",
+      "directory": "props-statues/texture-097",
+      "image": "flat/texture-097-record-003-frame-000-source.png",
+      "content": "One pale grey stone statue of an old long-bearded wizard in a heavy robe holding a tall staff at his side, on a low rectangular pale grey stone plinth. A carved statue, one single material all over, not a living person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-97-3 (78x90)"
+    },
+    {
+      "id": "flat-97-4",
+      "directory": "props-statues/texture-097",
+      "image": "flat/texture-097-record-004-frame-000-source.png",
+      "content": "One aged bronze statue of a crowned queen with long hair, in a long embroidered gown, on a low rectangular aged bronze plinth. A carved statue, one single material all over, not a living person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-97-4 (55x91)"
+    },
+    {
+      "id": "flat-97-5",
+      "directory": "props-statues/texture-097",
+      "image": "flat/texture-097-record-005-frame-000-source.png",
+      "content": "One aged bronze statue of a young musician in a tunic holding a long flute out to one side at his lips, on a low rectangular aged bronze plinth. A carved statue, one single material all over, not a living person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-97-5 (46x88)"
+    },
+    {
+      "id": "flat-97-6",
+      "directory": "props-statues/texture-097",
+      "image": "flat/texture-097-record-006-frame-000-source.png",
+      "content": "One dark grey stone statue of a bare-headed man with short hair and a high collar, in a long pleated robe with one wide puffed sleeve, on a low rectangular dark grey stone plinth. A carved statue, one single material all over, not a living person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-97-6 (53x88)"
+    },
+    {
+      "id": "flat-97-7",
+      "directory": "props-statues/texture-097",
+      "image": "flat/texture-097-record-007-frame-000-source.png",
+      "content": "One aged bronze statue of a bare-headed man with short hair and a high collar, in a long pleated robe with one wide puffed sleeve, on a low rectangular aged bronze plinth. A carved statue, one single material all over, not a living person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-97-7 (55x91)"
+    },
+    {
+      "id": "flat-97-9",
+      "directory": "props-statues/texture-097",
+      "image": "flat/texture-097-record-009-frame-000-source.png",
+      "content": "One aged bronze statue of a hooded monk in heavy folded robes, a bearded face under the hood, hands at the waist, on a low rectangular aged bronze plinth. A carved statue, one single material all over, not a living person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-97-9 (54x88)"
+    },
+    {
+      "id": "flat-97-11",
+      "directory": "props-statues/texture-097",
+      "image": "flat/texture-097-record-011-frame-000-source.png",
+      "content": "One rose-pink marble statue of a woman with her hair bound up, in a long gown with many draped folds, on a low rectangular rose-pink marble plinth. A carved statue, one single material all over, not a living person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-97-11 (50x91)"
+    },
+    {
+      "id": "flat-97-12",
+      "directory": "props-statues/texture-097",
+      "image": "flat/texture-097-record-012-frame-000-source.png",
+      "content": "One rose-pink marble statue of a nude woman with a short cap of hair sitting on the plinth, legs folded to one side, leaning on one arm, on a low rectangular rose-pink marble plinth. A carved statue, one single material all over, not a living person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-97-12 (72x60)"
+    },
+    {
+      "id": "flat-97-13",
+      "directory": "props-statues/texture-097",
+      "image": "flat/texture-097-record-013-frame-000-source.png",
+      "content": "One green-patinated bronze statue of a nude female dancer balanced on one foot with both arms raised, a long veil held in her hands spreading behind her like a cloak, on a low rectangular green-patinated bronze plinth. A carved statue, one single material all over, not a living person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-97-13 (61x91)"
+    },
+    {
+      "id": "flat-97-14",
+      "directory": "props-statues/texture-097",
+      "image": "flat/texture-097-record-014-frame-000-source.png",
+      "content": "One green-patinated bronze statue of a nude female dancer balanced on one foot with both arms raised, a narrow veil trailing from her hands behind one shoulder, on a low rectangular green-patinated bronze plinth. A carved statue, one single material all over, not a living person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-97-14 (46x90)"
+    },
+    {
+      "id": "flat-97-15",
+      "directory": "props-statues/texture-097",
+      "image": "flat/texture-097-record-015-frame-000-source.png",
+      "content": "One grey stone statue of a nude female dancer balanced on one foot with both arms raised, a narrow veil trailing from her hands behind one shoulder, on a low rectangular grey stone plinth. A carved statue, one single material all over, not a living person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-97-15 (46x90)"
+    },
+    {
+      "id": "flat-97-17",
+      "directory": "props-statues/texture-097",
+      "image": "flat/texture-097-record-017-frame-000-source.png",
+      "content": "One dark grey stone statue of a nude female dancer balanced on one foot with both arms raised, a long veil held in her hands spreading behind her like a cloak, on a low rectangular dark grey stone plinth. A carved statue, one single material all over, not a living person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-97-17 (61x91)"
+    },
+    {
+      "id": "flat-97-18",
+      "directory": "props-statues/texture-097",
+      "image": "flat/texture-097-record-018-frame-000-source.png",
+      "content": "One aged bronze statue of a bearded nobleman standing with one hand on his hip, in a doublet with checkered panels, breeches and tall boots, on a low rectangular aged bronze plinth. A carved statue, one single material all over, not a living person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-97-18 (47x90)"
+    },
+    {
+      "id": "flat-216-20",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-020-frame-000-source.png",
+      "content": "One tidy low wide pile of treasure: a heap of gold coins with a tied brown leather coin pouch on top and a small wooden crossbow lying behind it.",
+      "uncertainty": "",
+      "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",
+      "name": "flat-216-20 (60x25)"
+    },
+    {
+      "id": "flat-216-22",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-022-frame-000-source.png",
+      "content": "One tidy low wide pile of treasure: a heap of gold coins with a tied brown leather coin pouch on top and a small wooden crossbow lying behind it.",
+      "uncertainty": "",
+      "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",
+      "name": "flat-216-22 (60x25)"
+    },
+    {
+      "id": "flat-216-26",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-026-frame-000-source.png",
+      "content": "One tidy low wide pile of gear: a folded dark leather cuirass with a wooden longbow laid across it.",
+      "uncertainty": "",
+      "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",
+      "name": "flat-216-26 (89x25)"
+    },
+    {
+      "id": "flat-216-28",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-028-frame-000-source.png",
+      "content": "One tidy low wide pile of treasure: a folded dark leather cuirass on the ground with gold coins spilled in a line along its front.",
+      "uncertainty": "",
+      "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",
+      "name": "flat-216-28 (84x24)"
+    },
+    {
+      "id": "flat-216-33",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-033-frame-000-source.png",
+      "content": "One tidy low wide pile of treasure: a heap of gold coins with a small glass potion bottle standing in it and a short dagger lying beside it.",
+      "uncertainty": "",
+      "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",
+      "name": "flat-216-33 (92x23)"
+    },
+    {
+      "id": "flat-216-36",
+      "directory": "props-treasure/texture-216",
+      "image": "flat/texture-216-record-036-frame-000-source.png",
+      "content": "One tidy low wide pile of treasure: a folded grey chainmail shirt with a few gold coins and a small scatter of pearls beside it.",
+      "uncertainty": "",
+      "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",
+      "name": "flat-216-36 (67x26)"
+    }
+  ],
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "flats",
+      "model": "krea2-turbo",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ]
+}
