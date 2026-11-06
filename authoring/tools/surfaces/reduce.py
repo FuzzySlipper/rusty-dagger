@@ -13,6 +13,7 @@
 from pathlib import Path
 
 import numpy as np
+from scipy import ndimage
 from PIL import Image, ImageCms, ImageFilter
 
 PALETTE_FILE = Path.home() / "research/daggerfall-files/ART_PAL.COL"
@@ -22,6 +23,7 @@ SCALE = 2
 WRAP = 1.6
 SNOW = 24
 SNOWED = 0.6
+GLOW_PATCH = 0.1   # the smallest share of a light's largest glowing patch that still glows
 
 _srgb, _lab = ImageCms.createProfile("sRGB"), ImageCms.createProfile("LAB")
 _to_lab = ImageCms.buildTransformFromOpenProfiles(_srgb, _lab, "RGB", "LAB")
@@ -97,15 +99,18 @@ def crunch_sprites(frames, size):
 
 def glow(tile, cool=False):
     """What of a crunched sprite gives light, for its emission map: the tile's own colours where they are a bright warm flame
-    or, with `cool`, a bright blue glass, and clear elsewhere. A lit pixel needs a lit neighbour, so a highlight on metal stays dark."""
+    or, with `cool`, a bright blue glass, and clear elsewhere. A patch far smaller than the largest is a highlight on the metal,
+    which stays dark, as does a lone pixel."""
     pixels = np.asarray(tile.convert("RGBA"), np.float32) / 255
     red, green, blue = pixels[..., 0], pixels[..., 1], pixels[..., 2]
     value = pixels[..., :3].max(-1)
     chroma = (value - pixels[..., :3].min(-1)) / np.maximum(value, 1e-3)
     hue = blue > red if cool else (red >= green) & (green >= blue * 1.05)
     lit = (pixels[..., 3] > 0.5) & hue & (value > (0.5 if cool else 0.72)) & (chroma > 0.25)
-    padded = np.pad(lit, 1)
-    lit &= padded[:-2, 1:-1] | padded[2:, 1:-1] | padded[1:-1, :-2] | padded[1:-1, 2:]
+    patches, count = ndimage.label(lit)
+    if count:
+        sizes = ndimage.sum_labels(lit, patches, range(1, count + 1))
+        lit = np.isin(patches, 1 + np.flatnonzero(sizes >= np.maximum(2, GLOW_PATCH * sizes.max())))
     image = np.asarray(tile.convert("RGBA")).copy()
     image[~lit] = 0
     return Image.fromarray(image, "RGBA")
