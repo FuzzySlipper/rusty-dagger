@@ -11,6 +11,9 @@ internal sealed partial class DaggerfallSiteAppearance
     private readonly List<DecorationSprite> decorationSprites = [];
     private readonly Dictionary<string, SpriteAtlas> decorationAtlases = new(StringComparer.Ordinal);
     private readonly List<RenderResource> decorationResources = [];
+    private readonly Dictionary<string, RenderResource> decorationGlowMaps = new(StringComparer.Ordinal);
+    private readonly List<Appearance> glowingDecorations = [];
+    private float lampLevel;
 
     private sealed record DecorationVisual(DaggerfallSiteDecoration Definition, DecorationSprite Summer,
         DecorationSprite Winter, ulong Ordinal)
@@ -94,10 +97,33 @@ internal sealed partial class DaggerfallSiteAppearance
         }
         (Vector2 size, Vector2 pivot) = art.Placed(sprite.Size, baseAligned ? new Vector2(.5f, 0f) : sprite.Pivot);
         var result = new DecorationSprite(appearance.CreateSpriteFromAtlas(new(atlas, sprite.InitialFrameId, pivot, size,
-            BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f), material)));
+            BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f),
+            art.Emission is { } emission ? GlowingSprite(emission) : material)));
+        if (art.Emission is not null) glowingDecorations.Add(result.Visual);
         decorationSprites.Add(result);
         StartDecorationPlayback(result, atlas, sprite);
         return result;
+    }
+
+    /// <summary>A lamp's material: it takes the light around it like any flat, and what its emission map holds shines at the lamps' level.</summary>
+    private SpriteMaterialDescriptor GlowingSprite(DaggerfallArtFile emission)
+    {
+        if (!decorationGlowMaps.TryGetValue(emission.Path, out RenderResource? map))
+        {
+            map = appearance.OpenTexture(content, emission.Path, emission.Sha256, TextureFilter.Nearest).Handle;
+            decorationResources.Add(map);
+            decorationGlowMaps.Add(emission.Path, map);
+        }
+        return LitSprite with { EmissionColor = Vector3.One, EmissionIntensity = lampLevel, EmissionMap = new RenderResourceReference(map) };
+    }
+
+    /// <summary>Lights the refreshed lamps at a level, which is zero while they are out.</summary>
+    internal void UpdateLampGlow(float level)
+    {
+        if (level == lampLevel) return;
+        lampLevel = level;
+        foreach (Appearance lamp in glowingDecorations)
+            appearance.SetSpriteEmission(new(lamp, level));
     }
 
     private void StartDecorationPlayback(DecorationSprite result, SpriteAtlas atlas, NormalizedBillboardSprite sprite)
@@ -157,6 +183,8 @@ internal sealed partial class DaggerfallSiteAppearance
         decorationSprites.Clear();
         decorationAtlases.Clear();
         decorationResources.Clear();
+        decorationGlowMaps.Clear();
+        glowingDecorations.Clear();
         return values;
     }
 }

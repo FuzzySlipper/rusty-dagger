@@ -76,6 +76,7 @@ internal sealed class EngineGraphicsOutsideUpdate(IGraphicsService engine) : IGr
     public Appearance CreateSpriteFromAtlas(SpriteFromAtlasRequest arg0) { CreatedResources++; return _engine.CreateSpriteFromAtlas(arg0); }
     public Appearance ReplaceSpriteFromAtlas(SpriteFromAtlasReplaceRequest arg0) => _engine.ReplaceSpriteFromAtlas(arg0);
     public void SetSpriteFrame(SpriteFrameUpdateRequest arg0) => _engine.SetSpriteFrame(arg0);
+    public void SetSpriteEmission(SpriteEmissionUpdateRequest arg0) => _engine.SetSpriteEmission(arg0);
     public void SetSpriteViewport(SpriteViewportUpdateRequest arg0) => _engine.SetSpriteViewport(arg0);
     public SpriteReadout ReadSprite(Appearance arg0) => _engine.ReadSprite(arg0);
     public SpritePlayback CreateSpritePlayback(SpritePlaybackCreateRequest arg0) { CreatedResources++; return _engine.CreateSpritePlayback(arg0); }

@@ -2162,6 +2162,7 @@ internal sealed class DaggerfallSiteLifecycle
         {
             resident.Projection.Lighting.UpdateCityLights(_time.Calendar);
             resident.Projection.Lighting.UpdateWindowGlass(resident.Projection.Appearance, _time.Calendar);
+            resident.Projection.Lighting.UpdateLampGlow(resident.Projection.Appearance, _time.Calendar);
         }
     }
 

@@ -592,6 +592,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         public Appearance CreateSpriteFromAtlas(SpriteFromAtlasRequest request) => throw new NotSupportedException();
         public Appearance ReplaceSpriteFromAtlas(SpriteFromAtlasReplaceRequest request) => throw new NotSupportedException();
         public void SetSpriteFrame(SpriteFrameUpdateRequest request) => throw new NotSupportedException();
+        public void SetSpriteEmission(SpriteEmissionUpdateRequest request) => throw new NotSupportedException();
         public void SetSpriteViewport(SpriteViewportUpdateRequest request) => throw new NotSupportedException();
         public SpriteReadout ReadSprite(Appearance appearance) => throw new NotSupportedException();
         public LandmarkReadResult ReadLandmarks(LandmarkReadRequest request) => throw new NotSupportedException();
