@@ -68,7 +68,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         IEnumerable<DaggerfallDoorSave>? restoredDoors = null,
         DaggerfallDungeonMotionSnapshot? restoredMotion = null,
         bool deferMotionCollisionAdmission = false,
-        NormalizedClassicPresentation? sessionPresentation = null, DaggerfallDefinitions? definitions = null)
+        NormalizedClassicPresentation? sessionPresentation = null, DaggerfallDefinitions? definitions = null, bool carriesSky = true)
     {
         ArgumentNullException.ThrowIfNull(engine);
         ArgumentNullException.ThrowIfNull(actors);
@@ -93,7 +93,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
             appearance = new(engine.Content, engine.Graphics, inputs, engine.Audio,
                 tuning.PresentationAudio, random, audioBundle, doors, motion, sessionPresentation, gates, definitions);
             configureAppearance(appearance);
-            lighting = new(engine.Graphics, engine.CameraView, inputs, tuning.SiteLighting, calendar);
+            lighting = new(engine.Graphics, engine.CameraView, inputs, tuning.SiteLighting, calendar, carriesSky);
             portals = new(actors, inputs.ProfileKey, inputs.Portals);
             DaggerfallSiteProjection projection = new(inputs, doors, motion, gates, appearance, lighting, portals, spatialMovement);
             projection.ActivateWaterTriggers(tick: 0);
@@ -180,7 +180,9 @@ internal sealed class DaggerfallSiteProjection : IDisposable
     /// profile projection and its product state. Durable resource identities are recreated by
     /// <see cref="Resume"/> under the same profile key.
     /// </summary>
-    internal void Suspend(IReadOnlySet<long>? retainedActors = null)
+    /// <param name="retainedActors">Actors that stay live through the suspension.</param>
+    /// <param name="keepSky">Leaves the sun and ambient standing, for a location unloading under the player's wilderness.</param>
+    internal void Suspend(IReadOnlySet<long>? retainedActors = null, bool keepSky = false)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(DaggerfallSiteProjection));
         if (_suspended) return;
@@ -191,7 +193,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         Motion.Suspend();
         Doors.Suspend();
         Portals.Suspend();
-        Lighting.Suspend();
+        Lighting.Suspend(keepSky);
         _suspended = true;
     }
 

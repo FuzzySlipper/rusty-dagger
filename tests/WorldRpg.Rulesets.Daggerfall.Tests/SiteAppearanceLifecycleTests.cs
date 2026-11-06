@@ -510,4 +510,51 @@ public sealed class SiteAppearanceLifecycleTests
         Assert.Equal(original.Handle, appearance.DisposedPlaybackHandles[0]);
         presentation.CompleteAdmittedUpdate();
     }
+
+    private static DaggerfallSiteProfile SkyExterior() => new(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
+        DaggerfallSiteGeometry.Closure(new SpatialContentArtifact("spatial/exterior.json", Hash, 1), new ContentArtifact("mesh/exterior.json", Hash)),
+        new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene), new PlayerInitialLook(0, 0), [], new Dictionary<long, NormalizedActorSprite>(),
+        site: new DaggerfallSiteId(17, 4), profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: "worldrpg/test/exterior");
+
+    /// <summary>A location unloading behind a player walking away leaves the sky lit, and the sky goes on following the day.</summary>
+    [Fact]
+    public void The_sky_outlasts_its_location_unloading_and_keeps_following_the_day()
+    {
+        List<string> releases = [];
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(new ContentFake(releases), SpatialFake.Create(Hash, releases).Service, appearance);
+        DaggerfallCalendar noon = DaggerfallCalendar.Start with { Hour = 12 };
+        using DaggerfallSiteLighting lighting = new(appearance, engine.Context.CameraView, SkyExterior(), DaggerfallTuning.Defaults.SiteLighting, noon);
+        int created = appearance.LightRequests.Count;
+
+        lighting.Suspend(keepSky: true);
+        Assert.Equal(0, appearance.DisposedLights);
+        lighting.UpdateAmbient(noon, .5f);
+        Assert.Equal(.5f, appearance.LightUpdates.Last(update => update.Replacement.Descriptor.Kind == LightKind.Directional).Replacement.Descriptor.Intensity);
+
+        lighting.Resume();
+        Assert.Equal(created, appearance.LightRequests.Count);
+
+        lighting.Suspend(keepSky: true);
+        lighting.Suspend();
+        Assert.Equal(created, appearance.DisposedLights);
+        lighting.RestoreSky();
+        Assert.Equal(created * 2, appearance.LightRequests.Count);
+    }
+
+    /// <summary>A resident location beside the active one lights only itself: a second sun would light the same ground twice.</summary>
+    [Fact]
+    public void A_resident_location_brings_no_sky_of_its_own()
+    {
+        List<string> releases = [];
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(new ContentFake(releases), SpatialFake.Create(Hash, releases).Service, appearance);
+        using DaggerfallSiteLighting lighting = new(appearance, engine.Context.CameraView, SkyExterior(), DaggerfallTuning.Defaults.SiteLighting,
+            DaggerfallCalendar.Start, carriesSky: false);
+
+        lighting.Suspend();
+        lighting.Resume();
+
+        Assert.DoesNotContain(appearance.LightRequests, request => request.Descriptor.Kind is LightKind.Directional or LightKind.Ambient);
+    }
 }

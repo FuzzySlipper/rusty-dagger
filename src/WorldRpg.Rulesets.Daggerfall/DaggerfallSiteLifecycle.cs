@@ -850,6 +850,7 @@ internal sealed class DaggerfallSiteLifecycle
                 source.Suspend();
                 sourceProjectionSuspended = true;
             }
+            else source.Lighting.Suspend();
             // A profile can already have its authored closure detached while a caller still holds a
             // live spawned actor in the one canonical roster.  Capture and retire that actor at the
             // same profile boundary; otherwise the durable entity remains materialized while the
@@ -988,6 +989,11 @@ internal sealed class DaggerfallSiteLifecycle
             if (sourceProjectionSuspended)
             {
                 try { source.Resume(); }
+                catch (Exception rollbackFailure) { failures.Add(rollbackFailure); }
+            }
+            else if (!sourceLocationLoaded)
+            {
+                try { source.Lighting.RestoreSky(); }
                 catch (Exception rollbackFailure) { failures.Add(rollbackFailure); }
             }
             try { source.Lighting.ApplyBackground(); }
@@ -1140,7 +1146,7 @@ internal sealed class DaggerfallSiteLifecycle
         {
             _locationLoaded = false;
             // Restored wilderness actors are live independently of the detached location.
-            Projection.Suspend(_roster.Dynamic.Keys.ToHashSet());
+            Projection.Suspend(_roster.Dynamic.Keys.ToHashSet(), keepSky: true);
             RemoveLocationArtifact(Projection.Inputs);
             _host.RebuildActivation();
         }
@@ -1508,7 +1514,7 @@ internal sealed class DaggerfallSiteLifecycle
             Vector3 translation = ExteriorProfileTranslation(profile, origin);
             projection = DaggerfallSiteProjection.Create(_engine, _state.Actors.Entities, _random, _tuning, _time.Calendar,
                 profile, AudioFor(profile), _spatial, _host.ConfigureSiteAppearance, delta?.Doors, delta?.Motion, deferMotionCollisionAdmission: true,
-                sessionPresentation: _sessionPresentation, definitions: _definitions);
+                sessionPresentation: _sessionPresentation, definitions: _definitions, carriesSky: false);
             projection.Appearance.DrawThroughActiveSnapshot();
             // The profile's authored geometry and actors use its own source frame. Rebase every
             // projection owner before admitting collision so doors, motion, portals, appearance
@@ -1692,7 +1698,7 @@ internal sealed class DaggerfallSiteLifecycle
             Projection.Motion, _roster.Dynamic, dynamicActorIds, ExteriorProfileTranslation(profile));
         _deltas[ActiveProfile] = delta;
         _roster.UnloadSite(profile, delta);
-        Projection.Suspend();
+        Projection.Suspend(keepSky: true);
         RemoveLocationArtifact(profile);
         _locationLoaded = false;
         _locationCell = center;

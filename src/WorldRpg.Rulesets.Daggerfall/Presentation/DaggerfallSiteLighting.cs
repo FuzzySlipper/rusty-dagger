@@ -39,11 +39,14 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     private float _daylight = 1f;
     private float? _dungeonLevel;
     private float _flash;
+    private readonly bool _carriesSky;
     private bool _disposed;
     private bool _suspended;
 
+    /// <param name="carriesSky">Whether this site lights the world with its sun and ambient. A resident location beside the
+    /// active one brings only its own lamps: there is one sky, and a second sun would light the same ground twice.</param>
     internal DaggerfallSiteLighting(IGraphicsService graphics, ICameraViewService camera, DaggerfallSiteProfile inputs,
-        DaggerfallSiteLightingTuning tuning, DaggerfallCalendar calendar)
+        DaggerfallSiteLightingTuning tuning, DaggerfallCalendar calendar, bool carriesSky = true)
     {
         ArgumentNullException.ThrowIfNull(graphics);
         ArgumentNullException.ThrowIfNull(camera);
@@ -52,6 +55,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         _graphics = graphics;
         _camera = camera;
         _profileKind = inputs.ProfileKind;
+        _carriesSky = carriesSky;
         _tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
         long instance = _instance = Interlocked.Increment(ref s_lastInstance);
         _profileId = inputs.ProfileKey.LogicalId;
@@ -95,15 +99,8 @@ internal sealed class DaggerfallSiteLighting : IDisposable
                 created.Add(point);
                 _points.Add((point, request));
             }
-            if (_profileKind == DaggerfallWorldProfileKind.Exterior)
-            {
-                LightRequest sunRequest = SunRequest(calendar, calendar.IsDay ? 1f : 0f);
-                _sunRequest = sunRequest;
-                _sun = graphics.CreateLight(sunRequest);
-                created.Add(_sun);
-            }
-            _ambient = graphics.CreateLight(AmbientRequest(_ambientLevel));
-            created.Add(_ambient);
+            if (carriesSky && _profileKind == DaggerfallWorldProfileKind.Exterior) _sunRequest = SunRequest(calendar, calendar.IsDay ? 1f : 0f);
+            CreateSky(created);
             _lights.AddRange(created);
             ApplyBackground();
         }
@@ -224,13 +221,13 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         _daylight = exteriorDaylight;
         _dungeonLevel = dungeonLevel;
         _flash = lightningFlash;
-        if (_profileKind == DaggerfallWorldProfileKind.Exterior)
+        if (_carriesSky && _profileKind == DaggerfallWorldProfileKind.Exterior)
             _sunRequest = SunRequest(calendar, exteriorDaylight);
-        if (!_suspended && _sun is { } sun && _sunRequest is { } sunRequest)
+        if (_sun is { } sun && _sunRequest is { } sunRequest)
             _graphics.UpdateLight(new(sun, sunRequest));
         float level = AmbientLevel(calendar);
         if (level == _ambientLevel) return;
-        if (!_suspended && _ambient is { } ambient)
+        if (_ambient is { } ambient)
             _graphics.UpdateLight(new LightUpdateRequest(ambient, AmbientRequest(level)));
         _ambientLevel = level;
     }
@@ -260,22 +257,31 @@ internal sealed class DaggerfallSiteLighting : IDisposable
             _suspendedPoints[index] = CityRequest(_suspendedPoints[index], calendar);
     }
 
-    /// <summary>Releases point and ambient light resources while retaining their authored requests.</summary>
-    internal void Suspend()
+    /// <summary>
+    /// Releases the site's light resources while retaining their authored requests. <paramref name="keepSky"/> leaves the
+    /// sun and ambient standing: they light the wilderness too, after the location itself has unloaded.
+    /// </summary>
+    internal void Suspend(bool keepSky = false)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(DaggerfallSiteLighting));
-        if (_suspended) return;
-        _suspendedPoints.Clear();
-        _suspendedPoints.AddRange(_points.Select(value => value.Request));
+        if (!_suspended)
+        {
+            _suspendedPoints.Clear();
+            _suspendedPoints.AddRange(_points.Select(value => value.Request));
+            foreach (Light light in _lights.AsEnumerable().Reverse().Where(light => !IsSky(light))) light.Dispose();
+            _lights.RemoveAll(light => !IsSky(light));
+            _mobileLights.Clear();
+            _spellLights.Clear();
+            _points.Clear();
+            _magicCandle = null;
+            _suspended = true;
+        }
+
+        if (keepSky) return;
         foreach (Light light in _lights.AsEnumerable().Reverse()) light.Dispose();
-        _mobileLights.Clear();
-        _spellLights.Clear();
-        _points.Clear();
         _lights.Clear();
         _ambient = null;
         _sun = null;
-        _magicCandle = null;
-        _suspended = true;
     }
 
     /// <summary>Recreates the retained lights after a location is admitted again.</summary>
@@ -292,14 +298,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
                 created.Add(light);
                 _points.Add((light, request));
             }
-            if (_sunRequest is { } sunRequest)
-            {
-                _sun = _graphics.CreateLight(sunRequest);
-                created.Add(_sun);
-            }
-            Light ambient = _graphics.CreateLight(AmbientRequest(_ambientLevel));
-            _ambient = ambient;
-            created.Add(ambient);
+            CreateSky(created);
             _lights.AddRange(created);
             _suspendedPoints.Clear();
             _suspended = false;
@@ -307,16 +306,46 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         }
         catch
         {
-            foreach (Light light in created.AsEnumerable().Reverse()) light.Dispose();
-            _mobileLights.Clear();
-            _spellLights.Clear();
-        _points.Clear();
-            _lights.Clear();
-            _ambient = null;
-        _sun = null;
-        _magicCandle = null;
+            DisposeCreated(created);
             throw;
         }
+    }
+
+    /// <summary>Stands the sky again over a suspended site, after a transition away from it fails.</summary>
+    internal void RestoreSky()
+    {
+        List<Light> created = [];
+        try
+        {
+            CreateSky(created);
+            _lights.AddRange(created);
+        }
+        catch
+        {
+            DisposeCreated(created);
+            throw;
+        }
+    }
+
+    private bool IsSky(Light light) => ReferenceEquals(light, _sun) || ReferenceEquals(light, _ambient);
+
+    /// <summary>Creates whichever of the sun and ambient this site carries and isn't holding.</summary>
+    private void CreateSky(List<Light> created)
+    {
+        if (!_carriesSky) return;
+        if (_sun is null && _sunRequest is { } sunRequest) created.Add(_sun = _graphics.CreateLight(sunRequest));
+        if (_ambient is null) created.Add(_ambient = _graphics.CreateLight(AmbientRequest(_ambientLevel)));
+    }
+
+    private void DisposeCreated(List<Light> created)
+    {
+        foreach (Light light in created.AsEnumerable().Reverse())
+        {
+            if (ReferenceEquals(light, _sun)) _sun = null;
+            if (ReferenceEquals(light, _ambient)) _ambient = null;
+            light.Dispose();
+        }
+        _points.Clear();
     }
 
     internal void ApplyBackground()
