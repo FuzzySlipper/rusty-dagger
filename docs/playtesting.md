@@ -110,6 +110,7 @@ report them; names with spaces are quoted.
 | `world.hour HOUR` | Lets world time run on to the next HOUR (0 to 23) of the clock, as resting would. |
 | `world.ground-blend CONTRAST METRES SHARPNESS` | Changes how open ground blends for this run, reporting the rebuild's time. Contrast `0` tiles it instead, for comparing the two on one spot. |
 | `world.weather KIND` | Sets the weather everywhere until the next day: `Sunny`, `Cloudy`, `Overcast`, `Fog`, `Rain`, `Thunder` or `Snow`. |
+| `world.ground-weather WET SNOW` | Leaves open ground this wet and this snowed, both from 0 to 1; weather carries on from there. |
 | `world.stand EAST SOUTH` | Stands the player on the ground that far away, inside the walked window: a way out into the wilderness. |
 | `world.ground-survey` | Slopes at walking scale from random land points, and what a surface costs to build. |
 | `world.horizon` | What the distant horizon is drawing: its lift and base, the haze, and its tiles. |

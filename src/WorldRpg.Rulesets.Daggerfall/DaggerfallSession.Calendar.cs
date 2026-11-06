@@ -77,7 +77,7 @@ internal sealed partial class DaggerfallSession
         DaggerfallCalendar after = _time.Calendar;
         long minuteBefore = MinuteIndex(before), minuteAfter = MinuteIndex(after);
         State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
-        _weather.Advance(_time.Calendar);
+        _weather.Advance(_time.Calendar, (minuteAfter - minuteBefore) / 60d);
         _sites.Projection.Lighting.UpdateAmbient(_time.Calendar, _tuning.Weather.Daylight(_time.Calendar, CurrentWeather));
         _sites.UpdateResidentCityLights();
         State.Quests.AdvanceClocks(State.Variables, before, _time.Calendar);

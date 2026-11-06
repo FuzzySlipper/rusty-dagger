@@ -23,7 +23,6 @@ public sealed class DaggerfallSkyMediaTests
         Assert.Equal("night-2", media.Select(231, summer with {Hour=0}, DaggerfallWeatherKind.Overcast, 0).First);
         Assert.Equal("sky-21-0", media.Select(231, summer with {Hour=0}, DaggerfallWeatherKind.Fog, 1).First);
         Assert.Equal("sky-16-32", media.Select(227, summer with {Month=0}, DaggerfallWeatherKind.Sunny, 0).First);
-        Assert.Equal("particle-snow", media.Particle(true));
         var graphics = new AppearanceFake([]);
         using var resource = media.Open(graphics, "sky-13-32");
         Assert.Equal((DaggerfallData.DataContainerName, DaggerfallSkyMedia.LogicalRoot + "/sky-13-32.png"), fixture.Service.OpenedReferences.Single());
@@ -72,7 +71,7 @@ public sealed class DaggerfallSkyMediaTests
         service.Container(DaggerfallData.DataContainerName);
         byte[] body = [1];
         string digest = Convert.ToHexString(SHA256.HashData(body)).ToLowerInvariant();
-        var resources = new List<object>(); var selections = new List<object>(); var nights = new List<object>(); var particles = new List<object>();
+        var resources = new List<object>(); var selections = new List<object>(); var nights = new List<object>();
         var cleared = new List<object>();
         object Resource(string id, int width, int height, int? night = null, string? kind = null)
         {
@@ -92,14 +91,13 @@ public sealed class DaggerfallSkyMediaTests
             resources.Add(Resource(id,1024,512)); selections.Add(new {skyIndex=sky,timeFrame=frame,resourceId=id}); cleared.Add(Cleared(id));
         }
         for (int night=0;night<4;night++) { nights.Add(Resource($"night-{night}",1024,512,night)); cleared.Add(Cleared($"night-{night}")); }
-        particles.Add(Resource("particle-rain",32,64,kind:"rain")); particles.Add(Resource("particle-snow",32,32,kind:"snow"));
         object Moon(string moon)
         {
             string id = "moon-" + moon;
             service.Add(DaggerfallData.DataContainerName, DaggerfallSkyMedia.LogicalRoot + "/" + id + ".png", body);
             return new {id, moon, relativePath="media/sky/resources/"+id+".png", contentHash=digest, byteLength=1, width=288, height=112, columns=8, frameCount=32};
         }
-        byte[] manifest = JsonSerializer.SerializeToUtf8Bytes(new {resources,selections,nightResources=nights,clearedResources=cleared,weatherParticles=particles,
+        byte[] manifest = JsonSerializer.SerializeToUtf8Bytes(new {resources,selections,nightResources=nights,clearedResources=cleared,
             moons=new[]{Moon("masser"),Moon("secunda")},
             daylightFrameCurve=new[]{new{time=0f,value=0f,tangent=1f},new{time=.5f,value=.5f,tangent=1f},new{time=1f,value=1f,tangent=1f}}});
         return new(manifest,service);

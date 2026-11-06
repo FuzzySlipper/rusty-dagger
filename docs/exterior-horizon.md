@@ -9,7 +9,7 @@ heightfield in the backdrop that only draws.
 | The height function, shared by walked and far ground | `DaggerfallTerrainSurfaceBuilder.NormalizedHeight` |
 | Far ground: rings, lift, colours | `DaggerfallHorizonGround` |
 | Heightfield, backdrop link, following the player | `DaggerfallHorizon` |
-| Haze, cloud layer, which sky panorama draws | `DaggerfallWeatherPresentation` |
+| Haze, cloud layer, which sky draws, falling weather, wet ground and snow | `DaggerfallWeatherPresentation` |
 | Moons | `DaggerfallMoons`, `SkyMediaPublication` (importer) |
 | Panoramas with the painted horizon cleared | `SkyHorizonClearing` (importer) |
 | Sun, ambient and how lights scale | `DaggerfallSiteLighting`, `siteLighting` in the tuning payload |
@@ -47,8 +47,8 @@ heightfield in the backdrop that only draws.
   horizon, so clear weather uses thin exponential haze instead, its colour the cleared
   sky's own horizon. Rain, snow and fog keep their densities and hide the far ground:
   they close within a kilometre or so, and ground the fog has wholly taken would
-  still stand out as a flat shape of the fog's colour. Fog also clears the cloud
-  layer, which would darken the sky just above it.
+  still stand out as a flat shape of the fog's colour. Their fog is the weather's own
+  [air](#weather).
 - **Light.** The world's night lights keep far ground's bright vertex colours bright,
   so far ground takes the day's light as a material tint, down to `nightTint`.
 
@@ -93,6 +93,37 @@ off, and that is what `bloom` spreads.
   it into their material factors, over any metal. A sprite running a playback can't be replaced
   with a new tint, and lighting a screen-space sprite turns it white, so the classic hand holds
   it as a paused Engine tint tween.
+
+## Weather
+
+Weather is facts first. `DaggerfallWeatherConditions` states what is falling and how hard,
+the wind, and how wet and snowed open ground is, per climate. Wet and snow build and fade
+with world time through `DaggerfallWeatherState`, so ground stays soaked after the rain,
+and snow lies through winter and melts after it. They save with the game. Presentation
+draws these facts and rules should read them too, through
+`DaggerfallSession.CurrentConditions`, rather than asking which sky is up.
+
+- **Falling.** Rain and snow are the Engine's precipitation, small enough that a drop
+  near the eye doesn't swell past the pixel art. The day's wind slants them. They ease
+  with the weather and at a shelter's edge; through a door they are there or gone at once.
+  Their colour follows the daylight, down to `nightFall`.
+- **Ground.** `wetLook` and `snowLook` map the facts to the Engine's wetness and snow.
+  `snowLook` stops short of the Engine's full cover, which would bury the art in one flat
+  colour: the ground shows through in drifts stepped at the ground's own texel size, and
+  winter freezes the puddles.
+- **Air.** Over the cleared sky, fog, rain, storms and snow close the sky in a colour of
+  their own (`airColors`), which falls with the daylight and flares with lightning. Fog
+  takes the same colour, so the world fades exactly into it in every climate, whatever
+  a day's panorama would have shown under the clouds.
+- **Sprites stand in the fog.** World sprites have hard edges and write depth
+  (`SpriteAlphaMode.Mask`). The Engine fogs by depth, so a blended sprite takes the fog of
+  what is behind it, and a tree against the sky would stay sharp in mist. Only glowing and
+  translucent sprites blend.
+- **Wind** turns each day (`windDegrees` in the save), and drives the clouds' drift
+  and the rain's slant. Cloud colour is by weather too (`cloudColors`), so foul skies close
+  dark.
+- **Classic art** keeps its painted sky under every weather, with the same falling, ground
+  and wind.
 
 ## Open ground
 
@@ -148,5 +179,6 @@ stand on it, through the same height function. Without it they stand on WOODS.
 ## Tuning by eye
 
 `world.horizon-set LIFT FOG` changes the lift and haze for one run, `world.ground-blend
-CONTRAST METRES SHARPNESS` the ground's blend, and `world.hour HOUR` sets the light. Over bare WOODS its stepped heights make ranges into
+CONTRAST METRES SHARPNESS` the ground's blend, `world.weather KIND` and `world.ground-weather
+WET SNOW` the weather, and `world.hour HOUR` sets the light. Over bare WOODS its stepped heights make ranges into
 mesas at any lift; the relief makes them peaks.

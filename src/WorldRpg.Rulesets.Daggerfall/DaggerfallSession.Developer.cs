@@ -149,6 +149,12 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
         return DebugCommandResult.Success($"Open ground {(contrast == 0 ? "is tiled" : "blends")}, rebuilt in {System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds:F0} ms.");
     }
 
+    public DebugCommandResult GroundWeather(double wet, double snow)
+    {
+        _weather.Force((float)wet, (float)snow);
+        return DebugCommandResult.Success($"The ground here is {CurrentConditions.Wet:0.##} wet and {CurrentConditions.Snow:0.##} snowed.");
+    }
+
     public DebugCommandResult Weather(string kind)
     {
         if (!Enum.TryParse(kind, ignoreCase: true, out DaggerfallWeatherKind weather) || !Enum.IsDefined(weather))

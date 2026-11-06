@@ -274,37 +274,6 @@ public sealed record SkyCurveKnot(float Time, float Value, float Tangent)
     }
 }
 
-/// <summary>Product-authored neutral precipitation sprite metadata; it is separate from Bethesda source facts.</summary>
-public enum SkyWeatherParticleKind
-{
-    Rain,
-    Snow,
-}
-
-/// <summary>One deterministic, product-authored precipitation billboard resource.</summary>
-public sealed record SkyWeatherParticleResource(
-    string Id,
-    string RelativePath,
-    ContentDigest ContentHash,
-    long ByteLength,
-    int Width,
-    int Height,
-    SkyWeatherParticleKind Kind,
-    string Provenance)
-{
-    public void Validate()
-    {
-        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
-        NormalizedImportDocument.RequireLogicalPath(RelativePath, nameof(RelativePath));
-        ContentHash.Validate();
-        if (ByteLength <= 0 || Width <= 0 || Height <= 0 || !Enum.IsDefined(Kind)
-            || !StringComparer.Ordinal.Equals(Provenance, "product-authored-neutral"))
-        {
-            throw new InvalidOperationException($"Weather particle resource '{Id}' carries invalid authored-resource facts.");
-        }
-    }
-}
-
 /// <summary>
 /// One panorama with its painted horizon cleared (<see cref="SkyHorizonClearing"/>), drawn over a real horizon.
 /// </summary>
@@ -350,7 +319,6 @@ public sealed record SkyMediaManifest(
     IReadOnlyList<SkyPanoramaSelection> Selections,
     IReadOnlyList<PublishedSource> NightSources,
     IReadOnlyList<SkyNightResource> NightResources,
-    IReadOnlyList<SkyWeatherParticleResource> WeatherParticles,
     IReadOnlyList<SkyCurveKnot> DaylightFrameCurve,
     IReadOnlyList<SkyClearedResource> ClearedResources,
     IReadOnlyList<SkyMoonResource> Moons)
@@ -363,7 +331,6 @@ public sealed record SkyMediaManifest(
         Selections = Selections.OrderBy(selection => selection.SkyIndex).ThenBy(selection => selection.TimeFrame).ToArray(),
         NightSources = NightSources.OrderBy(source => source.Path, StringComparer.Ordinal).ToArray(),
         NightResources = NightResources.OrderBy(resource => resource.Id, StringComparer.Ordinal).ToArray(),
-        WeatherParticles = WeatherParticles.OrderBy(resource => resource.Id, StringComparer.Ordinal).ToArray(),
         DaylightFrameCurve = DaylightFrameCurve.OrderBy(knot => knot.Time).ToArray(),
         ClearedResources = ClearedResources.OrderBy(resource => resource.Id, StringComparer.Ordinal).ToArray(),
     };
@@ -375,26 +342,23 @@ public sealed record SkyMediaManifest(
         ArgumentNullException.ThrowIfNull(Selections);
         ArgumentNullException.ThrowIfNull(NightSources);
         ArgumentNullException.ThrowIfNull(NightResources);
-        ArgumentNullException.ThrowIfNull(WeatherParticles);
         ArgumentNullException.ThrowIfNull(DaylightFrameCurve);
         if (Sources.Count != SkyFileDecoder.FileCount || Resources.Count != SkyFileDecoder.FileCount * SkyFileDecoder.FramesPerRecord * 2
             || Selections.Count != SkyFileDecoder.FileCount * 64 || (NightSources.Count != 0 && NightSources.Count != 4)
-            || NightResources.Count != NightSources.Count || WeatherParticles.Count != 2 || DaylightFrameCurve.Count != 7)
+            || NightResources.Count != NightSources.Count || DaylightFrameCurve.Count != 7)
         {
-            throw new InvalidOperationException("The sky publication must close over all day sources, panoramas, time frames, optional four night sources, two precipitation sprites, and the seven day-frame curve knots.");
+            throw new InvalidOperationException("The sky publication must close over all day sources, panoramas, time frames, optional four night sources and the frame curve.");
         }
 
         NormalizedImportDocument.ValidateUnique(Sources, source => source.Path, "sky source");
         NormalizedImportDocument.ValidateUnique(NightSources, source => source.Path, "night sky source");
         NormalizedImportDocument.ValidateUnique(Resources, resource => resource.Id, "sky panorama");
         NormalizedImportDocument.ValidateUnique(NightResources, resource => resource.Id, "night sky resource");
-        NormalizedImportDocument.ValidateUnique(WeatherParticles, resource => resource.Id, "weather particle resource");
         foreach (PublishedSource source in Sources) source.Validate();
         foreach (SkyPanoramaResource resource in Resources) resource.Validate();
         foreach (SkyPanoramaSelection selection in Selections) selection.Validate();
         foreach (PublishedSource source in NightSources) source.Validate();
         foreach (SkyNightResource resource in NightResources) resource.Validate();
-        foreach (SkyWeatherParticleResource resource in WeatherParticles) resource.Validate();
         foreach (SkyCurveKnot knot in DaylightFrameCurve) knot.Validate();
         foreach (SkyClearedResource resource in ClearedResources) resource.Validate();
         NormalizedImportDocument.ValidateUnique(ClearedResources, resource => resource.Id, "cleared sky panorama");
@@ -557,7 +521,6 @@ public sealed record SkyMediaPublication(
             nightProvenance.Add(PublishedSource.Of(source.SourcePath, source.Bytes.Span));
         }
 
-        SkyWeatherParticleResource[] particleResources = CreateWeatherParticles(artifacts);
         SkyMoonResource[] moonResources = [.. (moons ?? []).Select(moon => PublishMoon(artifacts, moon,
             moonPalette ?? throw new ArgumentNullException(nameof(moonPalette), "Moons are published through the art palette.")))];
 
@@ -585,7 +548,7 @@ public sealed record SkyMediaPublication(
         }
 
         SkyMediaManifest manifest = new SkyMediaManifest(provenance, resources, selections, nightProvenance, nightResources,
-            particleResources, DaylightFrameCurve, cleared, moonResources).Canonicalize();
+            DaylightFrameCurve, cleared, moonResources).Canonicalize();
         manifest.Validate();
         byte[] manifestBytes = JsonSerializer.SerializeToUtf8Bytes(manifest, PublishedJson.Section);
         artifacts.Add(new(ManifestRelativePath, [.. manifestBytes, (byte)'\n']));
@@ -642,24 +605,6 @@ public sealed record SkyMediaPublication(
         }
 
         return pixels;
-    }
-
-    private static SkyWeatherParticleResource[] CreateWeatherParticles(List<ImportPublicationArtifact> artifacts)
-    {
-        (string Id, string Path, SkyWeatherParticleKind Kind, int Width, int Height, byte[] Bytes)[] definitions =
-        [
-            ("weather.particle.rain", "media/sky/resources/particles/rain.png", SkyWeatherParticleKind.Rain, 16, 64, WeatherParticleEncoder.Rain()),
-            ("weather.particle.snow", "media/sky/resources/particles/snow.png", SkyWeatherParticleKind.Snow, 32, 32, WeatherParticleEncoder.Snow()),
-        ];
-        List<SkyWeatherParticleResource> resources = [];
-        foreach (var definition in definitions)
-        {
-            artifacts.Add(new(definition.Path, definition.Bytes, mediaId: definition.Id));
-            resources.Add(new(definition.Id, definition.Path, ContentDigest.Compute(definition.Bytes), definition.Bytes.LongLength,
-                definition.Width, definition.Height, definition.Kind, "product-authored-neutral"));
-        }
-
-        return [.. resources];
     }
 }
 
@@ -810,49 +755,5 @@ internal static class SkyNightPanoramaEncoder
         }
 
         return panorama;
-    }
-}
-
-/// <summary>Small deterministic authored sprites for Engine precipitation billboards.</summary>
-internal static class WeatherParticleEncoder
-{
-    public static byte[] Rain()
-    {
-        const int width = 16, height = 64;
-        byte[] pixels = new byte[width * height * 4];
-        for (int y = 0; y < height; y++)
-        {
-            float along = MathF.Sin((y + 1F) / (height + 1F) * MathF.PI);
-            for (int x = 0; x < width; x++)
-            {
-                float distance = MathF.Abs(x - (width - 1) * 0.5F);
-                float alpha = MathF.Max(0F, 1F - distance / 3.5F) * along;
-                int offset = ((y * width) + x) * 4;
-                pixels[offset] = pixels[offset + 1] = pixels[offset + 2] = byte.MaxValue;
-                pixels[offset + 3] = (byte)Math.Clamp(MathF.Round(alpha * 210F), 0F, 255F);
-            }
-        }
-
-        return DeterministicPngEncoder.EncodeRgba8(width, height, pixels);
-    }
-
-    public static byte[] Snow()
-    {
-        const int width = 32, height = 32;
-        byte[] pixels = new byte[width * height * 4];
-        float center = (width - 1) * 0.5F;
-        for (int y = 0; y < height; y++)
-        {
-            for (int x = 0; x < width; x++)
-            {
-                float distance = MathF.Sqrt(MathF.Pow(x - center, 2F) + MathF.Pow(y - center, 2F));
-                float alpha = MathF.Max(0F, 1F - distance / (width * 0.5F));
-                int offset = ((y * width) + x) * 4;
-                pixels[offset] = pixels[offset + 1] = pixels[offset + 2] = byte.MaxValue;
-                pixels[offset + 3] = (byte)Math.Clamp(MathF.Round(alpha * 190F), 0F, 255F);
-            }
-        }
-
-        return DeterministicPngEncoder.EncodeRgba8(width, height, pixels);
     }
 }

@@ -34,6 +34,18 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
     internal float CloudPixelMetres { get; init; } = 180;
     /// <summary>How many shades a cloud is drawn in.</summary>
     internal uint CloudShadeSteps { get; init; } = 5;
+    /// <summary>The colour the clouds take the light in, by <see cref="World.DaggerfallWeatherKind"/>, so foul skies close over dark.</summary>
+    internal Vector3[] CloudColors { get; init; } = [Vector3.One, Vector3.One, new(.6f, .6f, .63f), Vector3.One, new(.28f, .31f, .37f), new(.17f, .19f, .24f), new(.52f, .54f, .58f)];
+
+    /// <summary>
+    /// The colour thick weather closes the sky in by full day, by <see cref="World.DaggerfallWeatherKind"/>: the air the clouds
+    /// hang in and the world fades into, so no panorama shows under them. Black keeps the panorama.
+    /// </summary>
+    internal Vector3[] AirColors { get; init; } = [Vector3.Zero, Vector3.Zero, Vector3.Zero, new(.6f, .6f, .62f), new(.19f, .23f, .31f), new(.13f, .15f, .22f), new(.66f, .69f, .78f)];
+    /// <summary>The least of the day's light the air keeps by night.</summary>
+    internal float NightAir { get; init; } = .06f;
+    /// <summary>How much a lightning flash lights the air, for each of its intensity.</summary>
+    internal float FlashAir { get; init; } = .12f;
 
     /// <summary>How large each moon stands, in degrees of sky from its centre to its edge.</summary>
     internal float MasserRadiusDegrees { get; init; } = 4;
@@ -70,6 +82,12 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
         if (CloudCoverage is < 0 or > 1 || StormCloudCoverage is < 0 or > 1 || CloudTwilightDegrees < 0
             || !float.IsFinite(CloudDrift.X) || !float.IsFinite(CloudDrift.Y))
             throw new ArgumentException("A horizon's cloud cover is from 0 to 1, with a finite drift and twilight.");
+        if (CloudColors.Length != Enum.GetValues<World.DaggerfallWeatherKind>().Length
+            || CloudColors.Any(color => !float.IsFinite(color.X + color.Y + color.Z) || color.X < 0 || color.Y < 0 || color.Z < 0))
+            throw new ArgumentException("Every weather colours its clouds.");
+        if (AirColors.Length != CloudColors.Length || AirColors.Any(color => !float.IsFinite(color.X + color.Y + color.Z) || color.X < 0 || color.Y < 0 || color.Z < 0)
+            || NightAir is < 0 or > 1 || !float.IsFinite(FlashAir) || FlashAir < 0)
+            throw new ArgumentException("Every weather states its air, with a night floor and a flash.");
         if (MasserRadiusDegrees <= 0 || SecundaRadiusDegrees <= 0 || MoonDayBrightness is < 0 or > 1)
             throw new ArgumentException("A moon has a size, and a day brightness from 0 to 1.");
         if (Climates.Count == 0) throw new ArgumentException("A horizon needs a colour for its climates.");
@@ -90,6 +108,10 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
     {
         CloudPixelMetres = e.GetProperty("cloudPixelMetres").GetSingle(),
         CloudShadeSteps = e.GetProperty("cloudShadeSteps").GetUInt32(),
+        CloudColors = [.. e.GetProperty("cloudColors").EnumerateArray().Select(color => new Vector3(color[0].GetSingle(), color[1].GetSingle(), color[2].GetSingle()))],
+        AirColors = [.. e.GetProperty("airColors").EnumerateArray().Select(color => new Vector3(color[0].GetSingle(), color[1].GetSingle(), color[2].GetSingle()))],
+        NightAir = e.GetProperty("nightAir").GetSingle(),
+        FlashAir = e.GetProperty("flashAir").GetSingle(),
         MasserRadiusDegrees = e.GetProperty("masserRadiusDegrees").GetSingle(),
         SecundaRadiusDegrees = e.GetProperty("secundaRadiusDegrees").GetSingle(),
         MasserTiltDegrees = e.GetProperty("masserTiltDegrees").GetSingle(),

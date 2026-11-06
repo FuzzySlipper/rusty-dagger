@@ -36,8 +36,12 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private double? playerBeastVoiceSeconds;
     /// <summary>The archive of the flats that are light sources.</summary>
     private const int LightFlatArchive = 210;
-    /// <summary>A sprite that takes the light around it, so it falls with the day and warms by a lamp.</summary>
-    internal static readonly SpriteMaterialDescriptor LitSprite = new(SpriteLightingMode.Synthetic, default, default, 1f, 0f, SpriteAlphaMode.Blend, .5f, SpriteShadowPolicy.None);
+    /// <summary>
+    /// A sprite that takes the light around it, so it falls with the day and warms by a lamp. Its edges are hard, so it
+    /// stands in the depth buffer and fog reaches it: a blended sprite would take the fog of what is behind it, which over
+    /// the sky is none.
+    /// </summary>
+    internal static readonly SpriteMaterialDescriptor LitSprite = new(SpriteLightingMode.Synthetic, default, default, 1f, 0f, SpriteAlphaMode.Mask, .5f, SpriteShadowPolicy.None);
     /// <summary>A sprite that shows at its own brightness, as a light source does.</summary>
     private static readonly SpriteMaterialDescriptor UnlitSprite = new(SpriteLightingMode.Unlit, default, default, 1f, 0f, SpriteAlphaMode.Blend, .5f, SpriteShadowPolicy.None);
     private readonly NormalizedBillboardSprite? candleSprite;
@@ -1102,7 +1106,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         if (mobile is not null)
             request = request with { Material = new SpriteMaterialDescriptor(
                 mobile.GlowColor is null ? SpriteLightingMode.Synthetic : SpriteLightingMode.Unlit,
-                default, default, 1f, 0f, SpriteAlphaMode.Blend, .5f,
+                default, default, 1f, 0f, mobile.GlowColor is null ? SpriteAlphaMode.Mask : SpriteAlphaMode.Blend, .5f,
                 mobile.GlowColor is not null ? SpriteShadowPolicy.None
                     : mobile.NoShadow ? SpriteShadowPolicy.Receive : SpriteShadowPolicy.CastAndReceive) };
         Appearance value = appearance.CreateSpriteFromAtlas(request);
