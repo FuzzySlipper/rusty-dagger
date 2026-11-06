@@ -9,7 +9,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallExteriorTerrainAppearanceTests
 {
     [Fact]
-    public void Donor_tile_uv_flags_flip_the_vertical_axis_after_rotation()
+    public void Donor_tile_uv_flags_turn_a_quarter_then_a_half()
     {
         AssertUv(new(0.2F, 0.3F), false, false, new(0.2F, 0.3F));
         AssertUv(new(0.2F, 0.3F), false, true, new(0.8F, 0.7F));
