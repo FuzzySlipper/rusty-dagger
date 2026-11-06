@@ -77,7 +77,7 @@ public sealed class ResidualSourceInventoryTests
             inventory.Imported.Select(file => file.Path).Order(StringComparer.Ordinal));
         Assert.All(inventory.Imported, file => Assert.Contains("a consumer claims it", file.Note, StringComparison.Ordinal));
 
-        Assert.Equal(106, inventory.Unused.Count());
+        Assert.Equal(110, inventory.Unused.Count());
         Assert.All(inventory.Unused, file => Assert.Contains("no consumer named here claims it", file.Note, StringComparison.Ordinal));
         Assert.All(inventory.Unused, file => Assert.NotEqual(string.Empty, file.Reader));
 
@@ -96,13 +96,13 @@ public sealed class ResidualSourceInventoryTests
             inventory.Family("CIF").Where(file => file.Path.StartsWith("WEAPO", StringComparison.Ordinal)),
             file => Assert.Equal("WeaponCifArchive", file.Reader));
 
-        Assert.Equal(61, inventory.Unresolved.Count());
+        Assert.Equal(57, inventory.Unresolved.Count());
         Assert.All(inventory.Unresolved, file => Assert.Equal(string.Empty, file.Reader));
         // A path with no reader is not a path a reader refused: saying "refused it:" with an empty
         // reader is the kind of text that reads as a fact and is not one.
         Assert.All(inventory.Unresolved, file => Assert.DoesNotContain("refused it", file.Note, StringComparison.Ordinal));
         Assert.All(inventory.Unresolved, file => Assert.Contains("no reader for it", file.Note, StringComparison.Ordinal));
-        Assert.Contains(inventory.Unresolved, file => file.Path == "MRED00I0.CFA" && file.DonorReader == "CfaFile");
+        Assert.DoesNotContain(inventory.Unresolved, file => file.Path == "MRED00I0.CFA");
         Assert.Contains(inventory.Unresolved, file => file.Path == "HAZE.000" && file.DonorReader == string.Empty);
         Assert.Contains(inventory.Unresolved, file => file.Path == "PAINT.DAT" && file.DonorReader == "PaintFile");
         // The donor reads the sky animations from Arena2 through SkyFile, which the DAT family's

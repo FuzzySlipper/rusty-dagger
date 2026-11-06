@@ -93,7 +93,14 @@ public sealed class DaggerfallSkyMediaTests
         }
         for (int night=0;night<4;night++) { nights.Add(Resource($"night-{night}",1024,512,night)); cleared.Add(Cleared($"night-{night}")); }
         particles.Add(Resource("particle-rain",32,64,kind:"rain")); particles.Add(Resource("particle-snow",32,32,kind:"snow"));
+        object Moon(string moon)
+        {
+            string id = "moon-" + moon;
+            service.Add(DaggerfallData.DataContainerName, DaggerfallSkyMedia.LogicalRoot + "/" + id + ".png", body);
+            return new {id, moon, relativePath="media/sky/resources/"+id+".png", contentHash=digest, byteLength=1, width=288, height=112, columns=8, frameCount=32};
+        }
         byte[] manifest = JsonSerializer.SerializeToUtf8Bytes(new {resources,selections,nightResources=nights,clearedResources=cleared,weatherParticles=particles,
+            moons=new[]{Moon("masser"),Moon("secunda")},
             daylightFrameCurve=new[]{new{time=0f,value=0f,tangent=1f},new{time=.5f,value=.5f,tangent=1f},new{time=1f,value=1f,tangent=1f}}});
         return new(manifest,service);
     }

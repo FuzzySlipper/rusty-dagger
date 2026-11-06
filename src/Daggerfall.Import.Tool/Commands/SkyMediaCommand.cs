@@ -37,7 +37,15 @@ internal static class SkyMediaCommand
             })
             .ToArray();
 
-        SkyMediaPublication publication = SkyMediaPublication.Create(day, night, nightPalette);
+        SkyMoonSource[] moons = new[] { ("masser", "MOON01I0.CFA"), ("secunda", "MOON00I0.CFA") }
+            .Select(moon => new SkyMoonSource(moon.Item1, Options.Arena2Label(moon.Item2),
+                PayloadFiles.ReadBounded(Path.Combine(arena2, moon.Item2), $"moon source {moon.Item2}")))
+            .ToArray();
+        const string artPaletteName = "ART_PAL.COL";
+        Arena2Palette artPalette = PaletteDecoder.Decode(PayloadFiles.ReadBounded(Path.Combine(arena2, artPaletteName), $"art palette {artPaletteName}"),
+            Options.Arena2Label(artPaletteName));
+
+        SkyMediaPublication publication = SkyMediaPublication.Create(day, night, nightPalette, moons, artPalette);
         Console.WriteLine($"sky media: {publication.Manifest.Sources.Count} day sources, {publication.Manifest.Resources.Count} day panoramas, {publication.Manifest.NightResources.Count} night backgrounds, {publication.Artifacts.Count} artifacts");
         Console.WriteLine($"sky curve: {string.Join(", ", SkyMediaPublication.DaylightFrameCurve.Select(knot => $"{knot.Time:0.###}->{knot.Value:0.###}"))}");
         if (!args.Switch("--update")) return Options.ReportOnly("these sky artifacts");

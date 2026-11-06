@@ -18,6 +18,7 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
     private readonly Dictionary<bool, RenderResource> _particles = [];
     private Color _skyColor = new(.5f,.5f,.5f,1);
     private float _cloudCover;
+    private DaggerfallMoons? _moons;
     private bool _disposed;
 
     internal DaggerfallWeatherPresentation(IEngineContext engine, DaggerfallSkyMedia? media,
@@ -54,6 +55,10 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
         _engine.CameraView.SetFog(Fog(inputs.ProfileKind, weather, horizonFog));
         SetClouds(horizonFog is null || weather == DaggerfallWeatherKind.Fog ? 0
             : weather is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy ? _horizon.CloudCoverage : _horizon.StormCloudCoverage);
+        // Moons stand with the cleared sky: the classic's painted one has none, and thick weather closes over them.
+        if (_media is not null && horizonFog is not null && weather is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy or DaggerfallWeatherKind.Overcast)
+            (_moons ??= new(_engine, _media, _horizon)).Show(calendar, _weather.Daylight(calendar, weather));
+        else _moons?.Hide();
     }
 
     private void SetClouds(float cover)
@@ -128,6 +133,7 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
         try {if (_sky.Count != 0) _engine.CameraView.ClearSkyBackground(default);} catch (Exception error) {failures.Add(error);}
         try {_engine.CameraView.SetFog(new(FogMode.Off, new Color(0,0,0,1),0,0,0));} catch (Exception error) {failures.Add(error);}
         try {SetClouds(0);} catch (Exception error) {failures.Add(error);}
+        try {_moons?.Dispose();} catch (Exception error) {failures.Add(error);}
         foreach (var resource in _sky.Values)
             try {resource.Dispose();} catch (Exception error) {failures.Add(error);}
         _sky.Clear();

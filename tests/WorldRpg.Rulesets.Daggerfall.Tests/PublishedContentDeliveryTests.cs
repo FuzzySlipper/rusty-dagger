@@ -212,6 +212,8 @@ public sealed class PublishedContentDeliveryTests
         JsonElement[] nights = [.. manifest.GetProperty("nightResources").EnumerateArray()];
         JsonElement[] particles = [.. manifest.GetProperty("weatherParticles").EnumerateArray()];
         JsonElement[] cleared = [.. manifest.GetProperty("clearedResources").EnumerateArray()];
+        JsonElement[] moons = [.. manifest.GetProperty("moons").EnumerateArray()];
+        Assert.Equal(2, moons.Length);
         Assert.Equal(32 * 64, day.Length);
         Assert.Equal(4, nights.Length);
         Assert.Equal(2, particles.Length);
@@ -220,7 +222,7 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal(7, manifest.GetProperty("daylightFrameCurve").GetArrayLength());
 
         HashSet<string> indexed = [];
-        foreach (JsonElement resource in day.Concat(nights).Concat(particles).Concat(cleared))
+        foreach (JsonElement resource in day.Concat(nights).Concat(particles).Concat(cleared).Concat(moons))
         {
             string relativePath = resource.GetProperty("relativePath").GetString()!;
             string path = $"worldrpg/{relativePath}";
