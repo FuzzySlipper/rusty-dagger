@@ -66,9 +66,14 @@ in the world, unlit lamp art included, which bleaches it.
   unlit, since a light source shows at its own brightness, and each carries an Engine
   point light from the importer. Sprite materials have no emission input, so a sprite
   glows only by being unlit.
-- **First person.** The classic hand is a screen-space sprite, which lighting turns white,
-  so it stays unlit. The held arms draw in the viewmodel layer and don't take the scene's
-  light either.
+- **First person.** The viewmodel layer doesn't take the scene's lights, so the view takes a
+  tint from the light the eye stands in (`DaggerfallViewLight`): the sky plus any lamp, glowing
+  mobile, spell or magic candle in reach, by the renderer's own falloff. `viewFull` is the light
+  that draws the art at its own value, the clear noon sky, and `viewFloor` keeps the hands
+  readable in the dark. It is sampled every few updates and moves in steps. Held meshes multiply
+  it into their material factors, over any metal. A sprite running a playback can't be replaced
+  with a new tint, and lighting a screen-space sprite turns it white, so the classic hand holds
+  it as a paused Engine tint tween.
 
 ## Open ground
 

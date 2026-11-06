@@ -641,7 +641,9 @@
     "exteriorSun": 1.05,
     "interiorScale": 1.3,
     "dungeonScale": 1,
-    "nightColor": [0.7, 0.8, 1]
+    "nightColor": [0.7, 0.8, 1],
+    "viewFull": 2.875,
+    "viewFloor": 0.2
   },
   "weather": {
     "odds": [

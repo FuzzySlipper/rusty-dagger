@@ -62,6 +62,35 @@ public sealed class PlayerViewmodelTests
     }
 
     [Fact]
+    public void The_sprite_viewmodel_takes_the_view_light_through_a_held_tween_while_its_playback_runs()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        content.Add("weapon/dagger.png", Hash);
+        AppearanceFake appearance = new(releases);
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
+        TweenRecorder tween = TweenRecorder.Create();
+        DaggerfallViewLight light = new(DaggerfallTuning.Defaults.SiteLighting);
+        presentation.UseViewLight(tween.Service, light);
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
+
+        presentation.Publish(EmptyActors());
+        Assert.Empty(tween.Started);
+
+        light.Update(() => new Vector3(DaggerfallTuning.Defaults.SiteLighting.ViewFull / 2));
+        presentation.Publish(EmptyActors());
+        presentation.Publish(EmptyActors());
+
+        TweenStartRequest dimmed = Assert.Single(tween.Started);
+        Assert.Equal(Assert.Single(appearance.Snapshots.Last(), fact => fact.Layer == RenderLayer.Viewmodel).ObjectId, dimmed.ObjectId);
+        TweenSegment segment = Assert.Single(dimmed.Segments.ToArray());
+        Assert.Equal(TweenChannel.Tint, segment.Channel);
+        Assert.Equal(new Vector4(.5F, .5F, .5F, 1), segment.From);
+        Assert.Equal(segment.From, segment.To);
+        Assert.Equal(TweenControl.Pause, Assert.Single(tween.Controls).Control);
+    }
+
+    [Fact]
     public void Compatible_right_hand_creates_a_viewmodel_and_uses_one_shot_strike_playback()
     {
         List<string> releases = [];

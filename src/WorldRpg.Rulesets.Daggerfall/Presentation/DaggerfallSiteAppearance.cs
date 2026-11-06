@@ -1660,6 +1660,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         internal SpritePlayback? Playback { get; set; }
         internal bool Strike { get; set; }
         internal AppearanceOuterUpdate? LastOuterUpdate { get; set; }
+        // The view's light this sprite is tinted by.
+        internal Color Light { get; set; } = new(1, 1, 1, 1);
         internal void Dispose(ref List<Exception>? failures)
         {
             if (Playback is { } playback) DaggerfallSiteAppearance.Dispose(playback, ref failures);

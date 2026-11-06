@@ -125,6 +125,18 @@ internal sealed class DaggerfallHeldArt
         return null;
     }
 
+    /// <summary>What a model's material slots are tinted before any light: white, and its <c>metal</c> slot in <paramref name="metal"/>.</summary>
+    internal Color[] SlotTints(string model, DaggerfallDyeTint? metal)
+    {
+        byte[] glb = Container.ReadBytes(model).ToArray();
+        using JsonDocument gltf = JsonDocument.Parse(glb.AsMemory(20, BinaryPrimitives.ReadInt32LittleEndian(glb.AsSpan(12))));
+        if (!gltf.RootElement.TryGetProperty("materials", out JsonElement materials)) return [];
+        Color[] tints = new Color[materials.GetArrayLength()];
+        Array.Fill(tints, new Color(1, 1, 1, 1));
+        if (metal is not null && MetalSlot(model) is uint slot) tints[slot] = MetalColor(metal);
+        return tints;
+    }
+
     /// <summary>
     /// The colour a dye tint multiplies a model's texture by (linear): the paper doll's tint, its colour brightened as it
     /// brightens the image.

@@ -24,6 +24,8 @@ internal sealed class DaggerfallHeldMount : IDisposable
     private readonly RenderResource? cartModel;
     private readonly Appearance? cart;
     private readonly ulong horseObject, cartObject;
+    private readonly DaggerfallHeldLitLook horseLit;
+    private readonly DaggerfallHeldLitLook? cartLit;
     private readonly AnimationLayerSet layers = new();
     private readonly string[] clips;
     private bool playing;
@@ -39,17 +41,28 @@ internal sealed class DaggerfallHeldMount : IDisposable
         this.cartObject = cartObject;
         seat = cart ? mount.CartSeat : mount.Seat;
         DaggerfallHeldArmSet drawn = cart ? mount.Harnessed : mount.Horse;
-        using (ContentReference content = art.Container.OpenReference(retro ? drawn.RetroModel : drawn.Model))
+        string horsePath = retro ? drawn.RetroModel : drawn.Model;
+        using (ContentReference content = art.Container.OpenReference(horsePath))
             horseModel = engine.Animation.OpenAnimatedMeshFromContent(new(content));
         horse = engine.Animation.CreateAnimatedMeshAppearance(new(horseModel));
+        horseLit = new(engine, horse, art.SlotTints(horsePath, null));
         horsePose = engine.Animation.CreateInstance(new(horse, horseObject));
         clips = [.. engine.Animation.ReadClips(horseModel).ToArray().Select(clip => clip.Id)];
         shares = new float[mount.Gaits.Count];
         shares[0] = 1;
         if (!cart) return;
-        using ContentReference cartContent = art.Container.OpenReference(retro ? mount.Cart.RetroModel : mount.Cart.Model);
+        string cartPath = retro ? mount.Cart.RetroModel : mount.Cart.Model;
+        using ContentReference cartContent = art.Container.OpenReference(cartPath);
         cartModel = engine.Animation.OpenAnimatedMeshFromContent(new(cartContent));
         this.cart = engine.Animation.CreateAnimatedMeshAppearance(new(cartModel));
+        cartLit = new(engine, this.cart, art.SlotTints(cartPath, null));
+    }
+
+    /// <summary>Draws the mount under the view's light.</summary>
+    internal void Light(Color level)
+    {
+        horseLit.Light(level);
+        cartLit?.Light(level);
     }
 
     /// <summary>How far the eye sits above the ground now, in metres above where it stands on foot, with the gait's bob.</summary>

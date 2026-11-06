@@ -69,6 +69,8 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
     private float? guarding;
     private bool lowering;
     private readonly Appearance look;
+    // Every mesh drawn here, which the view's light tints.
+    private readonly List<DaggerfallHeldLitLook> litLooks = [];
     // The model's chain, for an item that has one, and the world seconds it has not yet been stepped.
     private readonly HeldChain? chain;
     private float chainSeconds;
@@ -105,7 +107,8 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
         WeaponObject = weaponObject;
         this.engine = engine;
         DaggerfallHeldArmSet armSet = art.ArmSet(drawing.Arms);
-        using (ContentReference armsModel = art.Container.OpenReference(retro ? armSet.RetroModel : armSet.Model))
+        string armsPath = retro ? armSet.RetroModel : armSet.Model;
+        using (ContentReference armsModel = art.Container.OpenReference(armsPath))
         {
             arms = new FirstPersonArms(engine, art.Document.Arms, art.Document.Rig, armsObject, armsModel);
             armsPose = engine.Animation.OpenAnimatedMeshFromContent(new(armsModel));
@@ -122,8 +125,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
                 try
                 {
                     look = engine.Animation.CreateAnimatedMeshAppearance(new(model));
-                    if (metal is not null && art.MetalSlot(path) is uint slot)
-                        engine.Animation.UpdateAnimatedMeshMaterialFactors(new(look, new[] { MeshMaterialFactors.Tint(slot, DaggerfallHeldArt.MetalColor(metal)) }));
+                    litLooks.Add(new(engine, look, art.SlotTints(path, metal)));
                     if (item?.Chain is { } hanging) chain = new HeldChain(engine, hanging, model, look, weaponObject);
                 }
                 catch { look?.Dispose(); model.Dispose(); throw; }
@@ -135,6 +137,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
             }
         }
         catch { armsPose.Dispose(); arms.Dispose(); throw; }
+        litLooks.Add(new(engine, arms.Fact(false).Appearance, art.SlotTints(armsPath, null)));
         ShieldObject = shieldObject;
         ArrowObject = arrowObject;
         bow = family.Bow;
@@ -148,6 +151,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
             using ContentReference arrowContent = art.Container.OpenReference(bow.Arrow);
             arrowModel = engine.Animation.OpenAnimatedMeshFromContent(new(arrowContent));
             arrowLook = engine.Animation.CreateAnimatedMeshAppearance(new(arrowModel));
+            litLooks.Add(new(engine, arrowLook, art.SlotTints(bow.Arrow, null)));
             bowPose = engine.Animation.CreateInstance(new(look, weaponObject));
         }
         if (drawing.Enchanted && art.Document.Enchant is { } enchant && (item?.Model ?? family.Look.Model) is { } drawn && art.Lightning(drawn) is { } lightning)
@@ -165,8 +169,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
             using ContentReference shieldContent = art.Container.OpenReference(carried.Model);
             shieldModel = engine.Animation.OpenAnimatedMeshFromContent(new(shieldContent));
             shieldLook = engine.Animation.CreateAnimatedMeshAppearance(new(shieldModel));
-            if (shieldMetal is not null && art.MetalSlot(carried.Model) is uint slot)
-                engine.Animation.UpdateAnimatedMeshMaterialFactors(new(shieldLook, new[] { MeshMaterialFactors.Tint(slot, DaggerfallHeldArt.MetalColor(shieldMetal)) }));
+            litLooks.Add(new(engine, shieldLook, art.SlotTints(carried.Model, shieldMetal)));
         }
     }
 
@@ -214,6 +217,12 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
         Vector3 palm = (joints[(int)hand.Wrist].Model.Translation + joints[(int)hand.Middle[0]].Model.Translation) / 2;
         Transform placed = arms.Fact(true).Transform;
         return placed.Translation + Vector3.Transform(palm * placed.Scale, placed.Rotation);
+    }
+
+    /// <summary>Draws the arms and all they hold under the view's light. The enchanted look's lightning keeps its own glow.</summary>
+    internal void Light(Color level)
+    {
+        foreach (DaggerfallHeldLitLook lit in litLooks) lit.Light(level);
     }
 
     /// <summary>Turns the arms about the eye, as the mount's level turn does, so the hands stay on the reins as the view moves.</summary>

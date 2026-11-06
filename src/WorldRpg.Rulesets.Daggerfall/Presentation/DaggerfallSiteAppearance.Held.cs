@@ -1,3 +1,4 @@
+using System.Numerics;
 using Rusty.Engine;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -38,6 +39,12 @@ internal sealed partial class DaggerfallSiteAppearance
     // Whether the arms drawn are only there to hold the reins.
     private bool reinArms;
     private const string ReinsFamily = "reins";
+
+    // Where the view's light comes from, and the tweens that carry it to the sprites; null in a session with no Engine view.
+    private (ITweenService Tween, DaggerfallViewLight Light)? viewLight;
+
+    /// <summary>Tints the first-person view by <paramref name="light"/>; <paramref name="tween"/> carries it to the sprites.</summary>
+    internal void UseViewLight(ITweenService tween, DaggerfallViewLight light) => viewLight = (tween, light);
 
     /// <summary>Reads what the player rides, how fast in metres a second, the view's pitch and how far the mount's heading lies from the view in radians, for the mount drawn in the held styles.</summary>
     internal void UsePlayerRide(Func<(DaggerfallTransportMode Mode, float Speed, float Pitch, float Turn)> ride) => playerRide = ride;
@@ -261,5 +268,26 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         held?.Reach();
         mount?.Posed();
+        LightView();
+    }
+
+    // The meshes tint their material factors, once the level changes. The sprites run a playback, which holds their
+    // appearance from being replaced with another tint, so theirs is an Engine tween held paused on the level.
+    private void LightView()
+    {
+        if (viewLight is not { } view) return;
+        held?.Light(view.Light.Level);
+        mount?.Light(view.Light.Level);
+        if (viewmodel is { } weapon) LightSprite(weapon, view);
+        if (castHand is { } hand) LightSprite(hand, view);
+    }
+
+    private static void LightSprite(ViewmodelVisual sprite, (ITweenService Tween, DaggerfallViewLight Light) view)
+    {
+        if (sprite.Light == view.Light.Level) return;
+        sprite.Light = view.Light.Level;
+        Vector4 level = new(sprite.Light.R, sprite.Light.G, sprite.Light.B, 1);
+        TweenSegment[] held = [TweenSegment.Tint(level, level, 1, TweenEasing.Linear)];
+        view.Tween.Control(new(view.Tween.Start(new TweenStartRequest(sprite.EntityId, held)).Tween, TweenControl.Pause));
     }
 }

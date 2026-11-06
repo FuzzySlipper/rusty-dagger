@@ -158,14 +158,18 @@ public sealed class DaggerfallHeldArtTests
         BundleContentFake service = new();
         service.Container(DaggerfallHeldArt.ContainerName);
         foreach (string file in Directory.GetFiles(weapons, "*.glb")) service.Add(DaggerfallHeldArt.ContainerName, $"first-person/weapons/{Path.GetFileName(file)}", File.ReadAllBytes(file));
-        foreach (string model in ArmModels()) service.Add(DaggerfallHeldArt.ContainerName, model, [7]);
+        foreach (string model in ArmModels()) service.Add(DaggerfallHeldArt.ContainerName, model, EmptyGlb);
         service.Add(DaggerfallHeldArt.ContainerName, "first-person/effects/enchant.wgsl", [7]);
         foreach (string mount in Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/first-person/mounts"), "*.glb"))
-            service.Add(DaggerfallHeldArt.ContainerName, $"first-person/mounts/{Path.GetFileName(mount)}", [7]);
+            service.Add(DaggerfallHeldArt.ContainerName, $"first-person/mounts/{Path.GetFileName(mount)}", EmptyGlb);
         ProductContentBundle container = new ProductContent(Array.Empty<ProductContentFile>(), service).OpenContainer(DaggerfallHeldArt.ContainerName);
         DaggerfallHeldArt art = DaggerfallHeldArt.Read(container, System.Text.Encoding.UTF8.GetBytes(Document().ToJsonString()));
 
         Assert.Equal(0u, art.MetalSlot("first-person/weapons/dagger.glb"));
+        Color[] slots = art.SlotTints("first-person/weapons/saber.glb", new("#808080", 1));
+        Assert.True(slots.Length >= 2);
+        Assert.Equal(new Color(1, 1, 1, 1), slots[0]);
+        Assert.Equal(DaggerfallHeldArt.MetalColor(new("#808080", 1)), slots[1]);
         Assert.Equal(1u, art.MetalSlot("first-person/weapons/saber.glb"));
 
         Color white = DaggerfallHeldArt.MetalColor(new("#ffffff", 1));
@@ -772,6 +776,9 @@ public sealed class DaggerfallHeldArtTests
         return (presentation, appearance, engine);
     }
 
+    // A model with no materials: a GLB's header, its JSON chunk's length and type, and the JSON.
+    private static readonly byte[] EmptyGlb = [.. new byte[12], 2, 0, 0, 0, .. "JSON"u8, .. "{}"u8];
+
     private static string[] GuardClips(DaggerfallHeldGuard guard) => [guard.Raise.Clip, guard.Hold.Clip, guard.Lower.Clip];
 
     // Both arms' joints under one root: the upper arm, the forearm and its twist, the hand and its digits.
@@ -811,9 +818,9 @@ public sealed class DaggerfallHeldArtTests
         BundleContentFake service = new();
         service.Container(DaggerfallHeldArt.ContainerName);
         foreach (string model in models ?? [.. ArmModels(), .. Weapons()])
-            service.Add(DaggerfallHeldArt.ContainerName, model, [7]);
+            service.Add(DaggerfallHeldArt.ContainerName, model, EmptyGlb);
         foreach (string mount in Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/first-person/mounts"), "*.glb"))
-            service.Add(DaggerfallHeldArt.ContainerName, $"first-person/mounts/{Path.GetFileName(mount)}", [7]);
+            service.Add(DaggerfallHeldArt.ContainerName, $"first-person/mounts/{Path.GetFileName(mount)}", EmptyGlb);
         service.Add(DaggerfallHeldArt.ContainerName, "first-person/effects/enchant.wgsl", [7]);
         foreach (string arcs in Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/first-person/weapons"), "*.arcs.json"))
             service.Add(DaggerfallHeldArt.ContainerName, $"first-person/weapons/{Path.GetFileName(arcs)}", File.ReadAllBytes(arcs));
