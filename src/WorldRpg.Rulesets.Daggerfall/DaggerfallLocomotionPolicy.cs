@@ -160,6 +160,16 @@ internal sealed class DaggerfallLocomotionPolicy
         _swimmingGameSeconds = 0d;
     }
 
+    /// <summary>
+    /// Whether the rider has more fatigue left than <paramref name="reserveShare"/> of their pool, and than a minute's gallop.
+    /// An empty pool is a collapse, so a gallop ends well short of it, with time left to rest.
+    /// </summary>
+    internal bool CanGallop(StatsComponent stats, double reserveShare)
+    {
+        Track fatigue = stats.GetTrack(Fatigue);
+        return fatigue.Current > Math.Max(fatigue.MaximumValue * reserveShare, MovementFatigue(_tuning.RunningFatiguePerGameMinute));
+    }
+
     /// <summary>Refreshes the typed athletics multiplier from the current career and held talent owners.</summary>
     /// <remarks>
     /// The donor slows every fatigue loss to 0.9 for a career with Athleticism, and to 0.8 only when that

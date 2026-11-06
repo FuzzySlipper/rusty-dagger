@@ -624,7 +624,8 @@
       "lookRangeDegrees": 50,
       "uphillDrag": 0.8,
       "waterShare": 0.4
-    }
+    },
+    "gallopFatigueReserve": 0.1
   },
   "siteLighting": {
     "mobileGlowRange": 4,

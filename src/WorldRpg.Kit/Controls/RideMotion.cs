@@ -123,7 +123,7 @@ public sealed class RideMotion
         float range = Radians(tuning.LookRangeDegrees);
         player.YawRadians = yaw - past + Math.Clamp(past, -range, range);
         heading = Wrapped(mount);
-        return new(Speed, heading.Value, intent.Urged && Speed > topSpeed * tuning.TrotShare);
+        return new(Speed, heading.Value, intent.Urged && intent.MayGallop && Speed > topSpeed * tuning.TrotShare);
     }
 
     /// <summary>Takes in where the step went: a mount that was stopped loses what it could not carry, and a slope bears on the next step.</summary>
