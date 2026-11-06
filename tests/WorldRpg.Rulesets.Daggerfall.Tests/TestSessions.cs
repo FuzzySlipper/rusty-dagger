@@ -360,6 +360,8 @@ internal static class TestSessions
             yield return (material.TexturePath, material.TextureSha256);
             if (material.WinterTexture is { } winter) yield return (winter.Path, winter.Sha256);
             if (material.RainTexture is { } rain) yield return (rain.Path, rain.Sha256);
+            foreach (ContentArtifact? glass in new[] { material.SummerGlass, material.WinterGlass, material.RainGlass })
+                if (glass is not null) yield return (glass.Path, glass.Sha256);
         }
         foreach (NormalizedActorSprite sprite in inputs.ActorSprites.Values.Concat(inputs.MobileSprites.Values))
         {

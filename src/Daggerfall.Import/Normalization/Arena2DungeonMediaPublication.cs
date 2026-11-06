@@ -647,6 +647,21 @@ public sealed record Arena2DungeonMediaPublication(
                 null,
                 "image/png");
             generated.Add(generatedArtifact);
+            if (ClassicWindowGlass.Mask(selection.Archive, selection.Record, frame) is { } glass)
+            {
+                byte[] mask = DeterministicPngEncoder.EncodeRgba8(frame.Width, frame.Height, glass);
+                RequireArtifactSize(mask, quotas, $"glass of material '{selection.TextureResourceId}'");
+                generated.Add(new(
+                    $"{id}-glass",
+                    NormalizedMediaKind.Texture,
+                    $"media/dungeon/materials/texture-{selection.Archive}-{selection.Record}-glass.png",
+                    mask,
+                    frame.Width,
+                    frame.Height,
+                    null,
+                    "image/png"));
+            }
+
             ImportPublicationArtifact artifact = ToPublicationArtifact(generatedArtifact);
             materials.Add(new(
                 id,

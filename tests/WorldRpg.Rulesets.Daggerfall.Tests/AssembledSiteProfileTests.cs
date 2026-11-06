@@ -81,6 +81,17 @@ public sealed class AssembledSiteProfileTests
         }
     }
 
+    [Fact]
+    public void Town_windows_carry_their_glass_and_a_dungeon_shows_none()
+    {
+        foreach (var profile in new[] { Published("daggerfall.charing-exterior.json"), Fixture.Value.Assembly.Assemble(DaggerfallWorldProfileIds.Exterior(Charing)) })
+            Assert.Contains(profile.Materials, material => material.SummerGlass is not null);
+
+        var dungeon = TestPayload.Definitions.Locations.Records.First(site => site.DungeonBlocks.Any());
+        Assert.All(Fixture.Value.Assembly.Assemble(DaggerfallWorldProfileIds.Dungeon(dungeon.Id)).Materials,
+            material => Assert.Null(material.SummerGlass));
+    }
+
     [Theory]
     [InlineData("SHRIAA00.RMB", true)]
     [InlineData("S0000070.RDB", false)]

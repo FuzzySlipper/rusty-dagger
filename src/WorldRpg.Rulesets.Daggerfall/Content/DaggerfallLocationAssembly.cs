@@ -440,7 +440,13 @@ internal sealed partial class DaggerfallLocationAssembly
                     if (!_media.Textures.TryGetValue(rainId, out rain))
                         diagnostics.Add($"Profile '{key.LogicalId}' rain texture '{rainId}' is not published.");
                 }
-                materials.Add(new NormalizedMaterial(slot, texture.Path, texture.Sha256, material) { WinterTexture = winter, RainTexture = rain });
+                ContentArtifact? Glass(string? id) =>
+                    key.Kind == DaggerfallWorldProfileKind.Exterior && _media.Textures.TryGetValue($"{id ?? material}-glass", out ContentArtifact? glass) ? glass : null;
+                materials.Add(new NormalizedMaterial(slot, texture.Path, texture.Sha256, material)
+                {
+                    WinterTexture = winter, RainTexture = rain,
+                    SummerGlass = Glass(material), WinterGlass = Glass(winterId), RainGlass = Glass(rainId),
+                });
             }
 
             DaggerfallMeshMaterialBinding[] Bindings(IReadOnlyDictionary<uint, string> mesh) =>

@@ -643,7 +643,9 @@
     "dungeonScale": 1,
     "nightColor": [0.7, 0.8, 1],
     "viewFull": 2.875,
-    "viewFloor": 0.2
+    "viewFloor": 0.2,
+    "windowColor": [1, 0.47, 0.04],
+    "windowLevel": 0.8
   },
   "weather": {
     "odds": [

@@ -38,6 +38,7 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
         _ambient.Update(new(inputs.ProfileKey, weather, !calendar.IsDay, sheltered, castle, special), player, seconds, playing);
         projection.Lighting.UpdateAmbient(calendar, _weather.Daylight(calendar, weather),
             castle || special ? _tuning.ZoneAmbient : null, _ambient.FlashIntensity);
+        projection.Lighting.UpdateWindowGlass(projection.Appearance, calendar);
         if (inputs.ProfileKind == DaggerfallWorldProfileKind.Exterior && _media is not null)
         {
             DaggerfallSkySelection sky = _media.Select(climate, calendar, weather, variant);

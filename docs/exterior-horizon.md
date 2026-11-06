@@ -66,6 +66,12 @@ in the world, unlit lamp art included, which bleaches it.
   unlit, since a light source shows at its own brightness, and each carries an Engine
   point light from the importer. Sprite materials have no emission input, so a sprite
   glows only by being unlit.
+- **Windows.** Building windows glow on the city lamps' hours through mesh emission. The
+  importer publishes each window texture's glass as a mask beside it, and the location's
+  material holds that mask as its emission map, so nightfall changes only the emission's
+  level (`windowColor`, `windowLevel`). Refreshed walls keep the classic's window layout,
+  so the classic's mask serves both art sets. Glass outshines the night rather than
+  lighting the street: windows carry no lights.
 - **First person.** The viewmodel layer doesn't take the scene's lights, so the view takes a
   tint from the light the eye stands in (`DaggerfallViewLight`): the sky plus any lamp, glowing
   mobile, spell or magic candle in reach, by the renderer's own falloff. `viewFull` is the light
