@@ -3,5 +3,6 @@
   "startSite": "daggerfall.charing-exterior",
   "gold": 5000,
   "quests": [],
-  "startHour": 9
+  "startHour": 9,
+  "quickEntry": true
 }
