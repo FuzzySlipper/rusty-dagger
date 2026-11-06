@@ -1,0 +1,390 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy world props and animals of a dark fantasy RPG, seen from standing height. Keep the source's silhouette, proportions, local colours and the arrangement of its parts: it replaces the source at the same size in the world. Restrained palette with distinct light, middle and dark families. Detail hierarchy: silhouette first, a few large masses second, sparse material marks third. Keep open gaps between legs, chain links and posts open. No extra parts, gemstones, runes, faces, symbols or fantasy embellishment. Not pixel art, not a photoreal photograph, not a glossy mobile-game asset, not a dramatic scene. No text, labels, border, vignette, frame, hand, person, ground plane, scenery, plants or second object.",
+  "presentation": "One isolated object on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no ground shadow, no background texture and no cast shadow outside the object. The whole object visible with breathing room, centred, its base where the source's base is. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Flats: animated records, moving frames (frames-lights) / Qwen then retro",
+  "items": [
+    {
+      "id": "flat-208-2-f1",
+      "directory": "props-instruments/texture-208",
+      "image": "flat/texture-208-record-002-frame-001-source.png",
+      "content": "One alchemist's glass flask with a long teal neck and round belly of yellow liquid, on a thin iron tripod above a small burning oil lamp. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 1; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-208-2-f1 (31x51)"
+    },
+    {
+      "id": "flat-208-2-f2",
+      "directory": "props-instruments/texture-208",
+      "image": "flat/texture-208-record-002-frame-002-source.png",
+      "content": "One alchemist's glass flask with a long teal neck and round belly of yellow liquid, on a thin iron tripod above a small burning oil lamp. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 2; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-208-2-f2 (31x51)"
+    },
+    {
+      "id": "flat-208-2-f3",
+      "directory": "props-instruments/texture-208",
+      "image": "flat/texture-208-record-002-frame-003-source.png",
+      "content": "One alchemist's glass flask with a long teal neck and round belly of yellow liquid, on a thin iron tripod above a small burning oil lamp. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 3; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-208-2-f3 (31x51)"
+    },
+    {
+      "id": "flat-210-1-f1",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-001-frame-001-source.png",
+      "content": "One campfire: a low ring of dark charred stones around burning flames. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 1; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-1-f1 (48x49)"
+    },
+    {
+      "id": "flat-210-1-f2",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-001-frame-002-source.png",
+      "content": "One campfire: a low ring of dark charred stones around burning flames. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 2; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-1-f2 (48x49)"
+    },
+    {
+      "id": "flat-210-1-f3",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-001-frame-003-source.png",
+      "content": "One campfire: a low ring of dark charred stones around burning flames. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 3; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-1-f3 (48x49)"
+    },
+    {
+      "id": "flat-210-2-f1",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-002-frame-001-source.png",
+      "content": "One grey wax candle burning on top of a plain human skull. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 1; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-2-f1 (13x29)"
+    },
+    {
+      "id": "flat-210-2-f2",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-002-frame-002-source.png",
+      "content": "One grey wax candle burning on top of a plain human skull. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 2; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-2-f2 (13x29)"
+    },
+    {
+      "id": "flat-210-2-f3",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-002-frame-003-source.png",
+      "content": "One grey wax candle burning on top of a plain human skull. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 3; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-2-f3 (13x29)"
+    },
+    {
+      "id": "flat-210-2-f4",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-002-frame-004-source.png",
+      "content": "One grey wax candle burning on top of a plain human skull. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 4; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-2-f4 (13x29)"
+    },
+    {
+      "id": "flat-210-16-f1",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-016-frame-001-source.png",
+      "content": "One flaming wall torch: a short wooden handle in a small dark iron cup, flames rising from it. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 1; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-16-f1 (13x54)"
+    },
+    {
+      "id": "flat-210-16-f2",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-016-frame-002-source.png",
+      "content": "One flaming wall torch: a short wooden handle in a small dark iron cup, flames rising from it. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 2; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-16-f2 (13x54)"
+    },
+    {
+      "id": "flat-210-16-f3",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-016-frame-003-source.png",
+      "content": "One flaming wall torch: a short wooden handle in a small dark iron cup, flames rising from it. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 3; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-16-f3 (13x54)"
+    },
+    {
+      "id": "flat-210-17-f1",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-017-frame-001-source.png",
+      "content": "One flaming wall torch in a black iron cup with a glowing red ember rim. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 1; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-17-f1 (13x50)"
+    },
+    {
+      "id": "flat-210-17-f2",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-017-frame-002-source.png",
+      "content": "One flaming wall torch in a black iron cup with a glowing red ember rim. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 2; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-17-f2 (13x50)"
+    },
+    {
+      "id": "flat-210-17-f3",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-017-frame-003-source.png",
+      "content": "One flaming wall torch in a black iron cup with a glowing red ember rim. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 3; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-17-f3 (13x50)"
+    },
+    {
+      "id": "flat-210-18-f1",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-018-frame-001-source.png",
+      "content": "One flaming wall torch in a tapered black iron cup with a gold rim. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 1; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-18-f1 (16x55)"
+    },
+    {
+      "id": "flat-210-18-f2",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-018-frame-002-source.png",
+      "content": "One flaming wall torch in a tapered black iron cup with a gold rim. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 2; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-18-f2 (16x55)"
+    },
+    {
+      "id": "flat-210-18-f3",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-018-frame-003-source.png",
+      "content": "One flaming wall torch in a tapered black iron cup with a gold rim. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 3; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-18-f3 (16x55)"
+    },
+    {
+      "id": "flat-210-19-f1",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-019-frame-001-source.png",
+      "content": "One short dark stone column with a shallow gold fire dish on top, burning. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 1; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-19-f1 (41x93)"
+    },
+    {
+      "id": "flat-210-19-f2",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-019-frame-002-source.png",
+      "content": "One short dark stone column with a shallow gold fire dish on top, burning. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 2; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-19-f2 (41x93)"
+    },
+    {
+      "id": "flat-210-19-f3",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-019-frame-003-source.png",
+      "content": "One short dark stone column with a shallow gold fire dish on top, burning. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 3; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-19-f3 (41x93)"
+    },
+    {
+      "id": "flat-210-20-f1",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-020-frame-001-source.png",
+      "content": "One tall thin wooden standing torch, a small flame burning at its top. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 1; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-20-f1 (16x86)"
+    },
+    {
+      "id": "flat-210-20-f2",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-020-frame-002-source.png",
+      "content": "One tall thin wooden standing torch, a small flame burning at its top. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 2; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-20-f2 (16x86)"
+    },
+    {
+      "id": "flat-210-20-f3",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-020-frame-003-source.png",
+      "content": "One tall thin wooden standing torch, a small flame burning at its top. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 3; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-20-f3 (16x86)"
+    },
+    {
+      "id": "flat-210-21-f1",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-021-frame-001-source.png",
+      "content": "One tall thin dark pole with a small pale flame burning at its top. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 1; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-21-f1 (12x80)"
+    },
+    {
+      "id": "flat-210-21-f2",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-021-frame-002-source.png",
+      "content": "One tall thin dark pole with a small pale flame burning at its top. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 2; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-21-f2 (12x80)"
+    },
+    {
+      "id": "flat-210-21-f3",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-021-frame-003-source.png",
+      "content": "One tall thin dark pole with a small pale flame burning at its top. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 3; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-21-f3 (12x80)"
+    },
+    {
+      "id": "flat-210-21-f4",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-021-frame-004-source.png",
+      "content": "One tall thin dark pole with a small pale flame burning at its top. Bright orange and yellow painted flames. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 4; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-21-f4 (12x80)"
+    },
+    {
+      "id": "flat-210-24-f1",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-024-frame-001-source.png",
+      "content": "One small iron and brass lantern with warm lit glass panes, hanging from a long thin dark iron chain. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 1; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-24-f1 (18x182)"
+    },
+    {
+      "id": "flat-210-24-f2",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-024-frame-002-source.png",
+      "content": "One small iron and brass lantern with warm lit glass panes, hanging from a long thin dark iron chain. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 2; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-24-f2 (18x182)"
+    },
+    {
+      "id": "flat-210-24-f3",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-024-frame-003-source.png",
+      "content": "One small iron and brass lantern with warm lit glass panes, hanging from a long thin dark iron chain. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 3; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-24-f3 (18x182)"
+    },
+    {
+      "id": "flat-210-25-f1",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-025-frame-001-source.png",
+      "content": "One small iron and brass lantern with warm lit glass panes, hanging from a thin dark iron chain. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 1; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-25-f1 (18x110)"
+    },
+    {
+      "id": "flat-210-25-f2",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-025-frame-002-source.png",
+      "content": "One small iron and brass lantern with warm lit glass panes, hanging from a thin dark iron chain. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 2; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-25-f2 (18x110)"
+    },
+    {
+      "id": "flat-210-25-f3",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-025-frame-003-source.png",
+      "content": "One small iron and brass lantern with warm lit glass panes, hanging from a thin dark iron chain. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 3; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-25-f3 (18x110)"
+    },
+    {
+      "id": "flat-210-26-f1",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-026-frame-001-source.png",
+      "content": "One small iron and brass lantern with warm lit glass panes, hanging from a short thin dark iron chain. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 1; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-26-f1 (18x77)"
+    },
+    {
+      "id": "flat-210-26-f2",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-026-frame-002-source.png",
+      "content": "One small iron and brass lantern with warm lit glass panes, hanging from a short thin dark iron chain. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 2; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-26-f2 (18x77)"
+    },
+    {
+      "id": "flat-210-26-f3",
+      "directory": "props-lights/texture-210",
+      "image": "flat/texture-210-record-026-frame-003-source.png",
+      "content": "One small iron and brass lantern with warm lit glass panes, hanging from a short thin dark iron chain. Add no plants, ground or second object.",
+      "uncertainty": "This is animation frame 3; only the moving part differs from frame 0, so the body must match frame 0.",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-210-26-f3 (18x77)"
+    }
+  ],
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "flats",
+      "model": "krea2-turbo",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ]
+}
