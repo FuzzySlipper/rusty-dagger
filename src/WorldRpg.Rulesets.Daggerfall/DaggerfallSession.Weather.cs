@@ -1,3 +1,4 @@
+using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
 using System.Numerics;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
@@ -9,6 +10,13 @@ internal sealed partial class DaggerfallSession
     private readonly DaggerfallWeatherState _weather;
     private readonly DaggerfallWeatherPresentation _weatherPresentation;
     private readonly DaggerfallHorizon _horizon;
+
+    /// <inheritdoc/>
+    public LoadingProgress AwaitArrivalGround()
+    {
+        SyncWeatherContext();
+        return _horizon.GroundProgress();
+    }
 
     private void SyncWeatherContext(double seconds = 0, bool playing = false)
     {
@@ -22,10 +30,11 @@ internal sealed partial class DaggerfallSession
         bool sheltered = outside && _spatial.CastRay(player + Vector3.UnitY * _tuning.Camera.EyeHeight,
             Vector3.UnitY, _tuning.Ambient.ShelterProbeHeight,
             _sites.CharacterEnvironment(State.PlayerControl.Motion)).Present;
-        if (outside && !_controlSettings.ClassicArt && _sites.ActiveExteriorOrigin is { } origin)
+        if (outside && _sites.ActiveExteriorOrigin is { } origin)
             _horizon.Show(_spatial.Session, origin, player, _time.Calendar.Season == DaggerfallSeason.Winter,
                 _tuning.Weather.Daylight(_time.Calendar, CurrentWeather),
-                CurrentWeather is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy or DaggerfallWeatherKind.Overcast);
+                CurrentWeather is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy or DaggerfallWeatherKind.Overcast,
+                !_controlSettings.ClassicArt, _sites.GroundLayers);
         else _horizon.Hide();
         _weatherPresentation.Update(_sites.Projection, _time.Calendar, CurrentClimate, CurrentConditions,
             _weather.SkyVariant(CurrentClimate), player, sheltered, seconds, playing, _horizon.FogDensity);

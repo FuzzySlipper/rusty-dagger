@@ -267,61 +267,16 @@ internal static class DaggerfallTerrainSurfaceBuilder
         }
 
         float targetHeight = surface.NormalizedHeights.Average();
-        float xMin = flattening.MinX / (float)WorldMapTileDimension;
-        float xMax = flattening.MaxX / (float)WorldMapTileDimension;
-        float yMin = flattening.MinY / (float)WorldMapTileDimension;
-        float yMax = flattening.MaxY / (float)WorldMapTileDimension;
-        float leftScale = 1F / xMin;
-        float rightScale = 1F / (1F - xMax);
-        float topScale = 1F / yMin;
-        float bottomScale = 1F / (1F - yMax);
-
         float[] normalizedHeights = (float[])surface.NormalizedHeights.Clone();
         Vector3[] vertices = (Vector3[])surface.Vertices.Clone();
         for (int y = 0; y < SampleDimension; y++)
         {
             float v = y / (float)(SampleDimension - 1);
-            bool insideY = v >= yMin && v <= yMax;
             for (int x = 0; x < SampleDimension; x++)
             {
                 float u = x / (float)(SampleDimension - 1);
-                bool insideX = u >= xMin && u <= xMax;
-                float strength;
-                if (insideX || insideY)
-                {
-                    if (insideY && u <= xMin)
-                    {
-                        strength = u * leftScale;
-                    }
-                    else if (insideY && u >= xMax)
-                    {
-                        strength = (1F - u) * rightScale;
-                    }
-                    else if (insideX && v <= yMin)
-                    {
-                        strength = v * topScale;
-                    }
-                    else if (insideX && v >= yMax)
-                    {
-                        strength = (1F - v) * bottomScale;
-                    }
-                    else
-                    {
-                        strength = 0F;
-                    }
-                }
-                else
-                {
-                    float xs = u <= xMin ? u * leftScale : u >= xMax ? (1F - u) * rightScale : 0F;
-                    float ys = v <= yMin ? v * topScale : v >= yMax ? (1F - v) * bottomScale : 0F;
-                    // TerrainHelper.BilinearInterpolator(0, 0, 0, 1, xs, ys) reduces to xs*ys.
-                    strength = xs * ys;
-                }
-
                 int index = Index(x, y, SampleDimension);
-                float height = insideX && insideY
-                    ? targetHeight
-                    : Lerp(normalizedHeights[index], targetHeight, strength);
+                float height = Lerp(normalizedHeights[index], targetHeight, FlatteningShare(flattening, u, v));
                 normalizedHeights[index] = height;
                 Vector3 vertex = vertices[index];
                 vertices[index] = new(vertex.X, height * TerrainVerticalSize, vertex.Z);
@@ -337,6 +292,21 @@ internal static class DaggerfallTerrainSurfaceBuilder
         {
             SourceWorldHeight = surface.SourceWorldHeight,
         };
+    }
+
+    /// <summary>How much of a cell's mean height a point takes from its location: all of it inside, fading to none at the cell's edge.</summary>
+    internal static float FlatteningShare(DaggerfallTerrainLocationFlattening flattening, float u, float v)
+    {
+        float xMin = flattening.MinX / (float)WorldMapTileDimension, xMax = flattening.MaxX / (float)WorldMapTileDimension;
+        float yMin = flattening.MinY / (float)WorldMapTileDimension, yMax = flattening.MaxY / (float)WorldMapTileDimension;
+        bool insideX = u >= xMin && u <= xMax, insideY = v >= yMin && v <= yMax;
+        if (insideX && insideY) return 1F;
+        float xs = u <= xMin ? u / xMin : u >= xMax ? (1F - u) / (1F - xMax) : 0F;
+        float ys = v <= yMin ? v / yMin : v >= yMax ? (1F - v) / (1F - yMax) : 0F;
+        if (insideY) return xs;
+        if (insideX) return ys;
+        // TerrainHelper.BilinearInterpolator(0, 0, 0, 1, xs, ys) reduces to xs*ys.
+        return xs * ys;
     }
 
     /// <summary>

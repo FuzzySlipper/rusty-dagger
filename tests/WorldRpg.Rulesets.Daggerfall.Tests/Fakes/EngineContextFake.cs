@@ -79,9 +79,13 @@ internal class EngineContextFake : DispatchProxy
     internal IReadOnlyList<CloudsRequest> Clouds => ((CameraServiceFake)(object)camera).Clouds;
     internal IReadOnlyList<MoonRequest> Moons => ((CameraServiceFake)(object)camera).Moons;
     private readonly IHeightfieldService heightfield = ServiceProxy<IHeightfieldService, HeightfieldServiceFake>.Create();
-    private readonly IAuthoredContentService authored = ServiceProxy<IAuthoredContentService, AuthoredContentFake>.Create();
+    private IAuthoredContentService authored = ServiceProxy<IAuthoredContentService, AuthoredContentFake>.Create();
     /// <summary>Whether the far ground draws, as the last call left it.</summary>
+    /// <summary>Serves the real Engine's authored content, for a fixture whose graphics are real and must read its catalogs.</summary>
+    internal void UseAuthoredContent(IAuthoredContentService service) => authored = service;
+
     internal bool HeightfieldVisible => ((HeightfieldServiceFake)(object)heightfield).Visible;
+    internal bool NearGroundVisible => ((HeightfieldServiceFake)(object)heightfield).NearVisible;
     private IWorldOriginService worldOrigin = null!;
     internal IReadOnlyList<WorldOriginCommitReceipt> OriginCommits => ((WorldOriginFake)(object)worldOrigin).Commits;
 
@@ -138,14 +142,29 @@ internal class EngineContextFake : DispatchProxy
     /// <summary>A heightfield that asks for no tiles: nothing here draws, and every readout is empty.</summary>
     private class HeightfieldServiceFake : DispatchProxy
     {
+        private const ulong Near = 1, Far = 2;
+
+        /// <summary>Whether far ground, in the backdrop, stands.</summary>
         internal bool Visible { get; private set; } = true;
+        /// <summary>Whether near ground has been made and stands.</summary>
+        internal bool NearVisible { get; private set; }
 
         protected override object? Invoke(MethodInfo? method, object?[]? arguments)
         {
-            if (method?.Name == nameof(IHeightfieldService.SetVisible)) Visible = ((HeightfieldVisibilityRequest)arguments![0]!).Visible;
-            return method?.Name == nameof(IHeightfieldService.Create)
-                ? new Heightfield(new HeightfieldHandle(1), () => { })
-                : method!.ReturnType.IsValueType && method.ReturnType != typeof(void) ? Activator.CreateInstance(method.ReturnType) : null;
+            if (method?.Name == nameof(IHeightfieldService.SetVisible))
+            {
+                HeightfieldVisibilityRequest request = (HeightfieldVisibilityRequest)arguments![0]!;
+                if (request.Heightfield.Handle.Value == Near) NearVisible = request.Visible;
+                else Visible = request.Visible;
+            }
+            if (method?.Name == nameof(IHeightfieldService.Create))
+            {
+                HeightfieldCreateRequest request = (HeightfieldCreateRequest)arguments![0]!;
+                if (request.Layer == RenderLayer.Scene) NearVisible = true;
+                return new Heightfield(new HeightfieldHandle(request.Layer == RenderLayer.Scene ? Near : Far), () => { });
+            }
+            if (method?.Name == nameof(IHeightfieldService.Read)) return new HeightfieldReadout(true, 0, 0, 0, 0, 0, true, true, 0, 0, 0, 0, 0, 0);
+            return method!.ReturnType.IsValueType && method.ReturnType != typeof(void) ? Activator.CreateInstance(method.ReturnType) : null;
         }
     }
 

@@ -2,15 +2,17 @@ using System.Globalization;
 using System.Numerics;
 using Rusty.Engine;
 using Rusty.Engine.Heightfields;
+using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>
-/// The map on the skyline: <see cref="DaggerfallHorizonGround"/> drawn in the Engine's backdrop past the walked window,
-/// so the ranges stand where the map has them. The world draws over the backdrop, so inside the window only the walked
-/// ground shows. It lives only while the player is outdoors and has not chosen classic art.
+/// The exterior ground, <see cref="DaggerfallHorizonGround"/> as two heightfields. Near ground stands in the world across the
+/// walked window, and far ground in the backdrop past it, so the ranges stand where the map has them. The world draws over
+/// the backdrop, so inside the window only near ground shows. Near ground stands while the player is outdoors, and far
+/// ground too unless they have chosen classic art.
 /// </summary>
 internal sealed class DaggerfallHorizon : IDisposable
 {
@@ -21,18 +23,25 @@ internal sealed class DaggerfallHorizon : IDisposable
     private const double CellSize = DaggerfallExteriorCellResidency.CellSize;
     /// <summary>The far ground's tint follows the light in steps this small, too fine to see.</summary>
     private const float TintStep = .01f;
+    /// <summary>Past anything near ground's frame can reach.</summary>
+    private const double NearEverywhere = 1e7;
 
     private readonly IEngineContext _engine;
     private readonly DaggerfallHorizonTuning _tuning;
     private readonly DaggerfallHorizonGround _ground;
-    private readonly Material _material;
+    private readonly Material _sea;
     private Heightfield? _heightfield;
     private HeightfieldStreamer? _streamer;
+    private Heightfield? _near;
+    private HeightfieldStreamer? _nearStreamer;
+    private HeightfieldMaterial[]? _bound;
+    private (int MapX, int MapY) _nearFrame;
     private (SpatialSession Session, int MapX, int MapY)? _link;
     private float _tint = 1;
     private bool _seen = true;
     private double _lift;
     private float _fogDensity;
+    private bool _nearSeen;
     private bool _disposed;
 
     internal DaggerfallHorizon(IEngineContext engine, DaggerfallHorizonGround ground, DaggerfallHorizonTuning tuning)
@@ -42,32 +51,45 @@ internal sealed class DaggerfallHorizon : IDisposable
         _tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
         _lift = tuning.Lift;
         _fogDensity = tuning.FogDensity;
-        _material = engine.Graphics.CreateMaterial(Tinted(1));
+        _sea = engine.Graphics.CreateMaterial(Sea(1));
     }
 
     /// <summary>The clear-weather haze while the horizon stands, or none when the classic fog applies.</summary>
     internal float? FogDensity => _link is null ? null : _fogDensity;
 
-    /// <summary>Stands the horizon about a player at <paramref name="local"/> in the exterior frame <paramref name="origin"/>.</summary>
+    /// <summary>Stands the ground about a player at <paramref name="local"/> in the exterior frame <paramref name="origin"/>.</summary>
     /// <param name="seen">Whether the weather lets the far ground show. Thick weather closes within a kilometre or so, and
     /// ground that the fog has wholly taken would still stand out as a flat shape of the fog's colour against the sky.</param>
-    /// <param name="daylight">The day's light from 0 to 1: far ground takes it as a tint, since the world's night lights keep the ground's own colours bright.</param>
-    internal void Show(SpatialSession session, DaggerfallExteriorWorldOrigin origin, Vector3 local, bool winter, float daylight, bool seen)
+    /// <param name="daylight">The day's light from 0 to 1: the far sea takes it as a tint, its colour being its own.</param>
+    /// <param name="far">Whether far ground stands at all: classic art shows the painted sky's horizon instead.</param>
+    /// <param name="layers">Opens a ground archive's layers.</param>
+    internal void Show(SpatialSession session, DaggerfallExteriorWorldOrigin origin, Vector3 local, bool winter, float daylight, bool seen, bool far,
+        Func<int, DaggerfallGroundLayers> layers)
     {
         float tint = _tuning.NightTint + ((1 - _tuning.NightTint) * Math.Clamp(daylight, 0, 1));
         if (Math.Abs(tint - _tint) >= TintStep)
         {
             _tint = tint;
-            _engine.Graphics.UpdateMaterial(new(_material, Tinted(tint)));
+            _engine.Graphics.UpdateMaterial(new(_sea, Sea(tint)));
         }
 
+        _bound ??= Bind(layers);
+        Vector3 engineLocal = local - origin.Compensation;
+        double x = engineLocal.X + (origin.MapPixelX * CellSize), z = engineLocal.Z + (origin.MapPixelY * CellSize);
+        Follow(x, z, winter, far);
+        ShowNear(session, origin, x, z);
+        if (far) ShowFar(session, origin, seen);
+        else HideFar();
+    }
+
+    private void ShowFar(SpatialSession session, DaggerfallExteriorWorldOrigin origin, bool seen)
+    {
         if (_heightfield is null)
         {
             _heightfield = _engine.Heightfield.Create(new HeightfieldCreateRequest(DaggerfallHorizonGround.TileCells, DaggerfallHorizonGround.Rings,
-                new HeightfieldMaterial[] { new(0, _material) }, RenderLayer.Backdrop, Vector3.Zero, 1 / Scale, HeightfieldFocus.At(0, 0))
+                _bound!, RenderLayer.Backdrop, Vector3.Zero, 1 / Scale, HeightfieldFocus.At(_ground.Current.CentreX, _ground.Current.CentreZ))
                 with { ShadowCasting = ShadowCasting.None });
             _streamer = new HeightfieldStreamer(_engine, _heightfield, _ground, CommitsPerUpdate);
-            _ground.Current = _ground.Current with { CentreX = double.NaN, CentreZ = double.NaN };
         }
 
         if (_link is not { } link || link.Session != session || link.MapX != origin.MapPixelX || link.MapY != origin.MapPixelY)
@@ -85,16 +107,105 @@ internal sealed class DaggerfallHorizon : IDisposable
             _engine.Heightfield.SetVisible(new(_heightfield, seen));
         }
 
-        Vector3 engineLocal = local - origin.Compensation;
-        Follow(engineLocal.X + (origin.MapPixelX * CellSize), engineLocal.Z + (origin.MapPixelY * CellSize), winter);
         _streamer!.Update();
     }
 
-    private static MaterialRequest Tinted(float tint) => new(new Color(tint, tint, tint, 1), default(RenderResourceReference), 1,
+    /// <summary>
+    /// Binds the far sea and every ground archive's layers, so a vertex can name its climate's. A heightfield's materials are
+    /// fixed when it is made, so all of them are bound at once.
+    /// </summary>
+    private HeightfieldMaterial[] Bind(Func<int, DaggerfallGroundLayers> layers)
+    {
+        List<HeightfieldMaterial> bound = [new(0, _sea)];
+        uint Index(Material material)
+        {
+            bound.Add(new((uint)bound.Count, material));
+            return (uint)bound.Count - 1;
+        }
+
+        Dictionary<int, DaggerfallHorizonGround.ArchiveMaterials> archives = [];
+        foreach (int archive in DaggerfallExteriorEnvironment.GroundArchives)
+        {
+            DaggerfallGroundLayers ground = layers(archive);
+            uint open = Index(ground.Open);
+            archives.Add(archive, new(open, ground.HasLush ? Index(ground.Lush) : open, Index(ground.Town), Index(ground.Shore), ground.NoiseStone, ground.HasLush));
+        }
+
+        _ground.Materials = new(0, archives);
+        return [.. bound];
+    }
+
+    /// <summary>Near ground stands in the world, in the origin's own frame, and draws what the player walks on.</summary>
+    private void ShowNear(SpatialSession session, DaggerfallExteriorWorldOrigin origin, double x, double z)
+    {
+        if (_near is not null && _nearFrame != (origin.MapPixelX, origin.MapPixelY)) DropNear();
+        double offsetX = origin.MapPixelX * CellSize, offsetZ = origin.MapPixelY * CellSize;
+        if (_near is null)
+        {
+            _near = _engine.Heightfield.Create(new HeightfieldCreateRequest(DaggerfallHorizonGround.TileCells, DaggerfallHorizonGround.NearRings, _bound!, RenderLayer.Scene,
+                Vector3.Zero, 1, HeightfieldFocus.At(x - offsetX, z - offsetZ))
+                with { Session = session, Anchor = Global(0, 0, 0), ShadowCasting = ShadowCasting.None });
+            _nearStreamer = new HeightfieldStreamer(_engine, _near, new NearGround(_ground, offsetX, offsetZ), CommitsPerUpdate);
+            _nearFrame = (origin.MapPixelX, origin.MapPixelY);
+            _nearSeen = true;
+        }
+
+        if (!_nearSeen)
+        {
+            _nearSeen = true;
+            _engine.Heightfield.SetVisible(new(_near, true));
+        }
+
+        _engine.Heightfield.SetFocus(new HeightfieldFocusRequest(_near, HeightfieldFocus.At(x - offsetX, z - offsetZ)));
+        _nearStreamer!.Update();
+    }
+
+    private sealed class NearGround(DaggerfallHorizonGround ground, double offsetX, double offsetZ) : IHeightfieldSampler
+    {
+        public void Sample(HeightfieldTileRequest tile, HeightfieldTileSamples samples) => ground.SampleNear(tile, samples, offsetX, offsetZ);
+    }
+
+    private void DropNear()
+    {
+        _nearStreamer?.Dispose(); _nearStreamer = null;
+        _near?.Dispose(); _near = null;
+    }
+
+    /// <summary>How far the ground around an arrival has come: a loading screen holds until it stands, so nobody watches it stream in.</summary>
+    internal LoadingProgress GroundProgress()
+    {
+        if (_near is null || !_nearSeen) return LoadingProgress.Finished;
+        HeightfieldReadout read = _engine.Heightfield.Read(_near);
+        return read.Settled ? LoadingProgress.Finished
+            : LoadingProgress.Measured(read.ResidentTiles / Math.Max(1d, read.ResidentTiles + read.PendingTiles));
+    }
+
+    /// <summary>Lets go of the heightfields, whose materials are about to change; the next showing makes them anew.</summary>
+    internal void Rebuild()
+    {
+        HideFar();
+        DropNear();
+        _streamer?.Dispose(); _streamer = null;
+        _heightfield?.Dispose(); _heightfield = null;
+        _bound = null;
+        _ground.Current = _ground.Current with { CentreX = double.NaN, CentreZ = double.NaN };
+    }
+
+    private MaterialRequest Sea(float tint) => new(new Color(_tuning.Sea.R * tint, _tuning.Sea.G * tint, _tuning.Sea.B * tint, 1), default(RenderResourceReference), 1,
         new Color(1, 1, 1, 1), Vector3.Zero, 0, false);
 
-    /// <summary>Takes the horizon down, keeping its tiles for the next time outdoors.</summary>
+    /// <summary>Takes the ground down, keeping its tiles for the next time outdoors.</summary>
     internal void Hide()
+    {
+        HideFar();
+        if (_near is not null && _nearSeen)
+        {
+            _nearSeen = false;
+            _engine.Heightfield.SetVisible(new(_near, false));
+        }
+    }
+
+    private void HideFar()
     {
         if (_link is null) return;
         _engine.CameraView.ClearBackdrop(new(default));
@@ -121,7 +232,7 @@ internal sealed class DaggerfallHorizon : IDisposable
     internal string GroundSurvey(DaggerfallTerrainSet terrain)
     {
         DaggerfallTerrainSet classic = new(terrain.Width, terrain.Height, terrain.Heightmap, terrain.Samples);
-        return string.Join(" | ", Survey("relief", terrain, _ground), Survey("classic", classic, new(classic, (_, _) => 231, _tuning, _ground.GroundTuning)));
+        return string.Join(" | ", Survey("relief", terrain, _ground), Survey("classic", classic, new(classic, (_, _) => 231, _tuning, _ground.GroundTuning, new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior>())));
     }
 
     private static string Survey(string name, DaggerfallTerrainSet terrain, DaggerfallHorizonGround ground)
@@ -165,6 +276,7 @@ internal sealed class DaggerfallHorizon : IDisposable
         if (_disposed) return;
         _disposed = true;
         Hide();
+        DropNear();
         _streamer?.Dispose();
         _heightfield?.Dispose();
     }
@@ -174,17 +286,20 @@ internal sealed class DaggerfallHorizon : IDisposable
     /// either side of one barely differ. The frame changes first, so nothing invalidated is sampled by the old one. A move
     /// changes only what lies inside the fade about either centre; a new lift or season changes every tile.
     /// </summary>
-    private void Follow(double x, double z, bool winter)
+    private void Follow(double x, double z, bool winter, bool far)
     {
         DaggerfallHorizonGround.Frame frame = _ground.Current;
         bool everywhere = !double.IsFinite(frame.CentreX) || frame.Lift != _lift || frame.Winter != winter;
         bool moved = Math.Max(Math.Abs(x - frame.CentreX), Math.Abs(z - frame.CentreZ)) >= _tuning.FollowMetres;
         if (!everywhere && !moved) return;
         _ground.Current = new(x, z, _lift, winter);
-        _engine.Heightfield.SetFocus(new HeightfieldFocusRequest(_heightfield!, HeightfieldFocus.At(x, z)));
+        // A season changes near ground too; the lift's centre only moves far ground.
+        if (frame.Winter != winter && _near is not null) _engine.Heightfield.Invalidate(new HeightfieldInvalidateRequest(_near, -NearEverywhere, -NearEverywhere, NearEverywhere, NearEverywhere));
+        if (_heightfield is null || !far) return;
+        _engine.Heightfield.SetFocus(new HeightfieldFocusRequest(_heightfield, HeightfieldFocus.At(x, z)));
         double reach = everywhere ? DaggerfallHorizonGround.CoarseReachMetres * 2 : _tuning.LiftFullMetres;
         double fromX = double.IsFinite(frame.CentreX) ? frame.CentreX : x, fromZ = double.IsFinite(frame.CentreZ) ? frame.CentreZ : z;
-        _engine.Heightfield.Invalidate(new HeightfieldInvalidateRequest(_heightfield!, Math.Min(x, fromX) - reach, Math.Min(z, fromZ) - reach,
+        _engine.Heightfield.Invalidate(new HeightfieldInvalidateRequest(_heightfield, Math.Min(x, fromX) - reach, Math.Min(z, fromZ) - reach,
             Math.Max(x, fromX) + reach, Math.Max(z, fromZ) + reach));
     }
 

@@ -28,7 +28,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres, float LiftFullMetres, float FogDensity, float SinkMetres, float SinkFromMetres, float SinkGoneMetres, float NightTint,
     float FollowMetres, float RockFromSlope, float RockFullSlope,
     float CloudCoverage, float StormCloudCoverage, float CloudAltitudeMetres, float CloudScaleMetres, float CloudTwilightDegrees, Vector2 CloudDrift,
-    Color Sea, Color Rock, Color Snow, IReadOnlyDictionary<int, Color> Climates)
+    Color Sea)
 {
     /// <summary>The side of a cloud's cells in metres, so the sky sits with the pixel art under it.</summary>
     internal float CloudPixelMetres { get; init; } = 180;
@@ -58,14 +58,7 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
 
     internal static DaggerfallHorizonTuning Default { get; } = new(4.5f, 3_000, 24_000, .00003f, 150, 2_900, 3_700, .1f, 204.8f, .25f, .7f,
         .45f, .9f, 3_500, 1_800, 8, new(14, 5),
-        Color.FromSrgb(.16f, .24f, .32f), Color.FromSrgb(.28f, .28f, .29f), Color.FromSrgb(.78f, .78f, .81f),
-        new Dictionary<int, Color>
-        {
-            [223] = Color.FromSrgb(.27f, .24f, .18f), [224] = Color.FromSrgb(.54f, .41f, .29f), [225] = Color.FromSrgb(.54f, .41f, .29f),
-            [226] = Color.FromSrgb(.25f, .26f, .2f), [227] = Color.FromSrgb(.27f, .24f, .18f), [228] = Color.FromSrgb(.27f, .24f, .18f),
-            [229] = Color.FromSrgb(.54f, .41f, .29f), [230] = Color.FromSrgb(.25f, .26f, .2f), [231] = Color.FromSrgb(.24f, .3f, .2f),
-            [232] = Color.FromSrgb(.24f, .3f, .2f),
-        });
+        Color.FromSrgb(.16f, .24f, .32f));
 
     internal DaggerfallHorizonTuning Validate()
     {
@@ -90,7 +83,6 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
             throw new ArgumentException("Every weather states its air, with a night floor and a flash.");
         if (MasserRadiusDegrees <= 0 || SecundaRadiusDegrees <= 0 || MoonDayBrightness is < 0 or > 1)
             throw new ArgumentException("A moon has a size, and a day brightness from 0 to 1.");
-        if (Climates.Count == 0) throw new ArgumentException("A horizon needs a colour for its climates.");
         return this;
     }
 
@@ -103,8 +95,7 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
         e.GetProperty("cloudAltitudeMetres").GetSingle(), e.GetProperty("cloudScaleMetres").GetSingle(),
         e.GetProperty("cloudTwilightDegrees").GetSingle(),
         new(e.GetProperty("cloudDrift")[0].GetSingle(), e.GetProperty("cloudDrift")[1].GetSingle()),
-        ReadColor(e.GetProperty("sea")), ReadColor(e.GetProperty("rock")), ReadColor(e.GetProperty("snow")),
-        e.GetProperty("climates").EnumerateObject().ToDictionary(climate => int.Parse(climate.Name), climate => ReadColor(climate.Value)))
+        ReadColor(e.GetProperty("sea")))
     {
         CloudPixelMetres = e.GetProperty("cloudPixelMetres").GetSingle(),
         CloudShadeSteps = e.GetProperty("cloudShadeSteps").GetUInt32(),

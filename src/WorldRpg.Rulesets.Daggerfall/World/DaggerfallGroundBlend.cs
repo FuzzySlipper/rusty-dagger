@@ -54,22 +54,30 @@ internal static class DaggerfallGroundBlend
     }
 }
 
-/// <summary>One ground archive's four layers as one Engine terrain layer material.</summary>
+/// <summary>
+/// One ground archive's layers as Engine terrain layer materials. A vertex weighs four layers, so ground picks the
+/// material that holds what it needs: open ground, a swamp's lush ground, a location's paving and ruts, or a shore's water.
+/// </summary>
 internal sealed class DaggerfallGroundLayers : IDisposable
 {
+    /// <summary>The side of a classic ground texture in texels.</summary>
+    internal const int ClassicSide = 64;
     private const uint Version = 1;
-    private const int SharedLayers = 4;
+    private const int Grass = 0, Dirt = 1, Rock = 2, Snow = 3;
+    /// <summary>The records of a location's flagstones and rutted road, which only its authored ground wears.</summary>
+    private const int PavingRecord = 46, RutsRecord = 54;
     private static readonly Color White = new(1, 1, 1, 1);
     private readonly AuthoredCatalog _catalog;
     private readonly List<RenderResource> _textures = [];
     private readonly List<Material> _materials = [];
+    private readonly List<Material> _layered = [];
 
-    /// <param name="surfaces">The grass, dirt, stone and snow textures, in layer order.</param>
+    /// <param name="surfaces">An archive's <see cref="Records"/>, in that order.</param>
     internal DaggerfallGroundLayers(IAuthoredContentService authored, IGraphicsService graphics, IContentService content, int archive,
         IReadOnlyList<DaggerfallArtSurface> surfaces, DaggerfallGroundBlendSettings settings)
     {
         NoiseStone = BaresNoiseStone(archive);
-        HasLush = surfaces.Count > SharedLayers;
+        HasLush = archive / 100 == 4;
         List<AuthoredCatalogEntryInput> entries = [];
         List<AuthoredCatalogDependencyInput> dependencies = [];
         List<AuthoredMaterialInput> definitions = [];
@@ -103,7 +111,18 @@ internal sealed class DaggerfallGroundLayers : IDisposable
                     $"material/ground/{Name(archive, layer, settings)}", texture) { TriplanarSharpness = settings.TriplanarSharpness }));
             }
 
-            Layered = graphics.CreateTerrainLayerMaterial(new TerrainLayerMaterialRequest(_materials[0], _materials.Skip(1).ToArray(), settings.Contrast));
+            int last = surfaces.Count - 1;
+            Material Layered(params int[] upper)
+            {
+                Material material = graphics.CreateTerrainLayerMaterial(new TerrainLayerMaterialRequest(_materials[Grass], upper.Select(layer => _materials[layer]).ToArray(), settings.Contrast));
+                _layered.Add(material);
+                return material;
+            }
+
+            Open = Layered(Dirt, Rock, Snow);
+            Lush = HasLush ? Layered(Dirt, Rock, Snow + 1) : Open;
+            Town = Layered(Dirt, last - 2, last - 1);
+            Shore = Layered(Dirt, Rock, last);
         }
         catch
         {
@@ -112,27 +131,34 @@ internal sealed class DaggerfallGroundLayers : IDisposable
         }
     }
 
-    internal Material? Layered { get; }
+    /// <summary>Open ground: grass, dirt, rock and snow.</summary>
+    internal Material Open { get; } = null!;
+
+    /// <summary>A swamp's ground below the snow: grass, dirt, rock and lush ground.</summary>
+    internal Material Lush { get; } = null!;
+
+    /// <summary>A location's own ground: grass, dirt, paving and ruts.</summary>
+    internal Material Town { get; } = null!;
+
+    /// <summary>Ground at the water: grass, dirt, rock and water.</summary>
+    internal Material Shore { get; } = null!;
 
     /// <summary>Whether the noise bares this archive's stone, or only the slope does.</summary>
     internal bool NoiseStone { get; }
 
-    /// <summary>Whether this archive has a fifth layer, the swamp's lush ground, which a cell draws in place of snow.</summary>
+    /// <summary>Whether this archive has a lush ground, drawn wherever no snow reaches.</summary>
     internal bool HasLush { get; }
-
-    /// <summary>The layers a cell of lush ground draws: a mesh weighs four, and snow is rare in a swamp.</summary>
-    internal static readonly uint[] LushPalette = [0, 1, 2, 4];
 
     /// <summary>
     /// The archive and record of each layer of a ground archive: its grass and dirt, its rock, and the climate's snow,
     /// which is the grass of its winter archive, ending in 3. A desert has no winter archive, so its heights go to rock.
-    /// The swamp's own third record is lush ground, a fifth layer.
+    /// The swamp's own third record is lush ground. Then a location's paving and ruts, and water.
     /// </summary>
     internal static (int Archive, int Record)[] Records(int archive)
     {
         int climate = archive / 100 * 100;
         (int, int)[] shared = [(archive, 2), (archive, 1), (RockArchive(archive), 3), climate == 0 ? (archive, 3) : (climate + 3, 2)];
-        return climate == 400 ? [.. shared, (archive, 3)] : shared;
+        return [.. shared, .. climate == 400 ? [(archive, 3)] : Array.Empty<(int, int)>(), (archive, PavingRecord), (archive, RutsRecord), (archive, 0)];
     }
 
     /// <summary>
@@ -156,9 +182,56 @@ internal sealed class DaggerfallGroundLayers : IDisposable
 
     public void Dispose()
     {
-        Layered?.Dispose();
+        foreach (Material material in _layered) material.Dispose();
         foreach (Material material in _materials) material.Dispose();
         foreach (RenderResource texture in _textures) texture.Dispose();
         _catalog.Dispose();
+    }
+}
+
+/// <summary>
+/// What a location's authored ground is at each corner of a tile. Every record of a ground archive is a pattern of six
+/// kinds, so a location's tiles read as ground at its vertices.
+/// </summary>
+internal static class DaggerfallGroundKinds
+{
+    internal const byte Water = 0, Dirt = 1, Grass = 2, Stone = 3, Paving = 4, Ruts = 5;
+    private const byte W = Water, D = Dirt, G = Grass, S = Stone, P = Paving, R = Ruts;
+
+    /// <summary>Each record's kinds at the image's corners: upper left, upper right, lower left, lower right.</summary>
+    private static readonly byte[][] Corners = Table();
+
+    private static byte[][] Table()
+    {
+        byte[][] table = new byte[64][];
+        void Set(int record, byte ul, byte ur, byte ll, byte lr) => table[record] = [ul, ur, ll, lr];
+        void All(byte kind, params int[] records) { foreach (int record in records) Set(record, kind, kind, kind, kind); }
+        void Run(int first, byte a, byte b) { Set(first, a, b, b, b); Set(first + 1, a, b, a, b); Set(first + 2, a, a, a, b); }
+        All(W, 0, 4, 19, 29); All(D, 1, 8, 9, 24); All(G, 2, 13, 14, 23); All(S, 3, 18, 28, 33); All(P, 46); All(R, 54);
+        Run(5, D, W); Run(10, G, D); Run(15, S, G); Run(20, G, W); Run(25, S, D); Run(30, S, W);
+        Set(47, D, P, P, P); Set(55, G, P, P, P);
+        Set(34, D, W, G, W); Set(35, G, W, S, W); Set(36, D, W, S, W); Set(37, D, G, D, W); Set(38, D, S, D, W); Set(39, D, S, D, G);
+        Set(40, G, D, G, W); Set(41, G, S, G, W); Set(42, G, S, G, D); Set(43, S, D, S, W); Set(44, S, G, S, W); Set(45, S, G, S, D);
+        Set(48, D, W, W, D); Set(49, G, W, W, G); Set(50, S, W, W, S); Set(51, G, D, D, G); Set(52, S, D, D, S); Set(53, S, G, G, S);
+        return table;
+    }
+
+    /// <summary>Whether a tile is a paving edge, whose art divides it along a diagonal.</summary>
+    internal static bool CutsDiagonally(byte bitfield) => (bitfield & 0x3F) is 47 or 55;
+
+    /// <summary>
+    /// The kind at a corner of a tile. The terrain lookup fixes the frame: a record's image has x running right and y running
+    /// up, rotation is a quarter turn anticlockwise and a flip a half turn.
+    /// </summary>
+    /// <param name="bitfield">The tile's record, rotation and flip.</param>
+    /// <param name="u">0 at the tile's first column of vertices, 1 at its next.</param>
+    /// <param name="v">0 at its first row of vertices, 1 at its next.</param>
+    internal static byte At(byte bitfield, int u, int v)
+    {
+        byte[] corners = Corners[bitfield & 0x3F] ?? Corners[1];
+        (byte ul, byte ur, byte ll, byte lr) = (corners[0], corners[1], corners[2], corners[3]);
+        if ((bitfield & 0x40) != 0) (ul, ur, lr, ll) = (ur, lr, ll, ul);
+        if ((bitfield & 0x80) != 0) (ul, ur, ll, lr) = (lr, ll, ur, ul);
+        return v == 0 ? u == 0 ? ll : lr : u == 0 ? ul : ur;
     }
 }

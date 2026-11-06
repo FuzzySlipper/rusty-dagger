@@ -555,9 +555,12 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             {
                 ReplaceSession(created!, ProductMode.Title, "the product initialized the committed character");
                 began(StartEntry());
-            }),
+            }, AwaitArrivalGround),
         ];
     }
+
+    /// <summary>How far the session's ground around an arrival has come, if it has any to wait for.</summary>
+    private LoadingProgress AwaitArrivalGround() => _session is IArrivalGroundSession ground ? ground.AwaitArrivalGround() : LoadingProgress.Finished;
 
     /// <summary>Starts the entry screen's opening sequence, or goes straight to play when the session has none.</summary>
     private ProductModeChange StartEntry()
@@ -1084,7 +1087,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         IGameSession? restored = null;
         _loading.Start("Loading the saved game", [
             new("Restoring the saved world", () => restored = saveable.CreateSession(SessionContext(Composition), envelope.Payload)),
-            new("Entering the world", () => AdoptLoadedGame(requesting, restored!)),
+            new("Entering the world", () => AdoptLoadedGame(requesting, restored!), AwaitArrivalGround),
         ], error => requesting.ReportSaveOutcome($"Load failed: {error.Message}"));
     }
 

@@ -91,27 +91,57 @@ public sealed class DaggerfallHorizonGroundTests
         Assert.Equal(400, ground.Lifted(400, 50_000, 0, new(0, 0, 1, false)));
     }
 
+    private static readonly DaggerfallHorizonGround.GroundMaterials Materials = new(0, new Dictionary<int, DaggerfallHorizonGround.ArchiveMaterials>
+    {
+        [302] = new(1, 1, 2, 3, true, false), [303] = new(4, 4, 5, 6, false, false), [402] = new(7, 8, 9, 10, false, true),
+    });
+
     [Fact]
-    public void Far_ground_wears_its_climate_with_rock_snow_and_sea_over_it()
+    public void Open_ground_is_the_same_wherever_it_is_drawn_and_only_near_ground_has_a_shore()
     {
         DaggerfallHorizonGround ground = Ground(Terrain(8, 8));
-        DaggerfallHorizonTuning tuning = DaggerfallHorizonTuning.Default;
         double sea = DaggerfallTerrainSurfaceBuilder.OceanElevation * DaggerfallTerrainSurfaceBuilder.TerrainScale;
 
-        Assert.Equal(tuning.Sea, ground.Paint(231, sea, 0, false));
-        Assert.Equal(tuning.Climates[231], ground.Paint(231, 200, 0, false));
-        Assert.Equal(tuning.Rock, ground.Paint(231, 200, tuning.RockFullSlope, false));
-        Assert.Equal(tuning.Snow, ground.Paint(231, DaggerfallGroundTuning.Default.SnowFullMetres, 0, false));
-        Assert.NotEqual(tuning.Climates[231], ground.Paint(231, 200, 0, true));
-        Assert.Equal(tuning.Climates[224], ground.Paint(224, 200, 0, true));
+        Assert.Equal(ground.PaintOpen(1000, 1000, 200, 0, false, Materials), ground.PaintNear(1000, 1000, 200, 0, false, Materials));
+        DaggerfallHorizonGround.Paint water = ground.PaintNear(1000, 1000, sea, 0, false, Materials);
+        Assert.Equal((3u, 1f), (water.Material, water.Weights.W));
+        DaggerfallHorizonGround.Paint beach = ground.PaintNear(1000, 1000, sea + 2, 0, false, Materials);
+        Assert.Equal((3u, 1f), (beach.Material, beach.Weights.Y));
     }
 
     [Fact]
-    public void A_climate_without_a_colour_is_reported()
+    public void Winter_changes_a_climates_layers_and_real_height_brings_the_snow()
     {
         DaggerfallHorizonGround ground = Ground(Terrain(8, 8));
 
-        Assert.Contains("999", Assert.Throws<InvalidOperationException>(() => ground.Paint(999, 200, 0, false)).Message);
+        Assert.Equal(1u, ground.PaintOpen(1000, 1000, 200, 0, false, Materials).Material);
+        Assert.Equal(4u, ground.PaintOpen(1000, 1000, 200, 0, true, Materials).Material);
+        Assert.Equal(1f, ground.PaintOpen(1000, 1000, DaggerfallGroundTuning.Default.SnowFullMetres, 0, false, Materials).Weights.W);
+    }
+
+    [Theory]
+    [InlineData(200f, 8u)]
+    [InlineData(5_000f, 7u)]
+    public void A_swamp_wears_its_lush_ground_below_the_snow(float height, uint material)
+    {
+        DaggerfallHorizonGround ground = new(Terrain(8, 8), (_, _) => 227, DaggerfallHorizonTuning.Default, DaggerfallGroundTuning.Default, NoLocations);
+
+        Assert.Equal(material, ground.PaintOpen(1000, 1000, height, 0, false, Materials).Material);
+    }
+
+    [Fact]
+    public void Tile_corners_stand_where_the_terrain_lookup_puts_them()
+    {
+        // Record 5 is dirt in one corner of water. Unturned that is the tile's far left; the lookup's quarter turn
+        // brings it to near left and its half turn to near right.
+        Assert.Equal(DaggerfallGroundKinds.Dirt, DaggerfallGroundKinds.At(5, 0, 1));
+        Assert.Equal(DaggerfallGroundKinds.Water, DaggerfallGroundKinds.At(5, 0, 0));
+        Assert.Equal(DaggerfallGroundKinds.Dirt, DaggerfallGroundKinds.At(5 | 0x40, 0, 0));
+        Assert.Equal(DaggerfallGroundKinds.Dirt, DaggerfallGroundKinds.At(5 | 0x80, 1, 0));
+        Assert.Equal(DaggerfallGroundKinds.Dirt, DaggerfallGroundKinds.At(5 | 0xC0, 1, 1));
+        // A paving edge is paving but for one corner.
+        Assert.Equal(DaggerfallGroundKinds.Dirt, DaggerfallGroundKinds.At(47, 0, 1));
+        Assert.Equal(DaggerfallGroundKinds.Paving, DaggerfallGroundKinds.At(47, 1, 0));
     }
 
     [Fact]
@@ -157,7 +187,9 @@ public sealed class DaggerfallHorizonGroundTests
     }
 
     private static DaggerfallHorizonGround Ground(DaggerfallTerrainSet terrain) =>
-        new(terrain, (_, _) => 231, DaggerfallHorizonTuning.Default, DaggerfallGroundTuning.Default);
+        new(terrain, (_, _) => 231, DaggerfallHorizonTuning.Default, DaggerfallGroundTuning.Default, NoLocations);
+
+    private static readonly Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> NoLocations = [];
 
     private static DaggerfallTerrainSet Terrain(int width, int height, byte[]? relief = null)
     {
