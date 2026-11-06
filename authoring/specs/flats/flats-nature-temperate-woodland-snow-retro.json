@@ -1,0 +1,327 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy world scenery: the trees, rocks, plants and town fixtures of a dark fantasy RPG, seen from standing height. Keep the source's silhouette, proportions, local colours and the arrangement of its parts: it replaces the source at the same size in the world. Restrained palette with distinct light, middle and dark families. Detail hierarchy: silhouette first, a few large masses second, sparse material marks third. Foliage reads as clumps of painted leaf masses, not individual leaves. Keep open gaps between branches, bars and posts open. No extra parts, gemstones, runes, faces, symbols or fantasy embellishment. Not pixel art, not a photoreal photograph, not a glossy mobile-game asset, not a dramatic scene. No text, labels, border, vignette, frame, hand, person, ground plane, scenery or second object.",
+  "presentation": "One isolated object on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no ground shadow, no background texture and no cast shadow outside the object. The whole object visible with breathing room, centred, its base where the source's base is. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Flats: nature-temperate-woodland-snow / Qwen then retro",
+  "items": [
+    {
+      "id": "flat-505-1",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-001-frame-000-source.png",
+      "content": "One snow-covered bush with dark green foliage and white snow patches clinging to its branches.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-1 (57x42)"
+    },
+    {
+      "id": "flat-505-2",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-002-frame-000-source.png",
+      "content": "One ornate, multi-part fantasy weapon with metallic and wooden elements, featuring silver, gold, brown, and green hues.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-2 (19x18)"
+    },
+    {
+      "id": "flat-505-3",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-003-frame-000-source.png",
+      "content": "One clenched fist, muscular and dark grey, with lighter grey knuckles and a brown wristband, resting on a brown surface.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-3 (83x46)"
+    },
+    {
+      "id": "flat-505-4",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-004-frame-000-source.png",
+      "content": "One snow-covered boulder cluster, rough gray stone base with white snow atop, forming irregular, rounded shapes.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-4 (79x42)"
+    },
+    {
+      "id": "flat-505-5",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-005-frame-000-source.png",
+      "content": "One grey helmet with a rounded top, cheek guards, and a chin strap, made of metal, featuring silver and dark grey tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-5 (30x26)"
+    },
+    {
+      "id": "flat-505-6",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-006-frame-000-source.png",
+      "content": "One rounded, bulbous object with a smooth, light-grey top and dark base, possibly a stone or metal vessel.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-6 (32x20)"
+    },
+    {
+      "id": "flat-505-7",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-007-frame-000-source.png",
+      "content": "One ornate, dark-hued staff with curved green arms and silver-tipped ends, featuring intricate carvings and glowing blue accents.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-7 (36x28)"
+    },
+    {
+      "id": "flat-505-8",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-008-frame-000-source.png",
+      "content": "One ornate, multi-pronged staff with curved, silver-tipped ends and dark green, brown, and purple segmented shafts.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-8 (30x38)"
+    },
+    {
+      "id": "flat-505-9",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-009-frame-000-source.png",
+      "content": "One ornate, Y-shaped staff with snow-capped branches, dark wood, and metallic accents, featuring blue gemstones and green leaf details.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-9 (34x59)"
+    },
+    {
+      "id": "flat-505-10",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-010-frame-000-source.png",
+      "content": "One snow-dusted evergreen tree with layered branches, green needles, and brown trunk, featuring white snow on its limbs.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-10 (46x59)"
+    },
+    {
+      "id": "flat-505-11",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-011-frame-000-source.png",
+      "content": "One snow-dusted tree with layered branches, textured bark, and green foliage beneath white snow, standing tall against a dark backdrop.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-11 (61x105)"
+    },
+    {
+      "id": "flat-505-12",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-012-frame-000-source.png",
+      "content": "One snow-dusted tree with gnarled brown trunk, green foliage, and white snow clinging to branches and roots.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-12 (123x102)"
+    },
+    {
+      "id": "flat-505-13",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-013-frame-000-source.png",
+      "content": "One snow-covered evergreen tree with dark trunk, green needles, and white snow patches on branches.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-13 (77x150)"
+    },
+    {
+      "id": "flat-505-14",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-014-frame-000-source.png",
+      "content": "One snow-dusted tree with layered branches, green foliage, and a textured trunk, primarily in green, white, and brown tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-14 (84x116)"
+    },
+    {
+      "id": "flat-505-15",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-015-frame-000-source.png",
+      "content": "One snow-dusted, bare tree with gnarled trunk and twisted branches, dark bark and white snow.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-15 (142x185)"
+    },
+    {
+      "id": "flat-505-16",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-016-frame-000-source.png",
+      "content": "One snow-dusted tree with green foliage, brown trunk, and white snow on branches and roots, standing upright.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-16 (124x141)"
+    },
+    {
+      "id": "flat-505-17",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-017-frame-000-source.png",
+      "content": "One snow-dusted evergreen tree with a thick trunk, green foliage, and white snow patches on its branches.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-17 (127x142)"
+    },
+    {
+      "id": "flat-505-18",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-018-frame-000-source.png",
+      "content": "One snow-dusted tree with dark bark and green leaves, its branches laden with white snow, standing tall and full.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-18 (107x104)"
+    },
+    {
+      "id": "flat-505-19",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-019-frame-000-source.png",
+      "content": "One snow-dusted tree trunk with bare branches, brown bark, and white snow clinging to its limbs and base.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-19 (44x51)"
+    },
+    {
+      "id": "flat-505-20",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-020-frame-000-source.png",
+      "content": "One gnarled tree trunk with snow-dusted branches, textured bark, and white snow, primarily brown and white.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-20 (66x51)"
+    },
+    {
+      "id": "flat-505-21",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-021-frame-000-source.png",
+      "content": "One tall plant with a slender green stem, purple-pink blossoms, and green leaves at its base.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-21 (15x32)"
+    },
+    {
+      "id": "flat-505-22",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-022-frame-000-source.png",
+      "content": "One white, curved, horned creature with green accents, resembling a stylized dragon or wyvern, primarily white and green.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-22 (18x9)"
+    },
+    {
+      "id": "flat-505-23",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-023-frame-000-source.png",
+      "content": "One mushroom with a rounded cap, textured stem, and metallic base, featuring earthy browns, white, and grey tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-23 (23x39)"
+    },
+    {
+      "id": "flat-505-24",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-024-frame-000-source.png",
+      "content": "One gnarled, leafless tree with twisted branches and textured bark, primarily grey and white.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-24 (39x98)"
+    },
+    {
+      "id": "flat-505-25",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-025-frame-000-source.png",
+      "content": "One snow-covered evergreen tree with green needles, brown trunk, and white snow on branches.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-25 (67x131)"
+    },
+    {
+      "id": "flat-505-26",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-026-frame-000-source.png",
+      "content": "One snow-covered palm tree with green fronds and white snow, featuring a brown trunk and vibrant green leaves.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-26 (43x26)"
+    },
+    {
+      "id": "flat-505-27",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-027-frame-000-source.png",
+      "content": "One snow-dusted evergreen tree with dense green foliage, brown trunk, and white snow patches on branches.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-27 (42x37)"
+    },
+    {
+      "id": "flat-505-28",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-028-frame-000-source.png",
+      "content": "One snow-covered tree with green leaves, brown trunk, and white snow on branches, standing upright.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-28 (79x56)"
+    },
+    {
+      "id": "flat-505-29",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-029-frame-000-source.png",
+      "content": "One plant with green stems and white blossoms, featuring layered petals and leafy fronds, primarily in green and white hues.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-29 (33x24)"
+    },
+    {
+      "id": "flat-505-30",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-030-frame-000-source.png",
+      "content": "One bare tree with snow-dusted branches and a textured brown trunk stands tall against a dark sky.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-30 (82x128)"
+    },
+    {
+      "id": "flat-505-31",
+      "directory": "nature-temperate-woodland-snow/texture-505",
+      "image": "flat/texture-505-record-031-frame-000-source.png",
+      "content": "One snow-covered, gnarled tree branch with rough bark and jagged ends, mostly brown with white snow patches.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-505-31 (130x60)"
+    }
+  ],
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "flats",
+      "model": "krea2-turbo",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ]
+}
