@@ -864,9 +864,20 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         {
             RenderResourceInfo texture = appearance.OpenTexture(content, material.TexturePath, material.TextureSha256, TextureFilter.Nearest, TextureWrap.Repeat);
             locationResources.Add(texture.Handle);
-            Material created = appearance.CreateMaterial(new MaterialRequest(
-                new Color(1F, 1F, 1F, 1F), texture.Handle, 1F,
-                new Color(1F, 1F, 1F, 1F), Vector3.Zero, 0F, false));
+            Dictionary<string, RenderResource> masks = new(StringComparer.Ordinal);
+            RenderResource? Glass(ContentArtifact? mask)
+            {
+                if (mask is null) return null;
+                if (!masks.TryGetValue(mask.Path, out RenderResource? resource))
+                {
+                    resource = appearance.OpenTexture(content, mask.Path, mask.Sha256, TextureFilter.Nearest, TextureWrap.Repeat).Handle;
+                    locationResources.Add(resource);
+                    masks.Add(mask.Path, resource);
+                }
+                return resource;
+            }
+            RenderResource?[] glass = [Glass(material.SummerGlass), Glass(material.WinterGlass), Glass(material.RainGlass)];
+            Material created = appearance.CreateMaterial(SurfaceRequest(texture.Handle, glass[0]));
             locationMaterials.Add(created);
             materials.Add(created);
             materialsBySlot.Add(material.Slot, created);
@@ -878,7 +889,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 return resource.Handle;
             }
             SurfaceMaterial surface = new(created, [material.TexturePath, material.WinterTexture?.Path ?? material.TexturePath, material.RainTexture?.Path ?? material.TexturePath],
-                [texture.Handle, Variant(material.WinterTexture), Variant(material.RainTexture)], texture.Handle);
+                [texture.Handle, Variant(material.WinterTexture), Variant(material.RainTexture)], texture.Handle, glass) { Level = glass[0] is null ? 0F : windowLevel };
             AttachRefreshedSurface(surface);
             surfaceMaterials.Add(surface);
         }

@@ -241,4 +241,12 @@ public sealed class DaggerfallCalendarTests
         _ = new DaggerfallCalendar(405, 5, 0, 12, 0, 0).Advance(600, out DaggerfallCalendarElapsed steady);
         Assert.False(steady.DaylightChanged);
     }
+
+    [Theory]
+    [InlineData(7, true)]
+    [InlineData(8, false)]
+    [InlineData(16, false)]
+    [InlineData(17, true)]
+    public void City_lamps_and_windows_share_their_hours(int hour, bool on) =>
+        Assert.Equal(on, Presentation.DaggerfallSiteLighting.CityLightsOn(new DaggerfallCalendar(405, 11, 21, hour, 0, 0)));
 }

@@ -2159,7 +2159,10 @@ internal sealed class DaggerfallSiteLifecycle
     internal void UpdateResidentCityLights()
     {
         foreach (var resident in _residentExteriorLocations.Values)
+        {
             resident.Projection.Lighting.UpdateCityLights(_time.Calendar);
+            resident.Projection.Lighting.UpdateWindowGlass(resident.Projection.Appearance, _time.Calendar);
+        }
     }
 
     internal void SetExteriorSeason(DaggerfallExteriorSeason season, Func<int, bool>? raining = null)

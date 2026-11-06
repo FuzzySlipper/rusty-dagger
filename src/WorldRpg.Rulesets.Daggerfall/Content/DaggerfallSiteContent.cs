@@ -147,10 +147,17 @@ internal static partial class DaggerfallSiteContent
                 if (!material.MaterialResourceId.StartsWith(prefix, StringComparison.Ordinal)) return material;
                 var parts = material.MaterialResourceId[prefix.Length..].Split('-');
                 if (parts.Length != 2 || !int.TryParse(parts[0], out int archive) || !int.TryParse(parts[1], out int record)) return material;
+                string Id(DaggerfallClimateSeason season) =>
+                    $"{prefix}{ExteriorTextureArchive(definitions.Grids.Climate, archive, record, climate, groundClimate, season)}-{record}";
+                ContentArtifact? Glass(DaggerfallClimateSeason season)
+                {
+                    if (!product.TryGetResource($"{Id(season)}-glass", out var resource)) return null;
+                    string path = artifacts.Resolve(DaggerfallBaseContent.Text(resource, "relativePath", diagnostics));
+                    return new(path, RequireArtifact(artifacts, path, diagnostics));
+                }
                 ContentArtifact? Texture(DaggerfallClimateSeason season)
                 {
-                    int mapped = ExteriorTextureArchive(definitions.Grids.Climate, archive, record, climate, groundClimate, season);
-                    string id = $"{prefix}{mapped}-{record}";
+                    string id = Id(season);
                     if (!product.TryGetResource(id, out var resource))
                     { diagnostics.Add($"Exterior texture '{id}' for {season} is not published."); return null; }
                     string path = artifacts.Resolve(DaggerfallBaseContent.Text(resource, "relativePath", diagnostics));
@@ -161,7 +168,9 @@ internal static partial class DaggerfallSiteContent
                 var rain = Texture(DaggerfallClimateSeason.Rain);
                 return summer is null ? material : material with
                     { TexturePath = summer.Path, TextureSha256 = summer.Sha256, WinterTexture = winter?.Path != summer.Path ? winter : null,
-                        RainTexture = rain?.Path != summer.Path ? rain : null };
+                        RainTexture = rain?.Path != summer.Path ? rain : null,
+                        SummerGlass = Glass(DaggerfallClimateSeason.Summer), WinterGlass = Glass(DaggerfallClimateSeason.Winter),
+                        RainGlass = Glass(DaggerfallClimateSeason.Rain) };
             }).ToArray();
         }
         // Every normal encounter table can select any entry at a valid player level. Refuse a
@@ -2612,6 +2621,10 @@ internal sealed record NormalizedMaterial(uint Slot, string TexturePath, Content
 {
     internal ContentArtifact? WinterTexture { get; init; }
     internal ContentArtifact? RainTexture { get; init; }
+    /// <summary>The mask of the window glass each season's texture shows, on an exterior's window textures.</summary>
+    internal ContentArtifact? SummerGlass { get; init; }
+    internal ContentArtifact? WinterGlass { get; init; }
+    internal ContentArtifact? RainGlass { get; init; }
 }
 internal sealed record NormalizedAtlasFrame(uint Id, int X, int Y, int Width, int Height, Vector2? DisplaySize = null);
 internal sealed record NormalizedSpriteState(string Name, IReadOnlyList<uint> Frames, float FramesPerSecond, bool Loops)

@@ -264,7 +264,11 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     }
 
     // DaggerfallDateTime keeps city lamps on slightly beyond the ordinary night interval.
-    private static bool CityLightsOn(DaggerfallCalendar calendar) => calendar.Hour >= 17 || calendar.Hour < 8;
+    internal static bool CityLightsOn(DaggerfallCalendar calendar) => calendar.Hour >= 17 || calendar.Hour < 8;
+
+    /// <summary>Lights a location's window glass on the city lamps' hours.</summary>
+    internal void UpdateWindowGlass(DaggerfallSiteAppearance appearance, DaggerfallCalendar calendar) =>
+        appearance.UpdateWindowGlass(_tuning.WindowColor, CityLightsOn(calendar) ? _tuning.WindowLevel : 0f);
 
     private LightRequest CityRequest(LightRequest request, DaggerfallCalendar calendar) =>
         _cityIntensities.TryGetValue(request.LogicalId, out float intensity)

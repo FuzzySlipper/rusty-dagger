@@ -37,6 +37,54 @@ public sealed class ActorSpritePresentationTests
         Assert.Contains("winter.png", graphics.OpenedResourcePaths);
     }
 
+    [Fact]
+    public void Window_glass_lights_only_at_its_level_and_follows_the_season_without_changing_the_texture()
+    {
+        List<string> releases = []; var graphics = new AppearanceFake(releases); var source = MediaInputs();
+        var profile = new DaggerfallSiteProfile(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook,
+            [new NormalizedMaterial(0, "summer.png", Hash)
+            {
+                WinterTexture = new("winter.png", Hash),
+                SummerGlass = new("summer-glass.png", Hash), WinterGlass = new("winter-glass.png", Hash),
+            }], source.ActorSprites);
+        ContentFake content = MediaContent(releases);
+        foreach (string path in new[] { "summer.png", "winter.png", "summer-glass.png", "winter-glass.png" }) content.Add(path, Hash);
+        using var presentation = new DaggerfallSiteAppearance(content, graphics, profile);
+        Vector3 warm = new(1f, .5f, 0f);
+
+        presentation.UpdateWindowGlass(warm, .8f);
+        MaterialRequest lit = Assert.Single(graphics.MaterialUpdates).Replacement;
+        Assert.Equal(warm, lit.EmissionColor);
+        Assert.Equal(.8f, lit.EmissionIntensity);
+
+        presentation.UpdateWindowGlass(warm, .8f);
+        Assert.Single(graphics.MaterialUpdates);
+
+        presentation.UpdateWindowGlass(warm, 0f);
+        MaterialRequest dark = graphics.MaterialUpdates[1].Replacement;
+        Assert.Equal(0f, dark.EmissionIntensity);
+        Assert.Equal(lit.EmissionMap, dark.EmissionMap);
+
+        presentation.SetExteriorSeason(World.DaggerfallExteriorSeason.Winter);
+        Assert.NotEqual(lit.EmissionMap, graphics.MaterialUpdates[2].Replacement.EmissionMap);
+        Assert.Contains("winter-glass.png", graphics.OpenedResourcePaths);
+    }
+
+    [Fact]
+    public void A_surface_with_no_glass_takes_no_update_when_the_windows_light()
+    {
+        List<string> releases = []; var graphics = new AppearanceFake(releases); var source = MediaInputs();
+        var profile = new DaggerfallSiteProfile(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook,
+            [new NormalizedMaterial(0, "summer.png", Hash)], source.ActorSprites);
+        ContentFake content = MediaContent(releases);
+        content.Add("summer.png", Hash);
+        using var presentation = new DaggerfallSiteAppearance(content, graphics, profile);
+
+        presentation.UpdateWindowGlass(Vector3.One, 1f);
+
+        Assert.Empty(graphics.MaterialUpdates);
+    }
+
     /// <summary>
     /// A wall material whose texture record the refreshed art set has a surface for draws it while refreshed art is drawn,
     /// season by season: a season whose record the set has no surface for draws its classic texture. Season and art
