@@ -34,6 +34,11 @@ public sealed class SpellEffectPresentationTests
             {"replaces": {"archive": 380, "record": 4}, "path": "refreshed/corpse-bones.glb", "byteLength": 1, "sha256": "HASH", "footprint": 2.15}],
           "flats": [
             {"replaces": {"archive": 212, "record": 0}, "path": "refreshed/well.png", "byteLength": 1, "sha256": "HASH", "width": 32, "height": 32,
+             "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}], "classic": {"x": 0.25, "y": 0.5, "width": 0.5, "height": 0.5}},
+            {"replaces": {"archive": 210, "record": 14}, "path": "refreshed/lamp.png", "byteLength": 1, "sha256": "HASH", "width": 32, "height": 32,
+             "emission": {"path": "refreshed/lamp-glow.png", "byteLength": 1, "sha256": "HASH"},
+             "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}], "classic": {"x": 0.25, "y": 0.5, "width": 0.5, "height": 0.5}},
+            {"replaces": {"archive": 210, "record": 12}, "path": "refreshed/orb.png", "byteLength": 1, "sha256": "HASH", "width": 32, "height": 32,
              "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}], "classic": {"x": 0.25, "y": 0.5, "width": 0.5, "height": 0.5}}]}}
         """)), "test.art");
 
@@ -49,6 +54,9 @@ public sealed class SpellEffectPresentationTests
         content.Add("sprite/corpse.png", Hash);
         content.Add("sprite/well.png", Hash);
         content.Add("refreshed/well.png", Hash);
+        content.Add("refreshed/lamp.png", Hash);
+        content.Add("refreshed/lamp-glow.png", Hash);
+        content.Add("refreshed/orb.png", Hash);
         AppearanceFake graphics = new(releases);
         DaggerfallSiteAppearance presentation = new(content, graphics, MediaInputs(classic: ClassicEffects(fireSpell: true), corpse: corpse, decorations: decorations));
         PresentationRecorder particles = PresentationRecorder.Create();
@@ -167,6 +175,32 @@ public sealed class SpellEffectPresentationTests
         presentation.RetireActor(11);
         presentation.BeginAdmittedUpdate(); presentation.CompleteAdmittedUpdate(); presentation.BeginAdmittedUpdate();
         Assert.Equal(1, animation.ReleasedAppearances);
+    }
+
+    [Fact]
+    public void A_refreshed_lamp_takes_the_light_and_shines_through_its_emission_map_at_the_lamps_level()
+    {
+        NormalizedBillboardSprite classic = new("sprite/well.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, .5F), new Vector2(1F, 1F));
+        DaggerfallSiteDecoration lamp = new("flat-1", new WorldPoint(4, .5F, 6), false, classic, classic, (210, 14), (210, 14));
+        DaggerfallSiteDecoration orb = new("flat-2", new WorldPoint(5, .5F, 6), false, classic, classic, (210, 12), (210, 12));
+        var (presentation, graphics, _) = Compose(() => true, decorations: [lamp, orb]);
+        using DaggerfallSiteAppearance owned = presentation;
+
+        Assert.Contains("refreshed/lamp-glow.png", graphics.OpenedResourcePaths);
+        SpriteMaterialDescriptor lit = graphics.SpriteRequests.Select(request => request.Material).Single(material => material.EmissionColor != default);
+        Assert.Equal(SpriteLightingMode.Synthetic, lit.Lighting);
+        Assert.NotEqual(default, lit.EmissionMap);
+        Assert.Equal(0F, lit.EmissionIntensity);
+
+        presentation.UpdateLampGlow(1.5F);
+        presentation.UpdateLampGlow(1.5F);
+        SpriteEmissionUpdateRequest update = Assert.Single(graphics.EmissionUpdates);
+        Assert.Equal(1.5F, update.Intensity);
+
+        presentation.UpdateLampGlow(0F);
+        Assert.Equal(0F, graphics.EmissionUpdates[^1].Intensity);
+        // A light with no map keeps the classic lamp's material, showing whole at its own brightness.
+        Assert.Contains(graphics.SpriteRequests, request => request.Material.Lighting == SpriteLightingMode.Unlit);
     }
 
     [Fact]

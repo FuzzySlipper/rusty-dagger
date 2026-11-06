@@ -95,6 +95,22 @@ def crunch_sprites(frames, size):
     return out
 
 
+def glow(tile, cool=False):
+    """What of a crunched sprite gives light, for its emission map: the tile's own colours where they are a bright warm flame
+    or, with `cool`, a bright blue glass, and clear elsewhere. A lit pixel needs a lit neighbour, so a highlight on metal stays dark."""
+    pixels = np.asarray(tile.convert("RGBA"), np.float32) / 255
+    red, green, blue = pixels[..., 0], pixels[..., 1], pixels[..., 2]
+    value = pixels[..., :3].max(-1)
+    chroma = (value - pixels[..., :3].min(-1)) / np.maximum(value, 1e-3)
+    hue = blue > red if cool else (red >= green) & (green >= blue * 1.05)
+    lit = (pixels[..., 3] > 0.5) & hue & (value > (0.5 if cool else 0.72)) & (chroma > 0.25)
+    padded = np.pad(lit, 1)
+    lit &= padded[:-2, 1:-1] | padded[2:, 1:-1] | padded[1:-1, :-2] | padded[1:-1, 2:]
+    image = np.asarray(tile.convert("RGBA")).copy()
+    image[~lit] = 0
+    return Image.fromarray(image, "RGBA")
+
+
 def winter(summer_refreshed, summer_classic, winter_classic):
     """The refreshed summer with the classic winter's snow and ice laid over it, pixels doubled square."""
     s = np.asarray(summer_classic.convert("RGB"), np.int16)

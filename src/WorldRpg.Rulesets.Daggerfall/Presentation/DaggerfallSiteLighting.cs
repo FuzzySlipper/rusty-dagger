@@ -270,6 +270,10 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     internal void UpdateWindowGlass(DaggerfallSiteAppearance appearance, DaggerfallCalendar calendar) =>
         appearance.UpdateWindowGlass(_tuning.WindowColor, CityLightsOn(calendar) ? _tuning.WindowLevel : 0f);
 
+    /// <summary>Lights a site's refreshed lamps: outdoors on the city lamps' hours, and always under a roof, where they never go out.</summary>
+    internal void UpdateLampGlow(DaggerfallSiteAppearance appearance, DaggerfallCalendar calendar) =>
+        appearance.UpdateLampGlow(_profileKind != DaggerfallWorldProfileKind.Exterior || CityLightsOn(calendar) ? _tuning.LampLevel : 0f);
+
     private LightRequest CityRequest(LightRequest request, DaggerfallCalendar calendar) =>
         _cityIntensities.TryGetValue(request.LogicalId, out float intensity)
             ? request with { Descriptor = request.Descriptor with { Intensity = CityLightsOn(calendar) ? intensity : 0f } }

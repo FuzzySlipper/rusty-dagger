@@ -72,6 +72,12 @@ in the world, unlit lamp art included, which bleaches it.
   level (`windowColor`, `windowLevel`). Refreshed walls keep the classic's window layout,
   so the classic's mask serves both art sets. Glass outshines the night rather than
   lighting the street: windows carry no lights.
+- **Lamps.** A refreshed flat that gives light takes the light around it like any flat, and
+  its flame or glass shines through sprite emission. `promote.py` cuts the emission map from
+  the flat's own crunched atlas, in the same layout, so no second painting exists. Outdoors
+  the level (`lampLevel`) follows the city lamps' hours; under a roof it never drops. Classic
+  lamps stay unlit, showing whole at their own brightness as the donor's do. Emission lights
+  nothing else: the placed point lights do that.
 - **First person.** The viewmodel layer doesn't take the scene's lights, so the view takes a
   tint from the light the eye stands in (`DaggerfallViewLight`): the sky plus any lamp, glowing
   mobile, spell or magic candle in reach, by the renderer's own falloff. `viewFull` is the light

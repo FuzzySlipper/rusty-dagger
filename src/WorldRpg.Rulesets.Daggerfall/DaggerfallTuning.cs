@@ -278,6 +278,7 @@ internal sealed record DaggerfallTuning(
                 WindowColor = new(siteLighting.GetProperty("windowColor")[0].GetSingle(), siteLighting.GetProperty("windowColor")[1].GetSingle(),
                     siteLighting.GetProperty("windowColor")[2].GetSingle()),
                 WindowLevel = siteLighting.GetProperty("windowLevel").GetSingle(),
+                LampLevel = siteLighting.GetProperty("lampLevel").GetSingle(),
             },
             new DaggerfallClimbingTuning(
                 climbing.GetProperty("startCheckSeconds").GetSingle(),
@@ -667,6 +668,8 @@ internal sealed record DaggerfallSiteLightingTuning(
     /// <summary>The linear colour and level of lit window glass, whose emission adds to the light the wall takes.</summary>
     internal Vector3 WindowColor { get; init; } = new(1f, .47f, .04f);
     internal float WindowLevel { get; init; } = .8f;
+    /// <summary>How brightly a refreshed lamp's flame or glass shines over its painted colour, added to the light the lamp takes.</summary>
+    internal float LampLevel { get; init; } = 1f;
     internal static DaggerfallSiteLightingTuning Classic { get; } = new(
         160F / 255F, 100F / 255F, 75F / 255F, .7F, .1333F);
 
@@ -681,6 +684,8 @@ internal sealed record DaggerfallSiteLightingTuning(
         if (!float.IsFinite(WindowColor.X + WindowColor.Y + WindowColor.Z + WindowLevel)
             || WindowColor.X < 0 || WindowColor.Y < 0 || WindowColor.Z < 0 || WindowLevel < 0)
             throw new ArgumentOutOfRangeException(nameof(WindowColor), "Window glass's colour and level are finite and not negative.");
+        if (!float.IsFinite(LampLevel) || LampLevel < 0)
+            throw new ArgumentOutOfRangeException(nameof(LampLevel), "A lamp's level is finite and not negative.");
         if (!float.IsFinite(MobileGlowRange) || MobileGlowRange <= 0 || !float.IsFinite(MobileGlowIntensity) || MobileGlowIntensity < 0)
             throw new ArgumentOutOfRangeException(nameof(DaggerfallSiteLightingTuning), "Mobile glow requires a positive finite range and nonnegative finite intensity.");
         if (!float.IsFinite(SpellLightRange) || SpellLightRange <= 0 || !float.IsFinite(SpellLightIntensity) || SpellLightIntensity < 0)
