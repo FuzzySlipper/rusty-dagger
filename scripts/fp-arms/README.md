@@ -78,6 +78,8 @@ with the weapons, the mounts and the classic sprites, and `build.py` hands it th
 - the normals, with the normal map on them, are baked over the rest pose, where the backs of the arms face up. A light from
   above paints the forms in, and the occlusion map darkens the creases. The colour map only nudges the tone: more of it
   brings the pack's grime back as blotches;
+- cloth and leather draw that tone wide and low (`FOLDS`), blurred inside their own texels with its contrast eased, or the
+  sleeve's creases break into camouflage;
 - each material's tone picks a step of its ramp, with a light ordered dither at the band edges. Mail adds rows of rings,
   as the pack's own are too fine to survive.
 

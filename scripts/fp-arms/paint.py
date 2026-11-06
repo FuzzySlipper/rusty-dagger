@@ -35,6 +35,9 @@ VALUE_SHARE = .14
 OCCLUSION = .6
 SHARPEN = 1.4
 DITHER = .1
+# How cloth and leather fold, by ramp: how wide the shapes are in texels and how much of their contrast stays, so that they
+# lie a step or two apart and don't break into patches.
+FOLDS = {1: (3, .7), 2: (1, .8)}
 # The rings of mail, as steps of the ramp in dotted rows that step sideways: anything bolder draws as a chequerboard.
 RINGS = np.array(((1, 0, 0, 0), (-1, 0, -1, 0), (0, 0, 1, 0), (0, -1, 0, -1)))
 BAYER = np.array(((0, 8, 2, 10), (12, 4, 14, 6), (3, 11, 1, 9), (15, 7, 13, 5)), dtype=np.float32) / 16 - .47
@@ -76,13 +79,23 @@ def clusters(steps):
     return np.median(around, axis=0).astype(int)
 
 
+def folds(tone, here, radius, relief):
+    """`tone` over the texels `here` drawn wide and low: blurred inside them alone, its contrast eased toward their mean."""
+    weight = here.astype(np.float32)[..., None]
+    wide = (blur(tone[..., None] * weight, radius) / np.maximum(blur(weight, radius), 1e-3))[..., 0]
+    mean = wide[here].mean()
+    return mean + (wide - mean) * relief
+
+
 def paint(colour, occlusion, roughness, metal, normals, size):
     """
     The painted texture at `size`, sRGB 0-1, from square maps that divide evenly by it: `colour` sRGB, the rest 0-1 with one
     channel, `normals` baked in object space as colours, black where no mesh covers.
     """
     colour, occlusion, roughness, metal = (area(image, size) for image in (colour, occlusion, roughness, metal))
-    normals = area(normals, size) * 2 - 1
+    normals = area(normals, size)
+    covered = normals.max(axis=2) > 0
+    normals = normals * 2 - 1
     normals /= np.maximum(np.linalg.norm(normals, axis=2, keepdims=True), 1e-3)
     # The weave and pores go first: at this size they would only flicker between two steps of a ramp.
     light = blur(np.clip(normals @ LIGHT, -1, 1)[..., None] * .5 + .5, 1)
@@ -98,6 +111,8 @@ def paint(colour, occlusion, roughness, metal, normals, size):
             continue
         mean = max(value[here].mean(), .05)
         tone = LIGHT_FLOOR + light * LIGHT_SHARE + (value - mean) / mean * VALUE_SHARE - (1 - occlusion[..., 0]) * OCCLUSION
+        if index in FOLDS:
+            tone = folds(tone, here & covered, *FOLDS[index])
         steps = np.clip(tone * (len(colours) - 1) + dither * DITHER, 0, len(colours) - 1).round().astype(int)
         steps = clusters(steps)
         if colours is METAL:
