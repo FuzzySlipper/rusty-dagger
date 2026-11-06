@@ -301,11 +301,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         if (!actors.ContainsKey(durableId)) AddActor(durableId, sprite);
     }
 
-    /// <summary>Admits a source billboard as the live visual for a civilian actor.</summary>
-    internal void AddActor(long durableId, NormalizedBillboardSprite sprite) => AddActor(durableId,
-        new NormalizedActorSprite(sprite.TexturePath, sprite.TextureSha256, sprite.AtlasWidth, sprite.AtlasHeight,
-            sprite.Frames, sprite.InitialFrameId, sprite.Pivot, sprite.Size));
-
     /// <summary>Whether a dynamic actor currently has a live visual in this projection.</summary>
     internal bool HasActor(long durableId) => actors.ContainsKey(durableId);
 

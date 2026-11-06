@@ -92,12 +92,14 @@ internal sealed partial class DaggerfallSession
             : person.QuestorId ?? State.Npcs.RegisterStable(DaggerfallNpcKind.Questor, instanceId + "/" + resource.Symbol,
                 new(profile.Site!.Value.Region, _site.Require(profile.Site.Value).Name, profile.ProfileKey.LogicalId), appearance, "quest person", ["talk"]);
         var npc = State.Npcs.Require(id);
-        // GetSiteMarker/AlignBillboardToGround use the marker as a probe and retain the billboard's pivot above the floor.
+        // GetSiteMarker/AlignBillboardToGround use the marker as a probe. A person stands at their pose; only a
+        // projected questor draws the centred billboard, which keeps its pivot above the floor.
         var probe = position;
         if (profile.ProfileKind != DaggerfallWorldProfileKind.Dungeon)
             probe = WorldPoint.From(position.ToVector() + System.Numerics.Vector3.UnitY * (sprite.Size.Y / 2));
         var floor = _grounding.GroundPosition(probe, 4);
-        position = WorldPoint.From(floor.ToVector() + System.Numerics.Vector3.UnitY * (sprite.Size.Y * sprite.Pivot.Y));
+        bool projected = npc.Kind != DaggerfallNpcKind.Civilian && !State.Actors.TryGet(id, out _);
+        position = projected ? WorldPoint.From(floor.ToVector() + System.Numerics.Vector3.UnitY * (sprite.Size.Y * sprite.Pivot.Y)) : floor;
         if (npc.Kind == DaggerfallNpcKind.Civilian) RelocateQuestActor(id, position);
         else if (State.Actors.TryGet(id, out var actor)) actor.ApplyPose(new(position, actor.HeadingYawRadians));
         else ProjectNpc(npc, profile, position);

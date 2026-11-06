@@ -36,6 +36,23 @@ public sealed class DaggerfallPopulationSessionTests
     }
 
     [Fact]
+    public void Source_civilian_draws_its_feet_on_its_pose_and_is_aimed_at_mid_body()
+    {
+        using ResidentPopulationFixture fixture = ResidentPopulationFixture.Create();
+        DaggerfallSession session = fixture.Session;
+        session.AdvanceElapsedTime(8 * 60 * 60);
+        DaggerfallNpc sourceNpc = Assert.Single(session.State.Npcs.All,
+            npc => npc.StableKey == "population/source/0/0" && npc.Profile == fixture.Source.ProfileKey);
+        ActorState actor = session.State.Actors.Get(sourceNpc.DurableId);
+        NormalizedBillboardSprite billboard = fixture.Source.BillboardSprites[(sourceNpc.Appearance.BillboardArchive, sourceNpc.Appearance.BillboardRecord)];
+
+        // The billboard publishes a centred pivot; a pose is where the person stands, so a centred sprite would be half underground.
+        Assert.Equal(new Vector2(.5F, .5F), billboard.Pivot);
+        Assert.Equal(new Vector2(.5F, 0F), fixture.Appearance.SpriteRequests.Last(request => request.Size == billboard.Size).Pivot);
+        Assert.Equal(actor.Position.ToVector() + Vector3.UnitY * (billboard.Size.Y * .5F), session.State.Kit.Targeting.AimPoint(actor));
+    }
+
+    [Fact]
     public void Resident_defeated_source_civilian_rebuilds_billboard_before_corpse_sync_and_save_restore()
     {
         using ResidentPopulationFixture fixture = ResidentPopulationFixture.Create();
@@ -299,7 +316,7 @@ public sealed class DaggerfallPopulationSessionTests
             ? exterior.Project
             : new ProjectFacts(exterior.Project.PlayerPosition, new Dictionary<long, AuthoredActor>());
         NormalizedBillboardSprite billboard = new("sprite/population.png", Hash, 8, 8,
-            [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, 0F), Vector2.One);
+            [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, .5F), Vector2.One);
         IReadOnlyList<DaggerfallPopulationPlacement> population = includePopulation
             ? [new DaggerfallPopulationPlacement("population/source/0/0", new WorldPoint(1F, 1F, 1F), 210, 4,
                 TestPayload.Definitions.Factions.Factions.Values.First(faction => faction.Id > 0

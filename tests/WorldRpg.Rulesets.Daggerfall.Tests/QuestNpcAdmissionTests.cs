@@ -178,6 +178,8 @@ public sealed class QuestNpcAdmissionTests
         Assert.True(inactive.TryTransitionTo(castle.ProfileKey));
         Assert.Equal(health, inactive.State.Actors.Get(id).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current);
         Assert.Single(DaggerfallSavePayload.Read(inactive.CaptureSave()).DynamicActors, value => value.EntityId == id);
+        // A live person stands on the floor, which this fixture's spatial answers at zero: only a projected questor's centred billboard is lifted.
+        Assert.Equal(0F, inactive.State.Actors.Get(id).Position.Y, 3);
     }
 
     internal static DaggerfallDefinitions Definitions(bool explicitGiver = false, string[][]? taskBlocks = null)
