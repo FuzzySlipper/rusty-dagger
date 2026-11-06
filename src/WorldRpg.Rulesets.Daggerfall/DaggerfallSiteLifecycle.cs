@@ -88,7 +88,7 @@ internal sealed class DaggerfallSiteLifecycle
     private DaggerfallExteriorCellResidency? _exteriorResidency;
     private DaggerfallExteriorTerrainAppearance? _exteriorTerrainAppearance;
     private (DaggerfallArtReplacements Art, Func<bool> Refreshed)? _groundArt;
-    private DaggerfallGroundBlendSettings? _groundBlend;
+    private DaggerfallGroundBlendSettings _groundBlend;
     private DaggerfallExteriorEnvironment? _exteriorEnvironment;
     private Func<DaggerfallExteriorCellId, DaggerfallTerrainSurface>? _exteriorSurfaceFactory;
     private Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior>? _exteriorLocations;
@@ -685,7 +685,7 @@ internal sealed class DaggerfallSiteLifecycle
     /// The height of the admitted terrain surface under a local position in the active exterior, sampled as the donor's
     /// <c>Terrain.SampleHeight</c> does; false outside an exterior or the admitted terrain window.
     /// </summary>
-    private bool TryExteriorTerrainHeight(WorldPoint local, out float height)
+    internal bool TryExteriorTerrainHeight(WorldPoint local, out float height)
     {
         height = 0F;
         if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior
@@ -2037,22 +2037,20 @@ internal sealed class DaggerfallSiteLifecycle
             DeferredCollision());
     }
 
-    /// <summary>Blends open exterior ground by these settings, or tiles it when they are null, rebuilding what is resident.</summary>
-    internal void UseGroundBlend(DaggerfallGroundBlendSettings? settings)
+    /// <summary>The locations by the map pixel they stand on.</summary>
+    internal IReadOnlyDictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> Locations => ExteriorLocations();
+
+    /// <summary>A ground archive's layers.</summary>
+    internal DaggerfallGroundLayers GroundLayers(int archive) => (_exteriorTerrainAppearance ??= NewTerrainAppearance()).GroundLayers(archive);
+
+    /// <summary>Layers exterior ground by these settings.</summary>
+    internal void UseGroundBlend(DaggerfallGroundBlendSettings settings)
     {
         _groundBlend = settings;
         _exteriorTerrainAppearance?.UseBlend(_engine.AuthoredContent, _tuning.Ground, settings);
-        RedrawGround();
     }
 
-    /// <summary>Rebuilds the resident ground after a change of art: classic art draws tiles where refreshed art blends.</summary>
-    internal void RedrawGround()
-    {
-        if (ActiveProfile.Kind == DaggerfallWorldProfileKind.Exterior && _exteriorResidency is { IsInitialized: true } residency)
-            ReconcileExteriorTerrainAppearance(residency);
-    }
-
-    /// <summary>Draws the exterior ground in the refreshed art set's surfaces while <paramref name="refreshed"/> answers it is drawn.</summary>
+    /// <summary>Layers ground in the refreshed art set's surfaces, and draws nature in its flats while <paramref name="refreshed"/> answers they are drawn.</summary>
     internal void UseGroundArt(DaggerfallArtReplacements art, Func<bool> refreshed)
     {
         _groundArt = (art, refreshed);
@@ -2079,7 +2077,7 @@ internal sealed class DaggerfallSiteLifecycle
             _exteriorTerrainAppearance ??= NewTerrainAppearance();
         appearance.ConfigureProfile(Projection.Inputs);
         Projection.Appearance.SetSnapshotSupplement(AppendExteriorFacts, CompleteExteriorSnapshot);
-        appearance.Reconcile(residency.ResidentCells, ActiveOrigin(residency), surfaceFactory, environment);
+        appearance.Reconcile(residency.ResidentCells, ActiveOrigin(residency), environment);
         ReconcileExteriorWaterTriggers(environment.CharacterWaterVolumes(ActiveOrigin(residency)));
         TrimExteriorSurfaceCache(residency.ResidentCells);
     }

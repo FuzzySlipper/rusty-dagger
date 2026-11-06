@@ -488,6 +488,13 @@ public interface ICharacterCreationSession
     IGameSession CreateNewGame();
 }
 
+/// <summary>Optional seam for a session whose world takes a moment to stand: a loading screen stays up until it does.</summary>
+public interface IArrivalGroundSession
+{
+    /// <summary>How far the ground around the arrival has come. Each call also lets it come further.</summary>
+    Presentation.LoadingProgress AwaitArrivalGround();
+}
+
 /// <summary>Optional ruleset seam for recognizing its own entry-screen action.</summary>
 public interface IEntryScreenSession
 {

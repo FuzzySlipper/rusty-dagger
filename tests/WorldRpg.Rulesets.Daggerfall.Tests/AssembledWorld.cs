@@ -179,6 +179,7 @@ internal sealed class AssembledWorldRun : IDisposable
         Graphics = new EngineGraphicsOutsideUpdate(real.Graphics);
         EngineContextFake engine = EngineContextFake.Create(real.Content, real.Spatial, Graphics, _perception.Service,
             random: LodgingRandom.Create(), worldOrigin: real.WorldOrigin);
+        engine.UseAuthoredContent(real.AuthoredContent);
         // The sky's part of the data container is served over the Engine's own content, so its graphics opens live references.
         ProductContent sky = new(new[] { new ProductContentFile(System.Text.Encoding.UTF8.GetBytes(DaggerfallSkyMedia.ManifestPath),
                 files[DaggerfallSkyMedia.ManifestPath]) },

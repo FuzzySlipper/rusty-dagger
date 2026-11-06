@@ -8,275 +8,6 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class DaggerfallExteriorTerrainAppearanceTests
 {
-    [Fact]
-    public void Donor_tile_uv_flags_turn_a_quarter_then_a_half()
-    {
-        AssertUv(new(0.2F, 0.3F), false, false, new(0.2F, 0.3F));
-        AssertUv(new(0.2F, 0.3F), false, true, new(0.8F, 0.7F));
-        AssertUv(new(0.2F, 0.3F), true, false, new(0.3F, 0.8F));
-        AssertUv(new(0.2F, 0.3F), true, true, new(0.7F, 0.2F));
-    }
-
-    [Fact]
-    public void Reconcile_builds_normals_mesh_groups_and_stable_cell_facts()
-    {
-        GraphicsDouble graphics = new();
-        using DaggerfallExteriorTerrainAppearance appearance = new(graphics.Content, graphics);
-        DaggerfallExteriorWorldOrigin origin = new(10, 20, new Vector3(2F, 3F, 4F));
-
-        appearance.Reconcile(
-            [new DaggerfallExteriorCellId(12, 20), new DaggerfallExteriorCellId(11, 20)],
-            origin,
-            Surface);
-
-        Assert.Equal(2, appearance.ActiveCellCount);
-        Assert.Equal(2, graphics.MeshRequests.Count);
-        MeshResourceCreateRequest request = graphics.MeshRequests[0];
-        Assert.Equal(3, request.Positions.Length);
-        Assert.Equal(3, request.Normals.Length);
-        Assert.Equal(3, request.Uvs.Length);
-        Assert.Equal(3, request.Indices.Length);
-        Assert.Equal(3U, request.Groups.Span[0].Count);
-        Assert.Equal(new Vector3(0F, 1F, 0F), request.Normals.Span[0]);
-
-        AppearanceFact[] facts = appearance.BuildFacts();
-        Assert.Equal(2, facts.Length);
-        Assert.Equal(DaggerfallExteriorTerrainAppearance.ObjectId(new(11, 20)), facts[0].ObjectId);
-        Assert.Equal(DaggerfallExteriorTerrainAppearance.ObjectId(new(12, 20)), facts[1].ObjectId);
-        Assert.Equal(new Vector3(2F + DaggerfallExteriorCellResidency.CellSize, 3F, 4F), facts[0].Transform.Translation);
-        Assert.Equal(new Vector3(2F + (2F * DaggerfallExteriorCellResidency.CellSize), 3F, 4F), facts[1].Transform.Translation);
-    }
-
-    [Fact]
-    public void Origin_reprojection_reuses_retained_visual_resources()
-    {
-        GraphicsDouble graphics = new();
-        using DaggerfallExteriorTerrainAppearance appearance = new(graphics.Content, graphics);
-        DaggerfallExteriorCellId cell = new(10, 20);
-
-        appearance.Reconcile([cell], DaggerfallExteriorWorldOrigin.At(cell), Surface);
-        AppearanceFact first = Assert.Single(appearance.BuildFacts());
-
-        appearance.Reconcile(
-            [cell],
-            new DaggerfallExteriorWorldOrigin(11, 20, new Vector3(2F, 3F, 4F)),
-            Surface);
-        AppearanceFact second = Assert.Single(appearance.BuildFacts());
-
-        Assert.Same(first.Appearance, second.Appearance);
-        Assert.Single(graphics.MeshRequests);
-        Assert.Equal(
-            new Vector3(2F - DaggerfallExteriorCellResidency.CellSize, 3F, 4F),
-            second.Transform.Translation);
-    }
-
-    [Fact]
-    public void Retired_resources_are_released_only_after_the_replacement_snapshot_is_accepted()
-    {
-        GraphicsDouble graphics = new();
-        using DaggerfallExteriorTerrainAppearance appearance = new(graphics.Content, graphics);
-        DaggerfallExteriorCellId cell = new(10, 20);
-        appearance.Reconcile([cell], DaggerfallExteriorWorldOrigin.At(cell), Surface);
-        AppearanceFact terrain = Assert.Single(appearance.BuildFacts());
-        Appearance baseAppearance = graphics.CreatePrimitive(default);
-
-        appearance.Clear();
-        Assert.Equal(0, appearance.ActiveCellCount);
-        Assert.Equal(1, appearance.RetiredCellCount);
-        List<AppearanceFact> snapshot =
-        [new AppearanceFact(900, false, 0, default, baseAppearance, true, RenderLayer.Scene)];
-        appearance.AppendFacts(snapshot);
-        graphics.PublishSnapshot(snapshot.ToArray());
-        appearance.CompleteAcceptedSnapshot();
-
-        AppearanceFact[] published = Assert.Single(graphics.Snapshots);
-        Assert.Equal(900UL, published[0].ObjectId);
-        Assert.Equal(0, appearance.RetiredCellCount);
-        Assert.Contains("appearance", graphics.Releases);
-        Assert.Contains("mesh", graphics.Releases);
-        Assert.DoesNotContain("material", graphics.Releases);
-        Assert.DoesNotContain(terrain.Appearance, snapshot.Select(fact => fact.Appearance));
-    }
-
-    [Fact]
-    public void Failed_addition_keeps_the_previous_visual_set_and_releases_staged_resources()
-    {
-        GraphicsDouble graphics = new();
-        using DaggerfallExteriorTerrainAppearance appearance = new(graphics.Content, graphics);
-        DaggerfallExteriorCellId retainedCell = new(10, 20);
-        appearance.Reconcile([retainedCell], DaggerfallExteriorWorldOrigin.At(retainedCell), Surface);
-        AppearanceFact retained = Assert.Single(appearance.BuildFacts());
-
-        Assert.Throws<InvalidOperationException>(() => appearance.Reconcile(
-            [retainedCell, new(11, 20), new(12, 20)],
-            DaggerfallExteriorWorldOrigin.At(retainedCell),
-            cell => cell == new DaggerfallExteriorCellId(12, 20)
-                ? InvalidSurface(cell)
-                : Surface(cell)));
-
-        AppearanceFact afterFailure = Assert.Single(appearance.BuildFacts());
-        Assert.Equal(retained.ObjectId, afterFailure.ObjectId);
-        Assert.Same(retained.Appearance, afterFailure.Appearance);
-        Assert.Equal(2, graphics.MeshRequests.Count);
-        Assert.Equal(1, appearance.ActiveCellCount);
-        Assert.Equal(0, appearance.RetiredCellCount);
-        Assert.Equal(1, graphics.ReleasedMeshes);
-        Assert.Equal(1, graphics.ReleasedAppearances);
-    }
-
-    [Fact]
-    public void Changed_tile_flags_replace_the_mesh_and_unchanged_flags_retain_it()
-    {
-        DaggerfallExteriorCellId cell = new(1, 0);
-        DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(cell);
-        GraphicsDouble graphics = new();
-        DaggerfallSiteProfile source = TestSessions.MediaInputs();
-        DaggerfallSiteProfile profile = new(source.Project, source.Geometry,
-            source.WorldAppearance, source.InitialLook, [], new Dictionary<long, NormalizedActorSprite>(),
-            terrainTextures: new Dictionary<(int Archive, int Record), NormalizedTerrainTexture>
-            {
-                [(302, 0)] = new("texture/terrain.png", TestSessions.Hash),
-            });
-        using DaggerfallExteriorTerrainAppearance appearance = new(graphics.Content, graphics, graphics.Admit(profile));
-        DaggerfallTerrainSurface environmentSurface = new(cell.X, cell.Y,
-            Enumerable.Range(0, 129 * 129).Select(index => new Vector3(index % 129, 0F, index / 129)).ToArray(),
-            [new Triangle(0, 130, 1)], new float[129 * 129]);
-        DaggerfallTerrainSurface surface = environmentSurface;
-        DaggerfallClimateGridDefinition climate = new(3, 1, [0, 0, 231],
-            [new(231, "Woodlands", DaggerfallClimateDisposition.Named)]);
-        DaggerfallWorldGridsSet grids = new(climate, new(3, 1, [64, 64, 64], []));
-        DaggerfallExteriorEnvironment Environment(byte tile)
-        {
-            DaggerfallSiteExterior location = new(1, 0, 1, 1, 0, 0, false, 2, 0, 1, 0, 1)
-            {
-                GroundTiles = DaggerfallGroundTileGrid.FromBytes(Enumerable.Repeat(tile, 128 * 128).ToArray(), "test"),
-            };
-            DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
-            environment.Reconcile([cell], origin, _ => environmentSurface,
-                new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> { [cell] = location }, grids);
-            return environment;
-        }
-        DaggerfallExteriorEnvironment original = Environment(0);
-        DaggerfallExteriorEnvironment rotated = Environment(0x40);
-        appearance.Reconcile([cell], origin, _ => surface, original);
-        Appearance first = Assert.Single(appearance.BuildFacts()).Appearance;
-        appearance.Reconcile([cell], origin, _ => surface, rotated);
-        Appearance second = Assert.Single(appearance.BuildFacts()).Appearance;
-        Assert.NotSame(first, second);
-        Assert.NotEqual(graphics.MeshRequests[0].Uvs.Span[0], graphics.MeshRequests[1].Uvs.Span[0]);
-        Assert.Equal(2, graphics.MeshRequests.Count);
-        appearance.Reconcile([cell], origin, _ => surface, rotated);
-        Assert.Same(second, Assert.Single(appearance.BuildFacts()).Appearance);
-        Assert.Equal(2, graphics.MeshRequests.Count);
-    }
-
-    /// <summary>
-    /// A ground tile whose record the refreshed art set has a surface for opens that surface beside its classic texture
-    /// and draws it while refreshed art is drawn; the art choice swaps the material's texture, and an unchanged choice
-    /// leaves it alone.
-    /// </summary>
-    [Fact]
-    public void Refreshed_ground_surfaces_follow_the_art_choice()
-    {
-        DaggerfallExteriorCellId cell = new(1, 0);
-        DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(cell);
-        GraphicsDouble graphics = new();
-        DaggerfallSiteProfile source = TestSessions.MediaInputs();
-        DaggerfallSiteProfile profile = new(source.Project, source.Geometry,
-            source.WorldAppearance, source.InitialLook, [], new Dictionary<long, NormalizedActorSprite>(),
-            terrainTextures: new Dictionary<(int Archive, int Record), NormalizedTerrainTexture>
-            {
-                [(302, 0)] = new("terrain/texture-302-0.png", TestSessions.Hash),
-            });
-        graphics.Content.Add("refreshed/surfaces/texture-302-0.png", TestSessions.Hash);
-        DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(System.Text.Encoding.UTF8.GetBytes("""
-            {"artReplacements": {"images": [], "surfaces": [{"replaces": {"archive": 302, "record": 0},
-              "path": "refreshed/surfaces/texture-302-0.png", "byteLength": 1, "sha256": "0000000000000001000000000000000200000000000000030000000000000004",
-              "width": 128, "height": 128}]}}
-            """), "test.art");
-        bool refreshed = true;
-        using DaggerfallExteriorTerrainAppearance appearance = new(graphics.Content, graphics, graphics.Admit(profile));
-        appearance.UseArt(art, () => refreshed);
-        DaggerfallTerrainSurface surface = new(cell.X, cell.Y,
-            Enumerable.Range(0, 129 * 129).Select(index => new Vector3(index % 129, 0F, index / 129)).ToArray(),
-            [new Triangle(0, 130, 1)], new float[129 * 129]);
-        DaggerfallClimateGridDefinition climate = new(3, 1, [0, 0, 231], [new(231, "Woodlands", DaggerfallClimateDisposition.Named)]);
-        DaggerfallSiteExterior location = new(1, 0, 1, 1, 0, 0, false, 2, 0, 1, 0, 1)
-        {
-            GroundTiles = DaggerfallGroundTileGrid.FromBytes(new byte[128 * 128], "test"),
-        };
-        DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
-        environment.Reconcile([cell], origin, _ => surface, new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> { [cell] = location },
-            new DaggerfallWorldGridsSet(climate, new(3, 1, [64, 64, 64], [])));
-        appearance.Reconcile([cell], origin, _ => surface, environment);
-
-        Assert.Equal(["terrain/texture-302-0.png", "refreshed/surfaces/texture-302-0.png"], graphics.OpenedPaths);
-        appearance.AppendFacts([]);
-        Assert.Single(graphics.MaterialUpdates);
-        appearance.AppendFacts([]);
-        Assert.Single(graphics.MaterialUpdates);
-        refreshed = false;
-        appearance.AppendFacts([]);
-        Assert.Equal(2, graphics.MaterialUpdates.Count);
-        Assert.NotEqual(graphics.MaterialUpdates[0].Replacement, graphics.MaterialUpdates[1].Replacement);
-    }
-
-    /// <summary>
-    /// Open ground blends its four layers while refreshed art is drawn and tiles again under classic art, a new mesh
-    /// either way, since a tile's uvs and a layer's are not the same. Replaced layers are released once a snapshot
-    /// without them is accepted.
-    /// </summary>
-    [Fact]
-    public void Open_ground_blends_under_refreshed_art_and_tiles_under_classic_art()
-    {
-        DaggerfallExteriorCellId cell = new(1, 0);
-        DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(cell);
-        GraphicsDouble graphics = new();
-        (DaggerfallExteriorTerrainAppearance appearance, DaggerfallTerrainSurface surface, DaggerfallExteriorEnvironment environment, Action<bool> draw) =
-            OpenGround(graphics, cell, origin, [(302, 1), (302, 2), (302, 3), (303, 2)]);
-        using DaggerfallExteriorTerrainAppearance owned = appearance;
-
-        appearance.Reconcile([cell], origin, _ => surface, environment);
-        Assert.Equal(1, graphics.MeshRequests[^1].LayerWeights.Length / (double)graphics.MeshRequests[^1].Positions.Length);
-        Assert.Single(graphics.TerrainLayerMaterialRequests);
-
-        draw(false);
-        appearance.Reconcile([cell], origin, _ => surface, environment);
-        Assert.Equal(2, graphics.MeshRequests.Count);
-        Assert.True(graphics.MeshRequests[^1].LayerWeights.IsEmpty);
-
-        draw(true);
-        appearance.Reconcile([cell], origin, _ => surface, environment);
-        Assert.Equal(3, graphics.MeshRequests.Count);
-        Assert.False(graphics.MeshRequests[^1].LayerWeights.IsEmpty);
-        Assert.Single(graphics.TerrainLayerMaterialRequests);
-
-        appearance.UseBlend(ServiceProxy<IAuthoredContentService, AuthoredContentFake>.Create(), DaggerfallGroundTuning.Default, null);
-        appearance.Reconcile([cell], origin, _ => surface, environment);
-        Assert.True(graphics.MeshRequests[^1].LayerWeights.IsEmpty);
-        int released = graphics.Releases.Count;
-        appearance.CompleteAcceptedSnapshot();
-        Assert.True(graphics.Releases.Count > released);
-    }
-
-    /// <summary>An archive the art set doesn't cover whole keeps its tiles, where a missing layer would draw nothing.</summary>
-    [Fact]
-    public void An_archive_missing_a_refreshed_layer_keeps_its_tiles()
-    {
-        DaggerfallExteriorCellId cell = new(1, 0);
-        DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(cell);
-        GraphicsDouble graphics = new();
-        (DaggerfallExteriorTerrainAppearance appearance, DaggerfallTerrainSurface surface, DaggerfallExteriorEnvironment environment, _) =
-            OpenGround(graphics, cell, origin, [(302, 1), (302, 2), (302, 3)]);
-        using DaggerfallExteriorTerrainAppearance owned = appearance;
-
-        appearance.Reconcile([cell], origin, _ => surface, environment);
-
-        Assert.True(graphics.MeshRequests[^1].LayerWeights.IsEmpty);
-        Assert.Empty(graphics.TerrainLayerMaterialRequests);
-    }
-
-    /// <summary>Nature grows from soil: at the ground's snowline there is a treeline.</summary>
     [Theory]
     [InlineData(100F, true)]
     [InlineData(2_400F, false)]
@@ -302,25 +33,6 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
             new DaggerfallWorldGridsSet(new DaggerfallClimateGridDefinition(3, 1, [0, 0, 231], [new(231, "Woodlands", DaggerfallClimateDisposition.Named)]), new(3, 1, [64, 64, 64], [])));
 
         Assert.Equal(grows, environment.NatureFor(cell).Count > 0);
-    }
-
-    /// <summary>A mesh weighs four layers, so a swamp cell draws its lush ground unless it reaches the snow.</summary>
-    [Theory]
-    [InlineData(100F, true)]
-    [InlineData(2_400F, false)]
-    public void A_swamp_cell_draws_its_lush_ground_where_no_snow_reaches(float height, bool lush)
-    {
-        DaggerfallExteriorCellId cell = new(1, 0);
-        DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(cell);
-        GraphicsDouble graphics = new();
-        (DaggerfallExteriorTerrainAppearance appearance, DaggerfallTerrainSurface surface, DaggerfallExteriorEnvironment environment, _) =
-            OpenGround(graphics, cell, origin, [(402, 1), (402, 2), (402, 3), (102, 3), (403, 2)], climate: 223, height: height);
-        using DaggerfallExteriorTerrainAppearance owned = appearance;
-
-        appearance.Reconcile([cell], origin, _ => surface, environment);
-
-        Assert.Equal(4, Assert.Single(graphics.TerrainLayerMaterialRequests).Layers.Length);
-        Assert.Equal(lush ? DaggerfallGroundLayers.LushPalette : [], graphics.MeshRequests[^1].LayerPalette.ToArray());
     }
 
     private static (DaggerfallExteriorTerrainAppearance, DaggerfallTerrainSurface, DaggerfallExteriorEnvironment, Action<bool>) OpenGround(
@@ -411,7 +123,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
         environment.Reconcile([cell], origin, _ => surface, new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> { [cell] = location },
             new DaggerfallWorldGridsSet(new DaggerfallClimateGridDefinition(3, 1, [0, 0, 231], [new(231, "Woodlands", DaggerfallClimateDisposition.Named)]), new(3, 1, [64, 64, 64], [])));
-        appearance.Reconcile([cell], origin, _ => surface, environment);
+        appearance.Reconcile([cell], origin, environment);
         int batches = appearance.ActiveNatureBatchCount;
         Assert.True(batches > 0);
         Assert.All(graphics.BatchRequests, request =>
@@ -478,7 +190,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         void Reconcile() => environment.Reconcile([cell], origin, _ => surface,
             new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> { [cell] = location }, grids);
         Reconcile();
-        appearance.Reconcile([cell], origin, _ => surface, environment);
+        appearance.Reconcile([cell], origin, environment);
 
         IReadOnlyList<DaggerfallExteriorNaturePlacement> placements = environment.NaturePlacements;
         Assert.True(placements.Count > 1000);
@@ -498,22 +210,22 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
             Assert.Equal(SpriteDepthPolicy.Default, request.Depth);
         }
         Assert.All(graphics.AtlasTextures, path => Assert.StartsWith("sprite/texture-504-", path));
-        AppearanceFact[] nature = [.. appearance.BuildFacts().Where(fact => fact.ObjectId != DaggerfallExteriorTerrainAppearance.ObjectId(cell))];
+        AppearanceFact[] nature = [.. appearance.BuildFacts()];
         Assert.Equal(records.Select(record => DaggerfallExteriorTerrainAppearance.NatureBatchObjectId(cell, record)), nature.Select(fact => fact.ObjectId));
         Assert.All(nature, fact => Assert.Equal(origin.LocalTranslation(cell), fact.Transform.Translation));
 
         // Unchanged facts keep every batch; an origin rebase only moves them.
         DaggerfallExteriorWorldOrigin rebased = new(1, 0, Vector3.Zero);
-        appearance.Reconcile([cell], rebased, _ => surface, environment);
+        appearance.Reconcile([cell], rebased, environment);
         Assert.Equal(records.Length, graphics.BatchRequests.Count);
-        Assert.Equal(nature.Select(fact => fact.Appearance), appearance.BuildFacts().Skip(1).Select(fact => fact.Appearance));
-        Assert.All(appearance.BuildFacts().Skip(1), fact => Assert.Equal(rebased.LocalTranslation(cell), fact.Transform.Translation));
+        Assert.Equal(nature.Select(fact => fact.Appearance), appearance.BuildFacts().Select(fact => fact.Appearance));
+        Assert.All(appearance.BuildFacts(), fact => Assert.Equal(rebased.LocalTranslation(cell), fact.Transform.Translation));
 
         // Winter selects the woodland archive's snow set; the summer batches retire with the next accepted snapshot.
         environment.SetSeason(DaggerfallExteriorSeason.Winter);
         Reconcile();
         int released = graphics.ReleasedAppearances;
-        appearance.Reconcile([cell], rebased, _ => surface, environment);
+        appearance.Reconcile([cell], rebased, environment);
         Assert.Equal(2 * records.Length, graphics.BatchRequests.Count);
         Assert.Equal(records.Length, appearance.RetiredNatureBatchCount);
         Assert.Contains(graphics.AtlasTextures, path => path.StartsWith("sprite/texture-505-", StringComparison.Ordinal));
@@ -524,27 +236,6 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         appearance.CompleteAcceptedSnapshot();
         Assert.Equal(0, appearance.RetiredNatureBatchCount);
         Assert.True(graphics.ReleasedAppearances - released >= records.Length);
-    }
-
-    private static DaggerfallTerrainSurface Surface(DaggerfallExteriorCellId cell) => new(
-        cell.X,
-        cell.Y,
-        [new Vector3(0F, 0F, 0F), new Vector3(1F, 0F, 0F), new Vector3(0F, 0F, 1F)],
-        [new Triangle(0, 2, 1)],
-        [0F, 0F, 0F]);
-
-    private static DaggerfallTerrainSurface InvalidSurface(DaggerfallExteriorCellId cell) => new(
-        cell.X,
-        cell.Y,
-        [new Vector3(0F, 0F, 0F), new Vector3(1F, 0F, 0F), new Vector3(0F, 0F, 1F)],
-        [new Triangle(0, 2, 4)],
-        [0F, 0F, 0F]);
-
-    private static void AssertUv(Vector2 input, bool rotated, bool flipped, Vector2 expected)
-    {
-        Vector2 actual = DaggerfallExteriorTerrainAppearance.TransformTileUv(input, rotated, flipped);
-        Assert.Equal(expected.X, actual.X, 5);
-        Assert.Equal(expected.Y, actual.Y, 5);
     }
 
     private sealed class GraphicsDouble : IGraphicsService

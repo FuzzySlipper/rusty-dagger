@@ -90,9 +90,6 @@ internal readonly record struct DaggerfallExteriorWaterVolume(
 /// </summary>
 internal readonly record struct DaggerfallExteriorTerrainTile(int TextureRecord, bool Rotated, bool Flipped)
 {
-    /// <summary>Open ground, which can blend: not a location's authored tile and not touching water.</summary>
-    internal bool Blends { get; init; }
-
     internal byte Bitfield => checked((byte)(TextureRecord | (Rotated ? 0x40 : 0) | (Flipped ? 0x80 : 0)));
 }
 
@@ -103,7 +100,7 @@ internal readonly record struct DaggerfallExteriorTerrainTile(int TextureRecord,
 internal sealed class DaggerfallExteriorEnvironment
 {
     private const int TerrainTileDimension = 128;
-    private const float BeachElevation = 40F;
+    internal const float BeachElevation = 40F;
     private const float NatureClearance = 4F;
     /// <summary>A noise value that lays soil alone, for asking how much of the ground is soil at all.</summary>
     private const float SoilNoise = .7F;
@@ -304,6 +301,9 @@ internal sealed class DaggerfallExteriorEnvironment
         }
     }
 
+    /// <summary>Every ground archive open ground wears, summer and winter.</summary>
+    internal static int[] GroundArchives { get; } = [2, 102, 103, 302, 303, 402, 403];
+
     internal static int GroundTextureArchive(int climateValue, DaggerfallExteriorSeason season)
     {
         int archive = climateValue switch
@@ -462,7 +462,7 @@ internal sealed class DaggerfallExteriorEnvironment
                 int shape = (b0 & 1) | ((b1 & 1) << 1) | ((b2 & 1) << 2) | ((b3 & 1) << 3);
                 int ring = (b0 + b1 + b2 + b3) >> 2;
                 byte bitfield = lookup[shape | (ring << 4)];
-                result.Add(new(bitfield & 0x3F, (bitfield & 0x40) != 0, (bitfield & 0x80) != 0) { Blends = b0 != 0 && b1 != 0 && b2 != 0 && b3 != 0 });
+                result.Add(new(bitfield & 0x3F, (bitfield & 0x40) != 0, (bitfield & 0x80) != 0));
             }
         }
         return result;

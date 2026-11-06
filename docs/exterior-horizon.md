@@ -1,30 +1,39 @@
 # Exterior horizon
 
-Past the walked seven-by-seven window, the map itself stands on the skyline. The
-walked ground keeps its meshes, collision and nature; the far ground is an Engine
-heightfield in the backdrop that only draws.
+Exterior ground is one function drawn by two Engine heightfields. Near ground stands in
+the world from the player's feet to the edge of the walked seven-by-seven window; far
+ground stands in the backdrop past it, so the map itself reaches the skyline. Collision
+and nature stay with the walked window's cells; neither heightfield collides.
 
 | Part | Owner |
 | --- | --- |
 | The height function, shared by walked and far ground | `DaggerfallTerrainSurfaceBuilder.NormalizedHeight` |
-| Far ground: rings, lift, colours | `DaggerfallHorizonGround` |
-| Heightfield, backdrop link, following the player | `DaggerfallHorizon` |
+| What ground is at a point: height, rings, lift, paint | `DaggerfallHorizonGround` |
+| Both heightfields, backdrop link, following the player | `DaggerfallHorizon` |
 | Haze, cloud layer, which sky draws, falling weather, wet ground and snow | `DaggerfallWeatherPresentation` |
 | Moons | `DaggerfallMoons`, `SkyMediaPublication` (importer) |
 | Panoramas with the painted horizon cleared | `SkyHorizonClearing` (importer) |
 | Sun, ambient and how lights scale | `DaggerfallSiteLighting`, `siteLighting` in the tuning payload |
-| Lift, haze, clouds and far colours | `horizon` in the tuning payload |
+| Lift, haze and clouds | `horizon` in the tuning payload |
 | What open ground is made of | `DaggerfallGroundBlend`, `ground` in the tuning payload |
-| A ground archive's layers as one material | `DaggerfallGroundLayers` |
+| A ground archive's layers as materials | `DaggerfallGroundLayers` |
+| What a location's tiles are at their corners | `DaggerfallGroundKinds` |
 
 ## How it draws
 
-- **Rings.** Three rings reach about 200 km. Their cells are whole multiples of the
-  walked ground's 6.4 m spacing, so every far sample is a vertex of the walked
-  surface, before any location flattens it. The finest ring's tile is one map pixel.
-- **Join.** The world draws over the backdrop, so only the walked ground shows
-  inside the window. Far ground is sunk under the window and eases back out past it:
-  at the walked ground's own height it would poke through wherever the two differ.
+- **Rings.** Near ground samples half a tile (3.2 m) out to about 400 m, so every tile
+  has a sample of its own and a path one tile wide keeps its shape; the walked spacing to
+  about 1.2 km, as far as a tree's foot shows; and four times that to the window's edge.
+  Far ground's three rings reach about 200 km. Their cells are whole multiples of the
+  walked ground's 6.4 m spacing, so every sample is a vertex of the walked surface.
+- **Near ground** draws that surface as the walked window collides with it, levelled under
+  locations, and between vertices a straight line. It stands in the origin's own frame:
+  the map's corner is too far off to keep a texel exact in the shader. A new origin builds
+  it again, and the loading screen holds until it has settled, so nobody watches it
+  stream in coarsest first.
+- **Join.** The world draws over the backdrop, so only near ground shows inside the
+  window. Far ground is sunk under it and eases back out past it: at its own height it
+  would poke through wherever its coarser cells stand above the near ground.
 - **Lift.** The map's ranges rise only a degree or two over the skyline at true
   height. Ground above its valley floor (the lowest ground within about 20 km,
   smoothed) is multiplied by `lift`, fading in between `liftFromMetres` and
@@ -52,8 +61,8 @@ heightfield in the backdrop that only draws.
 - **Light.** The world's night lights keep far ground's bright vertex colours bright,
   so far ground takes the day's light as a material tint, down to `nightTint`.
 
-The horizon stands only outdoors and only while classic art is off. Classic art
-shows the painted sky, classic fog and no cloud layer.
+Near ground stands whenever the player is outdoors, whatever the art. Far ground stands only
+while classic art is off: classic art shows the painted sky, classic fog and no cloud layer.
 
 ## Light
 
@@ -125,36 +134,33 @@ draws these facts and rules should read them too, through
 - **Classic art** keeps its painted sky under every weather, with the same falling, ground
   and wind.
 
-## Open ground
+## Ground
 
-Where refreshed art is drawn, open ground blends four layers through an Engine terrain
-layer material instead of picking a tile per quad. Classic art keeps the tiles, and so
-does an archive the art set doesn't cover whole. A location's authored tiles and quads
-touching water stay tiles too, in the same mesh.
+Every vertex names a material and weighs that material's four layers. Refreshed surfaces wear
+the layers where the art set has them, and the classic's where it doesn't.
 
-- **Weights.** Each surface vertex weighs grass, dirt, rock and snow. The classic's
-  ground noise still lays out grass and dirt, real slope bares the rock, and real height
-  brings the snow, which a rock face holds less of.
+- **Open ground** weighs grass, dirt, rock and snow. The classic's ground noise still lays
+  out grass and dirt, real slope bares the rock, and real height brings the snow, which a
+  rock face holds less of. Far ground reads the same rules, with rock beginning at a gentler
+  slope because its coarse cells smooth one.
 - **Crunch.** `contrast` narrows every transition toward a pixel edge, and textures stay
   nearest-filtered, so layers meet as chunky pixels rather than a soft fade.
 - **Rock.** A layer has to be rock for a slope to bare it. The temperate and mountain
-  winters are snow on every record, so they wear the summer's stone, and the swamp's
-  third record is lush grass, so it wears the mountains'. Borrowed rock shows only where
-  the slope earns it: the noise bares only an archive's own.
-- **Nature.** It grows from soil, so it thins by the share of the ground that is soil:
-  there is a treeline at the snow, and bare rock stays bare. It reads the same rules as
-  the layers, in classic art too.
-- **Swamp.** Its lush ground is a fifth layer, where the noise would bare stone. A mesh
-  weighs four, so a swamp cell names a palette with lush ground in place of snow, unless
-  it reaches the snow.
-- **Cliffs.** Textures project from three planes (`triplanarSharpness`), since a single
-  projection smears down a steep face. `repeatMetres` must fill a cell a whole number of
-  times, or textures break at every cell's edge.
-- **Far ground.** At that range a texture is smaller than a pixel, and a heightfield
-  takes colours or layer weights, not both, so far ground keeps vertex colours and its
-  climates. Those colours are the walked ground's own as noon lights it, and snow comes
-  from the same `snowFromMetres` and `snowFullMetres`. Far slopes are measured over
-  coarser cells and read flatter, so the far ground has its own rock thresholds.
+  winters are snow on every record, so they wear the summer's stone, and the swamp's third
+  record is lush ground, so it wears the mountains'.
+- **Nature** grows from soil, so it thins by the share of the ground that is soil:
+  there is a treeline at the snow, and bare rock stays bare.
+- **Swamps** weigh lush ground in place of snow, below the snow.
+- **Towns** paint from their tiles. Every ground record is a corner pattern of six kinds:
+  water, dirt, grass, stone, paving and ruts. The terrain lookup fixes the frame: a record's
+  image has x running right and y up, a rotation is a quarter turn anticlockwise and a flip a
+  half turn. Paving edges (47 and 55) divide a tile along a diagonal, so their one odd corner
+  is half their area. A vertex on a tile's corner shares it with three others, and a sample
+  inside a tile reads that tile alone.
+- **The shore** follows the land's real contour. Ground at the ocean clamp is water, the
+  classic's beach band is dirt, and a location's water tiles paint the same way. Far ground
+  draws the sea as a flat colour (`sea`).
+- **Wet weather** darkens ground through the Engine's wetness, not the classic's rain archives.
 
 ## Relief
 

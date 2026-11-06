@@ -10,7 +10,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// phase each. A caller with no update to acknowledge in (a direct API, a developer command), or a host that
 /// shows no loading screen, gets the same work at once.
 /// </summary>
-internal sealed partial class DaggerfallSession : ILoadingScreenSession
+internal sealed partial class DaggerfallSession : ILoadingScreenSession, IArrivalGroundSession
 {
     private readonly LoadingScreen? _loading;
     private bool _inAdmittedUpdate;
@@ -37,13 +37,31 @@ internal sealed partial class DaggerfallSession : ILoadingScreenSession
     /// the next phase runs only then, so its own synchronous collision changes never wait on the bake. A refused
     /// bake fails the work as a throwing phase does.
     /// </remarks>
+    private bool _arrivalStood;
+
     private void StageWorldChange(string title, IReadOnlyList<LoadingPhase> phases, Func<Exception, string> failure)
     {
         _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard();
         _ = _loading!.Start(title,
-            [.. phases.Select(phase => new LoadingPhase(phase.Label, () => _sites.DeferCollision(phase.Run), _sites.AwaitArrivalCollision))],
+            [.. phases.Select((phase, index) => new LoadingPhase(phase.Label, () => _sites.DeferCollision(phase.Run),
+                index == phases.Count - 1 ? AwaitArrival : _sites.AwaitArrivalCollision))],
             // The arrival has happened by the time its ground is refused, so the work's own failure wording does not fit.
             error => Presentation.SetOutcome(error is DaggerfallArrivalCollisionRefusedException ? error.Message : failure(error)));
+    }
+
+    /// <summary>The last step of a world change: its collision, then the ground drawn over it.</summary>
+    private LoadingProgress AwaitArrival()
+    {
+        if (!_arrivalStood)
+        {
+            LoadingProgress collision = _sites.AwaitArrivalCollision();
+            if (!collision.Done) return collision;
+            _arrivalStood = true;
+        }
+
+        LoadingProgress ground = AwaitArrivalGround();
+        if (ground.Done) _arrivalStood = false;
+        return ground;
     }
 
     /// <summary>

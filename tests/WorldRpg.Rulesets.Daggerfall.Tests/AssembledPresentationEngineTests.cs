@@ -60,14 +60,14 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             AssertAccepted(run);
             IReadOnlyList<ulong> ids = run.Graphics.LastSnapshotIds;
             int nature = ids.Count(id => id >= 1UL << 49 && id < 1UL << 50);
-            int terrain = ids.Count(id => id >= 1UL << 48 && id < 1UL << 49);
+            int cells = run.Session.Sites.ResidentExteriorCells.Count;
             output.WriteLine($"Island admission (new game, hold, leaving it): {admission.Elapsed.TotalSeconds:F1} s; snapshot {ids.Count} objects "
-                + $"({terrain} terrain cells, {nature} nature batches); managed +{(managedAfter - managedBefore) / (1024 * 1024)} MiB, "
+                + $"({cells} resident cells, {nature} nature batches); managed +{(managedAfter - managedBefore) / (1024 * 1024)} MiB, "
                 + $"process working set +{(Environment.WorkingSet - processBefore) / (1024 * 1024)} MiB.");
             Assert.True(ids.Count > 1000, $"The island window published only {ids.Count} objects.");
             Assert.True(ids.Count < IslandObjectBound, $"The island window published {ids.Count} objects rather than batches.");
-            Assert.Equal(DaggerfallExteriorCellResidency.StreamingDimension * DaggerfallExteriorCellResidency.StreamingDimension, terrain);
-            Assert.InRange(nature, terrain, terrain * 32);
+            Assert.Equal(DaggerfallExteriorCellResidency.StreamingDimension * DaggerfallExteriorCellResidency.StreamingDimension, cells);
+            Assert.InRange(nature, cells, cells * 32);
 
             // Every resident neighbour's meshes are drawn, each under its own location slot.
             IReadOnlyCollection<DaggerfallWorldProfileKey> neighbours = run.Session.Sites.ResidentExteriorProfiles;
@@ -93,7 +93,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             Assert.Empty(run.Session.Sites.ResidentExteriorProfiles);
             Steps(host, run, 3);
             AssertAccepted(run);
-            Assert.DoesNotContain(run.Graphics.LastSnapshotIds, id => id >= 1UL << 48 && id < 1UL << 50);
+            Assert.DoesNotContain(run.Graphics.LastSnapshotIds, id => id >= 1UL << 49 && id < 1UL << 50);
             output.WriteLine($"Going back down into the hold: {descent.Elapsed.TotalSeconds:F2} s; the hold snapshot holds {run.Graphics.LastSnapshotObjects} objects.");
         }
         finally
@@ -649,8 +649,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             // The player and every one of the city's drawn meshes lie over the city's own terrain cell.
             WorldPoint player = run.Session.State.PlayerControl.Position!.Value;
             Assert.Equal(cell, run.Session.Sites.CurrentExteriorCell());
-            AppearanceFact terrain = Assert.Single(run.Graphics.LastSnapshot, fact => fact.ObjectId == DaggerfallPresentationObjectIds.TerrainCell(cell.X, cell.Y));
-            Vector3 corner = terrain.Transform.Translation;
+            Vector3 corner = run.Session.Sites.ActiveExteriorOrigin!.Value.LocalTranslation(cell);
             AppearanceFact[] meshes = [.. run.Graphics.LastSnapshot.Where(fact => fact.ObjectId >= DaggerfallPresentationObjectIds.WorldMesh(0, 0)
                 && fact.ObjectId < DaggerfallPresentationObjectIds.WorldMesh(1, 0) && (fact.ObjectId & uint.MaxValue) < 1UL << 31)];
             Assert.Equal(world.Profiles.Require(key).Geometry.Meshes.Count, meshes.Length);
@@ -659,12 +658,12 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
                 Assert.InRange(mesh.Transform.Translation.X - corner.X, 0F, DaggerfallExteriorCellResidency.CellSize);
                 Assert.InRange(corner.Z - mesh.Transform.Translation.Z, 0F, DaggerfallExteriorCellResidency.CellSize);
             });
-            // The drawn terrain under the player is the flattened ground they stand on.
+            // The ground under the player is the flattened ground they stand on.
             DaggerfallTerrainSurface surface = DaggerfallTerrainSurfaceBuilder.ApplyLocationFlattening(
                 DaggerfallTerrainSurfaceBuilder.Build(world.Definitions.Terrain, cell.X, cell.Y), DaggerfallLocationTerrainFrame.Flattening(exterior));
             float ground = corner.Y + DaggerfallTerrainSurfaceBuilder.SampleWorldHeight(surface,
                 (player.X - corner.X) / DaggerfallExteriorCellResidency.CellSize, (corner.Z - player.Z) / DaggerfallExteriorCellResidency.CellSize);
-            output.WriteLine($"Arrived at {player} over the city's cell at {corner}; drawn ground {ground}.");
+            output.WriteLine($"Arrived at {player} over the city's cell at {corner}; ground {ground}.");
             Assert.InRange(player.Y - ground, .7F, 1.1F);
 
             // Each block's ground tiles lie under that block: the donor lays a block's tile (x, y) along the block's rows,

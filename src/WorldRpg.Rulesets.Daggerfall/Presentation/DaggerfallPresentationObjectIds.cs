@@ -6,7 +6,6 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// into the snapshot draws from its own band below it, and no band can reach another's:
 /// <list type="table">
 /// <item><term>[1, 2^48)</term><description>gameplay identities published as their own visuals: actors, NPCs and ground containers.</description></item>
-/// <item><term>[2^48, 2^49)</term><description>exterior terrain cells, by map pixel.</description></item>
 /// <item><term>[2^49, 2^50)</term><description>exterior nature sprite batches, by map pixel and sprite record.</description></item>
 /// <item><term>[2^50, 2^52)</term><description>drawn locations' visuals. Each location slot (the active location is slot 0, each
 /// resident neighbour its own) owns a 2^32 range: its static meshes by index, then its door, city gate, action model and resident actor visuals by ordinal.</description></item>
@@ -20,7 +19,6 @@ internal static class DaggerfallPresentationObjectIds
     internal const ulong Maximum = (1UL << 53) - 1;
 
     private const ulong GameplayEnd = 1UL << 48;
-    private const ulong TerrainBase = 1UL << 48;
     private const ulong NatureBase = 1UL << 49;
     private const ulong LocationBase = 1UL << 50;
     internal const ulong TransientVisualFloor = 3UL << 51;
@@ -33,7 +31,7 @@ internal static class DaggerfallPresentationObjectIds
     private static ulong nextHeld = TransientVisualFloor - 1;
     internal const ulong TransientVisualFirst = Maximum;
 
-    /// <summary>Map pixel coordinates, wider than the world map, that terrain and nature identities carry.</summary>
+    /// <summary>Map pixel coordinates, wider than the world map, that nature identities carry.</summary>
     private const int CellBits = 12;
     /// <summary>A nature sprite record within its climate archive; normalized billboards address records 0 to 127.</summary>
     private const int SpriteRecordBits = 7;
@@ -56,14 +54,7 @@ internal static class DaggerfallPresentationObjectIds
         return (ulong)id;
     }
 
-    /// <summary>One exterior terrain cell's visual.</summary>
-    internal static ulong TerrainCell(int x, int y)
-    {
-        RequireCell(x, y, "Exterior terrain");
-        return TerrainBase | ((ulong)(uint)x << CellBits) | (uint)y;
-    }
-
-    /// <summary>One terrain cell's batch of the nature sprites that draw one sprite record.</summary>
+    /// <summary>One cell's batch of the nature sprites that draw one sprite record.</summary>
     internal static ulong NatureBatch(int x, int y, int record)
     {
         RequireCell(x, y, "Exterior nature");

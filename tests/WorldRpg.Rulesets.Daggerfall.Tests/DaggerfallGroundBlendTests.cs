@@ -77,8 +77,8 @@ public sealed class DaggerfallGroundBlendTests
     {
         (int, int)[] records = DaggerfallGroundLayers.Records(archive);
 
-        Assert.Equal(5, records.Length);
         Assert.Equal((archive, 3), records[4]);
+        Assert.Equal((archive, 0), records[^1]);
     }
 
     [Fact]
