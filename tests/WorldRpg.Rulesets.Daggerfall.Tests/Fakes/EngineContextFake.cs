@@ -64,6 +64,7 @@ internal class EngineContextFake : DispatchProxy
     private IPersistenceService persistence = null!;
     internal PresentationRecorder Particles { get; } = PresentationRecorder.Create();
     internal AnimationRecorder Animation { get; } = AnimationRecorder.Create();
+    internal TweenRecorder Tween { get; } = TweenRecorder.Create();
     internal IReadOnlyList<RenderResource> SkyBackgrounds => ((CameraServiceFake)(object)camera).SkyBackgrounds;
     internal IReadOnlyList<SkyBackgroundBlendRequest> SkyBlends => ((CameraServiceFake)(object)camera).SkyBlends;
     internal IReadOnlyList<FogRequest> Fogs => ((CameraServiceFake)(object)camera).Fogs;
@@ -115,6 +116,7 @@ internal class EngineContextFake : DispatchProxy
         "get_Audio" => audio,
         "get_Presentation" => Particles.Service,
         "get_Animation" => Animation.Service,
+        "get_Tween" => Tween.Service,
         "get_Diagnostics" => diagnostics,
         "get_Video" => video,
         "get_Random" => random,

@@ -16,8 +16,8 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     // before the session it replaces is disposed, so each lighting instance names its lights apart.
     private static long s_lastInstance;
     private readonly List<Light> _lights = [];
-    private readonly Dictionary<long, Light> _mobileLights = [];
-    private readonly Dictionary<long, Light> _spellLights = [];
+    private readonly Dictionary<long, (Light Light, LightRequest Request)> _mobileLights = [];
+    private readonly Dictionary<long, (Light Light, LightRequest Request)> _spellLights = [];
     private readonly long _instance;
     private readonly string _profileId;
     private readonly List<(Light Light, LightRequest Request)> _points = [];
@@ -29,6 +29,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     private readonly DaggerfallWorldProfileKind _profileKind;
     private readonly DaggerfallSiteLightingTuning _tuning;
     private Light? _magicCandle;
+    private LightRequest? _magicCandleRequest;
     private readonly ulong _magicCandleId;
     private Light? _ambient;
     private readonly ulong _ambientId;
@@ -113,18 +114,46 @@ internal sealed class DaggerfallSiteLighting : IDisposable
 
     internal int Count => _lights.Count;
 
+    /// <summary>
+    /// What this site's sky gives a surface open to it, before the Engine divides by pi: the ambient in its colour and the
+    /// sun whatever its angle, as a hand held up takes a low sun as well as a high one.
+    /// </summary>
+    internal Vector3 SkyLight => AmbientColor(_ambientLevel) * (_ambientLevel * Scale) + Vector3.One * (_sunRequest?.Descriptor.Intensity ?? 0);
+
+    /// <summary>What this site's lamps, glowing mobiles, flying spells and magic candle give <paramref name="at"/>, by the renderer's own falloff.</summary>
+    internal Vector3 LampLight(Vector3 at)
+    {
+        Vector3 light = Vector3.Zero;
+        foreach ((_, LightRequest request) in _points) light += Reaching(request.Descriptor, at);
+        foreach ((_, LightRequest request) in _mobileLights.Values) light += Reaching(request.Descriptor, at);
+        foreach ((_, LightRequest request) in _spellLights.Values) light += Reaching(request.Descriptor, at);
+        if (_magicCandleRequest is { } candle) light += Reaching(candle.Descriptor, at);
+        return light;
+    }
+
+    // Matches the Engine's lighting.wgsl distance_attenuation, with no surface to turn from the light.
+    private static Vector3 Reaching(LightDescriptor lamp, Vector3 at)
+    {
+        float distance = Vector3.Distance(lamp.Position, at);
+        if (distance >= lamp.Range) return Vector3.Zero;
+        float ratio = distance / lamp.Range;
+        float window = 1 - ratio * ratio * ratio * ratio;
+        return lamp.Color * (lamp.Intensity * window * window / MathF.Max(MathF.Pow(distance, lamp.Decay), .01f));
+    }
+
     internal void UpdateMagicCandle(Vector3? position, DaggerfallNormalLightTuning tuning)
     {
         if (_disposed || _suspended) return;
         if (position is not Vector3 value)
         {
-            if (_magicCandle is { } ended) { _lights.Remove(ended); ended.Dispose(); _magicCandle = null; }
+            if (_magicCandle is { } ended) { _lights.Remove(ended); ended.Dispose(); _magicCandle = null; _magicCandleRequest = null; }
             return;
         }
         var request = new LightRequest(_magicCandleId, false, 0, new LightDescriptor(LightKind.Point,
             Vector3.One, tuning.Intensity, true, value, Vector3.Zero, true, tuning.Range, 2f, 0f, 0f, LightShadowIntent.Disabled));
         if (_magicCandle is null) { _magicCandle = _graphics.CreateLight(request); _lights.Add(_magicCandle); }
         else _graphics.UpdateLight(new(_magicCandle, request));
+        _magicCandleRequest = request;
     }
 
 
@@ -144,12 +173,13 @@ internal sealed class DaggerfallSiteLighting : IDisposable
             Vector3 position = actor.Position.ToVector() + Vector3.UnitY * .3f + forward * .2f;
             var request = new LightRequest(LogicalLightId(_profileId, _instance, $"mobile:{actor.DurableId}"), false, 0,
                 new LightDescriptor(LightKind.Point, color, _tuning.MobileGlowIntensity, true, position, Vector3.Zero, true, _tuning.MobileGlowRange, 2f, 0f, 0f, LightShadowIntent.Disabled));
-            if (_mobileLights.TryGetValue(actor.DurableId, out var light)) _graphics.UpdateLight(new(light, request));
-            else { light = _graphics.CreateLight(request); _mobileLights.Add(actor.DurableId, light); _lights.Add(light); }
+            if (_mobileLights.TryGetValue(actor.DurableId, out var held)) _graphics.UpdateLight(new(held.Light, request));
+            else { held.Light = _graphics.CreateLight(request); _lights.Add(held.Light); }
+            _mobileLights[actor.DurableId] = (held.Light, request);
         }
         foreach (long retired in _mobileLights.Keys.Where(id => !live.Contains(id)).ToArray())
         {
-            Light light = _mobileLights[retired];
+            Light light = _mobileLights[retired].Light;
             _mobileLights.Remove(retired); _lights.Remove(light); light.Dispose();
         }
     }
@@ -168,12 +198,13 @@ internal sealed class DaggerfallSiteLighting : IDisposable
             var request = new LightRequest(LogicalLightId(_profileId, _instance, $"spell:{flight.Sequence}"), false, 0,
                 new LightDescriptor(LightKind.Point, SpellLightColor(flight.Element), _tuning.SpellLightIntensity, true, flight.Position.ToVector(),
                     Vector3.Zero, true, _tuning.SpellLightRange, 2f, 0f, 0f, LightShadowIntent.Disabled));
-            if (_spellLights.TryGetValue(flight.Sequence, out var light)) _graphics.UpdateLight(new(light, request));
-            else { light = _graphics.CreateLight(request); _spellLights.Add(flight.Sequence, light); _lights.Add(light); }
+            if (_spellLights.TryGetValue(flight.Sequence, out var held)) _graphics.UpdateLight(new(held.Light, request));
+            else { held.Light = _graphics.CreateLight(request); _lights.Add(held.Light); }
+            _spellLights[flight.Sequence] = (held.Light, request);
         }
         foreach (long retired in _spellLights.Keys.Where(id => !live.Contains(id)).ToArray())
         {
-            Light light = _spellLights[retired];
+            Light light = _spellLights[retired].Light;
             _spellLights.Remove(retired); _lights.Remove(light); light.Dispose();
         }
     }
@@ -274,6 +305,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
             _spellLights.Clear();
             _points.Clear();
             _magicCandle = null;
+            _magicCandleRequest = null;
             _suspended = true;
         }
 
@@ -413,6 +445,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         _ambient = null;
         _sun = null;
         _magicCandle = null;
+        _magicCandleRequest = null;
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
 

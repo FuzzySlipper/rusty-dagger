@@ -2147,6 +2147,15 @@ internal sealed class DaggerfallSiteLifecycle
     }
 
     /// <summary>Applies the calendar/weather season to the resident terrain environment.</summary>
+    /// <summary>The light the eye stands in at <paramref name="eye"/>: the one sky, and the lamps of every location resident around it.</summary>
+    internal Vector3 ViewLight(Vector3 eye)
+    {
+        Vector3 light = Projection.Lighting.SkyLight + Projection.Lighting.LampLight(eye);
+        foreach (ResidentExteriorLocation resident in _residentExteriorLocations.Values)
+            if (!ReferenceEquals(resident.Projection, Projection)) light += resident.Projection.Lighting.LampLight(eye);
+        return light;
+    }
+
     internal void UpdateResidentCityLights()
     {
         foreach (var resident in _residentExteriorLocations.Values)

@@ -41,6 +41,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     private readonly IRandomService _random;
     private readonly IEngineContext _engine;
     private readonly DaggerfallTuning _tuning;
+    private readonly DaggerfallViewLight _viewLight;
     private PlayerInputSystem _input;
     private ProductMode _mode = ProductMode.Playing;
     // The line the last mode change set for its mode, so returning to play can tell it from a result.
@@ -931,6 +932,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _sites.Projection.Lighting.UpdateSpellLights(spellFlights);
         _sites.Projection.Lighting.UpdateMagicCandle(candlePosition, _tuning.NormalLight);
         _appearance.UpdateMagicCandle(candlePosition);
+        if (State.PlayerControl.Position is { } eyeFeet)
+            _viewLight.Update(() => _sites.ViewLight(eyeFeet.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight));
         foreach (var appearance in _sites.Appearances) appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors, _groundContainers.All.Where(pair => pair.Value.PropertyPlacement is null).ToDictionary(),
             _latestUpdateGeneration is ulong generation && _latestSimulationStep is ulong simulationStep

@@ -271,6 +271,8 @@ internal sealed record DaggerfallTuning(
                 ExteriorSun = siteLighting.GetProperty("exteriorSun").GetSingle(),
                 InteriorScale = siteLighting.GetProperty("interiorScale").GetSingle(),
                 DungeonScale = siteLighting.GetProperty("dungeonScale").GetSingle(),
+                ViewFull = siteLighting.GetProperty("viewFull").GetSingle(),
+                ViewFloor = siteLighting.GetProperty("viewFloor").GetSingle(),
                 NightColor = new(siteLighting.GetProperty("nightColor")[0].GetSingle(), siteLighting.GetProperty("nightColor")[1].GetSingle(),
                     siteLighting.GetProperty("nightColor")[2].GetSingle()),
             },
@@ -655,11 +657,17 @@ internal sealed record DaggerfallSiteLightingTuning(
     internal float ExteriorSun { get; init; } = 1.05f;
     /// <summary>The colour of the sky's ambient at night, easing to white by noon. A lamp's warmth stands out against it.</summary>
     internal Vector3 NightColor { get; init; } = new(.7f, .8f, 1f);
+    /// <summary>The light, before the Engine divides by pi, at which the first-person view draws at its art's own value: what the clear noon sky gives.</summary>
+    internal float ViewFull { get; init; } = 2.875f;
+    /// <summary>The dimmest tint of the first-person view, so the hands stay readable in the dark.</summary>
+    internal float ViewFloor { get; init; } = .2f;
     internal static DaggerfallSiteLightingTuning Classic { get; } = new(
         160F / 255F, 100F / 255F, 75F / 255F, .7F, .1333F);
 
     internal DaggerfallSiteLightingTuning Validate()
     {
+        if (!float.IsFinite(ViewFull) || ViewFull <= 0 || !float.IsFinite(ViewFloor) || ViewFloor is < 0 or > 1)
+            throw new ArgumentOutOfRangeException(nameof(ViewFull), "The view's full light is finite and positive, and its floor a normalized tint.");
         foreach (float scale in new[] { ExteriorScale, ExteriorSun, InteriorScale, DungeonScale })
             if (!float.IsFinite(scale) || scale <= 0) throw new ArgumentOutOfRangeException(nameof(ExteriorScale), "A site's light scale is finite and positive.");
         if (!float.IsFinite(NightColor.X + NightColor.Y + NightColor.Z) || NightColor.X < 0 || NightColor.Y < 0 || NightColor.Z < 0)

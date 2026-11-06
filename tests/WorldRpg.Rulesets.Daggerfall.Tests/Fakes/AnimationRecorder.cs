@@ -11,6 +11,7 @@ internal class AnimationRecorder : DispatchProxy
     internal List<Appearance> Created { get; } = [];
     internal int ReleasedAppearances { get; private set; }
     internal int Instances { get; private set; }
+    internal List<AnimatedMeshMaterialFactorsRequest> FactorUpdates { get; } = [];
     /// <summary>The joints and clips an opened model reports.</summary>
     internal AnimationJointInfo[] Joints { get; set; } = [];
     internal AnimationClipInfo[] Clips { get; set; } = [];
@@ -28,10 +29,16 @@ internal class AnimationRecorder : DispatchProxy
         nameof(IAnimationService.ReadClips) => new ReadOnlyMemory<AnimationClipInfo>(Clips),
         nameof(IAnimationService.SampleModelJointPose) or nameof(IAnimationService.SampleJointPose) => new ReadOnlyMemory<JointPose>(new JointPose[Joints.Length]),
         nameof(IAnimationService.CreateInstance) => new AnimationInstance(new AnimationInstanceHandle(7000 + (ulong)++Instances), () => { }),
+        nameof(IAnimationService.UpdateAnimatedMeshMaterialFactors) => Factors((AnimatedMeshMaterialFactorsRequest)args![0]!),
         nameof(IAnimationService.ReadJointPose) => Activator.CreateInstance(method.ReturnType),
         nameof(IAnimationService.SetPlayback) or nameof(IAnimationService.SetPose) or nameof(IAnimationService.SetLayers) => null,
         _ => throw new NotSupportedException(method?.Name),
     };
+    private object? Factors(AnimatedMeshMaterialFactorsRequest request)
+    {
+        FactorUpdates.Add(request);
+        return null;
+    }
     private RenderResource Open(AnimationContentRequest request)
     {
         OpenedPaths.Add(TestContentReferences.PathOf(request.Content));

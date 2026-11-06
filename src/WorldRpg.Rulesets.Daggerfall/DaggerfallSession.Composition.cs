@@ -98,6 +98,7 @@ internal sealed partial class DaggerfallSession
             _loading = composition.Loading;
             _newGameInitialized = saved is not null;
             _tuning = tuning;
+            _viewLight = new(tuning.SiteLighting);
             // The score's tracks are read by name from the music container, so the resolver the director asks is
             // this session's own: it keeps the Engine resource alive for as long as the session plays that track
             // and releases it on disposal.
