@@ -60,7 +60,7 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
         if (cover == _cloudCover) return;
         _cloudCover = cover;
         _engine.CameraView.SetClouds(new(cover, _horizon.CloudDrift, _horizon.CloudAltitudeMetres, _horizon.CloudScaleMetres,
-            Vector3.One, 0, CloudKind.Cumulus, _horizon.CloudTwilightDegrees));
+            Vector3.One, 0, CloudKind.Cumulus, _horizon.CloudTwilightDegrees) { PixelMetres = _horizon.CloudPixelMetres, ShadeSteps = _horizon.CloudShadeSteps });
     }
 
     private RenderResourceReference Particle(bool snow)

@@ -237,6 +237,8 @@ internal class EngineContextFake : DispatchProxy
                 nameof(ICameraViewService.ClearSkyBackground) => ClearSkyBackground(),
                 nameof(ICameraViewService.SetBackgroundColor) => SetBackgroundColor(arguments),
                 nameof(ICameraViewService.UpdateCamera) => null,
+                nameof(ICameraViewService.SetToneMapping) => null,
+                nameof(ICameraViewService.SetBloom) => null,
                 nameof(ICameraViewService.SetSkyBackground) => SetSky((RenderResource)arguments![0]!),
                 nameof(ICameraViewService.SetSkyBackgroundBlend) => SetBlend((SkyBackgroundBlendRequest)arguments![0]!),
                 nameof(ICameraViewService.SetFog) => SetFog((FogRequest)arguments![0]!),

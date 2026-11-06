@@ -96,6 +96,7 @@ public sealed class DaggerfallWeatherSessionTests
         Assert.Equal(FogMode.Exponential, fixture.Engine.Fogs.Last().Mode);
         Assert.Equal(tuning.Horizon.FogDensity, fixture.Engine.Fogs.Last().Density);
         Assert.Equal(tuning.Horizon.CloudCoverage, fixture.Engine.Clouds.Last().Coverage);
+        Assert.Equal(tuning.Horizon.CloudPixelMetres, fixture.Engine.Clouds.Last().PixelMetres);
 
         Assert.True(session.TryTransitionTo(interior.ProfileKey));
         session.Update(Update(2));

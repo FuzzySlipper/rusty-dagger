@@ -32,6 +32,9 @@ internal static class DaggerfallGroundBlend
         return new(soil * grass, soil * (1 - grass), stone * (1 - snow), snow);
     }
 
+    /// <summary>How much of a swamp's soil the noise turns to its lush third ground, from 0 to 1.</summary>
+    internal static float Lush(DaggerfallGroundTuning tuning, float noise) => Smooth(tuning.StoneFrom, tuning.StoneFull, noise);
+
     /// <summary>How much of the ground at this height lies under snow, from 0 to 1.</summary>
     internal static float Snow(DaggerfallGroundTuning tuning, float heightMetres) =>
         Smooth(tuning.SnowFromMetres, tuning.SnowFullMetres, heightMetres);
@@ -55,6 +58,7 @@ internal static class DaggerfallGroundBlend
 internal sealed class DaggerfallGroundLayers : IDisposable
 {
     private const uint Version = 1;
+    private const int SharedLayers = 4;
     private static readonly Color White = new(1, 1, 1, 1);
     private readonly AuthoredCatalog _catalog;
     private readonly List<RenderResource> _textures = [];
@@ -65,6 +69,7 @@ internal sealed class DaggerfallGroundLayers : IDisposable
         IReadOnlyList<DaggerfallArtSurface> surfaces, DaggerfallGroundBlendSettings settings)
     {
         NoiseStone = BaresNoiseStone(archive);
+        HasLush = surfaces.Count > SharedLayers;
         List<AuthoredCatalogEntryInput> entries = [];
         List<AuthoredCatalogDependencyInput> dependencies = [];
         List<AuthoredMaterialInput> definitions = [];
@@ -112,14 +117,22 @@ internal sealed class DaggerfallGroundLayers : IDisposable
     /// <summary>Whether the noise bares this archive's stone, or only the slope does.</summary>
     internal bool NoiseStone { get; }
 
+    /// <summary>Whether this archive has a fifth layer, the swamp's lush ground, which a cell draws in place of snow.</summary>
+    internal bool HasLush { get; }
+
+    /// <summary>The layers a cell of lush ground draws: a mesh weighs four, and snow is rare in a swamp.</summary>
+    internal static readonly uint[] LushPalette = [0, 1, 2, 4];
+
     /// <summary>
     /// The archive and record of each layer of a ground archive: its grass and dirt, its rock, and the climate's snow,
     /// which is the grass of its winter archive, ending in 3. A desert has no winter archive, so its heights go to rock.
+    /// The swamp's own third record is lush ground, a fifth layer.
     /// </summary>
     internal static (int Archive, int Record)[] Records(int archive)
     {
         int climate = archive / 100 * 100;
-        return [(archive, 2), (archive, 1), (RockArchive(archive), 3), climate == 0 ? (archive, 3) : (climate + 3, 2)];
+        (int, int)[] shared = [(archive, 2), (archive, 1), (RockArchive(archive), 3), climate == 0 ? (archive, 3) : (climate + 3, 2)];
+        return climate == 400 ? [.. shared, (archive, 3)] : shared;
     }
 
     /// <summary>

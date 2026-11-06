@@ -38,8 +38,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private const int LightFlatArchive = 210;
     /// <summary>A sprite that takes the light around it, so it falls with the day and warms by a lamp.</summary>
     internal static readonly SpriteMaterialDescriptor LitSprite = new(SpriteLightingMode.Synthetic, default, default, 1f, 0f, SpriteAlphaMode.Blend, .5f, SpriteShadowPolicy.None);
-    /// <summary>A sprite that shows at its own brightness, as a light source does.</summary>
-    private static readonly SpriteMaterialDescriptor UnlitSprite = new(SpriteLightingMode.Unlit, default, default, 1f, 0f, SpriteAlphaMode.Blend, .5f, SpriteShadowPolicy.None);
     private readonly NormalizedBillboardSprite? candleSprite;
     private SpriteAtlas? candleAtlas;
     private Appearance? candleAppearance;

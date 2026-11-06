@@ -30,6 +30,11 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
     float CloudCoverage, float StormCloudCoverage, float CloudAltitudeMetres, float CloudScaleMetres, float CloudTwilightDegrees, Vector2 CloudDrift,
     Color Sea, Color Rock, Color Snow, IReadOnlyDictionary<int, Color> Climates)
 {
+    /// <summary>The side of a cloud's cells in metres, so the sky sits with the pixel art under it.</summary>
+    internal float CloudPixelMetres { get; init; } = 180;
+    /// <summary>How many shades a cloud is drawn in.</summary>
+    internal uint CloudShadeSteps { get; init; } = 5;
+
     internal static DaggerfallHorizonTuning Default { get; } = new(4.5f, 3_000, 24_000, .00003f, 150, 2_900, 3_700, .1f, 204.8f, .25f, .7f,
         .45f, .9f, 3_500, 1_800, 8, new(14, 5),
         Color.FromSrgb(.16f, .24f, .32f), Color.FromSrgb(.28f, .28f, .29f), Color.FromSrgb(.78f, .78f, .81f),
@@ -51,7 +56,7 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
         if (Lift < 1 || LiftFromMetres < 0 || LiftFromMetres >= LiftFullMetres
             || RockFromSlope < 0 || RockFromSlope >= RockFullSlope)
             throw new ArgumentException("A horizon's lift cannot fall, and its fades must rise from a start to a finish.");
-        foreach (float value in new[] {CloudAltitudeMetres, CloudScaleMetres})
+        foreach (float value in new[] {CloudAltitudeMetres, CloudScaleMetres, CloudPixelMetres})
             if (!float.IsFinite(value) || value <= 0) throw new ArgumentException("A horizon's clouds stand above the ground and have a size.");
         if (CloudCoverage is < 0 or > 1 || StormCloudCoverage is < 0 or > 1 || CloudTwilightDegrees < 0
             || !float.IsFinite(CloudDrift.X) || !float.IsFinite(CloudDrift.Y))
@@ -70,7 +75,11 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
         e.GetProperty("cloudTwilightDegrees").GetSingle(),
         new(e.GetProperty("cloudDrift")[0].GetSingle(), e.GetProperty("cloudDrift")[1].GetSingle()),
         ReadColor(e.GetProperty("sea")), ReadColor(e.GetProperty("rock")), ReadColor(e.GetProperty("snow")),
-        e.GetProperty("climates").EnumerateObject().ToDictionary(climate => int.Parse(climate.Name), climate => ReadColor(climate.Value)));
+        e.GetProperty("climates").EnumerateObject().ToDictionary(climate => int.Parse(climate.Name), climate => ReadColor(climate.Value)))
+    {
+        CloudPixelMetres = e.GetProperty("cloudPixelMetres").GetSingle(),
+        CloudShadeSteps = e.GetProperty("cloudShadeSteps").GetUInt32(),
+    };
 
     /// <summary>A colour as content writes it, sRGB from 0 to 1; a heightfield takes linear.</summary>
     private static Color ReadColor(JsonElement e)
