@@ -6,7 +6,7 @@
 # (default items). NAME picks specs/AREA/PREFIX-NAME.json and PREFIX-NAME-retro.json, PREFIX being
 # items-icons for items and the area name otherwise. Qwen and retro both run on HOST
 # (den-m5 / m5-comfy or den-nimo / nimo-comfy; the owner's den-5090 has no resource, pass none). SOURCE=dir overrides the source root.
-# A frames-* batch composites only the flame onto frame 0 (items only).
+# A frames-* batch composites only what moves onto frame 0.
 set -e
 N=$1; H=$2; RES=$3
 AREA=${AREA:-items}
@@ -28,6 +28,6 @@ python3 $TOOLS/postprocess.py run $R --route qwen-retro --palette "$PAL" --out $
 CUT=(); if [[ $AREA == flats ]]; then CUT=(--spec $SPEC/$PFX-$N-retro.json); fi
 python3 $TOOLS/postprocess.py cutout $R $B "${CUT[@]}" --out $B/cutout
 python3 $TOOLS/postprocess.py compare --study $R --out $ST/$PFX-$N-compare-$D --title "$AREA batch $N: source, retro, BP 0.5" --column "Retro=$B:original" --column "BP 0.5=$B:bp-broad-half"
-if [[ $N == frames-* ]]; then python3 $TOOLS/composite.py $SPEC/$PFX-$N-retro.json $R $B/cutout
+if [[ $N == frames-* ]]; then python3 $TOOLS/composite.py $SPEC/$PFX-$N-retro.json $R $B/cutout $AREA
 else python3 $TOOLS/finalize.py $SPEC/$PFX-$N-retro.json $B/cutout --area $AREA --study $R; fi
 echo BATCH-$N-DONE

@@ -60,8 +60,8 @@ A spec copies the style card, collection rules, presentation, seed and routes fr
   `needs-owner-review` status and a "guess" tag.
 - If the source pixels disagree with the template's name (a tomato in a "wine rack" slot), depict the pixels and
   flag the mismatch.
-- Animated sprites: convert frame 0 as a normal item. Convert frames 1+ with an `items-icons-frames-*.json`
-  batch; only the flame differs, so `composite.py` keeps frame 0's body and takes just the flame region.
+- Animated sprites: convert frame 0 as a normal item. Convert frames 1+ with a `frames-*` batch (`items-icons-frames-*.json`,
+  `flats-frames-*.json`); `composite.py` keeps frame 0's body and takes only the region that moves, a flame or an animal's tail.
 
 ## Transparency
 
