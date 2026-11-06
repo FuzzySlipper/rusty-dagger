@@ -2,7 +2,7 @@
 # Convert one batch of source sprites end to end: Qwen painted reconstruction, Krea retro, back-projection,
 # transparent cut-out, compare sheets, then publish the finals to gen-raw/<area>.
 #   [AREA=items] run_batch.sh NAME HOST RESOURCE      e.g. AREA=spells run_batch.sh pilot-icons den-m5 m5-comfy
-# AREA (items, worn, paper-doll, spells, effects, flats) picks the source root df-raw/AREA (worn reads df-raw/items), the spec directory specs/AREA and the finals gen-raw/AREA
+# AREA (items, worn, paper-doll, spells, effects, flats, people) picks the source root df-raw/AREA (worn reads df-raw/items), the spec directory specs/AREA and the finals gen-raw/AREA
 # (default items). NAME picks specs/AREA/PREFIX-NAME.json and PREFIX-NAME-retro.json, PREFIX being
 # items-icons for items and the area name otherwise. Qwen and retro both run on HOST
 # (den-m5 / m5-comfy or den-nimo / nimo-comfy; the owner's den-5090 has no resource, pass none). SOURCE=dir overrides the source root.
@@ -25,7 +25,7 @@ RUN "$AREA batch $N Qwen" python3 $TOOLS/run.py generate $Q --host $H
 python3 $TOOLS/run.py prepare --spec $SPEC/$PFX-$N-retro.json --source $RAW --out $R --upstream $Q --host $H
 RUN "$AREA batch $N retro" python3 $TOOLS/run.py generate $R --host $H
 python3 $TOOLS/postprocess.py run $R --route qwen-retro --palette "$PAL" --out $B --variants original bp-broad-half
-CUT=(); if [[ $AREA == flats ]]; then CUT=(--spec $SPEC/$PFX-$N-retro.json); fi
+CUT=(); if [[ $AREA == flats || $AREA == people ]]; then CUT=(--spec $SPEC/$PFX-$N-retro.json); fi
 python3 $TOOLS/postprocess.py cutout $R $B "${CUT[@]}" --out $B/cutout
 python3 $TOOLS/postprocess.py compare --study $R --out $ST/$PFX-$N-compare-$D --title "$AREA batch $N: source, retro, BP 0.5" --column "Retro=$B:original" --column "BP 0.5=$B:bp-broad-half"
 if [[ $N == frames-* ]]; then python3 $TOOLS/composite.py $SPEC/$PFX-$N-retro.json $R $B/cutout $AREA

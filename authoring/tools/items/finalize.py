@@ -28,7 +28,7 @@ spec = json.load(open(a.spec))
 for i in spec["items"]:
     target = finals / (art_key(a.area, i["directory"], i["image"]) + ".png")
     shutil.copyfile(Path(a.cutout) / (i["id"] + ".png"), target)
-    if a.area == "flats":
+    if a.area in ("flats", "people"):
         subprocess.run([sys.executable, Path(__file__).with_name("despeckle.py"), target], check=True)
     if a.area in DOLL_AREAS:
         given = json.load(open(a.study / "inputs" / i["id"] / "input.json"))

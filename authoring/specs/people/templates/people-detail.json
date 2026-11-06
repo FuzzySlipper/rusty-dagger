@@ -1,0 +1,39 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent cast of grounded, slightly timeworn people of a dark fantasy RPG, seen from standing height. Keep the source's pose, silhouette, proportions, costume, local colours and what the person holds: it replaces the source at the same size in the world. Paint a real individual: a clear face with readable eyes, nose, mouth and age, hair in grouped locks, hands with distinct fingers. Paint the costume as made things: cloth folds that follow the body, seams, stitching, belts and buckles, worn leather, dull metal edges. Restrained palette with distinct light, middle and dark families. Keep open gaps between arms, legs and held objects open. No extra parts, gemstones, runes, symbols or fantasy embellishment. Not pixel art, not a photoreal photograph, not a glossy mobile-game asset, not a dramatic scene. No text, labels, border, vignette, frame, ground plane, scenery, plants or second person.",
+  "presentation": "One isolated full-length person on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no ground shadow, no background texture and no cast shadow outside the figure. The whole figure visible with breathing room, centred, feet where the source's feet are. Preserve the source view and pose. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "People",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "flats",
+      "model": "qwen-edit",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "conditioning": "reference"
+    }
+  ],
+  "items": []
+}

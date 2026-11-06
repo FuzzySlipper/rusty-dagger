@@ -161,6 +161,23 @@ public sealed class ReferenceExportTests : IDisposable
         Assert.All(target.Rgba.Where((_, i) => i % 4 == 3), alpha => Assert.Equal(255, alpha));
     }
 
+    [CorpusFact("ART_PAL.COL", "BLOCKS.BSA", "TEXTURE.180", "TEXTURE.182", "TEXTURE.210", "TEXTURE.381")]
+    public void People_export_keeps_every_record_of_a_people_archive_and_counts_where_blocks_place_them()
+    {
+        PeopleReferenceExport.Run(TestData.CorpusRoot, root);
+
+        string[][] rows = [.. File.ReadAllLines(Path.Combine(root, "usage.csv")).Skip(1).Select(line => line.Split(','))];
+        string[] Row(int archive, int record) => rows.Single(row => row[0] == $"{archive}" && row[1] == $"{record}");
+        static int Placements(string[] row) => int.Parse(row[7]) + int.Parse(row[9]) + int.Parse(row[11]);
+
+        Assert.True(Placements(Row(182, 1)) > 0);
+        Assert.Equal(0, Placements(Row(180, 0))); // Unplaced, and still written: quests pick people by record.
+        Assert.Equal("1", Row(381, 0)[12]);
+        Assert.Equal("townspeople", Row(381, 0)[2]);
+        Assert.All(rows.Where(row => row[0] == "210"), row => Assert.True(Placements(row) > 0));
+        Assert.True(File.Exists(Path.Combine(root, "people-common/texture-182/person/texture-182-record-001-frame-000-source.png")));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
