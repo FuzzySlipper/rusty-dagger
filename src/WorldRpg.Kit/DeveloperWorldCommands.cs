@@ -37,7 +37,7 @@ public interface IDeveloperWorldSession
     /// <summary>Lets world time run on to the next time the clock reads <paramref name="hour"/>.</summary>
     DebugCommandResult Hour(int hour);
 
-    /// <summary>Blends open ground in place of tiles, or tiles it again when <paramref name="contrast"/> is 0.</summary>
+    /// <summary>Changes how open ground blends for this run, or tiles it when <paramref name="contrast"/> is 0.</summary>
     DebugCommandResult GroundBlend(double contrast, double repeatMetres, double triplanarSharpness);
 
     /// <summary>Sets the weather everywhere until the day's next change.</summary>
@@ -89,7 +89,7 @@ public sealed class DeveloperWorldDebugModule(Func<IDeveloperWorldSession> curre
     [DebugCommand("world.hour", Description = "Developer: let world time run on to the next HOUR (0 to 23) of the clock, as resting would.")]
     public DebugCommandResult Hour(int hour) => current().Hour(hour);
 
-    [DebugCommand("world.ground-blend", Description = "Developer: blend open ground at CONTRAST (0 tiles it again) with textures repeating every METRES, triplanar at SHARPNESS (0 for none).")]
+    [DebugCommand("world.ground-blend", Description = "Developer: blend open ground at CONTRAST (0 tiles it) with textures repeating every METRES, triplanar at SHARPNESS (0 for none).")]
     public DebugCommandResult GroundBlend(double contrast, double repeatMetres, double triplanarSharpness) => current().GroundBlend(contrast, repeatMetres, triplanarSharpness);
 
     [DebugCommand("world.weather", Description = "Developer: set the weather everywhere until the next day: Sunny, Cloudy, Overcast, Fog, Rain, Thunder or Snow.")]

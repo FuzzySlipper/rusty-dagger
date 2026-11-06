@@ -1,8 +1,8 @@
 # Exterior horizon
 
 Past the walked seven-by-seven window, the map itself stands on the skyline. The
-walked ground keeps its tiled meshes, collision and nature; the far ground is an
-Engine heightfield in the backdrop that only draws.
+walked ground keeps its meshes, collision and nature; the far ground is an Engine
+heightfield in the backdrop that only draws.
 
 | Part | Owner |
 | --- | --- |
@@ -12,6 +12,8 @@ Engine heightfield in the backdrop that only draws.
 | Haze, cloud layer, which sky panorama draws | `DaggerfallWeatherPresentation` |
 | Panoramas with the painted horizon cleared | `SkyHorizonClearing` (importer) |
 | Lift, haze, clouds and far colours | `horizon` in the tuning payload |
+| What open ground is made of | `DaggerfallGroundBlend`, `ground` in the tuning payload |
+| A ground archive's layers as one material | `DaggerfallGroundLayers` |
 
 ## How it draws
 
@@ -39,10 +41,37 @@ Engine heightfield in the backdrop that only draws.
   still stand out as a flat shape of the fog's colour. Fog also clears the cloud
   layer, which would darken the sky just above it.
 - **Light.** The world's night lights keep far ground's bright vertex colours bright,
-  so far ground takes the day's light as a material tint, down to `nightTint`.
+  so far ground takes the day's light as a material tint, down to `nightTint`. The
+  world has one sun and ambient, carried by the active site and kept when its location
+  unloads behind the player. Resident locations bring only their own lamps.
 
 The horizon stands only outdoors and only while classic art is off. Classic art
 shows the painted sky, classic fog and no cloud layer.
+
+## Open ground
+
+Where refreshed art is drawn, open ground blends four layers through an Engine terrain
+layer material instead of picking a tile per quad. Classic art keeps the tiles, and so
+does an archive the art set doesn't cover whole. A location's authored tiles and quads
+touching water stay tiles too, in the same mesh.
+
+- **Weights.** Each surface vertex weighs grass, dirt, rock and snow. The classic's
+  ground noise still lays out grass and dirt, real slope bares the rock, and real height
+  brings the snow, which a rock face holds less of.
+- **Crunch.** `contrast` narrows every transition toward a pixel edge, and textures stay
+  nearest-filtered, so layers meet as chunky pixels rather than a soft fade.
+- **Rock.** A layer has to be rock for a slope to bare it. The temperate and mountain
+  winters are snow on every record, so they wear the summer's stone, and the swamp's
+  third record is lush grass, so it wears the mountains'. Borrowed rock shows only where
+  the slope earns it: the noise bares only an archive's own.
+- **Cliffs.** Textures project from three planes (`triplanarSharpness`), since a single
+  projection smears down a steep face. `repeatMetres` must fill a cell a whole number of
+  times, or textures break at every cell's edge.
+- **Far ground.** At that range a texture is smaller than a pixel, and a heightfield
+  takes colours or layer weights, not both, so far ground keeps vertex colours and its
+  climates. Those colours are the walked ground's own as noon lights it, and snow comes
+  from the same `snowFromMetres` and `snowFullMetres`. Far slopes are measured over
+  coarser cells and read flatter, so the far ground has its own rock thresholds.
 
 ## Relief
 
@@ -66,6 +95,6 @@ stand on it, through the same height function. Without it they stand on WOODS.
 
 ## Tuning by eye
 
-`world.horizon-set LIFT FOG` changes the lift and haze for one run, and
-`world.hour HOUR` sets the light. Over bare WOODS its stepped heights make ranges into
+`world.horizon-set LIFT FOG` changes the lift and haze for one run, `world.ground-blend
+CONTRAST METRES SHARPNESS` the ground's blend, and `world.hour HOUR` sets the light. Over bare WOODS its stepped heights make ranges into
 mesas at any lift; the relief makes them peaks.

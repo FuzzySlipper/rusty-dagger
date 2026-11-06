@@ -101,7 +101,7 @@ public sealed class DaggerfallHorizonGroundTests
         Assert.Equal(tuning.Sea, ground.Paint(231, sea, 0, false));
         Assert.Equal(tuning.Climates[231], ground.Paint(231, 200, 0, false));
         Assert.Equal(tuning.Rock, ground.Paint(231, 200, tuning.RockFullSlope, false));
-        Assert.Equal(tuning.Snow, ground.Paint(231, tuning.SnowFullMetres, 0, false));
+        Assert.Equal(tuning.Snow, ground.Paint(231, DaggerfallGroundTuning.Default.SnowFullMetres, 0, false));
         Assert.NotEqual(tuning.Climates[231], ground.Paint(231, 200, 0, true));
         Assert.Equal(tuning.Climates[224], ground.Paint(224, 200, 0, true));
     }
@@ -157,7 +157,7 @@ public sealed class DaggerfallHorizonGroundTests
     }
 
     private static DaggerfallHorizonGround Ground(DaggerfallTerrainSet terrain) =>
-        new(terrain, (_, _) => 231, DaggerfallHorizonTuning.Default);
+        new(terrain, (_, _) => 231, DaggerfallHorizonTuning.Default, DaggerfallGroundTuning.Default);
 
     private static DaggerfallTerrainSet Terrain(int width, int height, byte[]? relief = null)
     {

@@ -143,8 +143,10 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
     public DebugCommandResult GroundBlend(double contrast, double repeatMetres, double triplanarSharpness)
     {
         if (contrast < 0 || repeatMetres <= 0 || triplanarSharpness < 0) return Refused("A contrast and sharpness are 0 or more, and a repeat more than 0.");
+        if (!DaggerfallGroundBlend.FillsCell((float)repeatMetres)) return Refused($"A texture repeating every {repeatMetres} metres would break at every cell's edge.");
+        long started = System.Diagnostics.Stopwatch.GetTimestamp();
         _sites.UseGroundBlend(contrast == 0 ? null : new((float)Math.Max(contrast, 1), (float)repeatMetres, (float)triplanarSharpness));
-        return DebugCommandResult.Success(contrast == 0 ? "Open ground is tiled." : "Open ground blends.");
+        return DebugCommandResult.Success($"Open ground {(contrast == 0 ? "is tiled" : "blends")}, rebuilt in {System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds:F0} ms.");
     }
 
     public DebugCommandResult Weather(string kind)
