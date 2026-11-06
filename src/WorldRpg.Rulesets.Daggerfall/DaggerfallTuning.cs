@@ -1,3 +1,4 @@
+using System.Numerics;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Policies;
@@ -266,6 +267,12 @@ internal sealed record DaggerfallTuning(
                 MobileGlowIntensity = siteLighting.GetProperty("mobileGlowIntensity").GetSingle(),
                 SpellLightRange = siteLighting.GetProperty("spellLightRange").GetSingle(),
                 SpellLightIntensity = siteLighting.GetProperty("spellLightIntensity").GetSingle(),
+                ExteriorScale = siteLighting.GetProperty("exteriorScale").GetSingle(),
+                ExteriorSun = siteLighting.GetProperty("exteriorSun").GetSingle(),
+                InteriorScale = siteLighting.GetProperty("interiorScale").GetSingle(),
+                DungeonScale = siteLighting.GetProperty("dungeonScale").GetSingle(),
+                NightColor = new(siteLighting.GetProperty("nightColor")[0].GetSingle(), siteLighting.GetProperty("nightColor")[1].GetSingle(),
+                    siteLighting.GetProperty("nightColor")[2].GetSingle()),
             },
             new DaggerfallClimbingTuning(
                 climbing.GetProperty("startCheckSeconds").GetSingle(),
@@ -621,7 +628,10 @@ internal sealed record DaggerfallPresentationAudioTuning(float Volume, float Pit
     }
 }
 
-/// <summary>Neutral site fill from the donor's PlayerAdvanced prefab, independent of weather cues.</summary>
+/// <summary>
+/// Neutral site fill from the donor's PlayerAdvanced prefab, independent of weather cues. Those levels count 1 as full
+/// light; the Engine's lights divide by pi, so each kind of place scales its lights to stand where the art wants them.
+/// </summary>
 internal sealed record DaggerfallSiteLightingTuning(
     float InteriorDay,
     float InteriorNight,
@@ -634,11 +644,26 @@ internal sealed record DaggerfallSiteLightingTuning(
     /// <summary>The light a flying spell carries in its element's colour (the donor's missile light).</summary>
     internal float SpellLightRange { get; init; } = 6f;
     internal float SpellLightIntensity { get; init; } = 1f;
+    /// <summary>What the ambient and lamps of each kind of place are multiplied by.</summary>
+    internal float ExteriorScale { get; init; } = 3f;
+    internal float InteriorScale { get; init; } = 1.3f;
+    internal float DungeonScale { get; init; } = 1f;
+    /// <summary>
+    /// The sun at full daylight. Ambient and sun together make pi, which lands noon on level ground at its texture's own
+    /// value. An upright sprite takes little of an overhead sun, so ambient carries most of it, or sprites fall dark at noon.
+    /// </summary>
+    internal float ExteriorSun { get; init; } = 1.05f;
+    /// <summary>The colour of the sky's ambient at night, easing to white by noon. A lamp's warmth stands out against it.</summary>
+    internal Vector3 NightColor { get; init; } = new(.7f, .8f, 1f);
     internal static DaggerfallSiteLightingTuning Classic { get; } = new(
-        160F / 255F, 100F / 255F, 75F / 255F, 150F / 255F, 50F / 255F);
+        160F / 255F, 100F / 255F, 75F / 255F, .7F, .1333F);
 
     internal DaggerfallSiteLightingTuning Validate()
     {
+        foreach (float scale in new[] { ExteriorScale, ExteriorSun, InteriorScale, DungeonScale })
+            if (!float.IsFinite(scale) || scale <= 0) throw new ArgumentOutOfRangeException(nameof(ExteriorScale), "A site's light scale is finite and positive.");
+        if (!float.IsFinite(NightColor.X + NightColor.Y + NightColor.Z) || NightColor.X < 0 || NightColor.Y < 0 || NightColor.Z < 0)
+            throw new ArgumentOutOfRangeException(nameof(NightColor), "The night's colour is finite and not negative.");
         if (!float.IsFinite(MobileGlowRange) || MobileGlowRange <= 0 || !float.IsFinite(MobileGlowIntensity) || MobileGlowIntensity < 0)
             throw new ArgumentOutOfRangeException(nameof(DaggerfallSiteLightingTuning), "Mobile glow requires a positive finite range and nonnegative finite intensity.");
         if (!float.IsFinite(SpellLightRange) || SpellLightRange <= 0 || !float.IsFinite(SpellLightIntensity) || SpellLightIntensity < 0)

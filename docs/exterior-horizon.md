@@ -11,6 +11,7 @@ heightfield in the backdrop that only draws.
 | Heightfield, backdrop link, following the player | `DaggerfallHorizon` |
 | Haze, cloud layer, which sky panorama draws | `DaggerfallWeatherPresentation` |
 | Panoramas with the painted horizon cleared | `SkyHorizonClearing` (importer) |
+| Sun, ambient and how lights scale | `DaggerfallSiteLighting`, `siteLighting` in the tuning payload |
 | Lift, haze, clouds and far colours | `horizon` in the tuning payload |
 | What open ground is made of | `DaggerfallGroundBlend`, `ground` in the tuning payload |
 | A ground archive's layers as one material | `DaggerfallGroundLayers` |
@@ -41,12 +42,33 @@ heightfield in the backdrop that only draws.
   still stand out as a flat shape of the fog's colour. Fog also clears the cloud
   layer, which would darken the sky just above it.
 - **Light.** The world's night lights keep far ground's bright vertex colours bright,
-  so far ground takes the day's light as a material tint, down to `nightTint`. The
-  world has one sun and ambient, carried by the active site and kept when its location
-  unloads behind the player. Resident locations bring only their own lamps.
+  so far ground takes the day's light as a material tint, down to `nightTint`.
 
 The horizon stands only outdoors and only while classic art is off. Classic art
 shows the painted sky, classic fog and no cloud layer.
+
+## Light
+
+Brightness comes from the lights themselves, with no tone mapping or exposure. A tone
+curve crushes the low-key art of night and interiors, and exposure multiplies everything
+in the world, unlit lamp art included, which bleaches it.
+
+- **One sky.** The world has one sun and ambient, carried by the active site and kept
+  when its location unloads behind the player. Resident locations bring only their lamps.
+- **Scale.** The Engine divides light by pi, so `siteLighting` levels are multiplied per
+  kind of place. Outdoors, ambient and sun together make pi at noon, which lands level
+  ground at its texture's own value. Ambient carries most of it: an upright sprite takes
+  little of an overhead sun, and would fall dark at noon.
+- **Night.** The ambient cools toward `nightColor`, so a lamp's warmth stands out. A grade
+  would cool the lamps too.
+- **Sprites.** Flats, nature, people and items take the light around them
+  (`SpriteLightingMode.Synthetic`), so they fall with the day. Lamps (archive 210) stay
+  unlit, since a light source shows at its own brightness, and each carries an Engine
+  point light from the importer. Sprite materials have no emission input, so a sprite
+  glows only by being unlit.
+- **First person.** The classic hand is a screen-space sprite, which lighting turns white,
+  so it stays unlit. The held arms draw in the viewmodel layer and don't take the scene's
+  light either.
 
 ## Open ground
 

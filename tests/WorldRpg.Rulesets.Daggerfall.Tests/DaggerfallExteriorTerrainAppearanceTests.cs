@@ -362,7 +362,11 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         appearance.Reconcile([cell], origin, _ => surface, environment);
         int batches = appearance.ActiveNatureBatchCount;
         Assert.True(batches > 0);
-        Assert.All(graphics.BatchRequests, request => Assert.Equal(new Vector2(3F, 6F), request.Size));
+        Assert.All(graphics.BatchRequests, request =>
+        {
+            Assert.Equal(new Vector2(3F, 6F), request.Size);
+            Assert.Equal(SpriteLightingMode.Synthetic, request.Material.Lighting);
+        });
 
         refreshed = true;
         appearance.AppendFacts([]);

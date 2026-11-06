@@ -34,6 +34,12 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private Func<DaggerfallRacialKind?> playerBeastForm = () => null;
     internal void UsePlayerBeastForm(Func<DaggerfallRacialKind?> form) => playerBeastForm = form;
     private double? playerBeastVoiceSeconds;
+    /// <summary>The archive of the flats that are light sources.</summary>
+    private const int LightFlatArchive = 210;
+    /// <summary>A sprite that takes the light around it, so it falls with the day and warms by a lamp.</summary>
+    internal static readonly SpriteMaterialDescriptor LitSprite = new(SpriteLightingMode.Synthetic, default, default, 1f, 0f, SpriteAlphaMode.Blend, .5f, SpriteShadowPolicy.None);
+    /// <summary>A sprite that shows at its own brightness, as a light source does.</summary>
+    private static readonly SpriteMaterialDescriptor UnlitSprite = new(SpriteLightingMode.Unlit, default, default, 1f, 0f, SpriteAlphaMode.Blend, .5f, SpriteShadowPolicy.None);
     private readonly NormalizedBillboardSprite? candleSprite;
     private SpriteAtlas? candleAtlas;
     private Appearance? candleAppearance;
@@ -207,7 +213,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         this.cityGates = cityGates;
         this.appearance = appearance;
         this.content = content;
-        candleSprite = inputs.BillboardSprites.GetValueOrDefault((210, 3));
+        candleSprite = inputs.BillboardSprites.GetValueOrDefault((LightFlatArchive, 3));
         this.audio = audio;
         this.audioBundle = audioBundle;
         this.random = random;
@@ -1031,7 +1037,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     {
         if (npcVisuals.ContainsKey(id)) return;
         var (_, visual) = CreateSprite(content, new NormalizedActorSprite(sprite.TexturePath, sprite.TextureSha256,
-            sprite.AtlasWidth, sprite.AtlasHeight, sprite.Frames, sprite.InitialFrameId, sprite.Pivot, sprite.Size));
+            sprite.AtlasWidth, sprite.AtlasHeight, sprite.Frames, sprite.InitialFrameId, sprite.Pivot, sprite.Size), material: LitSprite);
         npcVisuals.Add(id, new(id, visual));
     }
 
@@ -1054,7 +1060,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         SpriteAtlas? corpseAtlas = null;
         if (sprite.Corpse is { } authoredCorpse)
         {
-            (corpseAtlas, corpse) = CreateSprite(content, authoredCorpse);
+            (corpseAtlas, corpse) = CreateSprite(content, authoredCorpse, material: LitSprite);
         }
         ActorVisual visual = new(entityId, sprite, atlas, live, corpseAtlas, corpse) { LocationOrdinal = NextLocationVisualOrdinal() };
         AttachCorpseMesh(visual);
@@ -1069,7 +1075,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         }
     }
 
-    private (SpriteAtlas Atlas, Appearance Appearance) CreateSprite(IContentService content, NormalizedActorSprite sprite, DaggerfallMobileDefinition? mobile = null)
+    private (SpriteAtlas Atlas, Appearance Appearance) CreateSprite(IContentService content, NormalizedActorSprite sprite, DaggerfallMobileDefinition? mobile = null, SpriteMaterialDescriptor? material = null)
     {
         RenderResourceInfo texture = appearance.OpenTexture(content, sprite.TexturePath, sprite.TextureSha256);
         ownedResources.Add(texture.Handle);
@@ -1079,6 +1085,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         atlases.Add(atlas);
         var request = new SpriteFromAtlasRequest(atlas, sprite.InitialFrameId, sprite.Pivot, sprite.Size,
             BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F));
+        if (material is { } chosen) request = request with { Material = chosen };
         if (mobile is not null)
             request = request with { Material = new SpriteMaterialDescriptor(
                 mobile.GlowColor is null ? SpriteLightingMode.Synthetic : SpriteLightingMode.Unlit,
