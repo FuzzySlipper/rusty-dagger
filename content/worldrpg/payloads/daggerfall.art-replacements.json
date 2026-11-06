@@ -67667,6 +67667,150 @@
    {
     "replaces": {
      "archive": 200,
+     "record": 7
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-200-record-007.png",
+    "byteLength": 23159,
+    "sha256": "2a8024863f6ee6480389f9acc8f612ea090cfaf08dcff9b4e4bd0727b1098b77",
+    "emission": {
+     "path": "worldrpg/media/refreshed/flats/texture-200-record-007-glow.png",
+     "byteLength": 2624,
+     "sha256": "b0b4322c77450eaf98a7c32bff7b34b0c709a6a0f4d56f858736687fd2cee3f5"
+    },
+    "width": 74,
+    "height": 740,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 37,
+      "height": 370
+     },
+     {
+      "x": 37,
+      "y": 0,
+      "width": 37,
+      "height": 370
+     },
+     {
+      "x": 0,
+      "y": 370,
+      "width": 37,
+      "height": 370
+     },
+     {
+      "x": 37,
+      "y": 370,
+      "width": 37,
+      "height": 370
+     }
+    ],
+    "classic": {
+     "x": 0.027,
+     "y": 0.0149,
+     "width": 0.973,
+     "height": 0.9851
+    }
+   },
+   {
+    "replaces": {
+     "archive": 200,
+     "record": 8
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-200-record-008.png",
+    "byteLength": 15727,
+    "sha256": "3be8fd99cab0d71f4cd3174b69769d690ade62e1c77038bff4cae3df7b4de247",
+    "emission": {
+     "path": "worldrpg/media/refreshed/flats/texture-200-record-008-glow.png",
+     "byteLength": 4920,
+     "sha256": "603172a58bd2a0a55b1033e077b6ce06802aaf318b536c9640a4e136d6aeee6c"
+    },
+    "width": 80,
+    "height": 460,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 230
+     },
+     {
+      "x": 40,
+      "y": 0,
+      "width": 40,
+      "height": 230
+     },
+     {
+      "x": 0,
+      "y": 230,
+      "width": 40,
+      "height": 230
+     },
+     {
+      "x": 40,
+      "y": 230,
+      "width": 40,
+      "height": 230
+     }
+    ],
+    "classic": {
+     "x": 0.0417,
+     "y": 0.0363,
+     "width": 0.9,
+     "height": 0.9579
+    }
+   },
+   {
+    "replaces": {
+     "archive": 200,
+     "record": 9
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-200-record-009.png",
+    "byteLength": 12752,
+    "sha256": "01d4cf5bd2457fd5d39879c5426841c59e441694603e7e5b39b740083e15c5b5",
+    "emission": {
+     "path": "worldrpg/media/refreshed/flats/texture-200-record-009-glow.png",
+     "byteLength": 3758,
+     "sha256": "3bc496cd01b8db8805d8fde916624d73afd40190ee347a4ecf9f9e5463b11b5a"
+    },
+    "width": 72,
+    "height": 312,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 36,
+      "height": 156
+     },
+     {
+      "x": 36,
+      "y": 0,
+      "width": 36,
+      "height": 156
+     },
+     {
+      "x": 0,
+      "y": 156,
+      "width": 36,
+      "height": 156
+     },
+     {
+      "x": 36,
+      "y": 156,
+      "width": 36,
+      "height": 156
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.01,
+     "width": 1.0,
+     "height": 0.9858
+    }
+   },
+   {
+    "replaces": {
+     "archive": 200,
      "record": 10
     },
     "path": "worldrpg/media/refreshed/flats/texture-200-record-010.png",
@@ -67797,6 +67941,92 @@
    {
     "replaces": {
      "archive": 201,
+     "record": 0
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-201-record-000.png",
+    "byteLength": 50802,
+    "sha256": "77681db93ad3f6478ed92120ea92f76a247146dd30f356d1de9f6dc9369c322f",
+    "width": 388,
+    "height": 360,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 194,
+      "height": 180
+     },
+     {
+      "x": 194,
+      "y": 0,
+      "width": 194,
+      "height": 180
+     },
+     {
+      "x": 0,
+      "y": 180,
+      "width": 194,
+      "height": 180
+     },
+     {
+      "x": 194,
+      "y": 180,
+      "width": 194,
+      "height": 180
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0095,
+     "width": 1.0,
+     "height": 0.9793
+    }
+   },
+   {
+    "replaces": {
+     "archive": 201,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-201-record-001.png",
+    "byteLength": 49108,
+    "sha256": "380579372e7236ff38c103c7cb7fe360879b2503d6d0cfe8d0ccf07342a7599f",
+    "width": 338,
+    "height": 358,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 169,
+      "height": 179
+     },
+     {
+      "x": 169,
+      "y": 0,
+      "width": 169,
+      "height": 179
+     },
+     {
+      "x": 0,
+      "y": 179,
+      "width": 169,
+      "height": 179
+     },
+     {
+      "x": 169,
+      "y": 179,
+      "width": 169,
+      "height": 179
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0139,
+     "width": 0.9822,
+     "height": 0.9819
+    }
+   },
+   {
+    "replaces": {
+     "archive": 201,
      "record": 2
     },
     "path": "worldrpg/media/refreshed/flats/texture-201-record-002.png",
@@ -67817,6 +68047,338 @@
      "y": 0.0086,
      "width": 0.9945,
      "height": 0.9843
+    }
+   },
+   {
+    "replaces": {
+     "archive": 201,
+     "record": 3
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-201-record-003.png",
+    "byteLength": 32139,
+    "sha256": "14414d3cb099953b8c3a234ae6e3c72a5897700a9c332a2a4ef4d2ed01848e3d",
+    "width": 304,
+    "height": 256,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 152,
+      "height": 128
+     },
+     {
+      "x": 152,
+      "y": 0,
+      "width": 152,
+      "height": 128
+     },
+     {
+      "x": 0,
+      "y": 128,
+      "width": 152,
+      "height": 128
+     },
+     {
+      "x": 152,
+      "y": 128,
+      "width": 152,
+      "height": 128
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0052,
+     "width": 0.9985,
+     "height": 0.9861
+    }
+   },
+   {
+    "replaces": {
+     "archive": 201,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-201-record-004.png",
+    "byteLength": 35180,
+    "sha256": "7325aeefd18245b4daebbd9c817c88e2a3c40d3e9ba98ac1491679c5ad396976",
+    "width": 368,
+    "height": 232,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 184,
+      "height": 116
+     },
+     {
+      "x": 184,
+      "y": 0,
+      "width": 184,
+      "height": 116
+     },
+     {
+      "x": 0,
+      "y": 116,
+      "width": 184,
+      "height": 116
+     },
+     {
+      "x": 184,
+      "y": 116,
+      "width": 184,
+      "height": 116
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0172,
+     "width": 0.9973,
+     "height": 0.9828
+    }
+   },
+   {
+    "replaces": {
+     "archive": 201,
+     "record": 5
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-201-record-005.png",
+    "byteLength": 17468,
+    "sha256": "9cb1725d9513c93557044042ba3294219c6dd16ef5c07b3f85bf24e164fe1385",
+    "width": 262,
+    "height": 128,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 131,
+      "height": 64
+     },
+     {
+      "x": 131,
+      "y": 0,
+      "width": 131,
+      "height": 64
+     },
+     {
+      "x": 0,
+      "y": 64,
+      "width": 131,
+      "height": 64
+     },
+     {
+      "x": 131,
+      "y": 64,
+      "width": 131,
+      "height": 64
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0085,
+     "width": 0.9903,
+     "height": 0.9688
+    }
+   },
+   {
+    "replaces": {
+     "archive": 201,
+     "record": 6
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-201-record-006.png",
+    "byteLength": 15333,
+    "sha256": "e282f81e4cdcf9f5770e0907774c2f9a89c9294cb94d153e2b20f1bc558b661a",
+    "width": 180,
+    "height": 124,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 90,
+      "height": 62
+     },
+     {
+      "x": 90,
+      "y": 0,
+      "width": 90,
+      "height": 62
+     },
+     {
+      "x": 0,
+      "y": 62,
+      "width": 90,
+      "height": 62
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0081,
+     "width": 1.0,
+     "height": 0.9756
+    }
+   },
+   {
+    "replaces": {
+     "archive": 201,
+     "record": 7
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-201-record-007.png",
+    "byteLength": 6304,
+    "sha256": "a465e0686b70c0c8fa681c23c9e9839bd168ed8d61834edc41d90a253dde5355",
+    "width": 136,
+    "height": 100,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 68,
+      "height": 50
+     },
+     {
+      "x": 68,
+      "y": 0,
+      "width": 68,
+      "height": 50
+     },
+     {
+      "x": 0,
+      "y": 50,
+      "width": 68,
+      "height": 50
+     },
+     {
+      "x": 68,
+      "y": 50,
+      "width": 68,
+      "height": 50
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0072,
+     "width": 1.0,
+     "height": 0.9928
+    }
+   },
+   {
+    "replaces": {
+     "archive": 201,
+     "record": 8
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-201-record-008.png",
+    "byteLength": 4973,
+    "sha256": "89d8f9672764c18c3533e6c113feda0d12d2260a330188e3db4005924d20b854",
+    "width": 116,
+    "height": 96,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 58,
+      "height": 48
+     },
+     {
+      "x": 58,
+      "y": 0,
+      "width": 58,
+      "height": 48
+     },
+     {
+      "x": 0,
+      "y": 48,
+      "width": 58,
+      "height": 48
+     },
+     {
+      "x": 58,
+      "y": 48,
+      "width": 58,
+      "height": 48
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0,
+     "width": 0.9947,
+     "height": 1.0
+    }
+   },
+   {
+    "replaces": {
+     "archive": 201,
+     "record": 9
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-201-record-009.png",
+    "byteLength": 17783,
+    "sha256": "0126dfdd007111b0cf0ba00361c46280653731bbef02f371947908627995767a",
+    "width": 224,
+    "height": 162,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 112,
+      "height": 81
+     },
+     {
+      "x": 112,
+      "y": 0,
+      "width": 112,
+      "height": 81
+     },
+     {
+      "x": 0,
+      "y": 81,
+      "width": 112,
+      "height": 81
+     },
+     {
+      "x": 112,
+      "y": 81,
+      "width": 112,
+      "height": 81
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0057,
+     "width": 1.0,
+     "height": 0.983
+    }
+   },
+   {
+    "replaces": {
+     "archive": 201,
+     "record": 10
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-201-record-010.png",
+    "byteLength": 18598,
+    "sha256": "7b851d71a6cc251f3dd92322d0e7fb563ecdce265f10aacd088c9f92588198bc",
+    "width": 212,
+    "height": 132,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 106,
+      "height": 66
+     },
+     {
+      "x": 106,
+      "y": 0,
+      "width": 106,
+      "height": 66
+     },
+     {
+      "x": 0,
+      "y": 66,
+      "width": 106,
+      "height": 66
+     }
+    ],
+    "classic": {
+     "x": 0.004,
+     "y": 0.0022,
+     "width": 0.996,
+     "height": 0.9978
     }
    },
    {
@@ -67892,6 +68454,54 @@
      "y": 0.0044,
      "width": 0.9934,
      "height": 0.9956
+    }
+   },
+   {
+    "replaces": {
+     "archive": 202,
+     "record": 2
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-202-record-002.png",
+    "byteLength": 82224,
+    "sha256": "7ab941be1926d8ff7c72e7058ba4f4fe99c4a59f46a7635574f2ea26c996cc13",
+    "emission": {
+     "path": "worldrpg/media/refreshed/flats/texture-202-record-002-glow.png",
+     "byteLength": 8954,
+     "sha256": "bf9f2a6147b6f9a00b72f3c401b3b9c1cf7ebac3eccf450304f94f429ef72cee"
+    },
+    "width": 362,
+    "height": 540,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 181,
+      "height": 270
+     },
+     {
+      "x": 181,
+      "y": 0,
+      "width": 181,
+      "height": 270
+     },
+     {
+      "x": 0,
+      "y": 270,
+      "width": 181,
+      "height": 270
+     },
+     {
+      "x": 181,
+      "y": 270,
+      "width": 181,
+      "height": 270
+     }
+    ],
+    "classic": {
+     "x": 0.0177,
+     "y": 0.0074,
+     "width": 0.9823,
+     "height": 0.9866
     }
    },
    {
@@ -70072,6 +70682,54 @@
    {
     "replaces": {
      "archive": 208,
+     "record": 2
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-208-record-002.png",
+    "byteLength": 13689,
+    "sha256": "b5c2440dec940d6b5e90fba9798f1ab3d334027497648616969683150fc0e9a6",
+    "emission": {
+     "path": "worldrpg/media/refreshed/flats/texture-208-record-002-glow.png",
+     "byteLength": 2071,
+     "sha256": "3e98060ac93694b79a5724e22e6f75210f9ad503f75a293954040b7d46e5a88f"
+    },
+    "width": 136,
+    "height": 206,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 68,
+      "height": 103
+     },
+     {
+      "x": 68,
+      "y": 0,
+      "width": 68,
+      "height": 103
+     },
+     {
+      "x": 0,
+      "y": 103,
+      "width": 68,
+      "height": 103
+     },
+     {
+      "x": 68,
+      "y": 103,
+      "width": 68,
+      "height": 103
+     }
+    ],
+    "classic": {
+     "x": 0.0696,
+     "y": 0.0028,
+     "width": 0.9156,
+     "height": 0.9903
+    }
+   },
+   {
+    "replaces": {
+     "archive": 208,
      "record": 3
     },
     "path": "worldrpg/media/refreshed/flats/texture-208-record-003.png",
@@ -70367,6 +71025,156 @@
      "y": 0.0076,
      "width": 1.0,
      "height": 0.9771
+    }
+   },
+   {
+    "replaces": {
+     "archive": 210,
+     "record": 0
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-210-record-000.png",
+    "byteLength": 23352,
+    "sha256": "9461bd075b58bacb28228e39466069d6ec26c698821c478198bfa56af06b5999",
+    "emission": {
+     "path": "worldrpg/media/refreshed/flats/texture-210-record-000-glow.png",
+     "byteLength": 11152,
+     "sha256": "ed2709f59a0eff061f5f4105ca1f91cabdac62f48aaf26e558c9fe221f9a14c4"
+    },
+    "width": 160,
+    "height": 212,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 80,
+      "height": 106
+     },
+     {
+      "x": 80,
+      "y": 0,
+      "width": 80,
+      "height": 106
+     },
+     {
+      "x": 0,
+      "y": 106,
+      "width": 80,
+      "height": 106
+     },
+     {
+      "x": 80,
+      "y": 106,
+      "width": 80,
+      "height": 106
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0108,
+     "width": 1.0,
+     "height": 0.9851
+    }
+   },
+   {
+    "replaces": {
+     "archive": 210,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-210-record-001.png",
+    "byteLength": 24525,
+    "sha256": "710c0f9cf67c2e27b370d3a54cf65727a082f69f17613706bf3affdc3611c217",
+    "emission": {
+     "path": "worldrpg/media/refreshed/flats/texture-210-record-001-glow.png",
+     "byteLength": 10330,
+     "sha256": "3fd38b39d881743e73aa062f7d4d878979b524a2aa682fbf4c3d2b6e8b4e6d77"
+    },
+    "width": 192,
+    "height": 196,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 96,
+      "height": 98
+     },
+     {
+      "x": 96,
+      "y": 0,
+      "width": 96,
+      "height": 98
+     },
+     {
+      "x": 0,
+      "y": 98,
+      "width": 96,
+      "height": 98
+     },
+     {
+      "x": 96,
+      "y": 98,
+      "width": 96,
+      "height": 98
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0,
+     "width": 1.0,
+     "height": 0.9986
+    }
+   },
+   {
+    "replaces": {
+     "archive": 210,
+     "record": 2
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-210-record-002.png",
+    "byteLength": 3294,
+    "sha256": "aa99ed0dee792053ae6f1e5afd0256c261f896cec8faba6fecb1ab01dfd1fc1d",
+    "emission": {
+     "path": "worldrpg/media/refreshed/flats/texture-210-record-002-glow.png",
+     "byteLength": 785,
+     "sha256": "fbd343411a39b199963bbfa0d6ab427473a3f2b0faabe4cb7a66dd9da67f96d4"
+    },
+    "width": 78,
+    "height": 118,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 26,
+      "height": 59
+     },
+     {
+      "x": 26,
+      "y": 0,
+      "width": 26,
+      "height": 59
+     },
+     {
+      "x": 52,
+      "y": 0,
+      "width": 26,
+      "height": 59
+     },
+     {
+      "x": 0,
+      "y": 59,
+      "width": 26,
+      "height": 59
+     },
+     {
+      "x": 26,
+      "y": 59,
+      "width": 26,
+      "height": 59
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0181,
+     "width": 1.0,
+     "height": 0.9754
     }
    },
    {
@@ -70787,6 +71595,300 @@
    {
     "replaces": {
      "archive": 210,
+     "record": 16
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-210-record-016.png",
+    "byteLength": 9190,
+    "sha256": "3c3f26e6431d6bec36016c0bf5c264b63525014b114744a31d37731af167668e",
+    "emission": {
+     "path": "worldrpg/media/refreshed/flats/texture-210-record-016-glow.png",
+     "byteLength": 4249,
+     "sha256": "dc5f9b9a1a1a3899e87812f62fd473897e5774e23d5f87265a733c3f422b5b3d"
+    },
+    "width": 56,
+    "height": 220,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 28,
+      "height": 110
+     },
+     {
+      "x": 28,
+      "y": 0,
+      "width": 28,
+      "height": 110
+     },
+     {
+      "x": 0,
+      "y": 110,
+      "width": 28,
+      "height": 110
+     },
+     {
+      "x": 28,
+      "y": 110,
+      "width": 28,
+      "height": 110
+     }
+    ],
+    "classic": {
+     "x": 0.0256,
+     "y": 0.0,
+     "width": 0.9333,
+     "height": 0.9844
+    }
+   },
+   {
+    "replaces": {
+     "archive": 210,
+     "record": 17
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-210-record-017.png",
+    "byteLength": 9883,
+    "sha256": "156b3c3e27f63d3fe1006eed53ed2a6d5b007b3303ad1f1dd36a340254b0b868",
+    "emission": {
+     "path": "worldrpg/media/refreshed/flats/texture-210-record-017-glow.png",
+     "byteLength": 4398,
+     "sha256": "5b20dd74de6a6fa9c84a54634aa5d6fa54ce8cbc72e18522a6a83ca41e2b094b"
+    },
+    "width": 56,
+    "height": 214,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 28,
+      "height": 107
+     },
+     {
+      "x": 28,
+      "y": 0,
+      "width": 28,
+      "height": 107
+     },
+     {
+      "x": 0,
+      "y": 107,
+      "width": 28,
+      "height": 107
+     },
+     {
+      "x": 28,
+      "y": 107,
+      "width": 28,
+      "height": 107
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0275,
+     "width": 0.9375,
+     "height": 0.9387
+    }
+   },
+   {
+    "replaces": {
+     "archive": 210,
+     "record": 18
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-210-record-018.png",
+    "byteLength": 8020,
+    "sha256": "9f835b351cfe693ca452317adb0cd0bdf798ebcd4ef4883fe6642bf975066569",
+    "emission": {
+     "path": "worldrpg/media/refreshed/flats/texture-210-record-018-glow.png",
+     "byteLength": 4733,
+     "sha256": "d921516b43a8e7d095426bbac73f74ef2b2223f0d2ac32cbc9543fffb0732f06"
+    },
+    "width": 66,
+    "height": 226,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 33,
+      "height": 113
+     },
+     {
+      "x": 33,
+      "y": 0,
+      "width": 33,
+      "height": 113
+     },
+     {
+      "x": 0,
+      "y": 113,
+      "width": 33,
+      "height": 113
+     },
+     {
+      "x": 33,
+      "y": 113,
+      "width": 33,
+      "height": 113
+     }
+    ],
+    "classic": {
+     "x": 0.0184,
+     "y": 0.0,
+     "width": 0.9585,
+     "height": 0.9701
+    }
+   },
+   {
+    "replaces": {
+     "archive": 210,
+     "record": 19
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-210-record-019.png",
+    "byteLength": 24384,
+    "sha256": "dbbcfc9523f8982211bbce3607dfa9a79797f152a115649162f3aa0aae2de662",
+    "emission": {
+     "path": "worldrpg/media/refreshed/flats/texture-210-record-019-glow.png",
+     "byteLength": 6956,
+     "sha256": "526bd10c45751e42222e4d4ff2da20c0a1f373a3e68fc3e99e5d58b693e774b3"
+    },
+    "width": 164,
+    "height": 376,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 82,
+      "height": 188
+     },
+     {
+      "x": 82,
+      "y": 0,
+      "width": 82,
+      "height": 188
+     },
+     {
+      "x": 0,
+      "y": 188,
+      "width": 82,
+      "height": 188
+     },
+     {
+      "x": 82,
+      "y": 188,
+      "width": 82,
+      "height": 188
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0053,
+     "width": 1.0,
+     "height": 0.9907
+    }
+   },
+   {
+    "replaces": {
+     "archive": 210,
+     "record": 20
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-210-record-020.png",
+    "byteLength": 12457,
+    "sha256": "3abae519f8c9d9f0075e4e1637628ca1c78ae74448926169404de5f3ba345808",
+    "emission": {
+     "path": "worldrpg/media/refreshed/flats/texture-210-record-020-glow.png",
+     "byteLength": 3243,
+     "sha256": "3db0bc60a693ce0cab28f3eb5915a92404aaf66299d8f0d30b72984c2895c97b"
+    },
+    "width": 64,
+    "height": 372,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 186
+     },
+     {
+      "x": 32,
+      "y": 0,
+      "width": 32,
+      "height": 186
+     },
+     {
+      "x": 0,
+      "y": 186,
+      "width": 32,
+      "height": 186
+     },
+     {
+      "x": 32,
+      "y": 186,
+      "width": 32,
+      "height": 186
+     }
+    ],
+    "classic": {
+     "x": 0.0078,
+     "y": 0.0162,
+     "width": 0.9922,
+     "height": 0.9272
+    }
+   },
+   {
+    "replaces": {
+     "archive": 210,
+     "record": 21
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-210-record-021.png",
+    "byteLength": 7255,
+    "sha256": "87f72beb37f4fd5f84630231ca7c6b45bbd341f5e4b49734ea519c111d50776e",
+    "emission": {
+     "path": "worldrpg/media/refreshed/flats/texture-210-record-021-glow.png",
+     "byteLength": 2377,
+     "sha256": "e4e277c17eb059b2f6f7713f0880843d02d29a5397a31923c15705b7a8ce4309"
+    },
+    "width": 72,
+    "height": 334,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 24,
+      "height": 167
+     },
+     {
+      "x": 24,
+      "y": 0,
+      "width": 24,
+      "height": 167
+     },
+     {
+      "x": 48,
+      "y": 0,
+      "width": 24,
+      "height": 167
+     },
+     {
+      "x": 0,
+      "y": 167,
+      "width": 24,
+      "height": 167
+     },
+     {
+      "x": 24,
+      "y": 167,
+      "width": 24,
+      "height": 167
+     }
+    ],
+    "classic": {
+     "x": 0.0092,
+     "y": 0.0173,
+     "width": 0.9908,
+     "height": 0.9587
+    }
+   },
+   {
+    "replaces": {
+     "archive": 210,
      "record": 22
     },
     "path": "worldrpg/media/refreshed/flats/texture-210-record-022.png",
@@ -70842,6 +71944,150 @@
      "y": 0.0997,
      "width": 0.9865,
      "height": 0.8747
+    }
+   },
+   {
+    "replaces": {
+     "archive": 210,
+     "record": 24
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-210-record-024.png",
+    "byteLength": 23159,
+    "sha256": "2a8024863f6ee6480389f9acc8f612ea090cfaf08dcff9b4e4bd0727b1098b77",
+    "emission": {
+     "path": "worldrpg/media/refreshed/flats/texture-210-record-024-glow.png",
+     "byteLength": 2624,
+     "sha256": "b0b4322c77450eaf98a7c32bff7b34b0c709a6a0f4d56f858736687fd2cee3f5"
+    },
+    "width": 74,
+    "height": 740,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 37,
+      "height": 370
+     },
+     {
+      "x": 37,
+      "y": 0,
+      "width": 37,
+      "height": 370
+     },
+     {
+      "x": 0,
+      "y": 370,
+      "width": 37,
+      "height": 370
+     },
+     {
+      "x": 37,
+      "y": 370,
+      "width": 37,
+      "height": 370
+     }
+    ],
+    "classic": {
+     "x": 0.027,
+     "y": 0.0149,
+     "width": 0.973,
+     "height": 0.9851
+    }
+   },
+   {
+    "replaces": {
+     "archive": 210,
+     "record": 25
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-210-record-025.png",
+    "byteLength": 15727,
+    "sha256": "3be8fd99cab0d71f4cd3174b69769d690ade62e1c77038bff4cae3df7b4de247",
+    "emission": {
+     "path": "worldrpg/media/refreshed/flats/texture-210-record-025-glow.png",
+     "byteLength": 4920,
+     "sha256": "603172a58bd2a0a55b1033e077b6ce06802aaf318b536c9640a4e136d6aeee6c"
+    },
+    "width": 80,
+    "height": 460,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 40,
+      "height": 230
+     },
+     {
+      "x": 40,
+      "y": 0,
+      "width": 40,
+      "height": 230
+     },
+     {
+      "x": 0,
+      "y": 230,
+      "width": 40,
+      "height": 230
+     },
+     {
+      "x": 40,
+      "y": 230,
+      "width": 40,
+      "height": 230
+     }
+    ],
+    "classic": {
+     "x": 0.0417,
+     "y": 0.0363,
+     "width": 0.9,
+     "height": 0.9579
+    }
+   },
+   {
+    "replaces": {
+     "archive": 210,
+     "record": 26
+    },
+    "path": "worldrpg/media/refreshed/flats/texture-210-record-026.png",
+    "byteLength": 12752,
+    "sha256": "01d4cf5bd2457fd5d39879c5426841c59e441694603e7e5b39b740083e15c5b5",
+    "emission": {
+     "path": "worldrpg/media/refreshed/flats/texture-210-record-026-glow.png",
+     "byteLength": 3758,
+     "sha256": "3bc496cd01b8db8805d8fde916624d73afd40190ee347a4ecf9f9e5463b11b5a"
+    },
+    "width": 72,
+    "height": 312,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 36,
+      "height": 156
+     },
+     {
+      "x": 36,
+      "y": 0,
+      "width": 36,
+      "height": 156
+     },
+     {
+      "x": 0,
+      "y": 156,
+      "width": 36,
+      "height": 156
+     },
+     {
+      "x": 36,
+      "y": 156,
+      "width": 36,
+      "height": 156
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.01,
+     "width": 1.0,
+     "height": 0.9858
     }
    },
    {
