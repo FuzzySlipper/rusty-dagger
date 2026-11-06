@@ -53,11 +53,21 @@ internal sealed class DaggerfallExteriorGroundCollider : IDisposable
         _streamer.Update();
     }
 
-    /// <summary>Whether the ground stands about a local point, far enough to arrive on.</summary>
-    internal HeightfieldColliderReadout Read(Vector3 local, DaggerfallExteriorWorldOrigin origin)
+    /// <summary>
+    /// Whether the ground stands about every focus, far enough to arrive on. Anyone a focus stands for falls without it,
+    /// and ground arriving late would install around them, so one focus still waiting is the whole answer.
+    /// </summary>
+    internal HeightfieldColliderReadout Read()
     {
-        Vector3 frame = local - origin.Compensation;
-        return _spatial.ReadHeightfieldCollider(new(_collider, frame.X, frame.Z, ArrivalReachMetres));
+        bool ready = true;
+        uint resident = 0, pending = 0, refused = 0;
+        foreach (HeightfieldColliderFocus focus in _focuses)
+        {
+            HeightfieldColliderReadout read = _spatial.ReadHeightfieldCollider(new(_collider, focus.X, focus.Z, ArrivalReachMetres));
+            ready &= read.Ready;
+            (resident, pending, refused) = (read.ResidentTiles, read.PendingTiles, read.RefusedTiles);
+        }
+        return new(ready, resident, pending, refused);
     }
 
     public void Dispose()

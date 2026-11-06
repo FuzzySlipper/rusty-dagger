@@ -16,7 +16,7 @@ internal sealed partial class DaggerfallSession
     public LoadingProgress AwaitArrivalGround()
     {
         SyncWeatherContext();
-        LoadingProgress collider = _sites.AwaitGroundCollider(GroundWalkers());
+        LoadingProgress collider = _sites.AwaitGroundCollider();
         return collider.Done ? _horizon.GroundProgress() : collider;
     }
 

@@ -33,6 +33,9 @@ internal class SpatialFake : DispatchProxy
     internal List<HeightfieldColliderFocus[]> HeightfieldColliderFocuses { get; } = [];
     /// <summary>Whether the ground about a read point stands; a test holding an arrival clears it.</summary>
     internal bool HeightfieldColliderReady { get; set; } = true;
+    /// <summary>Whether the ground about one read point stands, for ground that arrives at one place before another.</summary>
+    internal Func<HeightfieldColliderReadRequest, bool>? HeightfieldColliderReadyAt { get; set; }
+    internal List<HeightfieldColliderReadRequest> HeightfieldColliderReads { get; } = [];
     internal uint HeightfieldColliderRefusedTiles { get; set; }
     internal int ReplaceCalls { get; private set; }
     internal List<SpatialContentArtifactResidencyRequest> ContentResidencyRequests { get; } = [];
@@ -129,7 +132,7 @@ internal class SpatialFake : DispatchProxy
         nameof(ISpatialService.ReadCollisionResidency) => ReadCollisionResidency((CollisionResidencyReadRequest)arguments![0]!),
         // The fake's floor answers everywhere, so exterior ground stands at once and no tile is asked for.
         nameof(ISpatialService.CreateHeightfieldCollider) => CreateHeightfieldCollider(),
-        nameof(ISpatialService.ReadHeightfieldCollider) => new HeightfieldColliderReadout(HeightfieldColliderReady, 1, HeightfieldColliderReady ? 0U : 1U, HeightfieldColliderRefusedTiles),
+        nameof(ISpatialService.ReadHeightfieldCollider) => ReadHeightfieldCollider((HeightfieldColliderReadRequest)arguments![0]!),
         nameof(ISpatialService.ReadHeightfieldColliderRequests) => ReadOnlyMemory<HeightfieldTileRequest>.Empty,
         nameof(ISpatialService.SetHeightfieldColliderFocuses) => SetHeightfieldColliderFocuses((HeightfieldColliderFocusRequest)arguments![0]!),
         nameof(ISpatialService.ReadContentArtifact) => Read(),
@@ -285,6 +288,13 @@ internal class SpatialFake : DispatchProxy
     /// A deferred delta is copied and queued under the next batch number, and the receipt names it with the counts
     /// live now; a synchronous one installs every queued batch first.
     /// </remarks>
+    private HeightfieldColliderReadout ReadHeightfieldCollider(HeightfieldColliderReadRequest request)
+    {
+        HeightfieldColliderReads.Add(request);
+        bool ready = HeightfieldColliderReady && (HeightfieldColliderReadyAt?.Invoke(request) ?? true);
+        return new HeightfieldColliderReadout(ready, 1, ready ? 0U : 1U, HeightfieldColliderRefusedTiles);
+    }
+
     private HeightfieldCollider CreateHeightfieldCollider()
     {
         HeightfieldColliderCreates++;

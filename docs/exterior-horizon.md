@@ -29,9 +29,10 @@ surface agree, and it reaches as far as that finest ring. It holds ground about 
 and every living actor outside a town's people, so an enemy left behind keeps its floor.
 The people of a town stand on the town's collision-only ground plane instead, which lies
 level with the flattened ground and keeps them standing past the collider's reach, in a
-neighbouring location the player has not reached. Tiles arrive over updates, so a staged
-change waits for the ground about its arrival before it stands the player or anyone placed
-with them. Travel makes a new collider; an Engine origin rebase carries the old one.
+neighbouring location the player has not reached. Tiles arrive over updates, so arrival and
+load wait for the ground about every one of those people, not only the player, and play holds
+until it stands: anyone who fell meanwhile would have the ground install around them, which
+the Engine refuses. Travel makes a new collider; an Engine origin rebase carries the old one.
 
 ## How it draws
 
