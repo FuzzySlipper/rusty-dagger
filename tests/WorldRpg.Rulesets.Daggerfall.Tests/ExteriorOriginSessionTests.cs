@@ -703,6 +703,31 @@ public sealed class ExteriorOriginSessionTests
         Assert.Throws<ArgumentException>(() => malformed.ResolveRestore(definitions, exterior));
     }
 
+    [Fact]
+    public void A_site_past_the_window_keeps_its_height_without_rebuilding_its_cell()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior.json");
+        List<string> releases = [];
+        ContentFake content = new(releases); PopulateContent(content, exterior);
+        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
+        DaggerfallExteriorCellId site = session.Sites.CaptureExteriorResidency()!.Value.Center;
+        Vector3 here = session.Sites.LocalToProfile(Vector3.Zero);
+
+        WorldPoint away = new(5 * DaggerfallExteriorCellResidency.CellSize, -50, -1);
+        Assert.True(session.Sites.TryRelocatePlayer(exterior.ProfileKey, new("recall", away, .7f, .1f)));
+        Assert.DoesNotContain(site, session.Sites.ResidentExteriorCells);
+        Assert.False(session.Sites.HoldsExteriorSurface(site));
+
+        // Every update asks where the site stands: that must not build its whole cell again.
+        Vector3 there = session.Sites.LocalToProfile(Vector3.Zero);
+        Assert.False(session.Sites.HoldsExteriorSurface(site));
+        Assert.NotEqual(here, there);
+    }
+
     [Theory]
     [InlineData(501f)]
     [InlineData(-501f)]
