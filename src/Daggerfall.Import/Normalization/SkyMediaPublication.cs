@@ -513,7 +513,7 @@ public sealed record SkyMediaPublication(
             byte[] panorama = SkyNightPanoramaEncoder.Pixels(rgba);
             byte[] png = SkyPanoramaEncoder.Png(panorama);
             artifacts.Add(new(path, png, mediaId: id));
-            cleared.Add(Cleared(artifacts, id, $"media/sky/resources/night-{source.NightIndex:00}-clear.png", panorama));
+            cleared.Add(Cleared(artifacts, id, $"media/sky/resources/night-{source.NightIndex:00}-clear.png", panorama, night: true));
             nightResources.Add(new(id, path, ContentDigest.Compute(png), png.LongLength, PanoramaWidth, PanoramaHeight,
                 NightWidth, NightHeight, source.NightIndex, source.SourcePath, ContentDigest.Compute(source.Bytes.Span), source.Bytes.Length,
                 nightPalette.SourcePath, nightPalette.SourceHash, nightPalette.ByteLength, SkyNightStarPolicy.Donor,
@@ -578,10 +578,10 @@ public sealed record SkyMediaPublication(
             MoonColumns, MoonFrames, source.SourcePath, ContentDigest.Compute(source.Bytes.Span));
     }
 
-    private static SkyClearedResource Cleared(List<ImportPublicationArtifact> artifacts, string of, string path, byte[] panorama)
+    private static SkyClearedResource Cleared(List<ImportPublicationArtifact> artifacts, string of, string path, byte[] panorama, bool night = false)
     {
         string id = $"{of}/clear";
-        byte[] png = SkyPanoramaEncoder.Png(SkyHorizonClearing.Clear(panorama));
+        byte[] png = SkyPanoramaEncoder.Png(night ? SkyHorizonClearing.ClearNight(panorama) : SkyHorizonClearing.Clear(panorama));
         artifacts.Add(new(path, png, mediaId: id));
         return new(id, of, path, ContentDigest.Compute(png), png.LongLength, PanoramaWidth, PanoramaHeight, SkyHorizonClearing.HorizonColor(panorama));
     }
@@ -667,7 +667,8 @@ internal static class SkyPanoramaEncoder
 /// Clears a panorama's painted horizon for a sky drawn over real distant ground. The classic paints its mountains,
 /// forests and low cloud into the sky's lower third, and they would float above the real skyline: everything from
 /// <see cref="FromRow"/> to the horizon becomes a fade from the sky above it down to the horizon's colour, stepped and
-/// dithered like the palette art around it.
+/// dithered like the palette art around it. Every column of a panorama also meets at the zenith, so what varies along
+/// a row draws as spokes converging overhead: the rows above <see cref="ZenithRows"/> close on their own mean colour.
 /// </summary>
 public static class SkyHorizonClearing
 {
@@ -676,6 +677,12 @@ public static class SkyHorizonClearing
     private const int HorizonRow = SkyMediaPublication.PanoramaHeight / 2;
     /// <summary>The rows and columns either side averaged into the colour the fade starts from.</summary>
     private const int SourceRows = 6, SourceColumns = 24;
+    /// <summary>The panorama rows the zenith closes over, about 32 degrees from overhead.</summary>
+    public const int ZenithRows = 90;
+    /// <summary>The rows either side averaged into a row's mean, so the closed zenith shows no rings.</summary>
+    private const int ZenithMeanRows = 8;
+    /// <summary>How far above its row's mean brightness a pixel of a night sky is a star.</summary>
+    private const float StarContrast = 12F;
     /// <summary>Colour channels step by this, as the palette's ramps do.</summary>
     private const int ColourStep = 6;
     private static readonly int[] Dither = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
@@ -719,8 +726,85 @@ public static class SkyHorizonClearing
             }
         }
 
+        CloseZenith(cleared);
         return cleared;
     }
+
+    /// <summary>
+    /// Clears a night panorama, keeping its stars overhead. Closing the zenith alone would leave a starless hole, and a
+    /// star left in place draws as a needle pointing at the zenith. The stars of the closed rows are lifted out first and
+    /// put back round: as wide as the row is stretched, and as sparse, so the sky holds them evenly.
+    /// </summary>
+    public static byte[] ClearNight(byte[] panorama)
+    {
+        const int width = SkyMediaPublication.PanoramaWidth;
+        byte[] starless = (byte[])panorama.Clone();
+        List<(int X, int Y, byte[] Colour)> stars = [];
+        for (int y = 0; y < ZenithRows; y++)
+        {
+            float mean = 0;
+            for (int x = 0; x < width; x++) mean += Brightness(panorama, (y * width) + x);
+            mean /= width;
+            List<int> sky = [];
+            List<int> lit = [];
+            for (int x = 0; x < width; x++) (Brightness(panorama, (y * width) + x) - mean > StarContrast ? lit : sky).Add(x);
+            foreach (int x in lit)
+            {
+                int at = ((y * width) + x) * 4;
+                stars.Add((x, y, panorama[at..(at + 3)]));
+                int from = ((y * width) + sky[x % sky.Count]) * 4;
+                panorama.AsSpan(from, 3).CopyTo(starless.AsSpan(at, 3));
+            }
+        }
+
+        byte[] cleared = Clear(starless);
+        foreach ((int x, int y, byte[] colour) in stars)
+        {
+            double stretch = 1 / Math.Sin((y + .5) / SkyMediaPublication.PanoramaHeight * Math.PI);
+            if (Scatter(x, y) * stretch >= 1) continue;
+            int columns = (int)Math.Round(stretch);
+            for (int column = x - (columns / 2); column < x - (columns / 2) + columns; column++)
+                colour.CopyTo(cleared.AsSpan(((y * width) + ((column + width) % width)) * 4, 3));
+        }
+
+        return cleared;
+    }
+
+    private static void CloseZenith(byte[] panorama)
+    {
+        const int width = SkyMediaPublication.PanoramaWidth;
+        const int rows = ZenithRows + ZenithMeanRows;
+        float[,] means = new float[rows, 3];
+        for (int y = 0; y < rows; y++)
+        for (int x = 0; x < width; x++)
+        for (int channel = 0; channel < 3; channel++)
+            means[y, channel] += panorama[(((y * width) + x) * 4) + channel] / (float)width;
+
+        for (int y = 0; y < ZenithRows; y++)
+        {
+            float share = (y + .5F) / ZenithRows;
+            share = share * share * (3 - (2 * share));
+            int first = Math.Max(0, y - ZenithMeanRows), last = y + ZenithMeanRows;
+            for (int channel = 0; channel < 3; channel++)
+            {
+                float mean = 0;
+                for (int row = first; row <= last; row++) mean += means[row, channel];
+                mean /= last - first + 1;
+                for (int x = 0; x < width; x++)
+                {
+                    int at = (((y * width) + x) * 4) + channel;
+                    panorama[at] = (byte)Math.Clamp(MathF.Round(mean + ((panorama[at] - mean) * share)), 0, 255);
+                }
+            }
+        }
+    }
+
+    private static float Brightness(byte[] panorama, int pixel) =>
+        (panorama[pixel * 4] + panorama[(pixel * 4) + 1] + panorama[(pixel * 4) + 2]) / 3F;
+
+    /// <summary>A fixed fraction from 0 to 1 for one panorama pixel, so publication stays deterministic.</summary>
+    private static double Scatter(int x, int y) =>
+        (uint)(((x * 73856093) ^ (y * 19349663)) * -1640531527) / (double)uint.MaxValue;
 }
 
 /// <summary>Converts the donor's single night image, used for both hemispheres, into a 2:1 panorama.</summary>

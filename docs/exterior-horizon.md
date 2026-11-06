@@ -13,7 +13,7 @@ and nature stay with the walked window's cells; neither heightfield collides.
 | Both heightfields, backdrop link, following the player | `DaggerfallHorizon` |
 | Haze, cloud layer, which sky draws, falling weather, wet ground and snow | `DaggerfallWeatherPresentation` |
 | Moons | `DaggerfallMoons`, `SkyMediaPublication` (importer) |
-| Panoramas with the painted horizon cleared | `SkyHorizonClearing` (importer) |
+| Panoramas with the painted horizon cleared and the zenith closed | `SkyHorizonClearing` (importer) |
 | Sun, ambient and how lights scale | `DaggerfallSiteLighting`, `siteLighting` in the tuning payload |
 | Lift, haze and clouds | `horizon` in the tuning payload |
 | What open ground is made of | `DaggerfallGroundBlend`, `ground` in the tuning payload |
@@ -47,6 +47,8 @@ and nature stay with the walked window's cells; neither heightfield collides.
   would float over the real skyline. Each panorama also ships cleared of it, and
   the Engine cloud layer stands in for the low cloud lost with it, drawn in cells anchored
   to the clouds (`cloudPixelMetres`, `cloudShadeSteps`) so it sits with the pixel art.
+  Every column of a panorama meets overhead, so the cleared sky also closes its top rows
+  on each row's mean colour, and a night sky's stars there go back round and evenly spread.
 - **Moons.** Masser and Secunda are the classic's art for each of the lunar cycle's 32
   days, published as an atlas each, and the frame comes from the calendar's own cycle, so
   the sky shows the phase lycanthropes and enchantments answer to. A moon falls behind the
