@@ -73,6 +73,7 @@ internal static class Program
         ReferenceExportCommands.Effects,
         ReferenceExportCommands.Surfaces,
         ReferenceExportCommands.Flats,
+        ReferenceExportCommands.People,
         ReferenceExportCommands.Terrain,
         ReferenceExportCommands.DirectionalSprites,
     }.ToDictionary(command => command.Name, StringComparer.Ordinal);

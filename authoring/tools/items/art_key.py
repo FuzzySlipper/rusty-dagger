@@ -10,7 +10,7 @@ TEXTURE = re.compile(r"texture-(\d+)-record-(\d+)-frame-(\d+)")
 
 
 # Areas whose images are named by texture archive; `worn` reads the player layers of the items export.
-TEXTURE_AREAS = ("items", "worn", "flats")
+TEXTURE_AREAS = ("items", "worn", "flats", "people")
 SOURCE_DIR = {"worn": "items"}
 
 

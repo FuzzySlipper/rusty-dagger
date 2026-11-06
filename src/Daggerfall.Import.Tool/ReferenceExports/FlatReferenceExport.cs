@@ -36,7 +36,7 @@ internal static class FlatReferenceExport
         [300] = "props-stalagmites", [301] = "props-crops",
     };
 
-    private sealed class Usage
+    internal sealed class Usage
     {
         internal readonly HashSet<string> ExteriorBlocks = [], InteriorBlocks = [], DungeonBlocks = [];
         internal int Exterior, Interior, Dungeon;
@@ -129,4 +129,7 @@ internal static class FlatReferenceExport
 
     /// <summary>Whether an exterior flat is scenery: not an editor marker, and not a person, who carries a faction.</summary>
     private static bool Scenery(RmbFlatPlacement flat) => flat.TextureArchive != RdbSourceClassification.EditorFlatArchive && flat.FactionId == 0;
+
+    /// <summary>Whether an exterior flat is a person, who carries a faction.</summary>
+    internal static bool Person(RmbFlatPlacement flat) => flat.TextureArchive != RdbSourceClassification.EditorFlatArchive && flat.FactionId != 0;
 }
