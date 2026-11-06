@@ -38,7 +38,8 @@ public sealed class QuestBlockVariantTests
         var resolved = f.Session.Sites.RequireProfiles().Require(key);
         PopulateContent(Assert.IsType<ContentFake>(f.Engine.Context.Content), resolved);
         Assert.True(f.Session.TryTransitionTo(key));
-        Assert.Contains(f.Appearance.LightRequests, value => value.Descriptor.Intensity == 17f);
+        var lighting = DaggerfallTuning.Defaults.SiteLighting;
+        Assert.Contains(f.Appearance.LightRequests, value => value.Descriptor.Intensity == 17f * (building ? lighting.InteriorScale : lighting.DungeonScale));
         Assert.True(f.Session.TryTransitionTo(f.Inputs.ProfileKey));
         var saved = DaggerfallSavePayload.Read(f.Session.CaptureSave());
         var choice = Assert.Single(saved.WorldVariants);
