@@ -795,6 +795,10 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             }
             catch (Exception exception) { failures = [exception]; }
         }
+        // What is retired goes first, oldest first, as an admitted update releases it: a playback a visual replaced
+        // still holds the sprite that visual owns, and nothing live needs anything retired.
+        foreach (IDisposable value in priorRetired.Concat(nextRetired)) Dispose(value, ref failures);
+        nextRetired.Clear(); priorRetired.Clear();
         foreach (ActorVisual visual in actors.Values.Reverse()) DisposeActorVisual(visual, ref failures);
         if (candleAppearance is { } candle) Dispose(candle, ref failures); candleAppearance = null;
         foreach (GroundVisual visual in groundVisuals.Values.Reverse()) visual.Billboard.Dispose(ref failures);
@@ -803,11 +807,9 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         effects.Clear();
         if (viewmodel is { } weapon) { viewmodel = null; weapon.Dispose(ref failures); }
         if (castHand is { } hand) { castHand = null; hand.Dispose(ref failures); }
+        if (castGlow is { } glow) { castGlow = null; glow.Dispose(ref failures); }
         if (held is { } drawn) { held = null; Dispose(drawn, ref failures); }
         if (mount is { } ridden) { mount = null; Dispose(ridden, ref failures); }
-        foreach (IDisposable value in nextRetired.AsEnumerable().Reverse()) Dispose(value, ref failures);
-        foreach (IDisposable value in priorRetired.AsEnumerable().Reverse()) Dispose(value, ref failures);
-        nextRetired.Clear(); priorRetired.Clear();
         actors.Clear();
         groundVisuals.Clear();
         npcVisuals.Clear();

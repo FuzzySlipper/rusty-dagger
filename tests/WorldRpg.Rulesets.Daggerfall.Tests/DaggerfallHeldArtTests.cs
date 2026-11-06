@@ -716,6 +716,20 @@ public sealed class DaggerfallHeldArtTests
     }
 
     [Fact]
+    public void A_location_left_mid_cast_releases_the_element_on_the_palm()
+    {
+        List<string> releases = [];
+        (DaggerfallSiteAppearance presentation, AppearanceFake appearance, _) = Viewing(releases);
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
+        presentation.React(new PlayerCastMotionFact(0, new(.3d, .02d, .3d), 1, 1));
+
+        presentation.Dispose();
+
+        Assert.Equal(appearance.CreatedPlaybacks.Count, appearance.DisposedPlaybacks);
+        Assert.Equal(appearance.CreatedAtlases, appearance.DisposedAtlases);
+    }
+
+    [Fact]
     public void A_cast_with_no_clip_rests_the_held_arms_it_cuts_into()
     {
         JsonObject document = Document();
