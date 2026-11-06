@@ -50,6 +50,10 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     private readonly HashSet<Appearance> retainedAppearances = new(ReferenceEqualityComparer.Instance);
     private ulong nextHandle = 1;
     private readonly Dictionary<ulong, ulong> liveLightIds = [];
+    // What the Engine refuses to release while it is held: a playback holds its sprite and atlas, a sprite its atlas, an atlas its texture.
+    private readonly List<(SpritePlaybackHandle Playback, Appearance Sprite, SpriteAtlas Atlas)> livePlaybacks = [];
+    private readonly Dictionary<Appearance, SpriteAtlas> liveSprites = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<SpriteAtlas, RenderResource> liveAtlases = new(ReferenceEqualityComparer.Instance);
 
     // The ruleset opens published textures and meshes by content reference, wherever the Engine stages them.
     public RenderResourceInfo OpenResource(RenderResourceRequest request) =>
@@ -68,11 +72,17 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     /// <summary>Counts how many opened render resources the caller released.</summary>
     internal int ReleasedResources { get; private set; }
 
-    private RenderResource OwnResource(ulong handle) => new(new RenderResourceHandle(handle), () =>
+    private RenderResource OwnResource(ulong handle)
     {
-        ReleasedResources++;
-        releases.Add("resource");
-    });
+        RenderResource value = null!;
+        value = new(new RenderResourceHandle(handle), () =>
+        {
+            if (liveAtlases.ContainsValue(value)) throw new InvalidOperationException("CSHARP_RENDER_RESOURCE_IN_USE");
+            ReleasedResources++;
+            releases.Add("resource");
+        });
+        return value;
+    }
     public Material CreateMaterial(MaterialRequest request) => new(new MaterialHandle(1), () => releases.Add("material"));
     public Material CreateTerrainLayerMaterial(TerrainLayerMaterialRequest request)
     {
@@ -116,9 +126,25 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
         AtlasRequests.Add(request);
         if (FailSpriteAtlasCreateAt == AtlasRequests.Count) throw new InvalidOperationException("Injected sprite atlas create failure.");
         CreatedAtlases++;
-        return new(new SpriteAtlasHandle(nextHandle++), () => { DisposedAtlases++; releases.Add("atlas"); });
+        SpriteAtlas atlas = null!;
+        atlas = new(new SpriteAtlasHandle(nextHandle++), () =>
+        {
+            if (liveSprites.ContainsValue(atlas)) throw new InvalidOperationException("CSHARP_SPRITE_ATLAS_IN_USE");
+            if (livePlaybacks.Any(live => ReferenceEquals(live.Atlas, atlas))) throw new InvalidOperationException("CSHARP_SPRITE_PLAYBACK_ATLAS_IN_USE");
+            liveAtlases.Remove(atlas);
+            DisposedAtlases++;
+            releases.Add("atlas");
+        });
+        liveAtlases.Add(atlas, request.Texture);
+        return atlas;
     }
-    public Appearance CreateSpriteFromAtlas(SpriteFromAtlasRequest request) { SpriteRequests.Add(request); return CreateAppearance(); }
+    public Appearance CreateSpriteFromAtlas(SpriteFromAtlasRequest request)
+    {
+        SpriteRequests.Add(request);
+        Appearance sprite = CreateAppearance();
+        liveSprites.Add(sprite, request.Atlas);
+        return sprite;
+    }
     public Appearance ReplaceSpriteFromAtlas(SpriteFromAtlasReplaceRequest request) => CreateAppearance();
     public void SetSpriteViewport(SpriteViewportUpdateRequest request) => ViewportRequests.Add(request);
     internal List<SpriteViewportUpdateRequest> ViewportRequests { get; } = [];
@@ -129,8 +155,10 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
         PlaybackRequests.Add(request);
         if (FailSpritePlaybackCreateAt == PlaybackRequests.Count) throw new InvalidOperationException("Injected sprite playback create failure.");
         SpritePlaybackHandle handle = new(nextHandle++);
+        livePlaybacks.Add((handle, request.Appearance, request.Atlas));
         SpritePlayback playback = new(handle, () =>
         {
+            livePlaybacks.RemoveAll(live => live.Playback == handle);
             DisposedPlaybacks++;
             DisposedPlaybackHandles.Add(handle);
             releases.Add("playback");
@@ -192,6 +220,8 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
                 throw new InvalidOperationException("Injected appearance dispose failure.");
             }
             if (RejectDisposeOfRetainedAppearance && retainedAppearances.Contains(value)) throw new InvalidOperationException("CSHARP_APPEARANCE_IN_USE");
+            if (livePlaybacks.Any(live => ReferenceEquals(live.Sprite, value))) throw new InvalidOperationException("CSHARP_SPRITE_PLAYBACK_APPEARANCE_IN_USE");
+            liveSprites.Remove(value);
             DisposedAppearances++;
             releases.Add("appearance");
         });

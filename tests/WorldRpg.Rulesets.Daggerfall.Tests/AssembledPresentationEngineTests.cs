@@ -9,6 +9,8 @@ using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Facts;
+using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
@@ -100,6 +102,40 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             host.Call(_ => run.Dispose());
             output.WriteLine($"Session disposal: {disposal.Elapsed.TotalSeconds:F2} s.");
         }
+    }
+
+    /// <summary>
+    /// A transition suspends and disposes the site it leaves with no update between, so what an actor retired in the last
+    /// update is still queued when the Engine is asked to release that actor's sprite, its atlas and their texture.
+    /// </summary>
+    [Fact]
+    public void Leaving_a_site_just_after_its_enemies_gave_chase_releases_it_through_the_engine()
+    {
+        AssembledWorld world = Shared.Value;
+        DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(AssembledWorld.PrivateersHold);
+        DaggerfallWorldProfileKey hold = DaggerfallWorldProfileIds.Dungeon(AssembledWorld.PrivateersHold);
+        Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, AssembledWorld.PrivateersHold);
+        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
+        AssembledWorldRun run = host.Call(engine => world.Start(engine, files));
+        try
+        {
+            Assert.True(host.Call(_ => run.Session.TryTransitionTo(hold)));
+            Steps(host, run, 3);
+            DaggerfallSiteAppearance appearance = run.Session.Sites.Projection.Appearance;
+            long[] resting = [.. world.Profiles.Require(hold).Project.Actors.Keys.Where(appearance.HasActor)];
+            Assert.NotEmpty(resting);
+            host.Call(_ =>
+            {
+                foreach (long actor in resting)
+                    appearance.React(new EnemyBehaviorTransitionFact(actor, EnemyBehaviorState.Idle, EnemyBehaviorState.Chase, 1, 1));
+            });
+
+            Assert.True(host.Call(_ => run.Session.TryTransitionTo(island)));
+
+            Steps(host, run, 3);
+            AssertAccepted(run);
+        }
+        finally { host.Call(_ => run.Dispose()); }
     }
 
     /// <summary>
