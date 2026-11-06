@@ -86,6 +86,10 @@ internal sealed class DaggerfallSiteLifecycle
     private readonly IDaggerfallSiteTransitionHost _host;
     private readonly Dictionary<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta> _deltas = [];
     private DaggerfallExteriorCellResidency? _exteriorResidency;
+    private DaggerfallHorizonGround? _ground;
+    private DaggerfallExteriorGroundCollider? _groundCollider;
+    // A window was admitted whose ground is still to stand: what arrives with it waits (CollisionPending).
+    private bool _groundAwaited;
     private DaggerfallExteriorTerrainAppearance? _exteriorTerrainAppearance;
     private (DaggerfallArtReplacements Art, Func<bool> Refreshed)? _groundArt;
     private DaggerfallGroundBlendSettings _groundBlend;
@@ -110,8 +114,8 @@ internal sealed class DaggerfallSiteLifecycle
     private DaggerfallExteriorCellId? _locationCell;
     private bool _admittingInitialResidency;
     private bool _retired;
-    // A staged site change holds its terrain window and its location placements to hand them over deferred, and
-    // stands the arriving player only once that collision is live.
+    // A staged site change holds its location placements to hand them over deferred, and stands the arriving player
+    // only once they and the ground under the arrival are live.
     private bool _deferringCollision;
     private bool _arrivalStandPending;
     // Collision a site change handed off that play must not run without: the Engine refused it, or the change failed
@@ -376,7 +380,7 @@ internal sealed class DaggerfallSiteLifecycle
     /// not be there yet, so anything settled onto it waits.
     /// </summary>
     internal bool CollisionPending =>
-        _exteriorResidency is { HoldsBatch: true } || _heldPlacementGrid is not null || _deferredCollision is { Awaiting: true };
+        _groundAwaited || _heldPlacementGrid is not null || _deferredCollision is { Awaiting: true };
 
     private void AdmitLocationArtifact(DaggerfallSiteProfile profile, DaggerfallExteriorWorldOrigin? exteriorOrigin = null) =>
         ApplyLocationResidency(profile, exteriorOrigin, [], profile.Geometry.NavigationGridId);
@@ -514,6 +518,8 @@ internal sealed class DaggerfallSiteLifecycle
                 HoldPlayerInsideWorldEdge();
                 _ = RebaseExteriorIfNeeded();
                 UpdateExteriorResidency();
+                // A recall can land past the ground's reach: the arrival stands once it is there.
+                _groundAwaited = true;
             }
             StandArrivingPlayer();
             return true;
@@ -554,10 +560,10 @@ internal sealed class DaggerfallSiteLifecycle
     }
 
     /// <summary>
-    /// Runs a staged site change with its collision prepared off the update: its terrain window and its towns'
-    /// placements are held while the change makes its own synchronous collision and content calls, which would
-    /// otherwise wait for them, then handed to the Engine as deferred batches. An arrival inside the change is stood,
-    /// and the actors it placed are settled, once <see cref="AwaitArrivalCollision"/> finds them live. Play does not
+    /// Runs a staged site change with its collision prepared off the update: its towns' placements are held while the
+    /// change makes its own synchronous collision and content calls, which would otherwise wait for them, then handed
+    /// to the Engine as a deferred batch, and the ground under the arrival streams in meanwhile. An arrival inside the
+    /// change is stood, and the actors it placed are settled, once <see cref="AwaitArrivalCollision"/> finds both live. Play does not
     /// resume meanwhile: the loading screen holds the updates. A change that fails with its rollback's collision still
     /// to come leaves the world held until it is live (<see cref="RecoverArrivalGround"/>). So does a handover that
     /// throws: what it could not hand over stays held, and a change that had otherwise succeeded fails with it, its
@@ -588,14 +594,6 @@ internal sealed class DaggerfallSiteLifecycle
             {
                 handover = error;
             }
-            try
-            {
-                _ = _exteriorResidency?.ReleaseHeld();
-            }
-            catch (Exception error)
-            {
-                handover ??= error;
-            }
             // A rolled-back change has nothing to stand; a committed one stands once its collision is live.
             if (!changed) _arrivalStandPending = false;
             if (!changed || handover is not null)
@@ -625,15 +623,79 @@ internal sealed class DaggerfallSiteLifecycle
             case DaggerfallDeferredCollisionState.Preparing:
                 return reading.Fraction is { } fraction ? LoadingProgress.Measured(fraction) : LoadingProgress.Unmeasured;
         }
+        if (_groundAwaited)
+        {
+            LoadingProgress ground = AwaitGroundCollider([]);
+            if (!ground.Done) return ground;
+        }
         // What a handover that threw left held is not live either: RecoverArrivalGround hands it over again.
         if (CollisionPending) return LoadingProgress.Unmeasured;
+        FinishArrival();
+        return LoadingProgress.Finished;
+    }
+
+    /// <summary>Stands the arrival and whoever was placed with it, now that what they stand on is live.</summary>
+    private void FinishArrival()
+    {
         if (_arrivalStandPending)
         {
             _arrivalStandPending = false;
             StandArrivingPlayer();
         }
         _host.GroundArrivedActors();
+    }
+
+    /// <summary>
+    /// Keeps the ground under the player and <paramref name="walkers"/> in the active exterior: anyone else out in the
+    /// wilderness, whom no town ground plane holds up. It stands in one map pixel's frame, so travel makes it anew.
+    /// </summary>
+    internal void UpdateGroundCollider(IEnumerable<Vector3> walkers)
+    {
+        if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior
+            || _exteriorResidency is not { IsInitialized: true } residency
+            || _state.PlayerControl.Position is not WorldPoint player) return;
+        DaggerfallExteriorWorldOrigin origin = ActiveOrigin(residency);
+        if (_groundCollider is { } standing && standing.MapPixel != (origin.MapPixelX, origin.MapPixelY))
+        {
+            DropGroundCollider();
+            _groundAwaited = true;
+        }
+        _groundCollider ??= new(_engine, _spatial.Session, _ground ?? throw new InvalidOperationException("Exterior ground is admitted before its function."), origin);
+        _groundCollider.Update(walkers.Prepend(player.ToVector()), origin);
+    }
+
+    /// <summary>
+    /// How far the ground under an arrival has come. The tiles arrive over updates, so this also keeps them coming; a
+    /// tile the Engine refused would leave the arrival standing on nothing, so it fails the arrival instead.
+    /// </summary>
+    internal LoadingProgress AwaitGroundCollider(IEnumerable<Vector3> walkers)
+    {
+        UpdateGroundCollider(walkers);
+        if (_groundCollider is not { } collider || _exteriorResidency is not { IsInitialized: true } residency
+            || _state.PlayerControl.Position is not WorldPoint player)
+        {
+            _groundAwaited = false;
+            return LoadingProgress.Finished;
+        }
+        HeightfieldColliderReadout read = collider.Read(player.ToVector(), ActiveOrigin(residency));
+        if (read.RefusedTiles != 0)
+        {
+            _awaitingGround = true;
+            throw new DaggerfallArrivalCollisionRefusedException();
+        }
+        if (!read.Ready) return LoadingProgress.Measured(read.ResidentTiles / Math.Max(1d, read.ResidentTiles + read.PendingTiles));
+        bool arrived = _groundAwaited;
+        _groundAwaited = false;
+        // Staged collision still on its way has the last word: AwaitArrivalCollision finishes the arrival after it.
+        if (arrived && !CollisionPending) FinishArrival();
         return LoadingProgress.Finished;
+    }
+
+    /// <summary>Lets go of the ground, which dies with the spatial session it stands in.</summary>
+    internal void DropGroundCollider()
+    {
+        _groundCollider?.Dispose();
+        _groundCollider = null;
     }
 
     /// <summary>
@@ -642,9 +704,16 @@ internal sealed class DaggerfallSiteLifecycle
     /// anyone else up. Each call reads the batches handed over; once they are refused, or a handover threw, it hands
     /// the placements and the window over again off the update, and once they are live, stands the arrival on them.
     /// </summary>
-    internal bool RecoverArrivalGround()
+    /// <param name="walkers">Anyone else out in the wilderness, for <see cref="UpdateGroundCollider"/>.</param>
+    internal bool RecoverArrivalGround(IEnumerable<Vector3> walkers)
     {
-        if (!_awaitingGround) return true;
+        if (!_awaitingGround)
+        {
+            // Ground that a character fell through while it was missing would install around them, which the Engine
+            // refuses: anyone moved past its reach waits for it here, as an arrival does, rather than falling.
+            try { return AwaitGroundCollider(walkers).Done; }
+            catch (DaggerfallArrivalCollisionRefusedException) { return false; }
+        }
         try
         {
             if (_deferredCollision is not { Awaiting: true })
@@ -1296,7 +1365,9 @@ internal sealed class DaggerfallSiteLifecycle
     private DaggerfallExteriorCellResidencyUpdate AdmitExteriorWindow(DaggerfallExteriorCellId center, DaggerfallExteriorWorldOrigin origin)
     {
         DaggerfallExteriorCellResidency residency = EnsureExteriorResidency();
-        DaggerfallExteriorCellResidencyUpdate update = residency.Update(center, origin, hold: _deferringCollision);
+        DaggerfallExteriorCellResidencyUpdate update = residency.Update(center, origin);
+        // A first window has no ground under it yet, which is sampled and installed over the updates to come.
+        if (_groundCollider is null) _groundAwaited = true;
         _groundContainers.ReconcileExteriorResidency(residency.ResidentCells, ActiveOrigin(residency));
         ReconcileExteriorTerrainAppearance(residency);
         UpdateExteriorLocation(center);
@@ -1777,6 +1848,7 @@ internal sealed class DaggerfallSiteLifecycle
         }
         DaggerfallExteriorCellResidency residency = EnsureExteriorResidency();
         DaggerfallExteriorCellResidencyUpdate update = residency.Restore(save);
+        if (_groundCollider is null) _groundAwaited = true;
         _groundContainers.ReconcileExteriorResidency(residency.ResidentCells, ActiveOrigin(residency));
         ReconcileExteriorTerrainAppearance(residency);
         return update;
@@ -1866,7 +1938,6 @@ internal sealed class DaggerfallSiteLifecycle
             throw new InvalidOperationException("An origin commit requires admitted exterior residency; otherwise world coordinates would detach from their cell.");
         // The commit installs pending batches and moves them with the rest; a held one would miss the move.
         ReleaseHeldPlacements();
-        _ = _exteriorResidency.ReleaseHeld();
         EntityStore store = _state.Actors.Store;
         EntityId[] roots = [.. _state.Actors.All.Select(actor => actor.Actor.Entity),
             .. store.Query<DaggerfallNpcBody>().Select(entry => entry.Entity)];
@@ -1919,7 +1990,7 @@ internal sealed class DaggerfallSiteLifecycle
     }
 
     /// <summary>
-    /// Removes product-owned exterior colliders before Spatial ReplaceContentArtifact replaces the
+    /// Forgets the exterior window and lets go of its ground before Spatial ReplaceContentArtifact replaces the
     /// complete static collision set. A null result means this session had no exterior window.
     /// </summary>
     internal DaggerfallExteriorCellResidencyUpdate? ClearExteriorResidency()
@@ -1927,6 +1998,7 @@ internal sealed class DaggerfallSiteLifecycle
         DaggerfallExteriorCellResidencyUpdate? update = _exteriorResidency is { IsInitialized: true } residency
             ? residency.Clear()
             : null;
+        DropGroundCollider();
         ReleaseExteriorWaterTriggers();
         _exteriorTerrainAppearance?.Clear();
         _exteriorSurfaceCache.Clear();
@@ -2030,15 +2102,14 @@ internal sealed class DaggerfallSiteLifecycle
         };
         _exteriorSurfaceFactory = surfaceFactory;
         return _exteriorResidency = new DaggerfallExteriorCellResidency(
-            _engine.Spatial,
-            _spatial.Session,
-            new DaggerfallExteriorWorldBounds(_definitions.Terrain.Width, _definitions.Terrain.Height),
-            surfaceFactory,
-            DeferredCollision());
+            new DaggerfallExteriorWorldBounds(_definitions.Terrain.Width, _definitions.Terrain.Height));
     }
 
     /// <summary>The locations by the map pixel they stand on.</summary>
     internal IReadOnlyDictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> Locations => ExteriorLocations();
+
+    /// <summary>The ground function exterior collision reads, the one near ground draws.</summary>
+    internal void UseGround(DaggerfallHorizonGround ground) => _ground = ground ?? throw new ArgumentNullException(nameof(ground));
 
     /// <summary>A ground archive's layers.</summary>
     internal DaggerfallGroundLayers GroundLayers(int archive) => (_exteriorTerrainAppearance ??= NewTerrainAppearance()).GroundLayers(archive);

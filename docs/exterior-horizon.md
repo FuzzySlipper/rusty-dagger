@@ -2,8 +2,9 @@
 
 Exterior ground is one function drawn by two Engine heightfields. Near ground stands in
 the world from the player's feet to the edge of the walked seven-by-seven window; far
-ground stands in the backdrop past it, so the map itself reaches the skyline. Collision
-and nature stay with the walked window's cells; neither heightfield collides.
+ground stands in the backdrop past it, so the map itself reaches the skyline. Nature
+stays with the walked window's cells. Neither heightfield collides: a heightfield collider
+reads the same function, and it is what the player and anyone in the wilderness stand on.
 
 | Part | Owner |
 | --- | --- |
@@ -11,6 +12,7 @@ and nature stay with the walked window's cells; neither heightfield collides.
 | Ground at a vertex with its location's flattening, shared by near and far ground | `DaggerfallHorizonGround.Ground` |
 | What ground is at a point: height, rings, lift, paint | `DaggerfallHorizonGround` |
 | Both heightfields, backdrop link, following the player | `DaggerfallHorizon` |
+| What exterior characters stand on | `DaggerfallExteriorGroundCollider` |
 | Haze, cloud layer, which sky draws, falling weather, wet ground and snow | `DaggerfallWeatherPresentation` |
 | Moons | `DaggerfallMoons`, `SkyMediaPublication` (importer) |
 | Panoramas with the painted horizon cleared and the zenith closed | `SkyHorizonClearing` (importer) |
@@ -19,6 +21,17 @@ and nature stay with the walked window's cells; neither heightfield collides.
 | What open ground is made of | `DaggerfallGroundBlend`, `ground` in the tuning payload |
 | A ground archive's layers as materials | `DaggerfallGroundLayers` |
 | What a location's tiles are at their corners | `DaggerfallGroundKinds` |
+
+## What it stands on
+
+The collider uses near ground's finest cells in near ground's frame, so feet and the drawn
+surface agree, and it reaches as far as that finest ring. It holds ground about the player
+and every living actor outside a town's people, so an enemy left behind keeps its floor.
+The people of a town stand on the town's collision-only ground plane instead, which lies
+level with the flattened ground and keeps them standing past the collider's reach, in a
+neighbouring location the player has not reached. Tiles arrive over updates, so a staged
+change waits for the ground about its arrival before it stands the player or anyone placed
+with them. Travel makes a new collider; an Engine origin rebase carries the old one.
 
 ## How it draws
 

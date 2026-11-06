@@ -14,7 +14,6 @@ public sealed class DaggerfallTerrainSurfaceBuilderTests
         DaggerfallTerrainSurface surface = DaggerfallTerrainSurfaceBuilder.Build(FlatTerrain(4, 4, 0, 0), 1, 1);
 
         Assert.Equal(129 * 129, surface.Vertices.Length);
-        Assert.Equal(128 * 128 * 2, surface.Triangles.Length);
         Assert.Equal(surface.Vertices.Length, surface.NormalizedHeights.Length);
 
         float expectedNormalizedOcean = DaggerfallTerrainSurfaceBuilder.OceanElevation
@@ -28,12 +27,6 @@ public sealed class DaggerfallTerrainSurfaceBuilderTests
         Assert.InRange(MathF.Abs(surface.Vertices[128].X - DaggerfallTerrainSurfaceBuilder.HorizontalSize), 0F, .00001F);
         Assert.InRange(MathF.Abs(surface.Vertices[129].Z + DaggerfallTerrainSurfaceBuilder.SampleSpacing), 0F, .00001F);
 
-        Assert.Equal(new Triangle(0, 1, 130), surface.Triangles[0]);
-        Assert.Equal(new Triangle(0, 130, 129), surface.Triangles[1]);
-        Vector3 firstNormal = Vector3.Cross(
-            surface.Vertices[1] - surface.Vertices[0],
-            surface.Vertices[130] - surface.Vertices[0]);
-        Assert.True(firstNormal.Y > 0F, "The right-handed surface triangles must face upward.");
     }
 
     [Fact]
@@ -68,7 +61,6 @@ public sealed class DaggerfallTerrainSurfaceBuilderTests
 
         Assert.Equal(first.NormalizedHeights, second.NormalizedHeights);
         Assert.Equal(first.Vertices, second.Vertices);
-        Assert.Equal(first.Triangles, second.Triangles);
     }
 
     [Fact]
@@ -148,7 +140,6 @@ public sealed class DaggerfallTerrainSurfaceBuilderTests
 
         Assert.Equal(explicitPass.NormalizedHeights, overload.NormalizedHeights);
         Assert.Equal(explicitPass.Vertices, overload.Vertices);
-        Assert.Equal(explicitPass.Triangles, overload.Triangles);
     }
 
     [Fact]
@@ -166,7 +157,6 @@ public sealed class DaggerfallTerrainSurfaceBuilderTests
             Enumerable.Range(0, count).Select(index => new Vector3(index % DaggerfallTerrainSurfaceBuilder.SampleDimension,
                 heights[index] * DaggerfallTerrainSurfaceBuilder.TerrainVerticalSize,
                 index / DaggerfallTerrainSurfaceBuilder.SampleDimension)).ToArray(),
-            [new Triangle(0, 1, DaggerfallTerrainSurfaceBuilder.SampleDimension)],
             heights);
 
         float expected = DaggerfallTerrainSurfaceBuilder.LocationSampleCoordinate

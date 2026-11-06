@@ -24,6 +24,8 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     internal const double MiddleCellMetres = FineCellMetres * 4, CoarseCellMetres = FineCellMetres * 16;
     internal const double FineReachMetres = 8_192, MiddleReachMetres = 49_152, CoarseReachMetres = 204_800;
     private const double Spacing = DaggerfallTerrainSurfaceBuilder.SampleSpacing;
+    /// <summary>Near ground's finest cells, which the collider shares.</summary>
+    internal const double FinestNearCellMetres = Spacing / 2;
     private const int TileDimension = DaggerfallTerrainSurfaceBuilder.SampleDimension - 1;
     private const double OceanMetres = DaggerfallTerrainSurfaceBuilder.OceanElevation * DaggerfallTerrainSurfaceBuilder.TerrainScale;
     /// <summary>Ground this close over the ocean clamp is the sea: the donor's noise never stands land so low.</summary>
@@ -91,7 +93,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     /// its shape; the walked spacing as far as a tree's foot shows; and coarse out past the window, where far ground takes over.
     /// </summary>
     internal static HeightfieldRing[] NearRings { get; } =
-        [new(Spacing / 2, 409.6), new(Spacing, 1_228.8), new(Spacing * 4, 3_276.8)];
+        [new(FinestNearCellMetres, DaggerfallExteriorGroundCollider.ReachMetres), new(Spacing, 1_228.8), new(Spacing * 4, 3_276.8)];
 
     /// <summary>The ground values the far ground shares with the walked ground.</summary>
     internal DaggerfallGroundTuning GroundTuning => _groundTuning;
@@ -136,6 +138,22 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         Frame now = Current;
         GroundMaterials materials = Materials;
         int heightSide = tile.HeightSide, side = tile.Side;
+        double[] ground = WalkedHeights(tile, samples, offsetX, offsetZ);
+        for (int j = 0; j < side; j++)
+        for (int i = 0; i < side; i++)
+        {
+            double x = tile.SampleX(i) + offsetX, z = tile.SampleZ(j) + offsetZ, height = ground[((j + 1) * heightSide) + i + 1];
+            Draw(samples, i, j, PaintNear(x, z, height, Slope(ground, heightSide, i, j, tile.CellSize), now.Winter, materials));
+        }
+    }
+
+    /// <summary>The collider's ground: near ground's heights alone, which need no materials bound.</summary>
+    internal void SampleHeights(HeightfieldTileRequest tile, HeightfieldTileSamples samples, double offsetX, double offsetZ) =>
+        _ = WalkedHeights(tile, samples, offsetX, offsetZ);
+
+    private double[] WalkedHeights(HeightfieldTileRequest tile, HeightfieldTileSamples samples, double offsetX, double offsetZ)
+    {
+        int heightSide = tile.HeightSide, side = tile.Side;
         double[] ground = new double[heightSide * heightSide];
         Dictionary<(int X, int Y), DaggerfallTerrainWindow> windows = [];
         Dictionary<(long X, long Z), double> lattice = [];
@@ -148,12 +166,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
             samples.SetHeight(i, j, (float)height);
         }
 
-        for (int j = 0; j < side; j++)
-        for (int i = 0; i < side; i++)
-        {
-            double x = tile.SampleX(i) + offsetX, z = tile.SampleZ(j) + offsetZ, height = ground[((j + 1) * heightSide) + i + 1];
-            Draw(samples, i, j, PaintNear(x, z, height, Slope(ground, heightSide, i, j, tile.CellSize), now.Winter, materials));
-        }
+        return ground;
     }
 
     private static float Slope(double[] ground, int heightSide, int i, int j, double cell)

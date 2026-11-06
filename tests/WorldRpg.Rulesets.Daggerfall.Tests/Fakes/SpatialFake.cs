@@ -28,6 +28,12 @@ internal class SpatialFake : DispatchProxy
     private ContentSha256 hash = Hash;
     private List<string> releases = null!;
     internal ISpatialService Service { get; private set; } = null!;
+    internal int HeightfieldColliderCreates { get; private set; }
+    internal int HeightfieldColliderReleases { get; private set; }
+    internal List<HeightfieldColliderFocus[]> HeightfieldColliderFocuses { get; } = [];
+    /// <summary>Whether the ground about a read point stands; a test holding an arrival clears it.</summary>
+    internal bool HeightfieldColliderReady { get; set; } = true;
+    internal uint HeightfieldColliderRefusedTiles { get; set; }
     internal int ReplaceCalls { get; private set; }
     internal List<SpatialContentArtifactResidencyRequest> ContentResidencyRequests { get; } = [];
     internal int ReadCalls { get; private set; }
@@ -121,6 +127,11 @@ internal class SpatialFake : DispatchProxy
         nameof(ISpatialService.ApplyContentArtifactResidency) => ApplyContentResidency((SpatialContentArtifactResidencyRequest)arguments![0]!),
         nameof(ISpatialService.ApplyCollisionResidency) => ApplyCollisionResidency((CollisionResidencyRequest)arguments![0]!),
         nameof(ISpatialService.ReadCollisionResidency) => ReadCollisionResidency((CollisionResidencyReadRequest)arguments![0]!),
+        // The fake's floor answers everywhere, so exterior ground stands at once and no tile is asked for.
+        nameof(ISpatialService.CreateHeightfieldCollider) => CreateHeightfieldCollider(),
+        nameof(ISpatialService.ReadHeightfieldCollider) => new HeightfieldColliderReadout(HeightfieldColliderReady, 1, HeightfieldColliderReady ? 0U : 1U, HeightfieldColliderRefusedTiles),
+        nameof(ISpatialService.ReadHeightfieldColliderRequests) => ReadOnlyMemory<HeightfieldTileRequest>.Empty,
+        nameof(ISpatialService.SetHeightfieldColliderFocuses) => SetHeightfieldColliderFocuses((HeightfieldColliderFocusRequest)arguments![0]!),
         nameof(ISpatialService.ReadContentArtifact) => Read(),
         nameof(ISpatialService.ProposeCharacterStep) => Step((CharacterStepRequest)arguments![0]!),
         // These general session tests have no authored trigger contact. Action trigger
@@ -274,6 +285,18 @@ internal class SpatialFake : DispatchProxy
     /// A deferred delta is copied and queued under the next batch number, and the receipt names it with the counts
     /// live now; a synchronous one installs every queued batch first.
     /// </remarks>
+    private HeightfieldCollider CreateHeightfieldCollider()
+    {
+        HeightfieldColliderCreates++;
+        return new HeightfieldCollider(new HeightfieldColliderHandle(1), () => HeightfieldColliderReleases++);
+    }
+
+    private object? SetHeightfieldColliderFocuses(HeightfieldColliderFocusRequest request)
+    {
+        HeightfieldColliderFocuses.Add(request.Focuses.ToArray());
+        return null;
+    }
+
     private CollisionReplaceReceipt ApplyCollisionResidency(CollisionResidencyRequest request)
     {
         // Engine consumes the request at admission. Keep the receipt's memory independent of

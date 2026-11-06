@@ -25,10 +25,10 @@ internal readonly record struct DaggerfallDeferredCollisionReading(DaggerfallDef
 }
 
 /// <summary>
-/// Follows the deferred batches a staged site change hands the Engine (its location placements and its terrain
-/// window) in the session's one collision residency order, until each is live or refused. Only a staged change
-/// defers, and it waits for its batches before anything else changes the session, so every refusal the Engine
-/// counts after the first of them was made is one of these.
+/// Follows the deferred batches a staged site change hands the Engine (its location placements) in the session's one
+/// collision residency order, until each is live or refused. A staged change waits for its batches before anything
+/// else changes the session, so a refusal the Engine counts after the first of them was made is one of these, or a
+/// ground tile's, which is reported as well and only costs handing the same placements over again.
 /// </summary>
 internal sealed class DaggerfallDeferredCollision(ISpatialService spatial, SpatialSession session)
 {

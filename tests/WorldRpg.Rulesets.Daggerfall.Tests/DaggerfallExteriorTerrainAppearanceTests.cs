@@ -18,7 +18,6 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         int dimension = DaggerfallTerrainSurfaceBuilder.SampleDimension;
         DaggerfallTerrainSurface surface = new(cell.X, cell.Y,
             Enumerable.Range(0, dimension * dimension).Select(index => new Vector3(index % dimension, height, index / dimension)).ToArray(),
-            [new Triangle(0, (uint)dimension + 1, 1)],
             Enumerable.Repeat(height / DaggerfallTerrainSurfaceBuilder.TerrainVerticalSize, dimension * dimension).ToArray())
         {
             SourceWorldHeight = 128,
@@ -67,7 +66,6 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         int dimension = DaggerfallTerrainSurfaceBuilder.SampleDimension;
         DaggerfallTerrainSurface surface = new(cell.X, cell.Y,
             Enumerable.Range(0, dimension * dimension).Select(index => new Vector3(index % dimension, height, index / dimension)).ToArray(),
-            [new Triangle(0, (uint)dimension + 1, 1)],
             Enumerable.Repeat(height / DaggerfallTerrainSurfaceBuilder.TerrainVerticalSize, dimension * dimension).ToArray())
         {
             SourceWorldHeight = 128,
@@ -111,7 +109,6 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         int dimension = DaggerfallTerrainSurfaceBuilder.SampleDimension;
         DaggerfallTerrainSurface surface = new(cell.X, cell.Y,
             Enumerable.Range(0, dimension * dimension).Select(index => new Vector3(index % dimension, 100F, index / dimension)).ToArray(),
-            [new Triangle(0, (uint)dimension + 1, 1)],
             Enumerable.Repeat(100F / DaggerfallTerrainSurfaceBuilder.TerrainVerticalSize, dimension * dimension).ToArray())
         {
             SourceWorldHeight = 128,
@@ -175,7 +172,6 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         int dimension = DaggerfallTerrainSurfaceBuilder.SampleDimension;
         DaggerfallTerrainSurface surface = new(cell.X, cell.Y,
             Enumerable.Range(0, dimension * dimension).Select(index => new Vector3(index % dimension, 100F, index / dimension)).ToArray(),
-            [new Triangle(0, (uint)dimension + 1, 1)],
             Enumerable.Repeat(100F / DaggerfallTerrainSurfaceBuilder.TerrainVerticalSize, dimension * dimension).ToArray())
         {
             SourceWorldHeight = 128,
