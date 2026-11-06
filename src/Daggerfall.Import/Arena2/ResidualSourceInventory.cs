@@ -56,7 +56,7 @@ public sealed class ResidualSourceInventory
         ["IMG"] = new("Arena2CanvasReader", "ImgFile", "single-image UI artwork and full-screen backdrops, read as one record or as a length-established headerless canvas"),
         ["CIF"] = new("Arena2CanvasReader", "CifRciFile", "multi-record sprite and UI graphics read as a contiguous sequence of IMG records"),
         ["RCI"] = new("Arena2CanvasReader", "CifRciFile.ReadRci", "headerless banks of equal fixed-size cells whose shape the classic reader selects by file name"),
-        ["CFA"] = new("", "CfaFile", "run-length encoded multi-frame animations: the horse and cart, and the two moons"),
+        ["CFA"] = new("CfaDecoder", "CfaFile", "run-length encoded multi-frame animations: the horse and cart, and the two moons"),
         ["PAL"] = new("PaletteDecoder", "", "256-colour palettes, either 768 raw bytes or 776 bytes behind an eight-byte header, of which the donor's palette reader accepts any by length while a call site reaches only MAP.PAL"),
         ["COL"] = new("PaletteDecoder", "DFPalette", "256-colour palettes with the eight-byte header the classic art uses"),
         ["DAT"] = new("", "", "assorted tables, of which the donor reads the thirty-two SKY##.DAT sky animations through SkyFile and PAINT.DAT through PaintFile; it reaches nothing else in this family"),
@@ -312,6 +312,9 @@ public sealed class ResidualSourceInventory
                     return ProbeOutcome.Read_(string.Empty);
                 case "BsaArchive":
                     BsaArchive.Parse(bytes, path);
+                    return ProbeOutcome.Read_(string.Empty);
+                case "CfaDecoder":
+                    CfaDecoder.Decode(bytes, path);
                     return ProbeOutcome.Read_(string.Empty);
                 default:
                     throw new InvalidOperationException($"Family reader '{reader}' has no probe, so its families would be classified without reading them.");

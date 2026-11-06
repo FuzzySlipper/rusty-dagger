@@ -289,7 +289,7 @@ internal static class ImportCommand
         {
             foreach (string file in Arena2Files.Where(file => !IsFile(Path.Combine(inputs.Arena2, file))))
                 yield return $"Arena2 file '{inputs.Arena2}/{file}'";
-            string[] sky = ["PAL.PAL", "NIGHTSKY.COL", .. Enumerable.Range(0, 32).Select(index => $"SKY{index:D2}.DAT"), .. Enumerable.Range(0, 4).Select(index => $"NITE{index:D2}I0.IMG")];
+            string[] sky = ["PAL.PAL", "NIGHTSKY.COL", "ART_PAL.COL", "MOON00I0.CFA", "MOON01I0.CFA", .. Enumerable.Range(0, 32).Select(index => $"SKY{index:D2}.DAT"), .. Enumerable.Range(0, 4).Select(index => $"NITE{index:D2}I0.IMG")];
             foreach (string file in sky.Where(file => !IsFile(Path.Combine(inputs.Arena2, file))))
                 yield return $"Arena2 sky file '{inputs.Arena2}/{file}'";
             if (!IsDirectory(Path.Combine(inputs.Arena2, "books"))) yield return $"Arena2 books directory '{inputs.Arena2}/books'";

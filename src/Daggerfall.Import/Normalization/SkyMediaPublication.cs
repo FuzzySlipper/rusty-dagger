@@ -324,6 +324,25 @@ public sealed record SkyClearedResource(string Id, string Of, string RelativePat
     }
 }
 
+/// <summary>One moon's source: its CFA animation of the 32 days of the lunar cycle.</summary>
+public sealed record SkyMoonSource(string Moon, string SourcePath, ReadOnlyMemory<byte> Bytes);
+
+/// <summary>One moon's phases as an atlas, frame 0 at the top left, running along each row.</summary>
+public sealed record SkyMoonResource(string Id, string Moon, string RelativePath, ContentDigest ContentHash, long ByteLength, int Width, int Height,
+    int FrameWidth, int FrameHeight, int Columns, int FrameCount, string SourcePath, ContentDigest SourceHash)
+{
+    public void Validate()
+    {
+        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
+        NormalizedImportDocument.RequireLogicalPath(RelativePath, nameof(RelativePath));
+        ContentHash.Validate();
+        SourceHash.Validate();
+        if (ByteLength <= 0 || FrameCount != SkyMediaPublication.MoonFrames || Columns != SkyMediaPublication.MoonColumns
+            || Width != FrameWidth * Columns || Height != FrameHeight * (FrameCount / Columns))
+            throw new InvalidOperationException($"Moon '{Id}' carries invalid generated facts.");
+    }
+}
+
 /// <summary>Complete product-wide day-sky metadata and generated resource closure.</summary>
 public sealed record SkyMediaManifest(
     IReadOnlyList<PublishedSource> Sources,
@@ -333,10 +352,12 @@ public sealed record SkyMediaManifest(
     IReadOnlyList<SkyNightResource> NightResources,
     IReadOnlyList<SkyWeatherParticleResource> WeatherParticles,
     IReadOnlyList<SkyCurveKnot> DaylightFrameCurve,
-    IReadOnlyList<SkyClearedResource> ClearedResources)
+    IReadOnlyList<SkyClearedResource> ClearedResources,
+    IReadOnlyList<SkyMoonResource> Moons)
 {
     public SkyMediaManifest Canonicalize() => this with
     {
+        Moons = Moons.OrderBy(moon => moon.Id, StringComparer.Ordinal).ToArray(),
         Sources = Sources.OrderBy(source => source.Path, StringComparer.Ordinal).ToArray(),
         Resources = Resources.OrderBy(resource => resource.Id, StringComparer.Ordinal).ToArray(),
         Selections = Selections.OrderBy(selection => selection.SkyIndex).ThenBy(selection => selection.TimeFrame).ToArray(),
@@ -396,6 +417,9 @@ public sealed record SkyMediaManifest(
             throw new InvalidOperationException("The sky frame curve must be ordered from dawn to dusk and nondecreasing.");
         }
 
+        foreach (SkyMoonResource moon in Moons) moon.Validate();
+        if (Moons.Count is not (0 or 2)) throw new InvalidOperationException("A sky publishes both moons or neither.");
+
         HashSet<int> nightIndexes = NightResources.Select(resource => resource.NightIndex).ToHashSet();
         if (NightSources.Count != 0 && (nightIndexes.Count != 4 || nightIndexes.Any(index => index is < 0 or >= 4)))
             throw new InvalidOperationException("Night sky resources must cover NITE00 through NITE03 exactly.");
@@ -428,6 +452,9 @@ public sealed record SkyMediaPublication(
     public const int NightSourceBytes = 112_128;
     public const int NightWidth = 512;
     public const int NightHeight = 219;
+    /// <summary>A moon's frames, one for each day of the lunar cycle.</summary>
+    public const int MoonFrames = 32;
+    public const int MoonColumns = 8;
 
     /// <summary>Source values from Daggerfall Unity's SkyRig.prefab SkyCurve.</summary>
     public static IReadOnlyList<SkyCurveKnot> DaylightFrameCurve { get; } =
@@ -443,7 +470,9 @@ public sealed record SkyMediaPublication(
     public static SkyMediaPublication Create(
         IEnumerable<SkyMediaSource> inputs,
         IEnumerable<NightSkyMediaSource> nightInputs,
-        NightSkyPaletteSource? nightPalette)
+        NightSkyPaletteSource? nightPalette,
+        IEnumerable<SkyMoonSource>? moons = null,
+        Arena2Palette? moonPalette = null)
     {
         ArgumentNullException.ThrowIfNull(inputs);
         ArgumentNullException.ThrowIfNull(nightInputs);
@@ -529,6 +558,8 @@ public sealed record SkyMediaPublication(
         }
 
         SkyWeatherParticleResource[] particleResources = CreateWeatherParticles(artifacts);
+        SkyMoonResource[] moonResources = [.. (moons ?? []).Select(moon => PublishMoon(artifacts, moon,
+            moonPalette ?? throw new ArgumentNullException(nameof(moonPalette), "Moons are published through the art palette.")))];
 
         List<SkyPanoramaSelection> selections = [];
         foreach (SkyMediaSource source in sources)
@@ -554,11 +585,34 @@ public sealed record SkyMediaPublication(
         }
 
         SkyMediaManifest manifest = new SkyMediaManifest(provenance, resources, selections, nightProvenance, nightResources,
-            particleResources, DaylightFrameCurve, cleared).Canonicalize();
+            particleResources, DaylightFrameCurve, cleared, moonResources).Canonicalize();
         manifest.Validate();
         byte[] manifestBytes = JsonSerializer.SerializeToUtf8Bytes(manifest, PublishedJson.Section);
         artifacts.Add(new(ManifestRelativePath, [.. manifestBytes, (byte)'\n']));
         return new(artifacts.OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal).ToArray(), manifest, provenance);
+    }
+
+    /// <summary>Lays a moon's frames into one atlas. Palette index 0 is the sky around the disc, and clear.</summary>
+    private static SkyMoonResource PublishMoon(List<ImportPublicationArtifact> artifacts, SkyMoonSource source, Arena2Palette palette)
+    {
+        CfaFrames frames = CfaDecoder.Decode(source.Bytes.Span, source.SourcePath);
+        if (frames.FrameCount != MoonFrames)
+            throw new InvalidOperationException($"Moon source '{source.SourcePath}' has {frames.FrameCount} frames for a {MoonFrames}-day cycle.");
+        int width = frames.Width * MoonColumns, height = frames.Height * (MoonFrames / MoonColumns);
+        byte[] atlas = new byte[checked(width * height * 4)];
+        for (int frame = 0; frame < MoonFrames; frame++)
+        {
+            byte[] rgba = palette.ToRgbaBytes(frames.Frame(frame), PaletteAlphaMode.IndexZeroTransparent);
+            int left = frame % MoonColumns * frames.Width, top = frame / MoonColumns * frames.Height;
+            for (int row = 0; row < frames.Height; row++)
+                rgba.AsSpan(row * frames.Width * 4, frames.Width * 4).CopyTo(atlas.AsSpan((((top + row) * width) + left) * 4));
+        }
+
+        string id = $"sky/moon/{source.Moon}", path = $"media/sky/resources/moon-{source.Moon}.png";
+        byte[] png = DeterministicPngEncoder.EncodeRgba8(width, height, atlas);
+        artifacts.Add(new(path, png, mediaId: id));
+        return new(id, source.Moon, path, ContentDigest.Compute(png), png.LongLength, width, height, frames.Width, frames.Height,
+            MoonColumns, MoonFrames, source.SourcePath, ContentDigest.Compute(source.Bytes.Span));
     }
 
     private static SkyClearedResource Cleared(List<ImportPublicationArtifact> artifacts, string of, string path, byte[] panorama)

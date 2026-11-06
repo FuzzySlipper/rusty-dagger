@@ -35,6 +35,15 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
     /// <summary>How many shades a cloud is drawn in.</summary>
     internal uint CloudShadeSteps { get; init; } = 5;
 
+    /// <summary>How large each moon stands, in degrees of sky from its centre to its edge.</summary>
+    internal float MasserRadiusDegrees { get; init; } = 4;
+    internal float SecundaRadiusDegrees { get; init; } = 2.4f;
+    /// <summary>How far each moon's path leans south of the sun's, so the two don't run along one line.</summary>
+    internal float MasserTiltDegrees { get; init; } = 20;
+    internal float SecundaTiltDegrees { get; init; } = 32;
+    /// <summary>How bright a moon stands by full day, as a share of its brightness at night.</summary>
+    internal float MoonDayBrightness { get; init; } = .45f;
+
     internal static DaggerfallHorizonTuning Default { get; } = new(4.5f, 3_000, 24_000, .00003f, 150, 2_900, 3_700, .1f, 204.8f, .25f, .7f,
         .45f, .9f, 3_500, 1_800, 8, new(14, 5),
         Color.FromSrgb(.16f, .24f, .32f), Color.FromSrgb(.28f, .28f, .29f), Color.FromSrgb(.78f, .78f, .81f),
@@ -61,6 +70,8 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
         if (CloudCoverage is < 0 or > 1 || StormCloudCoverage is < 0 or > 1 || CloudTwilightDegrees < 0
             || !float.IsFinite(CloudDrift.X) || !float.IsFinite(CloudDrift.Y))
             throw new ArgumentException("A horizon's cloud cover is from 0 to 1, with a finite drift and twilight.");
+        if (MasserRadiusDegrees <= 0 || SecundaRadiusDegrees <= 0 || MoonDayBrightness is < 0 or > 1)
+            throw new ArgumentException("A moon has a size, and a day brightness from 0 to 1.");
         if (Climates.Count == 0) throw new ArgumentException("A horizon needs a colour for its climates.");
         return this;
     }
@@ -79,6 +90,11 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
     {
         CloudPixelMetres = e.GetProperty("cloudPixelMetres").GetSingle(),
         CloudShadeSteps = e.GetProperty("cloudShadeSteps").GetUInt32(),
+        MasserRadiusDegrees = e.GetProperty("masserRadiusDegrees").GetSingle(),
+        SecundaRadiusDegrees = e.GetProperty("secundaRadiusDegrees").GetSingle(),
+        MasserTiltDegrees = e.GetProperty("masserTiltDegrees").GetSingle(),
+        SecundaTiltDegrees = e.GetProperty("secundaTiltDegrees").GetSingle(),
+        MoonDayBrightness = e.GetProperty("moonDayBrightness").GetSingle(),
     };
 
     /// <summary>A colour as content writes it, sRGB from 0 to 1; a heightfield takes linear.</summary>

@@ -1,11 +1,25 @@
+using System.Numerics;
 using System.Text.Json;
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.World;
+
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
 internal sealed record DaggerfallSkyResource(string Id, string RelativePath, ContentSha256 Hash, ulong ByteLength, Color ClearColor);
 internal readonly record struct DaggerfallSkySelection(string First, string Second, float Amount);
+/// <summary>A moon's atlas of its lunar cycle: the frame for a day is at <see cref="Frame"/>.</summary>
+internal sealed record DaggerfallSkyMoon(string Id, bool Masser, int Columns, int FrameCount)
+{
+    /// <summary>The share of the atlas's width and height one frame takes, and where a frame starts.</summary>
+    internal (Vector2 Min, Vector2 Max) Frame(int frame)
+    {
+        int rows = FrameCount / Columns;
+        Vector2 size = new(1F / Columns, 1F / rows), min = new(frame % Columns * size.X, frame / Columns * size.Y);
+        return (min, min + size);
+    }
+}
 
 /// <summary>The normalized product-wide sky and precipitation resource catalog.</summary>
 internal sealed class DaggerfallSkyMedia
@@ -21,15 +35,19 @@ internal sealed class DaggerfallSkyMedia
     private readonly float[][] _curve;
 
     private DaggerfallSkyMedia(DaggerfallData content, Dictionary<string, DaggerfallSkyResource> resources,
-        Dictionary<(int, int), string> frames, Dictionary<int, string> nights, Dictionary<string, string> cleared, Dictionary<bool, string> particles, float[][] curve)
-    { _content = content; _resources = resources; _frames = frames; _nights = nights; _cleared = cleared; _particles = particles; _curve = curve; }
+        Dictionary<(int, int), string> frames, Dictionary<int, string> nights, Dictionary<string, string> cleared, Dictionary<bool, string> particles, float[][] curve,
+        IReadOnlyList<DaggerfallSkyMoon> moons)
+    { _content = content; _resources = resources; _frames = frames; _nights = nights; _cleared = cleared; _particles = particles; _curve = curve; Moons = moons; }
+
+    /// <summary>Masser and Secunda.</summary>
+    internal IReadOnlyList<DaggerfallSkyMoon> Moons { get; }
 
     internal static DaggerfallSkyMedia Read(DaggerfallData content)
     {
         using var document = JsonDocument.Parse(content.ReadBytes(ManifestPath));
         JsonElement root = document.RootElement;
         Dictionary<string, DaggerfallSkyResource> resources = new(StringComparer.Ordinal);
-        foreach (string section in new[] {"resources", "nightResources", "clearedResources", "weatherParticles"})
+        foreach (string section in new[] {"resources", "nightResources", "clearedResources", "weatherParticles", "moons"})
         foreach (JsonElement resource in root.GetProperty(section).EnumerateArray())
         {
             string id = resource.GetProperty("id").GetString()!;
@@ -40,7 +58,8 @@ internal sealed class DaggerfallSkyMedia
                 throw new InvalidOperationException($"Sky resource '{id}' has invalid publication identity or artifact facts.");
             ContentSha256 hash = DaggerfallContentHash.Parse(resource.GetProperty("contentHash").GetString()!, $"Sky resource '{id}'");
             Color color = new(1,1,1,1);
-            if (section != "weatherParticles")
+            bool panorama = section is not ("weatherParticles" or "moons");
+            if (panorama)
             {
                 float[] rgb = resource.GetProperty("clearColor").EnumerateArray().Select(value => value.GetSingle()).ToArray();
                 if (rgb.Length != 3 || rgb.Any(value => !float.IsFinite(value) || value is < 0 or > 1))
@@ -48,7 +67,7 @@ internal sealed class DaggerfallSkyMedia
                 color = new(rgb[0], rgb[1], rgb[2], 1);
             }
             int width = resource.GetProperty("width").GetInt32(), height = resource.GetProperty("height").GetInt32();
-            if (width <= 0 || height <= 0 || section != "weatherParticles" && width != height * 2)
+            if (width <= 0 || height <= 0 || panorama && width != height * 2)
                 throw new InvalidOperationException($"Sky resource '{id}' must be a normalized 2:1 panorama.");
             if (!resources.TryAdd(id, new(id, path["media/sky/resources/".Length..], hash, (ulong)resource.GetProperty("byteLength").GetInt64(), color)))
                 throw new InvalidOperationException($"Sky publication repeats resource '{id}'.");
@@ -88,7 +107,11 @@ internal sealed class DaggerfallSkyMedia
         foreach (var resource in resources.Values)
             if (!entries.TryGetValue(resource.RelativePath, out var entry) || entry.Sha256 != resource.Hash || entry.ByteLength != resource.ByteLength)
                 throw new InvalidOperationException($"Sky artifact '{resource.Id}' is absent or disagrees with its published digest/length.");
-        return new(content, resources, frames, nights, cleared, particles, curve);
+        DaggerfallSkyMoon[] moons = [.. root.GetProperty("moons").EnumerateArray().Select(moon => new DaggerfallSkyMoon(moon.GetProperty("id").GetString()!,
+            moon.GetProperty("moon").GetString() == "masser", moon.GetProperty("columns").GetInt32(), moon.GetProperty("frameCount").GetInt32()))];
+        if (moons.Length != 2 || moons.Count(moon => moon.Masser) != 1 || moons.Any(moon => moon.FrameCount != DaggerfallMoons.CycleDays))
+            throw new InvalidOperationException("Sky publication does not carry Masser and Secunda, each with a frame for every day of the lunar cycle.");
+        return new(content, resources, frames, nights, cleared, particles, curve, moons);
     }
 
     internal DaggerfallSkySelection Select(int climate, DaggerfallCalendar calendar, DaggerfallWeatherKind weather, int variant)
@@ -138,11 +161,11 @@ internal sealed class DaggerfallSkyMedia
     }
 
     internal string Particle(bool snow) => _particles[snow];
-    internal RenderResource Open(IGraphicsService graphics, string id)
+    internal RenderResource Open(IGraphicsService graphics, string id, TextureFilter filter = TextureFilter.Linear)
     {
         DaggerfallSkyResource resource = _resources[id];
         using DaggerfallDataRoot bundle = _content.Open(LogicalRoot);
         using var reference = bundle.OpenReference(resource.RelativePath);
-        return graphics.OpenResourceFromContent(new(reference, TextureFilter.Linear, TextureWrap.Clamp, TextureColorSpace.Srgb)).Handle;
+        return graphics.OpenResourceFromContent(new(reference, filter, TextureWrap.Clamp, TextureColorSpace.Srgb)).Handle;
     }
 }

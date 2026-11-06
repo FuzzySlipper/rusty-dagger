@@ -10,6 +10,7 @@ heightfield in the backdrop that only draws.
 | Far ground: rings, lift, colours | `DaggerfallHorizonGround` |
 | Heightfield, backdrop link, following the player | `DaggerfallHorizon` |
 | Haze, cloud layer, which sky panorama draws | `DaggerfallWeatherPresentation` |
+| Moons | `DaggerfallMoons`, `SkyMediaPublication` (importer) |
 | Panoramas with the painted horizon cleared | `SkyHorizonClearing` (importer) |
 | Sun, ambient and how lights scale | `DaggerfallSiteLighting`, `siteLighting` in the tuning payload |
 | Lift, haze, clouds and far colours | `horizon` in the tuning payload |
@@ -36,6 +37,12 @@ heightfield in the backdrop that only draws.
   would float over the real skyline. Each panorama also ships cleared of it, and
   the Engine cloud layer stands in for the low cloud lost with it, drawn in cells anchored
   to the clouds (`cloudPixelMetres`, `cloudShadeSteps`) so it sits with the pixel art.
+- **Moons.** Masser and Secunda are the classic's art for each of the lunar cycle's 32
+  days, published as an atlas each, and the frame comes from the calendar's own cycle, so
+  the sky shows the phase lycanthropes and enchantments answer to. A moon falls behind the
+  sun a day at a time from new, so a full moon rises at dusk. Their paths lean south
+  (`masserTiltDegrees`, `secundaTiltDegrees`), and they stand with the cleared sky only:
+  the classic's painted sky has none, and thick weather closes over them.
 - **Fog.** The classic's clear fog ends at the window's edge and would hide the
   horizon, so clear weather uses thin exponential haze instead, its colour the cleared
   sky's own horizon. Rain, snow and fog keep their densities and hide the far ground:
