@@ -1,0 +1,319 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Restrained hand-painted 1990s fantasy adventure item illustration, opaque gouache-like colour modelling, broad confident painted planes, sparse dry-brush marks, selective dark accents along occluding contours. Tactile and believable without photographic microtexture. Slightly irregular handmade edges, clear original local colours and quiet wear; descriptive rather than ornamental. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn fantasy world scenery: the trees, rocks, plants and town fixtures of a dark fantasy RPG, seen from standing height. Keep the source's silhouette, proportions, local colours and the arrangement of its parts: it replaces the source at the same size in the world. Restrained palette with distinct light, middle and dark families. Detail hierarchy: silhouette first, a few large masses second, sparse material marks third. Foliage reads as clumps of painted leaf masses, not individual leaves. Keep open gaps between branches, bars and posts open. No extra parts, gemstones, runes, faces, symbols or fantasy embellishment. Not pixel art, not a photoreal photograph, not a glossy mobile-game asset, not a dramatic scene. No text, labels, border, vignette, frame, hand, person, ground plane, scenery or second object.",
+  "presentation": "One isolated object on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no ground shadow, no background texture and no cast shadow outside the object. The whole object visible with breathing room, centred, its base where the source's base is. Preserve the source view and rotation. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Flats: nature-woodland-hills-snow",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "flats",
+      "model": "qwen-edit",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "conditioning": "reference"
+    }
+  ],
+  "items": [
+    {
+      "id": "flat-507-1",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-001-frame-000-source.png",
+      "content": "One jagged, snow-capped mountain peak with dark rock base and white ice formations, primarily grey and white.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-1 (30x49)"
+    },
+    {
+      "id": "flat-507-2",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-002-frame-000-source.png",
+      "content": "One bare, snow-dusted tree with gnarled branches and a rough brown trunk, its limbs reaching upward against a dark sky.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-2 (82x124)"
+    },
+    {
+      "id": "flat-507-3",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-003-frame-000-source.png",
+      "content": "One dark, hooded figure with a cloak, visible hands, and a faint necklace, rendered in shades of grey and black.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-3 (49x78)"
+    },
+    {
+      "id": "flat-507-4",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-004-frame-000-source.png",
+      "content": "One jagged, grey-white rock formation with layered, branching structures and dark base, resembling a natural mineral cluster.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-4 (53x80)"
+    },
+    {
+      "id": "flat-507-5",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-005-frame-000-source.png",
+      "content": "One snow-dusted evergreen tree with layered branches, green needles, and brown trunk, featuring white snow on its limbs.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-5 (19x77)"
+    },
+    {
+      "id": "flat-507-6",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-006-frame-000-source.png",
+      "content": "One jagged, metallic sword with a worn blade and hilt, showing silver and grey tones, possibly ancient or battle-scarred.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-6 (27x41)"
+    },
+    {
+      "id": "flat-507-7",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-007-frame-000-source.png",
+      "content": "One ornate, leafy green and silver circlet with purple accents, featuring a central gem and symmetrical, vine-like patterns.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-7 (20x18)"
+    },
+    {
+      "id": "flat-507-8",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-008-frame-000-source.png",
+      "content": "One ornate, multi-pronged staff with curved, silver-tipped ends and dark green, brown, and purple segmented shafts.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-8 (30x38)"
+    },
+    {
+      "id": "flat-507-9",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-009-frame-000-source.png",
+      "content": "One green staff with silver top and grip, featuring vertical grooves and a curved handle, primarily green and silver.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-9 (17x15)"
+    },
+    {
+      "id": "flat-507-10",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-010-frame-000-source.png",
+      "content": "One snow-dusted evergreen tree with layered branches, green needles, and brown trunk, featuring white snow on its limbs.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-10 (46x59)"
+    },
+    {
+      "id": "flat-507-11",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-011-frame-000-source.png",
+      "content": "One snow-dusted evergreen tree with layered branches, brown trunk, and green needles topped with white snow.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-11 (46x110)"
+    },
+    {
+      "id": "flat-507-12",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-012-frame-000-source.png",
+      "content": "One snow-covered evergreen tree with brown trunk, green needles, and white snow on branches and tips.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-12 (35x103)"
+    },
+    {
+      "id": "flat-507-13",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-013-frame-000-source.png",
+      "content": "One snow-covered evergreen tree with dark trunk, green needles, and white snow patches on branches.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-13 (77x150)"
+    },
+    {
+      "id": "flat-507-14",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-014-frame-000-source.png",
+      "content": "One snow-dusted tree with layered branches, green foliage, and a textured trunk, primarily in green, white, and brown tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-14 (84x116)"
+    },
+    {
+      "id": "flat-507-15",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-015-frame-000-source.png",
+      "content": "One snow-dusted, bare tree with gnarled trunk and twisted branches, dark bark and white snow.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-15 (142x185)"
+    },
+    {
+      "id": "flat-507-16",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-016-frame-000-source.png",
+      "content": "One snow-dusted tree with green foliage, brown trunk, and white snow on branches and roots, standing upright.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-16 (124x141)"
+    },
+    {
+      "id": "flat-507-17",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-017-frame-000-source.png",
+      "content": "One grey, textured, roughly hewn stone object with irregular surface, jagged edges, and dark crevices.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-17 (43x47)"
+    },
+    {
+      "id": "flat-507-18",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-018-frame-000-source.png",
+      "content": "One curved, metallic blade with a worn hilt and darkened edges, showing silver and grey tones.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-18 (56x60)"
+    },
+    {
+      "id": "flat-507-19",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-019-frame-000-source.png",
+      "content": "One snow-dusted tree trunk with bare branches, brown bark, and white snow clinging to its limbs and base.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-19 (44x51)"
+    },
+    {
+      "id": "flat-507-20",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-020-frame-000-source.png",
+      "content": "One gnarled tree trunk with snow-dusted branches, textured bark, and white snow, primarily brown and white.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-20 (66x51)"
+    },
+    {
+      "id": "flat-507-21",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-021-frame-000-source.png",
+      "content": "One tall plant with a slender green stem, purple-pink blossoms, and green leaves at its base.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-21 (15x32)"
+    },
+    {
+      "id": "flat-507-22",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-022-frame-000-source.png",
+      "content": "One white, curved, horned creature with green accents, resembling a stylized dragon or wyvern, primarily white and green.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-22 (18x9)"
+    },
+    {
+      "id": "flat-507-23",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-023-frame-000-source.png",
+      "content": "One dark, leafy tree with snow-covered branches and a slender trunk, featuring muted greens, browns, and white.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-23 (43x48)"
+    },
+    {
+      "id": "flat-507-24",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-024-frame-000-source.png",
+      "content": "One gnarled, leafless tree with twisted branches and textured bark, primarily grey and white.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-24 (39x98)"
+    },
+    {
+      "id": "flat-507-25",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-025-frame-000-source.png",
+      "content": "One snow-covered evergreen tree with green needles, brown trunk, and white snow on branches.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-25 (67x131)"
+    },
+    {
+      "id": "flat-507-26",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-026-frame-000-source.png",
+      "content": "One green plant with silver-grey leaves and stems, featuring a blue gem-like detail at its base.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-26 (20x34)"
+    },
+    {
+      "id": "flat-507-27",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-027-frame-000-source.png",
+      "content": "One snow-dusted evergreen tree with dense green foliage, brown trunk, and white snow patches on branches.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-27 (42x37)"
+    },
+    {
+      "id": "flat-507-28",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-028-frame-000-source.png",
+      "content": "One jagged, grey stone blade with a sharp edge and textured surface, showing natural rock formations and dark mineral streaks.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-28 (21x59)"
+    },
+    {
+      "id": "flat-507-29",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-029-frame-000-source.png",
+      "content": "One plant with green stems and white blossoms, featuring layered petals and leafy fronds, primarily in green and white hues.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-29 (33x24)"
+    },
+    {
+      "id": "flat-507-30",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-030-frame-000-source.png",
+      "content": "One green and silver armored figure with a curved blade, helmet, and flowing cape, standing in a dynamic pose.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-30 (27x25)"
+    },
+    {
+      "id": "flat-507-31",
+      "directory": "nature-woodland-hills-snow/texture-507",
+      "image": "flat/texture-507-record-031-frame-000-source.png",
+      "content": "One snow-laden branch with green leaves and white blossoms, featuring brown stems and varied green shades.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "flat-507-31 (38x21)"
+    }
+  ]
+}
