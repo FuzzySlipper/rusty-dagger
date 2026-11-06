@@ -657,7 +657,7 @@ internal sealed class MeshAssembly
         NormalizedMesh[] orderedMeshes = meshes.OrderBy(mesh => mesh.Id, StringComparer.Ordinal).ToArray();
         foreach (NormalizedMesh mesh in orderedMeshes) mesh.Validate();
         string[] materials = (materialUniverse ?? orderedMeshes.SelectMany(mesh => mesh.MaterialGroups)
-            .Where(group => !collisionOnly || group.ParticipatesInCollision)
+            .Where(group => collisionOnly ? group.ParticipatesInCollision : !group.CollisionOnly)
             .Select(group => group.MaterialResourceId)
             .Distinct(StringComparer.Ordinal)
             .OrderBy(material => material, StringComparer.Ordinal)
@@ -674,7 +674,7 @@ internal sealed class MeshAssembly
         foreach (NormalizedMesh mesh in orderedMeshes)
         {
             NormalizedMaterialGroup[] selectedGroups = mesh.MaterialGroups
-                .Where(group => !collisionOnly || group.ParticipatesInCollision)
+                .Where(group => collisionOnly ? group.ParticipatesInCollision : !group.CollisionOnly)
                 .OrderBy(group => group.StartTriangle)
                 .ToArray();
             if (selectedGroups.Length == 0)
