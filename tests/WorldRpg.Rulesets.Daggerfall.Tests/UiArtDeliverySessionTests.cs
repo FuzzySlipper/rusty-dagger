@@ -436,7 +436,8 @@ public sealed class UiArtDeliverySessionTests
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(TestContentFiles.Read(Path.Combine(root, "content", payload)), "daggerfall.art-replacements");
         foreach (DaggerfallArtImage image in art.Images) content.Add(image.Path, TestContentFiles.ReadCopy(Path.Combine(root, "content", image.Path)));
         foreach (string path in art.All.SelectMany(replacement => new[] { replacement.World?.File.Path, replacement.DyeMask?.World?.File.Path })
-                .Concat(art.Surfaces.Values.Select(surface => surface.File.Path)).OfType<string>())
+                .Concat(art.Surfaces.Values.Select(surface => surface.File.Path))
+                .Concat(art.Flats.Values.SelectMany(flat => new[] { flat.File.Path, flat.Emission?.Path })).OfType<string>())
             content.Add(path, TestContentFiles.ReadCopy(Path.Combine(root, "content", path)));
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, appearance);

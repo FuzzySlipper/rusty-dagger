@@ -860,11 +860,28 @@ public sealed class PublishedContentDeliveryTests
             Assert.Equal((surface.Width, surface.Height), (BinaryPrimitives.ReadInt32BigEndian(png[16..20]), BinaryPrimitives.ReadInt32BigEndian(png[20..24])));
         });
 
+        // Refreshed flats stand in for classic records, each an 8-bit RGBA atlas of its stated size; a flat that gives light
+        // carries an emission map of the same layout.
+        JsonElement[] flats = [.. section.GetProperty("flats").EnumerateArray()];
+        Assert.NotEmpty(flats);
+        Assert.Equal(flats.Length, art.Flats.Count);
+        Assert.Contains(art.Flats.Values, flat => flat.Emission is not null);
+        Assert.All(art.Flats.Values, flat =>
+        {
+            foreach (DaggerfallArtFile file in new[] { flat.File, flat.Emission }.OfType<DaggerfallArtFile>())
+            {
+                ReadOnlySpan<byte> png = content.ReadBytes(file.Path).Span;
+                Assert.Equal([8, 6, 0, 0, 0], png[24..29].ToArray());
+                Assert.Equal((flat.Width, flat.Height), (BinaryPrimitives.ReadInt32BigEndian(png[16..20]), BinaryPrimitives.ReadInt32BigEndian(png[20..24])));
+            }
+        });
+
         // The payload states the bytes of every refreshed file, and names every file the refreshed media carries.
         JsonElement[] owners = [.. images.SelectMany(image => image.TryGetProperty("dyeMask", out JsonElement mask) ? [image, mask] : new[] { image })];
         JsonElement[] files = [.. owners, .. owners.Where(owner => owner.TryGetProperty("world", out _)).Select(owner => owner.GetProperty("world")),
             .. section.GetProperty("effects").EnumerateArray(), section.GetProperty("effectGlow"),
-            .. section.GetProperty("meshes").EnumerateArray().DistinctBy(mesh => mesh.GetProperty("path").GetString()), .. surfaces];
+            .. section.GetProperty("meshes").EnumerateArray().DistinctBy(mesh => mesh.GetProperty("path").GetString()), .. surfaces,
+            .. flats, .. flats.Where(flat => flat.TryGetProperty("emission", out _)).Select(flat => flat.GetProperty("emission"))];
         foreach (JsonElement file in files)
         {
             byte[] bytes = content.ReadBytes(file.GetProperty("path").GetString()!).ToArray();
