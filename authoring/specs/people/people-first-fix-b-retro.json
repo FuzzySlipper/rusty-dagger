@@ -1,0 +1,93 @@
+{
+  "seed": 27301,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Highly detailed lurid pulp-fantasy character painting in the manner of 1970s and 80s paperback cover art (Frank Frazetta, Boris Vallejo): glossy airbrushed oil rendering, strongly modelled features with defined brows, eyes, nose, lips and cheekbones, fine skin detail and sheen, individual strands of hair and beard, every fold of cloth, seam, buckle and link defined, warm rim light against deep shadow, sharp specular highlights, rich saturated colour. Crisp, confident, finely detailed forms rather than flat broad shapes; keep the original local colours. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent cast of grounded fantasy RPG character art. Keep the source's pose, skin tone, hair, proportions, build, costume, garment colours and everything the person holds: it replaces the source at the same size in the world. Keep open gaps between arms, legs and held objects open. No extra clothing, weapon, armour, text, border, scenery, shadow or second figure.",
+  "presentation": "One isolated full-length person on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no ground shadow, no background texture and no cast shadow outside the figure. The whole figure visible with breathing room, centred, feet where the source's feet are. Preserve the source view and pose. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "People first pass fixes b / Qwen then retro",
+  "items": [
+    {
+      "id": "person-178-2",
+      "directory": "people-necromancers/texture-178",
+      "image": "person/texture-178-record-002-frame-000-source.png",
+      "content": "One kneeling worshipper in red hooded robes with gold trim and a shining yellow-gold skull amulet, face hidden, bare forearms raised and pressed together before the hood, robes pooled on the floor, one bare foot behind. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-178-2 (43x61)"
+    },
+    {
+      "id": "person-178-4",
+      "directory": "people-necromancers/texture-178",
+      "image": "person/texture-178-record-004-frame-000-source.png",
+      "content": "One tall figure in a long deep red hooded robe with dark panels, a shadowed teal-grey face, both hands holding a tall staff topped with a shining yellow-gold metal skull, gold not bone. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-178-4 (35x94)"
+    },
+    {
+      "id": "person-184-1",
+      "directory": "people-common-2/texture-184",
+      "image": "person/texture-184-record-001-frame-000-source.png",
+      "content": "One dark-skinned woman in a pink-purple hooded cape, a teal bodice and a long green skirt, holding a tall staff with a small bright yellow-gold ball. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-184-1 (53x83)"
+    },
+    {
+      "id": "person-184-15",
+      "directory": "people-common-2/texture-184",
+      "image": "person/texture-184-record-015-frame-000-source.png",
+      "content": "One slim, softly built shirtless adult man with sandy hair, smooth plain torso with no visible ribs or veins, in torn olive knee-length trousers, one arm held out, bare feet. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-184-15 (38x57)"
+    },
+    {
+      "id": "person-334-19",
+      "directory": "people-daggerfall/texture-334",
+      "image": "person/texture-334-record-019-frame-000-source.png",
+      "content": "One young king in a thin gold crown, a purple tabard with one large bright red coiled serpent filling the whole chest and gold patterns below, tan sleeves with gold shoulders and a long purple cape. Add no plants, ground or second person.",
+      "uncertainty": "",
+      "invention": "Add nothing the source does not show.",
+      "name": "person-334-19 (96x161)"
+    }
+  ],
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.2",
+      "group": "flats",
+      "model": "krea2-turbo",
+      "host": "den-m5",
+      "url": "http://192.168.1.24:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.2,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.5"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ]
+}
