@@ -115,6 +115,7 @@ public static class RmbExteriorNormalizer
     private sealed class Builder(RmbExteriorNormalizationRequest request, MapsExteriorLayout layout, BsaArchive blocks, BsaArchive arch, ushort groundTextureArchive)
     {
         private readonly Dictionary<(ushort Archive, ushort Record, string? DoorId), NormalizedMeshBuilder> geometry = [];
+        private readonly Dictionary<(ushort Archive, ushort Record), NormalizedMeshBuilder> groundPlane = [];
         private readonly Dictionary<(ushort Archive, ushort Record), TextureInfo> textures = [];
         private readonly SortedSet<string> referencedMeshes = new(StringComparer.Ordinal);
         private readonly Dictionary<(int X, int Y), int> doorOrdinals = [];
@@ -184,7 +185,8 @@ public static class RmbExteriorNormalizer
         /// <summary>
         /// Projects every donor FLD ground tile. The ground plane remains complete below buildings exactly as
         /// MeshReader renders it; CityNavigation's automap is a navigation mask, never a reason to cut a
-        /// physical hole in the source ground mesh.
+        /// physical hole in the source ground mesh. It collides and carries navigation but never draws: the walked
+        /// terrain paints these same tiles at this same height, and two surfaces there fight for every pixel.
         /// </summary>
         private void AddGround(RmbBlockContent content, Arena2ImportPoint origin, MapsExteriorBlock block)
         {
@@ -196,7 +198,8 @@ public static class RmbExteriorNormalizer
                 // TextureArchive exposes the four-frame group by its base ordinal, so the block-level
                 // record is the group ordinal the climate's ground archive is read at.
                 TextureInfo texture = Texture(groundTextureArchive, tile.TextureRecord);
-                NormalizedMeshBuilder group = Geometry(groundTextureArchive, tile.TextureRecord, texture.MaterialId);
+                if (!groundPlane.TryGetValue((groundTextureArchive, tile.TextureRecord), out NormalizedMeshBuilder? group))
+                    groundPlane.Add((groundTextureArchive, tile.TextureRecord), group = new(texture.MaterialId, participatesInCollision: true, collisionOnly: true));
                 NormalizedVector3[] quad = [.. tile.Corners.Select(corner => MeshGeometry.ToRightHanded(RmbBlockContent.Add(origin, corner)))];
                 group.Add(quad, tile.Uvs, MeshGeometry.Normal(quad));
             }
@@ -353,7 +356,9 @@ public static class RmbExteriorNormalizer
                 .OrderBy(pair => pair.Key.Archive)
                 .ThenBy(pair => pair.Key.Record)
                 .ThenBy(pair => pair.Key.DoorId, StringComparer.Ordinal)
-                .Select(pair => pair.Value.ToMesh(MeshId(root, pair.Key), staticId)).ToList();
+                .Select(pair => pair.Value.ToMesh(MeshId(root, pair.Key), staticId))
+                .Concat(groundPlane.OrderBy(pair => pair.Key.Archive).ThenBy(pair => pair.Key.Record)
+                    .Select(pair => pair.Value.ToMesh($"mesh/{root}/ground-{pair.Key.Archive}-{pair.Key.Record}", staticId))).ToList();
             NormalizedBounds bounds = MeshGeometry.Bounds(meshes.SelectMany(mesh => mesh.Vertices).ToArray());
             HashSet<string> movableMeshIds = geometry.Keys
                 .Where(key => key.DoorId is not null)

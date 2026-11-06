@@ -404,6 +404,10 @@ public readonly record struct NormalizedTriangle(int FirstVertex, int SecondVert
 
 public sealed record NormalizedMaterialGroup(string MaterialResourceId, int StartTriangle, int TriangleCount, bool ParticipatesInCollision)
 {
+    /// <summary>Collision and navigation only: nothing draws it, as a location's ground plane under the walked terrain.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool CollisionOnly { get; init; }
+
     public void Validate(int triangleCount)
     {
         NormalizedImportDocument.RequireLogicalId(MaterialResourceId, nameof(MaterialResourceId));

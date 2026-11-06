@@ -8,6 +8,26 @@ namespace Daggerfall.Import.Tests;
 public sealed class RmbExteriorNormalizerTests
 {
     [CorpusFact]
+    public void A_towns_ground_plane_collides_and_carries_navigation_but_never_draws_over_the_walked_terrain()
+    {
+        RmbExteriorNormalizationResult exterior = RmbExteriorNormalizer.Normalize(new(Sources(), 17, "Charing", RmbWorldProfileKind.Exterior)
+        {
+            Navigation = NavigationDerivationConfig.ClassicDefault with { CellSize = 10F },
+        });
+        NormalizedMesh[] ground = [.. exterior.Document.Meshes.Where(mesh => mesh.MaterialGroups.All(group => group.CollisionOnly))];
+        Assert.NotEmpty(ground);
+        Assert.All(ground, mesh => Assert.Contains("/ground-", mesh.Id, StringComparison.Ordinal));
+        Assert.All(ground, mesh => Assert.All(mesh.MaterialGroups, group => Assert.True(group.ParticipatesInCollision)));
+        int all = exterior.Document.Meshes.Sum(mesh => mesh.Triangles.Count), plane = ground.Sum(mesh => mesh.Triangles.Count);
+
+        using EngineBinaryContent.StaticMesh drawn = EngineBinaryContent.ReadStaticMesh(exterior.SpatialPublication.StaticMesh.Bytes);
+        Assert.True(plane > 0 && drawn.Indices.Length / 3 <= all - plane, $"{drawn.Indices.Length / 3} drawn of {all}, {plane} of them ground.");
+        EngineBinaryContent.SpatialArtifact spatial = EngineBinaryContent.ReadSpatial(exterior.SpatialPublication.CollisionNavigation.Bytes.Span);
+        Assert.True(spatial.Triangles.Length >= plane, $"{spatial.Triangles.Length} collision triangles for {plane} of ground.");
+        Assert.NotEmpty(exterior.SpatialPublication.Navigation.Cells);
+    }
+
+    [CorpusFact]
     public void Charing_exterior_and_selected_real_building_interior_publish_nonempty_static_collision_navigation_closures()
     {
         DungeonLogicalSourceSet sources = Sources();

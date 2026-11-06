@@ -13,7 +13,7 @@ namespace Daggerfall.Import.Normalization;
 /// that differed between them would leave those two views disagreeing with nothing failing.
 /// </remarks>
 /// <summary>Accumulates one material group's polygons into a normalized mesh.</summary>
-internal sealed class NormalizedMeshBuilder(string materialId, bool participatesInCollision)
+internal sealed class NormalizedMeshBuilder(string materialId, bool participatesInCollision, bool collisionOnly = false)
 {
     private readonly List<NormalizedVector3> vertices = [];
     private readonly List<NormalizedVector3> normals = [];
@@ -28,7 +28,7 @@ internal sealed class NormalizedMeshBuilder(string materialId, bool participates
 
     public NormalizedMesh ToMesh(string id, string artifactId) => new(
         id, artifactId, vertices, normals, textureCoordinates, triangles,
-        [new NormalizedMaterialGroup(materialId, 0, triangles.Count, participatesInCollision)]);
+        [new NormalizedMaterialGroup(materialId, 0, triangles.Count, participatesInCollision) { CollisionOnly = collisionOnly }]);
 }
 
 public static class MeshGeometry
