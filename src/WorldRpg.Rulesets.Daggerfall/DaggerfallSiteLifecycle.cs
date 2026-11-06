@@ -2057,7 +2057,7 @@ internal sealed class DaggerfallSiteLifecycle
         Func<DaggerfallExteriorCellId, DaggerfallTerrainSurface> surfaceFactory = _exteriorSurfaceFactory
             ?? throw new InvalidOperationException("Exterior terrain surface factory was not initialized.");
         Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> exteriors = ExteriorLocations();
-        DaggerfallExteriorEnvironment environment = _exteriorEnvironment ??= new(_random);
+        DaggerfallExteriorEnvironment environment = _exteriorEnvironment ??= new(_random, ground: _tuning.Ground);
         environment.Reconcile(residency.ResidentCells, ActiveOrigin(residency), surfaceFactory, exteriors, _definitions.Grids);
         DaggerfallExteriorTerrainAppearance appearance =
             _exteriorTerrainAppearance ??= NewTerrainAppearance();
@@ -2180,7 +2180,7 @@ internal sealed class DaggerfallSiteLifecycle
         Projection.Appearance.SetExteriorSeason(ForProfile(Projection.Inputs));
         foreach (var resident in _residentExteriorLocations.Values)
             resident.Projection.Appearance.SetExteriorSeason(ForProfile(resident.Profile));
-        _exteriorEnvironment ??= new(_random, season);
+        _exteriorEnvironment ??= new(_random, season, _tuning.Ground);
         bool weatherChanged = _exteriorEnvironment.UpdateRain(_definitions.Grids.Climate.Values, raining ?? (_ => false));
         if (_exteriorEnvironment.Season == season && !weatherChanged) return;
         // SetSeason invalidates the retained source facts before the next appearance admission.

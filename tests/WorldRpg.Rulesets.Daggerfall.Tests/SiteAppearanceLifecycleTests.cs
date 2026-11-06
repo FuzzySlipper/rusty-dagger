@@ -641,4 +641,22 @@ public sealed class SiteAppearanceLifecycleTests
 
         Assert.Equal(Vector3.One, appearance.LightUpdates.Last(update => update.Replacement.Descriptor.Kind == LightKind.Ambient).Replacement.Descriptor.Color);
     }
+
+    /// <summary>The sun rises warm and whitens as it climbs, so dawn and dusk warm what they light.</summary>
+    [Fact]
+    public void The_low_sun_is_warm_and_the_high_sun_white()
+    {
+        List<string> releases = [];
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(new ContentFake(releases), SpatialFake.Create(Hash, releases).Service, appearance);
+        DaggerfallCalendar noon = DaggerfallCalendar.Start with { Hour = 12 };
+        using DaggerfallSiteLighting lighting = new(appearance, engine.Context.CameraView, SkyExterior(), DaggerfallTuning.Defaults.SiteLighting, noon);
+
+        lighting.UpdateAmbient(noon, 1);
+        Assert.Equal(Vector3.One, appearance.LightUpdates.Last(update => update.Replacement.Descriptor.Kind == LightKind.Directional).Replacement.Descriptor.Color);
+
+        lighting.UpdateAmbient(noon with { Hour = 6, Minute = 10 }, .3f);
+        Vector3 low = appearance.LightUpdates.Last(update => update.Replacement.Descriptor.Kind == LightKind.Directional).Replacement.Descriptor.Color;
+        Assert.True(low.Z < low.X);
+    }
 }

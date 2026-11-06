@@ -276,6 +276,34 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         Assert.Empty(graphics.TerrainLayerMaterialRequests);
     }
 
+    /// <summary>Nature grows from soil: at the ground's snowline there is a treeline.</summary>
+    [Theory]
+    [InlineData(100F, true)]
+    [InlineData(2_400F, false)]
+    public void Nature_gives_out_where_snow_takes_the_ground(float height, bool grows)
+    {
+        DaggerfallExteriorCellId cell = new(1, 0);
+        DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(cell);
+        int dimension = DaggerfallTerrainSurfaceBuilder.SampleDimension;
+        DaggerfallTerrainSurface surface = new(cell.X, cell.Y,
+            Enumerable.Range(0, dimension * dimension).Select(index => new Vector3(index % dimension, height, index / dimension)).ToArray(),
+            [new Triangle(0, (uint)dimension + 1, 1)],
+            Enumerable.Repeat(height / DaggerfallTerrainSurfaceBuilder.TerrainVerticalSize, dimension * dimension).ToArray())
+        {
+            SourceWorldHeight = 128,
+        };
+        DaggerfallSiteExterior location = new(1, 0, 1, 1, 0, 0, false, 2, 0, 1, 0, 1)
+        {
+            GroundTiles = DaggerfallGroundTileGrid.FromBytes(Enumerable.Repeat((byte)2, 128 * 128).ToArray(), "test"),
+        };
+        DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
+
+        environment.Reconcile([cell], origin, _ => surface, new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> { [cell] = location },
+            new DaggerfallWorldGridsSet(new DaggerfallClimateGridDefinition(3, 1, [0, 0, 231], [new(231, "Woodlands", DaggerfallClimateDisposition.Named)]), new(3, 1, [64, 64, 64], [])));
+
+        Assert.Equal(grows, environment.NatureFor(cell).Count > 0);
+    }
+
     /// <summary>A mesh weighs four layers, so a swamp cell draws its lush ground unless it reaches the snow.</summary>
     [Theory]
     [InlineData(100F, true)]

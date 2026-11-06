@@ -40,6 +40,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     private float _daylight = 1f;
     private float? _dungeonLevel;
     private float _flash;
+    private const float LowSunClimb = 3f;
     private readonly bool _carriesSky;
     private bool _disposed;
     private bool _suspended;
@@ -410,7 +411,9 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         float phase = (calendar.SecondOfDay / 60f - DaggerfallCalendar.DawnHour * 60f)
             / ((DaggerfallCalendar.DuskHour - DaggerfallCalendar.DawnHour) * 60f);
         Vector3 direction = Vector3.Normalize(new(MathF.Cos(phase * MathF.PI), -MathF.Sin(phase * MathF.PI), 0f));
-        return new(_sunId, false, 0, new LightDescriptor(LightKind.Directional, Vector3.One,
+        // The sun climbs out of its low colour by a third of the way to noon.
+        Vector3 color = Vector3.Lerp(_tuning.LowSunColor, Vector3.One, Math.Clamp(-direction.Y * LowSunClimb, 0, 1));
+        return new(_sunId, false, 0, new LightDescriptor(LightKind.Directional, color,
             daylight * _tuning.ExteriorSun, true, Vector3.Zero, direction, false, 0f, 0f, 0f, 0f, LightShadowIntent.Disabled));
     }
 
