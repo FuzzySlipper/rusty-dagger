@@ -87,6 +87,7 @@ internal sealed class DaggerfallSiteLifecycle
     private readonly Dictionary<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta> _deltas = [];
     private DaggerfallExteriorCellResidency? _exteriorResidency;
     private DaggerfallHorizonGround? _ground;
+    private Func<IEnumerable<Vector3>> _walkers = static () => [];
     private DaggerfallExteriorGroundCollider? _groundCollider;
     // A window was admitted whose ground is still to stand: what arrives with it waits (CollisionPending).
     private bool _groundAwaited;
@@ -625,7 +626,7 @@ internal sealed class DaggerfallSiteLifecycle
         }
         if (_groundAwaited)
         {
-            LoadingProgress ground = AwaitGroundCollider([]);
+            LoadingProgress ground = AwaitGroundCollider();
             if (!ground.Done) return ground;
         }
         // What a handover that threw left held is not live either: RecoverArrivalGround hands it over again.
@@ -646,10 +647,10 @@ internal sealed class DaggerfallSiteLifecycle
     }
 
     /// <summary>
-    /// Keeps the ground under the player and <paramref name="walkers"/> in the active exterior: anyone else out in the
-    /// wilderness, whom no town ground plane holds up. It stands in one map pixel's frame, so travel makes it anew.
+    /// Keeps the ground under the player and the walkers in the active exterior: anyone else out in the wilderness, whom
+    /// no town ground plane holds up. It stands in one map pixel's frame, so travel makes it anew.
     /// </summary>
-    internal void UpdateGroundCollider(IEnumerable<Vector3> walkers)
+    private void UpdateGroundCollider()
     {
         if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior
             || _exteriorResidency is not { IsInitialized: true } residency
@@ -661,23 +662,22 @@ internal sealed class DaggerfallSiteLifecycle
             _groundAwaited = true;
         }
         _groundCollider ??= new(_engine, _spatial.Session, _ground ?? throw new InvalidOperationException("Exterior ground is admitted before its function."), origin);
-        _groundCollider.Update(walkers.Prepend(player.ToVector()), origin);
+        _groundCollider.Update(_walkers().Prepend(player.ToVector()), origin);
     }
 
     /// <summary>
-    /// How far the ground under an arrival has come. The tiles arrive over updates, so this also keeps them coming; a
-    /// tile the Engine refused would leave the arrival standing on nothing, so it fails the arrival instead.
+    /// How far the ground under the player and the walkers has come. The tiles arrive over updates, so this also keeps
+    /// them coming; a tile the Engine refused would leave someone standing on nothing, so it fails the arrival instead.
     /// </summary>
-    internal LoadingProgress AwaitGroundCollider(IEnumerable<Vector3> walkers)
+    internal LoadingProgress AwaitGroundCollider()
     {
-        UpdateGroundCollider(walkers);
-        if (_groundCollider is not { } collider || _exteriorResidency is not { IsInitialized: true } residency
-            || _state.PlayerControl.Position is not WorldPoint player)
+        UpdateGroundCollider();
+        if (_groundCollider is not { } collider)
         {
             _groundAwaited = false;
             return LoadingProgress.Finished;
         }
-        HeightfieldColliderReadout read = collider.Read(player.ToVector(), ActiveOrigin(residency));
+        HeightfieldColliderReadout read = collider.Read();
         if (read.RefusedTiles != 0)
         {
             _awaitingGround = true;
@@ -704,14 +704,13 @@ internal sealed class DaggerfallSiteLifecycle
     /// anyone else up. Each call reads the batches handed over; once they are refused, or a handover threw, it hands
     /// the placements and the window over again off the update, and once they are live, stands the arrival on them.
     /// </summary>
-    /// <param name="walkers">Anyone else out in the wilderness, for <see cref="UpdateGroundCollider"/>.</param>
-    internal bool RecoverArrivalGround(IEnumerable<Vector3> walkers)
+    internal bool RecoverArrivalGround()
     {
         if (!_awaitingGround)
         {
             // Ground that a character fell through while it was missing would install around them, which the Engine
             // refuses: anyone moved past its reach waits for it here, as an arrival does, rather than falling.
-            try { return AwaitGroundCollider(walkers).Done; }
+            try { return AwaitGroundCollider().Done; }
             catch (DaggerfallArrivalCollisionRefusedException) { return false; }
         }
         try
@@ -2108,8 +2107,12 @@ internal sealed class DaggerfallSiteLifecycle
     /// <summary>The locations by the map pixel they stand on.</summary>
     internal IReadOnlyDictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> Locations => ExteriorLocations();
 
-    /// <summary>The ground function exterior collision reads, the one near ground draws.</summary>
-    internal void UseGround(DaggerfallHorizonGround ground) => _ground = ground ?? throw new ArgumentNullException(nameof(ground));
+    /// <summary>The ground function exterior collision reads, the one near ground draws, and who needs it beside the player.</summary>
+    internal void UseGround(DaggerfallHorizonGround ground, Func<IEnumerable<Vector3>> walkers)
+    {
+        _ground = ground ?? throw new ArgumentNullException(nameof(ground));
+        _walkers = walkers ?? throw new ArgumentNullException(nameof(walkers));
+    }
 
     /// <summary>A ground archive's layers.</summary>
     internal DaggerfallGroundLayers GroundLayers(int archive) => (_exteriorTerrainAppearance ??= NewTerrainAppearance()).GroundLayers(archive);

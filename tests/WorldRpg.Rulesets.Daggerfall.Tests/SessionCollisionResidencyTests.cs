@@ -215,6 +215,73 @@ public sealed class SessionCollisionResidencyTests
     }
 
     [Fact]
+    public void Play_arrival_and_load_all_wait_for_the_ground_under_an_enemy_out_in_the_wilderness()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        ProductContent admitted = FullContent(root, "worldrpg/imports/charing");
+        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, exterior);
+        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        DaggerfallSessionComposition composition = new(definitions, exterior, DaggerfallTuning.Defaults);
+        DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+        DaggerfallSession? restored = null;
+        try
+        {
+            Assert.True(session.AwaitArrivalGround().Done);
+            WorldPoint player = session.State.PlayerControl.Position!.Value;
+            const float away = 300F;
+            session.SpawnActor("rat", new ActorPose(new WorldPoint(player.X + away, player.Y, player.Z), 0F));
+            // The ground stands about the player, and is still on its way out where the enemy is.
+            bool arrived = false;
+            spatial.HeightfieldColliderReadyAt = read => arrived || read.X < player.X + (away / 2F);
+
+            // Play: held, nobody steps, and both places were asked after.
+            int steps = spatial.StepCalls;
+            spatial.HeightfieldColliderReads.Clear();
+            session.Update(new ProductUpdate(OuterUpdate(1), []));
+            Assert.Equal(steps, spatial.StepCalls);
+            Assert.Contains(spatial.HeightfieldColliderReads, read => read.X < player.X + 1F);
+            Assert.Contains(spatial.HeightfieldColliderReads, read => read.X > player.X + (away / 2F));
+            Assert.False(session.AwaitArrivalGround().Done);
+
+            // A staged arrival: the walkers are asked after there too, and nothing stands until they have ground.
+            session.Sites.DropGroundCollider();
+            session.Sites.DeferCollision(() => session.Sites.UpdateExteriorResidency());
+            Assert.False(session.Sites.AwaitArrivalCollision().Done);
+            Assert.True(session.Sites.CollisionPending);
+
+            arrived = true;
+            Assert.True(session.Sites.AwaitArrivalCollision().Done);
+            Assert.False(session.Sites.CollisionPending);
+            session.Update(new ProductUpdate(OuterUpdate(2), []));
+            Assert.True(spatial.StepCalls > steps);
+
+            // Load: the saved enemy's ground holds the load's own wait and the first update after it.
+            RulesetSavePayload save = session.CaptureSave();
+            session.Dispose();
+            arrived = false;
+            restored = DaggerfallSession.Restore(engine.Context, composition, save);
+            Assert.False(restored.AwaitArrivalGround().Done);
+            steps = spatial.StepCalls;
+            restored.Update(new ProductUpdate(OuterUpdate(3), []));
+            Assert.Equal(steps, spatial.StepCalls);
+            arrived = true;
+            Assert.True(restored.AwaitArrivalGround().Done);
+            restored.Update(new ProductUpdate(OuterUpdate(4), []));
+            Assert.True(spatial.StepCalls > steps);
+        }
+        finally
+        {
+            restored?.Dispose();
+            if (restored is null) session.Dispose();
+        }
+    }
+
+    [Fact]
     public void Resident_actor_delta_is_profile_framed_and_active_capture_excludes_resident_identities()
     {
         string root = TestData.RepositoryRoot;
