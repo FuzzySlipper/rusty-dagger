@@ -384,6 +384,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         MeshGroup[] groups;
         MeshMaterialBinding[] bindings;
         Vector4[]? weights = null;
+        uint[]? palette = null;
         if (textureKeys.Count == 0)
         {
             positions = surface.Vertices;
@@ -401,7 +402,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         }
         else
         {
-            (positions, normals, uvs, indices, groups, bindings, weights) = BuildTiledMesh(surface, normals, terrainTiles, textureKeys, layers);
+            (positions, normals, uvs, indices, groups, bindings, weights, palette) = BuildTiledMesh(surface, normals, terrainTiles, textureKeys, layers);
         }
         MeshResource? mesh = null;
         try
@@ -412,7 +413,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
                 uvs,
                 indices,
                 groups,
-                bindings) { LayerWeights = weights ?? default(ReadOnlyMemory<Vector4>) });
+                bindings) { LayerWeights = weights ?? default(ReadOnlyMemory<Vector4>), LayerPalette = palette ?? default(ReadOnlyMemory<uint>) });
             Appearance appearance = _graphics.CreateMeshAppearance(mesh);
             return new(mesh, appearance, textureKeys.ToArray(), terrainTiles.ToArray());
         }
@@ -453,7 +454,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         first.Count == second.Count && first.SequenceEqual(second);
 
     private (Vector3[] Positions, Vector3[] Normals, Vector2[] Uvs, uint[] Indices,
-        MeshGroup[] Groups, MeshMaterialBinding[] Bindings, Vector4[]? Weights) BuildTiledMesh(
+        MeshGroup[] Groups, MeshMaterialBinding[] Bindings, Vector4[]? Weights, uint[]? Palette) BuildTiledMesh(
         DaggerfallTerrainSurface surface,
         Vector3[] sourceNormals,
         IReadOnlyList<DaggerfallExteriorTerrainTile> terrainTiles,
@@ -470,7 +471,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         Dictionary<TerrainTextureKey, List<uint>> groupedIndices = [];
         List<uint> blendedIndices = [];
         List<Vector4> weights = new(layers is null ? 0 : surface.Vertices.Length);
-        Vector4[]? vertexWeights = layers is null ? null : GroundWeights(surface, sourceNormals, layers.NoiseStone);
+        (Vector4[]? vertexWeights, uint[]? palette) = layers is null ? (null, null) : GroundWeights(surface, sourceNormals, layers);
         // Blended ground stands on the surface's own vertices: its textures run on in metres, where a tile's restart at every corner.
         if (vertexWeights is not null)
         {
@@ -537,23 +538,37 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
             bindings.Add(new MeshMaterialBinding(slot, layers!.Layered!));
         }
         return (positions.ToArray(), normals.ToArray(), uvs.ToArray(), indices.ToArray(), groups.ToArray(), bindings.ToArray(),
-            layers is null ? null : weights.ToArray());
+            layers is null ? null : weights.ToArray(), palette);
     }
 
-    /// <summary>Every surface vertex's layers. A tile's corners share them, so each vertex is worked out once.</summary>
-    private Vector4[] GroundWeights(DaggerfallTerrainSurface surface, Vector3[] normals, bool noiseStone)
+    /// <summary>
+    /// Every surface vertex's layers, and the palette they name when that isn't the first four. A tile's corners share
+    /// them, so each vertex is worked out once. A mesh weighs four layers, so a swamp cell draws lush ground unless it
+    /// reaches the snow.
+    /// </summary>
+    private (Vector4[] Weights, uint[]? Palette) GroundWeights(DaggerfallTerrainSurface surface, Vector3[] normals, DaggerfallGroundLayers layers)
     {
         const int dimension = DaggerfallTerrainSurfaceBuilder.SampleDimension, tiles = dimension - 1;
         Vector4[] weights = new Vector4[surface.Vertices.Length];
+        float[] lush = new float[weights.Length];
         for (int vertex = 0; vertex < weights.Length; vertex++)
         {
             float up = Math.Clamp(normals[vertex].Y, .05F, 1F);
             int x = vertex % dimension, y = vertex / dimension;
             float noise = DaggerfallTerrainSurfaceBuilder.DonorTerrainWeight((surface.MapPixelX * tiles) + x, 64_000 - (surface.MapPixelY * tiles) + y);
-            weights[vertex] = DaggerfallGroundBlend.Weights(_ground, noise, MathF.Sqrt(1 - (up * up)) / up, surface.Vertices[vertex].Y, noiseStone);
+            weights[vertex] = DaggerfallGroundBlend.Weights(_ground, noise, MathF.Sqrt(1 - (up * up)) / up, surface.Vertices[vertex].Y, layers.NoiseStone);
+            lush[vertex] = DaggerfallGroundBlend.Lush(_ground, noise);
         }
 
-        return weights;
+        if (!layers.HasLush || weights.Any(weight => weight.W > 0)) return (weights, null);
+        for (int vertex = 0; vertex < weights.Length; vertex++)
+        {
+            Vector4 weight = weights[vertex];
+            float keep = 1 - lush[vertex];
+            weights[vertex] = new(weight.X * keep, weight.Y * keep, weight.Z, (weight.X + weight.Y) * lush[vertex]);
+        }
+
+        return (weights, DaggerfallGroundLayers.LushPalette);
     }
 
     /// <summary>The layers open ground of an archive blends while blending and refreshed art are on, if the art has them all.</summary>
@@ -562,14 +577,15 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         if (DrawnBlend is not { } settings || _authored is null || _profile is null) return null;
         if (_groundLayers.TryGetValue(archive, out DaggerfallGroundLayers? layers)) return layers;
         List<DaggerfallArtSurface> surfaces = [];
-        foreach ((int layerArchive, int record) in DaggerfallGroundLayers.Records(archive))
+        (int Archive, int Record)[] records = DaggerfallGroundLayers.Records(archive);
+        foreach ((int layerArchive, int record) in records)
         {
             if (!_profile.TerrainTextures.TryGetValue((layerArchive, record), out NormalizedTerrainTexture? texture))
                 throw new InvalidOperationException($"Ground archive {archive} has no texture for layer {layerArchive}/{record}.");
             if (_art?.Surface(texture.TexturePath) is { } surface) surfaces.Add(surface);
         }
 
-        layers = surfaces.Count == 4 ? new(_authored, _graphics, _content, archive, surfaces, settings) : null;
+        layers = surfaces.Count == records.Length ? new(_authored, _graphics, _content, archive, surfaces, settings) : null;
         _groundLayers.Add(archive, layers);
         return layers;
     }

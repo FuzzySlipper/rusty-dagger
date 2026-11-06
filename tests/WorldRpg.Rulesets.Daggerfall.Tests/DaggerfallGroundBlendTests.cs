@@ -70,6 +70,25 @@ public sealed class DaggerfallGroundBlendTests
     }
 
     [Theory]
+    [InlineData(402)]
+    [InlineData(403)]
+    [InlineData(404)]
+    public void A_swamp_keeps_its_own_third_ground_as_a_fifth_layer(int archive)
+    {
+        (int, int)[] records = DaggerfallGroundLayers.Records(archive);
+
+        Assert.Equal(5, records.Length);
+        Assert.Equal((archive, 3), records[4]);
+    }
+
+    [Fact]
+    public void The_noise_turns_a_swamps_soil_lush_where_it_would_bare_stone()
+    {
+        Assert.Equal(0, DaggerfallGroundBlend.Lush(Tuning, .5F), 4);
+        Assert.Equal(1, DaggerfallGroundBlend.Lush(Tuning, 1F), 4);
+    }
+
+    [Theory]
     [InlineData(2)]
     [InlineData(4)]
     public void A_deserts_heights_go_to_stone_for_want_of_a_winter(int archive)

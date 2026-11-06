@@ -169,6 +169,39 @@ public sealed class SpellEffectPresentationTests
         Assert.Equal(1, animation.ReleasedAppearances);
     }
 
+    /// <summary>A lamp takes the light around it and shines through its own art, so its flame glows and its iron doesn't; an ordinary flat only takes the light.</summary>
+    [Fact]
+    public void A_lamp_shines_through_its_own_art_until_it_goes_out()
+    {
+        NormalizedBillboardSprite art = new("sprite/corpse.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, .5F), new Vector2(1F, 1F));
+        DaggerfallSiteDecoration lamp = new("lamp", new WorldPoint(4, .5F, 6), false, art, art, (210, 1), (210, 1));
+        var (presentation, graphics, _) = Compose(() => false, decorations: [lamp]);
+        using DaggerfallSiteAppearance owned = presentation;
+        SpriteFromAtlasRequest shining = Assert.Single(graphics.SpriteRequests, request => !request.Material.EmissionMap.Equals(default(RenderResourceReference)));
+        Assert.Equal(SpriteLightingMode.Synthetic, shining.Material.Lighting);
+
+        presentation.UpdateLamps(1.3F);
+        presentation.UpdateLamps(1.3F);
+        Assert.Equal(1.3F, Assert.Single(graphics.SpriteEmissions).Intensity);
+
+        presentation.UpdateLamps(0F);
+        Assert.Equal(0F, graphics.SpriteEmissions[^1].Intensity);
+    }
+
+    [Fact]
+    public void An_ordinary_flat_takes_the_light_and_emits_nothing()
+    {
+        NormalizedBillboardSprite art = new("sprite/corpse.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, .5F), new Vector2(1F, 1F));
+        DaggerfallSiteDecoration flat = new("flat", new WorldPoint(4, .5F, 6), false, art, art, (211, 1), (211, 1));
+        var (presentation, graphics, _) = Compose(() => false, decorations: [flat]);
+        using DaggerfallSiteAppearance owned = presentation;
+
+        Assert.Contains(graphics.SpriteRequests, request => request.Material.Lighting == SpriteLightingMode.Synthetic);
+        Assert.DoesNotContain(graphics.SpriteRequests, request => !request.Material.EmissionMap.Equals(default(RenderResourceReference)));
+        presentation.UpdateLamps(1.3F);
+        Assert.Empty(graphics.SpriteEmissions);
+    }
+
     [Fact]
     public void A_placed_bone_pile_draws_as_the_mesh_at_its_sprite_width_on_its_floor_in_refreshed_art()
     {

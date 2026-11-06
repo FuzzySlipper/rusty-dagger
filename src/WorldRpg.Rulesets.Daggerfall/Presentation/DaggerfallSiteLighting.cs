@@ -267,8 +267,13 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     internal static bool CityLightsOn(DaggerfallCalendar calendar) => calendar.Hour >= 17 || calendar.Hour < 8;
 
     /// <summary>Lights a location's window glass on the city lamps' hours.</summary>
-    internal void UpdateWindowGlass(DaggerfallSiteAppearance appearance, DaggerfallCalendar calendar) =>
-        appearance.UpdateWindowGlass(_tuning.WindowColor, CityLightsOn(calendar) ? _tuning.WindowLevel : 0f);
+    internal void UpdateWindowGlass(DaggerfallSiteAppearance appearance, DaggerfallCalendar calendar)
+    {
+        bool on = CityLightsOn(calendar);
+        appearance.UpdateWindowGlass(_tuning.WindowColor, on ? _tuning.WindowLevel : 0f);
+        // A town's lamps go out by day with its windows; those indoors and underground stay lit.
+        appearance.UpdateLamps(on || _profileKind != DaggerfallWorldProfileKind.Exterior ? _tuning.LampLevel : 0f);
+    }
 
     private LightRequest CityRequest(LightRequest request, DaggerfallCalendar calendar) =>
         _cityIntensities.TryGetValue(request.LogicalId, out float intensity)

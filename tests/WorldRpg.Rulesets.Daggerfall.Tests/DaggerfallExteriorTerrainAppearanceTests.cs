@@ -276,17 +276,41 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         Assert.Empty(graphics.TerrainLayerMaterialRequests);
     }
 
+    /// <summary>A mesh weighs four layers, so a swamp cell draws its lush ground unless it reaches the snow.</summary>
+    [Theory]
+    [InlineData(100F, true)]
+    [InlineData(2_400F, false)]
+    public void A_swamp_cell_draws_its_lush_ground_where_no_snow_reaches(float height, bool lush)
+    {
+        DaggerfallExteriorCellId cell = new(1, 0);
+        DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(cell);
+        GraphicsDouble graphics = new();
+        (DaggerfallExteriorTerrainAppearance appearance, DaggerfallTerrainSurface surface, DaggerfallExteriorEnvironment environment, _) =
+            OpenGround(graphics, cell, origin, [(402, 1), (402, 2), (402, 3), (102, 3), (403, 2)], climate: 223, height: height);
+        using DaggerfallExteriorTerrainAppearance owned = appearance;
+
+        appearance.Reconcile([cell], origin, _ => surface, environment);
+
+        Assert.Equal(4, Assert.Single(graphics.TerrainLayerMaterialRequests).Layers.Length);
+        Assert.Equal(lush ? DaggerfallGroundLayers.LushPalette : [], graphics.MeshRequests[^1].LayerPalette.ToArray());
+    }
+
     private static (DaggerfallExteriorTerrainAppearance, DaggerfallTerrainSurface, DaggerfallExteriorEnvironment, Action<bool>) OpenGround(
-        GraphicsDouble graphics, DaggerfallExteriorCellId cell, DaggerfallExteriorWorldOrigin origin, (int Archive, int Record)[] refreshedLayers)
+        GraphicsDouble graphics, DaggerfallExteriorCellId cell, DaggerfallExteriorWorldOrigin origin, (int Archive, int Record)[] refreshedLayers,
+        int climate = 231, float height = 100F)
     {
         DaggerfallSiteProfile source = TestSessions.MediaInputs();
         Dictionary<(int Archive, int Record), NormalizedTerrainTexture> textures = [];
-        for (int record = 0; record < 64; record++) textures[(302, record)] = new($"terrain/texture-302-{record}.png", TestSessions.Hash);
+        foreach (int archive in new[] { 302, 402 })
+            for (int record = 0; record < 64; record++) textures[(archive, record)] = new($"terrain/texture-{archive}-{record}.png", TestSessions.Hash);
         textures[(303, 2)] = new("terrain/texture-303-2.png", TestSessions.Hash);
+        textures[(403, 2)] = new("terrain/texture-403-2.png", TestSessions.Hash);
+        textures[(102, 3)] = new("terrain/texture-102-3.png", TestSessions.Hash);
         Dictionary<(int Archive, int Record), NormalizedBillboardSprite> billboards = [];
-        for (int record = 1; record <= 31; record++)
-            billboards[(504, record)] = new($"sprite/texture-504-{record}.png", TestSessions.Hash, 16, 32,
-                [new NormalizedAtlasFrame(7, 0, 0, 16, 32)], 7, new Vector2(.5F, .5F), new Vector2(3F, 6F));
+        foreach (int archive in new[] { 501, 502, 503, 504, 505, 506, 507, 508, 509, 510, 511 })
+            for (int record = 1; record <= 31; record++)
+                billboards[(archive, record)] = new($"sprite/texture-{archive}-{record}.png", TestSessions.Hash, 16, 32,
+                    [new NormalizedAtlasFrame(7, 0, 0, 16, 32)], 7, new Vector2(.5F, .5F), new Vector2(3F, 6F));
         DaggerfallSiteProfile profile = new(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook, [],
             new Dictionary<long, NormalizedActorSprite>(), billboardSprites: billboards, terrainTextures: textures);
         string surfaces = string.Join(",", refreshedLayers.Select(layer => $$$"""
@@ -302,15 +326,15 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         appearance.UseBlend(ServiceProxy<IAuthoredContentService, AuthoredContentFake>.Create(), DaggerfallGroundTuning.Default, DaggerfallGroundTuning.Default.Blend);
         int dimension = DaggerfallTerrainSurfaceBuilder.SampleDimension;
         DaggerfallTerrainSurface surface = new(cell.X, cell.Y,
-            Enumerable.Range(0, dimension * dimension).Select(index => new Vector3(index % dimension, 100F, index / dimension)).ToArray(),
+            Enumerable.Range(0, dimension * dimension).Select(index => new Vector3(index % dimension, height, index / dimension)).ToArray(),
             [new Triangle(0, (uint)dimension + 1, 1)],
-            Enumerable.Repeat(100F / DaggerfallTerrainSurfaceBuilder.TerrainVerticalSize, dimension * dimension).ToArray())
+            Enumerable.Repeat(height / DaggerfallTerrainSurfaceBuilder.TerrainVerticalSize, dimension * dimension).ToArray())
         {
             SourceWorldHeight = 128,
         };
         DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
         environment.Reconcile([cell], origin, _ => surface, new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior>(),
-            new DaggerfallWorldGridsSet(new DaggerfallClimateGridDefinition(3, 1, [0, 0, 231], [new(231, "Woodlands", DaggerfallClimateDisposition.Named)]), new(3, 1, [64, 64, 64], [])));
+            new DaggerfallWorldGridsSet(new DaggerfallClimateGridDefinition(3, 1, [0, 0, (byte)climate], [new(climate, "Ground", DaggerfallClimateDisposition.Named)]), new(3, 1, [64, 64, 64], [])));
         return (appearance, surface, environment, drawn => refreshed = drawn);
     }
 
@@ -604,6 +628,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
 
         public void PublishSnapshot(ReadOnlySpan<AppearanceFact> values) => Snapshots.Add(values.ToArray());
         public Material CreateAuthoredMaterial(AuthoredMaterialAppearanceRequest request) => CreateMaterial(default);
+        public void SetSpriteEmission(SpriteEmissionUpdateRequest request) => throw new NotSupportedException();
         public Light CreateLight(LightRequest request) => throw new NotSupportedException();
         public void UpdateLight(LightUpdateRequest request) => throw new NotSupportedException();
         public Light ReplaceLight(LightUpdateRequest request) => throw new NotSupportedException();

@@ -34,7 +34,8 @@ heightfield in the backdrop that only draws.
   side of one barely differ, and a move resamples only the fade zone.
 - **Sky.** The classic paints its horizon into the panorama's lower third, where it
   would float over the real skyline. Each panorama also ships cleared of it, and
-  the Engine cloud layer stands in for the low cloud lost with it.
+  the Engine cloud layer stands in for the low cloud lost with it, drawn in cells anchored
+  to the clouds (`cloudPixelMetres`, `cloudShadeSteps`) so it sits with the pixel art.
 - **Fog.** The classic's clear fog ends at the window's edge and would hide the
   horizon, so clear weather uses thin exponential haze instead, its colour the cleared
   sky's own horizon. Rain, snow and fog keep their densities and hide the far ground:
@@ -49,9 +50,11 @@ shows the painted sky, classic fog and no cloud layer.
 
 ## Light
 
-Brightness comes from the lights themselves, with no tone mapping or exposure. A tone
-curve crushes the low-key art of night and interiors, and exposure multiplies everything
-in the world, unlit lamp art included, which bleaches it.
+Brightness comes from the lights themselves, not the camera: exposure multiplies
+everything in the world, glowing art included, which bleaches it. The tone operator is
+`Rolloff`, which leaves everything below a highlight exact, where `Neutral` and
+`AcesFilmic` crush the low-key art of night and interiors. Only what emits above 1 rolls
+off, and that is what `bloom` spreads.
 
 - **One sky.** The world has one sun and ambient, carried by the active site and kept
   when its location unloads behind the player. Resident locations bring only their lamps.
@@ -62,10 +65,12 @@ in the world, unlit lamp art included, which bleaches it.
 - **Night.** The ambient cools toward `nightColor`, so a lamp's warmth stands out. A grade
   would cool the lamps too.
 - **Sprites.** Flats, nature, people and items take the light around them
-  (`SpriteLightingMode.Synthetic`), so they fall with the day. Lamps (archive 210) stay
-  unlit, since a light source shows at its own brightness, and each carries an Engine
-  point light from the importer. Sprite materials have no emission input, so a sprite
-  glows only by being unlit.
+  (`SpriteLightingMode.Synthetic`), so they fall with the day.
+- **Lamps.** A lamp (archive 210) takes the light too, and shines through its own art:
+  its texture is its emission map, so the flame shines at `lampLevel` while the dark iron
+  takes the night, with no mask to paint. Each carries an Engine point light from the
+  importer, as a sprite's emission lights nothing. A town's lamps go out by day with its
+  windows; those indoors and underground stay lit.
 - **Windows.** Building windows glow on the city lamps' hours through mesh emission. The
   importer publishes each window texture's glass as a mask beside it, and the location's
   material holds that mask as its emission map, so nightfall changes only the emission's
@@ -97,6 +102,9 @@ touching water stay tiles too, in the same mesh.
   winters are snow on every record, so they wear the summer's stone, and the swamp's
   third record is lush grass, so it wears the mountains'. Borrowed rock shows only where
   the slope earns it: the noise bares only an archive's own.
+- **Swamp.** Its lush ground is a fifth layer, where the noise would bare stone. A mesh
+  weighs four, so a swamp cell names a palette with lush ground in place of snow, unless
+  it reaches the snow.
 - **Cliffs.** Textures project from three planes (`triplanarSharpness`), since a single
   projection smears down a steep face. `repeatMetres` must fill a cell a whole number of
   times, or textures break at every cell's edge.
