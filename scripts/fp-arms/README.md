@@ -200,7 +200,8 @@ and build again. `build.py`:
 
 - grows a low leg and boot on each of the skeleton's legs and joins them to the arms' mesh: the pack has arms only, and a
   kick needs something to kick with. Rings run down the bones with small plain textures, so none of it is the pack's art;
-- imports each set of arms (LOD0) and paints it from its medium colour and other maps ([The pixel paint](#the-pixel-paint));
+- imports each set of arms (LOD0), cuts the cloth sets' loose left cuff (the faces that follow the pack's `sleeve` bone) and
+  paints it from its medium colour and other maps ([The pixel paint](#the-pixel-paint));
 - bakes each clip as its own camera bone sees it (the pack's own clips have only `camera_mount`, with other axes, and take
   the arms' skeleton as it is): every frame the whole body is moved so the camera bone sits at the
   origin looking down the view, so the arms are placed with their origin at the game's eye and the clip carries only
