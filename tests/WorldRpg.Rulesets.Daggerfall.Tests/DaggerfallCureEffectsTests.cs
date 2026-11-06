@@ -244,7 +244,7 @@ public sealed class DaggerfallCureEffectsTests
         cure["key"] = CureParalysisKey; cure["identity"] = 900; cure["name"] = "Cure Paralyzation";
         cure["effects"]![0]!["key"] = CureParalysisKey + ".effect.1"; cure["effects"]![0]!["subType"] = 2;
         spells.Add(cure);
-        return DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()));
+        return DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()), TestPayload.Data);
 
         static System.Text.Json.Nodes.JsonArray? Spells(System.Text.Json.Nodes.JsonNode? node) => node switch
         {
