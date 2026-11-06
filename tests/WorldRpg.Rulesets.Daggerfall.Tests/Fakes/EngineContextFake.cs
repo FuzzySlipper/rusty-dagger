@@ -68,6 +68,10 @@ internal class EngineContextFake : DispatchProxy
     internal IReadOnlyList<RenderResource> SkyBackgrounds => ((CameraServiceFake)(object)camera).SkyBackgrounds;
     internal IReadOnlyList<SkyBackgroundBlendRequest> SkyBlends => ((CameraServiceFake)(object)camera).SkyBlends;
     internal IReadOnlyList<FogRequest> Fogs => ((CameraServiceFake)(object)camera).Fogs;
+    internal IReadOnlyList<PrecipitationRequest> Precipitation => ((CameraServiceFake)(object)camera).Precipitation;
+    internal IReadOnlyList<WetnessRequest> Wetness => ((CameraServiceFake)(object)camera).Wetness;
+    internal IReadOnlyList<SnowRequest> Snow => ((CameraServiceFake)(object)camera).Snow;
+    internal IReadOnlyList<WindRequest> Wind => ((CameraServiceFake)(object)camera).Wind;
     /// <summary>Whether a backdrop link stands, as the last call left it.</summary>
     internal bool BackdropLinked => ((CameraServiceFake)(object)camera).BackdropLinked;
     internal IReadOnlyList<CloudsRequest> Clouds => ((CameraServiceFake)(object)camera).Clouds;
@@ -221,6 +225,10 @@ internal class EngineContextFake : DispatchProxy
         internal bool BackdropLinked { get; private set; }
         internal List<CloudsRequest> Clouds { get; } = [];
         internal List<MoonRequest> Moons { get; } = [];
+        internal List<PrecipitationRequest> Precipitation { get; } = [];
+        internal List<WetnessRequest> Wetness { get; } = [];
+        internal List<SnowRequest> Snow { get; } = [];
+        internal List<WindRequest> Wind { get; } = [];
         internal ulong? ActiveCamera { get; private set; }
         private ulong nextCamera = 1;
 
@@ -241,6 +249,10 @@ internal class EngineContextFake : DispatchProxy
                 nameof(ICameraViewService.UpdateCamera) => null,
                 nameof(ICameraViewService.SetToneMapping) => null,
                 nameof(ICameraViewService.SetBloom) => null,
+                nameof(ICameraViewService.SetPrecipitation) => Record(Precipitation, arguments),
+                nameof(ICameraViewService.SetWetness) => Record(Wetness, arguments),
+                nameof(ICameraViewService.SetSnow) => Record(Snow, arguments),
+                nameof(ICameraViewService.SetWind) => Record(Wind, arguments),
                 nameof(ICameraViewService.SetSkyBackground) => SetSky((RenderResource)arguments![0]!),
                 nameof(ICameraViewService.SetSkyBackgroundBlend) => SetBlend((SkyBackgroundBlendRequest)arguments![0]!),
                 nameof(ICameraViewService.SetFog) => SetFog((FogRequest)arguments![0]!),
@@ -283,6 +295,12 @@ internal class EngineContextFake : DispatchProxy
         private object? ClearSkyBackground()
         {
             ClearedSkyBackgrounds++;
+            return null;
+        }
+
+        private static object? Record<T>(List<T> requests, object?[]? arguments)
+        {
+            requests.Add((T)arguments![0]!);
             return null;
         }
 

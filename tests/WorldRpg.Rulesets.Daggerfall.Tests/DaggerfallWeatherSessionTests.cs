@@ -119,6 +119,46 @@ public sealed class DaggerfallWeatherSessionTests
     }
 
     [Fact]
+    public void Thick_weather_closes_the_sky_in_its_own_air_which_the_world_fades_into_and_classic_art_keeps_its_panorama()
+    {
+        string root = TestData.RepositoryRoot;
+        var definitions = TestPayload.Definitions;
+        ProductContent admitted = FullContent(root);
+        var exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
+        var media = DaggerfallSkyMedia.Read(TestSessions.Data(DaggerfallSkyMediaTests.Fixture().Content));
+        var fairOdds = Enumerable.Range(0,24).Select(_ => new[]{100,0,0,0,0,0,0}).ToArray();
+        var tuning = DaggerfallTuning.Defaults with {Weather = DaggerfallWeatherTuning.Classic with {Odds = fairOdds}};
+        var composition = new DaggerfallSessionComposition(definitions, exterior, tuning) {Profiles = new([exterior]),Sky = media};
+        var fixture = Engine(exterior);
+        using var session = DaggerfallSession.StartNew(fixture.Engine.Context, composition);
+        session.ApplyProductMode(ProductMode.Playing);
+        session.PublishInitial();
+        session.Update(Update(1));
+        int panoramas = fixture.Engine.SkyBackgrounds.Count + fixture.Engine.SkyBlends.Count;
+        Assert.True(panoramas > 0);
+        int cleared = fixture.Engine.ClearedSkyBackgrounds;
+
+        foreach (string kind in new[] {"Rain", "Thunder", "Snow", "Fog"})
+        {
+            session.Weather(kind);
+            session.Update(Update(2));
+            Assert.Equal(fixture.Engine.Fogs.Last().Color, fixture.Engine.BackgroundColors.Last());
+            Assert.Equal(panoramas, fixture.Engine.SkyBackgrounds.Count + fixture.Engine.SkyBlends.Count);
+        }
+        Assert.Equal(cleared + 1, fixture.Engine.ClearedSkyBackgrounds);
+
+        session.Weather("Sunny");
+        session.Update(Update(3));
+        Assert.True(fixture.Engine.SkyBackgrounds.Count + fixture.Engine.SkyBlends.Count > panoramas);
+
+        panoramas = fixture.Engine.SkyBackgrounds.Count + fixture.Engine.SkyBlends.Count;
+        session.Update(new ProductUpdate(new(ProductLifecycleState.Running, 4,1,4,4,60,1,0,1d/60d), [ClassicArt()]));
+        session.Weather("Rain");
+        session.Update(Update(5));
+        Assert.True(fixture.Engine.SkyBackgrounds.Count + fixture.Engine.SkyBlends.Count > panoramas, "Classic art keeps its painted sky in the rain.");
+    }
+
+    [Fact]
     public void Real_exterior_shelter_indoor_return_pause_and_restore_keep_weather_and_retire_resources()
     {
         string root = TestData.RepositoryRoot;
@@ -140,26 +180,33 @@ public sealed class DaggerfallWeatherSessionTests
             session.PublishInitial();
             Assert.True(session.IsRaining);
             session.Update(Update(1)); session.Update(Update(2));
-            Assert.Single(fixture.Engine.Particles.Created);
-            Assert.Single(fixture.Engine.Particles.Updated);
-            Assert.True(fixture.Engine.SkyBackgrounds.Count + fixture.Engine.SkyBlends.Count > 0);
+            PrecipitationRequest rain = fixture.Engine.Precipitation.Last();
+            Assert.Equal(PrecipitationShape.Streak, rain.Shape);
+            Assert.True(rain.Drops > 0);
+            Assert.True(rain.Velocity.Y < 0);
+            session.GroundWeather(1, 1);
+            session.Update(Update(3));
+            Assert.Equal(tuning.Ambient.WetLook, fixture.Engine.Wetness.Last().Wetness);
+            Assert.Equal(tuning.Ambient.SnowLook, fixture.Engine.Snow.Last().Amount);
+            Assert.Equal(fixture.Engine.Fogs.Last().Color, fixture.Engine.BackgroundColors.Last());
             Assert.Equal(tuning.Ambient.RainFogDensity, fixture.Engine.Fogs.Last().Density);
             Assert.False(fixture.Engine.HeightfieldVisible);
             fixture.Spatial.FloorHit = request => request.Direction.Y > .9f
                 ? default(SpatialHit) with {Present=true, Kind=SpatialHitKind.StaticMesh, Point=request.Origin+Vector3.UnitY, Normal=-Vector3.UnitY, Distance=1}
                 : default;
-            session.Update(Update(3));
-            Assert.Equal(1, fixture.Engine.Particles.Released);
+            session.Update(Update(4));
+            Assert.True(fixture.Engine.Precipitation.Last().Drops < rain.Drops, "Rain thins out over a shelter.");
             Assert.True(session.TryTransitionTo(interior.ProfileKey));
             Assert.Equal(tuning.Ambient.InteriorFogDensity, fixture.Engine.Fogs.Last().Density);
             Assert.True(session.IsRaining);
+            session.Update(Update(5));
+            Assert.Equal(0, fixture.Engine.Wetness.Last().Wetness);
+            Assert.Equal(0, fixture.Engine.Snow.Last().Amount);
+            Assert.Equal(0u, fixture.Engine.Precipitation.Last().Drops);
             fixture.Spatial.FloorHit = _ => default;
             Assert.True(session.TryTransitionTo(exterior.ProfileKey));
-            session.Update(Update(4));
-            Assert.Equal(2, fixture.Engine.Particles.Created.Count);
-            session.ApplyProductMode(ProductMode.Paused);
-            session.Update(Update(5));
-            Assert.Equal(2, fixture.Engine.Particles.Released);
+            session.Update(Update(6));
+            Assert.True(fixture.Engine.Precipitation.Last().Drops > 0);
             session.ApplyProductMode(ProductMode.Playing);
             var before = DaggerfallSavePayload.Read(session.CaptureSave()).Weather;
             session.AdvanceElapsedTime(DaggerfallCalendar.SecondsPerDay*10L);
@@ -167,7 +214,6 @@ public sealed class DaggerfallWeatherSessionTests
             Assert.Equal(before.Climates,after.Climates); Assert.True(after.NextDay > before.NextDay);
             save = session.CaptureSave();
         }
-        Assert.Equal(fixture.Engine.Particles.Created.Count,fixture.Engine.Particles.Released);
         var resumed = Engine(exterior,interior);
         using(var restored = DaggerfallSession.Restore(resumed.Engine.Context,composition,save))
         {
@@ -175,10 +221,10 @@ public sealed class DaggerfallWeatherSessionTests
             Assert.True(restored.IsRaining);
             Assert.Equal(DaggerfallSavePayload.Read(save).Weather.Climates,DaggerfallSavePayload.Read(restored.CaptureSave()).Weather.Climates);
             Assert.Equal(DaggerfallSavePayload.Read(save).Weather.SkyVariants,DaggerfallSavePayload.Read(restored.CaptureSave()).Weather.SkyVariants);
-            restored.ApplyProductMode(ProductMode.Playing); restored.Update(Update(6));
-            Assert.Single(resumed.Engine.Particles.Created);
+            restored.ApplyProductMode(ProductMode.Playing); restored.Update(Update(7));
+            Assert.Equal(PrecipitationShape.Streak, resumed.Engine.Precipitation.Last().Shape);
+            Assert.True(resumed.Engine.Precipitation.Last().Drops > 0);
         }
-        Assert.Equal(resumed.Engine.Particles.Created.Count,resumed.Engine.Particles.Released);
     }
 
     private static (EngineContextFake Engine, SpatialFake Spatial, AppearanceFake Appearance) Engine(params DaggerfallSiteProfile[] sites)

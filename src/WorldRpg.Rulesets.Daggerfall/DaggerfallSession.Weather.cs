@@ -27,12 +27,14 @@ internal sealed partial class DaggerfallSession
                 _tuning.Weather.Daylight(_time.Calendar, CurrentWeather),
                 CurrentWeather is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy or DaggerfallWeatherKind.Overcast);
         else _horizon.Hide();
-        _weatherPresentation.Update(_sites.Projection, _time.Calendar, CurrentClimate, CurrentWeather,
+        _weatherPresentation.Update(_sites.Projection, _time.Calendar, CurrentClimate, CurrentConditions,
             _weather.SkyVariant(CurrentClimate), player, sheltered, seconds, playing, _horizon.FogDensity);
     }
 
     /// <summary>The actual outdoor weather at this geography, also available to indoor services.</summary>
     internal DaggerfallWeatherKind CurrentWeather => _weather.ForClimate(CurrentClimate);
+    /// <summary>The weather's facts here: what any rule that cares about the weather should read.</summary>
+    internal DaggerfallWeatherConditions CurrentConditions => _weather.Conditions(CurrentClimate);
     internal bool IsRaining => CurrentWeather is DaggerfallWeatherKind.Rain or DaggerfallWeatherKind.Thunder;
     internal bool IsStorming => CurrentWeather == DaggerfallWeatherKind.Thunder;
 

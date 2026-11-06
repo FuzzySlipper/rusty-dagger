@@ -7,6 +7,19 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed record DaggerfallWeatherTuning(int[][] Odds, float WinterScale, float OvercastScale,
     float RainScale, float StormScale, float SnowScale, float[][] DaylightCurve)
 {
+    /// <summary>How hard rain or snow falls in each weather, by <see cref="DaggerfallWeatherKind"/>.</summary>
+    internal float[] Falling { get; init; } = [0, 0, 0, 0, .7f, 1, .8f];
+    /// <summary>How hard the wind blows in each weather, by <see cref="DaggerfallWeatherKind"/>.</summary>
+    internal float[] Wind { get; init; } = [.1f, .25f, .3f, .03f, .45f, .9f, .55f];
+    /// <summary>The hours of rain that soak open ground through.</summary>
+    internal float SoakHours { get; init; } = 2;
+    /// <summary>The hours it takes soaked ground to dry.</summary>
+    internal float DryHours { get; init; } = 10;
+    /// <summary>The hours of snowfall that cover open ground.</summary>
+    internal float SnowHours { get; init; } = 6;
+    /// <summary>The hours settled snow takes to melt outside winter.</summary>
+    internal float MeltHours { get; init; } = 36;
+
     // WeatherTable.json cites Daggerfall Chronicles p47. Rows are climate group then season;
     // columns are Sunny, Cloudy, Overcast, Fog, Rain, Thunder, Snow.
     internal static DaggerfallWeatherTuning Classic { get; } = new(
@@ -44,6 +57,11 @@ internal sealed record DaggerfallWeatherTuning(int[][] Odds, float WinterScale, 
         if (Odds.Length != DaggerfallWeatherState.ClimateCount * 4
             || Odds.Any(row => row is null || row.Length != 7 || row.Any(value => value is < 0 or > 100) || row.Sum() != 100))
             throw new ArgumentException("Weather odds require seven percentages totaling 100 for each climate and season.");
+        int kinds = Enum.GetValues<DaggerfallWeatherKind>().Length;
+        if (Falling.Length != kinds || Wind.Length != kinds || Falling.Concat(Wind).Any(value => !float.IsFinite(value) || value is < 0 or > 1))
+            throw new ArgumentException("Every weather states how hard it falls and blows, from 0 to 1.");
+        foreach (float hours in new[] { SoakHours, DryHours, SnowHours, MeltHours })
+            if (!float.IsFinite(hours) || hours <= 0) throw new ArgumentException("Wet and snow build and fade over a positive number of hours.");
         foreach (float scale in new[] { WinterScale, OvercastScale, RainScale, StormScale, SnowScale })
             if (!float.IsFinite(scale) || scale is < 0 or > 1) throw new ArgumentException("Weather sunlight scales must be normalized.");
         ArgumentNullException.ThrowIfNull(DaylightCurve);
@@ -99,5 +117,13 @@ internal sealed record DaggerfallWeatherTuning(int[][] Odds, float WinterScale, 
         weather.GetProperty("odds").EnumerateArray().Select(row => row.EnumerateArray().Select(value => value.GetInt32()).ToArray()).ToArray(),
         weather.GetProperty("winterScale").GetSingle(), weather.GetProperty("overcastScale").GetSingle(),
         weather.GetProperty("rainScale").GetSingle(), weather.GetProperty("stormScale").GetSingle(), weather.GetProperty("snowScale").GetSingle(),
-        weather.GetProperty("daylightCurve").EnumerateArray().Select(row => row.EnumerateArray().Select(value => value.GetSingle()).ToArray()).ToArray());
+        weather.GetProperty("daylightCurve").EnumerateArray().Select(row => row.EnumerateArray().Select(value => value.GetSingle()).ToArray()).ToArray())
+    {
+        Falling = [.. weather.GetProperty("falling").EnumerateArray().Select(value => value.GetSingle())],
+        Wind = [.. weather.GetProperty("wind").EnumerateArray().Select(value => value.GetSingle())],
+        SoakHours = weather.GetProperty("soakHours").GetSingle(),
+        DryHours = weather.GetProperty("dryHours").GetSingle(),
+        SnowHours = weather.GetProperty("snowHours").GetSingle(),
+        MeltHours = weather.GetProperty("meltHours").GetSingle(),
+    };
 }

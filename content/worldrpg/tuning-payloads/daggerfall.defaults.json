@@ -651,6 +651,12 @@
     "lampLevel": 1
   },
   "weather": {
+    "falling": [0, 0, 0, 0, 0.7, 1, 0.8],
+    "wind": [0.1, 0.25, 0.3, 0.03, 0.45, 0.9, 0.55],
+    "soakHours": 2,
+    "dryHours": 10,
+    "snowHours": 6,
+    "meltHours": 36,
     "odds": [
       [
         75,
@@ -930,6 +936,10 @@
     "rockFullSlope": 0.7,
     "cloudCoverage": 0.45,
     "stormCloudCoverage": 0.9,
+    "cloudColors": [[1, 1, 1], [1, 1, 1], [0.6, 0.6, 0.63], [1, 1, 1], [0.28, 0.31, 0.37], [0.17, 0.19, 0.24], [0.52, 0.54, 0.58]],
+    "airColors": [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0.6, 0.6, 0.62], [0.19, 0.23, 0.31], [0.13, 0.15, 0.22], [0.66, 0.69, 0.78]],
+    "nightAir": 0.06,
+    "flashAir": 0.12,
     "cloudAltitudeMetres": 3500,
     "cloudScaleMetres": 1800,
     "cloudPixelMetres": 180,
@@ -972,17 +982,21 @@
     "flashIntensity": 2,
     "rollingThunderDelay": 1.7,
     "shelterProbeHeight": 12,
-    "precipitationHeight": 6,
-    "rainRate": 800,
-    "snowRate": 400,
-    "rainLifetime": 0.6,
-    "snowLifetime": 4,
+    "precipitationRadius": 18,
+    "precipitationHeight": 10,
+    "rainDrops": 24000,
+    "snowDrops": 20000,
     "rainSpeed": 14,
-    "snowSpeed": 1.5,
-    "rainSize": 0.16,
-    "snowSize": 0.08,
-    "particleBudget": 2048,
-    "rainSpread": 8,
-    "snowSpread": 2
+    "snowSpeed": 1.6,
+    "rainSize": 0.011,
+    "snowSize": 0.036,
+    "rainStreakSeconds": 0.05,
+    "fallEaseSeconds": 2,
+    "nightFall": 0.2,
+    "windDrift": 3,
+    "snowTexelsPerMetre": 20,
+    "puddleShare": 0.6,
+    "wetLook": 0.6,
+    "snowLook": 0.65
   }
 }

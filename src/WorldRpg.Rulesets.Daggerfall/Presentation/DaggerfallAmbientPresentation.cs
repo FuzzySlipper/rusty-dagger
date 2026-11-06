@@ -8,21 +8,20 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 internal readonly record struct DaggerfallAmbientContext(DaggerfallWorldProfileKey Profile,
     DaggerfallWeatherKind Weather, bool Night, bool Sheltered, bool Castle, bool SpecialArea);
 
-/// <summary>One session's weather emitter and ambient audio, stepped only by admitted product updates.</summary>
+/// <summary>One session's ambient audio and lightning, stepped only by admitted product updates.</summary>
 internal sealed class DaggerfallAmbientPresentation : IDisposable
 {
+    /// <summary>The classic's wind, published among its dungeon ambience: the moan, the deep moan and the blow.</summary>
+    private static readonly string[] WindGusts = ["dungeon.ambient.03", "dungeon.ambient.04", "dungeon.ambient.08"];
     private static long s_nextEmitter;
-    private readonly IPresentationService _presentation;
     private readonly IAudioService _audio;
     private readonly IRandomService _random;
     private readonly DaggerfallAmbientTuning _tuning;
     private readonly DaggerfallPresentationAudioTuning _audioTuning;
     private readonly Func<DaggerfallWorldProfileKey, string, AudioClip?> _openClip;
-    private readonly Func<bool, RenderResourceReference> _precipitationSprite;
     private readonly Dictionary<(DaggerfallWorldProfileKey, string), AudioClip> _clips = [];
     private readonly HashSet<AudioSignalHandle> _oneShots = [];
     private readonly ulong _emitterId = checked((ulong)Interlocked.Increment(ref s_nextEmitter));
-    private PresentationEmitter? _emitter;
     private AudioVoice? _loop;
     private string? _loopClip;
     private DaggerfallAmbientContext? _context;
@@ -37,13 +36,11 @@ internal sealed class DaggerfallAmbientPresentation : IDisposable
     private ulong _signal;
     private bool _disposed;
 
-    internal DaggerfallAmbientPresentation(IPresentationService presentation, IAudioService audio,
-        IRandomService random, DaggerfallAmbientTuning tuning,
-        Func<DaggerfallWorldProfileKey, string, AudioClip?> openClip,
-        Func<bool, RenderResourceReference> precipitationSprite, DaggerfallPresentationAudioTuning? audioTuning = null)
+    internal DaggerfallAmbientPresentation(IAudioService audio, IRandomService random, DaggerfallAmbientTuning tuning,
+        Func<DaggerfallWorldProfileKey, string, AudioClip?> openClip, DaggerfallPresentationAudioTuning? audioTuning = null)
     {
-        _presentation = presentation; _audio = audio; _random = random;
-        _tuning = tuning.Validate(); _openClip = openClip; _precipitationSprite = precipitationSprite;
+        _audio = audio; _random = random;
+        _tuning = tuning.Validate(); _openClip = openClip;
         _audioTuning = (audioTuning ?? DaggerfallTuning.Defaults.PresentationAudio).Validate();
     }
 
@@ -57,7 +54,7 @@ internal sealed class DaggerfallAmbientPresentation : IDisposable
         bool changed = _context != context;
         if (changed)
         {
-            RetireLoop(); RetireEmitter();
+            RetireLoop();
             _flashOn = false; _flashSteps = 0; _thunderClip = null; _thunderWait = 0;
             _wait = NextWait();
             _context = context;
@@ -82,20 +79,12 @@ internal sealed class DaggerfallAmbientPresentation : IDisposable
             _audio.ControlVoice(new(voice, playing ? AudioVoiceControl.Resume : AudioVoiceControl.Pause));
         _playing = playing;
 
-        bool snow = context.Weather == DaggerfallWeatherKind.Snow;
-        bool precipitating = playing && exterior && !context.Sheltered && (rain || snow);
-        if (precipitating)
-        {
-            PresentationParticleDescriptor descriptor = Precipitation(player, snow);
-            if (_emitter is null) _emitter = _presentation.CreateEmitter(descriptor);
-            else _presentation.UpdateEmitter(_emitter, descriptor);
-        }
-        else RetireEmitter();
         if (!playing || admittedSeconds == 0) return;
 
         AdvanceLightning(context, player, admittedSeconds);
         bool hasOneShots = exterior
-            ? context.Weather == DaggerfallWeatherKind.Thunder || !context.Night && context.Weather is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy
+            ? context.Weather is DaggerfallWeatherKind.Thunder or DaggerfallWeatherKind.Snow
+                || !context.Night && context.Weather is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy
             : context.Profile.Kind == DaggerfallWorldProfileKind.Dungeon && !context.Castle;
         if (!hasOneShots) return;
         _wait -= admittedSeconds;
@@ -110,6 +99,8 @@ internal sealed class DaggerfallAmbientPresentation : IDisposable
             _flashWait = 0;
             _thunderWait = type == 2 ? _tuning.RollingThunderDelay : 0;
         }
+        else if (exterior && context.Weather == DaggerfallWeatherKind.Snow)
+            Emit(context.Profile, WindGusts[Draw("wind", 0, WindGusts.Length - 1)], player);
         else if (exterior)
             Emit(context.Profile, Draw("bird", 1, 2) == 1 ? "ambient.bird1" : "ambient.bird2", player);
         else
@@ -134,23 +125,6 @@ internal sealed class DaggerfallAmbientPresentation : IDisposable
         if (_thunderWait > 0) return;
         Emit(context.Profile, _thunderClip, player);
         _thunderClip = null;
-    }
-
-    private PresentationParticleDescriptor Precipitation(Vector3 player, bool snow)
-    {
-        float speed = snow ? _tuning.SnowSpeed : _tuning.RainSpeed;
-        float size = snow ? _tuning.SnowSize : _tuning.RainSize;
-        float life = snow ? _tuning.SnowLifetime : _tuning.RainLifetime;
-        float spread = snow ? _tuning.SnowSpread : _tuning.RainSpread;
-        return new PresentationParticleDescriptor(_emitterId, $"daggerfall.weather.{_emitterId}",
-            new(PresentationAnchorKind.World, player + Vector3.UnitY * _tuning.PrecipitationHeight, 0, Vector3.Zero),
-            PresentationParticleVisual.Billboard, _precipitationSprite(snow), 1,
-            snow ? _tuning.SnowRate : _tuning.RainRate, 0, life, life,
-            new(-spread, -speed, -spread), new(spread, -speed, spread), Vector3.Zero,
-            new PresentationParticleScalarKey[] {new(0, size), new(1, size)},
-            new PresentationParticleColorKey[] {new(0, new Color(1,1,1,.7f)), new(1, new Color(1,1,1,0))},
-            0, _emitterId, _tuning.ParticleBudget, true, false, default,
-            ReadOnlyMemory<PresentationParticleCollisionVolume>.Empty, PresentationParticleSizeMode.World);
     }
 
     private AudioClip? Clip(DaggerfallWorldProfileKey profile, string id)
@@ -180,7 +154,6 @@ internal sealed class DaggerfallAmbientPresentation : IDisposable
         "daggerfall.ambient", $"{_emitterId}:{purpose}:{++_draw}", minimum, maximum)).Value);
     private int NextWait() => Draw("wait", _tuning.MinimumWaitSeconds, _tuning.MaximumWaitSeconds - 1);
     private void RetireLoop() {var loop = _loop; _loop = null; _loopClip = null; loop?.Dispose();}
-    private void RetireEmitter() {var emitter = _emitter; _emitter = null; emitter?.Dispose();}
     private void RetireRealizedOneShots()
     {
         if (_oneShots.Count == 0) return;
@@ -197,7 +170,6 @@ internal sealed class DaggerfallAmbientPresentation : IDisposable
         _disposed = true;
         List<Exception> failures = [];
         try {RetireLoop();} catch (Exception error) {failures.Add(error);}
-        try {RetireEmitter();} catch (Exception error) {failures.Add(error);}
         foreach (AudioSignalHandle signal in _oneShots)
             try {_audio.RetireOneShot(signal);} catch (Exception error) {failures.Add(error);}
         _oneShots.Clear();

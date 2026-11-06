@@ -5,10 +5,26 @@ namespace WorldRpg.Rulesets.Daggerfall.World;
 
 internal enum DaggerfallWeatherKind { Sunny, Cloudy, Overcast, Fog, Rain, Thunder, Snow }
 
+/// <summary>
+/// The weather's facts over a climate: what is falling and how hard, the wind, and what it has left on the ground. Wet
+/// and snow build and fade with world time, so they outlast the day that brought them. Presentation draws these, and
+/// they are what any rule that cares about the weather should read.
+/// </summary>
+/// <param name="Kind">The day's weather.</param>
+/// <param name="Falling">How hard rain or snow is falling, from 0 to 1.</param>
+/// <param name="Wind">How hard the wind blows, from 0 to 1.</param>
+/// <param name="WindDegrees">Where the wind blows toward, clockwise from north.</param>
+/// <param name="Wet">How wet open ground is, from 0 to 1.</param>
+/// <param name="Snow">How much snow lies on open ground, from 0 to 1.</param>
+internal readonly record struct DaggerfallWeatherConditions(DaggerfallWeatherKind Kind, float Falling, float Wind, float WindDegrees, float Wet, float Snow);
+
 /// <summary>Resolved weather for the six source climate groups and the next shared-calendar boundary.</summary>
 internal sealed record DaggerfallWeatherSave(DaggerfallWeatherKind[] Climates, long NextDay)
 {
     [JsonRequired] public int[] SkyVariants { get; init; } = new int[DaggerfallWeatherState.ClimateCount];
+    [JsonRequired] public float[] Wet { get; init; } = new float[DaggerfallWeatherState.ClimateCount];
+    [JsonRequired] public float[] Snow { get; init; } = new float[DaggerfallWeatherState.ClimateCount];
+    [JsonRequired] public int WindDegrees { get; init; }
 
     internal DaggerfallWeatherSave Validate()
     {
@@ -17,6 +33,10 @@ internal sealed record DaggerfallWeatherSave(DaggerfallWeatherKind[] Climates, l
             throw new ArgumentException("Weather must name one admitted pattern for each of the six source climates.");
         if (SkyVariants is null || SkyVariants.Length != DaggerfallWeatherState.ClimateCount || SkyVariants.Any(value => value is < 0 or > 1))
             throw new ArgumentException("Weather must retain one valid sky variant for every source climate.");
+        foreach (float[]? ground in new[] { Wet, Snow })
+            if (ground is null || ground.Length != DaggerfallWeatherState.ClimateCount || ground.Any(value => !float.IsFinite(value) || value is < 0 or > 1))
+                throw new ArgumentException("Weather must retain how wet and snowy each source climate is, from 0 to 1.");
+        if (WindDegrees is < 0 or >= 360) throw new ArgumentException("Weather's wind blows toward a compass degree.");
         return this;
     }
 }
@@ -32,6 +52,9 @@ internal sealed class DaggerfallWeatherState
     private readonly DaggerfallWeatherTuning _tuning;
     private DaggerfallWeatherKind[] _climates;
     private int[] _skyVariants = new int[ClimateCount];
+    private float[] _wet = new float[ClimateCount];
+    private float[] _snow = new float[ClimateCount];
+    private int _windDegrees;
     private long _nextDay;
 
     internal DaggerfallWeatherState(IRandomService random, DaggerfallWeatherTuning tuning,
@@ -46,6 +69,9 @@ internal sealed class DaggerfallWeatherState
                 throw new ArgumentException("Saved weather boundary does not follow the saved calendar day.");
             _climates = [.. saved.Climates];
             _skyVariants = [.. saved.SkyVariants];
+            _wet = [.. saved.Wet];
+            _snow = [.. saved.Snow];
+            _windDegrees = saved.WindDegrees;
             _nextDay = saved.NextDay;
         }
         else
@@ -57,13 +83,32 @@ internal sealed class DaggerfallWeatherState
 
     internal DaggerfallWeatherKind ForClimate(int sourceClimate) => _climates[ClimateGroup(sourceClimate)];
     internal int SkyVariant(int sourceClimate) => _skyVariants[ClimateGroup(sourceClimate)];
-    internal DaggerfallWeatherSave Capture() => new([.. _climates], _nextDay) { SkyVariants = [.. _skyVariants] };
+    internal DaggerfallWeatherSave Capture() => new([.. _climates], _nextDay)
+        { SkyVariants = [.. _skyVariants], Wet = [.. _wet], Snow = [.. _snow], WindDegrees = _windDegrees };
+
+    /// <summary>The weather's facts over a climate now.</summary>
+    internal DaggerfallWeatherConditions Conditions(int sourceClimate)
+    {
+        int group = ClimateGroup(sourceClimate);
+        DaggerfallWeatherKind kind = _climates[group];
+        return new(kind, _tuning.Falling[(int)kind], _tuning.Wind[(int)kind], _windDegrees, _wet[group], _snow[group]);
+    }
 
     /// <summary>For a developer: every climate takes this weather until the day's next change.</summary>
     internal void Force(DaggerfallWeatherKind weather) => Array.Fill(_climates, weather);
 
-    internal void Advance(DaggerfallCalendar calendar)
+    /// <summary>For a developer: every climate's ground is this wet and this snowed, and weather carries on from there.</summary>
+    internal void Force(float wet, float snow)
     {
+        Array.Fill(_wet, Math.Clamp(wet, 0, 1));
+        Array.Fill(_snow, Math.Clamp(snow, 0, 1));
+    }
+
+    /// <param name="calendar">The time now.</param>
+    /// <param name="elapsedHours">The world time since the last advance, over which the day's weather worked on the ground.</param>
+    internal void Advance(DaggerfallCalendar calendar, double elapsedHours)
+    {
+        Settle(calendar, (float)elapsedHours);
         if (calendar.DayNumber < _nextDay) return;
         // PlayerEntity changes all climate forecasts once when an admitted interval changes the
         // date, using the season at its end. A long rest/travel does not manufacture intermediate
@@ -72,8 +117,22 @@ internal sealed class DaggerfallWeatherState
         _nextDay = checked(calendar.DayNumber + 1);
     }
 
+    /// <summary>Rain soaks in and sun dries it; snow settles, and lies through winter once it has.</summary>
+    private void Settle(DaggerfallCalendar calendar, float hours)
+    {
+        for (int group = 0; group < ClimateCount; group++)
+        {
+            DaggerfallWeatherKind kind = _climates[group];
+            bool raining = kind is DaggerfallWeatherKind.Rain or DaggerfallWeatherKind.Thunder, snowing = kind == DaggerfallWeatherKind.Snow;
+            _wet[group] = Math.Clamp(_wet[group] + (raining ? hours / _tuning.SoakHours : -hours / _tuning.DryHours), 0, 1);
+            float melting = calendar.Season == DaggerfallSeason.Winter ? 0 : hours / _tuning.MeltHours;
+            _snow[group] = Math.Clamp(_snow[group] + (snowing ? hours / _tuning.SnowHours : -melting), 0, 1);
+        }
+    }
+
     private DaggerfallWeatherKind[] Select(DaggerfallCalendar calendar)
     {
+        _windDegrees = (int)(Draw(0, calendar.DayNumber, ":wind") * 3.6);
         var climates = new DaggerfallWeatherKind[ClimateCount];
         for (int group = 0; group < ClimateCount; group++)
         {

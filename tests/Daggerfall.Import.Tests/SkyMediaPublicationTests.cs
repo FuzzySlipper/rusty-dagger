@@ -137,7 +137,7 @@ public sealed class SkyMediaPublicationTests
         byte[] manifest = RealPublication.Value.Artifacts
             .Single(artifact => artifact.RelativePath == SkyMediaPublication.ManifestRelativePath).Bytes.ToArray();
         using JsonDocument document = JsonDocument.Parse(manifest);
-        foreach (string section in new[] { "resources", "nightResources", "weatherParticles" })
+        foreach (string section in new[] { "resources", "nightResources" })
         {
             Assert.All(document.RootElement.GetProperty(section).EnumerateArray(), resource =>
                 Assert.Equal(JsonValueKind.String, resource.GetProperty("contentHash").ValueKind));

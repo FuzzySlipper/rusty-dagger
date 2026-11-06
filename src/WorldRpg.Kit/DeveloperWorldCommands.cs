@@ -42,6 +42,8 @@ public interface IDeveloperWorldSession
 
     /// <summary>Sets the weather everywhere until the day's next change.</summary>
     DebugCommandResult Weather(string kind);
+    /// <summary>Leaves open ground this wet and this snowed, for a developer.</summary>
+    DebugCommandResult GroundWeather(double wet, double snow);
 
     /// <summary>Stands the player on the ground <paramref name="east"/> and <paramref name="south"/> metres away, as far as the walked window reaches.</summary>
     DebugCommandResult Stand(double east, double south);
@@ -94,6 +96,9 @@ public sealed class DeveloperWorldDebugModule(Func<IDeveloperWorldSession> curre
 
     [DebugCommand("world.weather", Description = "Developer: set the weather everywhere until the next day: Sunny, Cloudy, Overcast, Fog, Rain, Thunder or Snow.")]
     public DebugCommandResult Weather(string kind) => current().Weather(kind);
+
+    [DebugCommand("world.ground-weather", Description = "Developer: leave open ground this WET and this SNOWED, both from 0 to 1.")]
+    public DebugCommandResult GroundWeather(double wet, double snow) => current().GroundWeather(wet, snow);
 
     [DebugCommand("world.stand", Description = "Developer: stand the player on the ground EAST and SOUTH metres away, inside the walked window.")]
     public DebugCommandResult Stand(double east, double south) => current().Stand(east, south);
