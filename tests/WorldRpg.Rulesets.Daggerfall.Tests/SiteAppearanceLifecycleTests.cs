@@ -600,8 +600,10 @@ public sealed class SiteAppearanceLifecycleTests
         lighting.UpdateAmbient(noon, .5f);
         Assert.Equal(.5f * DaggerfallTuning.Defaults.SiteLighting.ExteriorSun, appearance.LightUpdates.Last(update => update.Replacement.Descriptor.Kind == LightKind.Directional).Replacement.Descriptor.Intensity);
 
+        int cleared = engine.ClearedSkyBackgrounds;
         lighting.Resume();
         Assert.Equal(created, appearance.LightRequests.Count);
+        Assert.Equal(cleared, engine.ClearedSkyBackgrounds);
 
         lighting.Suspend(keepSky: true);
         lighting.Suspend();
@@ -617,6 +619,7 @@ public sealed class SiteAppearanceLifecycleTests
         List<string> releases = [];
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(new ContentFake(releases), SpatialFake.Create(Hash, releases).Service, appearance);
+        int cleared = engine.ClearedSkyBackgrounds;
         using DaggerfallSiteLighting lighting = new(appearance, engine.Context.CameraView, SkyExterior(), DaggerfallTuning.Defaults.SiteLighting,
             DaggerfallCalendar.Start, carriesSky: false);
 
@@ -624,6 +627,7 @@ public sealed class SiteAppearanceLifecycleTests
         lighting.Resume();
 
         Assert.DoesNotContain(appearance.LightRequests, request => request.Descriptor.Kind is LightKind.Directional or LightKind.Ambient);
+        Assert.Equal(cleared, engine.ClearedSkyBackgrounds);
     }
 
     /// <summary>The sky's ambient cools by night and is white by noon, so a lamp's warmth stands out; indoors it stays white.</summary>

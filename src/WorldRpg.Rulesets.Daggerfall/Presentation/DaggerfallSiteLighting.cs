@@ -44,6 +44,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     private readonly bool _carriesSky;
     private bool _disposed;
     private bool _suspended;
+    private bool _skyKept;
 
     /// <param name="carriesSky">Whether this site lights the world with its sun and ambient. A resident location beside the
     /// active one brings only its own lamps: there is one sky, and a second sun would light the same ground twice.</param>
@@ -104,7 +105,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
             if (carriesSky && _profileKind == DaggerfallWorldProfileKind.Exterior) _sunRequest = SunRequest(calendar, calendar.IsDay ? 1f : 0f);
             CreateSky(created);
             _lights.AddRange(created);
-            ApplyBackground();
+            if (_carriesSky) ApplyBackground();
         }
         catch
         {
@@ -322,6 +323,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
             _suspended = true;
         }
 
+        _skyKept = keepSky;
         if (keepSky) return;
         foreach (Light light in _lights.AsEnumerable().Reverse()) light.Dispose();
         _lights.Clear();
@@ -347,7 +349,8 @@ internal sealed class DaggerfallSiteLighting : IDisposable
             _lights.AddRange(created);
             _suspendedPoints.Clear();
             _suspended = false;
-            ApplyBackground();
+            // A sky that stood through the suspension still has its panorama up: a location loading ahead of the player would blink it out.
+            if (_carriesSky && !_skyKept) ApplyBackground();
         }
         catch
         {
