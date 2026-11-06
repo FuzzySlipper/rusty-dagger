@@ -664,8 +664,10 @@ internal sealed partial class DaggerfallSession
             _weatherPresentation = new DaggerfallWeatherPresentation(engine, composition.Sky, tuning.Weather, tuning.Ambient, tuning.Horizon, tuning.PresentationAudio,
                 (profile, clip) => audioBundles?.Require(profile).OpenClip(engine.Audio, clip));
             partiallyConstructed.Add(_weatherPresentation);
-            _horizon = new DaggerfallHorizon(engine, new(definitions.Terrain,
-                (x, y) => definitions.Grids.ClimateAtWorldPixel(x, y).Value, tuning.Horizon, tuning.Ground, _sites.Locations), tuning.Horizon);
+            DaggerfallHorizonGround ground = new(definitions.Terrain,
+                (x, y) => definitions.Grids.ClimateAtWorldPixel(x, y).Value, tuning.Horizon, tuning.Ground, _sites.Locations);
+            _sites.UseGround(ground);
+            _horizon = new DaggerfallHorizon(engine, ground, tuning.Horizon);
             partiallyConstructed.Add(_horizon);
             effects.Completed += outcome => _facts.Append(new MagicEffectFact(outcome));
             crime.IncidentRecorded += AdmitLegalIncident;

@@ -189,6 +189,25 @@ public sealed class DaggerfallHorizonGroundTests
         Assert.Equal(flattened.Vertices[64 + (64 * 129)].Y, far.Heights[(9 * far.Tile.HeightSide) + 9], 1);
     }
 
+    [Fact]
+    public void Collision_stands_on_the_heights_near_ground_draws_without_its_materials()
+    {
+        DaggerfallTerrainSet terrain = Terrain(8, 8);
+        DaggerfallSiteExterior location = new(3, 3, 1, 1, 0, 0, false, 0, 32, 96, 32, 96);
+        Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> locations = new() { [new(3, 3)] = location };
+        DaggerfallHorizonGround drawn = new(terrain, (_, _) => 231, DaggerfallHorizonTuning.Default, DaggerfallGroundTuning.Default, locations) { Materials = Materials };
+        // The collider samples before anything has bound the ground's materials.
+        DaggerfallHorizonGround collided = new(terrain, (_, _) => 231, DaggerfallHorizonTuning.Default, DaggerfallGroundTuning.Default, locations);
+        const double cell = DaggerfallHorizonGround.FinestNearCellMetres, x = 3 * Size, z = (3 * Size) - 32;
+        HeightfieldTileSamples near = Samples(new(16, 0, 0, 0, 0, x, z, cell));
+        HeightfieldTileSamples collision = Samples(new(16, 0, 0, 0, 0, x, z, cell));
+
+        drawn.SampleNear(near.Tile, near, 0, 0);
+        collided.SampleHeights(collision.Tile, collision, 0, 0);
+
+        Assert.Equal(near.Heights, collision.Heights);
+    }
+
     /// <summary>Samples for a tile: the Engine makes them, and a fixture has no Engine to ask.</summary>
     private static HeightfieldTileSamples Samples(HeightfieldTileRequest tile) =>
         (HeightfieldTileSamples)Activator.CreateInstance(typeof(HeightfieldTileSamples), BindingFlags.NonPublic | BindingFlags.Instance, null, [tile], null)!;

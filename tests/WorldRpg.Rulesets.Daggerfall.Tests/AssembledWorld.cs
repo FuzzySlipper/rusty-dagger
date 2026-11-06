@@ -427,7 +427,10 @@ internal sealed class AssembledWorldRun : IDisposable
         return UseFromHere(entity);
     }
 
-    private WorldPoint UseFromHere(EntityId entity)
+    /// <summary>Stands the player in reach of a live position, facing it.</summary>
+    internal void AimAt(Vector3 target) => AimActivationAt(Session, WorldPoint.From(target));
+
+    internal WorldPoint UseFromHere(EntityId entity)
     {
         WorldPoint stood = Session.Sites.ActiveProfile.Kind == DaggerfallWorldProfileKind.Exterior
             ? Session.Sites.ExteriorSitePosition(Session.State.PlayerControl.Position!.Value)

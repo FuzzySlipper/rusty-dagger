@@ -430,7 +430,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         ReconcileSummoningFoes();
         // An arrival whose ground the Engine refused holds the world, like a held mode, until that ground is live
         // and the player stands on it: nothing would hold anyone up meanwhile.
-        bool groundless = _mode == ProductMode.Playing && !_sites.RecoverArrivalGround();
+        bool groundless = _mode == ProductMode.Playing && !_sites.RecoverArrivalGround(GroundWalkers());
         bool playing = _mode == ProductMode.Playing && !groundless && !Summoning.PendingOffer && State.Quests.PendingOffer is null && !LegalModalOpen && Cinematics?.ActiveSource is null && _pendingDispel is null && _pendingIdentify is null && _pendingCreateItem is null;
         bool modal = _mode == ProductMode.Modal || Summoning.PendingOffer || State.Quests.PendingOffer is not null || LegalModalOpen || _pendingDispel is not null || _pendingIdentify is not null || _pendingCreateItem is not null;
         DaggerfallUiPhases phase = _mode == ProductMode.Dead ? DaggerfallUiPhases.Dead
@@ -707,6 +707,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         Exception? failure = null;
         try { _sites.ReleaseExteriorWaterTriggers(); }
         catch (Exception exception) { failure = exception; }
+        try { _sites.DropGroundCollider(); }
+        catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         try { _sites.RetireResidentExteriorLocations(capture: false); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         try { DisposeAll([.. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }, _hud, _camera, _spatial, State.Actors, _heldEnchantments, _sites.Projection, State.Effects, _sites.ActionTriggers, Infections, _horizon, _weatherPresentation]); }

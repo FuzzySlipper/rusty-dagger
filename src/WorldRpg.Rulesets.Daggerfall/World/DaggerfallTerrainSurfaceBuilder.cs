@@ -15,13 +15,11 @@ internal sealed class DaggerfallTerrainSurface
         int mapPixelX,
         int mapPixelY,
         Vector3[] vertices,
-        Triangle[] triangles,
         float[] normalizedHeights)
     {
         MapPixelX = mapPixelX;
         MapPixelY = mapPixelY;
         Vertices = vertices ?? throw new ArgumentNullException(nameof(vertices));
-        Triangles = triangles ?? throw new ArgumentNullException(nameof(triangles));
         NormalizedHeights = normalizedHeights ?? throw new ArgumentNullException(nameof(normalizedHeights));
     }
 
@@ -33,9 +31,6 @@ internal sealed class DaggerfallTerrainSurface
 
     /// <summary>129 by 129 vertices in x-major, then z-row order.</summary>
     internal Vector3[] Vertices { get; }
-
-    /// <summary>Two upward-facing triangles for every adjacent sample quad.</summary>
-    internal Triangle[] Triangles { get; }
 
     /// <summary>Donor-normalized heights matching <see cref="Vertices"/> by index.</summary>
     internal float[] NormalizedHeights { get; }
@@ -125,8 +120,7 @@ internal static class DaggerfallTerrainSurfaceBuilder
             }
         }
 
-        Triangle[] triangles = BuildTriangles();
-        return new DaggerfallTerrainSurface(mapPixelX, mapPixelY, vertices, triangles, normalizedHeights)
+        return new DaggerfallTerrainSurface(mapPixelX, mapPixelY, vertices, normalizedHeights)
         {
             SourceWorldHeight = terrain.GetHeight(mapPixelX, mapPixelY),
         };
@@ -287,7 +281,6 @@ internal static class DaggerfallTerrainSurfaceBuilder
             surface.MapPixelX,
             surface.MapPixelY,
             vertices,
-            surface.Triangles,
             normalizedHeights)
         {
             SourceWorldHeight = surface.SourceWorldHeight,
@@ -459,28 +452,6 @@ internal static class DaggerfallTerrainSurfaceBuilder
             + (b * (fraction * fraction))
             + (c * fraction)
             + d;
-    }
-
-    private static Triangle[] BuildTriangles()
-    {
-        int quadsPerSide = SampleDimension - 1;
-        Triangle[] triangles = new Triangle[checked(quadsPerSide * quadsPerSide * 2)];
-        int index = 0;
-        for (int y = 0; y < quadsPerSide; y++)
-        {
-            for (int x = 0; x < quadsPerSide; x++)
-            {
-                uint lowerLeft = checked((uint)Index(x, y, SampleDimension));
-                uint lowerRight = checked((uint)Index(x + 1, y, SampleDimension));
-                uint upperLeft = checked((uint)Index(x, y + 1, SampleDimension));
-                uint upperRight = checked((uint)Index(x + 1, y + 1, SampleDimension));
-                // Match the Engine fixture's upward-facing right-handed winding.
-                triangles[index++] = new(lowerLeft, lowerRight, upperRight);
-                triangles[index++] = new(lowerLeft, upperRight, upperLeft);
-            }
-        }
-
-        return triangles;
     }
 
     private static void ValidateTerrain(DaggerfallTerrainSet terrain, int mapPixelX, int mapPixelY)

@@ -139,20 +139,20 @@ public sealed class LoadingScreenSessionTests
         LoadingScreen loading = run.Loading!;
         SpatialFake spatial = run.Spatial;
         string title = $"Travelling to {destination.Name}", arriving = $"Arriving at {destination.Name}";
-        // The terrain window's instances and the town's placements, and whether each downward floor probe (a stand)
-        // found both live.
+        // The ground and the town's placements, and whether each downward floor probe (a stand) found both live.
         ulong[] town = [];
-        bool WindowLive() => spatial.ResidentCollisionInstances.Keys.Any(id => id >> 56 == 0xD7);
+        bool GroundLive() => spatial.HeightfieldColliderReady;
         bool TownLive() => town.Length != 0 && town.All(spatial.PlacedArtifacts.Contains);
         List<bool> probes = [];
         spatial.FloorHit = request =>
         {
-            if (request.Direction.Y < 0) probes.Add(WindowLive() && TownLive());
+            if (request.Direction.Y < 0) probes.Add(GroundLive() && TownLive());
             return default;
         };
         spatial.HoldDeferredCollision = true;
 
         run.AcceptJourney(destination);
+        spatial.HeightfieldColliderReady = false;
         run.Step();
         run.Step();
         int waited = spatial.SynchronousWaitsOnDeferred;
@@ -160,34 +160,38 @@ public sealed class LoadingScreenSessionTests
         probes.Clear();
         run.Step();
 
-        // Arrived: the destination is the session's, and the town's placements and its window are handed to the Engine
-        // as two deferred batches, the placements first, after everything else the arrival did; nothing waited on them.
+        // Arrived: the destination is the session's, and the town's placements are handed to the Engine as a deferred
+        // batch after everything else the arrival did; nothing waited on it, and the ground streams in meanwhile.
         Assert.Equal(DaggerfallWorldProfileIds.Exterior(destination.Id), session.Sites.ActiveProfile);
-        Assert.Equal(2, spatial.PendingDeferredBatches);
+        Assert.Equal(1, spatial.PendingDeferredBatches);
         SpatialContentArtifactResidencyRequest placed = Assert.Single(spatial.ContentResidencyRequests.Skip(placements));
         Assert.True(placed.Deferred);
         town = [.. placed.Admitted.ToArray().Select(instance => instance.Id)];
         Assert.NotEmpty(town);
-        Assert.True(spatial.CollisionResidencyRequests.Last(request => request.Deferred).Instances.Length > 0);
         Assert.Equal(waited, spatial.SynchronousWaitsOnDeferred);
-        Assert.False(WindowLive());
+        Assert.False(GroundLive());
         Assert.False(TownLive());
         // The placements still parse, so the bar moves unmeasured, and nobody is stood: there is no ground yet.
         Assert.Equal(new LoadingState(title, arriving, 2, 3, null), loading.Current);
         Assert.Null(run.PublishedLoading()!["fraction"]);
         Assert.Empty(probes);
 
-        // Composing: the bar counts the share of the town's cells composed, of the two batches, within the arrival's third.
+        // Composing: the bar counts the share of the town's cells composed, within the arrival's third.
         spatial.DeferredCompose = (250, 1000);
         run.Step();
-        Assert.Equal(new LoadingState(title, arriving, 2, 3, (2d + .125d) / 3d), loading.Current);
-        Assert.Equal((2d + .125d) / 3d, run.PublishedLoading()!["fraction"]);
+        Assert.Equal(new LoadingState(title, arriving, 2, 3, (2d + .25d) / 3d), loading.Current);
+        Assert.Equal((2d + .25d) / 3d, run.PublishedLoading()!["fraction"]);
+        Assert.Empty(probes);
+
+        // The placements live but no ground yet: nobody is stood.
+        spatial.HoldDeferredCollision = false;
+        run.Step();
         Assert.Empty(probes);
 
         // Live: the arrival is stood on it, and the screen keeps its full bar for one update before play resumes.
-        spatial.HoldDeferredCollision = false;
+        spatial.HeightfieldColliderReady = true;
         run.Step();
-        Assert.True(WindowLive());
+        Assert.True(GroundLive());
         Assert.True(TownLive());
         Assert.NotEmpty(probes);
         Assert.All(probes, Assert.True);
@@ -212,7 +216,7 @@ public sealed class LoadingScreenSessionTests
         run.AcceptJourney(destination);
         run.FinishLoading();
 
-        // The window went live, the town did not: the arrival failed and says why.
+        // The ground stands, the town does not: the arrival failed and says why.
         Assert.Null(run.Loading!.Current);
         Assert.Equal(DaggerfallWorldProfileIds.Exterior(destination.Id), session.Sites.ActiveProfile);
         Assert.Contains("the Engine refused its collision", session.Presentation.LastOutcome);
@@ -248,7 +252,7 @@ public sealed class LoadingScreenSessionTests
         SpatialFake spatial = run.Spatial;
         HashSet<ulong> placedBefore = [.. spatial.PlacedArtifacts];
         int requests = spatial.ContentResidencyRequests.Count;
-        bool WindowLive() => spatial.ResidentCollisionInstances.Keys.Any(id => id >> 56 == 0xD7);
+        bool GroundLive() => spatial.HeightfieldColliderReady;
         // The destination's own parts, once handed over: the island's are placed again too, in the journey's new frame.
         ulong[] Arriving() => spatial.ContentResidencyRequests.Skip(requests).SingleOrDefault(request => request.Deferred) is { } handed
             ? [.. handed.Admitted.ToArray().Select(instance => instance.Id).Where(id => !placedBefore.Contains(id))]
@@ -257,13 +261,13 @@ public sealed class LoadingScreenSessionTests
         List<bool> probes = [];
         spatial.FloorHit = request =>
         {
-            if (request.Direction.Y < 0) probes.Add(WindowLive() && TownLive());
+            if (request.Direction.Y < 0) probes.Add(GroundLive() && TownLive());
             return default;
         };
         List<bool> stepped = [];
         spatial.StepResult = (_, receipt) =>
         {
-            stepped.Add(WindowLive() && TownLive());
+            stepped.Add(GroundLive() && TownLive());
             return receipt;
         };
         spatial.RejectDeferredPlacementCalls = 1;
@@ -271,11 +275,10 @@ public sealed class LoadingScreenSessionTests
         run.AcceptJourney(destination);
         run.FinishLoading();
 
-        // The arrival is committed and its window handed over, but the town's placements never left: it failed, and says why.
+        // The arrival is committed, but the town's placements never left: it failed, and says why.
         Assert.Null(run.Loading!.Current);
         Assert.Equal(DaggerfallWorldProfileIds.Exterior(destination.Id), session.Sites.ActiveProfile);
         Assert.Contains("the Engine refused its collision", session.Presentation.LastOutcome);
-        Assert.Contains(spatial.CollisionResidencyRequests, request => request.Deferred);
         Assert.DoesNotContain(spatial.ContentResidencyRequests.Skip(requests), request => request.Deferred);
         Assert.Empty(probes);
 
@@ -299,52 +302,45 @@ public sealed class LoadingScreenSessionTests
         using AssembledWorldRun run = world.Start(AssembledWorld.PrivateersHold, loadingScreen: true);
         DaggerfallSession session = run.Session;
         SpatialFake spatial = run.Spatial;
-        bool WindowLive() => spatial.ResidentCollisionInstances.Keys.Any(id => id >> 56 == 0xD7);
+        bool GroundLive() => spatial.HeightfieldColliderReady;
         List<bool> probes = [];
         spatial.FloorHit = request =>
         {
-            if (request.Direction.Y < 0) probes.Add(WindowLive());
+            if (request.Direction.Y < 0) probes.Add(GroundLive());
             return default;
         };
-        spatial.RefuseDeferredCollision = true;
-
         run.AcceptJourney(destination);
+        spatial.HeightfieldColliderReady = false;
+        spatial.HeightfieldColliderRefusedTiles = 1;
         run.FinishLoading();
 
         // The screen cleared on the refusal and says why; the player is at the destination with no ground under them.
         Assert.Null(run.Loading!.Current);
         Assert.Equal(DaggerfallWorldProfileIds.Exterior(destination.Id), session.Sites.ActiveProfile);
         Assert.Contains("the Engine refused its collision", session.Presentation.LastOutcome);
-        Assert.False(WindowLive());
         Assert.Empty(probes);
 
-        // The world is held: the window goes to the Engine again off the update, and nobody steps meanwhile, even
-        // while that batch is refused in turn.
-        int steps = spatial.StepCalls, waited = spatial.SynchronousWaitsOnDeferred;
-        spatial.HoldDeferredCollision = true;
+        // The world is held: nobody steps while the ground is refused, nor while it is still on its way.
+        int steps = spatial.StepCalls;
         run.Step();
-        Assert.Equal(1, spatial.PendingDeferredBatches);
-        Assert.True(spatial.CollisionResidencyRequests[^1].Deferred);
         run.Step();
         Assert.Equal(steps, spatial.StepCalls);
-        Assert.False(WindowLive());
         Assert.Empty(probes);
-        Assert.Equal(waited, spatial.SynchronousWaitsOnDeferred);
-        spatial.HoldDeferredCollision = false;
+        spatial.HeightfieldColliderRefusedTiles = 0;
         run.Step();
         Assert.Equal(steps, spatial.StepCalls);
-        Assert.False(WindowLive());
+        Assert.Empty(probes);
 
         // Admitted again: the arrival is stood on the live ground, and play takes its first step in that update.
-        spatial.RefuseDeferredCollision = false;
+        spatial.HeightfieldColliderReady = true;
         List<(bool Live, bool Stood)> stepped = [];
         spatial.StepResult = (_, receipt) =>
         {
-            stepped.Add((WindowLive(), probes.Count > 0));
+            stepped.Add((GroundLive(), probes.Count > 0));
             return receipt;
         };
         run.Step();
-        Assert.True(WindowLive());
+        Assert.True(GroundLive());
         Assert.All(probes, Assert.True);
         Assert.NotEmpty(stepped);
         Assert.All(stepped, step => Assert.Equal((true, true), step));

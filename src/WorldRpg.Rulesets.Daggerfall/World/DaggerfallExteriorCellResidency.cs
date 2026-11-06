@@ -109,72 +109,29 @@ internal readonly record struct DaggerfallExteriorCellResidencyUpdate(
     DaggerfallExteriorWorldOrigin Origin,
     int AddedCellCount,
     int RemovedCellCount,
-    int UpsertedInstanceCount,
-    bool OriginChanged,
-    bool Applied,
-    CollisionReplaceReceipt EngineReceipt);
+    bool OriginChanged);
 
 /// <summary>
-/// Selects and incrementally admits the donor's seven-by-seven exterior cell
-/// window. Product map-pixel identity stays global while Engine collision
-/// instances use the current local origin frame.
+/// Selects the donor's seven-by-seven exterior cell window. Product map-pixel identity stays global while the content
+/// each cell brings (its flats, water, ground containers and locations) stands in the current local origin frame. The
+/// window draws no collision: <see cref="DaggerfallExteriorGroundCollider"/> holds the ground.
 /// </summary>
-/// <remarks>
-/// A staged site change admits its window <em>held</em>: the batch is kept until the change's own synchronous
-/// collision and content calls are done, then handed to the Engine to bake off the update as one deferred batch
-/// (<see cref="ReleaseHeld"/>), which the session's <see cref="DaggerfallDeferredCollision"/> follows until it is live. A synchronous change the Engine
-/// receives while that batch is pending waits for it, so every other residency call here releases a held batch
-/// first and keeps the Engine's order the product's.
-/// </remarks>
 internal sealed class DaggerfallExteriorCellResidency
 {
     internal const int StreamingRadius = 3;
     internal const int StreamingDimension = (StreamingRadius * 2) + 1;
     internal const float CellSize = DaggerfallTerrainSurfaceBuilder.HorizontalSize;
 
-    // The high byte reserves separate, deterministic namespaces for this
-    // ruleset's exterior assets and instances. The remaining 48 bits pack the
-    // bounded map-pixel coordinates without using runtime Engine identities.
-    private const ulong AssetIdPrefix = 0xD600_0000_0000_0000UL;
-    private const ulong InstanceIdPrefix = 0xD700_0000_0000_0000UL;
-    private const int CoordinateBits = 24;
-    private const uint CoordinateMask = 0x00FF_FFFF;
-
-    private readonly ISpatialService _spatial;
-    private readonly SpatialSession _session;
     private readonly DaggerfallExteriorWorldBounds _bounds;
-    private readonly Func<DaggerfallExteriorCellId, DaggerfallTerrainSurface> _surfaceFactory;
     private readonly HashSet<DaggerfallExteriorCellId> _resident = [];
     private DaggerfallExteriorCellId _center;
     private DaggerfallExteriorWorldOrigin _origin;
     private bool _initialized;
-    // A held window batch, with the cells resident before it, which a refusal returns to.
-    private (CollisionResidencyRequest Request, HashSet<DaggerfallExteriorCellId> ResidentBefore)? _held;
-    private readonly DaggerfallDeferredCollision _deferred;
 
-    internal DaggerfallExteriorCellResidency(
-        ISpatialService spatial,
-        SpatialSession session,
-        Func<DaggerfallExteriorCellId, DaggerfallTerrainSurface> surfaceFactory,
-        DaggerfallDeferredCollision? deferred = null)
-        : this(spatial, session, DaggerfallExteriorWorldBounds.Daggerfall, surfaceFactory, deferred)
+    internal DaggerfallExteriorCellResidency(DaggerfallExteriorWorldBounds bounds)
     {
-    }
-
-    /// <param name="deferred">Follows a released batch until it is live; the session's own, shared with its placements.</param>
-    internal DaggerfallExteriorCellResidency(
-        ISpatialService spatial,
-        SpatialSession session,
-        DaggerfallExteriorWorldBounds bounds,
-        Func<DaggerfallExteriorCellId, DaggerfallTerrainSurface> surfaceFactory,
-        DaggerfallDeferredCollision? deferred = null)
-    {
-        _spatial = spatial ?? throw new ArgumentNullException(nameof(spatial));
-        _session = session ?? throw new ArgumentNullException(nameof(session));
         _bounds = bounds;
         _bounds.Validate();
-        _surfaceFactory = surfaceFactory ?? throw new ArgumentNullException(nameof(surfaceFactory));
-        _deferred = deferred ?? new DaggerfallDeferredCollision(spatial, session);
     }
 
     internal bool IsInitialized => _initialized;
@@ -192,9 +149,6 @@ internal sealed class DaggerfallExteriorCellResidency
         .ThenBy(cell => cell.X)
         .ToArray();
 
-    /// <summary>Whether a window batch is held for <see cref="ReleaseHeld"/>.</summary>
-    internal bool HoldsBatch => _held is not null;
-
     /// <summary>Updates the window while keeping the current map-pixel origin.</summary>
     internal DaggerfallExteriorCellResidencyUpdate Update(DaggerfallExteriorCellId center)
     {
@@ -204,219 +158,48 @@ internal sealed class DaggerfallExteriorCellResidency
         return Update(center, origin);
     }
 
-    /// <summary>
-    /// Updates the target window and local-origin projection in one operation.
-    /// Existing geometry is left resident and only newly selected cells are
-    /// rebuilt. When the origin changes, existing instances are upserted with
-    /// their new local translations; Engine WorldOrigin rebases retained
-    /// colliders through its own safe prepare/commit API.
-    /// </summary>
-    /// <param name="hold">
-    /// Keep the batch for <see cref="ReleaseHeld"/> instead of applying it now. Only one batch is held: a second, or
-    /// one that moves resident cells to a new origin, releases the held one and applies at once.
-    /// </param>
+    /// <summary>Updates the target window and local-origin projection in one operation.</summary>
     internal DaggerfallExteriorCellResidencyUpdate Update(
         DaggerfallExteriorCellId center,
-        DaggerfallExteriorWorldOrigin origin,
-        bool hold = false)
+        DaggerfallExteriorWorldOrigin origin)
     {
         _bounds.Require(center, nameof(center));
         ValidateOrigin(origin);
 
         List<DaggerfallExteriorCellId> desired = Select(center);
-        List<DaggerfallExteriorCellId> additions = desired
-            .Where(cell => !_resident.Contains(cell))
-            .ToList();
-        List<DaggerfallExteriorCellId> removals = _resident
-            .Where(cell => !desired.Contains(cell))
-            .OrderBy(cell => cell.Y)
-            .ThenBy(cell => cell.X)
-            .ToList();
+        int additions = desired.Count(cell => !_resident.Contains(cell));
+        int removals = _resident.Count(cell => !desired.Contains(cell));
         bool originChanged = _initialized && _origin != origin;
 
-        var assets = new List<StaticMeshAsset>(additions.Count);
-        var vertices = new List<Vector3>();
-        var triangles = new List<Triangle>();
-        var instances = new List<StaticMeshInstance>(additions.Count + (originChanged ? _resident.Count : 0));
-
-        foreach (DaggerfallExteriorCellId cell in additions)
-        {
-            DaggerfallTerrainSurface surface = _surfaceFactory(cell)
-                ?? throw new InvalidOperationException($"Exterior cell ({cell.X},{cell.Y}) produced no terrain surface.");
-            ValidateSurface(cell, surface);
-            StaticMeshAsset asset = AppendAsset(cell, surface, vertices, triangles);
-            assets.Add(asset);
-            instances.Add(Instance(cell, origin));
-        }
-
-        if (originChanged)
-        {
-            foreach (DaggerfallExteriorCellId cell in _resident
-                .Where(desired.Contains)
-                .OrderBy(value => value.Y)
-                .ThenBy(value => value.X))
-                instances.Add(Instance(cell, origin));
-        }
-
-        ulong[] removedAssets = removals.Select(AssetId).ToArray();
-        ulong[] removedInstances = removals.Select(InstanceId).ToArray();
-        bool applied = assets.Count != 0 || instances.Count != 0 || removedAssets.Length != 0;
-        CollisionReplaceReceipt receipt = default;
-        if (applied)
-        {
-            CollisionResidencyRequest request = new(
-                _session,
-                assets.ToArray(),
-                vertices.ToArray(),
-                triangles.ToArray(),
-                instances.ToArray(),
-                removedAssets,
-                removedInstances);
-            // A held batch moving resident cells would be planned in a frame the Engine may have left by its release.
-            if (hold && _held is null && !originChanged)
-                _held = (request, [.. _resident]);
-            else
-                receipt = Apply(request);
-        }
-
-        foreach (DaggerfallExteriorCellId cell in removals)
-            _resident.Remove(cell);
-        foreach (DaggerfallExteriorCellId cell in additions)
-            _resident.Add(cell);
+        _resident.Clear();
+        _resident.UnionWith(desired);
         _center = center;
         _origin = origin;
         _initialized = true;
-
-        return new DaggerfallExteriorCellResidencyUpdate(
-            center,
-            origin,
-            additions.Count,
-            removals.Count,
-            instances.Count,
-            originChanged,
-            applied,
-            receipt);
+        return new DaggerfallExteriorCellResidencyUpdate(center, origin, additions, removals, originChanged);
     }
 
     /// <summary>
     /// Adopts the local frame read back from the Engine after it committed its native WorldOrigin
     /// rebase; the caller derives its compensation from the WorldOrigin readout, so this is the
-    /// frame the retained instances now stand in, not a second origin. Spatial already shifted
-    /// retained colliders during that commit, so this bookkeeping operation deliberately emits no
-    /// replacement request; a following <see cref="Update"/>
-    /// admits only cells entering or leaving the selected window.
+    /// frame the window now stands in, not a second origin.
     /// </summary>
     internal void AdoptRebasedOrigin(DaggerfallExteriorWorldOrigin origin)
     {
         if (!_initialized)
             throw new InvalidOperationException("A rebased origin requires initialized exterior residency.");
-        // Its translations name the frame the commit just left, and the Engine has not seen it to rebase it.
-        if (_held is not null)
-            throw new InvalidOperationException("A held exterior batch must be released before the Engine origin moves.");
         ValidateOrigin(origin);
         _origin = origin;
     }
 
-    /// <summary>
-    /// Rebuilds one currently resident cell after its normalized surface or
-    /// product-owned terrain delta changes while preserving both Engine IDs.
-    /// </summary>
-    internal DaggerfallExteriorCellResidencyUpdate Refresh(DaggerfallExteriorCellId cell)
-    {
-        if (!_initialized)
-            throw new InvalidOperationException("Exterior residency has not been initialized.");
-        if (!_resident.Contains(cell))
-            throw new InvalidOperationException($"Exterior cell ({cell.X},{cell.Y}) is not resident.");
-
-        DaggerfallTerrainSurface surface = _surfaceFactory(cell)
-            ?? throw new InvalidOperationException($"Exterior cell ({cell.X},{cell.Y}) produced no terrain surface.");
-        ValidateSurface(cell, surface);
-        var assets = new List<StaticMeshAsset>(1);
-        var vertices = new List<Vector3>(surface.Vertices.Length);
-        var triangles = new List<Triangle>(surface.Triangles.Length);
-        assets.Add(AppendAsset(cell, surface, vertices, triangles));
-        StaticMeshInstance instance = Instance(cell, _origin);
-        CollisionReplaceReceipt receipt = Apply(new CollisionResidencyRequest(
-            _session,
-            assets.ToArray(),
-            vertices.ToArray(),
-            triangles.ToArray(),
-            new[] { instance },
-            ReadOnlyMemory<ulong>.Empty,
-            ReadOnlyMemory<ulong>.Empty));
-        return new DaggerfallExteriorCellResidencyUpdate(
-            _center,
-            _origin,
-            0,
-            0,
-            1,
-            false,
-            true,
-            receipt);
-    }
-
-    /// <summary>
-    /// Removes every exterior collider owned by this coordinator and forgets
-    /// the admitted set. Call this before a site/content transition because
-    /// Engine ReplaceContentArtifact replaces the complete collision set;
-    /// Restore the captured state after a failed transition rollback.
-    /// </summary>
+    /// <summary>Forgets the admitted set, ahead of a site or content transition; a failed one restores what it captured.</summary>
     internal DaggerfallExteriorCellResidencyUpdate Clear()
     {
-        if (!_initialized)
-            return new(default, default, 0, 0, 0, false, false, default);
-
-        DaggerfallExteriorCellId center = _center;
-        DaggerfallExteriorWorldOrigin origin = _origin;
-        List<DaggerfallExteriorCellId> cells = _resident
-            .OrderBy(cell => cell.Y)
-            .ThenBy(cell => cell.X)
-            .ToList();
-        ulong[] removedAssets = cells.Select(AssetId).ToArray();
-        ulong[] removedInstances = cells.Select(InstanceId).ToArray();
-        CollisionReplaceReceipt receipt = Apply(new CollisionResidencyRequest(
-            _session,
-            ReadOnlyMemory<StaticMeshAsset>.Empty,
-            ReadOnlyMemory<Vector3>.Empty,
-            ReadOnlyMemory<Triangle>.Empty,
-            ReadOnlyMemory<StaticMeshInstance>.Empty,
-            removedAssets,
-            removedInstances));
-
+        if (!_initialized) return default;
+        DaggerfallExteriorCellResidencyUpdate update = new(_center, _origin, 0, _resident.Count, false);
         _resident.Clear();
         _initialized = false;
-        return new(
-            center,
-            origin,
-            0,
-            cells.Count,
-            0,
-            false,
-            true,
-            receipt);
-    }
-
-    /// <summary>
-    /// Hands a held batch to the Engine to validate, bake and install off the update; nothing when none is held.
-    /// The session's <see cref="DaggerfallDeferredCollision"/> follows it until it is live. A refusal changed nothing
-    /// in the Engine, so the window returns to the cells resident before it: its next update admits them again.
-    /// A request the Engine rejects in the call stays held, to be handed over again.
-    /// </summary>
-    internal CollisionReplaceReceipt? ReleaseHeld()
-    {
-        if (_held is not { } held) return null;
-        CollisionResidencyReadout before = _deferred.Read();
-        CollisionResidencyRequest request = held.Request;
-        CollisionReplaceReceipt receipt = _spatial.ApplyCollisionResidency(new CollisionResidencyRequest(
-            request.Session, request.Assets, request.Vertices, request.Triangles, request.Instances,
-            request.RemovedAssets, request.RemovedInstances, Deferred: true));
-        _held = null;
-        _deferred.Track(receipt.DeferredBatch, before, () =>
-        {
-            _resident.Clear();
-            _resident.UnionWith(held.ResidentBefore);
-        });
-        return receipt;
+        return update;
     }
 
     /// <summary>Captures the window and its anchor with the Engine origin cell the caller read.</summary>
@@ -438,26 +221,6 @@ internal sealed class DaggerfallExteriorCellResidency
         return Update(save.Center, save.WorldOrigin);
     }
 
-    /// <summary>Applies a change at once, after any held batch, so the Engine receives them in the product's order.</summary>
-    private CollisionReplaceReceipt Apply(CollisionResidencyRequest request)
-    {
-        _ = ReleaseHeld();
-        return _spatial.ApplyCollisionResidency(request);
-    }
-
-    internal static ulong AssetId(DaggerfallExteriorCellId cell) =>
-        AssetIdPrefix | PackCoordinates(cell);
-
-    internal static ulong InstanceId(DaggerfallExteriorCellId cell) =>
-        InstanceIdPrefix | PackCoordinates(cell);
-
-    private static ulong PackCoordinates(DaggerfallExteriorCellId cell)
-    {
-        if ((uint)cell.X > CoordinateMask || (uint)cell.Y > CoordinateMask)
-            throw new ArgumentOutOfRangeException(nameof(cell), "Exterior identity coordinates exceed the stable ID range.");
-        return ((ulong)(uint)cell.X << CoordinateBits) | (uint)cell.Y;
-    }
-
     private List<DaggerfallExteriorCellId> Select(DaggerfallExteriorCellId center)
     {
         int minimumX = Math.Max(0, center.X - StreamingRadius);
@@ -473,32 +236,6 @@ internal sealed class DaggerfallExteriorCellResidency
         return cells;
     }
 
-    private static StaticMeshAsset AppendAsset(
-        DaggerfallExteriorCellId cell,
-        DaggerfallTerrainSurface surface,
-        List<Vector3> vertices,
-        List<Triangle> triangles)
-    {
-        int firstVertex = vertices.Count;
-        int firstTriangle = triangles.Count;
-        vertices.AddRange(surface.Vertices);
-        triangles.AddRange(surface.Triangles);
-        return new(
-            AssetId(cell),
-            checked((uint)firstVertex),
-            checked((uint)surface.Vertices.Length),
-            checked((uint)firstTriangle),
-            checked((uint)surface.Triangles.Length));
-    }
-
-    private static StaticMeshInstance Instance(
-        DaggerfallExteriorCellId cell,
-        DaggerfallExteriorWorldOrigin origin) =>
-        new(
-            InstanceId(cell),
-            AssetId(cell),
-            new Transform(origin.LocalTranslation(cell), Quaternion.Identity, Vector3.One));
-
     private void ValidateOrigin(DaggerfallExteriorWorldOrigin origin)
     {
         _bounds.Require(new DaggerfallExteriorCellId(origin.MapPixelX, origin.MapPixelY), nameof(origin));
@@ -507,27 +244,6 @@ internal sealed class DaggerfallExteriorCellResidency
             || !float.IsFinite(origin.Compensation.Z))
         {
             throw new ArgumentOutOfRangeException(nameof(origin), "Exterior origin compensation must be finite.");
-        }
-    }
-
-    private static void ValidateSurface(DaggerfallExteriorCellId cell, DaggerfallTerrainSurface surface)
-    {
-        if (surface.MapPixelX != cell.X || surface.MapPixelY != cell.Y)
-        {
-            throw new InvalidOperationException(
-                $"Terrain surface ({surface.MapPixelX},{surface.MapPixelY}) does not match exterior cell ({cell.X},{cell.Y}).");
-        }
-        if (surface.Vertices.Length == 0 || surface.Triangles.Length == 0)
-            throw new InvalidOperationException($"Exterior cell ({cell.X},{cell.Y}) has no collision geometry.");
-
-        uint vertexCount = checked((uint)surface.Vertices.Length);
-        foreach (Triangle triangle in surface.Triangles)
-        {
-            if (triangle.A >= vertexCount || triangle.B >= vertexCount || triangle.C >= vertexCount)
-            {
-                throw new InvalidOperationException(
-                    $"Exterior cell ({cell.X},{cell.Y}) has a triangle outside its vertex range.");
-            }
         }
     }
 }

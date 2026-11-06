@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Reflection;
 using Rusty.Engine;
 using Rusty.Engine.Entities;
+using Rusty.Engine.Heightfields;
 using Rusty.Engine.Testing;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
@@ -19,7 +20,7 @@ using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
-public sealed class ExteriorOriginSessionTests
+public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHelper output)
 {
     [Fact]
     public void Native_collision_retains_its_relative_hit_after_the_session_origin_changes()
@@ -31,16 +32,35 @@ public sealed class ExteriorOriginSessionTests
             .ToDictionary(entry => entry.Path, entry => (ReadOnlyMemory<byte>)entry.Bytes);
         foreach ((string path, ReadOnlyMemory<byte> bytes) in PresentedFiles(root, exterior)) files[path] = bytes;
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
+        ISpatialService spatial = DispatchProxy.Create<ISpatialService, RecordingSpatial>();
+        RecordingSpatial recorded = (RecordingSpatial)(object)spatial;
+        DaggerfallSession session = null!;
         host.Call(engine =>
         {
-            ISpatialService spatial = DispatchProxy.Create<ISpatialService, RecordingSpatial>();
-            RecordingSpatial recorded = (RecordingSpatial)(object)spatial;
             recorded.Inner = engine.Spatial;
             List<string> releases = [];
             EngineContextFake context = EngineContextFake.Create(engine.Content, spatial, new AppearanceFake(releases),
                 worldOrigin: engine.WorldOrigin);
-            using DaggerfallSession session = DaggerfallSession.StartNew(context.Context,
-                new(definitions, exterior, DaggerfallTuning.Defaults));
+            session = DaggerfallSession.StartNew(context.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
+        });
+        try
+        {
+        OnGround(host, session);
+        // An arrival waits for the ground about it; the rest of the collider's reach streams in over the updates after.
+        bool Reached(Vector3 offset)
+        {
+            Vector3 at = session.State.PlayerControl.Position!.Value.ToVector() + offset + Vector3.UnitY * 200F;
+            return spatial.CastRay(new(recorded.Session!, at, -Vector3.UnitY, 400F, default, ReadOnlyMemory<SpatialEntityCollider>.Empty,
+                ReadOnlyMemory<ulong>.Empty, ReadOnlyMemory<SpatialEntityCollider>.Empty)).Present;
+        }
+        System.Diagnostics.Stopwatch streaming = System.Diagnostics.Stopwatch.StartNew();
+        while (!host.Call(_ => { session.AwaitArrivalGround(); return new[] { -50F, 0F, 50F }.All(along => Reached(new(412F, 0F, along)) && Reached(new(-412F, 0F, along)) && Reached(new(along, 0F, 412F)) && Reached(new(along, 0F, -412F))); }))
+        {
+            Assert.True(streaming.Elapsed < TimeSpan.FromSeconds(60), "The ground never reached its full extent.");
+            Thread.Sleep(5);
+        }
+        host.Call(engine =>
+        {
             Vector3 exteriorFrame = session.Sites.ExteriorProfileFrameTranslation(exterior.ProfileKey);
             // Charing's sampled terrain height is deliberately not representable by the old
             // quarter-level placement field.  The location artifact and every source-owned pose
@@ -64,54 +84,44 @@ public sealed class ExteriorOriginSessionTests
             Assert.Equal(sourceDoor.Position.Y + exteriorFrame.Y, liveDoor.Pose.Translation.Y, 3);
             Assert.Equal(sourceDoor.Position.Z + exteriorFrame.Z, liveDoor.Pose.Translation.Z, 3);
 
-            // Probe an admitted neighboring map pixel without a location artifact.  This keeps
-            // the ray on the real generated terrain mesh, while the city ray below remains the
-            // native artifact collision check.
+            // Probe the neighbouring map pixel the ground reaches into, clear of the location's own collision.
+            // Every hit is the collider's, and it stands where the drawn surface does.
             DaggerfallExteriorCellResidencySave admitted = session.Sites.CaptureExteriorResidency()
                 ?? throw new InvalidOperationException("Native Charing session did not admit an exterior terrain window.");
             HashSet<DaggerfallExteriorCellId> locationCells = definitions.Locations.Records
                 .Where(record => record.Exterior is not null)
                 .Select(record => new DaggerfallExteriorCellId(record.Exterior!.MapPixelX, record.Exterior.MapPixelY))
                 .ToHashSet();
-            DaggerfallExteriorCellId terrainCell = default;
-            bool foundTerrainCell = false;
-            for (int row = -DaggerfallExteriorCellResidency.StreamingRadius;
-                 row <= DaggerfallExteriorCellResidency.StreamingRadius && !foundTerrainCell; row++)
+            (int X, int Y) side = new (int X, int Y)[] { (1, 0), (-1, 0), (0, 1), (0, -1) }
+                .First(step => !locationCells.Contains(new(admitted.Center.X + step.X, admitted.Center.Y + step.Y)));
+            float size = DaggerfallExteriorCellResidency.CellSize, past = 6F;
+            float edgeX = side.X > 0 ? size + past : side.X < 0 ? -past : livePlayer.X;
+            float edgeZ = side.Y > 0 ? past : side.Y < 0 ? -size - past : livePlayer.Z;
+            Vector3 cellCorner = admitted.WorldOrigin.LocalTranslation(admitted.Center);
+            // On the cells' corners, a hair inside: there both the drawn ring and the collider are the ground function itself.
+            float Corner(float at) => MathF.Round(at / (float)DaggerfallHorizonGround.FinestNearCellMetres) * (float)DaggerfallHorizonGround.FinestNearCellMetres;
+            Vector3[] probes = [.. Enumerable.Range(-10, 21).Select(step => new Vector3(
+                Corner(side.X != 0 ? cellCorner.X + edgeX : livePlayer.X + (step * 4.7F)), 0F,
+                Corner(side.Y != 0 ? cellCorner.Z + edgeZ : livePlayer.Z + (step * 4.7F))))];
+            DaggerfallHorizonGround function = new(definitions.Terrain, (x, y) => definitions.Grids.ClimateAtWorldPixel(x, y).Value,
+                DaggerfallTuning.Defaults.Horizon, DaggerfallTuning.Defaults.Ground, session.Sites.Locations);
+            float Drawn(Vector3 corner)
             {
-                for (int column = -DaggerfallExteriorCellResidency.StreamingRadius;
-                     column <= DaggerfallExteriorCellResidency.StreamingRadius; column++)
-                {
-                    DaggerfallExteriorCellId candidate = new(admitted.Center.X + column,
-                        admitted.Center.Y + row);
-                    if ((uint)candidate.X >= (uint)definitions.Terrain.Width
-                        || (uint)candidate.Y >= (uint)definitions.Terrain.Height
-                        || locationCells.Contains(candidate)) continue;
-                    terrainCell = candidate;
-                    foundTerrainCell = true;
-                    break;
-                }
+                HeightfieldTileSamples samples = (HeightfieldTileSamples)Activator.CreateInstance(typeof(HeightfieldTileSamples),
+                    BindingFlags.NonPublic | BindingFlags.Instance, null, [new HeightfieldTileRequest(1, 0, 0, 0, 0, corner.X, corner.Z, DaggerfallHorizonGround.FinestNearCellMetres)], null)!;
+                function.SampleHeights(samples.Tile, samples, admitted.Origin.X * (double)size, admitted.Origin.Y * (double)size);
+                return samples.Height(0, 0);
             }
-            Assert.True(foundTerrainCell, "Charing's admitted terrain window had no non-city collision cell to probe.");
-            DaggerfallTerrainSurface terrain = DaggerfallTerrainSurfaceBuilder.Build(
-                definitions.Terrain, terrainCell.X, terrainCell.Y);
-            DaggerfallExteriorWorldOrigin terrainOrigin = admitted.WorldOrigin;
-            int quadsPerSide = DaggerfallTerrainSurfaceBuilder.SampleDimension - 1;
-            int centerQuad = quadsPerSide / 2;
-            int centerTriangle = ((centerQuad * quadsPerSide) + centerQuad) * 2;
-            Triangle terrainTriangle = terrain.Triangles[centerTriangle];
-            Vector3 triangleA = terrain.Vertices[checked((int)terrainTriangle.A)];
-            Vector3 triangleB = terrain.Vertices[checked((int)terrainTriangle.B)];
-            Vector3 triangleC = terrain.Vertices[checked((int)terrainTriangle.C)];
-            // A shared grid vertex can be rejected by native triangle edge rules. Probe a
-            // strictly interior point of the admitted triangle while retaining the exact mesh
-            // plane, rather than approximating it with a bilinear sample.
-            Vector3 terrainPoint = terrainOrigin.LocalTranslation(terrainCell)
-                + (triangleA * .2F) + (triangleB * .3F) + (triangleC * .5F);
-            SpatialHit terrainHit = Hit(terrainPoint + Vector3.UnitY * 20F, 50F);
-            Assert.True(terrainHit.Present);
-            Assert.Equal(terrainPoint.X, terrainHit.Point.X, 2);
-            Assert.Equal(terrainPoint.Y, terrainHit.Point.Y, 2);
-            Assert.Equal(terrainPoint.Z, terrainHit.Point.Z, 2);
+            float worst = 0F;
+            foreach (Vector3 probe in probes)
+            {
+                float drawn = Drawn(probe);
+                SpatialHit ground = Hit(new(probe.X + .005F, drawn + 20F, probe.Z + .005F), 50F);
+                Assert.True(ground.Present, $"No ground at {probe}, drawn at {drawn}.");
+                worst = MathF.Max(worst, MathF.Abs(ground.Point.Y - drawn));
+            }
+            output.WriteLine($"Collision against the drawn ground: {worst} m at worst.");
+            Assert.InRange(worst, 0F, .02F);
 
             Vector3 ray = exterior.Portals[0].Position.ToVector() + exteriorFrame + Vector3.UnitY * 20f;
             SpatialHit Hit(Vector3 point, float distance = 100F) => spatial.CastRay(new(recorded.Session!, point, -Vector3.UnitY, distance,
@@ -161,10 +171,31 @@ public sealed class ExteriorOriginSessionTests
             Assert.Equal(beforeRoute.Outcome, afterRoute.Outcome);
             Assert.Equal(new Vector3(2f, 0f, 0f), session.State.Actors.Get(actor).Position.ToVector()
                 - session.State.PlayerControl.Position!.Value.ToVector());
+            // The collider moved with the rest of the session's collision.
+            float drawnHere = Drawn(probes[10]);
+            SpatialHit rebasedGround = Hit(new(probes[10].X + delta.X + .005F, drawnHere + delta.Y + 20F, probes[10].Z + delta.Z + .005F), 50F);
+            Assert.True(rebasedGround.Present);
+            Assert.InRange(MathF.Abs(rebasedGround.Point.Y - delta.Y - drawnHere), 0F, .02F);
             WorldOriginReadout native = engine.WorldOrigin.Read(new(recorded.Session!));
             Assert.Equal(-delta.X, native.CellX);
             Assert.Equal(-delta.Z, native.CellZ);
         });
+        }
+        finally
+        {
+            host.Call(_ => session.Dispose());
+        }
+    }
+
+    /// <summary>Holds until the exterior ground stands, as the host's loading screen does: an Engine call at a time, tiles sampled on workers meanwhile.</summary>
+    private static void OnGround(EngineTestHost host, DaggerfallSession session)
+    {
+        System.Diagnostics.Stopwatch waited = System.Diagnostics.Stopwatch.StartNew();
+        while (!host.Call(_ => session.AwaitArrivalGround().Done))
+        {
+            Assert.True(waited.Elapsed < TimeSpan.FromSeconds(60), "The exterior ground never stood.");
+            Thread.Sleep(5);
+        }
     }
 
     private class RecordingSpatial : DispatchProxy
@@ -534,31 +565,47 @@ public sealed class ExteriorOriginSessionTests
             .ToDictionary(entry => entry.Path, entry => (ReadOnlyMemory<byte>)entry.Bytes);
         foreach ((string path, ReadOnlyMemory<byte> bytes) in PresentedFiles(root, exterior)) files[path] = bytes;
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
+        DaggerfallSession session = null!;
         host.Call(engine =>
         {
             List<string> releases = [];
             EngineContextFake context = EngineContextFake.Create(engine.Content, engine.Spatial, new AppearanceFake(releases),
                 worldOrigin: engine.WorldOrigin);
-            using DaggerfallSession session = DaggerfallSession.StartNew(context.Context,
-                new(definitions, exterior, DaggerfallTuning.Defaults));
+            session = DaggerfallSession.StartNew(context.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
+        });
+        try
+        {
+            OnGround(host, session);
             float cell = DaggerfallExteriorCellResidency.CellSize;
-            WorldPoint start = session.State.PlayerControl.Position!.Value;
-
-            Assert.True(session.Teleport(start.X + (1100 * cell), start.Y, start.Z, force: true).Succeeded);
-            session.Update(new ProductUpdate(OuterUpdate(1), []));
+            host.Call(_ =>
+            {
+                WorldPoint start = session.State.PlayerControl.Position!.Value;
+                Assert.True(session.Teleport(start.X + (1100 * cell), start.Y, start.Z, force: true).Succeeded);
+            });
+            OnGround(host, session);
+            host.Call(_ => session.Update(new ProductUpdate(OuterUpdate(1), [])));
+            OnGround(host, session);
+            host.Call(_ => session.Update(new ProductUpdate(OuterUpdate(2), [])));
             Assert.Equal(999, session.Sites.CurrentExteriorCell().X);
             WorldPoint held = session.State.PlayerControl.Position!.Value;
 
             // Each step begins past the boundary, as one that has just walked over it does, clear of ground that may rise there.
-            for (ulong step = 2; step <= 8; step++)
+            for (ulong step = 3; step <= 9; step++)
             {
-                WorldPoint at = session.State.PlayerControl.Position!.Value;
-                session.State.PlayerControl.MoveTo(at.ToVector() + new Vector3(5F, 8F, 0F));
-                session.Update(new ProductUpdate(OuterUpdate(step), []));
+                host.Call(_ =>
+                {
+                    WorldPoint at = session.State.PlayerControl.Position!.Value;
+                    session.State.PlayerControl.MoveTo(at.ToVector() + new Vector3(5F, 8F, 0F));
+                    session.Update(new ProductUpdate(OuterUpdate(step), []));
+                });
                 Assert.Equal(held.X, session.State.PlayerControl.Position!.Value.X, 2);
             }
             Assert.Equal(999, session.Sites.CurrentExteriorCell().X);
-        });
+        }
+        finally
+        {
+            host.Call(_ => session.Dispose());
+        }
     }
 
     private static (DaggerfallSession Session, SpatialFake Spatial) EdgeSession()
@@ -590,6 +637,7 @@ public sealed class ExteriorOriginSessionTests
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context,
             new DaggerfallSessionComposition(definitions, exterior, DaggerfallTuning.Defaults));
         Assert.True(session.State.DungeonActions.ContainsKey(exterior.ProfileKey));
+        Assert.True(session.AwaitArrivalGround().Done);
         session.State.PlayerControl.MoveTo(new Vector3(5, 1, 5));
         int reconcilesBefore = spatial.TriggerReconcileCalls;
 
@@ -687,7 +735,14 @@ public sealed class ExteriorOriginSessionTests
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
         var before = session.Sites.CaptureExteriorResidency()!.Value;
         WorldPoint destination = new(4 * DaggerfallExteriorCellResidency.CellSize, -50, -1);
+        Assert.True(session.AwaitArrivalGround().Done);
+        // The ground at the destination is not there yet: nobody stands until it is.
+        spatial.HeightfieldColliderReady = false;
         Assert.True(session.Sites.TryRelocatePlayer(exterior.ProfileKey, new("recall", destination, .7f, .1f)));
+        Assert.True(session.Sites.CollisionPending);
+        Assert.False(session.AwaitArrivalGround().Done);
+        spatial.HeightfieldColliderReady = true;
+        Assert.True(session.AwaitArrivalGround().Done);
         Assert.Single(engine.OriginCommits);
         var after = session.Sites.CaptureExteriorResidency()!.Value;
         Assert.Equal(new DaggerfallExteriorCellId(before.Origin.X + 4, before.Origin.Y), after.Center);

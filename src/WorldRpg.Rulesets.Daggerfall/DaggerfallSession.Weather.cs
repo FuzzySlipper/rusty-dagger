@@ -1,4 +1,5 @@
 using WorldRpg.Kit.Presentation;
+using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 using System.Numerics;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
@@ -15,8 +16,16 @@ internal sealed partial class DaggerfallSession
     public LoadingProgress AwaitArrivalGround()
     {
         SyncWeatherContext();
-        return _horizon.GroundProgress();
+        LoadingProgress collider = _sites.AwaitGroundCollider(GroundWalkers());
+        return collider.Done ? _horizon.GroundProgress() : collider;
     }
+
+    /// <summary>Who needs exterior ground beside the player: the living, past a town's people, who have its ground plane.</summary>
+    private IEnumerable<Vector3> GroundWalkers() => State.Actors.All
+        .Where(actor => actor.DurableId != DaggerfallActorIdentity.PlayerEntityId && !actor.IsDefeated
+            && _roster.Definitions.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? definition)
+            && definition.Kind is not (DaggerfallActorKinds.Civilian or DaggerfallActorKinds.StaticNpc))
+        .Select(actor => actor.Position.ToVector());
 
     private void SyncWeatherContext(double seconds = 0, bool playing = false)
     {

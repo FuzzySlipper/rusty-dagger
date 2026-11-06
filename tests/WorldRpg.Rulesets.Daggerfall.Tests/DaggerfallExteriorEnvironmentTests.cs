@@ -260,7 +260,7 @@ public sealed class DaggerfallExteriorEnvironmentTests
         Vector3[] vertices = Enumerable.Range(0, count)
             .Select(index => new Vector3(index % DaggerfallTerrainSurfaceBuilder.SampleDimension, height,
                 index / DaggerfallTerrainSurfaceBuilder.SampleDimension)).ToArray();
-        return new DaggerfallTerrainSurface(1, 0, vertices, [],
+        return new DaggerfallTerrainSurface(1, 0, vertices,
             Enumerable.Repeat(height / DaggerfallTerrainSurfaceBuilder.TerrainVerticalSize, count).ToArray())
         {
             SourceWorldHeight = sourceWorldHeight,
@@ -289,7 +289,7 @@ public sealed class DaggerfallExteriorEnvironmentTests
         int sampleIndex = (sampleY * dimension) + sampleX;
         vertices[sampleIndex] = new(vertices[sampleIndex].X, dryHeight, vertices[sampleIndex].Z);
         normalized[sampleIndex] = dryNormalized;
-        return new DaggerfallTerrainSurface(1, 0, vertices, [], normalized);
+        return new DaggerfallTerrainSurface(1, 0, vertices, normalized);
     }
 
     private static DaggerfallWorldGridsSet Grids(int climateValue, string climateName)

@@ -51,7 +51,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
         long managedBefore = GC.GetTotalMemory(forceFullCollection: true);
         long processBefore = Environment.WorkingSet;
         Stopwatch admission = Stopwatch.StartNew();
-        AssembledWorldRun run = host.Call(engine => world.Start(engine, files));
+        AssembledWorldRun run = OnGround(host, host.Call(engine => world.Start(engine, files)));
         admission.Stop();
         try
         {
@@ -116,7 +116,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
         DaggerfallWorldProfileKey hold = DaggerfallWorldProfileIds.Dungeon(AssembledWorld.PrivateersHold);
         Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, AssembledWorld.PrivateersHold);
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
-        AssembledWorldRun run = host.Call(engine => world.Start(engine, files));
+        AssembledWorldRun run = OnGround(host, host.Call(engine => world.Start(engine, files)));
         try
         {
             Assert.True(host.Call(_ => run.Session.TryTransitionTo(hold)));
@@ -215,11 +215,13 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
         DaggerfallSiteRecord court = world.Definitions.Locations.Records.Single(record => record.Name == "Gaerhart Court");
         Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, court.Id);
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
-        AssembledWorldRun run = host.Call(engine => world.Start(engine, files));
+        AssembledWorldRun run = OnGround(host, host.Call(engine => world.Start(engine, files)));
         RulesetSavePayload save;
         try
         {
-            host.Call(_ => { run.Travel(court); run.AdvanceToHour(12); });
+            host.Call(_ => run.Travel(court));
+            OnGround(host, run);
+            host.Call(_ => run.AdvanceToHour(12));
             Steps(host, run, 60);
             Assert.NotEqual(Vector3.Zero, run.Session.Sites.LocalCompensation);
             save = host.Call(_ => run.Session.CaptureSave());
@@ -230,7 +232,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
         }
         Dictionary<long, float> saved = DaggerfallSavePayload.Read(save).DynamicActors.ToDictionary(actor => actor.EntityId, actor => actor.Y);
 
-        AssembledWorldRun restored = host.Call(engine => world.Restore(engine, files, save));
+        AssembledWorldRun restored = OnGround(host, host.Call(engine => world.Restore(engine, files, save)));
         try
         {
             ActorState[] townspeople = [.. restored.Session.State.Actors.All.Where(actor => actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian)];
@@ -265,7 +267,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
         DaggerfallWorldProfileKey interior = DaggerfallWorldProfileIds.Interior(site, building);
         Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, site, building);
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
-        AssembledWorldRun run = host.Call(engine => world.Start(engine, files));
+        AssembledWorldRun run = OnGround(host, host.Call(engine => world.Start(engine, files)));
         try
         {
             Assert.Equal(island, run.Session.Sites.ActiveProfile);
@@ -314,7 +316,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
         foreach ((DaggerfallSiteId site, DaggerfallSiteBuildingId building) in buildings)
             foreach ((string path, ReadOnlyMemory<byte> bytes) in AssembledWorldRun.EngineContent(world, site, building)) files[path] = bytes;
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
-        AssembledWorldRun run = host.Call(engine => world.Start(engine, files));
+        AssembledWorldRun run = OnGround(host, host.Call(engine => world.Start(engine, files)));
         try
         {
             foreach ((DaggerfallSiteId site, DaggerfallSiteBuildingId building) in buildings)
@@ -503,10 +505,11 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
         DaggerfallSiteRecord crypts = world.Definitions.Locations.Records.Single(record => record.Name == "THe Crypts of Rlertim");
         Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, crypts.Id);
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
-        AssembledWorldRun run = host.Call(engine => world.Start(engine, files));
+        AssembledWorldRun run = OnGround(host, host.Call(engine => world.Start(engine, files)));
         try
         {
             host.Call(_ => run.Travel(crypts));
+            OnGround(host, run);
             Steps(host, run, 5);
             Assert.True(run.Session.State.PlayerControl.Motion.Grounded);
             WorldPoint stood = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
@@ -539,10 +542,11 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
         DaggerfallSiteExterior footprint = site.Exterior ?? throw new InvalidOperationException($"{site.Name} has no exterior.");
         Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, site.Id);
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
-        AssembledWorldRun run = host.Call(engine => world.Start(engine, files));
+        AssembledWorldRun run = OnGround(host, host.Call(engine => world.Start(engine, files)));
         try
         {
             host.Call(_ => run.Travel(site));
+            OnGround(host, run);
             Assert.Equal(exterior, run.Session.Sites.ActiveProfile);
 
             // The location's frame lies over the tiles its blocks occupy in its map pixel, at the flattened terrain's height.
@@ -638,7 +642,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
         DaggerfallExteriorCellId cell = new(exterior.MapPixelX, exterior.MapPixelY);
         Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, city.Id);
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
-        AssembledWorldRun run = host.Call(engine => world.Start(engine, files));
+        AssembledWorldRun run = OnGround(host, host.Call(engine => world.Start(engine, files)));
         try
         {
             Assert.True(host.Call(_ => run.Session.TryTransitionTo(key)));
@@ -750,14 +754,17 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
         DaggerfallWorldProfileKey interior = DaggerfallWorldProfileIds.Interior(city.Id, building);
         Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, city.Id, building);
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
-        AssembledWorldRun run = host.Call(engine => world.Start(engine, files));
+        AssembledWorldRun run = OnGround(host, host.Call(engine => world.Start(engine, files)));
         try
         {
             Assert.True(host.Call(_ => run.Session.TryTransitionTo(key, DaggerfallLocationAssembly.StartAnchor)));
+            OnGround(host, run);
             host.Call(_ => run.AdvanceToHour(4));
             Steps(host, run, 2);
             DaggerfallDoorView door = run.Session.Sites.Projection.Doors.Read(shop.Id);
-            _ = host.Call(_ => run.Use(door.Pose.Translation, door.Entity));
+            host.Call(_ => run.AimAt(door.Pose.Translation));
+            OnGround(host, run);
+            _ = host.Call(_ => run.UseFromHere(door.Entity));
             Assert.False(run.Session.ActivationView.Applied);
             Assert.StartsWith("Locked.", run.Session.ActivationView.Message);
             Assert.Equal(key, run.Session.Sites.ActiveProfile);
@@ -765,7 +772,9 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             host.Call(_ => run.AdvanceToHour(10));
             Steps(host, run, 2);
             door = run.Session.Sites.Projection.Doors.Read(shop.Id);
-            _ = host.Call(_ => run.Use(door.Pose.Translation, door.Entity));
+            host.Call(_ => run.AimAt(door.Pose.Translation));
+            OnGround(host, run);
+            _ = host.Call(_ => run.UseFromHere(door.Entity));
             Assert.True(run.Session.ActivationView.Applied, run.Session.ActivationView.Message);
             host.Call(_ => run.ContinueGreeting());
             Assert.Equal(interior, run.Session.Sites.ActiveProfile);
@@ -801,8 +810,21 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
         && id < DaggerfallPresentationObjectIds.TransientVisualFloor
         && (id & uint.MaxValue) < 1UL << 31;
 
+    /// <summary>Holds until the exterior ground stands, as the host's loading screen does: an Engine call at a time, tiles sampled on workers meanwhile.</summary>
+    private static AssembledWorldRun OnGround(EngineTestHost host, AssembledWorldRun run)
+    {
+        System.Diagnostics.Stopwatch waited = System.Diagnostics.Stopwatch.StartNew();
+        while (!host.Call(_ => run.Session.AwaitArrivalGround().Done))
+        {
+            Assert.True(waited.Elapsed < TimeSpan.FromSeconds(60), "The exterior ground never stood.");
+            Thread.Sleep(5);
+        }
+        return run;
+    }
+
     private static void Steps(EngineTestHost host, AssembledWorldRun run, int count)
     {
+        OnGround(host, run);
         for (int step = 0; step < count; step++) host.Call(_ => run.Step());
     }
 
