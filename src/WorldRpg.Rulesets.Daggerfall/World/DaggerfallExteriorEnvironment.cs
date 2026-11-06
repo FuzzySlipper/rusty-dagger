@@ -105,6 +105,8 @@ internal sealed class DaggerfallExteriorEnvironment
     private const int TerrainTileDimension = 128;
     private const float BeachElevation = 40F;
     private const float NatureClearance = 4F;
+    /// <summary>A noise value that lays soil alone, for asking how much of the ground is soil at all.</summary>
+    private const float SoilNoise = .7F;
     private const float MaximumNatureSlope = 50F;
     private const float SlopeSinkRatio = 70F;
     private const float BaseChanceOnDirt = .2F;
@@ -117,16 +119,18 @@ internal sealed class DaggerfallExteriorEnvironment
     private readonly HashSet<int> _rainingClimates = [];
     private bool _initialized;
     private readonly IRandomService _random;
+    private readonly DaggerfallGroundTuning _ground;
 
     // Nature decoration draws from one Engine stream per cell, seeded by the cell's terrain key, so a
     // cell's placements are the same on every admission without consuming gameplay draws.
     private const string NatureScope = "daggerfall.exterior.nature.v1";
     private const uint NatureChanceResolution = 1_000_000;
 
-    internal DaggerfallExteriorEnvironment(IRandomService random, DaggerfallExteriorSeason season = DaggerfallExteriorSeason.Summer)
+    internal DaggerfallExteriorEnvironment(IRandomService random, DaggerfallExteriorSeason season = DaggerfallExteriorSeason.Summer, DaggerfallGroundTuning? ground = null)
     {
         _random = random ?? throw new ArgumentNullException(nameof(random));
         _season = season;
+        _ground = ground ?? DaggerfallGroundTuning.Default;
     }
 
     internal DaggerfallExteriorSeason Season => _season;
@@ -507,7 +511,9 @@ internal sealed class DaggerfallExteriorEnvironment
                     3 => chanceStone,
                     _ => 0F,
                 };
-                if (chance <= 0F || NextUnit(random) > chance) continue;
+                if (chance <= 0F) continue;
+                // Nature grows from soil, so it thins toward a treeline and off bare rock, as the ground under it turns.
+                if (NextUnit(random) > chance * Soil(surface, tileX, tileY, slope)) continue;
 
                 int heightIndex = (TerrainSampleCoordinate(tileY) * DaggerfallTerrainSurfaceBuilder.SampleDimension)
                     + TerrainSampleCoordinate(tileX);
@@ -529,6 +535,13 @@ internal sealed class DaggerfallExteriorEnvironment
             }
         }
         return nature;
+    }
+
+    /// <summary>How much of the ground at a tile is soil, from 1 down to 0 under snow or on bare rock.</summary>
+    private float Soil(DaggerfallTerrainSurface surface, int tileX, int tileY, float slopeDegrees)
+    {
+        Vector4 layers = DaggerfallGroundBlend.Weights(_ground, SoilNoise, MathF.Tan(slopeDegrees * MathF.PI / 180F), Height(surface, tileX, tileY));
+        return layers.X + layers.Y;
     }
 
     private float NextUnit(Rng stream) =>

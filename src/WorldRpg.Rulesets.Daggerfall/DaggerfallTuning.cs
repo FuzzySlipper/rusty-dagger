@@ -273,6 +273,8 @@ internal sealed record DaggerfallTuning(
                 DungeonScale = siteLighting.GetProperty("dungeonScale").GetSingle(),
                 ViewFull = siteLighting.GetProperty("viewFull").GetSingle(),
                 ViewFloor = siteLighting.GetProperty("viewFloor").GetSingle(),
+                LowSunColor = new(siteLighting.GetProperty("lowSunColor")[0].GetSingle(), siteLighting.GetProperty("lowSunColor")[1].GetSingle(),
+                    siteLighting.GetProperty("lowSunColor")[2].GetSingle()),
                 NightColor = new(siteLighting.GetProperty("nightColor")[0].GetSingle(), siteLighting.GetProperty("nightColor")[1].GetSingle(),
                     siteLighting.GetProperty("nightColor")[2].GetSingle()),
                 WindowColor = new(siteLighting.GetProperty("windowColor")[0].GetSingle(), siteLighting.GetProperty("windowColor")[1].GetSingle(),
@@ -660,6 +662,8 @@ internal sealed record DaggerfallSiteLightingTuning(
     /// value. An upright sprite takes little of an overhead sun, so ambient carries most of it, or sprites fall dark at noon.
     /// </summary>
     internal float ExteriorSun { get; init; } = 1.05f;
+    /// <summary>The sun's colour on the horizon, easing to white as it climbs, so dawn and dusk warm what they light.</summary>
+    internal Vector3 LowSunColor { get; init; } = new(1f, .68f, .42f);
     /// <summary>The colour of the sky's ambient at night, easing to white by noon. A lamp's warmth stands out against it.</summary>
     internal Vector3 NightColor { get; init; } = new(.7f, .8f, 1f);
     /// <summary>The light, before the Engine divides by pi, at which the first-person view draws at its art's own value: what the clear noon sky gives.</summary>
@@ -682,6 +686,8 @@ internal sealed record DaggerfallSiteLightingTuning(
             throw new ArgumentOutOfRangeException(nameof(ViewFull), "The view's full light is finite and positive, and its floor a normalized tint.");
         foreach (float scale in new[] { ExteriorScale, ExteriorSun, InteriorScale, DungeonScale })
             if (!float.IsFinite(scale) || scale <= 0) throw new ArgumentOutOfRangeException(nameof(ExteriorScale), "A site's light scale is finite and positive.");
+        if (!float.IsFinite(LowSunColor.X + LowSunColor.Y + LowSunColor.Z) || LowSunColor.X < 0 || LowSunColor.Y < 0 || LowSunColor.Z < 0)
+            throw new ArgumentOutOfRangeException(nameof(LowSunColor), "The low sun's colour is finite and not negative.");
         if (!float.IsFinite(NightColor.X + NightColor.Y + NightColor.Z) || NightColor.X < 0 || NightColor.Y < 0 || NightColor.Z < 0)
             throw new ArgumentOutOfRangeException(nameof(NightColor), "The night's colour is finite and not negative.");
         if (!float.IsFinite(Bloom) || Bloom < 0) throw new ArgumentOutOfRangeException(nameof(Bloom), "The bloom is finite and not negative.");

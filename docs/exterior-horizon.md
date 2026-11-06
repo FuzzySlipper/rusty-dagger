@@ -70,7 +70,7 @@ off, and that is what `bloom` spreads.
   ground at its texture's own value. Ambient carries most of it: an upright sprite takes
   little of an overhead sun, and would fall dark at noon.
 - **Night.** The ambient cools toward `nightColor`, so a lamp's warmth stands out. A grade
-  would cool the lamps too.
+  would cool the lamps too. The sun warms toward `lowSunColor` near the horizon.
 - **Sprites.** Flats, nature, people and items take the light around them
   (`SpriteLightingMode.Synthetic`), so they fall with the day.
 - **Windows.** Building windows glow on the city lamps' hours through mesh emission. The
@@ -110,6 +110,9 @@ touching water stay tiles too, in the same mesh.
   winters are snow on every record, so they wear the summer's stone, and the swamp's
   third record is lush grass, so it wears the mountains'. Borrowed rock shows only where
   the slope earns it: the noise bares only an archive's own.
+- **Nature.** It grows from soil, so it thins by the share of the ground that is soil:
+  there is a treeline at the snow, and bare rock stays bare. It reads the same rules as
+  the layers, in classic art too.
 - **Swamp.** Its lush ground is a fifth layer, where the noise would bare stone. A mesh
   weighs four, so a swamp cell names a palette with lush ground in place of snow, unless
   it reaches the snow.
