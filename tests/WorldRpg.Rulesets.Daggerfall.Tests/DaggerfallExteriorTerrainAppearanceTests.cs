@@ -12,9 +12,9 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
     public void Donor_tile_uv_flags_flip_the_vertical_axis_after_rotation()
     {
         AssertUv(new(0.2F, 0.3F), false, false, new(0.2F, 0.3F));
-        AssertUv(new(0.2F, 0.3F), false, true, new(0.2F, 0.7F));
+        AssertUv(new(0.2F, 0.3F), false, true, new(0.8F, 0.7F));
         AssertUv(new(0.2F, 0.3F), true, false, new(0.3F, 0.8F));
-        AssertUv(new(0.2F, 0.3F), true, true, new(0.3F, 0.2F));
+        AssertUv(new(0.2F, 0.3F), true, true, new(0.7F, 0.2F));
     }
 
     [Fact]

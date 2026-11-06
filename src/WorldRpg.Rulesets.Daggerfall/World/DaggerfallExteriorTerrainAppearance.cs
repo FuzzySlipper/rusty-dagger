@@ -593,8 +593,8 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     internal static Vector2 TransformTileUv(Vector2 uv, bool rotated, bool flipped)
     {
         if (rotated) uv = new(uv.Y, 1F - uv.X);
-        if (flipped) uv.Y = 1F - uv.Y;
-        return uv;
+        // A flip is a half turn: the terrain lookup states a flipped corner tile at the opposite corner, not the adjacent one.
+        return flipped ? new(1F - uv.X, 1F - uv.Y) : uv;
     }
 
     private TerrainMaterial GetTerrainMaterial(TerrainTextureKey key)
