@@ -27,23 +27,29 @@ public sealed class DaggerfallExteriorEnvironmentTests
     }
 
     [Fact]
-    public void A_river_stands_a_box_of_water_at_its_own_surface_and_a_torrent_has_none()
+    public void A_river_holds_water_to_swim_in_all_the_way_down_a_steep_reach()
     {
         // Map pixel (3, 2) spans the heightmap's pixel (2, 1): the course runs through its middle, gentle then falling hard.
         const float size = DaggerfallExteriorCellResidency.CellSize, gentle = 300, drop = 20;
+        (float X, float Surface)[] course = [(.2F, gentle), (.3F, gentle - .5F), (.4F, gentle - 1), (.5F, gentle - 1 - drop), (.6F, gentle - 1 - (2 * drop))];
         DaggerfallExteriorCellId cell = new(3, 2);
-        DaggerfallTerrainRivers rivers = Rivers(
-            [(2.2F * size, 1.5F * size, gentle, 10), (2.3F * size, 1.5F * size, gentle - .5F, 10), (2.4F * size, 1.5F * size, gentle - 1, 10),
-             (2.5F * size, 1.5F * size, gentle - 1 - drop, 10), (2.6F * size, 1.5F * size, gentle - 1 - (2 * drop), 10)]);
+        DaggerfallTerrainRivers rivers = Rivers([.. course.Select(station => ((2 + station.X) * size, 1.5F * size, station.Surface, 10F))]);
         DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
         environment.Reconcile([cell], DaggerfallExteriorWorldOrigin.At(cell), _ => Surface(100F, rivers: rivers), Locations(), Grids(224, "temperate"));
 
         DaggerfallExteriorWaterVolume[] water = [.. environment.WaterVolumes];
-        Assert.Equal(2, water.Length);
-        Assert.Equal(gentle - .25F, water[0].Maximum.Y, 3);
-        Assert.Equal(gentle - .75F, water[1].Maximum.Y, 3);
-        Assert.NotEqual(water[0].StableId, water[1].StableId);
-        Assert.InRange(water[0].Minimum.Z, -.6F * size, -.4F * size);
+        Assert.Equal(water.Length, water.Select(volume => volume.StableId).Distinct().Count());
+
+        // Down the middle of the course, every metre stands in a box whose top is within a metre of the river's own surface.
+        for (float along = .21F; along < .59F; along += 1 / size)
+        {
+            int at = Array.FindLastIndex(course, station => station.X <= along);
+            float share = (along - course[at].X) / (course[at + 1].X - course[at].X);
+            float surface = course[at].Surface + ((course[at + 1].Surface - course[at].Surface) * share);
+            Vector3 point = new(along * size, surface - 1, -.5F * size);
+            Assert.Contains(water, volume => volume.Maximum.X >= point.X && volume.Minimum.X <= point.X
+                && volume.Maximum.Z >= point.Z && volume.Minimum.Z <= point.Z && Math.Abs(volume.Maximum.Y - surface) <= 1);
+        }
     }
 
     [Fact]
