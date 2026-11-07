@@ -19,8 +19,10 @@ internal sealed record DaggerfallDollRect(double X, double Y, double Width, doub
 /// <param name="DyeMask">For clothing, the image of the neutral cloth a dye recolours, and for armour or a weapon, of the
 /// bare steel a metal recolours; the same size as this one.</param>
 /// <param name="World">For an item's image, the PNG a dropped item stands as on the ground.</param>
+/// <param name="Icon">For a held weapon, whose doll layer leaves a gap where the hand holds it, the whole weapon: what the
+/// inventory, a shop and the ground draw. It shares the layer's tint, and is drawn in place of it by its own identity.</param>
 internal sealed record DaggerfallArtReplacement(string Replaces, string MediaId, string Path, long ByteLength, DaggerfallDollRect? Doll,
-    DaggerfallArtImage? DyeMask = null, DaggerfallArtWorldImage? World = null);
+    DaggerfallArtImage? DyeMask = null, DaggerfallArtWorldImage? World = null, DaggerfallArtReplacement? Icon = null);
 
 /// <summary>One published image of the refreshed art set beside its replacement: its identity, path and length.</summary>
 /// <param name="World">For a worn item's dye mask, its PNG the same size as the item's <see cref="DaggerfallArtReplacement.World"/>.</param>
@@ -103,7 +105,7 @@ internal sealed class DaggerfallArtReplacements
         Flats = flats;
         People = people;
         _byClassic = byClassic;
-        _byMediaId = byClassic.Values.ToDictionary(replacement => replacement.MediaId, StringComparer.Ordinal);
+        _byMediaId = Every(byClassic.Values).ToDictionary(replacement => replacement.MediaId, StringComparer.Ordinal);
         Tints = tints;
         Effects = effects;
         EffectGlow = effectGlow;
@@ -142,13 +144,16 @@ internal sealed class DaggerfallArtReplacements
     /// <summary>Every replacement.</summary>
     internal IEnumerable<DaggerfallArtReplacement> All => _byClassic.Values;
 
-    /// <summary>Every image the set publishes: each replacement and its dye mask.</summary>
-    internal IEnumerable<DaggerfallArtImage> Images => _byClassic.Values.SelectMany(replacement =>
+    /// <summary>Every image the set publishes: each replacement, its icon, and their dye masks.</summary>
+    internal IEnumerable<DaggerfallArtImage> Images => Every(_byClassic.Values).SelectMany(replacement =>
         replacement.DyeMask is { } mask ? [new(replacement.MediaId, replacement.Path, replacement.ByteLength), mask]
             : new[] { new DaggerfallArtImage(replacement.MediaId, replacement.Path, replacement.ByteLength) });
 
     /// <summary>Each classic clothing dye's and metal's tint, by dye or metal name.</summary>
     internal IReadOnlyDictionary<string, DaggerfallDyeTint> Tints { get; }
+
+    private static IEnumerable<DaggerfallArtReplacement> Every(IEnumerable<DaggerfallArtReplacement> replacements) =>
+        replacements.SelectMany(replacement => replacement.Icon is { } icon ? [replacement, icon] : new[] { replacement });
 
     /// <summary>The replacement for a classic media identity, if the set has one.</summary>
     internal DaggerfallArtReplacement? For(string classicMediaId) =>
@@ -179,9 +184,8 @@ internal sealed class DaggerfallArtReplacements
         try
         {
             using JsonDocument document = JsonDocument.Parse(payload);
-            foreach (JsonElement image in document.RootElement.GetProperty("artReplacements").GetProperty("images").EnumerateArray())
+            DaggerfallArtReplacement Image(JsonElement image, string replaces)
             {
-                string replaces = image.GetProperty("replaces").GetString()!;
                 string mediaId = image.GetProperty("mediaId").GetString()!;
                 string path = image.GetProperty("path").GetString()!;
                 long byteLength = image.GetProperty("byteLength").GetInt64();
@@ -200,8 +204,21 @@ internal sealed class DaggerfallArtReplacements
                     throw new InvalidOperationException($"Content pack '{packId}' states no classic size for the world image of '{mediaId}'.");
                 if (dyeMask?.World is { } maskWorld && (world is null || maskWorld.Width != world.Width || maskWorld.Height != world.Height))
                     throw new InvalidOperationException($"Content pack '{packId}' states a world dye mask for '{mediaId}' that is not the size of its world image.");
-                if (!ids.Add(mediaId) || dyeMask is not null && !ids.Add(dyeMask.MediaId) || !byClassic.TryAdd(replaces, new(replaces, mediaId, path, byteLength, doll, dyeMask, world)))
+                if (!ids.Add(mediaId) || dyeMask is not null && !ids.Add(dyeMask.MediaId))
                     throw new InvalidOperationException($"Content pack '{packId}' names replacement '{mediaId}' for '{replaces}' twice.");
+                DaggerfallArtReplacement? icon = image.TryGetProperty("icon", out JsonElement whole) ? Image(whole, replaces) : null;
+                // The icon is drawn in the layer's tint, so it needs a dye mask exactly when the layer has one.
+                if (icon is not null && (icon.DyeMask is null) != (dyeMask is null))
+                    throw new InvalidOperationException($"Content pack '{packId}' states an icon for '{mediaId}' that is not dyed as its layer is.");
+                return new(replaces, mediaId, path, byteLength, doll, dyeMask, world, icon);
+            }
+
+            foreach (JsonElement image in document.RootElement.GetProperty("artReplacements").GetProperty("images").EnumerateArray())
+            {
+                string replaces = image.GetProperty("replaces").GetString()!;
+                DaggerfallArtReplacement replacement = Image(image, replaces);
+                if (!byClassic.TryAdd(replaces, replacement))
+                    throw new InvalidOperationException($"Content pack '{packId}' names replacement '{replacement.MediaId}' for '{replaces}' twice.");
             }
 
             if (document.RootElement.GetProperty("artReplacements").TryGetProperty("dyeTints", out JsonElement dyes))

@@ -326,6 +326,46 @@ public sealed class DaggerfallCharacterPresentationTests
     }
 
     [Fact]
+    public void Refreshed_weapon_icon_draws_the_whole_weapon_while_the_doll_keeps_the_layer_with_the_hand_gap()
+    {
+        using Fixture f = new();
+        DaggerfallCharacterIdentity identity = new DaggerfallCharacterState(f.Definitions, f.Player.Stats, f.PlayerDefinition).Identity;
+        DaggerfallItemDefinition longsword = f.Definitions.TemplateItems.Values.First(item => item.Template?.Index == 120);
+        DaggerfallItemInstanceMetadata Made(string material) =>
+            new(longsword.Id.Value, material, 0, 1, 1, true, false, null, null, null, DaggerfallItemOwner.Player);
+        System.Text.Json.Nodes.JsonObject Image(string mediaId, double width) => new()
+        {
+            ["mediaId"] = mediaId, ["path"] = $"worldrpg/media/refreshed/worn/{mediaId}.webp", ["byteLength"] = 1,
+            ["doll"] = new System.Text.Json.Nodes.JsonObject { ["x"] = 10, ["y"] = 20, ["width"] = width, ["height"] = 40 },
+            ["dyeMask"] = new System.Text.Json.Nodes.JsonObject { ["mediaId"] = $"{mediaId}.dye", ["path"] = $"worldrpg/media/refreshed/worn/{mediaId}-dye.webp", ["byteLength"] = 1 },
+        };
+        // The longsword's left-hand record, as promotion writes it: the layer with its hand gap, and the whole weapon as its icon.
+        System.Text.Json.Nodes.JsonObject layer = Image("refreshed.paper-doll.234.12", 30);
+        layer["replaces"] = "paper-doll.234.12";
+        layer["icon"] = Image("refreshed.paper-doll.234.12.icon", 34);
+        System.Text.Json.Nodes.JsonObject payload = new()
+        {
+            ["artReplacements"] = new System.Text.Json.Nodes.JsonObject
+            {
+                ["images"] = new System.Text.Json.Nodes.JsonArray(layer),
+                ["dyeTints"] = new System.Text.Json.Nodes.JsonObject { ["dwarven"] = new System.Text.Json.Nodes.JsonObject { ["multiply"] = "#ffd27a", ["brightness"] = 1.1 } },
+            },
+        };
+        DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()), "test.art");
+
+        // The doll draws the layer, which leaves the gap its hand shows through.
+        DaggerfallWornItem held = new("left-hand.sword", "left-hand", longsword, Made("steel"), () => "sword");
+        Assert.Equal("refreshed.paper-doll.234.12", DaggerfallPaperDollPolicy.Compose(f.Definitions, identity, null, [held], art).Layers.Single(item => item.Slot == "left-hand").MediaId);
+        // The inventory, a shop and the ground draw the whole weapon: in steel as it is, in another metal tinted through its own mask.
+        Assert.Equal(("refreshed.paper-doll.234.12.icon", (PaperDollTint?)null), DaggerfallPaperDollPolicy.InventoryImage(f.Definitions, longsword, Made("steel"), identity, art));
+        Assert.Equal(("refreshed.paper-doll.234.12.icon", new PaperDollTint("#ffd27a", 1.1, "refreshed.paper-doll.234.12.icon.dye")),
+            DaggerfallPaperDollPolicy.InventoryImage(f.Definitions, longsword, Made("dwarven"), identity, art));
+        Assert.Same(art.For("paper-doll.234.12")!.Icon, art.ByMediaId("refreshed.paper-doll.234.12.icon"));
+        // Classic art keeps its one image.
+        Assert.Equal(("paper-doll.234.12.dwarven", (PaperDollTint?)null), DaggerfallPaperDollPolicy.InventoryImage(f.Definitions, longsword, Made("dwarven"), identity, null));
+    }
+
+    [Fact]
     public void Paper_doll_draws_an_artifact_from_its_own_texture_for_the_gender_it_was_made_for()
     {
         using Fixture f = new();

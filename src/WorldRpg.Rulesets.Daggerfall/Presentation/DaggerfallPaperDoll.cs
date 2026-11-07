@@ -234,7 +234,8 @@ internal static class DaggerfallPaperDollPolicy
     /// The image the inventory draws an item with (<c>ItemHelper.GetItemImage</c> without <c>forPaperDoll</c>): a worn
     /// item's paper-doll image in its dye or metal - a katana's from its right-hand record, as the donor draws it - or
     /// another template's own image for its variant. With a refreshed art set, its replacement, tinted where the item is
-    /// dyed or in a metal. Null when the item has no template, or its template no image.
+    /// dyed or in a metal, and for a held weapon its whole image rather than the doll's, which leaves a gap for the hand.
+    /// Null when the item has no template, or its template no image.
     /// </summary>
     internal static (string MediaId, PaperDollTint? Tint)? InventoryImage(DaggerfallDefinitions definitions, DaggerfallItemDefinition definition,
         DaggerfallItemInstanceMetadata? metadata, DaggerfallCharacterIdentity wearer, DaggerfallArtReplacements? art)
@@ -255,7 +256,10 @@ internal static class DaggerfallPaperDollPolicy
             ? artifactRecord is int record ? Item(presentation, ArtifactArchive(item, wearer), record, UnchangedDye, art, clothing: false) : null
             : Item(presentation, Archive(template, item, wearer), Record(template, item) + (template.Index == KatanaTemplate ? 1 : 0),
                 Dye(template, item), art, IsClothing(template), template.RefreshedArt);
-        return image is null ? null : (image.MediaId, image.Tint);
+        if (image is null) return null;
+        // A held weapon's refreshed layer leaves a gap for the doll's hand; an icon has none, so it draws the whole weapon.
+        if (art?.ByMediaId(image.MediaId)?.Icon is not { } whole) return (image.MediaId, image.Tint);
+        return (whole.MediaId, image.Tint is { } tint ? tint with { Mask = whole.DyeMask!.MediaId } : null);
     }
 
     /// <summary>The katana template, which the inventory draws from its right-hand record (<c>ItemHelper.GetItemImage</c>).</summary>
