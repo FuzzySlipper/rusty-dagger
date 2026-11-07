@@ -5,10 +5,14 @@ are fixed: the classic sprite and its frames, and what the game plays. Every sta
 change, including the accepted still finals in `gen-raw/people/`.
 
 The route is a parts rig played at runtime:
-1. A **rig source** painting gives the rig clean parts.
-2. **See-through** splits it into layers.
-3. **rig-c/parts** builds the rig.
+1. A **rig source** painting gives the rig clean parts. Clothing that moves apart from the body,
+   such as a skirt's back and front panel, is generated as **separate layers**.
+2. **See-through** splits the body into layers.
+3. **rig-c/parts** builds the rig, with the generated clothing as author layers.
 4. A **video** of the figure supplies the motion and the key drawings for the frames a rig cannot bend into.
+
+Fix a part that goes wrong by changing what is generated or how it's rigged, not by repainting the
+part.
 
 ## Rig sources
 
@@ -42,31 +46,50 @@ How a rig source is made:
 Each figure's source is recorded in `specs/people/rig/<figure>.json`: input, model files, sampler
 settings, seeds tried, the chosen seed with the reason, and the full prompt.
 
+## Clothing layers
+
+See-through gives a skirt as one layer, shaped to the still, with fill painted where the legs hid it.
+A garment that hangs behind or in front of the legs is generated whole instead, with the same Qwen
+setup, each piece fitted to one body:
+1. **Body:** the final with that clothing removed and plain shorts in its place, in the rig source's
+   stance.
+2. **Worn:** the body wearing one garment at a time, with the final as a second image for the cloth.
+   A shape the prompt alone doesn't hold, such as a panel tapering from hip width to a narrow hem,
+   takes a `--guide` outline. Don't pass the outline as the compositing mask too: the garment
+   doesn't fill it, and what it leaves is repainted.
+3. **Isolated:** a garment the body covers, such as a back skirt, comes from removing the woman from
+   the worn image, which also paints its hidden inner face. A garment in front of everything is
+   already whole in the worn image, so it is taken from there; asked to remove the woman, Qwen
+   redraws it.
+4. **Cut out:** BiRefNet alone for garments, since dark cloth sits too close to the slate ground for
+   a key; BiRefNet joined with a ground key for the body, which brings back a staff.
+
+The painting the rig is assembled against is the stack of all three, and See-through runs on the body
+alone.
+
 ## Parts
 
 - **See-through runs:** one on the white-padded figure and one on a square crop around the head, at
   1280. The 5090's ComfyUI keeps most of the lab container's memory, so the runner must keep the model
   weights on the GPU.
+- **Generated garments:** each goes into the full See-through run as an author layer
+  (`author:<label>`: its PNG, depth image and `layers.json` entry on the run's canvas).
 - **Draw order, back to front:**
-  1. back hair, held objects, neck;
-  2. the skirt, then the legs and feet;
+  1. back hair, a back skirt, held objects, neck;
+  2. shorts, then the legs and feet, then a front panel;
   3. the bodice, then the arms;
   4. the face, then ears, nose, mouth;
   5. eye whites, irises, lashes;
   6. front hair, then brows.
 
   rig-c's proposed plan can put the face over the eyes and leave the nose out; check it.
-- **Skirt front panel:** in a legs-apart source, the panel is the skirt showing between the legs.
-  It's cut out from that gap and drawn in front of the legs, so legs moving back together pass
-  behind it. Its mesh is weighted to both leg chains as well as the waist, with a soft blend
-  (`exponent` 0.5), so its hem narrows partway as the legs close instead of hiding them. Weighted
-  to the waist alone, it stays as wide as the open stance and covers the legs; with the default
-  blend, it follows each leg fully and shrinks to a strip. Its turn depth sits just in front of the
-  legs, which now ride it.
-- **Back skirt:** See-through's skirt layer, less the panel, is mostly fill painted where the legs
-  hide it. It stays on the hip, so it shows past the legs at the sides as they close, as a skirt
-  hanging behind them does. Drop its thin hem slivers after assembly: they draw as dark outlines
-  once the legs move off them.
+- **Front panel:** drawn in front of the legs. Its mesh is weighted to both leg chains as well as
+  the waist, with a soft blend (`exponent` 0.5), so its hem narrows partway as the legs close.
+  Weighted to the waist alone, it stays as wide as the stance it was painted in and covers the legs;
+  with the default blend, it follows each leg fully and shrinks to a strip. Its turn depth sits just
+  in front of the legs, which ride it.
+- **Back skirt:** drawn behind everything and hung from the hip on three sway chains of its own,
+  running from the waist to the hem, so it shows past the legs at the sides and swings on its own.
 - **Hidden skin:** See-through bleeds cloth colour into skin it paints in. In bare-skin limb parts,
   a pixel greener than it is red is refilled from the skin around it, after assembly.
 - **Rigging:** a held staff rides the hip, not the forearm. Eyes get iris bones for gaze.

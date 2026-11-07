@@ -1,5 +1,5 @@
 {
- "title": "Rig source for the witch (texture-179 record 2): stance opened for rigging",
+ "title": "Rig sources for the witch (texture-179 record 2): stance opened for rigging, and her skirt generated as separate layers",
  "figure": "texture-179-record-002-frame-000",
  "input": {
   "image": "authoring/gen-raw/people/texture-179-record-002-frame-000.png",
@@ -73,5 +73,87 @@
    "result": "The panel covers her hips and inner thighs as in the final. When the bones bring her legs back together, her shins pass behind the wide hem, so less of the legs shows than in the final.",
    "prompt": "Keep this exact woman: her face, expression, hair, skin tone, proportions, green dress, belt, tall twisted staff, painting style and lighting stay the same. Keep the dress exactly as designed: the wide front panel hangs from the belt across the front of her hips and covers her groin and upper thighs, and the slits open only from the middle of her thighs downwards, no higher than in this picture. Change only her stance. She stands facing the viewer with her legs slightly apart, feet about shoulder width apart, both feet flat and pointing forward. The front panel hangs straight down between her legs as one separate strip of cloth, both bare legs visible from mid-thigh down on either side of it, and the rest of the skirt hangs behind her legs. Her arms hang slightly away from her body, with a clear gap of background between each arm and her waist. Her left hand grips the staff, which stands upright beside her with a clear gap between staff and body. Her right hand hangs open. Same size and position in the frame, whole figure and staff visible, on the same perfectly flat dark slate grey background. Add nothing else."
   }
- ]
+ ],
+ "layers": {
+  "why": "The skirt's back and front panel move differently from the legs: the back hangs behind everything and sways, the front panel hangs in front of the legs. See-through gives one skirt layer, painted to fit a still, so each piece is generated whole and given to rig-c/parts as an author layer.",
+  "qwen": {
+   "tool": "asset-pipeline tools/texture-edit/qwen_edit.py",
+   "host": "Patch's RTX 5090 ComfyUI, http://192.168.1.20:8188",
+   "model": "qwen_image_2.1_int8_convrot.safetensors",
+   "text_encoder": "qwen3vl_8b_int8_convrot.safetensors",
+   "loras": [],
+   "sampler": {
+    "steps": 25,
+    "cfg": 1,
+    "sampler": "euler",
+    "resolution": 1024
+   }
+  },
+  "steps": [
+   {
+    "layer": "body",
+    "input": "the accepted final on its ground",
+    "prompt": "Keep this exact woman: her face, expression, hair, skin tone, proportions, green bodice, belt, arms, hands, tall twisted staff, painting style and lighting stay the same. Remove the whole skirt of her dress below the belt: the front panel and the back of the skirt are both gone, and she wears only short, snug dark green cloth shorts under the belt. She stands facing the viewer with her legs slightly apart, a clear gap of background between her thighs and between her knees, feet a little apart, both feet flat. Her arms hang slightly away from her body, with a clear gap of background between each arm and her waist. Her left hand grips the staff, which stands upright beside her with a clear gap between staff and body. Same size and position in the frame, whole figure and staff visible, on the same perfectly flat dark slate grey background. Add nothing else.",
+    "seeds_tried": [
+     1,
+     2,
+     3,
+     4
+    ],
+    "chosen_seed": 2,
+    "why": "Seed 2 opens the legs with clear gaps at the thighs and knees and keeps her arms and staff clear. Qwen draws her a little shorter than the final."
+   },
+   {
+    "layer": "back skirt, worn",
+    "input": [
+     "the body",
+     "the accepted final, for the cloth"
+    ],
+    "prompt": "Keep this exact woman from the first image unchanged: her pose, face, hair, skin, bodice, shorts, belt, arms, legs, feet, staff, size and position in the frame, painting style and lighting. Add only the back part of a long skirt, made of the same green cloth as the skirt in the second image: one large piece that hangs from her belt at the hips and behind her, down to her ankles, wider than her legs and flaring gently toward the hem, so it shows beside her legs and in the gaps between them. Her legs and feet stay fully visible in front of it. There is no front panel. Same perfectly flat dark slate grey background. Add nothing else.",
+    "seeds_tried": [
+     1,
+     2,
+     3
+    ],
+    "chosen_seed": 1,
+    "why": "Seed 1 hangs one wide piece behind the legs, flaring to the hem. Seed 2 fills the ground with noise, as seed 2 did in other runs here."
+   },
+   {
+    "layer": "back skirt",
+    "input": "the body wearing the back skirt",
+    "prompt": "Remove the woman and her staff entirely: no head, hair, bodice, shorts, belt, arms, hands, legs, feet or staff remain. Keep only the long green back skirt, the same shape, size, folds, colour and position in the frame, and show it whole and complete as one piece of cloth, painting its inner face where her legs covered it, as if it hung on an invisible wearer. Same perfectly flat dark slate grey background everywhere else. Add nothing else.",
+    "seeds_tried": [
+     1,
+     3,
+     4
+    ],
+    "chosen_seed": 3,
+    "why": "Seed 3 keeps the skirt whole with its dark inner face where the legs were. Seed 1 fills the ground with noise; seed 4 starts it at the waist."
+   },
+   {
+    "layer": "front panel, worn",
+    "input": [
+     "the body",
+     "the accepted final, for the cloth"
+    ],
+    "guide": "a tapered outline from the hips at the belt (x 446 to 597, y 482) to a hem a third as wide (x 494 to 550, y 838), on the 1024 canvas, passed as --guide only",
+    "prompt": "Keep this exact woman from the first image unchanged: her pose, face, hair, skin, bodice, belt, arms, legs, feet, staff, size and position in the frame, painting style and lighting. Add a front panel of the same green cloth as the dress in the third image, with exactly the shape of the marked region: one piece of cloth hanging from just under her belt in front of her, as wide as her hips at the top so it covers her shorts completely, and tapering steadily as it falls in front of her legs to a narrow hem just above her ankles, about a third of its top width. Soft vertical folds. It hangs in front of her legs; the outer sides of her legs stay visible beside it. There is no other skirt. Same perfectly flat dark slate grey background. Add nothing else.",
+    "seeds_tried": [
+     1,
+     2,
+     3,
+     4
+    ],
+    "chosen_seed": 1,
+    "why": "Seed 1 tapers from hip width to a narrow hem. Without the outline Qwen draws a strip of even width. With the outline as a compositing mask too, the panel does not fill it and the legs inside it are repainted."
+   },
+   {
+    "layer": "front panel",
+    "input": "the body wearing the front panel",
+    "method": "no generation: the green cloth under the buckle inside BiRefNet's figure, one piece with holes filled (panel_extract.py in the evidence)",
+    "why": "Asked to remove the woman, Qwen redraws the panel as a full apron from the shoulders."
+   }
+  ],
+  "cut_out": "BiRefNet alone for the garments (the dark cloth sits too close to the slate ground for a key); BiRefNet joined with a ground key for the body, which brings back the staff BiRefNet drops."
+ }
 }
