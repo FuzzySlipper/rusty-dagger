@@ -75,6 +75,8 @@ ground's colour can join the ground at the sprite's edge, so what the cut-out to
 back unless it is flat ground, or whatever it is for an item marked `"solid": true`. `finalize.py` despeckles flats, whose stray flecks would otherwise stretch their atlas box.
 World flats promote through `reduce.crunch_sprites`: `FLAT_CRUNCH` pixels to a classic pixel (default 2), hard edges and
 one ART_PAL subset across a record's frames, drawn with nearest filtering so they sit with the terrain's crunch.
+Placed people promote the same way at `PEOPLE_CRUNCH` pixels to a classic pixel (3), on the whole of ART_PAL, because a subset
+drops small accents such as gold amulets and jewels. Each is one standing frame; records with the same frame share one atlas.
 
 A world flat's subject is a design choice, not always a copy. Gore translates to gothic Halloween content in the same rough
 outline and place: bodies on stakes become skeletons, severed heads become skulls, heaps of corpses become heaps of bones, in
