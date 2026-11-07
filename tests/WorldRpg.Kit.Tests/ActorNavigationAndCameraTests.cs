@@ -271,6 +271,23 @@ public sealed class ActorNavigationAndCameraTests
     }
 
     [Fact]
+    public void Camera_draws_out_as_far_as_a_place_names_and_returns_to_its_tuned_plane()
+    {
+        CameraDouble camera = CameraDouble.Create();
+        PlayerControlState player = new(new WorldPoint(1f, 2f, 3f), 0f, 0f);
+        using FirstPersonCameraSystem system = new(camera.Service, player, new FirstPersonCameraTuning(1.5f, 75d, .1d, 100d));
+
+        system.DrawOutTo(6_000);
+        system.Update(player);
+        Assert.Equal(6_000, camera.LastDescriptor.Projection.Far);
+
+        system.DrawOutTo(null);
+        system.Update(player);
+        Assert.Equal(100, camera.LastDescriptor.Projection.Far);
+        Assert.Throws<ArgumentOutOfRangeException>(() => system.DrawOutTo(.05));
+    }
+
+    [Fact]
     public void Camera_presentation_offset_moves_the_existing_camera_without_moving_the_player()
     {
         CameraDouble camera = CameraDouble.Create();

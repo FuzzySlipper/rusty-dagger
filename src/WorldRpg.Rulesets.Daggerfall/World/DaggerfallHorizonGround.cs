@@ -24,12 +24,23 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     internal const double MiddleCellMetres = FineCellMetres * 4, CoarseCellMetres = FineCellMetres * 16;
     internal const double FineReachMetres = 8_192, MiddleReachMetres = 49_152, CoarseReachMetres = 204_800;
     private const double Spacing = DaggerfallTerrainSurfaceBuilder.SampleSpacing;
+    /// <summary>How far near ground reaches at the least, and the sea with it.</summary>
+    internal const double NearReachMetres = 3_276.8;
     /// <summary>Near ground's finest cells, which the collider shares.</summary>
     internal const double FinestNearCellMetres = Spacing / 2;
     private const int TileDimension = DaggerfallTerrainSurfaceBuilder.SampleDimension - 1;
-    private const double OceanMetres = DaggerfallTerrainSurfaceBuilder.OceanElevation * DaggerfallTerrainSurfaceBuilder.TerrainScale;
+    /// <summary>The sea's surface, everywhere the same.</summary>
+    internal const double OceanMetres = DaggerfallTerrainSurfaceBuilder.OceanElevation * DaggerfallTerrainSurfaceBuilder.TerrainScale;
     /// <summary>Ground this close over the ocean clamp is the sea: the donor's noise never stands land so low.</summary>
     private const double SeaMarginMetres = .5;
+    /// <summary>The seabed's lattice, coarser than the ground's, since each node looks for land about it.</summary>
+    private const double SeabedNodeMetres = Spacing * 4;
+    /// <summary>How the seabed falls away from land, rise over run.</summary>
+    private const double SeabedSlope = .06;
+    /// <summary>How many nodes away a node looks for land; the seabed levels off past the last.</summary>
+    private static readonly int[] SeabedProbes = [1, 2, 3, 5, 8];
+    /// <summary>Ground this close over the ocean clamp stands on it, whatever its rounding.</summary>
+    private const double ClampMetres = .01;
     /// <summary>Ground this close over the sea is beach, which the classic lays bare whatever its climate.</summary>
     private const double BeachMetres = (DaggerfallExteriorEnvironment.BeachElevation - DaggerfallTerrainSurfaceBuilder.OceanElevation) * DaggerfallTerrainSurfaceBuilder.TerrainScale;
 
@@ -59,6 +70,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     private GroundMaterials? _materials;
     private readonly IReadOnlyDictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> _locations;
     private readonly System.Collections.Concurrent.ConcurrentDictionary<(int X, int Y), float> _cellMeans = new();
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<(int X, int Y), byte> _seaPixels = new();
 
     /// <param name="climate">The climate value at an in-bounds map pixel.</param>
     /// <param name="locations">The locations by the map pixel they stand on: all ground levels under them and near ground wears their tiles.</param>
@@ -93,7 +105,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     /// its shape; the walked spacing as far as a tree's foot shows; and coarse out past the window, where far ground takes over.
     /// </summary>
     internal static HeightfieldRing[] NearRings { get; } =
-        [new(FinestNearCellMetres, DaggerfallExteriorGroundCollider.ReachMetres), new(Spacing, 1_228.8), new(Spacing * 4, 3_276.8)];
+        [new(FinestNearCellMetres, DaggerfallExteriorGroundCollider.ReachMetres), new(Spacing, 1_228.8), new(Spacing * 4, NearReachMetres)];
 
     /// <summary>The ground values the far ground shares with the walked ground.</summary>
     internal DaggerfallGroundTuning GroundTuning => _groundTuning;
@@ -138,32 +150,42 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         Frame now = Current;
         GroundMaterials materials = Materials;
         int heightSide = tile.HeightSide, side = tile.Side;
-        double[] ground = WalkedHeights(tile, samples, offsetX, offsetZ);
+        double[] ground = WalkedHeights(tile, offsetX, offsetZ);
+        SetHeights(samples, ground, heightSide, side);
         for (int j = 0; j < side; j++)
         for (int i = 0; i < side; i++)
         {
             double x = tile.SampleX(i) + offsetX, z = tile.SampleZ(j) + offsetZ, height = ground[((j + 1) * heightSide) + i + 1];
-            Draw(samples, i, j, PaintNear(x, z, height, Slope(ground, heightSide, i, j, tile.CellSize), now.Winter, materials));
+            // Past the sea's sheet the outer ring's bed shows for up to a tile, so it wears far ground's sea.
+            Draw(samples, i, j, height < OceanMetres && tile.CellSize > Spacing ? new(materials.Sea, new(1, 0, 0, 0))
+                : PaintNear(x, z, height, Slope(ground, heightSide, i, j, tile.CellSize), now.Winter, materials));
         }
     }
 
     /// <summary>The collider's ground: near ground's heights alone, which need no materials bound.</summary>
     internal void SampleHeights(HeightfieldTileRequest tile, HeightfieldTileSamples samples, double offsetX, double offsetZ) =>
-        _ = WalkedHeights(tile, samples, offsetX, offsetZ);
+        SetHeights(samples, WalkedHeights(tile, offsetX, offsetZ), tile.HeightSide, tile.Side);
 
-    private double[] WalkedHeights(HeightfieldTileRequest tile, HeightfieldTileSamples samples, double offsetX, double offsetZ)
+    private static void SetHeights(HeightfieldTileSamples samples, double[] ground, int heightSide, int side)
+    {
+        for (int j = -1; j <= side; j++)
+        for (int i = -1; i <= side; i++)
+            samples.SetHeight(i, j, (float)ground[((j + 1) * heightSide) + i + 1]);
+    }
+
+    private double[] WalkedHeights(HeightfieldTileRequest tile, double offsetX, double offsetZ)
     {
         int heightSide = tile.HeightSide, side = tile.Side;
         double[] ground = new double[heightSide * heightSide];
         Dictionary<(int X, int Y), DaggerfallTerrainWindow> windows = [];
-        Dictionary<(long X, long Z), double> lattice = [];
+        Dictionary<(long X, long Z), double> lattice = [], depths = [];
         double finest = Math.Max(tile.CellSize, Spacing) * 2;
         for (int j = -1; j <= side; j++)
         for (int i = -1; i <= side; i++)
         {
-            double height = Walked(tile.SampleX(i) + offsetX, tile.SampleZ(j) + offsetZ, finest, windows, lattice);
+            double x = tile.SampleX(i) + offsetX, z = tile.SampleZ(j) + offsetZ, height = Walked(x, z, finest, windows, lattice, depths);
             ground[((j + 1) * heightSide) + i + 1] = height;
-            samples.SetHeight(i, j, (float)height);
+            if (height < OceanMetres) _seaPixels.TryAdd(MapPixel(x, z), 0);
         }
 
         return ground;
@@ -245,25 +267,29 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
                 : new(ground.Town, new System.Numerics.Vector4(grass, dirt, stone + paving, ruts) / sum);
         }
 
-        if (height <= OceanMetres + SeaMarginMetres) return new(ground.Shore, new(0, 0, 0, 1));
         return height <= OceanMetres + BeachMetres ? new(ground.Shore, new(0, 1, 0, 0)) : PaintOpen(x, z, height, slope, winter, materials);
     }
 
-    private ArchiveMaterials Archive(double x, double z, bool winter, GroundMaterials materials)
+    private ArchiveMaterials Archive(double x, double z, bool winter, GroundMaterials materials) => materials.Archives[GroundArchive(x, z, winter)];
+
+    /// <summary>Whether near ground has found seabed on a map pixel, which is where the sea stands.</summary>
+    internal bool HoldsSea(int mapX, int mapY) => _seaPixels.ContainsKey((mapX, mapY));
+
+    /// <summary>The ground archive at a point.</summary>
+    internal int GroundArchive(double x, double z, bool winter)
     {
         (int mapX, int mapY) = MapPixel(x, z);
-        int archive = DaggerfallExteriorEnvironment.GroundTextureArchive(Climate(mapX, mapY), winter ? DaggerfallExteriorSeason.Winter : DaggerfallExteriorSeason.Summer);
-        return materials.Archives[archive];
+        return DaggerfallExteriorEnvironment.GroundTextureArchive(Climate(mapX, mapY), winter ? DaggerfallExteriorSeason.Winter : DaggerfallExteriorSeason.Summer);
     }
 
     /// <summary>The walked surface at a point: its vertices flattened under locations, and between them a straight line.</summary>
-    private double Walked(double x, double z, double finestMetres, Dictionary<(int X, int Y), DaggerfallTerrainWindow> windows, Dictionary<(long X, long Z), double> lattice)
+    private double Walked(double x, double z, double finestMetres, Dictionary<(int X, int Y), DaggerfallTerrainWindow> windows, Dictionary<(long X, long Z), double> lattice, Dictionary<(long X, long Z), double> depths)
     {
         double at(long vx, long vz)
         {
             if (lattice.TryGetValue((vx, vz), out double known)) return known;
             double px = vx * Spacing, pz = vz * Spacing;
-            return lattice[(vx, vz)] = Ground(px, pz, finestMetres, windows);
+            return lattice[(vx, vz)] = Flattened(Bed(px, pz, finestMetres, windows, depths), px, pz);
         }
 
         double fx = x / Spacing, fz = z / Spacing;
@@ -335,6 +361,37 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         return kinds;
     }
 
+    /// <summary>Walked ground at a vertex, which runs on down under the sea where far ground stops at its surface.</summary>
+    private double Bed(double x, double z, double finestMetres, Dictionary<(int X, int Y), DaggerfallTerrainWindow> windows, Dictionary<(long X, long Z), double> depths)
+    {
+        double height = Height(x, z, finestMetres, windows);
+        if (height > OceanMetres + ClampMetres) return height;
+        double fx = x / SeabedNodeMetres, fz = z / SeabedNodeMetres;
+        long ix = (long)Math.Floor(fx), iz = (long)Math.Floor(fz);
+        double u = fx - ix, v = fz - iz;
+        double at(long nodeX, long nodeZ) => depths.TryGetValue((nodeX, nodeZ), out double known) ? known
+            : depths[(nodeX, nodeZ)] = SeaDepth(nodeX, nodeZ, finestMetres, windows);
+        double near = at(ix, iz) + ((at(ix + 1, iz) - at(ix, iz)) * u), far = at(ix, iz + 1) + ((at(ix + 1, iz + 1) - at(ix, iz + 1)) * u);
+        return OceanMetres - (near + ((far - near) * v));
+    }
+
+    /// <summary>
+    /// How deep the sea stands at a seabed node, from how far it is to land. The classic's heights under its ocean clamp
+    /// can't serve: nothing ever showed them, and they jump metres at map pixel edges.
+    /// </summary>
+    private double SeaDepth(long nodeX, long nodeZ, double finestMetres, Dictionary<(int X, int Y), DaggerfallTerrainWindow> windows)
+    {
+        double x = nodeX * SeabedNodeMetres, z = nodeZ * SeabedNodeMetres;
+        foreach (int reach in SeabedProbes)
+        {
+            double metres = reach * SeabedNodeMetres, diagonal = metres * .7071;
+            foreach ((double east, double south) in new[] { (metres, 0d), (-metres, 0d), (0d, metres), (0d, -metres), (diagonal, diagonal), (diagonal, -diagonal), (-diagonal, diagonal), (-diagonal, -diagonal) })
+                if (Height(x + east, z + south, finestMetres, windows) > OceanMetres + ClampMetres) return metres * SeabedSlope;
+        }
+
+        return SeabedProbes[^1] * SeabedNodeMetres * SeabedSlope;
+    }
+
     private double Height(double x, double z, double finestMetres, Dictionary<(int X, int Y), DaggerfallTerrainWindow> windows)
     {
         // The vertex the point falls on: a pixel's rows run north from its y, so its row 0 is the pixel's own z.
@@ -380,7 +437,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         return result;
     }
 
-    private static (int X, int Y) MapPixel(double x, double z) => (
+    internal static (int X, int Y) MapPixel(double x, double z) => (
         (int)Math.Floor(x / DaggerfallTerrainSurfaceBuilder.HorizontalSize),
         (int)Math.Ceiling(z / DaggerfallTerrainSurfaceBuilder.HorizontalSize));
 

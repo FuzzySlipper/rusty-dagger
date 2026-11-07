@@ -37,6 +37,7 @@ public sealed class FirstPersonCameraSystem : IDisposable
     private readonly Camera _camera;
     private readonly PlayerControlState _player;
     private readonly FirstPersonCameraTuning _tuning;
+    private double _farPlane;
     private bool _disposed;
     private double _punchPitchDegrees;
     private double _punchYawDegrees;
@@ -49,6 +50,7 @@ public sealed class FirstPersonCameraSystem : IDisposable
         _cameraView = cameraView ?? throw new ArgumentNullException(nameof(cameraView));
         _player = player ?? throw new ArgumentNullException(nameof(player));
         _tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
+        _farPlane = _tuning.FarPlane;
 
         Camera? camera = null;
         try
@@ -99,6 +101,17 @@ public sealed class FirstPersonCameraSystem : IDisposable
     /// <summary>The derived eye point submitted to the Engine camera descriptor.</summary>
     public WorldPoint Viewpoint => ViewpointFor(_player);
 
+    /// <summary>
+    /// How far the world draws from the next update on, or the tuned plane with none: the far plane clips everything, so a
+    /// place that draws out past it names its own. Null returns to the tuned plane.
+    /// </summary>
+    public void DrawOutTo(double? farPlane)
+    {
+        double plane = farPlane ?? _tuning.FarPlane;
+        if (!double.IsFinite(plane) || plane <= _tuning.NearPlane) throw new ArgumentOutOfRangeException(nameof(farPlane));
+        _farPlane = plane;
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
@@ -124,7 +137,7 @@ public sealed class FirstPersonCameraSystem : IDisposable
                 _tuning.FieldOfViewYDegrees,
                 0d,
                 _tuning.NearPlane,
-                _tuning.FarPlane),
+                _farPlane),
             FullViewport);
     }
 
