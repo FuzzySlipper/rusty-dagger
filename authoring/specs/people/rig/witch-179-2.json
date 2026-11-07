@@ -10,28 +10,6 @@
   ],
   "note": "The accepted final, laid on its generation ground before the edit."
  },
- "edit": {
-  "tool": "asset-pipeline tools/texture-edit/qwen_edit.py",
-  "host": "Patch's RTX 5090 ComfyUI, http://192.168.1.20:8188",
-  "model": "qwen_image_2.1_int8_convrot.safetensors",
-  "text_encoder": "qwen3vl_8b_int8_convrot.safetensors",
-  "loras": [],
-  "sampler": {
-   "steps": 25,
-   "cfg": 1,
-   "sampler": "euler",
-   "resolution": 1024
-  },
-  "seeds_tried": [
-   1,
-   2,
-   3,
-   4
-  ],
-  "chosen_seed": 1,
-  "why": "Seed 1 opens the stance least and keeps her height and proportions; seeds 2 to 4 widen the stance further and seeds 3 and 4 make her taller.",
-  "prompt": "Keep this exact woman: her face, expression, hair, skin tone, proportions, green dress, belt, tall twisted staff, painting style and lighting stay the same. Change only her stance. She stands facing the viewer with her legs slightly apart, feet about shoulder width apart, both feet flat and pointing forward. The narrow front panel of the green dress hangs straight down between her legs as one separate strip of cloth, both bare legs fully visible on either side of it through the high slits, and the rest of the skirt hangs behind her legs. Her arms hang slightly away from her body, with a clear gap of background between each arm and her waist. Her left hand grips the staff, which stands upright beside her with a clear gap between staff and body. Her right hand hangs open. Same size and position in the frame, whole figure and staff visible, on the same perfectly flat dark slate grey background. Add nothing else."
- },
  "not_used": {
   "step": "Krea 2 turbo retro pass, as in the people first pass",
   "model": "krea2_turbo_fp8_scaled.safetensors",
@@ -45,5 +23,55 @@
   },
   "why": "The final already carries that style, so a second pass repaints her: the face came out softer and younger, and the staff smooth with yellow vines."
  },
- "cut_out": "authoring/tools/items/matte.py ask_mask (BiRefNet) united with a ground-colour key, then laid on white for See-through."
+ "cut_out": "authoring/tools/items/matte.py ask_mask (BiRefNet) united with a ground-colour key, then laid on white for See-through.",
+ "edits": [
+  {
+   "tool": "asset-pipeline tools/texture-edit/qwen_edit.py",
+   "host": "Patch's RTX 5090 ComfyUI, http://192.168.1.20:8188",
+   "model": "qwen_image_2.1_int8_convrot.safetensors",
+   "text_encoder": "qwen3vl_8b_int8_convrot.safetensors",
+   "loras": [],
+   "sampler": {
+    "steps": 25,
+    "cfg": 1,
+    "sampler": "euler",
+    "resolution": 1024
+   },
+   "seeds_tried": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "chosen_seed": 1,
+   "why": "Seed 1 opens the stance least and keeps her height and proportions; seeds 2 to 4 widen the stance further and seeds 3 and 4 make her taller.",
+   "prompt": "Keep this exact woman: her face, expression, hair, skin tone, proportions, green dress, belt, tall twisted staff, painting style and lighting stay the same. Change only her stance. She stands facing the viewer with her legs slightly apart, feet about shoulder width apart, both feet flat and pointing forward. The narrow front panel of the green dress hangs straight down between her legs as one separate strip of cloth, both bare legs fully visible on either side of it through the high slits, and the rest of the skirt hangs behind her legs. Her arms hang slightly away from her body, with a clear gap of background between each arm and her waist. Her left hand grips the staff, which stands upright beside her with a clear gap between staff and body. Her right hand hangs open. Same size and position in the frame, whole figure and staff visible, on the same perfectly flat dark slate grey background. Add nothing else.",
+   "label": "a",
+   "result": "Opened the stance cleanly, but raised the slits to the hip and narrowed the front panel, which changes her dress."
+  },
+  {
+   "tool": "asset-pipeline tools/texture-edit/qwen_edit.py",
+   "host": "Patch's RTX 5090 ComfyUI, http://192.168.1.20:8188",
+   "model": "qwen_image_2.1_int8_convrot.safetensors",
+   "text_encoder": "qwen3vl_8b_int8_convrot.safetensors",
+   "loras": [],
+   "sampler": {
+    "steps": 25,
+    "cfg": 1,
+    "sampler": "euler",
+    "resolution": 1024
+   },
+   "label": "b",
+   "seeds_tried": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "chosen_seed": 2,
+   "why": "Seed 2 has the widest front panel and a moderate stance. Every seed still opens the slits to the hip on both sides.",
+   "result": "The panel covers her hips and inner thighs as in the final. When the bones bring her legs back together, her shins pass behind the wide hem, so less of the legs shows than in the final.",
+   "prompt": "Keep this exact woman: her face, expression, hair, skin tone, proportions, green dress, belt, tall twisted staff, painting style and lighting stay the same. Keep the dress exactly as designed: the wide front panel hangs from the belt across the front of her hips and covers her groin and upper thighs, and the slits open only from the middle of her thighs downwards, no higher than in this picture. Change only her stance. She stands facing the viewer with her legs slightly apart, feet about shoulder width apart, both feet flat and pointing forward. The front panel hangs straight down between her legs as one separate strip of cloth, both bare legs visible from mid-thigh down on either side of it, and the rest of the skirt hangs behind her legs. Her arms hang slightly away from her body, with a clear gap of background between each arm and her waist. Her left hand grips the staff, which stands upright beside her with a clear gap between staff and body. Her right hand hangs open. Same size and position in the frame, whole figure and staff visible, on the same perfectly flat dark slate grey background. Add nothing else."
+  }
+ ]
 }

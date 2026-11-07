@@ -30,8 +30,10 @@ How a rig source is made:
    - LoRAs: none;
    - host: Patch's 5090 ComfyUI.
 
-   The prompt keeps everything but the stance and states the new stance part by part. Try a few
-   seeds and keep the smallest change that opens the stance.
+   The prompt keeps everything but the stance and states the new stance part by part. It also
+   restates the costume details the stance touches, such as a skirt's panel width and where its slits
+   start: Qwen otherwise redesigns them to fit the new stance. Try a few seeds and keep the smallest
+   change that opens the stance.
 3. Don't run the Krea retro pass again. The final already carries that style, so a second pass
    repaints the figure: the face and held objects drift.
 4. Cut the figure out with `tools/items/matte.py` (BiRefNet) joined with a ground-colour key, and lay
