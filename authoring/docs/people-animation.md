@@ -93,3 +93,8 @@ alone.
 - **Hidden skin:** See-through bleeds cloth colour into skin it paints in. In bare-skin limb parts,
   a pixel greener than it is red is refilled from the skin around it, after assembly.
 - **Rigging:** a held staff rides the hip, not the forearm. Eyes get iris bones for gaze.
+- **Head turns:** a turned head is a key drawing, not a bend. Video frames from the turn are cut out,
+  shifted so their neck lands on the rig's neck, and run through See-through (full and head) like the
+  source. Their head parts become alternate sets on the head chain, bound to the frames of the turn,
+  and the in-between drawing holds one 8 fps frame each way. Garment layers leave the head as it was,
+  so head key frames and their runs carry over to a rig rebuilt with new clothing.
