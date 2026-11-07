@@ -120,8 +120,8 @@ public sealed class DaggerfallHorizonGroundTests
         double sea = DaggerfallTerrainSurfaceBuilder.OceanElevation * DaggerfallTerrainSurfaceBuilder.TerrainScale;
 
         Assert.Equal(ground.PaintOpen(1000, 1000, 200, 0, false, Materials), ground.PaintNear(1000, 1000, 200, 0, false, Materials));
-        DaggerfallHorizonGround.Paint water = ground.PaintNear(1000, 1000, sea, 0, false, Materials);
-        Assert.Equal((3u, 1f), (water.Material, water.Weights.W));
+        DaggerfallHorizonGround.Paint seabed = ground.PaintNear(1000, 1000, sea - 3, 0, false, Materials);
+        Assert.Equal((3u, 1f), (seabed.Material, seabed.Weights.Y));
         DaggerfallHorizonGround.Paint beach = ground.PaintNear(1000, 1000, sea + 2, 0, false, Materials);
         Assert.Equal((3u, 1f), (beach.Material, beach.Weights.Y));
     }
@@ -223,6 +223,41 @@ public sealed class DaggerfallHorizonGroundTests
         Assert.Equal(near.Heights, collision.Heights);
     }
 
+    [Fact]
+    public void The_seabed_falls_away_from_the_shore_and_levels_off_without_a_step_at_a_map_pixel_edge()
+    {
+        DaggerfallHorizonGround ground = Ground(Coast());
+        const double cell = DaggerfallHorizonGround.FinestNearCellMetres;
+        double sea = DaggerfallHorizonGround.OceanMetres;
+        // Westward from the shore, and on across the map pixel edge at 2 pixels.
+        List<double> bed = [];
+        for (double tileX = 3 * Size; tileX > (1 * Size) + 200; tileX -= 16 * cell)
+        {
+            HeightfieldTileSamples samples = Samples(new(16, 0, 0, 0, 0, tileX - (16 * cell), 4 * Size, cell));
+            ground.SampleHeights(samples.Tile, samples, 0, 0);
+            int middle = 9 * samples.Tile.HeightSide;
+            for (int i = 16; i >= 1; i--) bed.Add(samples.Heights[middle + i]);
+        }
+
+        Assert.All(bed, height => Assert.True(height < sea + 3, $"{height} stands proud of the water."));
+        Assert.True(bed.Min() < sea - 5, "The sea has depth.");
+        Assert.True(bed.Zip(bed.Skip(1)).All(pair => Math.Abs(pair.First - pair.Second) < 1), "The seabed has no steps.");
+        Assert.True(ground.HoldsSea(2, 4));
+    }
+
+    [Fact]
+    public void Dry_land_holds_no_sea_and_the_outer_ring_wears_the_far_sea_past_the_sheets()
+    {
+        DaggerfallHorizonGround ground = new(Coast(), (_, _) => 231, DaggerfallHorizonTuning.Default, DaggerfallGroundTuning.Default, NoLocations) { Materials = Materials };
+        HeightfieldTileSamples land = Samples(new(16, 0, 0, 0, 0, 6 * Size, 4 * Size, DaggerfallHorizonGround.FinestNearCellMetres));
+        ground.SampleNear(land.Tile, land, 0, 0);
+        Assert.False(ground.HoldsSea(6, 4));
+
+        HeightfieldTileSamples outer = Samples(new(16, 0, 0, 0, 0, 1 * Size, 4 * Size, DaggerfallTerrainSurfaceBuilder.SampleSpacing * 4));
+        ground.SampleNear(outer.Tile, outer, 0, 0);
+        Assert.Contains(Materials.Sea, outer.Materials.ToArray());
+    }
+
     /// <summary>Samples for a tile: the Engine makes them, and a fixture has no Engine to ask.</summary>
     private static HeightfieldTileSamples Samples(HeightfieldTileRequest tile) =>
         (HeightfieldTileSamples)Activator.CreateInstance(typeof(HeightfieldTileSamples), BindingFlags.NonPublic | BindingFlags.Instance, null, [tile], null)!;
@@ -253,6 +288,16 @@ public sealed class DaggerfallHorizonGroundTests
         new(terrain, (_, _) => 231, DaggerfallHorizonTuning.Default, DaggerfallGroundTuning.Default, NoLocations);
 
     private static readonly Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> NoLocations = [];
+
+    /// <summary>The sea west of map pixel 3, and land rising east of it.</summary>
+    private static DaggerfallTerrainSet Coast()
+    {
+        const int width = 8, height = 8;
+        byte[] heights = new byte[width * height], samples = new byte[width * height * 25];
+        for (int cell = 0; cell < heights.Length; cell++)
+            heights[cell] = cell % width < 3 ? (byte)0 : (byte)(30 + (cell % width * 10));
+        return new DaggerfallTerrainSet(width, height, heights, () => samples);
+    }
 
     private static DaggerfallTerrainSet Terrain(int width, int height, byte[]? relief = null)
     {

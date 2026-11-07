@@ -922,6 +922,18 @@
     "snowFullMetres": 2200,
     "rockHoldsSnow": 0.3
   },
+  "water": {
+    "shallow": [0.85, 0.95, 0.95],
+    "deep": [0.5, 0.6, 0.7],
+    "depthMetres": 3,
+    "shoreMetres": 0.3,
+    "foamThreshold": 0.55,
+    "waveMetres": 7,
+    "ripple": 0.2,
+    "roughness": 0.85,
+    "opacity": 0.48,
+    "drift": [0.03, 0.02]
+  },
   "horizon": {
     "lift": 4.5,
     "liftFromMetres": 3000,
@@ -930,7 +942,6 @@
     "sinkMetres": 150,
     "sinkFromMetres": 2900,
     "sinkGoneMetres": 3700,
-    "nightTint": 0.1,
     "followMetres": 204.8,
     "rockFromSlope": 0.25,
     "rockFullSlope": 0.7,
@@ -951,7 +962,8 @@
     "moonDayBrightness": 0.45,
     "cloudTwilightDegrees": 8,
     "cloudDrift": [14, 5],
-    "sea": [0.16, 0.24, 0.32]
+    "sea": [0.31, 0.35, 0.44],
+    "drawnMetres": 6000
   },
   "ambient": {
     "clearFogEnd": 2400,
