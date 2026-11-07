@@ -421,7 +421,8 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         // The sun climbs out of its low colour by a third of the way to noon.
         Vector3 color = Vector3.Lerp(_tuning.LowSunColor, Vector3.One, Math.Clamp(-direction.Y * LowSunClimb, 0, 1));
         return new(_sunId, false, 0, new LightDescriptor(LightKind.Directional, color,
-            daylight * _tuning.ExteriorSun, true, Vector3.Zero, direction, false, 0f, 0f, 0f, 0f, LightShadowIntent.Disabled));
+            daylight * _tuning.ExteriorSun, true, Vector3.Zero, direction, true, _tuning.SunShadowRange, 0f, 0f, 0f,
+            LightShadowIntent.Requested) with { ShadowResolution = _tuning.SunShadowResolution });
     }
 
     /// <summary>What this kind of place multiplies its lights by.</summary>

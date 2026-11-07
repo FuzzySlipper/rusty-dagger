@@ -639,6 +639,8 @@
     "exteriorNight": 0.1333,
     "exteriorScale": 3,
     "exteriorSun": 1.05,
+    "sunShadowRange": 150,
+    "sunShadowResolution": 2048,
     "interiorScale": 1.3,
     "dungeonScale": 1,
     "nightColor": [0.7, 0.8, 1],

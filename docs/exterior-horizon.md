@@ -111,6 +111,11 @@ off, and that is what `bloom` spreads.
   little of an overhead sun, and would fall dark at noon.
 - **Night.** The ambient cools toward `nightColor`, so a lamp's warmth stands out. A grade
   would cool the lamps too. The sun warms toward `lowSunColor` near the horizon.
+- **Sun shadows.** The sun always asks for its shadow (`sunShadowRange`,
+  `sunShadowResolution`). It draws only when the player turns on Shadows in Settings'
+  video options, which are off by default. With ambient carrying most of the light, the
+  shadows are faint: a sun-heavy balance would deepen them, but it darkens upright sprites
+  across their faces. Static flats neither cast nor receive; enemies cast as before.
 - **Sprites.** Flats, nature, people and items take the light around them
   (`SpriteLightingMode.Synthetic`), so they fall with the day.
 - **Windows.** Building windows glow on the city lamps' hours through mesh emission. The

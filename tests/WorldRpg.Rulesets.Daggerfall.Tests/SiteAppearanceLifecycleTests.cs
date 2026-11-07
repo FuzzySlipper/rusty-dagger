@@ -327,7 +327,12 @@ public sealed class SiteAppearanceLifecycleTests
         exteriorLighting.UpdateAmbient(DaggerfallCalendar.Start with { Hour = 12 });
         Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.ExteriorNoon * DaggerfallTuning.Defaults.SiteLighting.ExteriorScale,
             appearance.LightUpdates.Single(update => update.Replacement.Descriptor.Kind == LightKind.Ambient).Replacement.Descriptor.Intensity);
-        Assert.Single(appearance.LightRequests, request => request.Descriptor.Kind == LightKind.Directional);
+        LightRequest sun = Assert.Single(appearance.LightRequests, request => request.Descriptor.Kind == LightKind.Directional);
+        // The sun asks for its shadow at the tuned reach and detail; the Engine's Shadows video option decides whether it draws.
+        Assert.Equal(LightShadowIntent.Requested, sun.Descriptor.ShadowIntent);
+        Assert.True(sun.Descriptor.HasRange);
+        Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.SunShadowRange, sun.Descriptor.Range);
+        Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.SunShadowResolution, sun.Descriptor.ShadowResolution);
         var noon = DaggerfallCalendar.Start with { Hour = 12 };
         float daylight = DaggerfallWeatherTuning.Classic.Daylight(noon, DaggerfallWeatherKind.Thunder);
         exteriorLighting.UpdateAmbient(noon, daylight);

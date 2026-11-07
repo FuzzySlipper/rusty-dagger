@@ -271,6 +271,8 @@ internal sealed record DaggerfallTuning(
                 SpellLightIntensity = siteLighting.GetProperty("spellLightIntensity").GetSingle(),
                 ExteriorScale = siteLighting.GetProperty("exteriorScale").GetSingle(),
                 ExteriorSun = siteLighting.GetProperty("exteriorSun").GetSingle(),
+                SunShadowRange = siteLighting.GetProperty("sunShadowRange").GetSingle(),
+                SunShadowResolution = siteLighting.GetProperty("sunShadowResolution").GetUInt32(),
                 InteriorScale = siteLighting.GetProperty("interiorScale").GetSingle(),
                 DungeonScale = siteLighting.GetProperty("dungeonScale").GetSingle(),
                 ViewFull = siteLighting.GetProperty("viewFull").GetSingle(),
@@ -665,6 +667,12 @@ internal sealed record DaggerfallSiteLightingTuning(
     /// value. An upright sprite takes little of an overhead sun, so ambient carries most of it, or sprites fall dark at noon.
     /// </summary>
     internal float ExteriorSun { get; init; } = 1.05f;
+    /// <summary>
+    /// How far from the camera the sun's shadow reaches, in metres, and the texels on a side of each of its cascades.
+    /// The sun always asks for its shadow; it draws only when the player turns on the Engine's Shadows video option.
+    /// </summary>
+    internal float SunShadowRange { get; init; } = 150f;
+    internal uint SunShadowResolution { get; init; } = 2048;
     /// <summary>The sun's colour on the horizon, easing to white as it climbs, so dawn and dusk warm what they light.</summary>
     internal Vector3 LowSunColor { get; init; } = new(1f, .68f, .42f);
     /// <summary>The colour of the sky's ambient at night, easing to white by noon. A lamp's warmth stands out against it.</summary>
@@ -693,6 +701,8 @@ internal sealed record DaggerfallSiteLightingTuning(
             throw new ArgumentOutOfRangeException(nameof(LowSunColor), "The low sun's colour is finite and not negative.");
         if (!float.IsFinite(NightColor.X + NightColor.Y + NightColor.Z) || NightColor.X < 0 || NightColor.Y < 0 || NightColor.Z < 0)
             throw new ArgumentOutOfRangeException(nameof(NightColor), "The night's colour is finite and not negative.");
+        if (!float.IsFinite(SunShadowRange) || SunShadowRange <= 0 || SunShadowResolution is not (256 or 512 or 1024 or 2048))
+            throw new ArgumentOutOfRangeException(nameof(SunShadowRange), "The sun's shadow reaches a finite positive range, at 256, 512, 1024 or 2048 texels.");
         if (!float.IsFinite(Bloom) || Bloom < 0) throw new ArgumentOutOfRangeException(nameof(Bloom), "The bloom is finite and not negative.");
         if (!float.IsFinite(WindowColor.X + WindowColor.Y + WindowColor.Z + WindowLevel)
             || WindowColor.X < 0 || WindowColor.Y < 0 || WindowColor.Z < 0 || WindowLevel < 0)
