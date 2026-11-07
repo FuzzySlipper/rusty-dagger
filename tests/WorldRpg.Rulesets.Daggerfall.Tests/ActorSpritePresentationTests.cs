@@ -128,6 +128,59 @@ public sealed class ActorSpritePresentationTests
     }
 
     [Fact]
+    public void A_standing_person_draws_refreshed_art_where_the_classic_stands_and_follows_the_art_choice()
+    {
+        List<string> releases = []; var graphics = new AppearanceFake(releases);
+        ContentFake content = MediaContent(releases);
+        content.Add("refreshed/people/texture-182-record-000.png", Hash);
+        content.Add("person.png", Hash);
+        DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(Encoding.UTF8.GetBytes("""
+            {"artReplacements": {"images": [], "people": [{"replaces": {"archive": 182, "record": 0}, "path": "refreshed/people/texture-182-record-000.png",
+              "byteLength": 1, "sha256": "0000000000000001000000000000000200000000000000030000000000000004", "width": 20, "height": 40,
+              "frames": [{"x": 0, "y": 0, "width": 20, "height": 40}], "classic": {"x": 0.25, "y": 0.25, "width": 0.5, "height": 0.5}}]}}
+            """), "test.art");
+        NormalizedBillboardSprite billboard = new("person.png", Hash, 8, 8, [new NormalizedAtlasFrame(7, 0, 0, 8, 8)], 7, new Vector2(.5F, .5F), new Vector2(2F, 4F));
+        using ActorsState actors = ActorsAt(new WorldPoint(0F, 0F, 0F));
+        const long person = 12;
+        bool refreshed = false;
+        using var presentation = new DaggerfallSiteAppearance(content, graphics, MediaInputs());
+        presentation.UseEffectArt(PresentationRecorder.Create().Service, AnimationRecorder.Create().Service, art, () => refreshed);
+        presentation.AddActor(person, billboard.Standing((182, 0)));
+
+        SpriteFromAtlasRequest drawn = graphics.SpriteRequests[^1];
+        Assert.Equal(new Vector2(4F, 8F), drawn.Size);
+        Assert.Equal(new Vector2(.5F, .25F), drawn.Pivot);
+        Assert.Contains("refreshed/people/texture-182-record-000.png", graphics.OpenedResourcePaths);
+        Appearance Chosen()
+        {
+            List<AppearanceFact> facts = [];
+            presentation.AppendActorFacts(facts, actors, DaggerfallPresentationObjectIds.ActiveLocationSlot);
+            return Assert.Single(facts).Appearance;
+        }
+        Appearance classic = Chosen();
+        refreshed = true;
+        Appearance replacement = Chosen();
+        Assert.NotEqual(classic, replacement);
+        refreshed = false;
+        Assert.Equal(classic, Chosen());
+    }
+
+    [Fact]
+    public void A_person_the_set_has_no_art_for_stays_classic_in_either_art_choice()
+    {
+        List<string> releases = []; var graphics = new AppearanceFake(releases);
+        ContentFake content = MediaContent(releases);
+        content.Add("person.png", Hash);
+        DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(Encoding.UTF8.GetBytes("""{"artReplacements": {"images": []}}"""), "test.art");
+        NormalizedBillboardSprite billboard = new("person.png", Hash, 8, 8, [new NormalizedAtlasFrame(7, 0, 0, 8, 8)], 7, new Vector2(.5F, .5F), new Vector2(2F, 4F));
+        using var presentation = new DaggerfallSiteAppearance(content, graphics, MediaInputs());
+        presentation.UseEffectArt(PresentationRecorder.Create().Service, AnimationRecorder.Create().Service, art, () => true);
+        int before = graphics.SpriteRequests.Count;
+        presentation.AddActor(12, billboard.Standing((182, 0)));
+        Assert.Equal(before + 1, graphics.SpriteRequests.Count);
+    }
+
+    [Fact]
     public void Normalized_actor_states_preserve_all_directional_sectors_and_select_an_explicit_sector()
     {
         DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);

@@ -19,6 +19,7 @@ internal sealed partial class DaggerfallSiteAppearance
     private readonly Dictionary<string, (RenderResource Texture, DaggerfallEffectArt Art)> refreshedEffects = new(StringComparer.Ordinal);
     private readonly Dictionary<long, (EffectVisual Visual, int Element, PresentationEmitter? Trail, ulong TrailId)> spellFlightVisuals = [];
     private Func<bool> drawRefreshedEffects = () => false;
+    private readonly Dictionary<string, SpriteAtlas> personAtlases = new(StringComparer.Ordinal);
     private IPresentationService? particles;
     private RenderResource? particleGlow;
     private IAnimationService? meshes;
@@ -87,6 +88,30 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         if (flat.Mesh is null && WorldMesh(flat.Definition.Source, flat.Definition.Summer.Size.X) is { } mesh) (flat.Mesh, flat.MeshScale) = mesh;
     }
+
+    /// <summary>Gives a standing person the set has art for a refreshed sprite, placed where the classic one stands.</summary>
+    private void AttachRefreshedPerson(ActorVisual visual)
+    {
+        NormalizedActorSprite sprite = visual.Sprite;
+        if (visual.Refreshed is not null || visual.Live is null || sprite.SourceTexture is not { } source
+            || surfaceArt?.People.GetValueOrDefault(source) is not { } art) return;
+        if (!personAtlases.TryGetValue(art.File.Path, out SpriteAtlas? atlas))
+        {
+            RenderResourceInfo texture = appearance.OpenTexture(content, art.File.Path, art.File.Sha256, TextureFilter.Nearest);
+            ownedResources.Add(texture.Handle);
+            DaggerfallArtRect frame = art.Frames[0];
+            atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, SpriteAtlasAdapter.ToAtlasFrames(art.Width, art.Height,
+                [new NormalizedSpriteFrame(sprite.InitialFrameId, (int)frame.X, (int)frame.Y, (int)frame.Width, (int)frame.Height)])));
+            atlases.Add(atlas);
+            personAtlases.Add(art.File.Path, atlas);
+        }
+        (Vector2 size, Vector2 pivot) = art.Placed(sprite.Size, sprite.Pivot);
+        visual.Refreshed = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, sprite.InitialFrameId, pivot, size,
+            BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F)));
+    }
+
+    /// <summary>The sprite a living actor shows: its refreshed one while refreshed art is drawn, else its classic one.</summary>
+    private Appearance? DrawnLive(ActorVisual visual) => drawRefreshedEffects() && visual.Refreshed is { } refreshed ? refreshed : visual.Live;
 
     /// <summary>The corpse a defeated actor shows: the refreshed mesh while refreshed art is drawn, else its sprite.</summary>
     private Appearance? DrawnCorpse(ActorVisual visual) => drawRefreshedEffects() && visual.CorpseMesh is { } mesh ? mesh : visual.Corpse;

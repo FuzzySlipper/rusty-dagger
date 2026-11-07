@@ -95,11 +95,13 @@ internal sealed class DaggerfallArtReplacements
 
     private DaggerfallArtReplacements(Dictionary<string, DaggerfallArtReplacement> byClassic, IReadOnlyDictionary<string, DaggerfallDyeTint> tints,
         IReadOnlyDictionary<string, DaggerfallEffectArt> effects, DaggerfallArtFile? effectGlow, IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtMesh> meshes,
-        IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtSurface> surfaces, IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtFlat> flats)
+        IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtSurface> surfaces, IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtFlat> flats,
+        IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtFlat> people)
     {
         Meshes = meshes;
         Surfaces = surfaces;
         Flats = flats;
+        People = people;
         _byClassic = byClassic;
         _byMediaId = byClassic.Values.ToDictionary(replacement => replacement.MediaId, StringComparer.Ordinal);
         Tints = tints;
@@ -124,6 +126,9 @@ internal sealed class DaggerfallArtReplacements
 
     /// <summary>The refreshed world billboards, by the classic texture archive and record each replaces.</summary>
     internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtFlat> Flats { get; }
+
+    /// <summary>The refreshed standing people, by the classic billboard record each stands in for.</summary>
+    internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtFlat> People { get; }
 
     /// <summary>
     /// The refreshed surface for a classic texture record the importer published at <paramref name="texturePath"/>
@@ -170,7 +175,7 @@ internal sealed class DaggerfallArtReplacements
         DaggerfallArtFile? glow = null;
         Dictionary<(int Archive, int Record), DaggerfallArtMesh> meshes = [];
         Dictionary<(int Archive, int Record), DaggerfallArtSurface> surfaces = [];
-        Dictionary<(int Archive, int Record), DaggerfallArtFlat> flats = [];
+        Dictionary<(int Archive, int Record), DaggerfallArtFlat> flats = [], people = [];
         try
         {
             using JsonDocument document = JsonDocument.Parse(payload);
@@ -249,8 +254,9 @@ internal sealed class DaggerfallArtReplacements
                             DaggerfallContentHash.Parse(surface.GetProperty("sha256").GetString()!, $"The refreshed surface for {replaces.Item1}/{replaces.Item2}")), width, height)))
                         throw new InvalidOperationException($"Content pack '{packId}' names two surfaces for {replaces.Item1}/{replaces.Item2}.");
                 }
-            if (section.TryGetProperty("flats", out JsonElement flatArt))
-                foreach (JsonElement flat in flatArt.EnumerateArray())
+            foreach ((string name, Dictionary<(int Archive, int Record), DaggerfallArtFlat> sprites) in new[] { ("flats", flats), ("people", people) })
+                if (section.TryGetProperty(name, out JsonElement spriteArt))
+                foreach (JsonElement flat in spriteArt.EnumerateArray())
                 {
                     (int, int) replaces = (flat.GetProperty("replaces").GetProperty("archive").GetInt32(), flat.GetProperty("replaces").GetProperty("record").GetInt32());
                     int width = flat.GetProperty("width").GetInt32(), height = flat.GetProperty("height").GetInt32();
@@ -262,7 +268,7 @@ internal sealed class DaggerfallArtReplacements
                     DaggerfallArtFile? emission = flat.TryGetProperty("emission", out JsonElement map)
                         ? new(map.GetProperty("path").GetString()!, DaggerfallContentHash.Parse(map.GetProperty("sha256").GetString()!, $"The emission map for {replaces.Item1}/{replaces.Item2}"))
                         : null;
-                    if (!flats.TryAdd(replaces, new(new(flat.GetProperty("path").GetString()!,
+                    if (!sprites.TryAdd(replaces, new(new(flat.GetProperty("path").GetString()!,
                             DaggerfallContentHash.Parse(flat.GetProperty("sha256").GetString()!, $"The refreshed flat for {replaces.Item1}/{replaces.Item2}")), width, height, frames, classic, emission)))
                         throw new InvalidOperationException($"Content pack '{packId}' names two flats for {replaces.Item1}/{replaces.Item2}.");
                 }
@@ -272,7 +278,7 @@ internal sealed class DaggerfallArtReplacements
             throw new InvalidOperationException($"Content pack '{packId}' carries an unreadable artReplacements section: {exception.Message}", exception);
         }
 
-        return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, flats);
+        return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, flats, people);
 
         DaggerfallArtWorldImage? World(JsonElement owner, string mediaId)
         {

@@ -2689,9 +2689,9 @@ internal sealed record NormalizedBillboardSprite(string TexturePath, ContentSha2
 {
     internal float FramesPerSecond { get; init; }
 
-    /// <summary>This billboard as an actor's sprite. An actor's pose is where it stands, so the feet sit on the pose, not the billboard's centre.</summary>
-    internal NormalizedActorSprite Standing() =>
-        new(TexturePath, TextureSha256, AtlasWidth, AtlasHeight, Frames, InitialFrameId, new Vector2(.5F, 0F), Size);
+    /// <summary>This billboard, cut from <paramref name="source"/>, as an actor's sprite. An actor's pose is where it stands, so the feet sit on the pose, not the billboard's centre.</summary>
+    internal NormalizedActorSprite Standing((int Archive, int Record) source) =>
+        new(TexturePath, TextureSha256, AtlasWidth, AtlasHeight, Frames, InitialFrameId, new Vector2(.5F, 0F), Size) { SourceTexture = source };
 }
 internal sealed record NormalizedTerrainTexture(string TexturePath, ContentSha256 TextureSha256);
 /// <summary>Ruleset input projected from an importer-owned source population placement.</summary>

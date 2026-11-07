@@ -876,13 +876,25 @@ public sealed class PublishedContentDeliveryTests
             }
         });
 
+        // Refreshed people stand in for classic records as one-frame 8-bit RGBA atlases of their stated size.
+        JsonElement[] people = [.. section.GetProperty("people").EnumerateArray()];
+        Assert.NotEmpty(people);
+        Assert.Equal(people.Length, art.People.Count);
+        Assert.All(art.People.Values, person =>
+        {
+            ReadOnlySpan<byte> png = content.ReadBytes(person.File.Path).Span;
+            Assert.Single(person.Frames);
+            Assert.Equal([8, 6, 0, 0, 0], png[24..29].ToArray());
+            Assert.Equal((person.Width, person.Height), (BinaryPrimitives.ReadInt32BigEndian(png[16..20]), BinaryPrimitives.ReadInt32BigEndian(png[20..24])));
+        });
+
         // The payload states the bytes of every refreshed file, and names every file the refreshed media carries.
         JsonElement[] owners = [.. images.SelectMany(image => image.TryGetProperty("dyeMask", out JsonElement mask) ? [image, mask] : new[] { image })];
         JsonElement[] files = [.. owners, .. owners.Where(owner => owner.TryGetProperty("world", out _)).Select(owner => owner.GetProperty("world")),
             .. section.GetProperty("effects").EnumerateArray(), section.GetProperty("effectGlow"),
             .. section.GetProperty("meshes").EnumerateArray().DistinctBy(mesh => mesh.GetProperty("path").GetString()), .. surfaces,
             .. flats, .. flats.Where(flat => flat.TryGetProperty("emission", out _)).Select(flat => flat.GetProperty("emission")),
-            .. section.GetProperty("people").EnumerateArray().DistinctBy(person => person.GetProperty("path").GetString())];
+            .. people.DistinctBy(person => person.GetProperty("path").GetString())];
         foreach (JsonElement file in files)
         {
             byte[] bytes = content.ReadBytes(file.GetProperty("path").GetString()!).ToArray();
