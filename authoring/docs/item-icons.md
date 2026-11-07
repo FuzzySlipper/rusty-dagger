@@ -77,6 +77,9 @@ World flats promote through `reduce.crunch_sprites`: `FLAT_CRUNCH` pixels to a c
 one ART_PAL subset across a record's frames, drawn with nearest filtering so they sit with the terrain's crunch.
 Placed people promote the same way at `PEOPLE_CRUNCH` pixels to a classic pixel (3), on the whole of ART_PAL, because a subset
 drops small accents such as gold amulets and jewels. Each is one standing frame; records with the same frame share one atlas.
+Once people's art is settled, `matte.py` cleans their cut-outs with a BiRefNet mask from ComfyUI, about a second a figure: it removes the
+generation ground left inside the silhouette and fills holes opened in the figure, and leaves everything else, including hand edits. It
+keeps each final and mask under `gen-raw/people/pre-matte/`, so reruns start from the same art; `finalize.py` drops them when a final is replaced.
 
 A world flat's subject is a design choice, not always a copy. Gore translates to gothic Halloween content in the same rough
 outline and place: bodies on stakes become skeletons, severed heads become skulls, heaps of corpses become heaps of bones, in
