@@ -5,7 +5,7 @@ Generic image tooling stays in the asset-pipeline checkout; everything Dagger-sp
 
 ```
 authoring/
-  docs/        process docs (item-icons.md, conversion-plan.md, weapons.md); reference/ holds the asset-pipeline-era study docs
+  docs/        process docs (item-icons.md, conversion-plan.md, weapons.md, people-animation.md); reference/ holds the asset-pipeline-era study docs
   tools/       scripts (items/ serves every area)
   specs/       tracked contract specs per area and batch (items, worn, paper-doll, spells, effects)
   ledger/      tracked status and notes per sprite
