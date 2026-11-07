@@ -270,17 +270,91 @@ public sealed class DaggerfallHorizonGroundTests
         Assert.Throws<InvalidOperationException>(() => DaggerfallTerrainRelief.Read(bytes.AsSpan(0, bytes.Length - 1)));
     }
 
+    [Fact]
+    public void A_river_cuts_its_channel_into_walked_and_far_ground_alike_and_banks_it_back_into_the_land()
+    {
+        const double surface = 480, halfWidth = 8, x = 3.5 * Size, z = 3 * Size;
+        DaggerfallTerrainSet terrain = Terrain(8, 8, Relief(metres: 500, share: 255), River(surface, halfWidth));
+        DaggerfallHorizonGround ground = Ground(terrain);
+
+        // The rivers are measured from the heightmap's corner, a map pixel west of the ground's.
+        double middle = ground.Height(x + Size, z), lip = ground.Height(x + Size, z + halfWidth + 5), away = ground.Height(x + Size, z + 200);
+        Assert.True(middle < surface - 1, $"the channel's bed stands at {middle}");
+        Assert.InRange(lip, surface, surface + 1);
+        Assert.Equal(500, away, 1);
+    }
+
+    [Fact]
+    public void Gullies_fade_out_toward_a_channel_so_the_land_beside_a_river_never_falls_below_it()
+    {
+        DaggerfallTerrainRivers rivers = DaggerfallTerrainRivers.Read(River(480, 8));
+        double x = 3.5 * Size, z = 3 * Size;
+
+        Assert.Equal(0, rivers.GullyShare(x, z));
+        Assert.Equal(0, rivers.GullyShare(x, z + 20));
+        Assert.InRange(rivers.GullyShare(x, z + 70), .01, .99);
+        Assert.Equal(1, rivers.GullyShare(x, z + 400));
+    }
+
+    [Fact]
+    public void A_sampling_too_coarse_for_a_channel_leaves_it_out_and_a_coarser_ring_widens_one_it_can_hold()
+    {
+        DaggerfallTerrainRivers rivers = DaggerfallTerrainRivers.Read(River(480, 8));
+        double x = 3.5 * Size, z = 3 * Size;
+
+        Assert.False(rivers.InChannel(x, z + 12, 12.8));
+        Assert.True(rivers.InChannel(x, z + 12, 51.2));
+        Assert.False(rivers.InChannel(x, z, 400));
+    }
+
+    [Fact]
+    public void Each_section_of_water_belongs_to_one_map_pixel_and_a_course_at_the_sea_leaves_it_to_the_sheets()
+    {
+        DaggerfallTerrainRivers rivers = DaggerfallTerrainRivers.Read(River(480, 8));
+
+        Assert.Equal(11, rivers.Sections(3, 3).Count() + rivers.Sections(4, 3).Count());
+        Assert.Empty(DaggerfallTerrainRivers.Read(River(DaggerfallHorizonGround.OceanMetres, 8)).Sections(3, 3));
+    }
+
+    [Fact]
+    public void Rivers_of_the_wrong_length_are_refused()
+    {
+        byte[] bytes = River(10, 8);
+
+        Assert.Throws<InvalidOperationException>(() => DaggerfallTerrainRivers.Read(bytes.AsSpan(0, bytes.Length - 1)));
+    }
+
+    /// <summary>One straight course across the middle of a map pixel, level enough to read a cross-section.</summary>
+    private static byte[] River(double surface, double halfWidth)
+    {
+        const int stations = 12;
+        byte[] bytes = new byte[8 + 4 + (stations * 16)];
+        "RVR1"u8.CopyTo(bytes);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(4), 1);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(8), stations);
+        for (int s = 0; s < stations; s++)
+        {
+            int at = 12 + (s * 16);
+            System.Buffers.Binary.BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(at), (float)((3 * Size) + (s * 100)));
+            System.Buffers.Binary.BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(at + 4), (float)(3 * Size));
+            System.Buffers.Binary.BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(at + 8), (float)(surface - (s * .01)));
+            System.Buffers.Binary.BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(at + 12), (float)halfWidth);
+        }
+
+        return bytes;
+    }
+
     /// <summary>A flat relief over the whole map: flat ground takes no gullies, so a height reads back as written.</summary>
     private static byte[] Relief(float metres, byte share)
     {
-        const int width = 2_000, height = 1_000;
-        byte[] bytes = new byte[12 + (width * height * 5)];
-        "RLF1"u8.CopyTo(bytes);
-        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(4), width);
-        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(8), height);
+        const int width = 2_000, height = 1_000, header = 20;
+        byte[] bytes = new byte[header + (width * height * 3)];
+        "RLF2"u8.CopyTo(bytes);
+        foreach (int at in new[] { 4, 12 }) System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(at), width);
+        foreach (int at in new[] { 8, 16 }) System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(at), height);
         for (int i = 0; i < width * height; i++)
-            System.Buffers.Binary.BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(12 + (i * 4)), metres);
-        bytes.AsSpan(12 + (width * height * 4)).Fill(share);
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(header + (i * 2)), (ushort)(metres * 8));
+        bytes.AsSpan(header + (width * height * 2)).Fill(share);
         return bytes;
     }
 
@@ -299,7 +373,7 @@ public sealed class DaggerfallHorizonGroundTests
         return new DaggerfallTerrainSet(width, height, heights, () => samples);
     }
 
-    private static DaggerfallTerrainSet Terrain(int width, int height, byte[]? relief = null)
+    private static DaggerfallTerrainSet Terrain(int width, int height, byte[]? relief = null, byte[]? rivers = null)
     {
         byte[] heights = new byte[width * height];
         byte[] samples = new byte[width * height * 25];
@@ -313,6 +387,7 @@ public sealed class DaggerfallHorizonGroundTests
         }
 
         return new DaggerfallTerrainSet(width, height, heights, () => samples,
-            relief is null ? null : () => DaggerfallTerrainRelief.Read(relief));
+            relief is null ? null : () => DaggerfallTerrainRelief.Read(relief),
+            rivers is null ? null : () => DaggerfallTerrainRivers.Read(rivers));
     }
 }

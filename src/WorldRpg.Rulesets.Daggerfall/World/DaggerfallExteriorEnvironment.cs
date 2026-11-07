@@ -63,10 +63,11 @@ internal readonly record struct DaggerfallExteriorWaterVolume(
     Vector3 Minimum,
     Vector3 Maximum,
     int TileWidth = 1,
-    int TileHeight = 1)
+    int TileHeight = 1,
+    int RiverSection = 0)
 {
     /// <summary>Stable product identity for this source water rectangle, independent of Engine origin.</summary>
-    internal ulong StableId => DaggerfallExteriorEnvironment.WaterObjectId(Cell, TileX, TileY, TileWidth, TileHeight);
+    internal ulong StableId => DaggerfallExteriorEnvironment.WaterObjectId(Cell, TileX, TileY, TileWidth, TileHeight, RiverSection);
 
     /// <summary>Projects this source tile into the current Engine-local frame for movement and triggers.</summary>
     internal CharacterWaterVolume ToCharacterVolume(DaggerfallExteriorWorldOrigin origin) =>
@@ -237,7 +238,7 @@ internal sealed class DaggerfallExteriorEnvironment
             staged.Add(cell, new(
                 cell,
                 variant,
-                BuildWater(cell, terrain),
+                [.. BuildWater(cell, terrain), .. BuildRiverWater(cell, surface)],
                 terrain,
                 BuildNature(cell, surface, variant, location, terrain)));
         }
@@ -248,6 +249,11 @@ internal sealed class DaggerfallExteriorEnvironment
         _origin = origin;
         _initialized = true;
     }
+
+    /// <summary>How many metres a river may fall across one section and still hold water to swim in.</summary>
+    private const double SwimmableFall = 2;
+    /// <summary>A river box's depth under its surface: past any channel's bed, which the ground stops at anyway.</summary>
+    private const float RiverVolumeDepth = 12;
 
     internal bool TryReadWater(Vector3 localPosition, out DaggerfallExteriorWaterVolume volume)
     {
@@ -266,7 +272,7 @@ internal sealed class DaggerfallExteriorEnvironment
     internal static ulong WaterObjectId(DaggerfallExteriorCellId cell, int tileX, int tileY) =>
         WaterObjectId(cell, tileX, tileY, 1, 1);
 
-    internal static ulong WaterObjectId(DaggerfallExteriorCellId cell, int tileX, int tileY, int tileWidth, int tileHeight)
+    internal static ulong WaterObjectId(DaggerfallExteriorCellId cell, int tileX, int tileY, int tileWidth, int tileHeight, int riverSection = 0)
     {
         const int coordinateBits = 24;
         const uint coordinateMask = (1U << coordinateBits) - 1U;
@@ -288,6 +294,7 @@ internal sealed class DaggerfallExteriorEnvironment
         value = MixWaterIdentity(value, (uint)tileY);
         value = MixWaterIdentity(value, (uint)tileWidth);
         value = MixWaterIdentity(value, (uint)tileHeight);
+        if (riverSection != 0) value = MixWaterIdentity(value, (uint)riverSection);
         value = 0xDA00_0000_0000_0000UL | (value & 0x00FF_FFFF_FFFF_FFFFUL);
         return value == 0 ? 1UL : value;
     }
@@ -406,6 +413,30 @@ internal sealed class DaggerfallExteriorEnvironment
 
     private readonly record struct WaterRectangle(int X, int Y, int Width, int Height);
 
+    /// <summary>
+    /// The water of the rivers in a cell, one box a section, topped at that section's surface so a swimmer floats where the
+    /// ribbon draws. A box can overhang its banks, which stand above its top. Water falling faster than <see cref="SwimmableFall"/>
+    /// is a torrent with no pool to swim in, so it has none and anyone there walks the bed.
+    /// </summary>
+    private static IEnumerable<DaggerfallExteriorWaterVolume> BuildRiverWater(DaggerfallExteriorCellId cell, DaggerfallTerrainSurface surface)
+    {
+        if (surface.Rivers is not { } rivers) yield break;
+        const float size = DaggerfallTerrainSurfaceBuilder.HorizontalSize, tile = DaggerfallTerrainSurfaceBuilder.SampleSpacing;
+        // A cell's corner is heightmap pixel (X - 1, Y), its rows running north from there.
+        double cornerX = (cell.X - 1) * (double)size, cornerZ = cell.Y * (double)size;
+        int section = 0;
+        foreach (DaggerfallRiverSection water in rivers.Sections(cell.X - 1, cell.Y - 1))
+        {
+            section++;
+            if (Math.Abs(water.From.Surface - water.To.Surface) > SwimmableFall) continue;
+            double[] xs = [water.From.LeftX, water.From.RightX, water.To.LeftX, water.To.RightX], zs = [water.From.LeftZ, water.From.RightZ, water.To.LeftZ, water.To.RightZ];
+            float minX = (float)(xs.Min() - cornerX), maxX = (float)(xs.Max() - cornerX), minZ = (float)(zs.Min() - cornerZ), maxZ = (float)(zs.Max() - cornerZ);
+            float top = (float)((water.From.Surface + water.To.Surface) / 2);
+            int tileX = Math.Clamp((int)(minX / tile), 0, TerrainTileDimension - 1), tileY = Math.Clamp((int)(-maxZ / tile), 0, TerrainTileDimension - 1);
+            yield return new(cell, tileX, tileY, new(minX, top - RiverVolumeDepth, minZ), new(maxX, top, maxZ), 1, 1, section);
+        }
+    }
+
     private static IReadOnlyList<DaggerfallExteriorTerrainTile> BuildTerrainTiles(
         DaggerfallExteriorCellId cell,
         DaggerfallTerrainSurface surface,
@@ -502,6 +533,7 @@ internal sealed class DaggerfallExteriorEnvironment
                 if (hasLocationRect && tileX >= locationMinX && tileX < locationMaxX
                     && tileY >= locationMinY && tileY < locationMaxY)
                     continue;
+                if (surface.OnBank(tileX, tileY)) continue;
 
                 int terrainKind = terrain[(tileY * TerrainTileDimension) + tileX].TextureRecord;
                 float chance = terrainKind switch

@@ -45,6 +45,28 @@ public sealed class DaggerfallSwimmingPolicyTests
     }
 
     [Fact]
+    public void Leaving_one_of_two_overlapping_waters_keeps_the_swimmer_in_the_other()
+    {
+        const ulong player = 7;
+        CharacterWaterVolume upstream = new(41, new Vector3(0f, 0f, 0f), new Vector3(4f, 3f, 4f));
+        CharacterWaterVolume downstream = new(42, new Vector3(3f, 0f, 0f), new Vector3(8f, 2.8f, 4f));
+        DaggerfallSwimmingPolicy policy = new(DaggerfallSwimmingTuning.Classic);
+        void Fact(bool enter, CharacterWaterVolume volume) =>
+            policy.ObserveTriggers([new SpatialTriggerFact(enter, volume.Trigger, player, 1, SpatialTriggerCause.Movement)], player, [upstream, downstream]);
+
+        Fact(true, upstream);
+        Fact(true, downstream);
+        Assert.Equal(downstream.Trigger, policy.ActiveWaterTrigger);
+
+        // Turning back upstream leaves the box entered last while still inside the first.
+        Fact(false, downstream);
+        Assert.Equal(upstream.Trigger, policy.ActiveWaterTrigger);
+
+        Fact(false, upstream);
+        Assert.Null(policy.ActiveWaterTrigger);
+    }
+
+    [Fact]
     public void Water_breathing_keeps_breath_empty_then_removal_starts_a_new_deep_breath()
     {
         DaggerfallSwimmingPolicy policy = new(DaggerfallSwimmingTuning.Classic);

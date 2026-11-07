@@ -38,6 +38,7 @@ internal sealed class DaggerfallHorizon : IDisposable
     private readonly MeshResource _sheet;
     private readonly Appearance _sheetLook;
     private readonly List<(ulong Id, Vector3 At)> _sheets = [];
+    private readonly DaggerfallRiverWater? _rivers;
     private readonly DaggerfallWaterTuning _waterTuning;
     private readonly Dictionary<int, RenderResource> _waterArt = [];
     private int _waterArchive = -1;
@@ -55,7 +56,7 @@ internal sealed class DaggerfallHorizon : IDisposable
     private bool _nearSeen;
     private bool _disposed;
 
-    internal DaggerfallHorizon(IEngineContext engine, DaggerfallHorizonGround ground, DaggerfallHorizonTuning tuning, DaggerfallWaterTuning water, float repeatMetres)
+    internal DaggerfallHorizon(IEngineContext engine, DaggerfallHorizonGround ground, DaggerfallHorizonTuning tuning, DaggerfallWaterTuning water, float repeatMetres, DaggerfallTerrainRivers? rivers)
     {
         ArgumentNullException.ThrowIfNull(water);
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
@@ -68,6 +69,7 @@ internal sealed class DaggerfallHorizon : IDisposable
         _water = engine.Graphics.CreateMaterial(water.Material(default, Vector3.One));
         _sheet = engine.Graphics.CreateMeshResource(Sheet(_water, repeatMetres));
         _sheetLook = engine.Graphics.CreateMeshAppearance(_sheet);
+        _rivers = rivers is null ? null : new(engine, rivers, _water, repeatMetres);
     }
 
     /// <summary>The clear-weather haze while the horizon stands, or none when the classic fog applies.</summary>
@@ -96,6 +98,7 @@ internal sealed class DaggerfallHorizon : IDisposable
         Follow(x, z, winter, far);
         ShowNear(session, origin, x, z);
         ShowSea(origin, x, z, winter);
+        _rivers?.Follow(origin, x, z);
         if (far) ShowFar(session, origin, seen);
         else HideFar();
     }
@@ -243,7 +246,11 @@ internal sealed class DaggerfallHorizon : IDisposable
     {
         foreach ((ulong id, Vector3 at) in _sheets)
             facts.Add(new AppearanceFact(id, false, 0, new Transform(at, Quaternion.Identity, Vector3.One), _sheetLook, true, RenderLayer.Scene));
+        _rivers?.AppendFacts(facts);
     }
+
+    /// <summary>A snapshot was accepted: river water that left it is let go.</summary>
+    internal void CompleteSnapshot() => _rivers?.CompleteSnapshot();
 
     /// <summary>
     /// One map pixel of flat water at the sea's surface. Land stands through it, so the shore is wherever ground meets the
@@ -263,6 +270,7 @@ internal sealed class DaggerfallHorizon : IDisposable
     internal void Hide()
     {
         _sheets.Clear();
+        _rivers?.Hide();
         HideFar();
         if (_near is not null && _nearSeen)
         {
@@ -292,6 +300,16 @@ internal sealed class DaggerfallHorizon : IDisposable
         Vector3 engineLocal = local - origin.Compensation;
         double x = engineLocal.X + (origin.MapPixelX * CellSize), z = engineLocal.Z + (origin.MapPixelY * CellSize);
         return _ground.Height(x + east, z + south) - _ground.Height(x, z);
+    }
+
+    /// <summary>Where the nearest river lies from a player at <paramref name="local"/>, for finding water by hand.</summary>
+    internal string NearestRiver(DaggerfallExteriorWorldOrigin origin, Vector3 local, DaggerfallTerrainSet terrain)
+    {
+        Vector3 engineLocal = local - origin.Compensation;
+        double x = engineLocal.X + (origin.MapPixelX * CellSize) - CellSize, z = engineLocal.Z + (origin.MapPixelY * CellSize);
+        return terrain.Rivers?.NearestStation(x, z) is { } river
+            ? string.Create(CultureInfo.InvariantCulture, $"River: {river.East:F0} m east, {river.South:F0} m south, surface {river.Surface:F1} m, {river.HalfWidth * 2:F0} m wide; ground there {_ground.Height(x + CellSize + river.East, z + river.South):F1} m, frame {origin.Compensation.Y:F1} m.")
+            : "This terrain carries no rivers.";
     }
 
     /// <summary>How steep the land is at walking scale, on this ground and the classic's, and where it is worst.</summary>
@@ -350,6 +368,7 @@ internal sealed class DaggerfallHorizon : IDisposable
     /// <summary>Lets go of the sea, once a snapshot without it has been accepted and before the water art it wears is released.</summary>
     internal void ReleaseSea()
     {
+        _rivers?.Release();
         _sheetLook.Dispose();
         _sheet.Dispose();
         _water.Dispose();

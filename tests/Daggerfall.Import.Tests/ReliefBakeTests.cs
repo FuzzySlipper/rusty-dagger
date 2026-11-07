@@ -50,18 +50,20 @@ public sealed class ReliefBakeTests
     }
 
     [Fact]
-    public void The_published_form_is_a_header_then_heights_then_shares()
+    public void The_published_form_is_a_header_then_heights_in_eighths_then_shares()
     {
-        DaggerfallRelief relief = new(2, 1, [1.5F, 2.5F], [0, 255]);
+        DaggerfallRelief relief = new(2, 1, [1.5F, 2.5F], 2, 1, [0, 255]);
 
         byte[] bytes = relief.Encode();
 
-        Assert.Equal("RLF1"u8.ToArray(), bytes[..4]);
+        Assert.Equal("RLF2"u8.ToArray(), bytes[..4]);
         Assert.Equal(2, BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(4)));
         Assert.Equal(1, BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(8)));
-        Assert.Equal(2.5F, BinaryPrimitives.ReadSingleLittleEndian(bytes.AsSpan(16)));
+        Assert.Equal(2, BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(12)));
+        Assert.Equal(1, BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(16)));
+        Assert.Equal(20, BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan(22)));
         Assert.Equal(255, bytes[^1]);
-        Assert.Equal(12 + 10, bytes.Length);
+        Assert.Equal(20 + 4 + 2, bytes.Length);
     }
 
     [Fact]
@@ -71,6 +73,72 @@ public sealed class ReliefBakeTests
         Assert.Equal(((100 * 8) + (10 * 4)) * 1.5, ReliefBake.ClassicMetres(100, 10), 6);
         Assert.Equal(1539 * 1.5, ReliefBake.ClassicMetres(255, 255), 6);
     }
+
+    [Fact]
+    public void A_finer_stage_refines_the_coarse_landscape_on_its_own_lattice()
+    {
+        ReliefStage[] stages = [new(ReliefBake.NodesPerPixel, 2, 10), new(ReliefBake.NodesPerPixel * 2, 1, 5)];
+
+        DaggerfallRelief relief = ReliefBake.Bake(Island([]), stages);
+
+        Assert.Equal(Width * ReliefBake.NodesPerPixel * 2, relief.Width);
+        Assert.Equal(relief.Width * relief.Height, relief.Metres.Length);
+        Assert.Equal(ReliefBake.OceanMetres, relief.Metres[0], 3);
+        Assert.Equal(ReliefBake.Bake(Island([]), stages).Encode(), relief.Encode());
+    }
+
+    [Fact]
+    public void A_river_falls_all_the_way_from_its_head_and_ends_on_the_sea_or_what_it_joins()
+    {
+        DaggerfallRivers rivers = Rivers(Island([]));
+
+        Assert.NotEmpty(rivers.Courses);
+        foreach (DaggerfallRiverStation[] course in rivers.Courses)
+        {
+            for (int s = 1; s < course.Length; s++) Assert.True(course[s].Surface < course[s - 1].Surface, "a river rose on its way down");
+            DaggerfallRiverStation end = course[^1];
+            bool sea = Math.Abs(end.Surface - ReliefBake.OceanMetres) < .01;
+            bool joins = rivers.Courses.Any(other => other != course && other.Any(station => station.X == end.X && station.Z == end.Z && station.Surface == end.Surface));
+            Assert.True(sea || joins, "a river stopped in the hills");
+        }
+    }
+
+    [Fact]
+    public void A_river_tapers_in_from_its_head_rather_than_starting_at_full_width()
+    {
+        DaggerfallRiverStation[] longest = Rivers(Island([])).Courses.MaxBy(course => course.Length)!;
+
+        Assert.True(longest[0].HalfWidth < longest[^1].HalfWidth / 2, $"the head stands {longest[0].HalfWidth} m half wide, the mouth {longest[^1].HalfWidth} m");
+    }
+
+    [Fact]
+    public void A_river_keeps_off_every_location_it_would_otherwise_run_through()
+    {
+        // Wall the island's middle off: a location levels its map pixel, and any channel through it with that.
+        ReliefPlace place = new(Width / 2, Height / 2, 4);
+        DaggerfallRivers rivers = Rivers(Island([place]));
+
+        double size = 819.2, x0 = (place.MapPixelX - 1) * size, z0 = (place.MapPixelY - 1) * size;
+        Assert.DoesNotContain(rivers.Courses.SelectMany(course => course),
+            station => station.X > x0 && station.X < x0 + size && station.Z > z0 && station.Z < z0 + size);
+    }
+
+    [Fact]
+    public void Rivers_publish_their_stations_course_by_course()
+    {
+        DaggerfallRivers rivers = new([[new(1, 2, 3, 4), new(5, 6, 7, 8)], [new(9, 10, 11, 12)]]);
+
+        byte[] bytes = rivers.Encode();
+
+        Assert.Equal("RVR1"u8.ToArray(), bytes[..4]);
+        Assert.Equal(2, BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(4)));
+        Assert.Equal(2, BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(8)));
+        Assert.Equal(1, BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(12)));
+        Assert.Equal(8 + 8 + (3 * 16), bytes.Length);
+        Assert.Equal(12F, BinaryPrimitives.ReadSingleLittleEndian(bytes.AsSpan(bytes.Length - 4)));
+    }
+
+    private static DaggerfallRivers Rivers(ReliefInput input) => ReliefBake.Bake(input, rounds: 3, steps: 20, sourceSquareKilometres: 8).Rivers;
 
     private static DaggerfallRelief Bake() => ReliefBake.Bake(Island([new(Width / 2, Height / 2, 1)]), rounds: 2, steps: 10);
 

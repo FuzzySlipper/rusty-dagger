@@ -86,6 +86,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         // The samples are read on first use, which is content work no worker may do.
         _ = terrain.Samples;
         _ = terrain.Relief;
+        _ = terrain.Rivers;
         _floor = ValleyFloor(terrain);
     }
 
@@ -139,7 +140,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         {
             double x = tile.SampleX(i), z = tile.SampleZ(j), height = ground[((j + 1) * heightSide) + i + 1];
             // Far cells smooth a slope below the walked ground's, so rock begins at less of one here.
-            Draw(samples, i, j, height <= OceanMetres + SeaMarginMetres ? new(materials.Sea, new(1, 0, 0, 0))
+            Draw(samples, i, j, height <= OceanMetres + SeaMarginMetres || InChannel(x, z, tile.CellSize * 2) ? new(materials.Sea, new(1, 0, 0, 0))
                 : PaintOpen(x, z, height, Slope(ground, heightSide, i, j, tile.CellSize) * _groundTuning.RockFromSlope / _tuning.RockFromSlope, now.Winter, materials));
         }
     }
@@ -156,8 +157,8 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         for (int i = 0; i < side; i++)
         {
             double x = tile.SampleX(i) + offsetX, z = tile.SampleZ(j) + offsetZ, height = ground[((j + 1) * heightSide) + i + 1];
-            // Past the sea's sheet the outer ring's bed shows for up to a tile, so it wears far ground's sea.
-            Draw(samples, i, j, height < OceanMetres && tile.CellSize > Spacing ? new(materials.Sea, new(1, 0, 0, 0))
+            // Past the sea's sheet and the rivers' ribbons the outer ring's bed shows, so it wears far ground's sea.
+            Draw(samples, i, j, tile.CellSize > Spacing && (height < OceanMetres || InChannel(x, z, tile.CellSize * 2)) ? new(materials.Sea, new(1, 0, 0, 0))
                 : PaintNear(x, z, height, Slope(ground, heightSide, i, j, tile.CellSize), now.Winter, materials));
         }
     }
@@ -267,8 +268,13 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
                 : new(ground.Town, new System.Numerics.Vector4(grass, dirt, stone + paving, ruts) / sum);
         }
 
-        return height <= OceanMetres + BeachMetres ? new(ground.Shore, new(0, 1, 0, 0)) : PaintOpen(x, z, height, slope, winter, materials);
+        return height <= OceanMetres + BeachMetres || OnBank(x, z) ? new(ground.Shore, new(0, 1, 0, 0)) : PaintOpen(x, z, height, slope, winter, materials);
     }
+
+    /// <summary>Whether a point of the map lies in a river, as a sampling this coarse holds it. The rivers are measured from the heightmap's corner, a map pixel west of the ground's.</summary>
+    private bool InChannel(double x, double z, double finestMetres) => _terrain.Rivers?.InChannel(x - DaggerfallTerrainSurfaceBuilder.HorizontalSize, z, finestMetres) ?? false;
+
+    private bool OnBank(double x, double z) => _terrain.Rivers?.OnBank(x - DaggerfallTerrainSurfaceBuilder.HorizontalSize, z, Spacing * 2) ?? false;
 
     private ArchiveMaterials Archive(double x, double z, bool winter, GroundMaterials materials) => materials.Archives[GroundArchive(x, z, winter)];
 

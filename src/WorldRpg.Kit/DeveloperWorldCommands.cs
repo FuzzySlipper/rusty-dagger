@@ -50,6 +50,7 @@ public interface IDeveloperWorldSession
 
     /// <summary>Slopes at walking scale from random points across the land, and what a map pixel's surface costs to build.</summary>
     DebugCommandResult GroundSurvey();
+    DebugCommandResult NearestRiver();
 
     /// <summary>What the distant horizon is drawing, and how it is set.</summary>
     DebugCommandResult Horizon();
@@ -102,6 +103,9 @@ public sealed class DeveloperWorldDebugModule(Func<IDeveloperWorldSession> curre
 
     [DebugCommand("world.stand", Description = "Developer: stand the player on the ground EAST and SOUTH metres away, inside the walked window.")]
     public DebugCommandResult Stand(double east, double south) => current().Stand(east, south);
+
+    [DebugCommand("world.river", Description = "Developer: the nearest river's bearing, surface and width.")]
+    public DebugCommandResult NearestRiver() => current().NearestRiver();
 
     [DebugCommand("world.ground-survey", Description = "Developer: slopes at walking scale from random points across the land, and what a surface costs to build.")]
     public DebugCommandResult GroundSurvey() => current().GroundSurvey();
