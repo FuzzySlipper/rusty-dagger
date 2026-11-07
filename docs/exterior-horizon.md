@@ -51,12 +51,14 @@ the Engine refuses. Travel makes a new collider; an Engine origin rebase carries
   would poke through wherever its coarser cells stand above the near ground.
 - **Lift.** The map's ranges rise only a degree or two over the skyline at true
   height. Ground above its valley floor (the lowest ground within about 20 km,
-  smoothed) is multiplied by `lift`, fading in between `liftFromMetres` and
-  `liftFullMetres`. The floor is fixed on the map, not measured from the player: a
+  smoothed) is multiplied by `lift`, fading in along a straight line between
+  `liftFromMetres` and `liftFullMetres`. An eased fade loses height faster than walking
+  toward a range gains it, so the range would shrink on approach. The floor is fixed on the map, not measured from the player: a
   lift that follows the player moves every tile at once, and tiles sampled either
   side of the change tear arches into the ranges until they are all sampled again.
   The fade's centre follows every `followMetres`, small steps so tiles sampled either
-  side of one barely differ, and a move resamples only the fade zone.
+  side of one barely differ, and a move resamples only the fade zone. Far tiles commit a
+  few at a time, since a step samples hundreds again.
 - **Sky.** The classic paints its horizon into the panorama's lower third, where it
   would float over the real skyline. Each panorama also ships cleared of it, and
   the Engine cloud layer stands in for the low cloud lost with it, drawn in cells anchored

@@ -61,6 +61,21 @@ public sealed class DaggerfallHorizonGroundTests
     }
 
     [Fact]
+    public void A_range_only_ever_grows_as_the_player_walks_toward_it()
+    {
+        DaggerfallHorizonTuning tuning = DaggerfallHorizonTuning.Default;
+        DaggerfallHorizonGround ground = Ground(Terrain(8, 8));
+        const double peakX = 30_000;
+        double floor = ground.Floor(peakX, 0), peak = floor + 1_000, last = 0;
+        for (double away = tuning.LiftFullMetres + 6_000; away >= tuning.LiftFromMetres; away -= 500)
+        {
+            double seen = (ground.Lifted(peak, peakX, 0, new(peakX - away, 0, tuning.Lift, false)) - floor) / away;
+            Assert.True(seen > last, $"The peak shrinks to {seen:F4} from {last:F4} at {away} m.");
+            last = seen;
+        }
+    }
+
+    [Fact]
     public void A_valley_floor_lies_under_the_ground_and_is_fixed_on_the_map()
     {
         DaggerfallTerrainSet terrain = Terrain(8, 8);

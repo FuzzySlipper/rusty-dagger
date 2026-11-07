@@ -191,8 +191,8 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         double floor = Floor(x, z), above = height - floor;
         if (above <= 0 || frame.Lift == 1) return height;
         double away = Math.Max(Math.Abs(x - frame.CentreX), Math.Abs(z - frame.CentreZ));
+        // A straight fade, because an eased one takes height off a range faster than walking toward it adds it, and the range shrinks on approach.
         double share = Math.Clamp((away - _tuning.LiftFromMetres) / (_tuning.LiftFullMetres - _tuning.LiftFromMetres), 0, 1);
-        share = share * share * (3 - (2 * share));
         return floor + (above * (1 + ((frame.Lift - 1) * share)));
     }
 
