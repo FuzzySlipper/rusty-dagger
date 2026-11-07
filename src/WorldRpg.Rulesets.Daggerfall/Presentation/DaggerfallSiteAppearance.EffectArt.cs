@@ -89,7 +89,7 @@ internal sealed partial class DaggerfallSiteAppearance
         if (flat.Mesh is null && WorldMesh(flat.Definition.Source, flat.Definition.Summer.Size.X) is { } mesh) (flat.Mesh, flat.MeshScale) = mesh;
     }
 
-    /// <summary>Gives a standing person the set has art for a refreshed sprite, placed where the classic one stands.</summary>
+    /// <summary>Gives a standing person the set has art for a refreshed sprite, at the classic size.</summary>
     private void AttachRefreshedPerson(ActorVisual visual)
     {
         NormalizedActorSprite sprite = visual.Sprite;
@@ -105,8 +105,9 @@ internal sealed partial class DaggerfallSiteAppearance
             atlases.Add(atlas);
             personAtlases.Add(art.File.Path, atlas);
         }
+        // A painted hem or foot can reach below the classic frame, so the person stands on the art's own base.
         (Vector2 size, Vector2 pivot) = art.Placed(sprite.Size, sprite.Pivot);
-        visual.Refreshed = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, sprite.InitialFrameId, pivot, size,
+        visual.Refreshed = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, sprite.InitialFrameId, pivot with { Y = 0F }, size,
             BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F)));
     }
 
