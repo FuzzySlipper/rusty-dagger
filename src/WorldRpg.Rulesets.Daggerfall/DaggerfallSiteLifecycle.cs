@@ -90,6 +90,7 @@ internal sealed class DaggerfallSiteLifecycle
     private Func<IEnumerable<Vector3>> _walkers = static () => [];
     private DaggerfallExteriorGroundCollider? _groundCollider;
     private Action<List<AppearanceFact>>? _seaFacts;
+    private Action? _seaAccepted;
     private Action? _releaseSea;
     // A window was admitted whose ground is still to stand: what arrives with it waits (CollisionPending).
     private bool _groundAwaited;
@@ -1723,6 +1724,8 @@ internal sealed class DaggerfallSiteLifecycle
         List<Exception>? failures = null;
         try { _exteriorTerrainAppearance?.CompleteAcceptedSnapshot(); }
         catch (Exception exception) { (failures ??= []).Add(exception); }
+        try { _seaAccepted?.Invoke(); }
+        catch (Exception exception) { (failures ??= []).Add(exception); }
         ReleaseRetiredResidentLocations(ref failures);
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
@@ -2070,7 +2073,7 @@ internal sealed class DaggerfallSiteLifecycle
     /// calls this once while it is disposed; the exterior window cannot be admitted afterwards.
     /// </summary>
     /// <summary>Names who adds the sea to the exterior's snapshot, and how it lets go when the exterior retires.</summary>
-    internal void DrawSeaWith(Action<List<AppearanceFact>> facts, Action release) => (_seaFacts, _releaseSea) = (facts, release);
+    internal void DrawSeaWith(Action<List<AppearanceFact>> facts, Action accepted, Action release) => (_seaFacts, _seaAccepted, _releaseSea) = (facts, accepted, release);
 
     internal void RetireExteriorAppearance()
     {

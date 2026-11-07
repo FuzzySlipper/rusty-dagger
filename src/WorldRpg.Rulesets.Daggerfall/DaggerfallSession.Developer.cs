@@ -173,6 +173,10 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
         return Teleport(feet.X + east, feet.Y + rise + .05, feet.Z + south, force: true);
     }
 
+    public DebugCommandResult NearestRiver() => _sites.ActiveExteriorOrigin is { } origin && State.PlayerControl.Position is { } position
+        ? DebugCommandResult.Success(_horizon.NearestRiver(origin, position.ToVector(), _definitions.Terrain))
+        : Refused("The player is not outdoors.");
+
     public DebugCommandResult GroundSurvey() => DebugCommandResult.Success(_horizon.GroundSurvey(_definitions.Terrain));
 
     public DebugCommandResult Horizon() => DebugCommandResult.Success(_horizon.Readout());

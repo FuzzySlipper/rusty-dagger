@@ -27,6 +27,26 @@ public sealed class DaggerfallExteriorEnvironmentTests
     }
 
     [Fact]
+    public void A_river_stands_a_box_of_water_at_its_own_surface_and_a_torrent_has_none()
+    {
+        // Map pixel (3, 2) spans the heightmap's pixel (2, 1): the course runs through its middle, gentle then falling hard.
+        const float size = DaggerfallExteriorCellResidency.CellSize, gentle = 300, drop = 20;
+        DaggerfallExteriorCellId cell = new(3, 2);
+        DaggerfallTerrainRivers rivers = Rivers(
+            [(2.2F * size, 1.5F * size, gentle, 10), (2.3F * size, 1.5F * size, gentle - .5F, 10), (2.4F * size, 1.5F * size, gentle - 1, 10),
+             (2.5F * size, 1.5F * size, gentle - 1 - drop, 10), (2.6F * size, 1.5F * size, gentle - 1 - (2 * drop), 10)]);
+        DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
+        environment.Reconcile([cell], DaggerfallExteriorWorldOrigin.At(cell), _ => Surface(100F, rivers: rivers), Locations(), Grids(224, "temperate"));
+
+        DaggerfallExteriorWaterVolume[] water = [.. environment.WaterVolumes];
+        Assert.Equal(2, water.Length);
+        Assert.Equal(gentle - .25F, water[0].Maximum.Y, 3);
+        Assert.Equal(gentle - .75F, water[1].Maximum.Y, 3);
+        Assert.NotEqual(water[0].StableId, water[1].StableId);
+        Assert.InRange(water[0].Minimum.Z, -.6F * size, -.4F * size);
+    }
+
+    [Fact]
     public void Water_tiles_project_through_the_current_origin_with_stable_trigger_ids()
     {
         DaggerfallExteriorCellId cell = new(12, 34);
@@ -254,7 +274,22 @@ public sealed class DaggerfallExteriorEnvironmentTests
         return environment;
     }
 
-    private static DaggerfallTerrainSurface Surface(float height, int sourceWorldHeight = 128)
+    private static DaggerfallTerrainRivers Rivers((float X, float Z, float Surface, float HalfWidth)[] stations)
+    {
+        byte[] bytes = new byte[12 + (stations.Length * 16)];
+        "RVR1"u8.CopyTo(bytes);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(4), 1);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(8), stations.Length);
+        for (int s = 0; s < stations.Length; s++)
+        {
+            float[] values = [stations[s].X, stations[s].Z, stations[s].Surface, stations[s].HalfWidth];
+            for (int v = 0; v < 4; v++) System.Buffers.Binary.BinaryPrimitives.WriteSingleLittleEndian(bytes.AsSpan(12 + (s * 16) + (v * 4)), values[v]);
+        }
+
+        return DaggerfallTerrainRivers.Read(bytes);
+    }
+
+    private static DaggerfallTerrainSurface Surface(float height, int sourceWorldHeight = 128, DaggerfallTerrainRivers? rivers = null)
     {
         int count = DaggerfallTerrainSurfaceBuilder.SampleDimension * DaggerfallTerrainSurfaceBuilder.SampleDimension;
         Vector3[] vertices = Enumerable.Range(0, count)
@@ -264,6 +299,7 @@ public sealed class DaggerfallExteriorEnvironmentTests
             Enumerable.Repeat(height / DaggerfallTerrainSurfaceBuilder.TerrainVerticalSize, count).ToArray())
         {
             SourceWorldHeight = sourceWorldHeight,
+            Rivers = rivers,
         };
     }
 

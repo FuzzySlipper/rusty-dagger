@@ -19,6 +19,8 @@ internal static class DaggerfallPresentationObjectIds
     internal const ulong Maximum = (1UL << 53) - 1;
 
     private const ulong GameplayEnd = 1UL << 48;
+    /// <summary>Marks a map pixel's river water, above any coordinate the sea's sheets reach.</summary>
+    private const ulong RiverBit = 1UL << 40;
     private const ulong NatureBase = 1UL << 49;
     private const ulong LocationBase = 1UL << 50;
     internal const ulong TransientVisualFloor = 3UL << 51;
@@ -68,6 +70,13 @@ internal static class DaggerfallPresentationObjectIds
     {
         RequireCell(x, y, "Sea");
         return GameplayEnd | ((ulong)(uint)x << CellBits) | (uint)y;
+    }
+
+    /// <summary>A map pixel's river water, in the half of the sea's band no map pixel reaches.</summary>
+    internal static ulong River(int x, int y)
+    {
+        RequireCell(x, y, "River");
+        return GameplayEnd | ((ulong)(uint)x << CellBits) | (uint)y | RiverBit;
     }
 
     /// <summary>A drawn location's static mesh by its index in the location's geometry.</summary>

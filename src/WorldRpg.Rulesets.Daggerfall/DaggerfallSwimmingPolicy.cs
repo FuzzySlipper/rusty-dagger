@@ -67,6 +67,7 @@ internal readonly record struct DaggerfallSwimmingStep(
 internal sealed class DaggerfallSwimmingPolicy
 {
     private readonly DaggerfallSwimmingTuning _tuning;
+    private readonly List<ulong> _overlapping = [];
     private ulong? _activeWaterTrigger;
     private bool _swimming;
     private bool _headSubmerged;
@@ -94,10 +95,13 @@ internal sealed class DaggerfallSwimmingPolicy
         foreach (SpatialTriggerFact fact in facts)
         {
             if (fact.Subject != playerEntity || !admitted.Contains(fact.Trigger)) continue;
-            if (fact.Enter) _activeWaterTrigger = fact.Trigger;
-            else if (_activeWaterTrigger == fact.Trigger) _activeWaterTrigger = null;
+            _overlapping.Remove(fact.Trigger);
+            if (fact.Enter) _overlapping.Add(fact.Trigger);
         }
-        if (_activeWaterTrigger is ulong active && !admitted.Contains(active)) _activeWaterTrigger = null;
+
+        // A river's boxes overlap: leaving one still leaves the swimmer in the one entered last.
+        _overlapping.RemoveAll(trigger => !admitted.Contains(trigger));
+        _activeWaterTrigger = _overlapping.Count == 0 ? null : _overlapping[^1];
     }
 
     internal CharacterWaterVolume? ActiveVolume(ReadOnlySpan<CharacterWaterVolume> volumes)
@@ -198,6 +202,8 @@ internal sealed class DaggerfallSwimmingPolicy
         _currentBreath = saved.CurrentBreath;
         _breathSeconds = saved.BreathSeconds;
         _activeWaterTrigger = saved.ActiveWaterTrigger;
+        _overlapping.Clear();
+        if (saved.ActiveWaterTrigger is ulong active) _overlapping.Add(active);
     }
 }
 

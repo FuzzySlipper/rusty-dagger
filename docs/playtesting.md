@@ -112,6 +112,7 @@ report them; names with spaces are quoted.
 | `world.weather KIND` | Sets the weather everywhere until the next day: `Sunny`, `Cloudy`, `Overcast`, `Fog`, `Rain`, `Thunder` or `Snow`. |
 | `world.ground-weather WET SNOW` | Leaves open ground this wet and this snowed, both from 0 to 1; weather carries on from there. |
 | `world.stand EAST SOUTH` | Stands the player on the ground that far away, inside the walked window: a way out into the wilderness. |
+| `world.river` | The nearest river's bearing, surface and width, to find water with `world.stand`. |
 | `world.ground-survey` | Slopes at walking scale from random land points, and what a surface costs to build. |
 | `world.horizon` | What the distant horizon is drawing: its lift and base, the haze, and its tiles. |
 | `world.horizon-set LIFT FOG` | Sets the horizon's lift (1 is true height) and haze per metre for this run, to judge them by eye. |

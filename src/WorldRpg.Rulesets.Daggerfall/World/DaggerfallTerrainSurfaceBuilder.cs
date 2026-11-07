@@ -37,10 +37,21 @@ internal sealed class DaggerfallTerrainSurface
 
     /// <summary>The source map-pixel elevation used by nature density, before terrain interpolation/flattening.</summary>
     internal int SourceWorldHeight { get; init; }
+
+    /// <summary>The rivers cut into this surface, where the data carries them.</summary>
+    internal DaggerfallTerrainRivers? Rivers { get; init; }
+
+    /// <summary>Whether a terrain tile's middle lies on a channel's bed or lip.</summary>
+    internal bool OnBank(int tileX, int tileY)
+    {
+        if (Rivers is not { } rivers) return false;
+        (double mapX, double mapY) = DaggerfallTerrainSurfaceBuilder.ReliefPoint(MapPixelX, MapPixelY, tileX + .5, tileY + .5);
+        return rivers.OnBank(mapX * DaggerfallTerrainSurfaceBuilder.HorizontalSize, mapY * DaggerfallTerrainSurfaceBuilder.HorizontalSize, DaggerfallTerrainSurfaceBuilder.SampleSpacing * 2);
+    }
 }
 
 /// <summary>The source samples behind one map pixel's surface: its small and large donor windows.</summary>
-internal sealed record DaggerfallTerrainWindow(int MapPixelX, int MapPixelY, float[] Small, float[] Large, DaggerfallTerrainRelief? Relief);
+internal sealed record DaggerfallTerrainWindow(int MapPixelX, int MapPixelY, float[] Small, float[] Large, DaggerfallTerrainRelief? Relief, DaggerfallTerrainRivers? Rivers);
 
 /// <summary>
 /// The source-normalized rectangle the donor uses to flatten one exterior location. The values are
@@ -100,7 +111,7 @@ internal static class DaggerfallTerrainSurfaceBuilder
         ValidateTerrain(terrain, mapPixelX, mapPixelY);
 
         DaggerfallTerrainWindow window = ReadWindow(terrain, mapPixelX, mapPixelY);
-        DaggerfallReliefPatch? patch = terrain.Relief is { } relief ? ReadPatch(relief, mapPixelX, mapPixelY) : null;
+        DaggerfallReliefPatch? patch = terrain.Relief is { } relief ? ReadPatch(relief, terrain.Rivers, mapPixelX, mapPixelY) : null;
         int sampleCount = checked(SampleDimension * SampleDimension);
         Vector3[] vertices = new Vector3[sampleCount];
         float[] normalizedHeights = new float[sampleCount];
@@ -111,6 +122,12 @@ internal static class DaggerfallTerrainSurfaceBuilder
             {
                 float classic = ClassicNormalizedHeight(window, x, y);
                 float normalizedHeight = patch is null ? classic : patch.Blend(classic, x, y);
+                if (window.Rivers is { } rivers)
+                {
+                    (double mapX, double mapY) = ReliefPoint(mapPixelX, mapPixelY, x, y);
+                    normalizedHeight = Carved(rivers, normalizedHeight, mapX, mapY, SampleSpacing * 2);
+                }
+
                 int index = Index(x, y, SampleDimension);
                 normalizedHeights[index] = normalizedHeight;
                 vertices[index] = new(
@@ -123,6 +140,7 @@ internal static class DaggerfallTerrainSurfaceBuilder
         return new DaggerfallTerrainSurface(mapPixelX, mapPixelY, vertices, normalizedHeights)
         {
             SourceWorldHeight = terrain.GetHeight(mapPixelX, mapPixelY),
+            Rivers = terrain.Rivers,
         };
     }
 
@@ -131,7 +149,7 @@ internal static class DaggerfallTerrainSurfaceBuilder
     /// <see cref="DaggerfallTerrainSet"/> reads them, so a distant view runs on over the map's edge.
     /// </summary>
     internal static DaggerfallTerrainWindow ReadWindow(DaggerfallTerrainSet terrain, int mapPixelX, int mapPixelY) =>
-        new(mapPixelX, mapPixelY, ReadSmallHeightmap(terrain, mapPixelX, mapPixelY), ReadLargeHeightmap(terrain, mapPixelX, mapPixelY), terrain.Relief);
+        new(mapPixelX, mapPixelY, ReadSmallHeightmap(terrain, mapPixelX, mapPixelY), ReadLargeHeightmap(terrain, mapPixelX, mapPixelY), terrain.Relief, terrain.Rivers);
 
     /// <summary>
     /// The donor-normalized height of one vertex of a map pixel's surface, before any location flattening:
@@ -148,11 +166,19 @@ internal static class DaggerfallTerrainSurfaceBuilder
         if (window.Relief is not { } relief) return classic;
         (double mapX, double mapY) = ReliefPoint(window.MapPixelX, window.MapPixelY, x, y);
         double share = relief.Share(mapX, mapY);
-        return share <= 0 ? classic : Blend(classic, (float)(relief.Metres(mapX, mapY, finestMetres) / TerrainVerticalSize), (float)share);
+        float ground = share <= 0 ? classic : Blend(classic, (float)(relief.Metres(mapX, mapY, finestMetres, Gullies(window.Rivers, mapX, mapY)) / TerrainVerticalSize), (float)share);
+        return window.Rivers is { } rivers ? Carved(rivers, ground, mapX, mapY, finestMetres) : ground;
     }
 
+    private static double Gullies(DaggerfallTerrainRivers? rivers, double mapX, double mapY) =>
+        rivers?.GullyShare(mapX * HorizontalSize, mapY * HorizontalSize) ?? 1;
+
+    /// <summary>A normalized height with any river cut into it; a channel reaching the sea stops at the ocean clamp, where the seabed takes over.</summary>
+    private static float Carved(DaggerfallTerrainRivers rivers, float normalized, double mapX, double mapY, double finestMetres) =>
+        Math.Max(OceanElevation / MaxTerrainHeight, (float)(rivers.Carve(mapX * HorizontalSize, mapY * HorizontalSize, normalized * (double)TerrainVerticalSize, finestMetres) / TerrainVerticalSize));
+
     /// <summary>Vertex (0, 0) of map pixel (X, Y) is heightmap pixel (X - 1, Y), and its rows run north to (X, Y - 1).</summary>
-    private static (double X, double Y) ReliefPoint(int mapPixelX, int mapPixelY, double x, double y) =>
+    internal static (double X, double Y) ReliefPoint(int mapPixelX, int mapPixelY, double x, double y) =>
         (mapPixelX - 1 + (x / (SampleDimension - 1)), mapPixelY - (y / (SampleDimension - 1)));
 
     private static float Blend(float classic, float eroded, float share) =>
@@ -163,7 +189,7 @@ internal static class DaggerfallTerrainSurfaceBuilder
     /// a surface and its finest gully spans several vertices, so a surface reads it here between the lattice's nodes.
     /// Neighbouring pixels share their edge nodes, so their edges meet.
     /// </summary>
-    private static DaggerfallReliefPatch ReadPatch(DaggerfallTerrainRelief relief, int mapPixelX, int mapPixelY)
+    private static DaggerfallReliefPatch ReadPatch(DaggerfallTerrainRelief relief, DaggerfallTerrainRivers? rivers, int mapPixelX, int mapPixelY)
     {
         const int side = ((SampleDimension - 1) / DaggerfallReliefPatch.Stride) + 1;
         float[] eroded = new float[side * side], share = new float[side * side];
@@ -172,7 +198,7 @@ internal static class DaggerfallTerrainSurfaceBuilder
         {
             (double mapX, double mapY) = ReliefPoint(mapPixelX, mapPixelY, i * DaggerfallReliefPatch.Stride, j * DaggerfallReliefPatch.Stride);
             share[(j * side) + i] = (float)relief.Share(mapX, mapY);
-            eroded[(j * side) + i] = (float)(relief.Metres(mapX, mapY, SampleSpacing * 2) / TerrainVerticalSize);
+            eroded[(j * side) + i] = (float)(relief.Metres(mapX, mapY, SampleSpacing * 2, Gullies(rivers, mapX, mapY)) / TerrainVerticalSize);
         }
 
         return new(eroded, share, side);
@@ -284,6 +310,7 @@ internal static class DaggerfallTerrainSurfaceBuilder
             normalizedHeights)
         {
             SourceWorldHeight = surface.SourceWorldHeight,
+            Rivers = surface.Rivers,
         };
     }
 

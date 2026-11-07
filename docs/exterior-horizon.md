@@ -25,6 +25,8 @@ past near ground's corners; under a roof it keeps `camera.farPlane`.
 | What a location's tiles are at their corners | `DaggerfallGroundKinds` |
 | The seabed, and which map pixels hold sea | `DaggerfallHorizonGround` |
 | The sea's sheets and how they follow the player | `DaggerfallHorizon` |
+| Rivers' courses and what they cut into the ground | `DaggerfallTerrainRivers` |
+| River water about the player | `DaggerfallRiverWater` |
 | How the sea draws | `water` in the tuning payload, `DaggerfallWaterTuning` |
 
 ## What it stands on
@@ -185,8 +187,9 @@ the layers where the art set has them, and the classic's where it doesn't.
 
 ## Sea
 
-The sea has one surface, the ocean clamp's height, and ground rises through it, so a shore or
-a river is wherever land meets the water.
+The sea has one surface, the ocean clamp's height, and ground rises through it, so a shore is
+wherever land meets the water. It fills a channel only where that reaches the coast: higher up,
+[rivers](#rivers) stand at their own surfaces.
 
 - **Seabed.** Near ground and the collider run on down under the sea, falling away from land
   and levelling off about 12 m down. The depth comes from how far a point is from land. The
@@ -214,18 +217,58 @@ stand on it, through the same height function. Without it they stand on WOODS.
 
 - **Bake.** The import's `relief` step (`ReliefBake`) runs stream-power erosion over
   the map: the coast is fixed, climate sets the rain, and uplift is calibrated back to
-  WOODS's own heights, so the land keeps its shape and gains valleys and ridges. Flow
-  leaves by a random slope weighted by steepness, which keeps valleys off the grid's
-  axes. All its noise comes from coordinate hashes, so a bake depends only on its input.
+  WOODS's own heights, so the land keeps its shape and gains valleys and ridges. A node's
+  water is shared among all its lower neighbours by slope. A single receiver cuts every
+  hillside into ribs along the lattice, whatever spacing it has. All its noise comes from
+  coordinate hashes, so a bake depends only on its input.
+- **Cascade.** The landscape evolves on a coarse lattice, where the calibration closes on
+  the classic heights, then carries on to finer ones. Each starts from the last and cuts what
+  that one could not hold, so the cost of the finest lattice buys only its last few steps.
 - **Locations.** Every location gets a calmer pad in the bake, so its flattening
   doesn't stand on a cliff. Location heights are sampled at runtime, so they follow.
 - **Coast.** The bake's share falls to nothing within 300 m of the sea, so the classic
   height returns there and shores stay where they were. The band is narrow because
   the classic's terrace cliffs turn into sheer walls once the horizon lifts them.
-- **Detail.** The lattice holds nothing under about 800 m. Kit's `ErosionFilter` cuts
-  gullies below that and breaks high ground into peaks. Each sampling skips what it
-  can't hold, so far rings don't alias. A walked surface reads the relief from a
-  25.6 m patch rather than per vertex, since the filter is its costly part.
+- **Published form.** Heights are 16-bit eighths of a metre over the whole map, and shares
+  stay on the coarsest lattice. Holding detail only where it shows saves little: erosion
+  reaches nearly every land tile, and the sea is only a third of the map.
+- **Detail.** The lattice holds valleys and ridges down to about two nodes. Kit's
+  `ErosionFilter` cuts gullies below that. Each sampling skips what it can't hold, so far
+  rings don't alias. A walked surface reads the relief from a 25.6 m patch rather than per
+  vertex, since the filter is its costly part.
+
+## Rivers
+
+The classic map has no rivers: WOODS holds a sea, a few ponds and short inlets, and the
+region maps paint coasts alone. Every river is the bake's own drainage, published as
+`worldrpg/terrain/rivers.bin`.
+
+- **Tracing.** Water is routed down the finished lattice, each node to its steepest
+  neighbour, with every location's map pixel walled off: a location levels its pixel, and a
+  channel with it. A river starts where a catchment passes 150 km² of ordinary rain, so dry
+  climates carry fewer. The largest donor at a confluence carries the trunk.
+- **Courses.** A course is a line of stations about 48 m apart, smoothed off the lattice.
+  Width follows the root of the catchment, and a head tapers in over its first 3 km, as a
+  catchment reaches the source all at once. The surface comes from the valley's own lowest
+  nodes, only ever falls, and a tributary ends on the surface of what it joins, so water never
+  climbs. Ground that stands in the way is cut through. Rivers are read before the locations'
+  pads, which blur valley floors up into dams.
+- **Floor.** The bake lowers the lattice toward the water out from each course, as far as
+  its width carries, so a large river opens a flat valley. Ground is only ever lowered.
+- **Channel.** The height function cuts a channel and its banks at runtime, on top of the
+  relief and the filter, so collider, near ground and far ground all carry it. The bed follows
+  the water both ways, and a bank's lip stands over it whatever the ground does, so water never
+  spills. Gullies fade out toward a channel: cut beside it, they would leave the land below the
+  water and the river on a levee. A sampling too coarse for a channel widens it to its own cells,
+  and one far too coarse leaves it out.
+- **Water.** Each map pixel about the player holds one mesh, a ribbon of sections level
+  across and falling with the river, as far as the walked ground holds a channel. Past that the
+  channel wears far ground's sea, as a bed does past the sheets. A channel that has come down to
+  the ocean clamp is the sea's: its sheets fill it, and the ribbon stops.
+- **Swimming.** Each section has a box of water topped at its surface, and a swimmer floats
+  there. A box may overhang its banks, which stand above its top. Water falling more than 2 m in
+  a section is a torrent with no box, and anyone in it walks the bed.
+- **Banks.** A channel's bed and lip paint as shore, and nature keeps off them.
 
 ## Tuning by eye
 
