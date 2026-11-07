@@ -76,9 +76,10 @@ def crunch(raw, classic):
     return Image.fromarray(palette[nearest].reshape(pixels.shape).astype(np.uint8))
 
 
-def crunch_sprites(frames, size):
+def crunch_sprites(frames, size, colours=COLOURS):
     """Transparent art crunched for a world billboard: each RGBA frame at `size`, a strong unsharp mask, hard edges, and one
-    ART_PAL subset across the frames, so an animation doesn't flicker between palettes."""
+    ART_PAL subset of `colours` across the frames, so an animation doesn't flicker between palettes. `colours` None keeps all of
+    ART_PAL, for a figure whose small accents, a gold amulet or a jewel, a subset would drop."""
     colour, solid = [], []
     for frame in frames:
         channels = np.asarray(frame.convert("RGBA"), np.float32) / 255
@@ -87,7 +88,7 @@ def crunch_sprites(frames, size):
         rgb = np.clip(small[..., :3] / np.maximum(small[..., 3:], 0.02), 0, 1)
         colour.append(np.asarray(Image.fromarray((rgb * 255).astype(np.uint8)).filter(ImageFilter.UnsharpMask(radius=1, percent=140, threshold=1)), np.float32))
         solid.append(small[..., 3] > 0.5)
-    palette = subset_palette(Image.fromarray(np.concatenate([c[s] for c, s in zip(colour, solid)])[None].astype(np.uint8)))
+    palette = PALETTE if colours is None else subset_palette(Image.fromarray(np.concatenate([c[s] for c, s in zip(colour, solid)])[None].astype(np.uint8)), colours)
     out = []
     for pixels, mask in zip(colour, solid):
         image = np.zeros((*mask.shape, 4), np.uint8)
