@@ -38,6 +38,7 @@ ARTIFACT_RECORDS = [0, 3, 5, 10, 13, 23, 24, 25]
 SOLID = 128    # alpha over which a pixel is part of a piece
 PIECE = 500    # pixels in the smallest piece; fewer are flecks or a detached ornament, such as the Staff of Magnus's pendant
 NEAR = 120     # pixels from the other piece within which a piece's own axis is measured
+FLECK = 20     # pixels in the smallest piece of a bowstring; fewer are a stray fleck of the cut-out
 
 
 def sources():
@@ -92,6 +93,8 @@ def bowstring(rgba):
     solid = rgba[..., 3] > SOLID
     thick = ndimage.binary_opening(solid, iterations=3)
     thin = solid & ~ndimage.binary_dilation(thick, iterations=2)
+    labels, count = ndimage.label(thin, structure=np.ones((3, 3)))   # the string's pieces, without stray flecks
+    thin = np.isin(labels, 1 + np.nonzero(ndimage.sum(thin, labels, range(1, count + 1)) >= FLECK)[0])
     sy, sx = np.nonzero(thin)
     by, bx = np.nonzero(thick)
     top = np.argmin(by)
