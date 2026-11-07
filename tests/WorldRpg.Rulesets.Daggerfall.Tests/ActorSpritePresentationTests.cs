@@ -128,7 +128,7 @@ public sealed class ActorSpritePresentationTests
     }
 
     [Fact]
-    public void A_standing_person_draws_refreshed_art_where_the_classic_stands_and_follows_the_art_choice()
+    public void A_standing_person_draws_refreshed_art_at_the_classic_size_on_its_own_base_and_follows_the_art_choice()
     {
         List<string> releases = []; var graphics = new AppearanceFake(releases);
         ContentFake content = MediaContent(releases);
@@ -149,7 +149,7 @@ public sealed class ActorSpritePresentationTests
 
         SpriteFromAtlasRequest drawn = graphics.SpriteRequests[^1];
         Assert.Equal(new Vector2(4F, 8F), drawn.Size);
-        Assert.Equal(new Vector2(.5F, .25F), drawn.Pivot);
+        Assert.Equal(new Vector2(.5F, 0F), drawn.Pivot);
         Assert.Contains("refreshed/people/texture-182-record-000.png", graphics.OpenedResourcePaths);
         Appearance Chosen()
         {
