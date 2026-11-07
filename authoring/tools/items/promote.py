@@ -61,7 +61,8 @@ sprite's size and anchor. A record an item also draws takes its accepted `items`
 The `people` area promotes the placed static people (`people`): each record in df-raw/people/usage.csv with a placement
 becomes a one-frame atlas of its standing figure, the only frame a static person shows, crunched at PEOPLE_CRUNCH pixels to
 a classic pixel on the whole of ART_PAL, whose small accents a smaller palette loses. Records with the same frame share the
-atlas of whichever has an accepted final, since only one of them was painted. A record without one stays classic.
+atlas of whichever has an accepted final, since only one of them was painted. A record without one stays classic. The game
+draws each at the classic sprite's size, standing on the atlas's own base.
 
 Icons are written at their area's ICON pixels on the longer side and carry no doll rect.
 
