@@ -436,6 +436,16 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     private Vector3 AmbientColor(float level) => _profileKind != DaggerfallWorldProfileKind.Exterior ? Vector3.One
         : Vector3.Lerp(_tuning.NightColor, Vector3.One, Math.Clamp((level - _tuning.ExteriorNight) / (_tuning.ExteriorNoon - _tuning.ExteriorNight), 0, 1));
 
+    /// <summary>
+    /// The outdoor ambient: the night's, as much of it as the moons give, rising into the day's with the daylight. Dawn and
+    /// dusk start from that same floor, so the light never steps as the hour turns.
+    /// </summary>
+    internal static float ExteriorAmbient(float night, float noon, float nightShare, float daylight)
+    {
+        float floor = night * nightShare;
+        return floor + ((noon - floor) * daylight);
+    }
+
     private float AmbientLevel(DaggerfallCalendar calendar)
     {
         bool night = calendar.Hour is < 6 or >= 18;
@@ -443,8 +453,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         {
             DaggerfallWorldProfileKind.Interior => night ? _tuning.InteriorNight : _tuning.InteriorDay,
             DaggerfallWorldProfileKind.Dungeon => _dungeonLevel ?? _tuning.Dungeon,
-            DaggerfallWorldProfileKind.Exterior => Math.Max(_flash,
-                night ? _tuning.ExteriorNight * _nightShare : _tuning.ExteriorNight + ((_tuning.ExteriorNoon - _tuning.ExteriorNight) * _daylight)),
+            DaggerfallWorldProfileKind.Exterior => Math.Max(_flash, ExteriorAmbient(_tuning.ExteriorNight, _tuning.ExteriorNoon, _nightShare, night ? 0f : _daylight)),
             _ => throw new ArgumentOutOfRangeException(nameof(_profileKind)),
         };
     }
