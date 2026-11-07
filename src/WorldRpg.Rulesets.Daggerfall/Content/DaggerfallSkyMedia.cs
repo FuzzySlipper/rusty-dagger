@@ -35,27 +35,36 @@ internal sealed class DaggerfallSkyMedia
 
     private DaggerfallSkyMedia(DaggerfallData content, Dictionary<string, DaggerfallSkyResource> resources,
         Dictionary<(int, int), string> frames, Dictionary<int, string> nights, Dictionary<string, string> cleared, float[][] curve,
-        IReadOnlyList<DaggerfallSkyMoon> moons)
-    { _content = content; _resources = resources; _frames = frames; _nights = nights; _cleared = cleared; _curve = curve; Moons = moons; }
+        IReadOnlyList<DaggerfallSkyMoon> moons, string stars)
+    { _content = content; _resources = resources; _frames = frames; _nights = nights; _cleared = cleared; _curve = curve; Moons = moons; Stars = stars; }
 
     /// <summary>Masser and Secunda.</summary>
     internal IReadOnlyList<DaggerfallSkyMoon> Moons { get; }
+
+    /// <summary>The id of the night's star catalogue.</summary>
+    internal string Stars { get; }
 
     internal static DaggerfallSkyMedia Read(DaggerfallData content)
     {
         using var document = JsonDocument.Parse(content.ReadBytes(ManifestPath));
         JsonElement root = document.RootElement;
         Dictionary<string, DaggerfallSkyResource> resources = new(StringComparer.Ordinal);
-        foreach (string section in new[] {"resources", "nightResources", "clearedResources", "moons"})
-        foreach (JsonElement resource in root.GetProperty(section).EnumerateArray())
+        void Admit(string id, string path, JsonElement resource, Color color)
         {
-            string id = resource.GetProperty("id").GetString()!;
-            string path = resource.GetProperty("relativePath").GetString()!;
             if (string.IsNullOrWhiteSpace(id) || !path.StartsWith("media/sky/resources/", StringComparison.Ordinal)
                 || path.Contains("..", StringComparison.Ordinal) || path.Contains('\\')
                 || resource.GetProperty("byteLength").GetInt64() <= 0)
                 throw new InvalidOperationException($"Sky resource '{id}' has invalid publication identity or artifact facts.");
             ContentSha256 hash = DaggerfallContentHash.Parse(resource.GetProperty("contentHash").GetString()!, $"Sky resource '{id}'");
+            if (!resources.TryAdd(id, new(id, path["media/sky/resources/".Length..], hash, (ulong)resource.GetProperty("byteLength").GetInt64(), color)))
+                throw new InvalidOperationException($"Sky publication repeats resource '{id}'.");
+        }
+
+        foreach (string section in new[] {"resources", "nightResources", "clearedResources", "moons"})
+        foreach (JsonElement resource in root.GetProperty(section).EnumerateArray())
+        {
+            string id = resource.GetProperty("id").GetString()!;
+            string path = resource.GetProperty("relativePath").GetString()!;
             Color color = new(1,1,1,1);
             bool panorama = section != "moons";
             if (panorama)
@@ -68,9 +77,11 @@ internal sealed class DaggerfallSkyMedia
             int width = resource.GetProperty("width").GetInt32(), height = resource.GetProperty("height").GetInt32();
             if (width <= 0 || height <= 0 || panorama && width != height * 2)
                 throw new InvalidOperationException($"Sky resource '{id}' must be a normalized 2:1 panorama.");
-            if (!resources.TryAdd(id, new(id, path["media/sky/resources/".Length..], hash, (ulong)resource.GetProperty("byteLength").GetInt64(), color)))
-                throw new InvalidOperationException($"Sky publication repeats resource '{id}'.");
+            Admit(id, path, resource, color);
         }
+        JsonElement stars = root.GetProperty("stars");
+        string starsId = stars.GetProperty("id").GetString()!;
+        Admit(starsId, stars.GetProperty("relativePath").GetString()!, stars, new(1, 1, 1, 1));
         Dictionary<(int, int), string> frames = [];
         foreach (JsonElement selection in root.GetProperty("selections").EnumerateArray())
         {
@@ -103,7 +114,7 @@ internal sealed class DaggerfallSkyMedia
             moon.GetProperty("moon").GetString() == "masser", moon.GetProperty("columns").GetInt32(), moon.GetProperty("frameCount").GetInt32()))];
         if (moons.Length != 2 || moons.Count(moon => moon.Masser) != 1 || moons.Any(moon => moon.FrameCount != DaggerfallMoons.CycleDays))
             throw new InvalidOperationException("Sky publication does not carry Masser and Secunda, each with a frame for every day of the lunar cycle.");
-        return new(content, resources, frames, nights, cleared, curve, moons);
+        return new(content, resources, frames, nights, cleared, curve, moons, starsId);
     }
 
     internal DaggerfallSkySelection Select(int climate, DaggerfallCalendar calendar, DaggerfallWeatherKind weather, int variant)

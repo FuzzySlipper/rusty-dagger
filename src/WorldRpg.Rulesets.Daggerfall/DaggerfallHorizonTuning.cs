@@ -29,6 +29,24 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
     float CloudCoverage, float StormCloudCoverage, float CloudAltitudeMetres, float CloudScaleMetres, float CloudTwilightDegrees, Vector2 CloudDrift,
     Color Sea)
 {
+    /// <summary>The share of a moonlit night's ambient left on a night with no moon.</summary>
+    internal float MoonlessNight { get; init; } = .45f;
+    /// <summary>Masser's share of the moonlight; Secunda gives the rest.</summary>
+    internal float MasserLight { get; init; } = .7f;
+    /// <summary>How brightly a full moon lights the clouds.</summary>
+    internal float MoonCloudLight { get; init; } = .1f;
+    /// <summary>How high the star field's pole stands over the north, in degrees.</summary>
+    internal float StarPoleDegrees { get; init; } = 50;
+    /// <summary>The faintest magnitude that shows on a moonless night.</summary>
+    internal float StarLimit { get; init; } = 6;
+    /// <summary>How many magnitudes a full moon washes out.</summary>
+    internal float StarMoonWash { get; init; } = 1.5f;
+    /// <summary>How bright the stars stand, by the Engine's scale.</summary>
+    internal float StarBrightness { get; init; } = 3;
+    /// <summary>How much each star flickers, from 0 to 1.</summary>
+    internal float StarTwinkle { get; init; } = .2f;
+    /// <summary>The stars show once the daylight falls below this.</summary>
+    internal float StarsFromDaylight { get; init; } = .35f;
     /// <summary>How far the world draws outdoors: past near ground's corners, for the far plane clips everything.</summary>
     internal double DrawnMetres { get; init; } = 6_000;
     /// <summary>The side of a cloud's cells in metres, so the sky sits with the pixel art under it.</summary>
@@ -82,6 +100,9 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
         if (AirColors.Length != CloudColors.Length || AirColors.Any(color => !float.IsFinite(color.X + color.Y + color.Z) || color.X < 0 || color.Y < 0 || color.Z < 0)
             || NightAir is < 0 or > 1 || !float.IsFinite(FlashAir) || FlashAir < 0)
             throw new ArgumentException("Every weather states its air, with a night floor and a flash.");
+        if (MoonlessNight is < 0 or > 1 || MasserLight is < 0 or > 1 || MoonCloudLight < 0 || StarMoonWash < 0 || StarBrightness < 0
+            || StarTwinkle is < 0 or > 1 || StarsFromDaylight is <= 0 or > 1 || StarPoleDegrees is < 0 or > 90 || !float.IsFinite(StarLimit))
+            throw new ArgumentException("Moonlight's shares are from 0 to 1, and the stars have a limit, a pole above the horizon and a daylight to come out by.");
         if (MasserRadiusDegrees <= 0 || SecundaRadiusDegrees <= 0 || MoonDayBrightness is < 0 or > 1)
             throw new ArgumentException("A moon has a size, and a day brightness from 0 to 1.");
         return this;
@@ -99,6 +120,15 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
         ReadColor(e.GetProperty("sea")))
     {
         DrawnMetres = e.GetProperty("drawnMetres").GetDouble(),
+        MoonlessNight = e.GetProperty("moonlessNight").GetSingle(),
+        MasserLight = e.GetProperty("masserLight").GetSingle(),
+        MoonCloudLight = e.GetProperty("moonCloudLight").GetSingle(),
+        StarPoleDegrees = e.GetProperty("starPoleDegrees").GetSingle(),
+        StarLimit = e.GetProperty("starLimit").GetSingle(),
+        StarMoonWash = e.GetProperty("starMoonWash").GetSingle(),
+        StarBrightness = e.GetProperty("starBrightness").GetSingle(),
+        StarTwinkle = e.GetProperty("starTwinkle").GetSingle(),
+        StarsFromDaylight = e.GetProperty("starsFromDaylight").GetSingle(),
         CloudPixelMetres = e.GetProperty("cloudPixelMetres").GetSingle(),
         CloudShadeSteps = e.GetProperty("cloudShadeSteps").GetUInt32(),
         CloudColors = [.. e.GetProperty("cloudColors").EnumerateArray().Select(color => new Vector3(color[0].GetSingle(), color[1].GetSingle(), color[2].GetSingle()))],

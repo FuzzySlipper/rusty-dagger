@@ -40,6 +40,10 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
         bool castle = zones.Any(zone => zone.Kind == DaggerfallAmbientZoneKind.Castle);
         bool special = zones.Any(zone => zone.Kind == DaggerfallAmbientZoneKind.SpecialArea);
         _ambient.Update(new(inputs.ProfileKey, weather, !calendar.IsDay, sheltered, castle, special), player, seconds, playing);
+        // Moons stand with the cleared sky: the classic's painted one has none, and thick weather closes over them.
+        bool moons = _media is not null && horizonFog is not null && weather is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy or DaggerfallWeatherKind.Overcast;
+        if (moons) _moons ??= new(_engine, _media!, _horizon);
+        projection.Lighting.LightNightBy(horizonFog is null ? 1 : _horizon.MoonlessNight + ((1 - _horizon.MoonlessNight) * (moons ? _moons!.Moonlight(calendar) : 0)));
         projection.Lighting.UpdateAmbient(calendar, _weather.Daylight(calendar, weather),
             castle || special ? _tuning.ZoneAmbient : null, _ambient.FlashIntensity);
         projection.Lighting.UpdateWindowGlass(projection.Appearance, calendar);
@@ -72,9 +76,7 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
             wind * _horizon.CloudDrift.Length() * (1 + (conditions.Wind * _tuning.WindDrift)), _horizon.CloudColors[(int)weather]);
         SetFall(conditions, outside, sheltered, wind, daylight, seconds);
         SetGround(conditions, outside, wind, calendar.Season == DaggerfallSeason.Winter);
-        // Moons stand with the cleared sky: the classic's painted one has none, and thick weather closes over them.
-        if (_media is not null && horizonFog is not null && weather is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy or DaggerfallWeatherKind.Overcast)
-            (_moons ??= new(_engine, _media, _horizon)).Show(calendar, daylight);
+        if (moons) _moons!.Show(calendar, daylight);
         else _moons?.Hide();
     }
 

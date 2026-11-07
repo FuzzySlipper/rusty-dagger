@@ -293,6 +293,9 @@ public sealed record SkyClearedResource(string Id, string Of, string RelativePat
     }
 }
 
+/// <summary>The night sky's stars, as the Engine's star catalogue.</summary>
+public sealed record SkyStarsResource(string Id, string RelativePath, ContentDigest ContentHash, long ByteLength);
+
 /// <summary>One moon's source: its CFA animation of the 32 days of the lunar cycle.</summary>
 public sealed record SkyMoonSource(string Moon, string SourcePath, ReadOnlyMemory<byte> Bytes);
 
@@ -321,7 +324,8 @@ public sealed record SkyMediaManifest(
     IReadOnlyList<SkyNightResource> NightResources,
     IReadOnlyList<SkyCurveKnot> DaylightFrameCurve,
     IReadOnlyList<SkyClearedResource> ClearedResources,
-    IReadOnlyList<SkyMoonResource> Moons)
+    IReadOnlyList<SkyMoonResource> Moons,
+    SkyStarsResource Stars)
 {
     public SkyMediaManifest Canonicalize() => this with
     {
@@ -383,6 +387,8 @@ public sealed record SkyMediaManifest(
 
         foreach (SkyMoonResource moon in Moons) moon.Validate();
         if (Moons.Count is not (0 or 2)) throw new InvalidOperationException("A sky publishes both moons or neither.");
+        if (Stars is null || Stars.ByteLength <= 0 || !Stars.RelativePath.EndsWith(".stars.json", StringComparison.Ordinal))
+            throw new InvalidOperationException("A sky publishes its star catalogue.");
 
         HashSet<int> nightIndexes = NightResources.Select(resource => resource.NightIndex).ToHashSet();
         if (NightSources.Count != 0 && (nightIndexes.Count != 4 || nightIndexes.Any(index => index is < 0 or >= 4)))
@@ -547,8 +553,10 @@ public sealed record SkyMediaPublication(
             }
         }
 
+        byte[] stars = SkyStarCatalogue.Json();
+        artifacts.Add(new(SkyStarCatalogue.RelativePath, stars, mediaId: SkyStarCatalogue.Id));
         SkyMediaManifest manifest = new SkyMediaManifest(provenance, resources, selections, nightProvenance, nightResources,
-            DaylightFrameCurve, cleared, moonResources).Canonicalize();
+            DaylightFrameCurve, cleared, moonResources, new(SkyStarCatalogue.Id, SkyStarCatalogue.RelativePath, ContentDigest.Compute(stars), stars.LongLength)).Canonicalize();
         manifest.Validate();
         byte[] manifestBytes = JsonSerializer.SerializeToUtf8Bytes(manifest, PublishedJson.Section);
         artifacts.Add(new(ManifestRelativePath, [.. manifestBytes, (byte)'\n']));
@@ -737,10 +745,9 @@ public static class SkyHorizonClearing
     /// </summary>
     public static byte[] ClearNight(byte[] panorama)
     {
-        const int width = SkyMediaPublication.PanoramaWidth;
+        const int width = SkyMediaPublication.PanoramaWidth, horizon = SkyMediaPublication.PanoramaHeight / 2;
         byte[] starless = (byte[])panorama.Clone();
-        List<(int X, int Y, byte[] Colour)> stars = [];
-        for (int y = 0; y < ZenithRows; y++)
+        for (int y = 0; y < horizon; y++)
         {
             float mean = 0;
             for (int x = 0; x < width; x++) mean += Brightness(panorama, (y * width) + x);
@@ -749,25 +756,10 @@ public static class SkyHorizonClearing
             List<int> lit = [];
             for (int x = 0; x < width; x++) (Brightness(panorama, (y * width) + x) - mean > StarContrast ? lit : sky).Add(x);
             foreach (int x in lit)
-            {
-                int at = ((y * width) + x) * 4;
-                stars.Add((x, y, panorama[at..(at + 3)]));
-                int from = ((y * width) + sky[x % sky.Count]) * 4;
-                panorama.AsSpan(from, 3).CopyTo(starless.AsSpan(at, 3));
-            }
+                panorama.AsSpan(((y * width) + sky[x % sky.Count]) * 4, 3).CopyTo(starless.AsSpan(((y * width) + x) * 4, 3));
         }
 
-        byte[] cleared = Clear(starless);
-        foreach ((int x, int y, byte[] colour) in stars)
-        {
-            double stretch = 1 / Math.Sin((y + .5) / SkyMediaPublication.PanoramaHeight * Math.PI);
-            if (Scatter(x, y) * stretch >= 1) continue;
-            int columns = (int)Math.Round(stretch);
-            for (int column = x - (columns / 2); column < x - (columns / 2) + columns; column++)
-                colour.CopyTo(cleared.AsSpan(((y * width) + ((column + width) % width)) * 4, 3));
-        }
-
-        return cleared;
+        return Clear(starless);
     }
 
     private static void CloseZenith(byte[] panorama)
@@ -801,10 +793,45 @@ public static class SkyHorizonClearing
 
     private static float Brightness(byte[] panorama, int pixel) =>
         (panorama[pixel * 4] + panorama[(pixel * 4) + 1] + panorama[(pixel * 4) + 2]) / 3F;
+}
 
-    /// <summary>A fixed fraction from 0 to 1 for one panorama pixel, so publication stays deterministic.</summary>
-    private static double Scatter(int x, int y) =>
-        (uint)(((x * 73856093) ^ (y * 19349663)) * -1640531527) / (double)uint.MaxValue;
+/// <summary>
+/// The stars of the cleared night sky, drawn by the Engine as points. A panorama's stars are texels, which stretch into pale
+/// quads high in the sky. Nothing here comes from the game: the field is generated, the same on every import.
+/// </summary>
+public static class SkyStarCatalogue
+{
+    internal const string Id = "sky/stars", RelativePath = "media/sky/resources/night.stars.json";
+    private const int Count = 4_000;
+    /// <summary>The faintest star, and how many times more stars each magnitude holds, as in a real sky.</summary>
+    private const double FaintestMagnitude = 6.5, MagnitudesPerDecade = 2;
+    private const double BrightestMagnitude = -1;
+
+    public static byte[] Json()
+    {
+        System.Text.StringBuilder json = new("{\"format\":\"rusty.stars.v1\",\"stars\":[");
+        ulong state = 0x5DA6_6E12_7A3C_91F1UL;
+        double Next()
+        {
+            // SplitMix64: a fixed sequence, so a publication depends only on its input.
+            ulong z = state += 0x9E37_79B9_7F4A_7C15UL;
+            z = (z ^ (z >> 30)) * 0xBF58_476D_1CE4_E5B9UL;
+            z = (z ^ (z >> 27)) * 0x94D0_49BB_1331_11EBUL;
+            return ((z ^ (z >> 31)) >> 11) / (double)(1UL << 53);
+        }
+
+        for (int star = 0; star < Count; star++)
+        {
+            double y = (Next() * 2) - 1, around = Next() * 2 * Math.PI, ring = Math.Sqrt(1 - (y * y));
+            double magnitude = Math.Max(BrightestMagnitude, FaintestMagnitude + (MagnitudesPerDecade * Math.Log10(Math.Max(Next(), 1e-9))));
+            // Pale blue through white to pale gold.
+            double warmth = Next();
+            (double r, double g, double b) = warmth < .5 ? (.72 + (warmth * .56), .82 + (warmth * .36), 1d) : (1d, 1 - ((warmth - .5) * .3), 1 - ((warmth - .5) * .7));
+            json.Append(System.Globalization.CultureInfo.InvariantCulture, $"{(star == 0 ? "" : ",")}[{ring * Math.Cos(around):F5},{y:F5},{ring * Math.Sin(around):F5},{magnitude:F2},{r:F3},{g:F3},{b:F3}]");
+        }
+
+        return System.Text.Encoding.UTF8.GetBytes(json.Append("]}\n").ToString());
+    }
 }
 
 /// <summary>Converts the donor's single night image, used for both hemispheres, into a 2:1 panorama.</summary>

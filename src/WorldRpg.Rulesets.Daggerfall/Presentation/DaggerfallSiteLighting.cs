@@ -37,6 +37,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     private LightRequest? _sunRequest;
     private readonly ulong _sunId;
     private float _ambientLevel;
+    private float _nightShare = 1;
     private float _daylight = 1f;
     private float? _dungeonLevel;
     private float _flash;
@@ -115,6 +116,9 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     }
 
     internal int Count => _lights.Count;
+
+    /// <summary>The share of the night's ambient the moons give tonight, from the next ambient update on. Under classic art it stays whole.</summary>
+    internal void LightNightBy(float share) => _nightShare = share;
 
     /// <summary>
     /// What this site's sky gives a surface open to it, before the Engine divides by pi: the ambient in its colour and the
@@ -440,7 +444,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
             DaggerfallWorldProfileKind.Interior => night ? _tuning.InteriorNight : _tuning.InteriorDay,
             DaggerfallWorldProfileKind.Dungeon => _dungeonLevel ?? _tuning.Dungeon,
             DaggerfallWorldProfileKind.Exterior => Math.Max(_flash,
-                _tuning.ExteriorNight + (_tuning.ExteriorNoon - _tuning.ExteriorNight) * (night ? 0f : _daylight)),
+                night ? _tuning.ExteriorNight * _nightShare : _tuning.ExteriorNight + ((_tuning.ExteriorNoon - _tuning.ExteriorNight) * _daylight)),
             _ => throw new ArgumentOutOfRangeException(nameof(_profileKind)),
         };
     }
