@@ -851,12 +851,13 @@ public sealed class PublishedContentDeliveryTests
         // The bone pile stands in for the corpse every human class shares and for the bone pile flat.
         Assert.Equal([(380, 1), (380, 4)], art.Meshes.Keys.Order());
 
-        // Every item image a dropped item can stand as has a world PNG, sized from its classic image: a worn item's
-        // from its doll rect, an icon's from its stated classic size; a worn item's dye mask has one the same size.
+        // Every item image a dropped item can stand as has a world PNG, crunched as a world flat is at two pixels to a
+        // classic world pixel: an icon's classic pixels are its stated classic size, a worn item's doll rect is in doll
+        // units of 1 cm, 0.4 of a 2.5 cm classic pixel. A worn item's dye mask has one the same size.
         DaggerfallArtReplacement[] items = [.. art.All.Where(replacement => replacement.Replaces.StartsWith("item.", StringComparison.Ordinal)
             || replacement.Replaces.StartsWith("inventory.icon.", StringComparison.Ordinal) || replacement.Replaces.StartsWith("paper-doll.", StringComparison.Ordinal))];
-        Assert.All(items, replacement => Assert.True(replacement.World is { } world && (world.Classic is not null || replacement.Doll is not null)
-            && Math.Max(world.Width, world.Height) <= 128, replacement.MediaId));
+        Assert.All(items, replacement => Assert.True(replacement.World is { } world
+            && Math.Abs(world.Height - 2 * (world.Classic?.Height ?? .4 * replacement.Doll!.Height)) <= 1, replacement.MediaId));
         Assert.All(items.Where(replacement => replacement.DyeMask is not null), replacement =>
             Assert.Equal((replacement.World!.Width, replacement.World.Height), (replacement.DyeMask!.World!.Width, replacement.DyeMask.World.Height)));
         Assert.All(art.All.Except(items), replacement => Assert.Null(replacement.World));

@@ -70,8 +70,9 @@ A held weapon's layer leaves a gap where the doll's hand holds it; its whole ima
 is published beside it as its `icon`, which the inventory, shops and the ground draw instead.
 
 A worn image and an item icon is also what a dropped item stands as on the ground, and the renderer reads PNG, so
-each also has a `world` PNG of at most WORLD_ICON pixels on its longer side, and a worn image's dye mask a `world`
-PNG the same size as the image's. An item icon's `world` also states its classic image's size in classic pixels (its
+each also has a `world` PNG, crunched as a world flat is at GROUND_CRUNCH pixels to a classic world pixel (an icon's
+classic pixels are the treasure pile's, a worn image's DOLL_UNIT to its doll unit), and a worn image's dye mask a `world`
+PNG the same size as the image's, clear wherever it is. The menus draw the smooth webp images. An item icon's `world` also states its classic image's size in classic pixels (its
 opaque box in the import's published image), from which the game sizes it on the ground as a worn image is sized from its doll rect.
 
 Only finals whose ledger/AREA-notes.json status is `accepted` are promoted. Rerunning an area replaces that
@@ -122,7 +123,8 @@ WORLD_EFFECTS = {
        for kind, folder, record in (("missile", "projectile", 0), ("impact", "impact", 1))},
 }
 CANVAS, OCCUPANCY = 1024, 0.74   # the generation canvas and the share of it the classic frame filled (run.py)
-WORLD_ICON = 128                 # pixels on a dropped item's longer side: a small pile on the floor
+GROUND_CRUNCH = 2                # a dropped item's pixels to a classic world pixel, as a world flat's
+DOLL_UNIT = .01 / .025           # a paper-doll unit (1 cm on the body) in classic world pixels (2.5 cm)
 EFFECT_FRAME = 256               # pixels on an effect frame's longer side
 FLAT_CRUNCH = float(os.environ.get("FLAT_CRUNCH", "2"))   # a world billboard's pixels to a classic pixel
 PEOPLE_CRUNCH = 3   # a person's pixels to a classic pixel
@@ -198,10 +200,18 @@ def world_png(image, target):
     return {"path": target, "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest(), "width": image.width, "height": image.height}
 
 
-def world_size(image):
-    """The size of an image's world PNG: at most WORLD_ICON pixels on its longer side."""
-    k = min(1, WORLD_ICON / max(image.size))
-    return max(1, round(image.width * k)), max(1, round(image.height * k))
+def world_image(image, height, doll=False):
+    """An item's ground image, crunched as a world flat is: GROUND_CRUNCH pixels to a classic world pixel, for an image
+    `height` classic pixels tall (an icon), or with `doll`, doll units tall (a worn image)."""
+    k = GROUND_CRUNCH * (DOLL_UNIT if doll else 1) * height / image.height
+    return reduce.crunch_sprites([image], (max(1, round(image.width * k)), max(1, round(image.height * k))))[0]
+
+
+def world_mask(mask, world):
+    """A dye mask's ground image: the size of the item's, and clear wherever the item is."""
+    small = mask.resize(world.size, Image.Resampling.LANCZOS)
+    small.putalpha(Image.fromarray((np.asarray(small.getchannel("A"), np.float32) * (np.asarray(world.getchannel("A")) > 0)).astype(np.uint8)))
+    return small
 
 
 def dye_mask(image):
@@ -267,15 +277,15 @@ def promote(area, key, path, rect=None, mediaId=None, name=None):
              "width": image.width, "height": image.height,
              "doll": {"x": round(x + box[0] / k, 4), "y": round(y + box[1] / k, 4),
                       "width": round(image.width / k, 4), "height": round(image.height / k, 4)}}
-    world = world_size(image)
     if area == "worn":
-        entry["world"] = world_png(image.resize(world, Image.Resampling.LANCZOS), f"{MEDIA}/{area}/{name}.png")
+        ground = world_image(image, image.height / k, doll=True)
+        entry["world"] = world_png(ground, f"{MEDIA}/{area}/{name}.png")
     m = WORN.fullmatch(key) or NAMED.fullmatch(key)
     if m and dyed(NAMED_ARCHIVE.get(m[1]) or int(m[1]), int(m[2])):
         mask = dye_mask(image)
         entry["dyeMask"] = {"mediaId": f"{media}.dye", **webp(mask, f"{MEDIA}/{area}/{name}-dye.webp", lossless=True)}
         if area == "worn":
-            entry["dyeMask"]["world"] = world_png(mask.resize(world, Image.Resampling.LANCZOS), f"{MEDIA}/{area}/{name}-dye.png")
+            entry["dyeMask"]["world"] = world_png(world_mask(mask, ground), f"{MEDIA}/{area}/{name}-dye.png")
     whole = path.parent / "whole" / f"{key}.png"
     if area == "worn" and mediaId is None and whole.exists():
         icon = promote(area, key, whole, (x, y, w, h), f"{media}.icon", f"{key}-icon")
@@ -518,7 +528,7 @@ def icon_entry(replaces, image, name, world=None):
     entry = {"replaces": replaces, "mediaId": f"refreshed.{replaces}", **webp(image, f"{MEDIA}/{name}.webp"),
              "width": image.width, "height": image.height}
     if world is not None:
-        entry["world"] = world_png(image.resize(world_size(image), Image.Resampling.LANCZOS), f"{MEDIA}/{name}.png") | {"classic": world}
+        entry["world"] = world_png(world_image(image, world["height"]), f"{MEDIA}/{name}.png") | {"classic": world}
     return entry
 
 

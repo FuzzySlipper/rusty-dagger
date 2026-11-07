@@ -92,7 +92,7 @@ internal sealed partial class DaggerfallSiteAppearance
     private SpriteAtlas GroundItemAtlas(DaggerfallArtWorldImage image)
     {
         if (groundItemAtlases.TryGetValue(image.File.Path, out SpriteAtlas? opened)) return opened;
-        RenderResourceInfo texture = appearance.OpenTexture(content, image.File.Path, image.File.Sha256, TextureFilter.Linear);
+        RenderResourceInfo texture = appearance.OpenTexture(content, image.File.Path, image.File.Sha256, TextureFilter.Nearest);
         ownedResources.Add(texture.Handle);
         SpriteAtlas atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle,
             SpriteAtlasAdapter.ToAtlasFrames(image.Width, image.Height, [new NormalizedSpriteFrame(0, 0, 0, image.Width, image.Height)])));
@@ -104,7 +104,7 @@ internal sealed partial class DaggerfallSiteAppearance
     private RenderResource GroundItemMask(DaggerfallArtWorldImage mask)
     {
         if (groundItemMasks.TryGetValue(mask.File.Path, out RenderResource? opened)) return opened;
-        RenderResourceInfo texture = appearance.OpenTexture(content, mask.File.Path, mask.File.Sha256, TextureFilter.Linear);
+        RenderResourceInfo texture = appearance.OpenTexture(content, mask.File.Path, mask.File.Sha256, TextureFilter.Nearest);
         ownedResources.Add(texture.Handle);
         groundItemMasks.Add(mask.File.Path, texture.Handle);
         return texture.Handle;
