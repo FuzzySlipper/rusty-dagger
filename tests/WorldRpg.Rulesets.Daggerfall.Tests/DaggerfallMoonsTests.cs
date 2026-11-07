@@ -29,6 +29,18 @@ public sealed class DaggerfallMoonsTests
         Assert.Equal(0, DaggerfallMoons.Phase(New), 5);
     }
 
+    [Theory]
+    [InlineData(1F)]
+    [InlineData(.45F)]
+    public void The_outdoor_light_rises_from_the_moonlit_night_without_a_step_and_reaches_the_same_noon(float share)
+    {
+        const float night = .1333F, noon = .7F;
+        // The last moment of night and the first of a dawn with no daylight yet are the same light.
+        Assert.Equal(night * share, DaggerfallSiteLighting.ExteriorAmbient(night, noon, share, 0), 5);
+        Assert.Equal(noon, DaggerfallSiteLighting.ExteriorAmbient(night, noon, share, 1), 5);
+        Assert.True(DaggerfallSiteLighting.ExteriorAmbient(night, noon, share, .01F) - DaggerfallSiteLighting.ExteriorAmbient(night, noon, share, 0) < .01F);
+    }
+
     [Fact]
     public void A_full_moon_stands_high_at_midnight_and_under_the_ground_at_noon()
     {
