@@ -19,6 +19,8 @@ internal static class DaggerfallPresentationObjectIds
     internal const ulong Maximum = (1UL << 53) - 1;
 
     private const ulong GameplayEnd = 1UL << 48;
+    /// <summary>How many map pixels past the world's north and west edges a sheet of sea can stand.</summary>
+    private const int SeaPastEdge = 16;
     private const ulong NatureBase = 1UL << 49;
     private const ulong LocationBase = 1UL << 50;
     internal const ulong TransientVisualFloor = 3UL << 51;
@@ -63,11 +65,12 @@ internal static class DaggerfallPresentationObjectIds
         return NatureBase | ((ulong)(uint)x << (CellBits + SpriteRecordBits)) | ((ulong)(uint)y << SpriteRecordBits) | (uint)record;
     }
 
-    /// <summary>The sea's sheet on a map pixel.</summary>
+    /// <summary>The sea's sheet on a map pixel. The sea runs on past the map's edge, so a pixel may lie a little short of it.</summary>
     internal static ulong Sea(int x, int y)
     {
-        RequireCell(x, y, "Sea");
-        return GameplayEnd | ((ulong)(uint)x << CellBits) | (uint)y;
+        (int cellX, int cellY) = (x + SeaPastEdge, y + SeaPastEdge);
+        RequireCell(cellX, cellY, "Sea");
+        return GameplayEnd | ((ulong)(uint)cellX << CellBits) | (uint)cellY;
     }
 
     /// <summary>A drawn location's static mesh by its index in the location's geometry.</summary>

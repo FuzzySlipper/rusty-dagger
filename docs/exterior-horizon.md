@@ -186,7 +186,10 @@ the layers where the art set has them, and the classic's where it doesn't.
 ## Sea
 
 The sea has one surface, the ocean clamp's height, and ground rises through it, so a shore or
-a river is wherever land meets the water.
+a river is wherever land meets the water. All of the map's water stands at that height: its
+rivers are long channels of the sea, like the one past Rlorht Manor. A location's own water
+tiles on higher ground stay painted, since the classic's water volumes stop at the sea's
+surface and nobody can swim in them.
 
 - **Seabed.** Near ground and the collider run on down under the sea, falling away from land
   and levelling off about 12 m down. The depth comes from how far a point is from land. The
@@ -194,7 +197,8 @@ a river is wherever land meets the water.
   metres at map pixel edges. Far ground stops at the surface.
 - **Sheets.** Each map pixel where near ground found seabed gets one flat sheet of Engine
   water, out to a pixel short of near ground's reach, so a sheet never hangs over far land.
-  Inland no sheet stands and no view pays for water. Sheets are meshes because a heightfield's
+  Inland no sheet stands and no view pays for water. Past the map's north and west edges the
+  sea runs on, sheets included. Sheets are meshes because a heightfield's
   tiles hang skirts, which show through water.
 - **Look.** A sheet wears the climate's own water art, repeating as ground does, under
   `water`'s depth tint, with the Engine's own ripples and shore foam. Water's colours are its

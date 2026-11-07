@@ -2,6 +2,7 @@ using System.Reflection;
 using Rusty.Engine;
 using Rusty.Engine.Heightfields;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
@@ -256,6 +257,23 @@ public sealed class DaggerfallHorizonGroundTests
         HeightfieldTileSamples outer = Samples(new(16, 0, 0, 0, 0, 1 * Size, 4 * Size, DaggerfallTerrainSurfaceBuilder.SampleSpacing * 4));
         ground.SampleNear(outer.Tile, outer, 0, 0);
         Assert.Contains(Materials.Sea, outer.Materials.ToArray());
+    }
+
+    [Fact]
+    public void The_sea_runs_on_past_the_north_and_west_edges_of_the_map_with_a_sheet_on_each_pixel()
+    {
+        DaggerfallHorizonGround ground = Ground(Coast());
+        const double cell = DaggerfallHorizonGround.FinestNearCellMetres;
+        // A tile west of column 0 and north of row 0: the terrain's edge runs on out there.
+        HeightfieldTileSamples samples = Samples(new(16, 0, 0, 0, 0, -Size / 2, -Size / 2, cell));
+        ground.SampleHeights(samples.Tile, samples, 0, 0);
+
+        Assert.True(ground.HoldsSea(-1, 0));
+        HashSet<ulong> sheets = [];
+        for (int y = -4; y <= 4; y++)
+        for (int x = -4; x <= 4; x++)
+            Assert.True(sheets.Add(DaggerfallPresentationObjectIds.Sea(x, y)));
+        Assert.All(sheets, id => Assert.InRange(id, 0UL, DaggerfallPresentationObjectIds.Maximum));
     }
 
     /// <summary>Samples for a tile: the Engine makes them, and a fixture has no Engine to ask.</summary>
