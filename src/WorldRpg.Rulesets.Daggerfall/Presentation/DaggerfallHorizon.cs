@@ -23,8 +23,10 @@ internal sealed class DaggerfallHorizon : IDisposable
     /// <summary>How many far tiles are: every lift step samples hundreds again, and a frame that takes them all at once shows as a hitch.</summary>
     private const int FarCommitsPerUpdate = 16;
     private const double CellSize = DaggerfallExteriorCellResidency.CellSize;
-    /// <summary>The far ground's tint follows the light in steps this small, too fine to see.</summary>
+    /// <summary>The sea follows the light in steps this small, too fine to see.</summary>
     private const float TintStep = .01f;
+    /// <summary>How many map pixels either side of the player the sea's sheets stand, all of them inside near ground's reach.</summary>
+    private const int SheetReach = (int)(DaggerfallHorizonGround.NearReachMetres / CellSize) - 1;
     /// <summary>Past anything near ground's frame can reach.</summary>
     private const double NearEverywhere = 1e7;
 
@@ -32,6 +34,13 @@ internal sealed class DaggerfallHorizon : IDisposable
     private readonly DaggerfallHorizonTuning _tuning;
     private readonly DaggerfallHorizonGround _ground;
     private readonly Material _sea;
+    private readonly Material _water;
+    private readonly MeshResource _sheet;
+    private readonly Appearance _sheetLook;
+    private readonly List<(ulong Id, Vector3 At)> _sheets = [];
+    private readonly DaggerfallWaterTuning _waterTuning;
+    private readonly Dictionary<int, RenderResource> _waterArt = [];
+    private int _waterArchive = -1;
     private Heightfield? _heightfield;
     private HeightfieldStreamer? _streamer;
     private Heightfield? _near;
@@ -39,21 +48,26 @@ internal sealed class DaggerfallHorizon : IDisposable
     private HeightfieldMaterial[]? _bound;
     private (int MapX, int MapY) _nearFrame;
     private (SpatialSession Session, int MapX, int MapY)? _link;
-    private float _tint = 1;
+    private Vector3 _sky = Vector3.One;
     private bool _seen = true;
     private double _lift;
     private float _fogDensity;
     private bool _nearSeen;
     private bool _disposed;
 
-    internal DaggerfallHorizon(IEngineContext engine, DaggerfallHorizonGround ground, DaggerfallHorizonTuning tuning)
+    internal DaggerfallHorizon(IEngineContext engine, DaggerfallHorizonGround ground, DaggerfallHorizonTuning tuning, DaggerfallWaterTuning water, float repeatMetres)
     {
+        ArgumentNullException.ThrowIfNull(water);
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _ground = ground ?? throw new ArgumentNullException(nameof(ground));
         _tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
         _lift = tuning.Lift;
         _fogDensity = tuning.FogDensity;
-        _sea = engine.Graphics.CreateMaterial(Sea(1));
+        _sea = engine.Graphics.CreateMaterial(Sea(Vector3.One));
+        _waterTuning = water;
+        _water = engine.Graphics.CreateMaterial(water.Material(default, Vector3.One));
+        _sheet = engine.Graphics.CreateMeshResource(Sheet(_water, repeatMetres));
+        _sheetLook = engine.Graphics.CreateMeshAppearance(_sheet);
     }
 
     /// <summary>The clear-weather haze while the horizon stands, or none when the classic fog applies.</summary>
@@ -62,17 +76,18 @@ internal sealed class DaggerfallHorizon : IDisposable
     /// <summary>Stands the ground about a player at <paramref name="local"/> in the exterior frame <paramref name="origin"/>.</summary>
     /// <param name="seen">Whether the weather lets the far ground show. Thick weather closes within a kilometre or so, and
     /// ground that the fog has wholly taken would still stand out as a flat shape of the fog's colour against the sky.</param>
-    /// <param name="daylight">The day's light from 0 to 1: the far sea takes it as a tint, its colour being its own.</param>
+    /// <param name="sky">The sky's light as a share of clear noon's, which the sea takes in its own colours, near and far alike.</param>
     /// <param name="far">Whether far ground stands at all: classic art shows the painted sky's horizon instead.</param>
     /// <param name="layers">Opens a ground archive's layers.</param>
-    internal void Show(SpatialSession session, DaggerfallExteriorWorldOrigin origin, Vector3 local, bool winter, float daylight, bool seen, bool far,
+    internal void Show(SpatialSession session, DaggerfallExteriorWorldOrigin origin, Vector3 local, bool winter, Vector3 sky, bool seen, bool far,
         Func<int, DaggerfallGroundLayers> layers)
     {
-        float tint = _tuning.NightTint + ((1 - _tuning.NightTint) * Math.Clamp(daylight, 0, 1));
-        if (Math.Abs(tint - _tint) >= TintStep)
+        sky = Vector3.Clamp(sky, Vector3.Zero, Vector3.One);
+        if (Vector3.Abs(sky - _sky) is { } moved && Math.Max(moved.X, Math.Max(moved.Y, moved.Z)) >= TintStep)
         {
-            _tint = tint;
-            _engine.Graphics.UpdateMaterial(new(_sea, Sea(tint)));
+            _sky = sky;
+            _engine.Graphics.UpdateMaterial(new(_sea, Sea(sky)));
+            _waterArchive = -1;
         }
 
         _bound ??= Bind(layers);
@@ -80,6 +95,7 @@ internal sealed class DaggerfallHorizon : IDisposable
         double x = engineLocal.X + (origin.MapPixelX * CellSize), z = engineLocal.Z + (origin.MapPixelY * CellSize);
         Follow(x, z, winter, far);
         ShowNear(session, origin, x, z);
+        ShowSea(origin, x, z, winter);
         if (far) ShowFar(session, origin, seen);
         else HideFar();
     }
@@ -130,6 +146,7 @@ internal sealed class DaggerfallHorizon : IDisposable
         {
             DaggerfallGroundLayers ground = layers(archive);
             uint open = Index(ground.Open);
+            _waterArt[archive] = ground.Water;
             archives.Add(archive, new(open, ground.HasLush ? Index(ground.Lush) : open, Index(ground.Town), Index(ground.Shore), ground.NoiseStone, ground.HasLush));
         }
 
@@ -190,15 +207,62 @@ internal sealed class DaggerfallHorizon : IDisposable
         _streamer?.Dispose(); _streamer = null;
         _heightfield?.Dispose(); _heightfield = null;
         _bound = null;
+        _waterArt.Clear();
+        _waterArchive = -1;
         _ground.Current = _ground.Current with { CentreX = double.NaN, CentreZ = double.NaN };
     }
 
-    private MaterialRequest Sea(float tint) => new(new Color(_tuning.Sea.R * tint, _tuning.Sea.G * tint, _tuning.Sea.B * tint, 1), default(RenderResourceReference), 1,
-        new Color(1, 1, 1, 1), Vector3.Zero, 0, false);
+    /// <summary>The sea past the sheets: it glows its colour, so the world's lights can't take it away from the water it meets.</summary>
+    private MaterialRequest Sea(Vector3 sky) => new(new Color(0, 0, 0, 1), default(RenderResourceReference), 1, new Color(1, 1, 1, 1),
+        new Vector3(_tuning.Sea.R, _tuning.Sea.G, _tuning.Sea.B) * sky, 1, false);
+
+    /// <summary>Stands a sheet of sea on every map pixel with water in it about the player, so inland nothing draws water at all.</summary>
+    private void ShowSea(DaggerfallExteriorWorldOrigin origin, double x, double z, bool winter)
+    {
+        int archive = _ground.GroundArchive(x, z, winter);
+        if (archive != _waterArchive)
+        {
+            _waterArchive = archive;
+            _engine.Graphics.UpdateMaterial(new(_water, _waterTuning.Material(_waterArt[archive], _sky)));
+        }
+
+        _sheets.Clear();
+        (int mapX, int mapY) = DaggerfallHorizonGround.MapPixel(x, z);
+        for (int y = mapY - SheetReach; y <= mapY + SheetReach; y++)
+        for (int column = mapX - SheetReach; column <= mapX + SheetReach; column++)
+        {
+            if (!_ground.HoldsSea(column, y)) continue;
+            // A pixel spans x on from its X and z back from its Y; the sheet's corner is its least x and z.
+            Vector3 corner = new((float)((column - origin.MapPixelX) * CellSize), (float)DaggerfallHorizonGround.OceanMetres, (float)((y - 1 - origin.MapPixelY) * CellSize));
+            _sheets.Add((DaggerfallPresentationObjectIds.Sea(column, y), corner + origin.Compensation));
+        }
+    }
+
+    /// <summary>Adds the sea to the world's snapshot while the ground stands.</summary>
+    internal void AppendFacts(List<AppearanceFact> facts)
+    {
+        foreach ((ulong id, Vector3 at) in _sheets)
+            facts.Add(new AppearanceFact(id, false, 0, new Transform(at, Quaternion.Identity, Vector3.One), _sheetLook, true, RenderLayer.Scene));
+    }
+
+    /// <summary>
+    /// One map pixel of flat water at the sea's surface. Land stands through it, so the shore is wherever ground meets the
+    /// water. It is a mesh, not a heightfield: a heightfield's tiles hang skirts, which show through water. The art's repeats
+    /// fill a pixel exactly, so it runs on from sheet to sheet.
+    /// </summary>
+    private static MeshResourceCreateRequest Sheet(Material water, float repeatMetres)
+    {
+        float side = (float)CellSize, repeats = side / repeatMetres;
+        Vector3[] positions = [new(0, 0, 0), new(side, 0, 0), new(side, 0, side), new(0, 0, side)];
+        Vector3[] normals = [Vector3.UnitY, Vector3.UnitY, Vector3.UnitY, Vector3.UnitY];
+        Vector2[] uvs = [new(0, 0), new(repeats, 0), new(repeats, repeats), new(0, repeats)];
+        return new MeshResourceCreateRequest(positions, normals, uvs, new uint[] { 0, 2, 1, 0, 3, 2 }, new MeshGroup[] { new(0, 0, 6) }, new MeshMaterialBinding[] { new(0, water) });
+    }
 
     /// <summary>Takes the ground down, keeping its tiles for the next time outdoors.</summary>
     internal void Hide()
     {
+        _sheets.Clear();
         HideFar();
         if (_near is not null && _nearSeen)
         {
@@ -281,6 +345,14 @@ internal sealed class DaggerfallHorizon : IDisposable
         DropNear();
         _streamer?.Dispose();
         _heightfield?.Dispose();
+    }
+
+    /// <summary>Lets go of the sea, once a snapshot without it has been accepted and before the water art it wears is released.</summary>
+    internal void ReleaseSea()
+    {
+        _sheetLook.Dispose();
+        _sheet.Dispose();
+        _water.Dispose();
     }
 
     /// <summary>

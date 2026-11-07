@@ -5,6 +5,8 @@ the world from the player's feet to the edge of the walked seven-by-seven window
 ground stands in the backdrop past it, so the map itself reaches the skyline. Nature
 stays with the walked window's cells. Neither heightfield collides: a heightfield collider
 reads the same function, and it is what the player and anyone in the wilderness stand on.
+The far plane clips the whole world, so outdoors the camera draws out to `drawnMetres`,
+past near ground's corners; under a roof it keeps `camera.farPlane`.
 
 | Part | Owner |
 | --- | --- |
@@ -21,6 +23,9 @@ reads the same function, and it is what the player and anyone in the wilderness 
 | What open ground is made of | `DaggerfallGroundBlend`, `ground` in the tuning payload |
 | A ground archive's layers as materials | `DaggerfallGroundLayers` |
 | What a location's tiles are at their corners | `DaggerfallGroundKinds` |
+| The seabed, and which map pixels hold sea | `DaggerfallHorizonGround` |
+| The sea's sheets and how they follow the player | `DaggerfallHorizon` |
+| How the sea draws | `water` in the tuning payload, `DaggerfallWaterTuning` |
 
 ## What it stands on
 
@@ -77,8 +82,6 @@ the Engine refuses. Travel makes a new collider; an Engine origin rebase carries
   they close within a kilometre or so, and ground the fog has wholly taken would
   still stand out as a flat shape of the fog's colour. Their fog is the weather's own
   [air](#weather).
-- **Light.** The world's night lights keep far ground's bright vertex colours bright,
-  so far ground takes the day's light as a material tint, down to `nightTint`.
 
 Near ground stands whenever the player is outdoors, whatever the art. Far ground stands only
 while classic art is off: classic art shows the painted sky, classic fog and no cloud layer.
@@ -176,10 +179,33 @@ the layers where the art set has them, and the classic's where it doesn't.
   half turn. Paving edges (47 and 55) divide a tile along a diagonal, so their one odd corner
   is half their area. A vertex on a tile's corner shares it with three others, and a sample
   inside a tile reads that tile alone.
-- **The shore** follows the land's real contour. Ground at the ocean clamp is water, the
-  classic's beach band is dirt, and a location's water tiles paint the same way. Far ground
-  draws the sea as a flat colour (`sea`).
+- **The shore** follows the land's real contour. The classic's beach band is dirt, and it runs
+  on down as the seabed. A location's water tiles paint as water on its ground.
 - **Wet weather** darkens ground through the Engine's wetness, not the classic's rain archives.
+
+## Sea
+
+The sea has one surface, the ocean clamp's height, and ground rises through it, so a shore or
+a river is wherever land meets the water.
+
+- **Seabed.** Near ground and the collider run on down under the sea, falling away from land
+  and levelling off about 12 m down. The depth comes from how far a point is from land. The
+  classic's heights under its clamp can't serve: nothing ever showed them, and they jump
+  metres at map pixel edges. Far ground stops at the surface.
+- **Sheets.** Each map pixel where near ground found seabed gets one flat sheet of Engine
+  water, out to a pixel short of near ground's reach, so a sheet never hangs over far land.
+  Inland no sheet stands and no view pays for water. Sheets are meshes because a heightfield's
+  tiles hang skirts, which show through water.
+- **Look.** A sheet wears the climate's own water art, repeating as ground does, under
+  `water`'s depth tint, with the Engine's own ripples and shore foam. Water's colours are its
+  own, so the sky's light tints them. It is one-sided: seen from under the surface,
+  foam would hang overhead.
+- **Far sea.** Past the sheets the sea is one flat colour (`sea`), on near ground's outer ring
+  and on far ground. It glows that colour under the same tint, so the world's lights can't
+  part it from the water it meets.
+- **Swimming.** The cell's water volumes reach the same surface, and a swimmer floats at it,
+  riders included, since the seabed would otherwise walk a horse under. The head stays above
+  water, so nobody drowns at sea.
 
 ## Relief
 
