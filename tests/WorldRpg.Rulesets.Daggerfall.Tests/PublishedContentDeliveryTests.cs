@@ -823,6 +823,21 @@ public sealed class PublishedContentDeliveryTests
         Assert.All(art.All.Where(replacement => replacement.Replaces is var id && id.StartsWith("paper-doll.", StringComparison.Ordinal)
                 && (designs.Contains(id) || int.Parse(id.Split('.')[1], CultureInfo.InvariantCulture) is >= 235 and <= 242 || classic.Contains($"{id}.daedric"))),
             replacement => Assert.NotNull(replacement.DyeMask));
+        // A held weapon's layer leaves a gap for the doll's hand, so it carries the whole weapon as its icon, on its own doll
+        // rect and with its own ground image, dyed as the layer is.
+        DaggerfallArtReplacement[] icons = [.. art.All.Where(replacement => replacement.Icon is not null)];
+        Assert.Contains(icons, replacement => replacement.Replaces == "paper-doll.234.0");
+        Assert.Contains(icons, replacement => replacement.Replaces == "paper-doll.mace.14");
+        Assert.Contains(icons, replacement => replacement.Replaces == "paper-doll.433.3");
+        Assert.All(icons, replacement =>
+        {
+            DaggerfallArtReplacement icon = replacement.Icon!;
+            Assert.Equal($"{replacement.MediaId}.icon", icon.MediaId);
+            Assert.Same(icon, art.ByMediaId(icon.MediaId));
+            Assert.NotNull(icon.Doll);
+            Assert.NotNull(icon.World);
+            Assert.Equal(replacement.DyeMask is null, icon.DyeMask is null);
+        });
         Assert.Equal(["adamantium", "aquamarine", "blue", "daedric", "dark-brown", "dwarven", "ebony", "elven", "green", "grey", "iron", "light-brown",
                 "mithril", "orcish", "purple", "red", "silver", "white", "yellow"],
             art.Tints.Keys.Order(StringComparer.Ordinal));
@@ -889,7 +904,8 @@ public sealed class PublishedContentDeliveryTests
         });
 
         // The payload states the bytes of every refreshed file, and names every file the refreshed media carries.
-        JsonElement[] owners = [.. images.SelectMany(image => image.TryGetProperty("dyeMask", out JsonElement mask) ? [image, mask] : new[] { image })];
+        JsonElement[] owners = [.. images.SelectMany(image => image.TryGetProperty("icon", out JsonElement icon) ? [image, icon] : new[] { image })
+            .SelectMany(image => image.TryGetProperty("dyeMask", out JsonElement mask) ? [image, mask] : new[] { image })];
         JsonElement[] files = [.. owners, .. owners.Where(owner => owner.TryGetProperty("world", out _)).Select(owner => owner.GetProperty("world")),
             .. section.GetProperty("effects").EnumerateArray(), section.GetProperty("effectGlow"),
             .. section.GetProperty("meshes").EnumerateArray().DistinctBy(mesh => mesh.GetProperty("path").GetString()), .. surfaces,

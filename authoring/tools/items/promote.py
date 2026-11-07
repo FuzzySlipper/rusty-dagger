@@ -66,6 +66,9 @@ draws each at the classic sprite's size, standing on the atlas's own base.
 
 Icons are written at their area's ICON pixels on the longer side and carry no doll rect.
 
+A held weapon's layer leaves a gap where the doll's hand holds it; its whole image (whole.py, in gen-raw/worn/whole/)
+is published beside it as its `icon`, which the inventory, shops and the ground draw instead.
+
 A worn image and an item icon is also what a dropped item stands as on the ground, and the renderer reads PNG, so
 each also has a `world` PNG of at most WORLD_ICON pixels on its longer side, and a worn image's dye mask a `world`
 PNG the same size as the image's. An item icon's `world` also states its classic image's size in classic pixels (its
@@ -248,28 +251,36 @@ def dye_tints(promoted, dyes, probe):
     return tints
 
 
-def promote(area, key, path):
+def promote(area, key, path, rect=None, mediaId=None, name=None):
+    """A final's entry. A worn final with a whole image in gen-raw/worn/whole/ (whole.py) also carries it as its `icon`,
+    on the same canvas and rect, which is what the inventory and the ground draw instead of the doll's layer."""
     image = Image.open(path).convert("RGBA")
-    x, y, w, h = rect_of(area, key, path)
+    x, y, w, h = rect or rect_of(area, key, path)
     k = image.width / w
     box = image.getchannel("A").getbbox()
     if box is None:
         raise SystemExit(f"{path} is fully transparent.")
     image = image.crop(box)
     classic = replaces(key)
-    entry = {"replaces": classic, "mediaId": f"refreshed.{classic}", **webp(image, f"{MEDIA}/{area}/{key}.webp"),
+    media, name = mediaId or f"refreshed.{classic}", name or key
+    entry = {"replaces": classic, "mediaId": media, **webp(image, f"{MEDIA}/{area}/{name}.webp"),
              "width": image.width, "height": image.height,
              "doll": {"x": round(x + box[0] / k, 4), "y": round(y + box[1] / k, 4),
                       "width": round(image.width / k, 4), "height": round(image.height / k, 4)}}
     world = world_size(image)
     if area == "worn":
-        entry["world"] = world_png(image.resize(world, Image.Resampling.LANCZOS), f"{MEDIA}/{area}/{key}.png")
+        entry["world"] = world_png(image.resize(world, Image.Resampling.LANCZOS), f"{MEDIA}/{area}/{name}.png")
     m = WORN.fullmatch(key) or NAMED.fullmatch(key)
     if m and dyed(NAMED_ARCHIVE.get(m[1]) or int(m[1]), int(m[2])):
         mask = dye_mask(image)
-        entry["dyeMask"] = {"mediaId": f"refreshed.{classic}.dye", **webp(mask, f"{MEDIA}/{area}/{key}-dye.webp", lossless=True)}
+        entry["dyeMask"] = {"mediaId": f"{media}.dye", **webp(mask, f"{MEDIA}/{area}/{name}-dye.webp", lossless=True)}
         if area == "worn":
-            entry["dyeMask"]["world"] = world_png(mask.resize(world, Image.Resampling.LANCZOS), f"{MEDIA}/{area}/{key}-dye.png")
+            entry["dyeMask"]["world"] = world_png(mask.resize(world, Image.Resampling.LANCZOS), f"{MEDIA}/{area}/{name}-dye.png")
+    whole = path.parent / "whole" / f"{key}.png"
+    if area == "worn" and mediaId is None and whole.exists():
+        icon = promote(area, key, whole, (x, y, w, h), f"{media}.icon", f"{key}-icon")
+        del icon["replaces"]
+        entry["icon"] = icon
     return entry
 
 

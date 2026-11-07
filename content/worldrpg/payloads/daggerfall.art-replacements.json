@@ -6054,6 +6054,40 @@
       "width": 128,
       "height": 118
      }
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.234.0.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-234-record-000-frame-000-icon.webp",
+     "byteLength": 49378,
+     "sha256": "3fff8a58f45ce5485d8b30a1c257acaf3070708e8313b9e6b1e8b09b3642eb72",
+     "width": 957,
+     "height": 946,
+     "doll": {
+      "x": 27.1875,
+      "y": 79.875,
+      "width": 59.8125,
+      "height": 59.125
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-000-frame-000-icon.png",
+      "byteLength": 9140,
+      "sha256": "bbc86c610e8968c0773b6d6a96b05de57dac307c09835ab0454022a847eb1532",
+      "width": 128,
+      "height": 127
+     },
+     "dyeMask": {
+      "mediaId": "refreshed.paper-doll.234.0.icon.dye",
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-000-frame-000-icon-dye.webp",
+      "byteLength": 19620,
+      "sha256": "2effd27cfed0ea39217bae380f7abd7ef7d0251135e0913efd1f680c9a66a0bd",
+      "world": {
+       "path": "worldrpg/media/refreshed/worn/texture-234-record-000-frame-000-icon-dye.png",
+       "byteLength": 3359,
+       "sha256": "2aca062a478d26a966d7e1744741a842e421255d6de1910694bbcf72a03ab7be",
+       "width": 128,
+       "height": 127
+      }
+     }
     }
    },
    {
@@ -6124,6 +6158,40 @@
       "width": 128,
       "height": 101
      }
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.234.10.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-234-record-010-frame-000-icon.webp",
+     "byteLength": 33034,
+     "sha256": "3c14bdc987a51b1706650fbf5ca978ea22021ec400e2a3a354d90222b10005ab",
+     "width": 809,
+     "height": 616,
+     "doll": {
+      "x": 26.9,
+      "y": 97.05,
+      "width": 40.45,
+      "height": 30.8
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-010-frame-000-icon.png",
+      "byteLength": 8684,
+      "sha256": "b44071ab8dd7e082464237c7d35ae896bc3ac280021e0fdf17863e3a6e8c7c23",
+      "width": 128,
+      "height": 97
+     },
+     "dyeMask": {
+      "mediaId": "refreshed.paper-doll.234.10.icon.dye",
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-010-frame-000-icon-dye.webp",
+      "byteLength": 16462,
+      "sha256": "bc9ee1fca56bc7848a44bcdb7f956886e1b54c172e9285439d3ed8b2d4dd52cb",
+      "world": {
+       "path": "worldrpg/media/refreshed/worn/texture-234-record-010-frame-000-icon-dye.png",
+       "byteLength": 3013,
+       "sha256": "3b7b9f64bd4bd93aad6e6356b90f7d9045082300d188bf060d208f2744924cb3",
+       "width": 128,
+       "height": 97
+      }
+     }
     }
    },
    {
@@ -6159,6 +6227,40 @@
       "width": 128,
       "height": 81
      }
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.234.11.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-234-record-011-frame-000-icon.webp",
+     "byteLength": 28802,
+     "sha256": "676920279bde02f283db4ab4f6d191afad1422d39e2b994efcfb5539166179d1",
+     "width": 682,
+     "height": 463,
+     "doll": {
+      "x": -2.5,
+      "y": 43.8333,
+      "width": 113.6667,
+      "height": 77.1667
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-011-frame-000-icon.png",
+      "byteLength": 6591,
+      "sha256": "e13d9be742ccf7635838e5103942d5e6a3692f692781cb78d0a953f68a5e7c02",
+      "width": 128,
+      "height": 87
+     },
+     "dyeMask": {
+      "mediaId": "refreshed.paper-doll.234.11.icon.dye",
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-011-frame-000-icon-dye.webp",
+      "byteLength": 3026,
+      "sha256": "9c01a955ea32aa5fb8440a6a6d031c475737e91242c48a578ada34a3b17d8c05",
+      "world": {
+       "path": "worldrpg/media/refreshed/worn/texture-234-record-011-frame-000-icon-dye.png",
+       "byteLength": 1283,
+       "sha256": "cd585cfa16e6fc0f80056535ea3db15492fbbafb8a73a24fbbb098396f4e7783",
+       "width": 128,
+       "height": 87
+      }
+     }
     }
    },
    {
@@ -6193,6 +6295,40 @@
       "sha256": "d7faf85f73c1c0d5292bb827f395c5dc3c68f5b253ba31e99a3631095acde0ce",
       "width": 128,
       "height": 41
+     }
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.234.12.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-234-record-012-frame-000-icon.webp",
+     "byteLength": 24424,
+     "sha256": "1838a2503f291cbb5e1863a636273c82e4adcca7f52781b58bfdb1ae33e59f69",
+     "width": 730,
+     "height": 667,
+     "doll": {
+      "x": -3.625,
+      "y": 56.25,
+      "width": 91.25,
+      "height": 83.375
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-012-frame-000-icon.png",
+      "byteLength": 5874,
+      "sha256": "24c809afd2e6d2f0933aa01b9cda65db9d224a3a9de340b90ea35191a62b91bc",
+      "width": 128,
+      "height": 117
+     },
+     "dyeMask": {
+      "mediaId": "refreshed.paper-doll.234.12.icon.dye",
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-012-frame-000-icon-dye.webp",
+      "byteLength": 8330,
+      "sha256": "f5d527c3c2646a12dba5397bb5524fba620f33af164efc02fb5e3986a1b0c7ed",
+      "world": {
+       "path": "worldrpg/media/refreshed/worn/texture-234-record-012-frame-000-icon-dye.png",
+       "byteLength": 1947,
+       "sha256": "4ea33a3450f63d4464fe81bfb1e3f3f16691e4d5150bf823c95873e459f66af9",
+       "width": 128,
+       "height": 117
+      }
      }
     }
    },
@@ -6264,6 +6400,40 @@
       "width": 128,
       "height": 46
      }
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.234.14.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-234-record-014-frame-000-icon.webp",
+     "byteLength": 30706,
+     "sha256": "bbcddf43c5cf922e52cde5ee151c4764e7c643c857998aceaf4f047a6164f774",
+     "width": 971,
+     "height": 851,
+     "doll": {
+      "x": -5.3333,
+      "y": 49.7778,
+      "width": 107.8889,
+      "height": 94.5556
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-014-frame-000-icon.png",
+      "byteLength": 4821,
+      "sha256": "9aab7eaf2395645c463323c1fe249aa5724e0a60ed4a46859f54d2fe7bbcc1ef",
+      "width": 128,
+      "height": 112
+     },
+     "dyeMask": {
+      "mediaId": "refreshed.paper-doll.234.14.icon.dye",
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-014-frame-000-icon-dye.webp",
+      "byteLength": 13430,
+      "sha256": "68eb80049df4b689ba8e7d5cdadcb77e15166189c81eb5e830ca42b412ab040a",
+      "world": {
+       "path": "worldrpg/media/refreshed/worn/texture-234-record-014-frame-000-icon-dye.png",
+       "byteLength": 1917,
+       "sha256": "182fbd832cb11b276daf18b1d8fff6ef3833af0e9b1264b19c7bda31a106d51a",
+       "width": 128,
+       "height": 112
+      }
+     }
     }
    },
    {
@@ -6334,6 +6504,40 @@
       "width": 128,
       "height": 69
      }
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.234.16.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-234-record-016-frame-000-icon.webp",
+     "byteLength": 32964,
+     "sha256": "eb51f4065899dd0da565a0c6bd98d3e3c982994fd7f602f96f487795a08a3f87",
+     "width": 763,
+     "height": 455,
+     "doll": {
+      "x": 23.125,
+      "y": 62.875,
+      "width": 95.375,
+      "height": 56.875
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-016-frame-000-icon.png",
+      "byteLength": 7011,
+      "sha256": "3e8913fc1ce5a3b84ce6f96f834cadde8ec1f9b176ef618501f9b290d6032847",
+      "width": 128,
+      "height": 76
+     },
+     "dyeMask": {
+      "mediaId": "refreshed.paper-doll.234.16.icon.dye",
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-016-frame-000-icon-dye.webp",
+      "byteLength": 7452,
+      "sha256": "ed2e518ced97e9324cf60e44264013c59d2d51a7a1e8abdb53860ddd3e14c460",
+      "world": {
+       "path": "worldrpg/media/refreshed/worn/texture-234-record-016-frame-000-icon-dye.png",
+       "byteLength": 1604,
+       "sha256": "caf9455ac7012a71131b740fdee99f7c96a6ffad29bd07d173687169a511f4dc",
+       "width": 128,
+       "height": 76
+      }
+     }
     }
    },
    {
@@ -6368,6 +6572,40 @@
       "sha256": "36740e0ff68c7fb33d873a3f5ca9a2f2d159f7b75aa306a71f602d62c2c76516",
       "width": 128,
       "height": 37
+     }
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.234.17.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-234-record-017-frame-000-icon.webp",
+     "byteLength": 25618,
+     "sha256": "300dbe1e7be24a4338b901068380beb87d5b83f0b2332320b2d88e9b3ad75450",
+     "width": 800,
+     "height": 232,
+     "doll": {
+      "x": -3.8889,
+      "y": 87.2222,
+      "width": 88.8889,
+      "height": 25.7778
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-017-frame-000-icon.png",
+      "byteLength": 5814,
+      "sha256": "15d6ce6c7abb107f368b66eb57d976d595574bb5407b7213c704bb91dc1127fd",
+      "width": 128,
+      "height": 37
+     },
+     "dyeMask": {
+      "mediaId": "refreshed.paper-doll.234.17.icon.dye",
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-017-frame-000-icon-dye.webp",
+      "byteLength": 10460,
+      "sha256": "5decd92d0c3bed4fae2035e513a3b8efda73894319a3833f081dfbe9603e97c8",
+      "world": {
+       "path": "worldrpg/media/refreshed/worn/texture-234-record-017-frame-000-icon-dye.png",
+       "byteLength": 1962,
+       "sha256": "ea79f766bf1b813555810e45e97e33e36c7a5a7a34f91fe5a3cd31d9f58590f5",
+       "width": 128,
+       "height": 37
+      }
      }
     }
    },
@@ -6439,6 +6677,40 @@
       "width": 128,
       "height": 34
      }
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.234.19.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-234-record-019-frame-000-icon.webp",
+     "byteLength": 25746,
+     "sha256": "1374bf80fcb823ff23e2485333637c75c83f019039cc08f04187e39cea622318",
+     "width": 790,
+     "height": 391,
+     "doll": {
+      "x": 13.3,
+      "y": 69.1,
+      "width": 79.0,
+      "height": 39.1
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-019-frame-000-icon.png",
+      "byteLength": 5854,
+      "sha256": "ed06f2f05f4155370404665cbf51d153a630b3c254363425f2ce530324aa0872",
+      "width": 128,
+      "height": 63
+     },
+     "dyeMask": {
+      "mediaId": "refreshed.paper-doll.234.19.icon.dye",
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-019-frame-000-icon-dye.webp",
+      "byteLength": 7654,
+      "sha256": "2159dd9e26b3c657b64ba98d639f74a330bfe7cc5cbb48bd19e486ec45e5d693",
+      "world": {
+       "path": "worldrpg/media/refreshed/worn/texture-234-record-019-frame-000-icon-dye.png",
+       "byteLength": 1846,
+       "sha256": "988b0ae78cb789eae75e9cbc6192ae834fd97cde86d478824f81789100a15166",
+       "width": 128,
+       "height": 63
+      }
+     }
     }
    },
    {
@@ -6473,6 +6745,40 @@
       "sha256": "f8078b0bebc876c8ca0e8b4a82b4b35d6d665fdf2ec00b82e8a06e9be60d56db",
       "width": 128,
       "height": 48
+     }
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.234.2.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-234-record-002-frame-000-icon.webp",
+     "byteLength": 32764,
+     "sha256": "2680a0e31a8f2cada44e1ee3bcf3274cdabdfc98632508d574778c26c298847d",
+     "width": 999,
+     "height": 905,
+     "doll": {
+      "x": -22.1429,
+      "y": 31.4286,
+      "width": 142.7143,
+      "height": 129.2857
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-002-frame-000-icon.png",
+      "byteLength": 4693,
+      "sha256": "8086aa2490431fe38638a0c3051df5b4dd5b2e7f765ead113c21d7bfca51a7f6",
+      "width": 128,
+      "height": 116
+     },
+     "dyeMask": {
+      "mediaId": "refreshed.paper-doll.234.2.icon.dye",
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-002-frame-000-icon-dye.webp",
+      "byteLength": 10150,
+      "sha256": "e08a4ed2b2ff71af6cc6ca5cf3bcafb7a54b7c00439d9ac829ddbb6e4b61798b",
+      "world": {
+       "path": "worldrpg/media/refreshed/worn/texture-234-record-002-frame-000-icon-dye.png",
+       "byteLength": 1641,
+       "sha256": "dd8000ff202e2e869ad3787e2c24f21a133ee02b86ddf2156e21e2467d939582",
+       "width": 128,
+       "height": 116
+      }
      }
     }
    },
@@ -6544,6 +6850,40 @@
       "width": 92,
       "height": 128
      }
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.234.21.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-234-record-021-frame-000-icon.webp",
+     "byteLength": 27092,
+     "sha256": "22d2d0b865cc429d0491b5448e6ec583d425d9f3929b53680756bef9be7a51a5",
+     "width": 1006,
+     "height": 897,
+     "doll": {
+      "x": -37.6,
+      "y": 0.0,
+      "width": 201.2,
+      "height": 179.4
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-021-frame-000-icon.png",
+      "byteLength": 3615,
+      "sha256": "8522f5207a565ca3af45cad79751be7939d2d20401d7b7de069c64de4205ba3b",
+      "width": 128,
+      "height": 114
+     },
+     "dyeMask": {
+      "mediaId": "refreshed.paper-doll.234.21.icon.dye",
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-021-frame-000-icon-dye.webp",
+      "byteLength": 5798,
+      "sha256": "c10c8355aeaa09269b5aa9fe1c9e3ae68f1cb4d7f5065fe376557f8d90b6f293",
+      "world": {
+       "path": "worldrpg/media/refreshed/worn/texture-234-record-021-frame-000-icon-dye.png",
+       "byteLength": 1089,
+       "sha256": "9c0020dd0f8b63f805e34dc19946d125691e768a51df04576282b9aa90bf5e26",
+       "width": 128,
+       "height": 114
+      }
+     }
     }
    },
    {
@@ -6578,6 +6918,40 @@
       "sha256": "2ef5a57c9b1875bdd3fd73dfd2069e4c375c894f5e6c70b51438ee71c57bf85a",
       "width": 128,
       "height": 43
+     }
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.234.22.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-234-record-022-frame-000-icon.webp",
+     "byteLength": 24462,
+     "sha256": "42babebc2aac68d132afe3bcc1b447153aaae467ade3dffc8b5c866675f079d7",
+     "width": 767,
+     "height": 590,
+     "doll": {
+      "x": 37.1429,
+      "y": 80.7857,
+      "width": 27.3929,
+      "height": 21.0714
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-022-frame-000-icon.png",
+      "byteLength": 6552,
+      "sha256": "f6796fe8784e073217dacdff576f491587673dc3320af42189a2277ccbcc5695",
+      "width": 128,
+      "height": 98
+     },
+     "dyeMask": {
+      "mediaId": "refreshed.paper-doll.234.22.icon.dye",
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-022-frame-000-icon-dye.webp",
+      "byteLength": 12566,
+      "sha256": "7b558c52c2a2640c9da9cf0d06db49495b98bb315770156fcdb71bca1d4b4394",
+      "world": {
+       "path": "worldrpg/media/refreshed/worn/texture-234-record-022-frame-000-icon-dye.png",
+       "byteLength": 2623,
+       "sha256": "1c9c73b430e84259592b89163918302bd6a507e2840d064099b8fba6baf68045",
+       "width": 128,
+       "height": 98
+      }
      }
     }
    },
@@ -6649,6 +7023,40 @@
       "width": 128,
       "height": 49
      }
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.234.24.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-234-record-024-frame-000-icon.webp",
+     "byteLength": 23368,
+     "sha256": "8021878f4e421e11fd786d1deb30e8cb3fb888ac7fb5b444a3dc39b6eede8f24",
+     "width": 717,
+     "height": 393,
+     "doll": {
+      "x": -6.6667,
+      "y": 61.1667,
+      "width": 119.5,
+      "height": 65.5
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-024-frame-000-icon.png",
+      "byteLength": 5988,
+      "sha256": "94b01269d851a198d0d83b73122d19f7c8570184e93dcf8b92ac6e0170fbadf7",
+      "width": 128,
+      "height": 70
+     },
+     "dyeMask": {
+      "mediaId": "refreshed.paper-doll.234.24.icon.dye",
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-024-frame-000-icon-dye.webp",
+      "byteLength": 11028,
+      "sha256": "f72caef9832bdc4ec74266a375fe7ee06f15c9878b9bb147eca318bdd3e739c6",
+      "world": {
+       "path": "worldrpg/media/refreshed/worn/texture-234-record-024-frame-000-icon-dye.png",
+       "byteLength": 2344,
+       "sha256": "9e4898e06980af11c3781df252cef6759d677e111248fe89c2aaa0144e3b57e6",
+       "width": 128,
+       "height": 70
+      }
+     }
     }
    },
    {
@@ -6684,6 +7092,40 @@
       "width": 128,
       "height": 47
      }
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.234.25.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-234-record-025-frame-000-icon.webp",
+     "byteLength": 24710,
+     "sha256": "852b068855698d410d37eada9b2eafa1728144f25227802d74e03f355bc7c19c",
+     "width": 845,
+     "height": 933,
+     "doll": {
+      "x": -28.1667,
+      "y": 26.8333,
+      "width": 140.8333,
+      "height": 155.5
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-025-frame-000-icon.png",
+      "byteLength": 3934,
+      "sha256": "11e6f5484fb57e2078a0443ee43668c2c74c274e141101ac94ffdfcdbced3549",
+      "width": 116,
+      "height": 128
+     },
+     "dyeMask": {
+      "mediaId": "refreshed.paper-doll.234.25.icon.dye",
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-025-frame-000-icon-dye.webp",
+      "byteLength": 11522,
+      "sha256": "6756a5ed5b9a9d61024bd1a75660692fc0b7c2e218a52cbeffdb7bd12a74cd50",
+      "world": {
+       "path": "worldrpg/media/refreshed/worn/texture-234-record-025-frame-000-icon-dye.png",
+       "byteLength": 1583,
+       "sha256": "f172b07c965eed4951a3c2f5ede361741c6ad64d2f8107a4da7b46e2cf0c046f",
+       "width": 116,
+       "height": 128
+      }
+     }
     }
    },
    {
@@ -6718,6 +7160,40 @@
       "sha256": "395fd5e78a3147806e94c1eaca157cff5d15ab1ea1f64b4503dde58eff285caf",
       "width": 128,
       "height": 35
+     }
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.234.26.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-234-record-026-frame-000-icon.webp",
+     "byteLength": 24634,
+     "sha256": "b8d7c8810b19418379ea3955b6b144f809a1c907cd589b956c910a31d2ddb1a8",
+     "width": 858,
+     "height": 848,
+     "doll": {
+      "x": 14.6923,
+      "y": 65.7692,
+      "width": 66.0,
+      "height": 65.2308
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-026-frame-000-icon.png",
+      "byteLength": 4725,
+      "sha256": "840fdcf8e87e154d090b84716d17cff96bd11f66b4ba57d911e30a6e8f740086",
+      "width": 128,
+      "height": 127
+     },
+     "dyeMask": {
+      "mediaId": "refreshed.paper-doll.234.26.icon.dye",
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-026-frame-000-icon-dye.webp",
+      "byteLength": 6816,
+      "sha256": "5b0bfdaa5b3ddabf01e3f9a707e03c4ca9cac59e0590fe443b49c0570631b7b6",
+      "world": {
+       "path": "worldrpg/media/refreshed/worn/texture-234-record-026-frame-000-icon-dye.png",
+       "byteLength": 1606,
+       "sha256": "fba72b3c58dc36b39b3db4de1efba8b61ffe1763d335fb9c3da8cf2bc31aced2",
+       "width": 128,
+       "height": 127
+      }
      }
     }
    },
@@ -6824,6 +7300,40 @@
       "width": 91,
       "height": 128
      }
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.234.4.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-234-record-004-frame-000-icon.webp",
+     "byteLength": 29494,
+     "sha256": "684156c64b93f515c0a2e0a7fdc02c0772f1c06c70945398787154e8cb411ff8",
+     "width": 494,
+     "height": 697,
+     "doll": {
+      "x": 8.5,
+      "y": 71.1667,
+      "width": 82.3333,
+      "height": 116.1667
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-004-frame-000-icon.png",
+      "byteLength": 7835,
+      "sha256": "cf7e8da4f69460234cf428b83140290941a94cc6d471b921c69f05d5f4a9dc6f",
+      "width": 91,
+      "height": 128
+     },
+     "dyeMask": {
+      "mediaId": "refreshed.paper-doll.234.4.icon.dye",
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-004-frame-000-icon-dye.webp",
+      "byteLength": 13502,
+      "sha256": "62f95e0df18d93fa901a5d03ca22496162ec248cec9c232c638bf3bb9a98bd1b",
+      "world": {
+       "path": "worldrpg/media/refreshed/worn/texture-234-record-004-frame-000-icon-dye.png",
+       "byteLength": 2513,
+       "sha256": "43509d8e57427404ac863cb0338fc6cdfd9d9af8e38d64053080f18fba15cf5b",
+       "width": 91,
+       "height": 128
+      }
+     }
     }
    },
    {
@@ -6858,6 +7368,40 @@
       "sha256": "f380ce1b67ae5a1ce95c588c7c42578c09f66bf9c5ab5a1ee31af05202519ccd",
       "width": 128,
       "height": 41
+     }
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.234.5.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-234-record-005-frame-000-icon.webp",
+     "byteLength": 29578,
+     "sha256": "b226687dac34a64adfe85585735b9bc2c011e758e76603b9cc7f432cd8998101",
+     "width": 992,
+     "height": 773,
+     "doll": {
+      "x": 16.6923,
+      "y": 65.0,
+      "width": 76.3077,
+      "height": 59.4615
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-005-frame-000-icon.png",
+      "byteLength": 4785,
+      "sha256": "874617cd538fcb03c06e535423e8417c377c678c0037d9a8c00be90793f89e7d",
+      "width": 128,
+      "height": 100
+     },
+     "dyeMask": {
+      "mediaId": "refreshed.paper-doll.234.5.icon.dye",
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-005-frame-000-icon-dye.webp",
+      "byteLength": 6934,
+      "sha256": "8fe6e3e84ce6a1ac4de2f3e061d032fcc842cf9cd00ef0c2ecc8f78601d40f70",
+      "world": {
+       "path": "worldrpg/media/refreshed/worn/texture-234-record-005-frame-000-icon-dye.png",
+       "byteLength": 1364,
+       "sha256": "cd729e374f663ec47e705ce696516d2897f534c1a756a9d347eae36f767fa2ff",
+       "width": 128,
+       "height": 100
+      }
      }
     }
    },
@@ -6929,6 +7473,40 @@
       "width": 96,
       "height": 128
      }
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.234.7.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-234-record-007-frame-000-icon.webp",
+     "byteLength": 29206,
+     "sha256": "966418c8bd111974d85aa84ccd7245d399c3ee0c90631aa5dedbff79f12fe547",
+     "width": 793,
+     "height": 755,
+     "doll": {
+      "x": 7.0,
+      "y": 74.1429,
+      "width": 113.2857,
+      "height": 107.8571
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-007-frame-000-icon.png",
+      "byteLength": 6651,
+      "sha256": "d88b337c0f784e29c448317b0fc199a5eed8d2bc892d1395e1d145559358ff76",
+      "width": 128,
+      "height": 122
+     },
+     "dyeMask": {
+      "mediaId": "refreshed.paper-doll.234.7.icon.dye",
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-007-frame-000-icon-dye.webp",
+      "byteLength": 15238,
+      "sha256": "345bb570e0e35ea1b580b412c9d5648c1576432d1703c6ed1f2b9136866e665f",
+      "world": {
+       "path": "worldrpg/media/refreshed/worn/texture-234-record-007-frame-000-icon-dye.png",
+       "byteLength": 2430,
+       "sha256": "fd9e4af3d6b81252365210a79a61cff8404f91a6b75ab91770b28b3c48052a3e",
+       "width": 128,
+       "height": 122
+      }
+     }
     }
    },
    {
@@ -6963,6 +7541,40 @@
       "sha256": "9293e4f264a4506831a2a4aa52c581ce566ce351385f8a8736fac8732e07e2d3",
       "width": 128,
       "height": 115
+     }
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.234.8.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-234-record-008-frame-000-icon.webp",
+     "byteLength": 39356,
+     "sha256": "7c22bffbcc3c0bdd357de98e9e404a9d7c8009f959b72b964518b829558d4ef4",
+     "width": 985,
+     "height": 1012,
+     "doll": {
+      "x": -15.0,
+      "y": 59.4286,
+      "width": 140.7143,
+      "height": 144.5714
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-008-frame-000-icon.png",
+      "byteLength": 5769,
+      "sha256": "b067d446bfc738cf59b5cd04455946b83fb3fed87ffdffac46b884d9161ceda2",
+      "width": 125,
+      "height": 128
+     },
+     "dyeMask": {
+      "mediaId": "refreshed.paper-doll.234.8.icon.dye",
+      "path": "worldrpg/media/refreshed/worn/texture-234-record-008-frame-000-icon-dye.webp",
+      "byteLength": 15172,
+      "sha256": "6f993d410e85af494d2692d93cd96421b229d6fca0c1519e572ba1b347dfcc13",
+      "world": {
+       "path": "worldrpg/media/refreshed/worn/texture-234-record-008-frame-000-icon-dye.png",
+       "byteLength": 2352,
+       "sha256": "78585f67aacb34dcbba9c8ff186103a4b5d22727754ee24981bcc6d83a0c61e6",
+       "width": 125,
+       "height": 128
+      }
      }
     }
    },
@@ -44653,6 +45265,27 @@
      "sha256": "9f48b68f15645d216de11eaeec3159cbe3955bad624640ccec82f8631496565d",
      "width": 128,
      "height": 84
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.432.0.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-432-record-000-frame-000-icon.webp",
+     "byteLength": 41708,
+     "sha256": "20f90ba19cbb7c07a4564bb883584af3e0c190223e9a7bab6323410904b27276",
+     "width": 951,
+     "height": 1006,
+     "doll": {
+      "x": -13.0,
+      "y": 9.4286,
+      "width": 135.8571,
+      "height": 143.7143
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-432-record-000-frame-000-icon.png",
+      "byteLength": 5640,
+      "sha256": "162cafe0717eec25acb85264cea94a3b3c700559b9db944356bd160bb7443cd7",
+      "width": 121,
+      "height": 128
+     }
     }
    },
    {
@@ -44697,6 +45330,27 @@
      "sha256": "3ed1692bd36c61752e2f0ccfe439e55ce6a92afc8a98804fb7a56e11c46dd537",
      "width": 128,
      "height": 44
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.432.10.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-432-record-010-frame-000-icon.webp",
+     "byteLength": 30058,
+     "sha256": "5c1f899a68548a1e6d740c3932d08b88092f7d2f21411def6f5c498ea35833c2",
+     "width": 781,
+     "height": 267,
+     "doll": {
+      "x": 7.4,
+      "y": 89.2,
+      "width": 78.1,
+      "height": 26.7
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-432-record-010-frame-000-icon.png",
+      "byteLength": 6820,
+      "sha256": "1b2027b985433b361a7f339fe5accf6a7c00ae79286b77cac221c49dae16dd72",
+      "width": 128,
+      "height": 44
+     }
     }
    },
    {
@@ -44763,6 +45417,27 @@
      "sha256": "d3eb3a755cbbdaebea27a5582e478f1b265aefb099564d849a3899b2f71ee182",
      "width": 128,
      "height": 36
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.432.13.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-432-record-013-frame-000-icon.webp",
+     "byteLength": 27512,
+     "sha256": "14dabe9bb626839738f054866d6ff4e9b201717e4a688bde8161b50291fcdbfd",
+     "width": 989,
+     "height": 995,
+     "doll": {
+      "x": 6.0,
+      "y": 51.8182,
+      "width": 89.9091,
+      "height": 90.4545
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-432-record-013-frame-000-icon.png",
+      "byteLength": 3810,
+      "sha256": "da7ece453f2bc447b23ae4070eb4825b3e4e8dfa3103fbfb1b139ba0d8802bb1",
+      "width": 127,
+      "height": 128
+     }
     }
    },
    {
@@ -45005,6 +45680,27 @@
      "sha256": "2fefeac94757ad8e280c22c46a8813d428e61291feefa1d77f8866517b25cd05",
      "width": 92,
      "height": 128
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.432.23.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-432-record-023-frame-000-icon.webp",
+     "byteLength": 28344,
+     "sha256": "225cbd4a2879b7555c490e32d748614c44d4789e18370ebf1ea2c9bc7f44e9fb",
+     "width": 680,
+     "height": 862,
+     "doll": {
+      "x": -23.8,
+      "y": 21.6,
+      "width": 136.0,
+      "height": 172.4
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-432-record-023-frame-000-icon.png",
+      "byteLength": 4016,
+      "sha256": "ab6d7336a4b28b809fa19cc256c6c0e014ae200d752266515afaa96139e00127",
+      "width": 101,
+      "height": 128
+     }
     }
    },
    {
@@ -45027,6 +45723,27 @@
      "sha256": "274d356df5d0496d3724b1c76f09c1e4708e1bd390aabc1f33fea9f426c416c9",
      "width": 128,
      "height": 52
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.432.24.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-432-record-024-frame-000-icon.webp",
+     "byteLength": 24496,
+     "sha256": "364ec430ff03992000e34c9555a6544c79a8b4a472b3e7171e5f2d5c59eed440",
+     "width": 839,
+     "height": 656,
+     "doll": {
+      "x": -25.1667,
+      "y": 77.8333,
+      "width": 139.8333,
+      "height": 109.3333
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-432-record-024-frame-000-icon.png",
+      "byteLength": 4778,
+      "sha256": "a18b4aebaba96e998945f2f945f825ba419812eb3418c1eb5cb46d658bf9bcf5",
+      "width": 128,
+      "height": 100
+     }
     }
    },
    {
@@ -45049,6 +45766,27 @@
      "sha256": "08cd6386769891a920413e60c59c096f0c800581800c8678721627d1a3e2d3ef",
      "width": 91,
      "height": 128
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.432.25.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-432-record-025-frame-000-icon.webp",
+     "byteLength": 27042,
+     "sha256": "b73a493692438b7d2a99b6a24a6bb8739557f4b95373bbc98a426646de45d25b",
+     "width": 828,
+     "height": 851,
+     "doll": {
+      "x": -24.6,
+      "y": -6.8,
+      "width": 165.6,
+      "height": 170.2
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-432-record-025-frame-000-icon.png",
+      "byteLength": 4277,
+      "sha256": "ae5f7b542722ea2b9edad06587dcdea15b7f3fc3d8c7de696dc229b36b7ff8db",
+      "width": 125,
+      "height": 128
+     }
     }
    },
    {
@@ -45093,6 +45831,27 @@
      "sha256": "93dc1a5664a3a314083798fab236ffe40eabd34b3afe8a1fbb876701be03c72a",
      "width": 90,
      "height": 128
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.432.3.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-432-record-003-frame-000-icon.webp",
+     "byteLength": 32786,
+     "sha256": "4e26993bcaa7f7fa19ee17c79d29465dc22947d93012c25087d2af092546f74f",
+     "width": 717,
+     "height": 803,
+     "doll": {
+      "x": -28.0,
+      "y": 71.1667,
+      "width": 119.5,
+      "height": 133.8333
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-432-record-003-frame-000-icon.png",
+      "byteLength": 6493,
+      "sha256": "d1facf5058e24c2137d748d83fa9e7eaaab0aa857c374b25f08d42c4721abb73",
+      "width": 114,
+      "height": 128
+     }
     }
    },
    {
@@ -45115,6 +45874,27 @@
      "sha256": "57a9a6b0a39821114ae1de8502243266e92d4b0852450e920834f6832210a6f7",
      "width": 128,
      "height": 10
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.432.5.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-432-record-005-frame-000-icon.webp",
+     "byteLength": 13792,
+     "sha256": "6eafe5f7aebcb336c688b9e146a2cf69d80b06cf401dbc982eb3e11bedf11809",
+     "width": 732,
+     "height": 85,
+     "doll": {
+      "x": -40.6,
+      "y": 86.8,
+      "width": 146.4,
+      "height": 17.0
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-432-record-005-frame-000-icon.png",
+      "byteLength": 2934,
+      "sha256": "efb0e7957a8a3b7545e275a72702977c2526ac6e85addf83e49399b99ccebc3e",
+      "width": 128,
+      "height": 15
+     }
     }
    },
    {
@@ -45225,6 +46005,27 @@
      "sha256": "9f48b68f15645d216de11eaeec3159cbe3955bad624640ccec82f8631496565d",
      "width": 128,
      "height": 84
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.433.0.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-433-record-000-frame-000-icon.webp",
+     "byteLength": 41708,
+     "sha256": "20f90ba19cbb7c07a4564bb883584af3e0c190223e9a7bab6323410904b27276",
+     "width": 951,
+     "height": 1006,
+     "doll": {
+      "x": -16.0,
+      "y": 8.4286,
+      "width": 135.8571,
+      "height": 143.7143
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-433-record-000-frame-000-icon.png",
+      "byteLength": 5640,
+      "sha256": "162cafe0717eec25acb85264cea94a3b3c700559b9db944356bd160bb7443cd7",
+      "width": 121,
+      "height": 128
+     }
     }
    },
    {
@@ -45269,6 +46070,27 @@
      "sha256": "3ed1692bd36c61752e2f0ccfe439e55ce6a92afc8a98804fb7a56e11c46dd537",
      "width": 128,
      "height": 44
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.433.10.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-433-record-010-frame-000-icon.webp",
+     "byteLength": 30058,
+     "sha256": "5c1f899a68548a1e6d740c3932d08b88092f7d2f21411def6f5c498ea35833c2",
+     "width": 781,
+     "height": 267,
+     "doll": {
+      "x": 7.4,
+      "y": 86.2,
+      "width": 78.1,
+      "height": 26.7
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-433-record-010-frame-000-icon.png",
+      "byteLength": 6820,
+      "sha256": "1b2027b985433b361a7f339fe5accf6a7c00ae79286b77cac221c49dae16dd72",
+      "width": 128,
+      "height": 44
+     }
     }
    },
    {
@@ -45335,6 +46157,27 @@
      "sha256": "d3eb3a755cbbdaebea27a5582e478f1b265aefb099564d849a3899b2f71ee182",
      "width": 128,
      "height": 36
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.433.13.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-433-record-013-frame-000-icon.webp",
+     "byteLength": 27512,
+     "sha256": "14dabe9bb626839738f054866d6ff4e9b201717e4a688bde8161b50291fcdbfd",
+     "width": 989,
+     "height": 995,
+     "doll": {
+      "x": 4.0,
+      "y": 50.8182,
+      "width": 89.9091,
+      "height": 90.4545
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-433-record-013-frame-000-icon.png",
+      "byteLength": 3810,
+      "sha256": "da7ece453f2bc447b23ae4070eb4825b3e4e8dfa3103fbfb1b139ba0d8802bb1",
+      "width": 127,
+      "height": 128
+     }
     }
    },
    {
@@ -45577,6 +46420,27 @@
      "sha256": "2fefeac94757ad8e280c22c46a8813d428e61291feefa1d77f8866517b25cd05",
      "width": 92,
      "height": 128
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.433.23.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-433-record-023-frame-000-icon.webp",
+     "byteLength": 28344,
+     "sha256": "225cbd4a2879b7555c490e32d748614c44d4789e18370ebf1ea2c9bc7f44e9fb",
+     "width": 680,
+     "height": 862,
+     "doll": {
+      "x": -26.8,
+      "y": 18.6,
+      "width": 136.0,
+      "height": 172.4
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-433-record-023-frame-000-icon.png",
+      "byteLength": 4016,
+      "sha256": "ab6d7336a4b28b809fa19cc256c6c0e014ae200d752266515afaa96139e00127",
+      "width": 101,
+      "height": 128
+     }
     }
    },
    {
@@ -45599,6 +46463,27 @@
      "sha256": "b9d8e8663c97079e37a5e289ba934b9faf307c960702dc2d43a8532d6b66d4be",
      "width": 128,
      "height": 52
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.433.24.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-433-record-024-frame-000-icon.webp",
+     "byteLength": 22570,
+     "sha256": "5ad23ded20dfff3f40c68b8e3dddce60ff6da4c3b8cdfdba5780e037f0c03224",
+     "width": 768,
+     "height": 282,
+     "doll": {
+      "x": -15.6667,
+      "y": 75.8333,
+      "width": 128.0,
+      "height": 47.0
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-433-record-024-frame-000-icon.png",
+      "byteLength": 5224,
+      "sha256": "e5f0f67afde4b1964d894e62969a75058c6a3b325fcf18ee092d2dee8bd2f02e",
+      "width": 128,
+      "height": 47
+     }
     }
    },
    {
@@ -45621,6 +46506,27 @@
      "sha256": "08cd6386769891a920413e60c59c096f0c800581800c8678721627d1a3e2d3ef",
      "width": 91,
      "height": 128
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.433.25.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-433-record-025-frame-000-icon.webp",
+     "byteLength": 27042,
+     "sha256": "b73a493692438b7d2a99b6a24a6bb8739557f4b95373bbc98a426646de45d25b",
+     "width": 828,
+     "height": 851,
+     "doll": {
+      "x": -26.6,
+      "y": -7.8,
+      "width": 165.6,
+      "height": 170.2
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-433-record-025-frame-000-icon.png",
+      "byteLength": 4277,
+      "sha256": "ae5f7b542722ea2b9edad06587dcdea15b7f3fc3d8c7de696dc229b36b7ff8db",
+      "width": 125,
+      "height": 128
+     }
     }
    },
    {
@@ -45665,6 +46571,27 @@
      "sha256": "93dc1a5664a3a314083798fab236ffe40eabd34b3afe8a1fbb876701be03c72a",
      "width": 90,
      "height": 128
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.433.3.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-433-record-003-frame-000-icon.webp",
+     "byteLength": 32786,
+     "sha256": "4e26993bcaa7f7fa19ee17c79d29465dc22947d93012c25087d2af092546f74f",
+     "width": 717,
+     "height": 803,
+     "doll": {
+      "x": -28.0,
+      "y": 69.1667,
+      "width": 119.5,
+      "height": 133.8333
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-433-record-003-frame-000-icon.png",
+      "byteLength": 6493,
+      "sha256": "d1facf5058e24c2137d748d83fa9e7eaaab0aa857c374b25f08d42c4721abb73",
+      "width": 114,
+      "height": 128
+     }
     }
    },
    {
@@ -45687,6 +46614,27 @@
      "sha256": "57a9a6b0a39821114ae1de8502243266e92d4b0852450e920834f6832210a6f7",
      "width": 128,
      "height": 10
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.433.5.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-433-record-005-frame-000-icon.webp",
+     "byteLength": 13792,
+     "sha256": "6eafe5f7aebcb336c688b9e146a2cf69d80b06cf401dbc982eb3e11bedf11809",
+     "width": 732,
+     "height": 85,
+     "doll": {
+      "x": -42.6,
+      "y": 85.8,
+      "width": 146.4,
+      "height": 17.0
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-433-record-005-frame-000-icon.png",
+      "byteLength": 2934,
+      "sha256": "efb0e7957a8a3b7545e275a72702977c2526ac6e85addf83e49399b99ccebc3e",
+      "width": 128,
+      "height": 15
+     }
     }
    },
    {
@@ -45809,6 +46757,40 @@
       "sha256": "5d293752755b8f2764f975b54b40c9f324d3cfed5d11f7602a760fa6182e8d89",
       "width": 128,
       "height": 42
+     }
+    },
+    "icon": {
+     "mediaId": "refreshed.paper-doll.mace.14.icon",
+     "path": "worldrpg/media/refreshed/worn/texture-mace-record-014-frame-000-icon.webp",
+     "byteLength": 19842,
+     "sha256": "8342919c3844e086ba545bdd0c1b6673d02c0cd06623f5f592cae6a34a814beb",
+     "width": 783,
+     "height": 258,
+     "doll": {
+      "x": 3.1111,
+      "y": 87.0,
+      "width": 87.0,
+      "height": 28.6667
+     },
+     "world": {
+      "path": "worldrpg/media/refreshed/worn/texture-mace-record-014-frame-000-icon.png",
+      "byteLength": 6005,
+      "sha256": "df4e26b4c6b38a95829ea7bbedb6d6d4d6518f6f351ebb8dae417b3d9597c312",
+      "width": 128,
+      "height": 42
+     },
+     "dyeMask": {
+      "mediaId": "refreshed.paper-doll.mace.14.icon.dye",
+      "path": "worldrpg/media/refreshed/worn/texture-mace-record-014-frame-000-icon-dye.webp",
+      "byteLength": 9234,
+      "sha256": "4f51c2ec8c40945175e17c713f1d0cda2c6cbe1f0ca3a2147dfb002df4153848",
+      "world": {
+       "path": "worldrpg/media/refreshed/worn/texture-mace-record-014-frame-000-icon-dye.png",
+       "byteLength": 2304,
+       "sha256": "a7063d2994c31df2a84835d2d740239362bda30e085495c63a245cd091e6efa1",
+       "width": 128,
+       "height": 42
+      }
      }
     }
    },
