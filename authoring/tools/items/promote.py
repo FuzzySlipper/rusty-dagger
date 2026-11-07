@@ -58,6 +58,11 @@ The `flats` area promotes the world's placed billboards and terrain nature (`fla
 whose every frame has an accepted final becomes one PNG atlas, as an effect does, and the game draws it at the classic
 sprite's size and anchor. A record an item also draws takes its accepted `items` final unless the area has its own.
 
+The `people` area promotes the placed static people (`people`): each record in df-raw/people/usage.csv with a placement
+becomes a one-frame atlas of its standing figure, the only frame a static person shows, crunched at PEOPLE_CRUNCH pixels to
+a classic pixel on the whole of ART_PAL, whose small accents a smaller palette loses. Records with the same frame share the
+atlas of whichever has an accepted final, since only one of them was painted. A record without one stays classic.
+
 Icons are written at their area's ICON pixels on the longer side and carry no doll rect.
 
 A worn image and an item icon is also what a dropped item stands as on the ground, and the renderer reads PNG, so
@@ -87,7 +92,7 @@ CONTENT = REPOSITORY / "content"
 MEDIA = "worldrpg/media/refreshed"
 PAYLOAD = CONTENT / "worldrpg/payloads/daggerfall.art-replacements.json"
 QUALITY = 90
-AREAS = ("paper-doll", "worn", "items", "spells", "effects", "surfaces", "terrain", "flats")
+AREAS = ("paper-doll", "worn", "items", "spells", "effects", "surfaces", "terrain", "flats", "people")
 SURFACE = re.compile(r"texture-(\d{3})-(\d+)")
 ICON = {"items": 256, "spells": 128}   # pixels on an icon's longer side: an item slot, a spell glyph of about 3rem
 CLASSIC_MANIFEST = REPOSITORY / "local/import/staging/worldrpg/imports/shared/media/classic/manifest.json"
@@ -116,6 +121,7 @@ CANVAS, OCCUPANCY = 1024, 0.74   # the generation canvas and the share of it the
 WORLD_ICON = 128                 # pixels on a dropped item's longer side: a small pile on the floor
 EFFECT_FRAME = 256               # pixels on an effect frame's longer side
 FLAT_CRUNCH = float(os.environ.get("FLAT_CRUNCH", "2"))   # a world billboard's pixels to a classic pixel
+PEOPLE_CRUNCH = 3   # a person's pixels to a classic pixel
 # The flats that give light, as Daggerfall Unity's emissive list names them, each with an emission map cut from its own art.
 # 210-8 is the one blue glass; every other record glows warm.
 GLOWING = {(190, 3), (190, 4), (190, 5), (200, 7), (200, 8), (200, 9), (200, 10), (202, 2), (208, 2),
@@ -328,11 +334,11 @@ def png_file(image, target):
     return {"path": target, "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest()}
 
 
-def frame_atlas(name, sources, finals, target, longest=None, crunch=None, glow=None):
+def frame_atlas(name, sources, finals, target, longest=None, crunch=None, colours=reduce.COLOURS, glow=None):
     """One PNG atlas of a classic record's frames in order, all cropped to one box that holds every frame's art and the
     classic frame's place on the generation canvas, and its entry without `replaces`. Smooth at most `longest` pixels a
-    side, or with `crunch`, reduce's sprite crunch at that many pixels to a classic pixel. `glow`, a function of a tile, also
-    writes an emission map of the same layout beside it."""
+    side, or with `crunch`, reduce's sprite crunch at that many pixels to a classic pixel, on `colours` of ART_PAL (None for
+    all of it). `glow`, a function of a tile, also writes an emission map of the same layout beside it."""
     boxes = {classic_box(source) for source in sources}
     if len(boxes) != 1:
         raise SystemExit(f"{name}: the classic frames differ in size, so no one box places them.")
@@ -347,7 +353,7 @@ def frame_atlas(name, sources, finals, target, longest=None, crunch=None, glow=N
     k = crunch * Image.open(sources[0]).width / (region[2] - region[0]) if crunch else min(1, longest / max(width, height))
     size = (max(1, round(width * k)), max(1, round(height * k)))
     crops = [frame.crop(box) for frame in frames]
-    tiles = reduce.crunch_sprites(crops, size) if crunch else [crop.resize(size, Image.Resampling.LANCZOS) for crop in crops]
+    tiles = reduce.crunch_sprites(crops, size, colours) if crunch else [crop.resize(size, Image.Resampling.LANCZOS) for crop in crops]
     columns = int(np.ceil(np.sqrt(len(frames))))
     atlas = Image.new("RGBA", (columns * size[0], int(np.ceil(len(frames) / columns)) * size[1]))
     glowing = atlas.copy()
@@ -473,6 +479,28 @@ def flats():
     return entries
 
 
+def people():
+    """An atlas entry for every placed person whose standing frame, or a record's with the same frame, has an accepted final."""
+    notes = ledger("people")
+    placed_people = []
+    for row in csv.DictReader(open(AUTHORING / "df-raw/people/usage.csv")):
+        if not any(int(row[f"{place}_placements"]) for place in ("exterior", "interior", "dungeon")):
+            continue
+        stem = f"texture-{int(row['archive']):03d}-record-{int(row['record']):03d}"
+        source = AUTHORING / "df-raw/people" / row["family"] / f"texture-{int(row['archive']):03d}/person/{stem}-frame-000-source.png"
+        image = Image.open(source).convert("RGBA")
+        placed_people.append((row, stem, source, (image.size, image.tobytes())))
+    atlases = {}
+    for _, stem, source, frame in placed_people:
+        if frame not in atlases and (final := accepted_final("people", notes, f"{stem}-frame-000")):
+            atlases[frame] = frame_atlas(stem, [source], [final], f"{MEDIA}/people/{stem}.png", crunch=PEOPLE_CRUNCH, colours=None)
+    entries = [{"replaces": {"archive": int(row["archive"]), "record": int(row["record"])}, **atlases[frame]}
+               for row, _, _, frame in placed_people if frame in atlases]
+    print(f"people: {len(entries)} records refreshed by {len(atlases)} atlases, {len(placed_people) - len(entries)} stay classic, "
+          f"{sum(entry['byteLength'] for entry in atlases.values()) / 1e6:.1f} MB", flush=True)
+    return entries
+
+
 def icon_entry(replaces, image, name, world=None):
     """An icon's entry; with its classic size, also its world PNG."""
     entry = {"replaces": replaces, "mediaId": f"refreshed.{replaces}", **webp(image, f"{MEDIA}/{name}.webp"),
@@ -514,6 +542,10 @@ def main():
         if area == "flats":
             shutil.rmtree(CONTENT / MEDIA / "flats", ignore_errors=True)
             payload["artReplacements"]["flats"] = flats()
+            continue
+        if area == "people":
+            shutil.rmtree(CONTENT / MEDIA / "people", ignore_errors=True)
+            payload["artReplacements"]["people"] = people()
             continue
         if area in ("surfaces", "terrain"):
             directory = CONTENT / MEDIA / area
