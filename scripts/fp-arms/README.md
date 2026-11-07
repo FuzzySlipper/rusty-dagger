@@ -60,6 +60,19 @@ chained attack is a new clip fading in over the recovery. An attack a family has
 | `sns` | `weapon.mace` | `FPP_SnS` (sword and shield; the shield hand rests out of view): Attack_RD, _LU, _RU, _F | AttackHeavyU | Magic1 | one |
 | `halberd` | `weapon.staff` | `FPP_Halberd`: Attack_R, _LD, _D, _F | AttackHeavy_R | Magic | both |
 | `unarmed` | `weapon.unarmed` | `CHANM_FPArms_Unarmed_Punch`, then the same `.mirrored`, turn about | the punch, held drawn back | `FPP_sns_Magic1` | both |
+| `claws` | `weapon.werecreature` | the dagger's AttackLSlash and AttackR, each also `.mirrored`, open-handed ([The claw arms](#the-claw-arms)) | the dagger's AttackHeavyD | `FPP_sns_Magic1` | both |
+| `bow` | `weapon.bow` | `BOW_Draw` and `BOW_Loose` ([The bow](#the-bow)) | `BOW_Hold`, the aim | none: the element's classic casting hand | both |
+| `reins` | `weapon.reins` | none: mounting puts the weapon away ([Riding](#riding)) | none | `FPP_sns_Magic1` | both |
+
+Every family but `reins` also kicks with `FPP_sns_Kick`.
+
+A classic visual covers weapons of both kinds: `weapon.longblade` draws every sword and `weapon.axe` both axes. So the
+family follows the item's handedness in Daggerfall, and `items` moves the one-handed items off their visual's family:
+the tanto (114) to `dagger`, and the shortsword, wakazashi, broadsword, saber, longsword, katana and battle axe (116 to
+121, 127) and the club (288) to `sns`. The claymore, dai-katana and war axe stay on `longsword`, as do the flail and
+warhammer, which are two-handed too; the mace is one-handed, so its visual is on `sns`. Every melee weapon but the dagger,
+whose family's look is its own, is listed for its model. The sword-and-shield idle holds the weapon upright beside the face, so a
+mace's head sits above the frame at rest and comes into view as it swings.
 
 ### Arm sets
 
@@ -134,22 +147,7 @@ Mounting puts the weapon away. The arms draw the `reins` family, whose `RIDE_Idl
 the mount (`DaggerfallHeldViewmodel.Level`) so the hands stay on them. A cast plays from the saddle. `player.ride MOUNT` mounts
 and dismounts. The classic style draws nothing while riding.
 
-### The claw arms
-
-A transformed werewolf or wereboar draws the `claws` family, the werewolf on the `claws` set and the wereboar on
-`claws-boar` (`armsBeast`), which is the same mesh in the darker, redder hide of its paper doll (`CLAW_FUR`). The sets come
-from no pack mesh: `claws()` in `build.py` grows them on the skeleton, as `legs()` grows a leg, so they have the same
-joints and every clip plays on them. An arm and palm are fused from tubes down the bones, each digit is a tube with a
-curved nail, and shards of fur lie back along the arm. The texture is painted per texel, the werewolf's in the colours of
-the classic WEAPON11 frames, 512 pixels a side and drawn nearest, so `held` and `heldRetro` differ only in its size. The
-mesh is our own, but its GLBs carry the clips, so they stay in the container like the rest.
-
-Each set bakes every clip with its fingers held open (`open_hand`: `CLAW_CURL` and `CLAW_SPREAD`), so the family plays the
-dagger's cuts with the hand raking, not gripping. Both hands strike in turn: `fastB` and `fastD` are `fastA` and `fastC`
-the other way round. It idles on the pack's unarmed loop, which holds both hands up as the classic frames do. The dagger's
-clips start and end at its own idle, with the hand raised and the palm toward the eye, so the fast attacks' marks cut both
-ends off and the fade carries the arm between the loop and the cut. Like the bare hands, it borrows the sword-and-shield
-set's guard, kick and cast. The legs are `legs()`' plain rings in the fur's colours.
+### Attacks, casting, shields and the guard
 
 `fastA` to `fastD` are the four fast attacks in the order a chain cycles them, so a cut from one side is followed by one
 from the other, then a downward blow and a thrust. Every plain clip starts and ends at its family's idle, so any can
@@ -177,13 +175,22 @@ them by eye, and answers with what to save.
 The rules' guard (the `block` intent) plays the family's `guard` clips, or the shield's with a shield up. They run faster
 than authored, because the guard counts from the moment it is raised.
 
-A classic visual covers weapons of both kinds: `weapon.longblade` draws every sword and `weapon.axe` both axes. So the
-family follows the item's handedness in Daggerfall, and `items` moves the one-handed items off their visual's family:
-the tanto (114) to `dagger`, and the shortsword, wakazashi, broadsword, saber, longsword, katana and battle axe (116 to
-121, 127) and the club (288) to `sns`. The claymore, dai-katana and war axe stay on `longsword`, as do the flail and
-warhammer, which are two-handed too; the mace is one-handed, so its visual is on `sns`. Every melee weapon but the dagger,
-whose family's look is its own, is listed for its model. The sword-and-shield idle holds the weapon upright beside the face, so a
-mace's head sits above the frame at rest and comes into view as it swings.
+### The claw arms
+
+A transformed werewolf or wereboar draws the `claws` family, the werewolf on the `claws` set and the wereboar on
+`claws-boar` (`armsBeast`), which is the same mesh in the darker, redder hide of its paper doll (`CLAW_FUR`). The sets come
+from no pack mesh: `claws()` in `build.py` grows them on the skeleton, as `legs()` grows a leg, so they have the same
+joints and every clip plays on them. An arm and palm are fused from tubes down the bones, each digit is a tube with a
+curved nail, and shards of fur lie back along the arm. The texture is painted per texel, the werewolf's in the colours of
+the classic WEAPON11 frames, 512 pixels a side and drawn nearest, so `held` and `heldRetro` differ only in its size. The
+mesh is our own, but its GLBs carry the clips, so they stay in the container like the rest.
+
+Each set bakes every clip with its fingers held open (`open_hand`: `CLAW_CURL` and `CLAW_SPREAD`), so the family plays the
+dagger's cuts with the hand raking, not gripping. Both hands strike in turn: `fastB` and `fastD` are `fastA` and `fastC`
+the other way round. It idles on the pack's unarmed loop, which holds both hands up as the classic frames do. The dagger's
+clips start and end at its own idle, with the hand raised and the palm toward the eye, so the fast attacks' marks cut both
+ends off and the fade carries the arm between the loop and the cut. Like the bare hands, it borrows the sword-and-shield
+set's guard, kick and cast. The legs are `legs()`' plain rings in the fur's colours.
 
 ## Building it
 
@@ -230,9 +237,6 @@ or in the viewer.
 `scripts/fp-arms/sheet.sh ORIGIN LOOK OUT_DIR [STEP] [ATTACK...]` drives the viewer over a running host and writes a
 contact sheet per attack, every STEP seconds of the attack as the rules time it, its hit outlined: the quickest way to
 place marks.
-
-## Not yet
-
 
 ## Weapon models
 
