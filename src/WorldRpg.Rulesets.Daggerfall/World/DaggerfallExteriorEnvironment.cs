@@ -64,10 +64,10 @@ internal readonly record struct DaggerfallExteriorWaterVolume(
     Vector3 Maximum,
     int TileWidth = 1,
     int TileHeight = 1,
-    int RiverSection = 0)
+    int RiverSlice = 0)
 {
     /// <summary>Stable product identity for this source water rectangle, independent of Engine origin.</summary>
-    internal ulong StableId => DaggerfallExteriorEnvironment.WaterObjectId(Cell, TileX, TileY, TileWidth, TileHeight, RiverSection);
+    internal ulong StableId => DaggerfallExteriorEnvironment.WaterObjectId(Cell, TileX, TileY, TileWidth, TileHeight, RiverSlice);
 
     /// <summary>Projects this source tile into the current Engine-local frame for movement and triggers.</summary>
     internal CharacterWaterVolume ToCharacterVolume(DaggerfallExteriorWorldOrigin origin) =>
@@ -250,8 +250,8 @@ internal sealed class DaggerfallExteriorEnvironment
         _initialized = true;
     }
 
-    /// <summary>How many metres a river may fall across one section and still hold water to swim in.</summary>
-    private const double SwimmableFall = 2;
+    /// <summary>The most a river falls across one box of its water, in metres.</summary>
+    private const double RiverBoxFall = 1;
     /// <summary>A river box's depth under its surface: past any channel's bed, which the ground stops at anyway.</summary>
     private const float RiverVolumeDepth = 12;
 
@@ -272,7 +272,7 @@ internal sealed class DaggerfallExteriorEnvironment
     internal static ulong WaterObjectId(DaggerfallExteriorCellId cell, int tileX, int tileY) =>
         WaterObjectId(cell, tileX, tileY, 1, 1);
 
-    internal static ulong WaterObjectId(DaggerfallExteriorCellId cell, int tileX, int tileY, int tileWidth, int tileHeight, int riverSection = 0)
+    internal static ulong WaterObjectId(DaggerfallExteriorCellId cell, int tileX, int tileY, int tileWidth, int tileHeight, int riverSlice = 0)
     {
         const int coordinateBits = 24;
         const uint coordinateMask = (1U << coordinateBits) - 1U;
@@ -294,7 +294,7 @@ internal sealed class DaggerfallExteriorEnvironment
         value = MixWaterIdentity(value, (uint)tileY);
         value = MixWaterIdentity(value, (uint)tileWidth);
         value = MixWaterIdentity(value, (uint)tileHeight);
-        if (riverSection != 0) value = MixWaterIdentity(value, (uint)riverSection);
+        if (riverSlice != 0) value = MixWaterIdentity(value, (uint)riverSlice);
         value = 0xDA00_0000_0000_0000UL | (value & 0x00FF_FFFF_FFFF_FFFFUL);
         return value == 0 ? 1UL : value;
     }
@@ -414,9 +414,9 @@ internal sealed class DaggerfallExteriorEnvironment
     private readonly record struct WaterRectangle(int X, int Y, int Width, int Height);
 
     /// <summary>
-    /// The water of the rivers in a cell, one box a section, topped at that section's surface so a swimmer floats where the
-    /// ribbon draws. A box can overhang its banks, which stand above its top. Water falling faster than <see cref="SwimmableFall"/>
-    /// is a torrent with no pool to swim in, so it has none and anyone there walks the bed.
+    /// The water of the rivers in a cell, wherever a ribbon draws it. A box is level and a river falls, so a section is cut
+    /// into as many slices as keep each one's top within <see cref="RiverBoxFall"/>, and a swimmer floats where the ribbon
+    /// draws all the way down a steep reach. A box can overhang its banks, which stand above its top.
     /// </summary>
     private static IEnumerable<DaggerfallExteriorWaterVolume> BuildRiverWater(DaggerfallExteriorCellId cell, DaggerfallTerrainSurface surface)
     {
@@ -424,17 +424,29 @@ internal sealed class DaggerfallExteriorEnvironment
         const float size = DaggerfallTerrainSurfaceBuilder.HorizontalSize, tile = DaggerfallTerrainSurfaceBuilder.SampleSpacing;
         // A cell's corner is heightmap pixel (X - 1, Y), its rows running north from there.
         double cornerX = (cell.X - 1) * (double)size, cornerZ = cell.Y * (double)size;
-        int section = 0;
+        int slice = 0;
         foreach (DaggerfallRiverSection water in rivers.Sections(cell.X - 1, cell.Y - 1))
         {
-            section++;
-            if (Math.Abs(water.From.Surface - water.To.Surface) > SwimmableFall) continue;
-            double[] xs = [water.From.LeftX, water.From.RightX, water.To.LeftX, water.To.RightX], zs = [water.From.LeftZ, water.From.RightZ, water.To.LeftZ, water.To.RightZ];
-            float minX = (float)(xs.Min() - cornerX), maxX = (float)(xs.Max() - cornerX), minZ = (float)(zs.Min() - cornerZ), maxZ = (float)(zs.Max() - cornerZ);
-            float top = (float)((water.From.Surface + water.To.Surface) / 2);
-            int tileX = Math.Clamp((int)(minX / tile), 0, TerrainTileDimension - 1), tileY = Math.Clamp((int)(-maxZ / tile), 0, TerrainTileDimension - 1);
-            yield return new(cell, tileX, tileY, new(minX, top - RiverVolumeDepth, minZ), new(maxX, top, maxZ), 1, 1, section);
+            int slices = Math.Max((int)Math.Ceiling(Math.Abs(water.From.Surface - water.To.Surface) / RiverBoxFall), 1);
+            for (int k = 0; k < slices; k++)
+            {
+                slice++;
+                DaggerfallRiverSpan from = Along(water, k / (double)slices), to = Along(water, (k + 1) / (double)slices);
+                double[] xs = [from.LeftX, from.RightX, to.LeftX, to.RightX], zs = [from.LeftZ, from.RightZ, to.LeftZ, to.RightZ];
+                float minX = (float)(xs.Min() - cornerX), maxX = (float)(xs.Max() - cornerX), minZ = (float)(zs.Min() - cornerZ), maxZ = (float)(zs.Max() - cornerZ);
+                float top = (float)((from.Surface + to.Surface) / 2);
+                int tileX = Math.Clamp((int)(minX / tile), 0, TerrainTileDimension - 1), tileY = Math.Clamp((int)(-maxZ / tile), 0, TerrainTileDimension - 1);
+                yield return new(cell, tileX, tileY, new(minX, top - RiverVolumeDepth, minZ), new(maxX, top, maxZ), 1, 1, slice);
+            }
         }
+    }
+
+    /// <summary>A section's span a share of the way along it.</summary>
+    private static DaggerfallRiverSpan Along(DaggerfallRiverSection water, double share)
+    {
+        double Mix(double from, double to) => from + ((to - from) * share);
+        return new(Mix(water.From.LeftX, water.To.LeftX), Mix(water.From.LeftZ, water.To.LeftZ), Mix(water.From.RightX, water.To.RightX),
+            Mix(water.From.RightZ, water.To.RightZ), Mix(water.From.Surface, water.To.Surface));
     }
 
     private static IReadOnlyList<DaggerfallExteriorTerrainTile> BuildTerrainTiles(
