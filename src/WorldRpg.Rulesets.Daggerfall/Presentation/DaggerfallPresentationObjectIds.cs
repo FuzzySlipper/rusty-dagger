@@ -63,6 +63,13 @@ internal static class DaggerfallPresentationObjectIds
         return NatureBase | ((ulong)(uint)x << (CellBits + SpriteRecordBits)) | ((ulong)(uint)y << SpriteRecordBits) | (uint)record;
     }
 
+    /// <summary>The sea's sheet on a map pixel.</summary>
+    internal static ulong Sea(int x, int y)
+    {
+        RequireCell(x, y, "Sea");
+        return GameplayEnd | ((ulong)(uint)x << CellBits) | (uint)y;
+    }
+
     /// <summary>A drawn location's static mesh by its index in the location's geometry.</summary>
     internal static ulong WorldMesh(int slot, int index)
     {

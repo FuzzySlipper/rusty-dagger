@@ -143,6 +143,9 @@ internal sealed class DaggerfallGroundLayers : IDisposable
     /// <summary>Ground at the water: grass, dirt, rock and water.</summary>
     internal Material Shore { get; } = null!;
 
+    /// <summary>This climate's water art, which the sea wears.</summary>
+    internal RenderResource Water => _textures[^1];
+
     /// <summary>Whether the noise bares this archive's stone, or only the slope does.</summary>
     internal bool NoiseStone { get; }
 

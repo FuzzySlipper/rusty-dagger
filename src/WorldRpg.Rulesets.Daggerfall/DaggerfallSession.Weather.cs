@@ -39,9 +39,10 @@ internal sealed partial class DaggerfallSession
         bool sheltered = outside && _spatial.CastRay(player + Vector3.UnitY * _tuning.Camera.EyeHeight,
             Vector3.UnitY, _tuning.Ambient.ShelterProbeHeight,
             _sites.CharacterEnvironment(State.PlayerControl.Motion)).Present;
+        _camera.DrawOutTo(outside ? _tuning.Horizon.DrawnMetres : null);
         if (outside && _sites.ActiveExteriorOrigin is { } origin)
             _horizon.Show(_spatial.Session, origin, player, _time.Calendar.Season == DaggerfallSeason.Winter,
-                _tuning.Weather.Daylight(_time.Calendar, CurrentWeather),
+                _sites.Projection.Lighting.SkyLight / _tuning.SiteLighting.ViewFull,
                 CurrentWeather is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy or DaggerfallWeatherKind.Overcast,
                 !_controlSettings.ClassicArt, _sites.GroundLayers);
         else _horizon.Hide();

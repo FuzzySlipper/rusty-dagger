@@ -15,7 +15,6 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="SinkMetres">How far far ground is sunk under the walked window, where it isn't wanted.</param>
 /// <param name="SinkFromMetres">The sink starts to ease out here, past where the window always reaches.</param>
 /// <param name="SinkGoneMetres">Far ground stands at its height from here, past the window however far the player has moved from the centre.</param>
-/// <param name="NightTint">How bright far ground stands in the dark, as a share of its daylight colour.</param>
 /// <param name="FollowMetres">The player moves this far before the lift's centre follows.</param>
 /// <param name="RockFromSlope">Far ground turns to rock from this slope (rise over run); its coarse cells smooth a slope below the walked ground's.</param>
 /// <param name="RockFullSlope">Far ground is bare rock from this slope.</param>
@@ -25,11 +24,13 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="CloudScaleMetres">The size of one cloud.</param>
 /// <param name="CloudTwilightDegrees">How far below the horizon the sun still lights the clouds.</param>
 /// <param name="CloudDrift">The clouds' drift east and south, in metres a second.</param>
-internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres, float LiftFullMetres, float FogDensity, float SinkMetres, float SinkFromMetres, float SinkGoneMetres, float NightTint,
+internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres, float LiftFullMetres, float FogDensity, float SinkMetres, float SinkFromMetres, float SinkGoneMetres,
     float FollowMetres, float RockFromSlope, float RockFullSlope,
     float CloudCoverage, float StormCloudCoverage, float CloudAltitudeMetres, float CloudScaleMetres, float CloudTwilightDegrees, Vector2 CloudDrift,
     Color Sea)
 {
+    /// <summary>How far the world draws outdoors: past near ground's corners, for the far plane clips everything.</summary>
+    internal double DrawnMetres { get; init; } = 6_000;
     /// <summary>The side of a cloud's cells in metres, so the sky sits with the pixel art under it.</summary>
     internal float CloudPixelMetres { get; init; } = 180;
     /// <summary>How many shades a cloud is drawn in.</summary>
@@ -56,17 +57,17 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
     /// <summary>How bright a moon stands by full day, as a share of its brightness at night.</summary>
     internal float MoonDayBrightness { get; init; } = .45f;
 
-    internal static DaggerfallHorizonTuning Default { get; } = new(4.5f, 3_000, 24_000, .00003f, 150, 2_900, 3_700, .1f, 204.8f, .25f, .7f,
+    internal static DaggerfallHorizonTuning Default { get; } = new(4.5f, 3_000, 24_000, .00003f, 150, 2_900, 3_700, 204.8f, .25f, .7f,
         .45f, .9f, 3_500, 1_800, 8, new(14, 5),
-        Color.FromSrgb(.16f, .24f, .32f));
+        Color.FromSrgb(.31f, .35f, .44f));
 
     internal DaggerfallHorizonTuning Validate()
     {
+        if (!double.IsFinite(DrawnMetres) || DrawnMetres <= 0) throw new ArgumentException("The world draws out to a finite distance.");
         foreach (float value in new[] {Lift, LiftFullMetres, FogDensity, FollowMetres, RockFullSlope})
             if (!float.IsFinite(value) || value <= 0) throw new ArgumentException("Horizon values must be finite and positive.");
         if (SinkMetres < 0 || SinkFromMetres < 0 || SinkFromMetres >= SinkGoneMetres)
             throw new ArgumentException("A horizon's sink is at least nothing, and eases out from a start to a finish.");
-        if (NightTint is < 0 or > 1) throw new ArgumentException("A horizon's night tint is from 0 to 1.");
         if (Lift < 1 || LiftFromMetres < 0 || LiftFromMetres >= LiftFullMetres
             || RockFromSlope < 0 || RockFromSlope >= RockFullSlope)
             throw new ArgumentException("A horizon's lift cannot fall, and its fades must rise from a start to a finish.");
@@ -89,7 +90,7 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
     internal static DaggerfallHorizonTuning Read(JsonElement e) => new(
         e.GetProperty("lift").GetSingle(), e.GetProperty("liftFromMetres").GetSingle(), e.GetProperty("liftFullMetres").GetSingle(),
         e.GetProperty("fogDensity").GetSingle(), e.GetProperty("sinkMetres").GetSingle(), e.GetProperty("sinkFromMetres").GetSingle(),
-        e.GetProperty("sinkGoneMetres").GetSingle(), e.GetProperty("nightTint").GetSingle(), e.GetProperty("followMetres").GetSingle(),
+        e.GetProperty("sinkGoneMetres").GetSingle(), e.GetProperty("followMetres").GetSingle(),
         e.GetProperty("rockFromSlope").GetSingle(), e.GetProperty("rockFullSlope").GetSingle(),
         e.GetProperty("cloudCoverage").GetSingle(), e.GetProperty("stormCloudCoverage").GetSingle(),
         e.GetProperty("cloudAltitudeMetres").GetSingle(), e.GetProperty("cloudScaleMetres").GetSingle(),
@@ -97,6 +98,7 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
         new(e.GetProperty("cloudDrift")[0].GetSingle(), e.GetProperty("cloudDrift")[1].GetSingle()),
         ReadColor(e.GetProperty("sea")))
     {
+        DrawnMetres = e.GetProperty("drawnMetres").GetDouble(),
         CloudPixelMetres = e.GetProperty("cloudPixelMetres").GetSingle(),
         CloudShadeSteps = e.GetProperty("cloudShadeSteps").GetUInt32(),
         CloudColors = [.. e.GetProperty("cloudColors").EnumerateArray().Select(color => new Vector3(color[0].GetSingle(), color[1].GetSingle(), color[2].GetSingle()))],

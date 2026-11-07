@@ -89,6 +89,8 @@ internal sealed class DaggerfallSiteLifecycle
     private DaggerfallHorizonGround? _ground;
     private Func<IEnumerable<Vector3>> _walkers = static () => [];
     private DaggerfallExteriorGroundCollider? _groundCollider;
+    private Action<List<AppearanceFact>>? _seaFacts;
+    private Action? _releaseSea;
     // A window was admitted whose ground is still to stand: what arrives with it waits (CollisionPending).
     private bool _groundAwaited;
     private DaggerfallExteriorTerrainAppearance? _exteriorTerrainAppearance;
@@ -1712,6 +1714,7 @@ internal sealed class DaggerfallSiteLifecycle
                 _state.Effects.PerceptionFor, _state.Npcs.IsGameplayActive);
         }
         _exteriorTerrainAppearance?.AppendFacts(facts);
+        _seaFacts?.Invoke(facts);
     }
 
     /// <summary>A snapshot was accepted: what the window and the retired neighbours no longer draw is released.</summary>
@@ -2066,6 +2069,9 @@ internal sealed class DaggerfallSiteLifecycle
     /// Releases retained terrain visuals after the complete appearance snapshot is empty. The session
     /// calls this once while it is disposed; the exterior window cannot be admitted afterwards.
     /// </summary>
+    /// <summary>Names who adds the sea to the exterior's snapshot, and how it lets go when the exterior retires.</summary>
+    internal void DrawSeaWith(Action<List<AppearanceFact>> facts, Action release) => (_seaFacts, _releaseSea) = (facts, release);
+
     internal void RetireExteriorAppearance()
     {
         ReleaseExteriorWaterTriggers();
@@ -2075,6 +2081,7 @@ internal sealed class DaggerfallSiteLifecycle
         List<Exception>? failures = null;
         ReleaseRetiredResidentLocations(ref failures);
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
+        _releaseSea?.Invoke();
         _exteriorTerrainAppearance?.Dispose();
         _exteriorTerrainAppearance = null;
         _exteriorEnvironment = null;

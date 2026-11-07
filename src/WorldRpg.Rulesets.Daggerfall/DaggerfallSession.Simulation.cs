@@ -110,7 +110,7 @@ internal sealed partial class DaggerfallSession
             Running = !levitation.IsLevitating && locomotion.Running,
             JumpRequested = !levitation.IsLevitating && locomotion.JumpRequested,
         };
-        if (activeWater is { } water && !waterWalking && !climb.Climbing && canMove && State.Transport.IsOnFoot)
+        if (activeWater is { } water && !waterWalking && !climb.Climbing && canMove && !State.Transport.OnShip)
         {
             float verticalIntent = locomotion.UpHeld ? 1f : locomotion.DownHeld ? -1f : 0f;
             locomotion = locomotion with
