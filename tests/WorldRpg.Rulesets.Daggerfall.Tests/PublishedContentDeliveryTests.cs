@@ -881,7 +881,8 @@ public sealed class PublishedContentDeliveryTests
         JsonElement[] files = [.. owners, .. owners.Where(owner => owner.TryGetProperty("world", out _)).Select(owner => owner.GetProperty("world")),
             .. section.GetProperty("effects").EnumerateArray(), section.GetProperty("effectGlow"),
             .. section.GetProperty("meshes").EnumerateArray().DistinctBy(mesh => mesh.GetProperty("path").GetString()), .. surfaces,
-            .. flats, .. flats.Where(flat => flat.TryGetProperty("emission", out _)).Select(flat => flat.GetProperty("emission"))];
+            .. flats, .. flats.Where(flat => flat.TryGetProperty("emission", out _)).Select(flat => flat.GetProperty("emission")),
+            .. section.GetProperty("people").EnumerateArray().DistinctBy(person => person.GetProperty("path").GetString())];
         foreach (JsonElement file in files)
         {
             byte[] bytes = content.ReadBytes(file.GetProperty("path").GetString()!).ToArray();
