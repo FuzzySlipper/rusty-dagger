@@ -75,7 +75,9 @@ internal sealed partial class DaggerfallSession
         _sites.SyncCityGates();
         CharacterStepEnvironment doorEnvironment = _sites.CharacterEnvironment(State.PlayerControl.Motion);
         ReconcileTriggers(doorEnvironment, simulationStep, actionGraph);
-        CharacterWaterVolume? activeWater = State.Swimming.ActiveVolume(doorEnvironment.WaterVolumes.Span);
+        CharacterWaterVolume? activeWater = positionBefore is { } waterPoint
+            ? _sites.WaterAt(State.Swimming.ActiveVolume(doorEnvironment.WaterVolumes.Span), waterPoint.ToVector())
+            : State.Swimming.ActiveVolume(doorEnvironment.WaterVolumes.Span);
         bool waterWalking = State.Effects.GrantsWaterWalking(DaggerfallActorIdentity.PlayerEntityId);
         bool wallAhead = _spatial.TryProbeClimbWall(State.PlayerControl, CharacterWallProbeDirection.Forward, out SpatialHit forwardHit, doorEnvironment)
             && MathF.Abs(forwardHit.Normal.Y) <= .06f;

@@ -254,6 +254,11 @@ internal sealed class DaggerfallSiteLifecycle
             water.Values.OrderBy(value => value.Trigger).ToArray());
     }
 
+    /// <summary>The water someone at a position is really in, given the volume they are inside; none past a river's banks.</summary>
+    internal CharacterWaterVolume? WaterAt(CharacterWaterVolume? volume, Vector3 position) =>
+        volume is { } water && _exteriorResidency is { IsInitialized: true } residency && _exteriorEnvironment is { IsInitialized: true } environment
+            ? environment.AtSurface(water, position, ActiveOrigin(residency)) : volume;
+
     private static ulong LocationPlacementId(DaggerfallWorldProfileKey profile, DaggerfallSiteSpatialPart part) =>
         StableHash.NonZeroFnv1a64($"daggerfall.location-artifact.v1|{profile.LogicalId}|{part.Id}");
 

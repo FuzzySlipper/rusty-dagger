@@ -1,4 +1,5 @@
 using System.Numerics;
+using Rusty.Engine;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
@@ -26,31 +27,68 @@ public sealed class DaggerfallExteriorEnvironmentTests
         Assert.False(environment.TryReadWater(new Vector3(900F, 10F, 25F), out _));
     }
 
-    [Fact]
-    public void A_river_holds_water_to_swim_in_all_the_way_down_a_steep_reach()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void A_swimmer_floats_at_the_rivers_own_surface_down_or_up_a_wide_steep_diagonal_reach(bool upstream)
     {
-        // Map pixel (3, 2) spans the heightmap's pixel (2, 1): the course runs through its middle, gentle then falling hard.
-        const float size = DaggerfallExteriorCellResidency.CellSize, gentle = 300, drop = 20;
-        (float X, float Surface)[] course = [(.2F, gentle), (.3F, gentle - .5F), (.4F, gentle - 1), (.5F, gentle - 1 - drop), (.6F, gentle - 1 - (2 * drop))];
+        // Map pixel (3, 2) spans the heightmap's pixel (2, 1). The reach runs at 45 degrees, 40 m wide, gentle and then losing 20 m a section.
+        const float size = DaggerfallExteriorCellResidency.CellSize, step = 34, wide = 20;
+        (float Along, float Surface)[] course = [(0, 300), (1, 299.5F), (2, 299), (3, 279), (4, 259), (5, 239), (6, 238.5F)];
+        float startX = 2.3F * size, startZ = 1.3F * size;
+        DaggerfallTerrainRivers rivers = Rivers([.. course.Select(station => (startX + (station.Along * step), startZ + (station.Along * step), station.Surface, wide))]);
         DaggerfallExteriorCellId cell = new(3, 2);
-        DaggerfallTerrainRivers rivers = Rivers([.. course.Select(station => ((2 + station.X) * size, 1.5F * size, station.Surface, 10F))]);
+        DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(cell);
         DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
-        environment.Reconcile([cell], DaggerfallExteriorWorldOrigin.At(cell), _ => Surface(100F, rivers: rivers), Locations(), Grids(224, "temperate"));
+        environment.Reconcile([cell], origin, _ => Surface(100F, rivers: rivers), Locations(), Grids(224, "temperate"));
+        CharacterWaterVolume[] water = [.. environment.CharacterWaterVolumes(origin)];
+        Assert.Equal(water.Length, water.Select(volume => volume.Trigger).Distinct().Count());
 
-        DaggerfallExteriorWaterVolume[] water = [.. environment.WaterVolumes];
-        Assert.Equal(water.Length, water.Select(volume => volume.StableId).Distinct().Count());
-
-        // Down the middle of the course, every metre stands in a box whose top is within a metre of the river's own surface.
-        for (float along = .21F; along < .59F; along += 1 / size)
+        const ulong player = 7;
+        DaggerfallSwimmingPolicy policy = new(DaggerfallSwimmingTuning.Classic);
+        HashSet<ulong> inside = [];
+        int steps = (int)(5.8F * step * 2);
+        for (int i = 0; i <= steps; i++)
         {
-            int at = Array.FindLastIndex(course, station => station.X <= along);
-            float share = (along - course[at].X) / (course[at + 1].X - course[at].X);
-            float surface = course[at].Surface + ((course[at + 1].Surface - course[at].Surface) * share);
-            Vector3 point = new(along * size, surface - 1, -.5F * size);
-            Assert.Contains(water, volume => volume.Maximum.X >= point.X && volume.Minimum.X <= point.X
-                && volume.Maximum.Z >= point.Z && volume.Minimum.Z <= point.Z && Math.Abs(volume.Maximum.Y - surface) <= 1);
+            float along = (upstream ? steps - i : i) / 2F / step + .1F;
+            int at = Array.FindLastIndex(course, station => station.Along <= along);
+            float surface = course[at].Surface + ((course[at + 1].Surface - course[at].Surface) * (along - course[at].Along));
+            // Heightmap metres to the cell's frame, a little off the centre line, where the reach's boxes overlap most.
+            Vector3 point = new(startX + (along * step) + 8 - ((cell.X - 1) * size), surface - 1.8F, startZ + (along * step) - 8 - (cell.Y * size));
+            HashSet<ulong> now = [.. water.Where(volume => Inside(volume, point)).Select(volume => volume.Trigger)];
+            SpatialTriggerFact[] facts = [.. inside.Except(now).Order().Select(trigger => new SpatialTriggerFact(false, trigger, player, 1, SpatialTriggerCause.Movement)),
+                .. now.Except(inside).Order().Select(trigger => new SpatialTriggerFact(true, trigger, player, 1, SpatialTriggerCause.Movement))];
+            policy.ObserveTriggers(facts, player, water);
+            inside = now;
+
+            CharacterWaterVolume? selected = policy.ActiveVolume(water);
+            Assert.True(selected.HasValue, $"no water {along} sections along");
+            CharacterWaterVolume? surfaced = environment.AtSurface(selected.Value, point, origin);
+            Assert.True(surfaced.HasValue, $"no surface {along} sections along");
+            Assert.InRange(surfaced.Value.Maximum.Y, surface - .1F, surface + .1F);
         }
     }
+
+    [Fact]
+    public void Past_a_rivers_banks_a_box_holds_no_water_and_other_water_keeps_its_own_top()
+    {
+        const float size = DaggerfallExteriorCellResidency.CellSize;
+        DaggerfallTerrainRivers rivers = Rivers([(2.2F * size, 1.2F * size, 300, 30), (2.2F * size + 300, 1.2F * size + 300, 299, 30)]);
+        DaggerfallExteriorCellId cell = new(3, 2);
+        DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(cell);
+        DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
+        environment.Reconcile([cell], origin, _ => Surface(100F, rivers: rivers), Locations(), Grids(224, "temperate"));
+        CharacterWaterVolume box = Assert.Single(environment.CharacterWaterVolumes(origin));
+
+        // The corner of the box on a diagonal reach, far from the course.
+        Assert.Null(environment.AtSurface(box, new(box.Minimum.X + 1, 298, box.Maximum.Z - 1), origin));
+        CharacterWaterVolume sea = new(99, Vector3.Zero, new(10, 40.8F, 10));
+        Assert.Equal(sea, environment.AtSurface(sea, new(5, 5, 5), origin));
+    }
+
+    private static bool Inside(CharacterWaterVolume volume, Vector3 point) =>
+        point.X >= volume.Minimum.X && point.X <= volume.Maximum.X && point.Y >= volume.Minimum.Y && point.Y <= volume.Maximum.Y
+        && point.Z >= volume.Minimum.Z && point.Z <= volume.Maximum.Z;
 
     [Fact]
     public void Water_tiles_project_through_the_current_origin_with_stable_trigger_ids()
