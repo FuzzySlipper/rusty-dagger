@@ -71,7 +71,14 @@ the Engine refuses. Travel makes a new collider; an Engine origin rebase carries
   the Engine cloud layer stands in for the low cloud lost with it, drawn in cells anchored
   to the clouds (`cloudPixelMetres`, `cloudShadeSteps`) so it sits with the pixel art.
   Every column of a panorama meets overhead, so the cleared sky also closes its top rows
-  on each row's mean colour, and a night sky's stars there go back round and evenly spread.
+  on each row's mean colour. A night sky's painted stars come out at every height: a panorama's
+  texels stretch into pale quads high up, so the Engine draws the stars as points instead, from a
+  generated catalogue. They wheel about their pole with the day and come out as the light goes.
+- **Moonlight.** The night's ambient follows the moons: all of it under a full Masser and
+  Secunda both overhead, down to `moonlessNight` with neither, each by its phase (`masserLight`
+  shares them out) while it stands above the horizon. Thick weather closes over them, so those
+  nights are dark too, and classic art keeps its one level. A bright moon washes out the
+  faintest stars and lights the clouds.
 - **Moons.** Masser and Secunda are the classic's art for each of the lunar cycle's 32
   days, published as an atlas each, and the frame comes from the calendar's own cycle, so
   the sky shows the phase lycanthropes and enchantments answer to. A moon falls behind the

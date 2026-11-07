@@ -73,6 +73,35 @@ public sealed class DaggerfallWeatherSessionTests
             source.QuestMarkers, source.BillboardSprites) {AmbientZones = zones};
 
     [Fact]
+    public void Stars_come_out_at_night_over_the_cleared_sky_and_leave_with_a_roof()
+    {
+        string root = TestData.RepositoryRoot;
+        var definitions = TestPayload.Definitions;
+        ProductContent admitted = FullContent(root);
+        var exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
+        var interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
+        var media = DaggerfallSkyMedia.Read(TestSessions.Data(DaggerfallSkyMediaTests.Fixture().Content));
+        var fairOdds = Enumerable.Range(0,24).Select(_ => new[]{100,0,0,0,0,0,0}).ToArray();
+        var tuning = DaggerfallTuning.Defaults with {Weather = DaggerfallWeatherTuning.Classic with {Odds = fairOdds}};
+        var composition = new DaggerfallSessionComposition(definitions, exterior, tuning)
+            {Profiles = new([exterior,interior]),Sky = media};
+        var fixture = Engine(exterior, interior);
+        using var session = DaggerfallSession.StartNew(fixture.Engine.Context, composition);
+        session.ApplyProductMode(ProductMode.Playing);
+        session.PublishInitial();
+
+        session.Hour(23);
+        session.Update(Update(1));
+        StarsRequest night = fixture.Engine.Stars.Last();
+        Assert.True(night.Brightness > 0);
+        Assert.True(night.LimitingMagnitude <= tuning.Horizon.StarLimit);
+
+        Assert.True(session.TryTransitionTo(interior.ProfileKey));
+        session.Update(Update(2));
+        Assert.Equal(0, fixture.Engine.Stars.Last().Brightness);
+    }
+
+    [Fact]
     public void The_horizon_stands_outdoors_comes_down_indoors_and_gives_way_to_the_classic_sky_under_classic_art()
     {
         string root = TestData.RepositoryRoot;
@@ -98,6 +127,7 @@ public sealed class DaggerfallWeatherSessionTests
         Assert.Equal(tuning.Horizon.CloudCoverage, fixture.Engine.Clouds.Last().Coverage);
         Assert.Equal(tuning.Horizon.CloudPixelMetres, fixture.Engine.Clouds.Last().PixelMetres);
         Assert.All(fixture.Engine.Moons.TakeLast(2), moon => Assert.True(moon.Radiance > 0));
+        Assert.All(fixture.Engine.Moons.TakeLast(2), moon => Assert.True(moon.LightIntensity <= tuning.Horizon.MoonCloudLight));
 
         Assert.True(session.TryTransitionTo(interior.ProfileKey));
         session.Update(Update(2));

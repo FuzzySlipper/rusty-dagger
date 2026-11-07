@@ -963,7 +963,16 @@
     "cloudTwilightDegrees": 8,
     "cloudDrift": [14, 5],
     "sea": [0.31, 0.35, 0.44],
-    "drawnMetres": 6000
+    "drawnMetres": 6000,
+    "moonlessNight": 0.45,
+    "masserLight": 0.7,
+    "moonCloudLight": 0.1,
+    "starPoleDegrees": 50,
+    "starLimit": 6,
+    "starMoonWash": 1.5,
+    "starBrightness": 3,
+    "starTwinkle": 0.2,
+    "starsFromDaylight": 0.35
   },
   "ambient": {
     "clearFogEnd": 2400,

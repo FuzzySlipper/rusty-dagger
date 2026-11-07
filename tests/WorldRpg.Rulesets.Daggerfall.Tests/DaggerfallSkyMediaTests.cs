@@ -97,8 +97,10 @@ public sealed class DaggerfallSkyMediaTests
             service.Add(DaggerfallData.DataContainerName, DaggerfallSkyMedia.LogicalRoot + "/" + id + ".png", body);
             return new {id, moon, relativePath="media/sky/resources/"+id+".png", contentHash=digest, byteLength=1, width=288, height=112, columns=8, frameCount=32};
         }
+        service.Add(DaggerfallData.DataContainerName, DaggerfallSkyMedia.LogicalRoot + "/night.stars.json", body);
         byte[] manifest = JsonSerializer.SerializeToUtf8Bytes(new {resources,selections,nightResources=nights,clearedResources=cleared,
             moons=new[]{Moon("masser"),Moon("secunda")},
+            stars=new {id="sky/stars", relativePath="media/sky/resources/night.stars.json", contentHash=digest, byteLength=1},
             daylightFrameCurve=new[]{new{time=0f,value=0f,tangent=1f},new{time=.5f,value=.5f,tangent=1f},new{time=1f,value=1f,tangent=1f}}});
         return new(manifest,service);
     }

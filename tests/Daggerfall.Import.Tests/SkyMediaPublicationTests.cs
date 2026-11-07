@@ -339,38 +339,37 @@ public sealed class SkyMediaPublicationTests
     }
 
     [Fact]
-    public void Clearing_a_night_sky_puts_its_stars_back_round_overhead_and_leaves_the_rest()
+    public void Clearing_a_night_sky_takes_its_stars_out_at_every_height_since_the_engine_draws_them_now()
     {
-        const int width = SkyMediaPublication.PanoramaWidth, height = SkyMediaPublication.PanoramaHeight;
-        byte[] panorama = new byte[width * height * 4];
-        for (int pixel = 0; pixel < width * height; pixel++)
+        const int width = SkyMediaPublication.PanoramaWidth;
+        byte[] panorama = new byte[width * SkyMediaPublication.PanoramaHeight * 4];
+        for (int pixel = 0; pixel < panorama.Length / 4; pixel++)
         {
             panorama[(pixel * 4) + 2] = 40;
             panorama[(pixel * 4) + 3] = 255;
         }
-        void Star(int x, int y) => panorama.AsSpan(((y * width) + x) * 4, 3).Fill(255);
         for (int y = 0; y < SkyHorizonClearing.FromRow - 10; y += 2)
         for (int x = y % 7; x < width; x += 7)
-            Star(x, y);
+            panorama.AsSpan(((y * width) + x) * 4, 3).Fill(255);
 
         byte[] cleared = SkyHorizonClearing.ClearNight(panorama);
-        bool Lit(int x, int y) => cleared[((y * width) + x) * 4] == 255;
-        int Lits(int y) => Enumerable.Range(0, width).Count(x => Lit(x, y));
-        static int Run(IEnumerable<bool> lit)
-        {
-            int longest = 0, run = 0;
-            foreach (bool value in lit) longest = Math.Max(longest, run = value ? run + 1 : 0);
-            return longest;
-        }
 
-        // A row stretched about four times shows stars about four pixels wide, and about a quarter as many of them.
-        const int stretched = 42;
-        Assert.InRange(Run(Enumerable.Range(0, width).Select(x => Lit(x, stretched))), 3, 16);
-        Assert.InRange(Lits(stretched), 1, width / 3);
-        Assert.True(Enumerable.Range(0, SkyHorizonClearing.ZenithRows).Sum(Lits) > 0);
-        // Below the closed rows nothing moves.
-        for (int y = SkyHorizonClearing.ZenithRows; y < SkyHorizonClearing.FromRow - 6; y++)
-            Assert.True(panorama.AsSpan(y * width * 4, width * 4).SequenceEqual(cleared.AsSpan(y * width * 4, width * 4)));
+        for (int y = 0; y < SkyHorizonClearing.FromRow - 10; y++)
+        for (int x = 0; x < width; x++)
+            Assert.Equal(0, cleared[((y * width) + x) * 4]);
+    }
+
+    [Fact]
+    public void The_star_catalogue_is_the_same_on_every_import_and_faint_stars_outnumber_bright_ones()
+    {
+        byte[] first = SkyStarCatalogue.Json();
+        Assert.Equal(first, SkyStarCatalogue.Json());
+        using System.Text.Json.JsonDocument catalogue = System.Text.Json.JsonDocument.Parse(first);
+        Assert.Equal("rusty.stars.v1", catalogue.RootElement.GetProperty("format").GetString());
+        double[][] stars = [.. catalogue.RootElement.GetProperty("stars").EnumerateArray().Select(star => star.EnumerateArray().Select(value => value.GetDouble()).ToArray())];
+        Assert.InRange(stars.Length, 1, 65_536);
+        Assert.All(stars, star => Assert.Equal(7, star.Length));
+        Assert.True(stars.Count(star => star[3] > 5) > stars.Count(star => star[3] < 3) * 4);
     }
 
     private static int Paeth(int left, int up, int upLeft)

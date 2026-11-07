@@ -22,6 +22,14 @@ public sealed class DaggerfallMoonsTests
     }
 
     [Fact]
+    public void A_moon_gives_all_its_light_full_half_at_the_quarter_and_none_new()
+    {
+        Assert.Equal(1, DaggerfallMoons.Phase(Full), 5);
+        Assert.Equal(.5F, DaggerfallMoons.Phase(New / 2), 5);
+        Assert.Equal(0, DaggerfallMoons.Phase(New), 5);
+    }
+
+    [Fact]
     public void A_full_moon_stands_high_at_midnight_and_under_the_ground_at_noon()
     {
         Assert.True(DaggerfallMoons.Direction(DaggerfallCalendar.Start with { Hour = 0, Minute = 0 }, Full, 0).Y > .99F);

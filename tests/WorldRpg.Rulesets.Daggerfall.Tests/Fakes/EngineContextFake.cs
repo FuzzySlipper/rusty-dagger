@@ -77,6 +77,7 @@ internal class EngineContextFake : DispatchProxy
     /// <summary>Whether a backdrop link stands, as the last call left it.</summary>
     internal bool BackdropLinked => ((CameraServiceFake)(object)camera).BackdropLinked;
     internal IReadOnlyList<CloudsRequest> Clouds => ((CameraServiceFake)(object)camera).Clouds;
+    internal IReadOnlyList<StarsRequest> Stars => ((CameraServiceFake)(object)camera).Stars;
     internal IReadOnlyList<MoonRequest> Moons => ((CameraServiceFake)(object)camera).Moons;
     private readonly IHeightfieldService heightfield = ServiceProxy<IHeightfieldService, HeightfieldServiceFake>.Create();
     private IAuthoredContentService authored = ServiceProxy<IAuthoredContentService, AuthoredContentFake>.Create();
@@ -247,6 +248,7 @@ internal class EngineContextFake : DispatchProxy
         internal bool BackdropLinked { get; private set; }
         internal List<CloudsRequest> Clouds { get; } = [];
         internal List<MoonRequest> Moons { get; } = [];
+        internal List<StarsRequest> Stars { get; } = [];
         internal List<PrecipitationRequest> Precipitation { get; } = [];
         internal List<WetnessRequest> Wetness { get; } = [];
         internal List<SnowRequest> Snow { get; } = [];
@@ -281,6 +283,7 @@ internal class EngineContextFake : DispatchProxy
                 nameof(ICameraViewService.SetBackdrop) => LinkBackdrop(true),
                 nameof(ICameraViewService.ClearBackdrop) => LinkBackdrop(false),
                 nameof(ICameraViewService.SetClouds) => SetClouds((CloudsRequest)arguments![0]!),
+                nameof(ICameraViewService.SetStars) => SetStars((StarsRequest)arguments![0]!),
                 nameof(ICameraViewService.SetMoon) => SetMoon((MoonRequest)arguments![0]!),
                 nameof(ICameraViewService.ReplaceCamera) => ReplaceCamera(((CameraUpdateRequest)arguments![0]!).Camera.Handle.Value),
                 _ => throw new NotSupportedException(method?.Name),
@@ -292,6 +295,7 @@ internal class EngineContextFake : DispatchProxy
         private object? SetFog(FogRequest request) { Fogs.Add(request); return null; }
         private object? LinkBackdrop(bool linked) { BackdropLinked = linked; return null; }
         private object? SetClouds(CloudsRequest request) { Clouds.Add(request); return null; }
+        private object? SetStars(StarsRequest request) { Stars.Add(request); return null; }
         private object? SetMoon(MoonRequest request) { Moons.Add(request); return null; }
 
         // Like the Engine, destroying the active camera clears it, and replacing it keeps the replacement active.

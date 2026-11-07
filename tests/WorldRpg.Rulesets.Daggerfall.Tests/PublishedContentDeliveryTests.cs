@@ -220,7 +220,7 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal(7, manifest.GetProperty("daylightFrameCurve").GetArrayLength());
 
         HashSet<string> indexed = [];
-        foreach (JsonElement resource in day.Concat(nights).Concat(cleared).Concat(moons))
+        foreach (JsonElement resource in day.Concat(nights).Concat(cleared).Concat(moons).Append(manifest.GetProperty("stars")))
         {
             string relativePath = resource.GetProperty("relativePath").GetString()!;
             string path = $"worldrpg/{relativePath}";
