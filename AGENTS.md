@@ -120,14 +120,8 @@ use one.
 
 ## Game files and assets
 
-Never commit the Arena2 directory, the music, or media extracted directly from
-them. Don't commit reproducible or ephemeral output either: importer output
-(the `local/*.rpak` containers built by `Daggerfall.Import.Tool import`), study
-renders and other WIP. Fix generated output by changing the importer or the
-authored source, never by hand. Finished art made for the game, including art
-inspired by the original, is ordinary content: commit the finals. Small facts
-from the game (identifiers, names, record numbers, short excerpts) are fine
-wherever they're useful.
+Never commit the Arena2 directory or raw assets extracted directly from it.
+Anything else is a case by case decision.
 
 ## Donors
 
