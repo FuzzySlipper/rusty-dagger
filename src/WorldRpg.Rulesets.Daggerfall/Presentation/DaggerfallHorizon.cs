@@ -18,8 +18,10 @@ internal sealed class DaggerfallHorizon : IDisposable
 {
     /// <summary>World metres per backdrop unit: the map fits in a few hundred units.</summary>
     private const float Scale = 1_000;
-    /// <summary>How many sampled tiles are committed an update.</summary>
+    /// <summary>How many sampled near tiles are committed an update.</summary>
     private const int CommitsPerUpdate = 64;
+    /// <summary>How many far tiles are: every lift step samples hundreds again, and a frame that takes them all at once shows as a hitch.</summary>
+    private const int FarCommitsPerUpdate = 16;
     private const double CellSize = DaggerfallExteriorCellResidency.CellSize;
     /// <summary>The far ground's tint follows the light in steps this small, too fine to see.</summary>
     private const float TintStep = .01f;
@@ -89,7 +91,7 @@ internal sealed class DaggerfallHorizon : IDisposable
             _heightfield = _engine.Heightfield.Create(new HeightfieldCreateRequest(DaggerfallHorizonGround.TileCells, DaggerfallHorizonGround.Rings,
                 _bound!, RenderLayer.Backdrop, Vector3.Zero, 1 / Scale, HeightfieldFocus.At(_ground.Current.CentreX, _ground.Current.CentreZ))
                 with { ShadowCasting = ShadowCasting.None });
-            _streamer = new HeightfieldStreamer(_engine, _heightfield, _ground, CommitsPerUpdate);
+            _streamer = new HeightfieldStreamer(_engine, _heightfield, _ground, FarCommitsPerUpdate);
         }
 
         if (_link is not { } link || link.Session != session || link.MapX != origin.MapPixelX || link.MapY != origin.MapPixelY)
