@@ -268,10 +268,10 @@ region maps paint coasts alone. Every river is the bake's own drainage, publishe
   across and falling with the river, as far as the walked ground holds a channel. Past that the
   channel wears far ground's sea, as a bed does past the sheets. A channel that has come down to
   the ocean clamp is the sea's: its sheets fill it, and the ribbon stops.
-- **Swimming.** Every section has boxes of water topped at its surface, and a swimmer floats
-  there. A box is level and a river falls, so a section is cut into as many as keep each one's
-  fall within a metre, however steep the reach. A box may overhang its banks, which stand above
-  its top.
+- **Swimming.** Each section has a box that says someone may be in the river. It reaches the
+  section's higher end and overhangs its banks and neighbours, so its top is no surface: a swimmer
+  floats at the river's own surface at their position, however steep the reach, and past the banks
+  there is no water.
 - **Banks.** A channel's bed and lip paint as shore, and nature keeps off them.
 
 ## Tuning by eye
