@@ -449,6 +449,11 @@
 /* The settings read at one size: labels, look fields and sound rows match the binding rows. */
 .dagger-controls-root label, .dagger-controls-scale > span, .dagger-controls-volume > span { font: 700 .8rem ui-monospace, monospace; }
 .dagger-controls-root label input[type="checkbox"] { margin-right: .375rem; }
+/* Settings' video section: the Engine's panel, coloured as the menu and lettered as the settings rows above it. */
+.dagger-video-root { --rusty-video-options-background: transparent; --rusty-video-options-foreground: #f2e3ba; --rusty-video-options-muted: #c9b78c;
+  --rusty-video-options-accent: #d4b56b; --rusty-video-options-border: #7d6c45; --rusty-video-options-warning: #f0c96a;
+  --rusty-video-options-radius: 0; --rusty-video-options-font: .8rem ui-monospace, monospace; margin-top: 1rem; }
+.dagger-video-root[hidden] { display: none; }
 /* A level steps in fixed amounts, so the stepper shows the percentage beside it rather than its step count. */
 .dagger-controls-volume .dagger-stepper input { display: none; }
 

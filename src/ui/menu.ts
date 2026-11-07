@@ -17,6 +17,7 @@ import type { NavigationSurface } from './navigation.js';
 import { renderSpells, spellAction } from './spells.js';
 import { isTransportProjection, mountTransport } from './transport.js';
 import { mountTravel, isTravelProjection } from './travel.js';
+import { mountVideoSettings } from './video.js';
 
 type Panel = 'spells' | 'magic-items' | 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'save-slots' | 'settings';
 
@@ -126,6 +127,8 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
   shell.querySelector('.dagger-controls-root')!.before(magicItemsRoot);
   const controlsRoot = shell.querySelector<HTMLElement>('.dagger-controls-root')!;
   const controlsView = mountControls(controlsRoot, send);
+  const videoRoot = shell.querySelector<HTMLElement>('.dagger-video-root')!;
+  const videoView = mountVideoSettings(videoRoot);
   const characterRoot = shell.querySelector<HTMLElement>('.dagger-character-root')!;
   const characterView = mountCharacter(characterRoot, send);
   const notebookRoot = shell.querySelector<HTMLElement>('.dagger-notebook-root')!;
@@ -255,6 +258,8 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     lootRoot.hidden = action !== 'loot';
     saveSlotsRoot.hidden = action !== 'save-slots';
     controlsRoot.hidden = action !== 'settings';
+    videoRoot.hidden = action !== 'settings';
+    if (action === 'settings') videoView.show();
     shell.querySelector<HTMLButtonElement>('[data-action="loot-exit"]')!.hidden = action !== 'loot';
     for (const name of ['inventory', 'character', 'spells', 'map', 'transport', 'rest', 'journal', 'loot'] as const)
       menu.classList.toggle(`has-${name}`, action === name);
@@ -526,6 +531,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     dispose() {
       reportMap(false);
       controlsView.dispose();
+      videoView.dispose();
       inventoryView.dispose();
       transportView.dispose();
       mapView.dispose();
@@ -552,7 +558,7 @@ const HOTKEY_ACTIONS: Readonly<Record<string, string>> = {
 const HOTKEY_PANELS: Readonly<Record<string, string>> = { notebook: 'journal', book: 'journal' };
 
 const PANEL_TITLES: Partial<Record<Panel, string>> = {
-  'magic-items': 'Use magic item', spells: 'Known spells', settings: 'Control settings', diagnostics: 'Composition diagnostics',
+  'magic-items': 'Use magic item', spells: 'Known spells', settings: 'Settings', diagnostics: 'Composition diagnostics',
   inventory: 'Inventory & equipment', character: 'Character', map: 'Map', transport: 'Travel & transport', rest: 'Rest & loiter',
   journal: 'Journal & notes', loot: 'Loot',
 };

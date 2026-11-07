@@ -99,6 +99,7 @@ const SHELL_MARKUP = `
       <ul class="dagger-text-diagnostics" aria-label="Text diagnostics"></ul>
     </section>
       <div class="dagger-controls-root" hidden></div>
+      <div class="dagger-video-root" hidden></div>
       <div class="dagger-inventory-root" hidden></div>
       <div class="dagger-character-root" hidden></div>
       <section class="dagger-spells-root" hidden aria-label="Known spells"></section>

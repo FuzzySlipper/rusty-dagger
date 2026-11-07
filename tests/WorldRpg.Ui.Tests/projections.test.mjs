@@ -16,7 +16,8 @@ for (const file of await readdir(new URL('../../src/ui/', import.meta.url))) {
   const source = await readFile(new URL(`../../src/ui/${file}`, import.meta.url), 'utf8');
   const compiled = ts.transpileModule(source, {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
-  }).outputText.replaceAll("'@rusty-engine/live-debug'", "'./debug-stub.js'");
+  }).outputText.replaceAll("'@rusty-engine/live-debug'", "'./debug-stub.js'")
+    .replaceAll("'@rusty-engine/video-options'", "'./video-stub.js'");
   await writeFile(join(output, file.replace(/\.ts$/, '.js')), compiled);
 }
 // The Engine's live-debug package stands in as a scripted host: a transport whose catalog answers only when a test
@@ -44,11 +45,22 @@ export function mountDeveloperShell(host, options) {
   return shell;
 }
 `);
+// The Engine's video options panel stands in as a recorder of where it mounts, what it hides, and its refreshes.
+await writeFile(join(output, 'video-stub.js'), `
+export const video = { mounts: [] };
+export async function mountVideoOptions(host, options) {
+  const panel = { host, options, refreshes: 0, disposed: false,
+    async refresh() { panel.refreshes++; }, setProductOptions() {}, dispose() { panel.disposed = true; } };
+  video.mounts.push(panel);
+  return panel;
+}
+`);
 const { mountProductUi } = await import(pathToFileURL(join(output, 'main.js')));
 const art = await import(pathToFileURL(join(output, 'art.js')));
 const skin = await import(pathToFileURL(join(output, 'skin.js')));
 const uiScale = await import(pathToFileURL(join(output, 'scale.js')));
 const { developer } = await import(pathToFileURL(join(output, 'debug-stub.js')));
+const { video } = await import(pathToFileURL(join(output, 'video-stub.js')));
 const developerTools = await import(pathToFileURL(join(output, 'developer.js')));
 
 /** A PNG data URL whose header states `width` x `height`: enough for the skin, which reads only the header. */
@@ -2461,6 +2473,30 @@ test('controls are grouped and named, and a key, a mouse button and a controller
     assert.deepEqual(f.actions.at(-1), { action: 'controls-volume', item: 'music', scale: 0.45 });
     assert.equal(music.querySelector('output').textContent, '45%');
   } finally { f.dispose(); }
+});
+
+test('Settings shows the Engine video options beside the controls, mounted once and read again on each opening', async () => {
+  const f = fixture();
+  const before = video.mounts.length;
+  let panel;
+  try {
+    const videoRoot = f.root.querySelector('.dagger-video-root');
+    assert.equal(videoRoot.hidden, true);
+    assert.equal(video.mounts.length, before, 'Nothing asks the host for video options until Settings opens.');
+    f.root.querySelector('[data-action="settings"]').click();
+    assert.equal(videoRoot.hidden, false);
+    assert.equal(f.root.querySelector('#dagger-menu-title').textContent, 'Settings');
+    assert.equal(video.mounts.length, before + 1);
+    panel = video.mounts.at(-1);
+    assert.equal(panel.host, videoRoot);
+    assert.deepEqual(panel.options.hide, ['clusteredLighting', 'gpuCulling', 'occlusionCulling']);
+    f.root.querySelector('[data-action="settings"]').click();
+    await Promise.resolve(); await Promise.resolve();
+    assert.equal(video.mounts.length, before + 1, 'Settings mounts the panel once.');
+    assert.equal(panel.refreshes, 1, 'Opening Settings again reads the catalogue again.');
+  } finally { f.dispose(); }
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(panel.disposed, true, 'Closing the UI removes the panel.');
 });
 
 test('activation selection follows product mode and emits only semantic mode changes', () => {

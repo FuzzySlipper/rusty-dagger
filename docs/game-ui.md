@@ -348,6 +348,14 @@ update to acknowledge in, so it runs the same phases at once.
   the weapon drawn or sheathed and the activation mode; and a prompt naming what
   use would do to the aimed target, worded by that target's owner, with the use
   binding of the device in use. It takes no focus in play.
+- **Settings** (`controls.ts`, `video.ts`): the controls, look, interface scale
+  and sound, which the ruleset persists, then the Engine's video options panel
+  (`@rusty-engine/video-options`). The Engine owns that catalogue, applies a
+  choice at once and keeps it for the install, so no video setting is game
+  state. The panel mounts the first time Settings opens and reads the catalogue
+  again on each opening after. The Engine's Advanced switches (clustered
+  lighting, GPU and occlusion culling) are hidden as renderer diagnostics. Sun
+  shadows are one of its options, off by default.
 - **Title, creation and death** (`entry.ts`, `character.ts`, `death.ts`): the
   title's game choice is a cycler. Creation sends every change at once and draws
   the ruleset's answer, including what blocks Start and whether Quick start can
