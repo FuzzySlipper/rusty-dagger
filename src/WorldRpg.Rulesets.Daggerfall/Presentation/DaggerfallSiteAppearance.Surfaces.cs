@@ -58,6 +58,7 @@ internal sealed partial class DaggerfallSiteAppearance
         surfaceArt = art;
         foreach (SurfaceMaterial surface in surfaceMaterials) AttachRefreshedSurface(surface);
         foreach (DecorationVisual flat in decorations) AttachDecorationFlats(flat);
+        foreach (ActorVisual visual in actors.Values) AttachRefreshedPerson(visual);
         ApplySurfaces();
     }
 

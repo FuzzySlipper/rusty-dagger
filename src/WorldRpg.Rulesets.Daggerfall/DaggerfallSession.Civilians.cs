@@ -111,7 +111,7 @@ internal sealed partial class DaggerfallSession
             throw new NotSupportedException($"Population NPC {npc.DurableId} has no published billboard {npc.Appearance.BillboardArchive}/{npc.Appearance.BillboardRecord} at '{profile.ProfileKey.LogicalId}'.");
         }
         if (appearance.HasActor(npc.DurableId)) return;
-        appearance.AddActor(npc.DurableId, sourceSprite.Standing());
+        appearance.AddActor(npc.DurableId, sourceSprite.Standing((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord)));
     }
 
     /// <summary>Retires a civilian and records the social identity as removed.</summary>
