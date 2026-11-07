@@ -84980,6 +84980,4658 @@
      "height": 0.9701
     }
    }
+  ],
+  "people": [
+   {
+    "replaces": {
+     "archive": 175,
+     "record": 14
+    },
+    "path": "worldrpg/media/refreshed/people/texture-175-record-014.png",
+    "byteLength": 42236,
+    "sha256": "b0840bf3db6b12f2d5e3114cff955cc722677011eddd846419fde6cdb1e57229",
+    "width": 130,
+    "height": 300,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 130,
+      "height": 300
+     }
+    ],
+    "classic": {
+     "x": 0.0115,
+     "y": 0.0462,
+     "width": 0.9655,
+     "height": 0.8989
+    }
+   },
+   {
+    "replaces": {
+     "archive": 176,
+     "record": 0
+    },
+    "path": "worldrpg/media/refreshed/people/texture-176-record-000.png",
+    "byteLength": 20738,
+    "sha256": "f76e922d562912a2b8439f6bf34fc5f6fd886190a617fcf971e9edc536e8a59e",
+    "width": 129,
+    "height": 184,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 129,
+      "height": 184
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0,
+     "width": 1.0,
+     "height": 0.9973
+    }
+   },
+   {
+    "replaces": {
+     "archive": 176,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/people/texture-176-record-001.png",
+    "byteLength": 22372,
+    "sha256": "7b9435e3b66da67c3998fded9aa56c442f96dded835f86533b0f30e960e30927",
+    "width": 89,
+    "height": 252,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 89,
+      "height": 252
+     }
+    ],
+    "classic": {
+     "x": 0.0261,
+     "y": 0.0,
+     "width": 0.9739,
+     "height": 0.9868
+    }
+   },
+   {
+    "replaces": {
+     "archive": 176,
+     "record": 2
+    },
+    "path": "worldrpg/media/refreshed/people/texture-176-record-002.png",
+    "byteLength": 22546,
+    "sha256": "25702563bcc42017efeb8349efa27c9cdd4a64a3b74e76d33edde8f8b9f295f8",
+    "width": 201,
+    "height": 324,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 201,
+      "height": 324
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0,
+     "width": 1.0,
+     "height": 1.0
+    }
+   },
+   {
+    "replaces": {
+     "archive": 176,
+     "record": 3
+    },
+    "path": "worldrpg/media/refreshed/people/texture-176-record-003.png",
+    "byteLength": 26681,
+    "sha256": "6e3bc5eb88568f5848a502ec5f115875a3d7f7d61710444785ccebb9a5890bb7",
+    "width": 222,
+    "height": 306,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 222,
+      "height": 306
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0,
+     "width": 1.0,
+     "height": 0.9916
+    }
+   },
+   {
+    "replaces": {
+     "archive": 176,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/people/texture-176-record-004.png",
+    "byteLength": 26814,
+    "sha256": "a6b97e302a6db735a3bead7e0f4430632a3574470f2316005a3a78640d6869bd",
+    "width": 213,
+    "height": 323,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 213,
+      "height": 323
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0,
+     "width": 1.0,
+     "height": 0.9841
+    }
+   },
+   {
+    "replaces": {
+     "archive": 176,
+     "record": 5
+    },
+    "path": "worldrpg/media/refreshed/people/texture-176-record-005.png",
+    "byteLength": 44277,
+    "sha256": "d3f7a5d76a94df50b840a9879acdcbc7a341028a376f2c4abd239c70f0d39afe",
+    "width": 151,
+    "height": 300,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 151,
+      "height": 300
+     }
+    ],
+    "classic": {
+     "x": 0.0298,
+     "y": 0.0725,
+     "width": 0.8933,
+     "height": 0.85
+    }
+   },
+   {
+    "replaces": {
+     "archive": 176,
+     "record": 6
+    },
+    "path": "worldrpg/media/refreshed/people/texture-176-record-006.png",
+    "byteLength": 42969,
+    "sha256": "8a0db29a1ea908b619e932a0e6c78e033c8c19eb7bba69c5f7e80d32d9b45b4b",
+    "width": 158,
+    "height": 310,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 158,
+      "height": 310
+     }
+    ],
+    "classic": {
+     "x": 0.0166,
+     "y": 0.0617,
+     "width": 0.9691,
+     "height": 0.9007
+    }
+   },
+   {
+    "replaces": {
+     "archive": 177,
+     "record": 0
+    },
+    "path": "worldrpg/media/refreshed/people/texture-177-record-000.png",
+    "byteLength": 70389,
+    "sha256": "9dc257dd8b152cba43093999629706b8d5eafb9de9fd3a0777385caafc8a75fc",
+    "width": 217,
+    "height": 350,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 217,
+      "height": 350
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0515,
+     "width": 0.9527,
+     "height": 0.9093
+    }
+   },
+   {
+    "replaces": {
+     "archive": 177,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/people/texture-177-record-001.png",
+    "byteLength": 47349,
+    "sha256": "348515d06f3dc80e5fc16911fefc1f6a67c2b60013f95066f5b712d56991b8d0",
+    "width": 219,
+    "height": 341,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 219,
+      "height": 341
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0704,
+     "width": 1.0,
+     "height": 0.8717
+    }
+   },
+   {
+    "replaces": {
+     "archive": 177,
+     "record": 2
+    },
+    "path": "worldrpg/media/refreshed/people/texture-177-record-002.png",
+    "byteLength": 40171,
+    "sha256": "4be9513107d6511a642450e77b0f1319ecee4391c10ce33b93870fb60514f00e",
+    "width": 139,
+    "height": 283,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 139,
+      "height": 283
+     }
+    ],
+    "classic": {
+     "x": 0.0433,
+     "y": 0.0766,
+     "width": 0.9087,
+     "height": 0.8269
+    }
+   },
+   {
+    "replaces": {
+     "archive": 177,
+     "record": 3
+    },
+    "path": "worldrpg/media/refreshed/people/texture-177-record-003.png",
+    "byteLength": 38292,
+    "sha256": "3b3febd45895a90178abf6f8e4557cb3654d82540ab6664e6a9088d26ecdffc1",
+    "width": 161,
+    "height": 313,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 161,
+      "height": 313
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0,
+     "width": 0.9309,
+     "height": 0.9193
+    }
+   },
+   {
+    "replaces": {
+     "archive": 177,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/people/texture-177-record-004.png",
+    "byteLength": 44596,
+    "sha256": "7632c43ac1d1a06361d904896233ac0a9fd8ed089b02aed5049898c540aa116c",
+    "width": 116,
+    "height": 301,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 116,
+      "height": 301
+     }
+    ],
+    "classic": {
+     "x": 0.0195,
+     "y": 0.0386,
+     "width": 0.9091,
+     "height": 0.9265
+    }
+   },
+   {
+    "replaces": {
+     "archive": 177,
+     "record": 5
+    },
+    "path": "worldrpg/media/refreshed/people/texture-177-record-005.png",
+    "byteLength": 69481,
+    "sha256": "706ef39e7f5f5cd3ad6b5d372ac157f1d5597421c66ca8b3f296139de72aad8a",
+    "width": 219,
+    "height": 319,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 219,
+      "height": 319
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0,
+     "width": 0.998,
+     "height": 0.9597
+    }
+   },
+   {
+    "replaces": {
+     "archive": 178,
+     "record": 0
+    },
+    "path": "worldrpg/media/refreshed/people/texture-178-record-000.png",
+    "byteLength": 38376,
+    "sha256": "d29bee2fbe24e7ef5a5dab2d8c0ef3b8d298fcfacc1813a4ca2866a827a8fa88",
+    "width": 138,
+    "height": 269,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 138,
+      "height": 269
+     }
+    ],
+    "classic": {
+     "x": 0.0109,
+     "y": 0.0,
+     "width": 0.9373,
+     "height": 0.9819
+    }
+   },
+   {
+    "replaces": {
+     "archive": 178,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/people/texture-178-record-001.png",
+    "byteLength": 40157,
+    "sha256": "91850a15a8e3fef2e3e9b68909873769720644281e608f77dffe2df986e119f6",
+    "width": 176,
+    "height": 345,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 176,
+      "height": 345
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0203,
+     "width": 0.9402,
+     "height": 0.9478
+    }
+   },
+   {
+    "replaces": {
+     "archive": 178,
+     "record": 2
+    },
+    "path": "worldrpg/media/refreshed/people/texture-178-record-002.png",
+    "byteLength": 26482,
+    "sha256": "3ccf42243b7d0cd5a02e0f19a71984decc4223b3db12a703b8c778f1c6cc816b",
+    "width": 131,
+    "height": 184,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 131,
+      "height": 184
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0,
+     "width": 0.9829,
+     "height": 0.9946
+    }
+   },
+   {
+    "replaces": {
+     "archive": 178,
+     "record": 3
+    },
+    "path": "worldrpg/media/refreshed/people/texture-178-record-003.png",
+    "byteLength": 27118,
+    "sha256": "439adb7157a30a18c3aad767a13280a30974e4f2d24c1f87228b64b7eaaf5cd0",
+    "width": 89,
+    "height": 251,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 89,
+      "height": 251
+     }
+    ],
+    "classic": {
+     "x": 0.0225,
+     "y": 0.0,
+     "width": 0.9775,
+     "height": 0.9801
+    }
+   },
+   {
+    "replaces": {
+     "archive": 178,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/people/texture-178-record-004.png",
+    "byteLength": 46643,
+    "sha256": "135ce955e48552dd87877c5acc8767c31b9b6b71655a19ed7de6e60aa3888529",
+    "width": 138,
+    "height": 312,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 138,
+      "height": 312
+     }
+    ],
+    "classic": {
+     "x": 0.0924,
+     "y": 0.0566,
+     "width": 0.7609,
+     "height": 0.9049
+    }
+   },
+   {
+    "replaces": {
+     "archive": 178,
+     "record": 5
+    },
+    "path": "worldrpg/media/refreshed/people/texture-178-record-005.png",
+    "byteLength": 23259,
+    "sha256": "e8347f65bcb12399bcad0ce1a09169cab55bcfd0c7839c1f1377bc4ca0e09351",
+    "width": 201,
+    "height": 324,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 201,
+      "height": 324
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0,
+     "width": 1.0,
+     "height": 1.0
+    }
+   },
+   {
+    "replaces": {
+     "archive": 178,
+     "record": 6
+    },
+    "path": "worldrpg/media/refreshed/people/texture-178-record-006.png",
+    "byteLength": 29575,
+    "sha256": "379f7460854f704e16a2dbbdddd53c141df813992bde96847f7d29b2e8d4da1c",
+    "width": 222,
+    "height": 303,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 222,
+      "height": 303
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0,
+     "width": 1.0,
+     "height": 1.0
+    }
+   },
+   {
+    "replaces": {
+     "archive": 179,
+     "record": 0
+    },
+    "path": "worldrpg/media/refreshed/people/texture-179-record-000.png",
+    "byteLength": 15969,
+    "sha256": "f2ea87518a871a8b004623d5f9c23f4706ee18606320f88b507f4effc1dbdf1d",
+    "width": 165,
+    "height": 198,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 165,
+      "height": 198
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0,
+     "width": 0.9818,
+     "height": 1.0
+    }
+   },
+   {
+    "replaces": {
+     "archive": 179,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/people/texture-179-record-001.png",
+    "byteLength": 30235,
+    "sha256": "db11d161f71722b998e7bf1f279cd456afdf5f0d0b9e29cee783c69d4bb99134",
+    "width": 297,
+    "height": 333,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 297,
+      "height": 333
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0,
+     "width": 1.0,
+     "height": 1.0
+    }
+   },
+   {
+    "replaces": {
+     "archive": 179,
+     "record": 2
+    },
+    "path": "worldrpg/media/refreshed/people/texture-179-record-002.png",
+    "byteLength": 48484,
+    "sha256": "7ef2fb2fe1775182c521ffe2e972934b3bb7c66e7c4973afd32594bff3aede1f",
+    "width": 231,
+    "height": 352,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 231,
+      "height": 352
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0657,
+     "width": 1.0,
+     "height": 0.8942
+    }
+   },
+   {
+    "replaces": {
+     "archive": 179,
+     "record": 3
+    },
+    "path": "worldrpg/media/refreshed/people/texture-179-record-003.png",
+    "byteLength": 22691,
+    "sha256": "1515b936a079a5b54347ed103160ae06a8d78430334145ff6f707e6774254976",
+    "width": 201,
+    "height": 324,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 201,
+      "height": 324
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0,
+     "width": 1.0,
+     "height": 1.0
+    }
+   },
+   {
+    "replaces": {
+     "archive": 179,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/people/texture-179-record-004.png",
+    "byteLength": 43719,
+    "sha256": "077f74e6b816dd86013239273bc9f0303c24d1bfe0af438cdd6723459f1159aa",
+    "width": 164,
+    "height": 300,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 164,
+      "height": 300
+     }
+    ],
+    "classic": {
+     "x": 0.0137,
+     "y": 0.0814,
+     "width": 0.9336,
+     "height": 0.8711
+    }
+   },
+   {
+    "replaces": {
+     "archive": 181,
+     "record": 0
+    },
+    "path": "worldrpg/media/refreshed/people/texture-181-record-000.png",
+    "byteLength": 26429,
+    "sha256": "1a533ed9ad50c4a88b07eea5eda153acd31731b53570aaa2e2a8d73872f470bb",
+    "width": 131,
+    "height": 184,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 131,
+      "height": 184
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0,
+     "width": 0.9866,
+     "height": 0.9959
+    }
+   },
+   {
+    "replaces": {
+     "archive": 181,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/people/texture-181-record-001.png",
+    "byteLength": 20683,
+    "sha256": "7f81bc05dcab3e111ed8bdbbef9d4d01596d53d9d12a6b955afe0952e4aba4c3",
+    "width": 159,
+    "height": 159,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 159,
+      "height": 159
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0,
+     "width": 1.0,
+     "height": 1.0
+    }
+   },
+   {
+    "replaces": {
+     "archive": 181,
+     "record": 2
+    },
+    "path": "worldrpg/media/refreshed/people/texture-181-record-002.png",
+    "byteLength": 34187,
+    "sha256": "4b6de52ce1aca27e2bd49a1c0d464598b49b973532383bba2affb42652187dff",
+    "width": 106,
+    "height": 278,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 106,
+      "height": 278
+     }
+    ],
+    "classic": {
+     "x": 0.0284,
+     "y": 0.0175,
+     "width": 0.9645,
+     "height": 0.9609
+    }
+   },
+   {
+    "replaces": {
+     "archive": 181,
+     "record": 3
+    },
+    "path": "worldrpg/media/refreshed/people/texture-181-record-003.png",
+    "byteLength": 30924,
+    "sha256": "25f16a48a7ee8ac7717fe92231c25f302525b2462c8130152f0757763c25e3fc",
+    "width": 126,
+    "height": 269,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 126,
+      "height": 269
+     }
+    ],
+    "classic": {
+     "x": 0.0345,
+     "y": 0.0682,
+     "width": 0.8594,
+     "height": 0.8598
+    }
+   },
+   {
+    "replaces": {
+     "archive": 181,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/people/texture-181-record-004.png",
+    "byteLength": 37371,
+    "sha256": "911ae13f522c34c55f6bf794ed76dd95582d2d699cee6ffc75554dbde0c11cc8",
+    "width": 107,
+    "height": 290,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 107,
+      "height": 290
+     }
+    ],
+    "classic": {
+     "x": 0.0217,
+     "y": 0.0586,
+     "width": 0.9783,
+     "height": 0.868
+    }
+   },
+   {
+    "replaces": {
+     "archive": 181,
+     "record": 5
+    },
+    "path": "worldrpg/media/refreshed/people/texture-181-record-005.png",
+    "byteLength": 27250,
+    "sha256": "f94c59d54db557d1c4b73df9a16c600cdce322a6f8feb38c21d3d210fe459f5f",
+    "width": 213,
+    "height": 324,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 213,
+      "height": 324
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0,
+     "width": 1.0,
+     "height": 0.9815
+    }
+   },
+   {
+    "replaces": {
+     "archive": 181,
+     "record": 6
+    },
+    "path": "worldrpg/media/refreshed/people/texture-181-record-006.png",
+    "byteLength": 22536,
+    "sha256": "c9f84e6febbd996c29d8798cc131ba28221ed5a42bc0d7c5855b1806648b1dc7",
+    "width": 201,
+    "height": 324,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 201,
+      "height": 324
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0,
+     "width": 1.0,
+     "height": 1.0
+    }
+   },
+   {
+    "replaces": {
+     "archive": 181,
+     "record": 7
+    },
+    "path": "worldrpg/media/refreshed/people/texture-181-record-007.png",
+    "byteLength": 30172,
+    "sha256": "1ff5ea2a4ace110f37136f661afb5e1efcf7dc5818e9746526549098ea6f4f14",
+    "width": 222,
+    "height": 320,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 222,
+      "height": 320
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0,
+     "width": 1.0,
+     "height": 0.9477
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 0
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-000.png",
+    "byteLength": 41986,
+    "sha256": "86462e17162ad5ae7976dbc64120814318c2030cfb9b9678a6b9eccd0cd90c2b",
+    "width": 142,
+    "height": 245,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 142,
+      "height": 245
+     }
+    ],
+    "classic": {
+     "x": 0.0047,
+     "y": 0.034,
+     "width": 0.9953,
+     "height": 0.9293
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-001.png",
+    "byteLength": 94464,
+    "sha256": "d533d5d4e9a84b483f7a91d49a38645d1d6fd8bff399a44f1ec90a34678782c3",
+    "width": 202,
+    "height": 400,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 202,
+      "height": 400
+     }
+    ],
+    "classic": {
+     "x": 0.0444,
+     "y": 0.0762,
+     "width": 0.9037,
+     "height": 0.8764
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 2
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-002.png",
+    "byteLength": 98165,
+    "sha256": "22af2d741341ebac6d0a44b1cbc0fc0365e9eb1781107b5e583ce6719ee32827",
+    "width": 225,
+    "height": 452,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 225,
+      "height": 452
+     }
+    ],
+    "classic": {
+     "x": 0.008,
+     "y": 0.0956,
+     "width": 0.9467,
+     "height": 0.8499
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 3
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-003.png",
+    "byteLength": 98651,
+    "sha256": "2d2bcf41218a7e3aa61c10f9a3ed4a1d3ab53847a4ba5bb308f786eba62bd28c",
+    "width": 193,
+    "height": 413,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 193,
+      "height": 413
+     }
+    ],
+    "classic": {
+     "x": 0.0207,
+     "y": 0.0484,
+     "width": 0.9171,
+     "height": 0.908
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-004.png",
+    "byteLength": 73600,
+    "sha256": "2bad0e12a9ea70fd233898b630d33c5bd21db5f8281e10ab105befd14190b0bf",
+    "width": 166,
+    "height": 404,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 166,
+      "height": 404
+     }
+    ],
+    "classic": {
+     "x": 0.0361,
+     "y": 0.0706,
+     "width": 0.9036,
+     "height": 0.8848
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 5
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-005.png",
+    "byteLength": 70046,
+    "sha256": "7713a03915273cf518d53bb587a4d7412e1f1a15f6e0d2219fdac70353d8237f",
+    "width": 262,
+    "height": 445,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 262,
+      "height": 445
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0715,
+     "width": 0.984,
+     "height": 0.8839
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 6
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-006.png",
+    "byteLength": 79379,
+    "sha256": "db361f7c080d57dcd5f5a3d9fd1db103dfae7b92c3c2655718780eb35f7f2b74",
+    "width": 306,
+    "height": 414,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 306,
+      "height": 414
+     }
+    ],
+    "classic": {
+     "x": 0.0049,
+     "y": 0.0543,
+     "width": 0.9918,
+     "height": 0.9058
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 7
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-007.png",
+    "byteLength": 90476,
+    "sha256": "c0241fb94769fdfb8a666471703f800b0c68321d29eade4b1493479cc3902ddb",
+    "width": 210,
+    "height": 411,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 210,
+      "height": 411
+     }
+    ],
+    "classic": {
+     "x": 0.0618,
+     "y": 0.0754,
+     "width": 0.8836,
+     "height": 0.8613
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 8
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-008.png",
+    "byteLength": 89801,
+    "sha256": "ffba0822080d1437b1dffd7948bf79b8b6a3830f6e28162c9e1912a44f24034d",
+    "width": 196,
+    "height": 396,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 196,
+      "height": 396
+     }
+    ],
+    "classic": {
+     "x": 0.0254,
+     "y": 0.0568,
+     "width": 0.916,
+     "height": 0.9091
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 9
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-009.png",
+    "byteLength": 76411,
+    "sha256": "085c271e29c468ee001f01d3e7ee8bfae2cfb29b5912a76a7233cd3b7f62f651",
+    "width": 185,
+    "height": 481,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 185,
+      "height": 481
+     }
+    ],
+    "classic": {
+     "x": 0.0357,
+     "y": 0.096,
+     "width": 0.9253,
+     "height": 0.7918
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 10
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-010.png",
+    "byteLength": 74244,
+    "sha256": "2f33efd7628a27d53c9165a38641ddbcd900c40cdf55bd37fed95769c716825a",
+    "width": 186,
+    "height": 481,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 186,
+      "height": 481
+     }
+    ],
+    "classic": {
+     "x": 0.0258,
+     "y": 0.0924,
+     "width": 0.9355,
+     "height": 0.799
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 11
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-011.png",
+    "byteLength": 92138,
+    "sha256": "4a9fbc75a3cb429677275326815bb4062eb3c335c32272d0d6903c9f850c9c58",
+    "width": 252,
+    "height": 432,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 252,
+      "height": 432
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0705,
+     "width": 0.9861,
+     "height": 0.8532
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 12
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-012.png",
+    "byteLength": 116400,
+    "sha256": "39604ca19b66267b86539e0f691c22cca8070825bcc608ad645561323df16784",
+    "width": 249,
+    "height": 452,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 249,
+      "height": 452
+     }
+    ],
+    "classic": {
+     "x": 0.0361,
+     "y": 0.0915,
+     "width": 0.9157,
+     "height": 0.8422
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 13
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-013.png",
+    "byteLength": 80398,
+    "sha256": "038d67e7245a49356ed86a804d5023ba26b934eb0ed0daaff82fc29edf2211cb",
+    "width": 229,
+    "height": 244,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 229,
+      "height": 244
+     }
+    ],
+    "classic": {
+     "x": 0.0146,
+     "y": 0.0137,
+     "width": 0.984,
+     "height": 0.9713
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 14
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-014.png",
+    "byteLength": 65412,
+    "sha256": "a8a65e24e0eefb7195a9c405d70cc7a7348e1e07bbf32ae4c9e6e6d2ff6877a5",
+    "width": 219,
+    "height": 238,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 219,
+      "height": 238
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0112,
+     "width": 0.9863,
+     "height": 0.9692
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 15
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-015.png",
+    "byteLength": 77284,
+    "sha256": "a2621b9c473f53a9cfa3268aefe7f84fc6547560269d23a4718e13d2a9f2fb95",
+    "width": 197,
+    "height": 456,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 197,
+      "height": 456
+     }
+    ],
+    "classic": {
+     "x": 0.0061,
+     "y": 0.0592,
+     "width": 0.9422,
+     "height": 0.8553
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 16
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-016.png",
+    "byteLength": 67512,
+    "sha256": "81d1c78e6087de2af72add06ca9450663968ce9b6a16028be8fcaf1b84747494",
+    "width": 195,
+    "height": 219,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 195,
+      "height": 219
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0192,
+     "width": 1.0,
+     "height": 0.9739
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 17
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-017.png",
+    "byteLength": 82996,
+    "sha256": "3d4d5f41f5de19895e693eff09f1a4538a01dd227b350b846defebec1a4abfe2",
+    "width": 225,
+    "height": 388,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 225,
+      "height": 388
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0103,
+     "width": 1.0,
+     "height": 0.9755
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 18
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-018.png",
+    "byteLength": 61900,
+    "sha256": "e1808d634e6302862476c1f58ef2adce9f6c6884ebcc1cfb01f3a90ca06f8ebc",
+    "width": 241,
+    "height": 235,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 241,
+      "height": 235
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0184,
+     "width": 0.9945,
+     "height": 0.9816
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 19
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-019.png",
+    "byteLength": 88080,
+    "sha256": "99446730cf3bc693b44f9970f9b23e8d02d9605b1b37615a115565bbf38fdf48",
+    "width": 227,
+    "height": 460,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 227,
+      "height": 460
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0992,
+     "width": 0.9235,
+     "height": 0.829
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 20
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-020.png",
+    "byteLength": 79403,
+    "sha256": "aeb2b3c970764a715a83047570cdf5f6a7439d7b3b8961f52f39814b39688a1a",
+    "width": 202,
+    "height": 400,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 202,
+      "height": 400
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.035,
+     "width": 0.9802,
+     "height": 0.9438
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 21
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-021.png",
+    "byteLength": 77022,
+    "sha256": "fd3421e223f38bfc25173b165e9457c58f64206815eedc2dcbe5fac6c1b85df8",
+    "width": 205,
+    "height": 321,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 205,
+      "height": 321
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0094,
+     "width": 0.9958,
+     "height": 0.9826
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 22
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-022.png",
+    "byteLength": 85958,
+    "sha256": "e5c3e3ad7232e59e3f971f8bd5ff0a39ce12e2b25339a71a2268afc0e5e5a16e",
+    "width": 216,
+    "height": 386,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 216,
+      "height": 386
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0078,
+     "width": 0.9861,
+     "height": 0.978
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 23
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-023.png",
+    "byteLength": 89861,
+    "sha256": "4676d39c19a7d3f6d331d7a90e9fe7495847b5b71860ff49300a61dc43ba9c29",
+    "width": 209,
+    "height": 408,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 209,
+      "height": 408
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.049,
+     "width": 0.9761,
+     "height": 0.9106
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 24
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-024.png",
+    "byteLength": 69856,
+    "sha256": "bcd1597779e52210c9177340ad041106bcb31d8753f96394a0fea05a05fa32ef",
+    "width": 252,
+    "height": 236,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 252,
+      "height": 236
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0197,
+     "width": 1.0,
+     "height": 0.9647
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 25
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-025.png",
+    "byteLength": 92373,
+    "sha256": "fc82e7a5af8f812272397aa85a0cbc268d0aa70f8dca6c361190967590983db9",
+    "width": 222,
+    "height": 450,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 222,
+      "height": 450
+     }
+    ],
+    "classic": {
+     "x": 0.0216,
+     "y": 0.072,
+     "width": 0.9324,
+     "height": 0.8533
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 26
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-026.png",
+    "byteLength": 78716,
+    "sha256": "58e1d006b05d15f139b6dc40e9d7a34d2f106f8ecaf1d34ca07715860b65bda8",
+    "width": 182,
+    "height": 412,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 182,
+      "height": 412
+     }
+    ],
+    "classic": {
+     "x": 0.0441,
+     "y": 0.0692,
+     "width": 0.843,
+     "height": 0.8665
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 27
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-027.png",
+    "byteLength": 79000,
+    "sha256": "2f0f5f981ca5bf3212063c247654fedd6361e8ba0622cd746f81d80cf58fb7b6",
+    "width": 192,
+    "height": 394,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 192,
+      "height": 394
+     }
+    ],
+    "classic": {
+     "x": 0.0625,
+     "y": 0.0292,
+     "width": 0.875,
+     "height": 0.953
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 28
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-028.png",
+    "byteLength": 93545,
+    "sha256": "794459aefad6ac99c1c2f2c44a05fcfd8e60d6b24cdbb98dd907537127918d58",
+    "width": 296,
+    "height": 446,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 296,
+      "height": 446
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0592,
+     "width": 0.9533,
+     "height": 0.8681
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 29
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-029.png",
+    "byteLength": 85396,
+    "sha256": "dff6569bbf9cbb5ffff5b2b6fc9ba544e66efe8a8d8ebc47dbe75229fb59f211",
+    "width": 226,
+    "height": 271,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 226,
+      "height": 271
+     }
+    ],
+    "classic": {
+     "x": 0.0033,
+     "y": 0.0055,
+     "width": 0.9967,
+     "height": 0.9737
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 33
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-033.png",
+    "byteLength": 65281,
+    "sha256": "45b8e5fca693d64099b7baa8232d96c5c2361c6b5419a1f81bfe4fd1b9bd701a",
+    "width": 175,
+    "height": 434,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 175,
+      "height": 434
+     }
+    ],
+    "classic": {
+     "x": 0.0241,
+     "y": 0.0567,
+     "width": 0.8935,
+     "height": 0.8852
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 35
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-035.png",
+    "byteLength": 81054,
+    "sha256": "23690a1be7b87b3b6c918e208d9131f7b6f877e5c15114c2fbff0f2138a51105",
+    "width": 226,
+    "height": 424,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 226,
+      "height": 424
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0439,
+     "width": 0.9682,
+     "height": 0.9065
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 36
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-036.png",
+    "byteLength": 83495,
+    "sha256": "c058efe8c9f35e0b72d41576b48b76af3c8158e6c893571c56aa5cf1b255a50a",
+    "width": 229,
+    "height": 251,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 229,
+      "height": 251
+     }
+    ],
+    "classic": {
+     "x": 0.0058,
+     "y": 0.004,
+     "width": 0.9942,
+     "height": 0.9934
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 37
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-037.png",
+    "byteLength": 86316,
+    "sha256": "2215d7d9f394c54daaedd6bfcca38a3944fdcc92a8ea1117505763f25553eb00",
+    "width": 191,
+    "height": 472,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 191,
+      "height": 472
+     }
+    ],
+    "classic": {
+     "x": 0.0721,
+     "y": 0.0966,
+     "width": 0.7994,
+     "height": 0.8132
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 38
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-038.png",
+    "byteLength": 53002,
+    "sha256": "8b7ef82690c145db081724b2cec2042ac8df797e5bd628d4b4830cc7d44d5f8e",
+    "width": 169,
+    "height": 193,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 169,
+      "height": 193
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.035,
+     "width": 0.9926,
+     "height": 0.9482
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 39
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-039.png",
+    "byteLength": 120884,
+    "sha256": "333ea4b3bc5e1c7b05bc4a2eb2ee7825016e01da8f1db7163dc659bd5a535569",
+    "width": 242,
+    "height": 414,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 242,
+      "height": 414
+     }
+    ],
+    "classic": {
+     "x": 0.0062,
+     "y": 0.047,
+     "width": 0.9938,
+     "height": 0.9119
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 40
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-040.png",
+    "byteLength": 121262,
+    "sha256": "8f8b8a8e948ac50a38ea0566a7e5975e0ccb4e74195e4230989e2598566ab847",
+    "width": 266,
+    "height": 451,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 266,
+      "height": 451
+     }
+    ],
+    "classic": {
+     "x": 0.0338,
+     "y": 0.0439,
+     "width": 0.9459,
+     "height": 0.8511
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 41
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-041.png",
+    "byteLength": 136325,
+    "sha256": "318efdab0e3ffe15688ca24da4fb6b5a0b21ffadbcdb0d035c049fa73262430f",
+    "width": 409,
+    "height": 499,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 409,
+      "height": 499
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0793,
+     "width": 0.9618,
+     "height": 0.8233
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 42
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-042.png",
+    "byteLength": 71980,
+    "sha256": "6fdce9a6c3b2bc157ef569635ba0e35bf32fb167fd0acf4e2832c7d45b4ce113",
+    "width": 146,
+    "height": 394,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 146,
+      "height": 394
+     }
+    ],
+    "classic": {
+     "x": 0.0341,
+     "y": 0.0697,
+     "width": 0.9215,
+     "height": 0.8669
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 43
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-043.png",
+    "byteLength": 50682,
+    "sha256": "f7adcb0c2ee6bce2f5180705c367115e739f5030470af279ed24b89f2fd58afd",
+    "width": 145,
+    "height": 339,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 145,
+      "height": 339
+     }
+    ],
+    "classic": {
+     "x": 0.0472,
+     "y": 0.0734,
+     "width": 0.8879,
+     "height": 0.8506
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 44
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-044.png",
+    "byteLength": 86605,
+    "sha256": "01df4b72cdeb885cc8ac99cd8fa8df1aa5269a386794321f5fcfee809efa669b",
+    "width": 316,
+    "height": 321,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 316,
+      "height": 321
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0013,
+     "width": 0.9864,
+     "height": 0.9987
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 45
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-045.png",
+    "byteLength": 79741,
+    "sha256": "9917dc99b73bd2eb79898de2dca03e603e953b494c33d89f4b108e60fc7f6264",
+    "width": 184,
+    "height": 412,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 184,
+      "height": 412
+     }
+    ],
+    "classic": {
+     "x": 0.0163,
+     "y": 0.0146,
+     "width": 0.9609,
+     "height": 0.9257
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 46
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-046.png",
+    "byteLength": 67473,
+    "sha256": "efeddfc3af7ee8ab2cd748c2221649d6e7f29269d1c1c755692dcc19670ee326",
+    "width": 216,
+    "height": 385,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 216,
+      "height": 385
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0031,
+     "width": 1.0,
+     "height": 0.9891
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 47
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-047.png",
+    "byteLength": 68854,
+    "sha256": "eba7c8db951f3b39e60cd5adf90088c2e16e7fb6efaf516ef73be2efc27222dc",
+    "width": 227,
+    "height": 437,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 227,
+      "height": 437
+     }
+    ],
+    "classic": {
+     "x": 0.0344,
+     "y": 0.0425,
+     "width": 0.8598,
+     "height": 0.8711
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 48
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-048.png",
+    "byteLength": 72946,
+    "sha256": "ba8face4083d09ebf2479a0499b98991a3b9250947e7c39989d63e30afde3074",
+    "width": 147,
+    "height": 415,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 147,
+      "height": 415
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0332,
+     "width": 1.0,
+     "height": 0.9176
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 49
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-049.png",
+    "byteLength": 86378,
+    "sha256": "46763457aac42f836c4e3541c2fbc7f8ee0b699744749a41501eb4d35f3cbdb8",
+    "width": 229,
+    "height": 464,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 229,
+      "height": 464
+     }
+    ],
+    "classic": {
+     "x": 0.0393,
+     "y": 0.0802,
+     "width": 0.9162,
+     "height": 0.8732
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 50
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-050.png",
+    "byteLength": 61674,
+    "sha256": "ef439c1b86613f021a4fac8bf08d33c62bfd1af410b9fbce0e79cd425efed886",
+    "width": 202,
+    "height": 378,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 202,
+      "height": 378
+     }
+    ],
+    "classic": {
+     "x": 0.0173,
+     "y": 0.0066,
+     "width": 0.963,
+     "height": 0.9934
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 51
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-051.png",
+    "byteLength": 83316,
+    "sha256": "97b1b0c3d517efc77a80673adb82ce5b4cb05264dd4ffa537b370686c3285e5f",
+    "width": 238,
+    "height": 396,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 238,
+      "height": 396
+     }
+    ],
+    "classic": {
+     "x": 0.0063,
+     "y": 0.0694,
+     "width": 0.9853,
+     "height": 0.9079
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 52
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-052.png",
+    "byteLength": 58242,
+    "sha256": "28c3e13a094c9fcc9430a07a3cf5b6d953e93b39bf553936ffbddc1afc739b84",
+    "width": 175,
+    "height": 346,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 175,
+      "height": 346
+     }
+    ],
+    "classic": {
+     "x": 0.0342,
+     "y": 0.0805,
+     "width": 0.9071,
+     "height": 0.8414
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 53
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-053.png",
+    "byteLength": 38010,
+    "sha256": "bb53b00b65b09593c1935bfc4c5e2e775249f25ee2f9c99972cdd2a6338cdb71",
+    "width": 210,
+    "height": 297,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 210,
+      "height": 297
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0115,
+     "width": 1.0,
+     "height": 0.9683
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 55
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-055.png",
+    "byteLength": 93231,
+    "sha256": "6cf90897c47a93593c2b5623d724a12528d726d6ed7cac5ce07df91cd12d4932",
+    "width": 208,
+    "height": 418,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 208,
+      "height": 418
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0599,
+     "width": 0.964,
+     "height": 0.8982
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 57
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-057.png",
+    "byteLength": 80521,
+    "sha256": "da0277f909d5b8946a43415680a3cc2ea5f96abeab4c09e7e8c9ecfcb7074d88",
+    "width": 172,
+    "height": 466,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 172,
+      "height": 466
+     }
+    ],
+    "classic": {
+     "x": 0.035,
+     "y": 0.0851,
+     "width": 0.9091,
+     "height": 0.8441
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 58
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-058.png",
+    "byteLength": 86987,
+    "sha256": "547a2e09332e622c04a1e326c6162e2b335b1c103e05f18a4582d40f7b326787",
+    "width": 170,
+    "height": 475,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 170,
+      "height": 475
+     }
+    ],
+    "classic": {
+     "x": 0.0282,
+     "y": 0.0934,
+     "width": 0.9155,
+     "height": 0.8333
+    }
+   },
+   {
+    "replaces": {
+     "archive": 182,
+     "record": 59
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-059.png",
+    "byteLength": 117431,
+    "sha256": "d96f7c9b151d52ff0e26d5c0e4f34756a9ee7a99c0858f7f84ed395211068108",
+    "width": 309,
+    "height": 431,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 309,
+      "height": 431
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0,
+     "width": 1.0,
+     "height": 0.9958
+    }
+   },
+   {
+    "replaces": {
+     "archive": 183,
+     "record": 2
+    },
+    "path": "worldrpg/media/refreshed/people/texture-183-record-002.png",
+    "byteLength": 117758,
+    "sha256": "f65936f222172d52734ce0ebbb9e509f1f7b09a76eff2d702ad6d0b17af18a4a",
+    "width": 215,
+    "height": 524,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 215,
+      "height": 524
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0415,
+     "width": 0.9617,
+     "height": 0.9112
+    }
+   },
+   {
+    "replaces": {
+     "archive": 183,
+     "record": 3
+    },
+    "path": "worldrpg/media/refreshed/people/texture-183-record-003.png",
+    "byteLength": 113969,
+    "sha256": "d8416ab7c9babd0f53308a1f8b4a8f42410daf06b6ed105584a11f5be6a683b6",
+    "width": 200,
+    "height": 515,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 515
+     }
+    ],
+    "classic": {
+     "x": 0.0112,
+     "y": 0.0611,
+     "width": 0.9888,
+     "height": 0.9258
+    }
+   },
+   {
+    "replaces": {
+     "archive": 183,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/people/texture-183-record-004.png",
+    "byteLength": 116922,
+    "sha256": "4177963bfa402a9479d438259a109e7d977db3c7c504cf7634b21181c8469fae",
+    "width": 245,
+    "height": 530,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 245,
+      "height": 530
+     }
+    ],
+    "classic": {
+     "x": 0.0031,
+     "y": 0.0424,
+     "width": 0.9664,
+     "height": 0.9392
+    }
+   },
+   {
+    "replaces": {
+     "archive": 183,
+     "record": 5
+    },
+    "path": "worldrpg/media/refreshed/people/texture-183-record-005.png",
+    "byteLength": 138390,
+    "sha256": "f7ca9a7c2898459b91d6c5afed94b92a6c5a4365ad398ef851671829f4996fe4",
+    "width": 292,
+    "height": 579,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 292,
+      "height": 579
+     }
+    ],
+    "classic": {
+     "x": 0.0463,
+     "y": 0.0777,
+     "width": 0.8946,
+     "height": 0.829
+    }
+   },
+   {
+    "replaces": {
+     "archive": 183,
+     "record": 6
+    },
+    "path": "worldrpg/media/refreshed/people/texture-183-record-006.png",
+    "byteLength": 168229,
+    "sha256": "b00c64f8d5fb09acca160a4a961c50f49cd62dd9bea83f9c8cb80815ca357fb0",
+    "width": 356,
+    "height": 513,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 356,
+      "height": 513
+     }
+    ],
+    "classic": {
+     "x": 0.0042,
+     "y": 0.0146,
+     "width": 0.9958,
+     "height": 0.9591
+    }
+   },
+   {
+    "replaces": {
+     "archive": 183,
+     "record": 7
+    },
+    "path": "worldrpg/media/refreshed/people/texture-183-record-007.png",
+    "byteLength": 153002,
+    "sha256": "de4eeec96eb6f4097a2e1b7873bcfaba013887092738fc002942743f67609ed3",
+    "width": 257,
+    "height": 591,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 257,
+      "height": 591
+     }
+    ],
+    "classic": {
+     "x": 0.0087,
+     "y": 0.0761,
+     "width": 0.9446,
+     "height": 0.8579
+    }
+   },
+   {
+    "replaces": {
+     "archive": 183,
+     "record": 9
+    },
+    "path": "worldrpg/media/refreshed/people/texture-183-record-009.png",
+    "byteLength": 141779,
+    "sha256": "310fb2c6cd0b15d77c519638956c11f3e4f0144340ab679eaa0896c5705595ac",
+    "width": 298,
+    "height": 579,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 298,
+      "height": 579
+     }
+    ],
+    "classic": {
+     "x": 0.1106,
+     "y": 0.1049,
+     "width": 0.794,
+     "height": 0.829
+    }
+   },
+   {
+    "replaces": {
+     "archive": 183,
+     "record": 14
+    },
+    "path": "worldrpg/media/refreshed/people/texture-183-record-014.png",
+    "byteLength": 80155,
+    "sha256": "f50c701cb4421538952567f246172aa083524ce88f612bd391d2dea72622938a",
+    "width": 264,
+    "height": 486,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 264,
+      "height": 486
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0108,
+     "width": 0.9886,
+     "height": 0.9815
+    }
+   },
+   {
+    "replaces": {
+     "archive": 183,
+     "record": 17
+    },
+    "path": "worldrpg/media/refreshed/people/texture-183-record-017.png",
+    "byteLength": 161336,
+    "sha256": "dfb3443c6f522c844a010c82258e082bf5240b386fa9f5931521e0895516570f",
+    "width": 343,
+    "height": 509,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 343,
+      "height": 509
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0265,
+     "width": 0.9978,
+     "height": 0.9602
+    }
+   },
+   {
+    "replaces": {
+     "archive": 183,
+     "record": 18
+    },
+    "path": "worldrpg/media/refreshed/people/texture-183-record-018.png",
+    "byteLength": 140732,
+    "sha256": "00532dedbe253fdc24266e44617d22749a6753348f30aee1d3df280da740b708",
+    "width": 295,
+    "height": 607,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 295,
+      "height": 607
+     }
+    ],
+    "classic": {
+     "x": 0.0407,
+     "y": 0.1075,
+     "width": 0.8651,
+     "height": 0.8208
+    }
+   },
+   {
+    "replaces": {
+     "archive": 183,
+     "record": 19
+    },
+    "path": "worldrpg/media/refreshed/people/texture-183-record-019.png",
+    "byteLength": 119409,
+    "sha256": "a02fa09d18ccf99eab574a2af93a67682d53298364bb3feb619d0627b93389a7",
+    "width": 299,
+    "height": 571,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 299,
+      "height": 571
+     }
+    ],
+    "classic": {
+     "x": 0.0451,
+     "y": 0.0696,
+     "width": 0.9023,
+     "height": 0.8778
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 0
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-000.png",
+    "byteLength": 43862,
+    "sha256": "b83eaade4730250892a8e2b378974d8375546bc1a19ada15a82ad12c965ddb8d",
+    "width": 176,
+    "height": 256,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 176,
+      "height": 256
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0234,
+     "width": 0.9527,
+     "height": 0.9258
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-001.png",
+    "byteLength": 46162,
+    "sha256": "56d0494fc91b5c947e455f17ba70c00fc08fb17f5c93b27b31b010c436f2baf0",
+    "width": 173,
+    "height": 260,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 173,
+      "height": 260
+     }
+    ],
+    "classic": {
+     "x": 0.0483,
+     "y": 0.0218,
+     "width": 0.9208,
+     "height": 0.9565
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 2
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-002.png",
+    "byteLength": 30281,
+    "sha256": "977d1ce3aead7d9d53e2aa8e5485b1197203df8afebf3148e679bc0e97b3defd",
+    "width": 129,
+    "height": 179,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 129,
+      "height": 179
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0129,
+     "width": 1.0,
+     "height": 0.9369
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 3
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-003.png",
+    "byteLength": 26242,
+    "sha256": "8f2bdcd2586a3c301245ab262eb8ff92922d54fbc07e276d0e8012b730866498",
+    "width": 89,
+    "height": 233,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 89,
+      "height": 233
+     }
+    ],
+    "classic": {
+     "x": 0.0203,
+     "y": 0.0154,
+     "width": 0.9797,
+     "height": 0.9524
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-004.png",
+    "byteLength": 51325,
+    "sha256": "0f6506c392aa66bcce360619144d811cd8d6bc5cd80ae460ca4c7933363acf7c",
+    "width": 173,
+    "height": 274,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 173,
+      "height": 274
+     }
+    ],
+    "classic": {
+     "x": 0.0965,
+     "y": 0.078,
+     "width": 0.9035,
+     "height": 0.866
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 5
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-005.png",
+    "byteLength": 43300,
+    "sha256": "731fecb935c04afddf38f19147ffe19dfa007a0dfa8d8dab5b3bca05fe57af8b",
+    "width": 168,
+    "height": 269,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 168,
+      "height": 269
+     }
+    ],
+    "classic": {
+     "x": 0.0554,
+     "y": 0.0483,
+     "width": 0.9446,
+     "height": 0.8922
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 7
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-007.png",
+    "byteLength": 37517,
+    "sha256": "71dc618441f9cfc832173645f8846c72aae9d8fad46faa56f91f70ae30a576f3",
+    "width": 104,
+    "height": 271,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 104,
+      "height": 271
+     }
+    ],
+    "classic": {
+     "x": 0.0225,
+     "y": 0.0528,
+     "width": 0.955,
+     "height": 0.8956
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 8
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-008.png",
+    "byteLength": 30538,
+    "sha256": "441ac05835e6531715176d0fcecfa3a5672c56963a9e8b8dc60042baaafe2022",
+    "width": 122,
+    "height": 268,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 122,
+      "height": 268
+     }
+    ],
+    "classic": {
+     "x": 0.0109,
+     "y": 0.0448,
+     "width": 0.959,
+     "height": 0.8966
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 9
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-009.png",
+    "byteLength": 26971,
+    "sha256": "3e81fbac4688cf077be678e5f334906fead2c979c040290adeddb9a5ce8fe27e",
+    "width": 89,
+    "height": 277,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 89,
+      "height": 277
+     }
+    ],
+    "classic": {
+     "x": 0.0075,
+     "y": 0.0614,
+     "width": 0.9775,
+     "height": 0.8664
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 10
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-010.png",
+    "byteLength": 31725,
+    "sha256": "6c5af5200d9cb9b426c399acb07e62f0e7f842b2d23ff10150bcfe5c57c7485f",
+    "width": 122,
+    "height": 244,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 122,
+      "height": 244
+     }
+    ],
+    "classic": {
+     "x": 0.0148,
+     "y": 0.0382,
+     "width": 0.9852,
+     "height": 0.9236
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 11
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-011.png",
+    "byteLength": 18098,
+    "sha256": "a20d58a580b4cb45f27a7efe9f7d5a47b370d9b59152ca56ba38c96efdd7a109",
+    "width": 108,
+    "height": 163,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 108,
+      "height": 163
+     }
+    ],
+    "classic": {
+     "x": 0.002,
+     "y": 0.0171,
+     "width": 0.998,
+     "height": 0.975
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 12
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-012.png",
+    "byteLength": 15159,
+    "sha256": "bc107b19a3b25d818b70440a318a3a85c909469870ca532de49f636901a1babd",
+    "width": 105,
+    "height": 139,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 105,
+      "height": 139
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0216,
+     "width": 1.0,
+     "height": 0.9492
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 14
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-014.png",
+    "byteLength": 14670,
+    "sha256": "4347ef72c1520df453a909b7dc5bfa4bb5730bca2cce504d0509d96435b9b1ca",
+    "width": 172,
+    "height": 148,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 172,
+      "height": 148
+     }
+    ],
+    "classic": {
+     "x": 0.0013,
+     "y": 0.0047,
+     "width": 0.9946,
+     "height": 0.9953
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 15
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-015.png",
+    "byteLength": 16774,
+    "sha256": "54091aff0cadaded577bc99ed9e4bb8b1315a08c18fbe1d65fee8975c3443432",
+    "width": 115,
+    "height": 195,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 115,
+      "height": 195
+     }
+    ],
+    "classic": {
+     "x": 0.008,
+     "y": 0.0581,
+     "width": 0.992,
+     "height": 0.879
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 16
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-016.png",
+    "byteLength": 47950,
+    "sha256": "b3857ce5edbf2d8dfec268dc03828ed186e2e96fa9baa8834f801ee1025c9340",
+    "width": 120,
+    "height": 270,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 120,
+      "height": 270
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0729,
+     "width": 0.9723,
+     "height": 0.8566
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 17
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-017.png",
+    "byteLength": 33219,
+    "sha256": "b953262083f3d3c5d584f3eca9808a7a98aea98f25d42d1f66fe190a51a94597",
+    "width": 94,
+    "height": 287,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 94,
+      "height": 287
+     }
+    ],
+    "classic": {
+     "x": 0.0141,
+     "y": 0.0697,
+     "width": 0.9859,
+     "height": 0.8362
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 18
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-018.png",
+    "byteLength": 35446,
+    "sha256": "40b275a6f3838d9e7c514dc7d1dd31d3cfbaedeedab384635905d3df163a6b15",
+    "width": 140,
+    "height": 277,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 140,
+      "height": 277
+     }
+    ],
+    "classic": {
+     "x": 0.0452,
+     "y": 0.0865,
+     "width": 0.9214,
+     "height": 0.8438
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 19
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-019.png",
+    "byteLength": 40768,
+    "sha256": "daf9902ad8660b7e6cecf0d3dee4cde81ba0fe0ac82a1e7904ab44123f73794a",
+    "width": 106,
+    "height": 260,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 106,
+      "height": 260
+     }
+    ],
+    "classic": {
+     "x": 0.0345,
+     "y": 0.0244,
+     "width": 0.9592,
+     "height": 0.9589
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 20
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-020.png",
+    "byteLength": 38327,
+    "sha256": "9fc3839b9b1b2dbc26659e8382250a76fc3033b97067b1bb63a251695e271374",
+    "width": 103,
+    "height": 270,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 103,
+      "height": 270
+     }
+    ],
+    "classic": {
+     "x": 0.0194,
+     "y": 0.0618,
+     "width": 0.9029,
+     "height": 0.8789
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 21
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-021.png",
+    "byteLength": 36934,
+    "sha256": "3e6dfc7f539db213d96c1a830285f2aaacd6480cdebad4ce5a0e79a1bcd90370",
+    "width": 123,
+    "height": 290,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 123,
+      "height": 290
+     }
+    ],
+    "classic": {
+     "x": 0.003,
+     "y": 0.0427,
+     "width": 0.8997,
+     "height": 0.8808
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 22
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-022.png",
+    "byteLength": 39361,
+    "sha256": "30bfb652d22c71d4eebb87fa1c371a6b446017b05d5a38b6bebef90207b7ee0a",
+    "width": 121,
+    "height": 267,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 121,
+      "height": 267
+     }
+    ],
+    "classic": {
+     "x": 0.0165,
+     "y": 0.0262,
+     "width": 0.9643,
+     "height": 0.9225
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 23
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-023.png",
+    "byteLength": 39110,
+    "sha256": "0549b483e2094f24b1215044f7e762417e4aa0eeebcd6cda1d70b1ecd65c892a",
+    "width": 102,
+    "height": 263,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 102,
+      "height": 263
+     }
+    ],
+    "classic": {
+     "x": 0.0261,
+     "y": 0.0533,
+     "width": 0.9088,
+     "height": 0.9137
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 24
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-024.png",
+    "byteLength": 38897,
+    "sha256": "e3f8df8d5cf609990892297bd6fd413ca3a6eff40157999641b04247a3ef7a02",
+    "width": 141,
+    "height": 260,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 141,
+      "height": 260
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0167,
+     "width": 1.0,
+     "height": 0.9692
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 25
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-025.png",
+    "byteLength": 38906,
+    "sha256": "aae03c0c343f094db103269ae1998a677e4fa3a6264a67ef226eb8fcacda0aec",
+    "width": 113,
+    "height": 262,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 113,
+      "height": 262
+     }
+    ],
+    "classic": {
+     "x": 0.0147,
+     "y": 0.0584,
+     "width": 0.9558,
+     "height": 0.892
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 26
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-026.png",
+    "byteLength": 36713,
+    "sha256": "17f1fcdc448e70543c70279fa6d1f4a914cf3918a2d06e15aa2569db09ea00d4",
+    "width": 129,
+    "height": 255,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 129,
+      "height": 255
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0039,
+     "width": 0.9278,
+     "height": 0.9869
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 28
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-028.png",
+    "byteLength": 33555,
+    "sha256": "065bc81bd1b39b9329682c5e1e9a30ab20d46f32c8dea6abd15db526127d310a",
+    "width": 110,
+    "height": 278,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 110,
+      "height": 278
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0491,
+     "width": 0.9545,
+     "height": 0.8946
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 29
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-029.png",
+    "byteLength": 31283,
+    "sha256": "d8754dd9b97d162057ebe97a857df8bdd5c1a0833f0178146fe51ba3eb3af30b",
+    "width": 101,
+    "height": 276,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 101,
+      "height": 276
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0519,
+     "width": 0.977,
+     "height": 0.8804
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 30
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-030.png",
+    "byteLength": 23713,
+    "sha256": "5b9c3a811f96060a83ae4f1506397fbbdd7af138700b2c3395a7a7b05c887423",
+    "width": 82,
+    "height": 269,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 82,
+      "height": 269
+     }
+    ],
+    "classic": {
+     "x": 0.0082,
+     "y": 0.0372,
+     "width": 0.9918,
+     "height": 0.9156
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 32
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-032.png",
+    "byteLength": 32177,
+    "sha256": "c60899d94525f48a1e14982825512cef17285a7747c600bed695effa7ba4d72b",
+    "width": 96,
+    "height": 280,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 96,
+      "height": 280
+     }
+    ],
+    "classic": {
+     "x": 0.0348,
+     "y": 0.044,
+     "width": 0.8467,
+     "height": 0.9
+    }
+   },
+   {
+    "replaces": {
+     "archive": 184,
+     "record": 33
+    },
+    "path": "worldrpg/media/refreshed/people/texture-184-record-033.png",
+    "byteLength": 28384,
+    "sha256": "afc48eb9100ed8ae401ec127cfa452c2df4f1ef9c556e4ea0e1846c3734c4083",
+    "width": 122,
+    "height": 265,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 122,
+      "height": 265
+     }
+    ],
+    "classic": {
+     "x": 0.0137,
+     "y": 0.0479,
+     "width": 0.9836,
+     "height": 0.9181
+    }
+   },
+   {
+    "replaces": {
+     "archive": 334,
+     "record": 0
+    },
+    "path": "worldrpg/media/refreshed/people/texture-334-record-000.png",
+    "byteLength": 70799,
+    "sha256": "96699c4035ac78a256d11021779c63c853a449f11f71b4cb69da0c2826c5b2c0",
+    "width": 209,
+    "height": 398,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 209,
+      "height": 398
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0181,
+     "width": 0.9885,
+     "height": 0.9563
+    }
+   },
+   {
+    "replaces": {
+     "archive": 334,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/people/texture-334-record-001.png",
+    "byteLength": 100704,
+    "sha256": "5a477cc299ee343763c5b273660f54d3efd1758aff113cc2b0e4dd12f1f2db6d",
+    "width": 252,
+    "height": 396,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 252,
+      "height": 396
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0101,
+     "width": 1.0,
+     "height": 0.9558
+    }
+   },
+   {
+    "replaces": {
+     "archive": 334,
+     "record": 3
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-006.png",
+    "byteLength": 79379,
+    "sha256": "db361f7c080d57dcd5f5a3d9fd1db103dfae7b92c3c2655718780eb35f7f2b74",
+    "width": 306,
+    "height": 414,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 306,
+      "height": 414
+     }
+    ],
+    "classic": {
+     "x": 0.0049,
+     "y": 0.0543,
+     "width": 0.9918,
+     "height": 0.9058
+    }
+   },
+   {
+    "replaces": {
+     "archive": 334,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-027.png",
+    "byteLength": 79000,
+    "sha256": "2f0f5f981ca5bf3212063c247654fedd6361e8ba0622cd746f81d80cf58fb7b6",
+    "width": 192,
+    "height": 394,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 192,
+      "height": 394
+     }
+    ],
+    "classic": {
+     "x": 0.0625,
+     "y": 0.0292,
+     "width": 0.875,
+     "height": 0.953
+    }
+   },
+   {
+    "replaces": {
+     "archive": 334,
+     "record": 5
+    },
+    "path": "worldrpg/media/refreshed/people/texture-334-record-005.png",
+    "byteLength": 93347,
+    "sha256": "89761b1d11e3fdda9ccc0f1464e95511655a4033b034fd600c2db5409ed4dc90",
+    "width": 245,
+    "height": 410,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 245,
+      "height": 410
+     }
+    ],
+    "classic": {
+     "x": 0.0184,
+     "y": 0.0572,
+     "width": 0.9551,
+     "height": 0.8989
+    }
+   },
+   {
+    "replaces": {
+     "archive": 334,
+     "record": 6
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-005.png",
+    "byteLength": 70046,
+    "sha256": "7713a03915273cf518d53bb587a4d7412e1f1a15f6e0d2219fdac70353d8237f",
+    "width": 262,
+    "height": 445,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 262,
+      "height": 445
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0715,
+     "width": 0.984,
+     "height": 0.8839
+    }
+   },
+   {
+    "replaces": {
+     "archive": 334,
+     "record": 7
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-024.png",
+    "byteLength": 69856,
+    "sha256": "bcd1597779e52210c9177340ad041106bcb31d8753f96394a0fea05a05fa32ef",
+    "width": 252,
+    "height": 236,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 252,
+      "height": 236
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0197,
+     "width": 1.0,
+     "height": 0.9647
+    }
+   },
+   {
+    "replaces": {
+     "archive": 334,
+     "record": 8
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-010.png",
+    "byteLength": 74244,
+    "sha256": "2f33efd7628a27d53c9165a38641ddbcd900c40cdf55bd37fed95769c716825a",
+    "width": 186,
+    "height": 481,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 186,
+      "height": 481
+     }
+    ],
+    "classic": {
+     "x": 0.0258,
+     "y": 0.0924,
+     "width": 0.9355,
+     "height": 0.799
+    }
+   },
+   {
+    "replaces": {
+     "archive": 334,
+     "record": 9
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-042.png",
+    "byteLength": 71980,
+    "sha256": "6fdce9a6c3b2bc157ef569635ba0e35bf32fb167fd0acf4e2832c7d45b4ce113",
+    "width": 146,
+    "height": 394,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 146,
+      "height": 394
+     }
+    ],
+    "classic": {
+     "x": 0.0341,
+     "y": 0.0697,
+     "width": 0.9215,
+     "height": 0.8669
+    }
+   },
+   {
+    "replaces": {
+     "archive": 334,
+     "record": 10
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-045.png",
+    "byteLength": 79741,
+    "sha256": "9917dc99b73bd2eb79898de2dca03e603e953b494c33d89f4b108e60fc7f6264",
+    "width": 184,
+    "height": 412,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 184,
+      "height": 412
+     }
+    ],
+    "classic": {
+     "x": 0.0163,
+     "y": 0.0146,
+     "width": 0.9609,
+     "height": 0.9257
+    }
+   },
+   {
+    "replaces": {
+     "archive": 334,
+     "record": 11
+    },
+    "path": "worldrpg/media/refreshed/people/texture-334-record-011.png",
+    "byteLength": 81854,
+    "sha256": "15f5f91e660e7c2f19d872994620744e36a74898e8514fa007ee64588f50cdb9",
+    "width": 238,
+    "height": 401,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 238,
+      "height": 401
+     }
+    ],
+    "classic": {
+     "x": 0.0084,
+     "y": 0.0686,
+     "width": 0.9811,
+     "height": 0.8978
+    }
+   },
+   {
+    "replaces": {
+     "archive": 334,
+     "record": 12
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-053.png",
+    "byteLength": 38010,
+    "sha256": "bb53b00b65b09593c1935bfc4c5e2e775249f25ee2f9c99972cdd2a6338cdb71",
+    "width": 210,
+    "height": 297,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 210,
+      "height": 297
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0115,
+     "width": 1.0,
+     "height": 0.9683
+    }
+   },
+   {
+    "replaces": {
+     "archive": 334,
+     "record": 13
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-055.png",
+    "byteLength": 93231,
+    "sha256": "6cf90897c47a93593c2b5623d724a12528d726d6ed7cac5ce07df91cd12d4932",
+    "width": 208,
+    "height": 418,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 208,
+      "height": 418
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0599,
+     "width": 0.964,
+     "height": 0.8982
+    }
+   },
+   {
+    "replaces": {
+     "archive": 334,
+     "record": 14
+    },
+    "path": "worldrpg/media/refreshed/people/texture-334-record-014.png",
+    "byteLength": 120129,
+    "sha256": "0792b04a69e9bc675d5fd821e376022ee818411091d88168c91d37e1aca9486e",
+    "width": 305,
+    "height": 429,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 305,
+      "height": 429
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0,
+     "width": 0.9843,
+     "height": 0.979
+    }
+   },
+   {
+    "replaces": {
+     "archive": 334,
+     "record": 16
+    },
+    "path": "worldrpg/media/refreshed/people/texture-183-record-003.png",
+    "byteLength": 113969,
+    "sha256": "d8416ab7c9babd0f53308a1f8b4a8f42410daf06b6ed105584a11f5be6a683b6",
+    "width": 200,
+    "height": 515,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 515
+     }
+    ],
+    "classic": {
+     "x": 0.0112,
+     "y": 0.0611,
+     "width": 0.9888,
+     "height": 0.9258
+    }
+   },
+   {
+    "replaces": {
+     "archive": 334,
+     "record": 17
+    },
+    "path": "worldrpg/media/refreshed/people/texture-334-record-017.png",
+    "byteLength": 88240,
+    "sha256": "5986e6731d10bb45da5319ee161553fbbf12a9c2d0537809c90f67dba85cae01",
+    "width": 210,
+    "height": 415,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 210,
+      "height": 415
+     }
+    ],
+    "classic": {
+     "x": 0.019,
+     "y": 0.0518,
+     "width": 0.9429,
+     "height": 0.9036
+    }
+   },
+   {
+    "replaces": {
+     "archive": 334,
+     "record": 18
+    },
+    "path": "worldrpg/media/refreshed/people/texture-334-record-018.png",
+    "byteLength": 100379,
+    "sha256": "d24384fb98e2f089db5d26d1619b53251645e52f4036676330e310ce1fe0f915",
+    "width": 212,
+    "height": 407,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 212,
+      "height": 407
+     }
+    ],
+    "classic": {
+     "x": 0.0213,
+     "y": 0.0467,
+     "width": 0.9362,
+     "height": 0.914
+    }
+   },
+   {
+    "replaces": {
+     "archive": 334,
+     "record": 19
+    },
+    "path": "worldrpg/media/refreshed/people/texture-334-record-019.png",
+    "byteLength": 161627,
+    "sha256": "05f83b0e7caafc77e1bbc92083d8a9651d3c9dafb14cbbf6735344ce42de2f40",
+    "width": 319,
+    "height": 568,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 319,
+      "height": 568
+     }
+    ],
+    "classic": {
+     "x": 0.0612,
+     "y": 0.0805,
+     "width": 0.9035,
+     "height": 0.8496
+    }
+   },
+   {
+    "replaces": {
+     "archive": 334,
+     "record": 20
+    },
+    "path": "worldrpg/media/refreshed/people/texture-334-record-020.png",
+    "byteLength": 138002,
+    "sha256": "e7886ee2b2505f6dd5d9b161468ea97dac0842f893be29b508d430aa210b524a",
+    "width": 482,
+    "height": 477,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 482,
+      "height": 477
+     }
+    ],
+    "classic": {
+     "x": 0.0047,
+     "y": 0.0031,
+     "width": 0.9953,
+     "height": 0.9937
+    }
+   },
+   {
+    "replaces": {
+     "archive": 334,
+     "record": 21
+    },
+    "path": "worldrpg/media/refreshed/people/texture-183-record-018.png",
+    "byteLength": 140732,
+    "sha256": "00532dedbe253fdc24266e44617d22749a6753348f30aee1d3df280da740b708",
+    "width": 295,
+    "height": 607,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 295,
+      "height": 607
+     }
+    ],
+    "classic": {
+     "x": 0.0407,
+     "y": 0.1075,
+     "width": 0.8651,
+     "height": 0.8208
+    }
+   },
+   {
+    "replaces": {
+     "archive": 346,
+     "record": 0
+    },
+    "path": "worldrpg/media/refreshed/people/texture-346-record-000.png",
+    "byteLength": 87309,
+    "sha256": "1bf38ea962c7cba9e66069b9ca4c88f183ae9544306a6511d34289e5121f8056",
+    "width": 252,
+    "height": 475,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 252,
+      "height": 475
+     }
+    ],
+    "classic": {
+     "x": 0.0548,
+     "y": 0.0871,
+     "width": 0.9048,
+     "height": 0.8207
+    }
+   },
+   {
+    "replaces": {
+     "archive": 346,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/people/texture-346-record-001.png",
+    "byteLength": 83583,
+    "sha256": "750bf9678fa2bcd70857fd5ee657727fb8b8d4b83661ab22dea14551f2e3e27d",
+    "width": 182,
+    "height": 406,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 182,
+      "height": 406
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0357,
+     "width": 0.9534,
+     "height": 0.9225
+    }
+   },
+   {
+    "replaces": {
+     "archive": 346,
+     "record": 3
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-005.png",
+    "byteLength": 70046,
+    "sha256": "7713a03915273cf518d53bb587a4d7412e1f1a15f6e0d2219fdac70353d8237f",
+    "width": 262,
+    "height": 445,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 262,
+      "height": 445
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0715,
+     "width": 0.984,
+     "height": 0.8839
+    }
+   },
+   {
+    "replaces": {
+     "archive": 346,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-007.png",
+    "byteLength": 90476,
+    "sha256": "c0241fb94769fdfb8a666471703f800b0c68321d29eade4b1493479cc3902ddb",
+    "width": 210,
+    "height": 411,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 210,
+      "height": 411
+     }
+    ],
+    "classic": {
+     "x": 0.0618,
+     "y": 0.0754,
+     "width": 0.8836,
+     "height": 0.8613
+    }
+   },
+   {
+    "replaces": {
+     "archive": 346,
+     "record": 5
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-008.png",
+    "byteLength": 89801,
+    "sha256": "ffba0822080d1437b1dffd7948bf79b8b6a3830f6e28162c9e1912a44f24034d",
+    "width": 196,
+    "height": 396,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 196,
+      "height": 396
+     }
+    ],
+    "classic": {
+     "x": 0.0254,
+     "y": 0.0568,
+     "width": 0.916,
+     "height": 0.9091
+    }
+   },
+   {
+    "replaces": {
+     "archive": 346,
+     "record": 6
+    },
+    "path": "worldrpg/media/refreshed/people/texture-346-record-006.png",
+    "byteLength": 69677,
+    "sha256": "af887ac649860e358bafa484db8766dcd46b51e01c8f6de974bd38e9198a1bc4",
+    "width": 248,
+    "height": 238,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 248,
+      "height": 238
+     }
+    ],
+    "classic": {
+     "x": 0.004,
+     "y": 0.0168,
+     "width": 0.9906,
+     "height": 0.9593
+    }
+   },
+   {
+    "replaces": {
+     "archive": 346,
+     "record": 8
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-023.png",
+    "byteLength": 89861,
+    "sha256": "4676d39c19a7d3f6d331d7a90e9fe7495847b5b71860ff49300a61dc43ba9c29",
+    "width": 209,
+    "height": 408,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 209,
+      "height": 408
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.049,
+     "width": 0.9761,
+     "height": 0.9106
+    }
+   },
+   {
+    "replaces": {
+     "archive": 346,
+     "record": 9
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-026.png",
+    "byteLength": 78716,
+    "sha256": "58e1d006b05d15f139b6dc40e9d7a34d2f106f8ecaf1d34ca07715860b65bda8",
+    "width": 182,
+    "height": 412,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 182,
+      "height": 412
+     }
+    ],
+    "classic": {
+     "x": 0.0441,
+     "y": 0.0692,
+     "width": 0.843,
+     "height": 0.8665
+    }
+   },
+   {
+    "replaces": {
+     "archive": 346,
+     "record": 10
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-028.png",
+    "byteLength": 93545,
+    "sha256": "794459aefad6ac99c1c2f2c44a05fcfd8e60d6b24cdbb98dd907537127918d58",
+    "width": 296,
+    "height": 446,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 296,
+      "height": 446
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0592,
+     "width": 0.9533,
+     "height": 0.8681
+    }
+   },
+   {
+    "replaces": {
+     "archive": 346,
+     "record": 11
+    },
+    "path": "worldrpg/media/refreshed/people/texture-346-record-011.png",
+    "byteLength": 54339,
+    "sha256": "a314dbfe8947efdc4cc85e2e0173251dfaf33cef2ee92fcfbf91ec35e258d99f",
+    "width": 160,
+    "height": 403,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 160,
+      "height": 403
+     }
+    ],
+    "classic": {
+     "x": 0.0262,
+     "y": 0.0417,
+     "width": 0.9738,
+     "height": 0.9538
+    }
+   },
+   {
+    "replaces": {
+     "archive": 346,
+     "record": 12
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-037.png",
+    "byteLength": 86316,
+    "sha256": "2215d7d9f394c54daaedd6bfcca38a3944fdcc92a8ea1117505763f25553eb00",
+    "width": 191,
+    "height": 472,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 191,
+      "height": 472
+     }
+    ],
+    "classic": {
+     "x": 0.0721,
+     "y": 0.0966,
+     "width": 0.7994,
+     "height": 0.8132
+    }
+   },
+   {
+    "replaces": {
+     "archive": 346,
+     "record": 13
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-039.png",
+    "byteLength": 120884,
+    "sha256": "333ea4b3bc5e1c7b05bc4a2eb2ee7825016e01da8f1db7163dc659bd5a535569",
+    "width": 242,
+    "height": 414,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 242,
+      "height": 414
+     }
+    ],
+    "classic": {
+     "x": 0.0062,
+     "y": 0.047,
+     "width": 0.9938,
+     "height": 0.9119
+    }
+   },
+   {
+    "replaces": {
+     "archive": 346,
+     "record": 14
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-040.png",
+    "byteLength": 121262,
+    "sha256": "8f8b8a8e948ac50a38ea0566a7e5975e0ccb4e74195e4230989e2598566ab847",
+    "width": 266,
+    "height": 451,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 266,
+      "height": 451
+     }
+    ],
+    "classic": {
+     "x": 0.0338,
+     "y": 0.0439,
+     "width": 0.9459,
+     "height": 0.8511
+    }
+   },
+   {
+    "replaces": {
+     "archive": 346,
+     "record": 15
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-043.png",
+    "byteLength": 50682,
+    "sha256": "f7adcb0c2ee6bce2f5180705c367115e739f5030470af279ed24b89f2fd58afd",
+    "width": 145,
+    "height": 339,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 145,
+      "height": 339
+     }
+    ],
+    "classic": {
+     "x": 0.0472,
+     "y": 0.0734,
+     "width": 0.8879,
+     "height": 0.8506
+    }
+   },
+   {
+    "replaces": {
+     "archive": 346,
+     "record": 16
+    },
+    "path": "worldrpg/media/refreshed/people/texture-346-record-016.png",
+    "byteLength": 65617,
+    "sha256": "9a398cf94930fe5034aa365b5f72260ae8c2eed472cebb6e32d868cf04796afd",
+    "width": 199,
+    "height": 226,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 199,
+      "height": 226
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0133,
+     "width": 0.9789,
+     "height": 0.984
+    }
+   },
+   {
+    "replaces": {
+     "archive": 346,
+     "record": 17
+    },
+    "path": "worldrpg/media/refreshed/people/texture-346-record-017.png",
+    "byteLength": 110886,
+    "sha256": "a0cbfa3d26a9faae3f7e9640afa0e99a34a5bfba03b4cdbc81acbe3a65bfa4ef",
+    "width": 204,
+    "height": 431,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 204,
+      "height": 431
+     }
+    ],
+    "classic": {
+     "x": 0.0059,
+     "y": 0.0167,
+     "width": 0.9559,
+     "height": 0.9597
+    }
+   },
+   {
+    "replaces": {
+     "archive": 346,
+     "record": 18
+    },
+    "path": "worldrpg/media/refreshed/people/texture-346-record-018.png",
+    "byteLength": 57932,
+    "sha256": "3b2cedf2142dd06027b456c4dc5a75af89e05573152eac626d1bde9a45ca7b5b",
+    "width": 176,
+    "height": 345,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 176,
+      "height": 345
+     }
+    ],
+    "classic": {
+     "x": 0.0341,
+     "y": 0.0783,
+     "width": 0.9027,
+     "height": 0.8435
+    }
+   },
+   {
+    "replaces": {
+     "archive": 346,
+     "record": 19
+    },
+    "path": "worldrpg/media/refreshed/people/texture-346-record-019.png",
+    "byteLength": 137476,
+    "sha256": "0d3132802d5a7168afa762899364e85c36e2c7bf84f19f8a4697248ee4bdfa39",
+    "width": 215,
+    "height": 530,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 215,
+      "height": 530
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0509,
+     "width": 0.9617,
+     "height": 0.8996
+    }
+   },
+   {
+    "replaces": {
+     "archive": 346,
+     "record": 20
+    },
+    "path": "worldrpg/media/refreshed/people/texture-183-record-003.png",
+    "byteLength": 113969,
+    "sha256": "d8416ab7c9babd0f53308a1f8b4a8f42410daf06b6ed105584a11f5be6a683b6",
+    "width": 200,
+    "height": 515,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 515
+     }
+    ],
+    "classic": {
+     "x": 0.0112,
+     "y": 0.0611,
+     "width": 0.9888,
+     "height": 0.9258
+    }
+   },
+   {
+    "replaces": {
+     "archive": 346,
+     "record": 21
+    },
+    "path": "worldrpg/media/refreshed/people/texture-183-record-006.png",
+    "byteLength": 168229,
+    "sha256": "b00c64f8d5fb09acca160a4a961c50f49cd62dd9bea83f9c8cb80815ca357fb0",
+    "width": 356,
+    "height": 513,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 356,
+      "height": 513
+     }
+    ],
+    "classic": {
+     "x": 0.0042,
+     "y": 0.0146,
+     "width": 0.9958,
+     "height": 0.9591
+    }
+   },
+   {
+    "replaces": {
+     "archive": 346,
+     "record": 22
+    },
+    "path": "worldrpg/media/refreshed/people/texture-346-record-022.png",
+    "byteLength": 133011,
+    "sha256": "7ecac0e723088302d6123851899093ab010ca9032886b7358f656765a4ce7675",
+    "width": 296,
+    "height": 572,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 296,
+      "height": 572
+     }
+    ],
+    "classic": {
+     "x": 0.1114,
+     "y": 0.097,
+     "width": 0.8,
+     "height": 0.8388
+    }
+   },
+   {
+    "replaces": {
+     "archive": 357,
+     "record": 0
+    },
+    "path": "worldrpg/media/refreshed/people/texture-357-record-000.png",
+    "byteLength": 47955,
+    "sha256": "480ed17e4ccb90d9e175875046a656fc08fae711dc8fea573e68ca521297d9a8",
+    "width": 170,
+    "height": 306,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 170,
+      "height": 306
+     }
+    ],
+    "classic": {
+     "x": 0.042,
+     "y": 0.0465,
+     "width": 0.9381,
+     "height": 0.9106
+    }
+   },
+   {
+    "replaces": {
+     "archive": 357,
+     "record": 1
+    },
+    "path": "worldrpg/media/refreshed/people/texture-357-record-001.png",
+    "byteLength": 87508,
+    "sha256": "4e6fd18e12dbbaefc41091f7cfc5aba32caaa12c1e8684f27e1ffdb9351f7901",
+    "width": 228,
+    "height": 466,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 228,
+      "height": 466
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.1082,
+     "width": 0.9211,
+     "height": 0.8183
+    }
+   },
+   {
+    "replaces": {
+     "archive": 357,
+     "record": 2
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-009.png",
+    "byteLength": 76411,
+    "sha256": "085c271e29c468ee001f01d3e7ee8bfae2cfb29b5912a76a7233cd3b7f62f651",
+    "width": 185,
+    "height": 481,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 185,
+      "height": 481
+     }
+    ],
+    "classic": {
+     "x": 0.0357,
+     "y": 0.096,
+     "width": 0.9253,
+     "height": 0.7918
+    }
+   },
+   {
+    "replaces": {
+     "archive": 357,
+     "record": 3
+    },
+    "path": "worldrpg/media/refreshed/people/texture-357-record-003.png",
+    "byteLength": 77337,
+    "sha256": "093850dd80cf73168075fc970df2cd5a015813ba9141ee08df6aa1b943fd69fa",
+    "width": 198,
+    "height": 454,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 198,
+      "height": 454
+     }
+    ],
+    "classic": {
+     "x": 0.0091,
+     "y": 0.0634,
+     "width": 0.9394,
+     "height": 0.8454
+    }
+   },
+   {
+    "replaces": {
+     "archive": 357,
+     "record": 4
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-035.png",
+    "byteLength": 81054,
+    "sha256": "23690a1be7b87b3b6c918e208d9131f7b6f877e5c15114c2fbff0f2138a51105",
+    "width": 226,
+    "height": 424,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 226,
+      "height": 424
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0439,
+     "width": 0.9682,
+     "height": 0.9065
+    }
+   },
+   {
+    "replaces": {
+     "archive": 357,
+     "record": 5
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-036.png",
+    "byteLength": 83495,
+    "sha256": "c058efe8c9f35e0b72d41576b48b76af3c8158e6c893571c56aa5cf1b255a50a",
+    "width": 229,
+    "height": 251,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 229,
+      "height": 251
+     }
+    ],
+    "classic": {
+     "x": 0.0058,
+     "y": 0.004,
+     "width": 0.9942,
+     "height": 0.9934
+    }
+   },
+   {
+    "replaces": {
+     "archive": 357,
+     "record": 6
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-038.png",
+    "byteLength": 53002,
+    "sha256": "8b7ef82690c145db081724b2cec2042ac8df797e5bd628d4b4830cc7d44d5f8e",
+    "width": 169,
+    "height": 193,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 169,
+      "height": 193
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.035,
+     "width": 0.9926,
+     "height": 0.9482
+    }
+   },
+   {
+    "replaces": {
+     "archive": 357,
+     "record": 7
+    },
+    "path": "worldrpg/media/refreshed/people/texture-357-record-007.png",
+    "byteLength": 61569,
+    "sha256": "4595974ad4cf6c5c4e7fbb08f3f0985453b8ffb2901b1540747f3b7a93ca80dd",
+    "width": 241,
+    "height": 231,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 241,
+      "height": 231
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0144,
+     "width": 0.9945,
+     "height": 0.9856
+    }
+   },
+   {
+    "replaces": {
+     "archive": 357,
+     "record": 8
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-049.png",
+    "byteLength": 86378,
+    "sha256": "46763457aac42f836c4e3541c2fbc7f8ee0b699744749a41501eb4d35f3cbdb8",
+    "width": 229,
+    "height": 464,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 229,
+      "height": 464
+     }
+    ],
+    "classic": {
+     "x": 0.0393,
+     "y": 0.0802,
+     "width": 0.9162,
+     "height": 0.8732
+    }
+   },
+   {
+    "replaces": {
+     "archive": 357,
+     "record": 9
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-050.png",
+    "byteLength": 61674,
+    "sha256": "ef439c1b86613f021a4fac8bf08d33c62bfd1af410b9fbce0e79cd425efed886",
+    "width": 202,
+    "height": 378,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 202,
+      "height": 378
+     }
+    ],
+    "classic": {
+     "x": 0.0173,
+     "y": 0.0066,
+     "width": 0.963,
+     "height": 0.9934
+    }
+   },
+   {
+    "replaces": {
+     "archive": 357,
+     "record": 10
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-057.png",
+    "byteLength": 80521,
+    "sha256": "da0277f909d5b8946a43415680a3cc2ea5f96abeab4c09e7e8c9ecfcb7074d88",
+    "width": 172,
+    "height": 466,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 172,
+      "height": 466
+     }
+    ],
+    "classic": {
+     "x": 0.035,
+     "y": 0.0851,
+     "width": 0.9091,
+     "height": 0.8441
+    }
+   },
+   {
+    "replaces": {
+     "archive": 357,
+     "record": 11
+    },
+    "path": "worldrpg/media/refreshed/people/texture-182-record-058.png",
+    "byteLength": 86987,
+    "sha256": "547a2e09332e622c04a1e326c6162e2b335b1c103e05f18a4582d40f7b326787",
+    "width": 170,
+    "height": 475,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 170,
+      "height": 475
+     }
+    ],
+    "classic": {
+     "x": 0.0282,
+     "y": 0.0934,
+     "width": 0.9155,
+     "height": 0.8333
+    }
+   },
+   {
+    "replaces": {
+     "archive": 357,
+     "record": 12
+    },
+    "path": "worldrpg/media/refreshed/people/texture-183-record-002.png",
+    "byteLength": 117758,
+    "sha256": "f65936f222172d52734ce0ebbb9e509f1f7b09a76eff2d702ad6d0b17af18a4a",
+    "width": 215,
+    "height": 524,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 215,
+      "height": 524
+     }
+    ],
+    "classic": {
+     "x": 0.0,
+     "y": 0.0415,
+     "width": 0.9617,
+     "height": 0.9112
+    }
+   },
+   {
+    "replaces": {
+     "archive": 357,
+     "record": 13
+    },
+    "path": "worldrpg/media/refreshed/people/texture-183-record-003.png",
+    "byteLength": 113969,
+    "sha256": "d8416ab7c9babd0f53308a1f8b4a8f42410daf06b6ed105584a11f5be6a683b6",
+    "width": 200,
+    "height": 515,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 515
+     }
+    ],
+    "classic": {
+     "x": 0.0112,
+     "y": 0.0611,
+     "width": 0.9888,
+     "height": 0.9258
+    }
+   },
+   {
+    "replaces": {
+     "archive": 357,
+     "record": 14
+    },
+    "path": "worldrpg/media/refreshed/people/texture-183-record-007.png",
+    "byteLength": 153002,
+    "sha256": "de4eeec96eb6f4097a2e1b7873bcfaba013887092738fc002942743f67609ed3",
+    "width": 257,
+    "height": 591,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 257,
+      "height": 591
+     }
+    ],
+    "classic": {
+     "x": 0.0087,
+     "y": 0.0761,
+     "width": 0.9446,
+     "height": 0.8579
+    }
+   },
+   {
+    "replaces": {
+     "archive": 357,
+     "record": 15
+    },
+    "path": "worldrpg/media/refreshed/people/texture-357-record-015.png",
+    "byteLength": 151350,
+    "sha256": "a1ffed0a20aef5fa396f1a32dca3efc1ed5b9aa0a414e82ca9ad1cfe17fbc1c7",
+    "width": 305,
+    "height": 598,
+    "frames": [
+     {
+      "x": 0,
+      "y": 0,
+      "width": 305,
+      "height": 598
+     }
+    ],
+    "classic": {
+     "x": 0.1204,
+     "y": 0.1053,
+     "width": 0.7666,
+     "height": 0.812
+    }
+   }
   ]
  }
 }
