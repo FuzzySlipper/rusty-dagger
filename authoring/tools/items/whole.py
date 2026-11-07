@@ -30,6 +30,7 @@ OUT = WORN / "whole"
 STUDIES = AUTHORING / "gen-raw/studies"
 WEAPONS = STUDIES / "worn-weapons-shared-bp-20261101/cutout"
 ARTIFACTS = STUDIES / "worn-artifacts-bp-20261101/cutout"
+REDRAWN = STUDIES / "warhammer-model-20261107/cutout"   # the warhammer, redrawn to follow its 3D model
 # Each weapon template's icon record: its record, or the katana's right-hand one.
 ICON_RECORDS = [0, 2, 4, 5, 7, 8, 10, 11, 12, 14, 16, 17, 19, 21, 22, 24, 25, 26]
 # The artifact weapons' records (DaggerfallPaperDollPolicy.ArtifactRecords): the shields and the worn artifacts have no gap.
@@ -41,9 +42,10 @@ NEAR = 120     # pixels from the other piece within which a piece's own axis is 
 
 def sources():
     """Each icon record's art key and its untrimmed cut-out; the flanged mace's design was painted with its gap, so its
-    own layer is its source."""
+    own layer is its source, and the warhammer's is its redraw's."""
     found = {f"texture-234-record-{r:03d}-frame-000": next(WEAPONS.glob(f"*-{r:03d}.png")) for r in ICON_RECORDS}
     found["texture-mace-record-014-frame-000"] = WORN / "texture-mace-record-014-frame-000.png"
+    found["texture-234-record-025-frame-000"] = REDRAWN / "warhammer-025.png"
     for r in ARTIFACT_RECORDS:
         male = next(ARTIFACTS.glob(f"*-m{r:03d}.png"))
         found[f"texture-432-record-{r:03d}-frame-000"] = male
