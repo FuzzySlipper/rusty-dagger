@@ -58,7 +58,15 @@ settings, seeds tried, the chosen seed with the reason, and the full prompt.
   rig-c's proposed plan can put the face over the eyes and leave the nose out; check it.
 - **Skirt front panel:** in a legs-apart source, the panel is the skirt showing between the legs.
   It's cut out from that gap and drawn in front of the legs, so legs moving back together pass
-  behind it.
+  behind it. Its mesh is weighted to both leg chains as well as the waist, with a soft blend
+  (`exponent` 0.5), so its hem narrows partway as the legs close instead of hiding them. Weighted
+  to the waist alone, it stays as wide as the open stance and covers the legs; with the default
+  blend, it follows each leg fully and shrinks to a strip. Its turn depth sits just in front of the
+  legs, which now ride it.
+- **Back skirt:** See-through's skirt layer, less the panel, is mostly fill painted where the legs
+  hide it. It stays on the hip, so it shows past the legs at the sides as they close, as a skirt
+  hanging behind them does. Drop its thin hem slivers after assembly: they draw as dark outlines
+  once the legs move off them.
 - **Hidden skin:** See-through bleeds cloth colour into skin it paints in. In bare-skin limb parts,
   a pixel greener than it is red is refilled from the skin around it, after assembly.
 - **Rigging:** a held staff rides the hip, not the forearm. Eyes get iris bones for gaze.
