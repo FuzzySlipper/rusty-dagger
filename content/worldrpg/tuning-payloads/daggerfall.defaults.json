@@ -963,6 +963,7 @@
     "shellReach": 44,
     "shellFade": 20,
     "shellSway": 0.12,
+    "shellRagged": 1,
     "tuftDensity": 2,
     "tuftReach": 70,
     "tuftFade": 25,

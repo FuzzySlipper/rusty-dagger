@@ -56,6 +56,16 @@ RELIEF = {(102, 1): "clods", (302, 1): "clods", (402, 1): "clods",
           (103, 2): "snow", (303, 2): "snow", (403, 2): "snow", (103, 1): "snow", (303, 1): "snow", (403, 1): "snow",
           (402, 3): "lush"}
 
+# How each kind of relief is drawn: how far its top sways in the wind, as a share of the shells' sway (tall grass bends,
+# snow's loose top drifts downwind); the linear colour its lowest layer is shaded to, rising to its own at the top (snow's
+# hollows go cold blue, other ground's darken); what share of its top texels glint in the light as the viewer moves (snow
+# catches the sun); and whether lying snow buries it (all but snow).
+LOOKS = {
+    "ground": {"sway": 0, "shade": [.6, .6, .6], "glints": 0, "sinksUnderSnow": True},
+    "lush": {"sway": 1, "shade": [.6, .6, .6], "glints": 0, "sinksUnderSnow": True},
+    "snow": {"sway": .5, "shade": [.52, .62, .86], "glints": .012, "sinksUnderSnow": False},
+}
+
 rng = np.random.default_rng(10647)
 
 
@@ -156,12 +166,10 @@ def hashed(name):
 
 
 def relief_entry(archive, record, kind):
-    """A relief texture's file, its tallest texel as a share of the stack, whether it sways (only tall grass does) and
-    whether lying snow buries it (all but the snow itself)."""
+    """A relief texture's file, its tallest texel as a share of the stack, and by its kind how it is drawn (LOOKS)."""
     image = relief(Image.open(CONTENT / TERRAIN / f"texture-{archive:03d}-{record}.png"), kind)
     return publish(f"relief-{archive:03d}-{record}", image) | {
-        "kind": kind, "height": round(np.asarray(image)[..., 3].max() / 255, 4), "sways": kind == "lush",
-        "sinksUnderSnow": kind != "snow"}
+        "kind": kind, "height": round(np.asarray(image)[..., 3].max() / 255, 4)} | LOOKS.get(kind, LOOKS["ground"])
 
 
 def main():

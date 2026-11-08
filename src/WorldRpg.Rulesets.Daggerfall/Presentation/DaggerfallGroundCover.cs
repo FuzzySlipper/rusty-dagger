@@ -31,8 +31,6 @@ internal sealed class DaggerfallGroundCover : IDisposable
     private const int Rebuild = 2;
     /// <summary>The lowest layer's brightness, rising to full at the top: the blades darken toward their roots.</summary>
     private const float Floor = .55f;
-    /// <summary>Relief's lowest layer's brightness: the ground's own colours, a little shaded at their foot.</summary>
-    private const float ReliefFloor = .6f;
     /// <summary>How fast the shells' gusts rise and fall.</summary>
     private const float GustRate = 1.3f;
     /// <summary>The texture's place on the map wraps this many metres, so its coordinates keep their precision.</summary>
@@ -79,16 +77,8 @@ internal sealed class DaggerfallGroundCover : IDisposable
         _cells = (int)Math.Ceiling(tuning.ShellReach / Cell);
         _shellImage = engine.Graphics.OpenTexture(engine.Content, art.Shell.Path, art.Shell.Sha256, TextureFilter.Nearest, TextureWrap.Repeat).Handle;
         _shader = engine.Graphics.OpenShader(engine.Content, art.Shader.Path, art.Shader.Sha256);
-        _shellMaterials = [.. Enumerable.Range(0, tuning.ShellLayers).Select(layer => engine.Graphics.CreateMaterial(
-            new MaterialRequest(new Color(1, 1, 1, 1), new RenderResourceReference(_shellImage), .9f, new Color(1, 1, 1, 1), Vector3.Zero, 0, false) with
-            {
-                AlphaMode = MaterialAlphaMode.Mask,
-                AlphaCutoff = (layer + 1f) / (tuning.ShellLayers + 1f),
-                SinksUnderSnow = true,
-                Shader = new MaterialShader(new RenderResourceReference(_shader),
-                    new Vector4(art.ShellTexelsPerMetre, tuning.ShellSway, GustRate, layer / (tuning.ShellLayers - 1f)),
-                    default, default, default, default, default, tuning.ShellSway),
-            }))];
+        _shellMaterials = [.. Enumerable.Range(0, tuning.ShellLayers)
+            .Select(layer => ShellLayer(_shellImage, layer, art.ShellTexels, art.ShellTexelsPerMetre, tuning.ShellSway, 0, true))];
         _tuftImage = engine.Graphics.OpenTexture(engine.Content, art.Tuft.Path, art.Tuft.Sha256, TextureFilter.Nearest).Handle;
         _tuftMaterial = engine.Graphics.CreateMaterial(
             new MaterialRequest(new Color(1, 1, 1, 1), new RenderResourceReference(_tuftImage), .9f, new Color(1, 1, 1, 1), Vector3.Zero, 0, true) with
@@ -208,7 +198,7 @@ internal sealed class DaggerfallGroundCover : IDisposable
         double[] ground = _ground.WalkedGrid(cornerX, cornerZ, Cell, side);
         double At(int i, int j) => ground[((j + 1) * heightSide) + i + 1];
         Vector3[] up = new Vector3[count];
-        Stack grass = new(_shellMaterials, 1, Floor, false, count);
+        Stack grass = new(_shellMaterials, 1, new Vector3(Floor), false, count);
         Dictionary<(int, int), Stack> relief = [];
         for (int j = 0; j < side; j++)
         for (int i = 0; i < side; i++)
@@ -236,7 +226,7 @@ internal sealed class DaggerfallGroundCover : IDisposable
                 (int, int) key = records[layer == 3 && look.Lush ? 4 : layer];
                 if (!_reliefShown || !_art.Relief.TryGetValue(key, out DaggerfallGroundRelief? art)) continue;
                 if (!relief.TryGetValue(key, out Stack? stack))
-                    relief[key] = stack = new(ReliefMaterials(key, art), art.Height, ReliefFloor, true, count);
+                    relief[key] = stack = new(ReliefMaterials(key, art), art.Height, art.Shade, true, count);
                 stack.Cover[vertex] += weight;
                 stack.Tint[vertex] = Vector3.One;
             }
@@ -255,9 +245,10 @@ internal sealed class DaggerfallGroundCover : IDisposable
             for (int layer = 0; layer < layers; layer++)
             {
                 // A layer shows a texel whose height beats its cutoff, so where no vertex's share could, it has nothing to draw.
-                float cutoff = (layer + 1f) / (_tuning.ShellLayers + 1f) / stack.Height;
+                // Raggedly, a thin share still keeps whole clumps, so only where it is all but gone.
+                float cutoff = _tuning.ShellRagged > 0 ? .01f : Cutoff(layer) / stack.Height;
                 uint first = (uint)positions.Count;
-                float brightness = stack.Floor + ((1 - stack.Floor) * layer / Math.Max(layers - 1f, 1));
+                Vector3 shade = Vector3.Lerp(stack.Shade, Vector3.One, layer / Math.Max(layers - 1f, 1));
                 int start = indices.Count;
                 for (int j = 0; j < cells * 2; j++)
                 for (int i = 0; i < cells * 2; i++)
@@ -282,7 +273,7 @@ internal sealed class DaggerfallGroundCover : IDisposable
                     // the ground's own texture does, from above: across the map's z, down its x.
                     uvs.Add(stack.OnGround ? new Vector2((float)(Wrap(z) / _groundRepeat), (float)(Wrap(x) / _groundRepeat))
                         : new Vector2((float)(Wrap(x) / shellRepeat), (float)(Wrap(z) / shellRepeat)));
-                    Vector3 tint = stack.Tint[vertex] * brightness;
+                    Vector3 tint = stack.Tint[vertex] * shade;
                     colours.Add(new Color(tint.X, tint.Y, tint.Z, Math.Min(stack.Cover[vertex], 1)));
                 }
 
@@ -298,12 +289,12 @@ internal sealed class DaggerfallGroundCover : IDisposable
         static double Wrap(double metres) => ((metres % TextureWrapMetres) + TextureWrapMetres) % TextureWrapMetres;
     }
 
-    /// <summary>A stack's layers' materials, each vertex's share of it and its tint, its tallest texel and its roots' brightness.</summary>
-    private sealed class Stack(Material[] materials, float height, float floor, bool onGround, int count)
+    /// <summary>A stack's layers' materials, each vertex's share of it and its tint, its tallest texel and the colour its roots are shaded to.</summary>
+    private sealed class Stack(Material[] materials, float height, Vector3 shade, bool onGround, int count)
     {
         internal Material[] Materials { get; } = materials;
         internal float Height { get; } = height;
-        internal float Floor { get; } = floor;
+        internal Vector3 Shade { get; } = shade;
         internal bool OnGround { get; } = onGround;
         internal float[] Cover { get; } = new float[count];
         internal Vector3[] Tint { get; } = new Vector3[count];
@@ -314,21 +305,34 @@ internal sealed class DaggerfallGroundCover : IDisposable
     {
         if (_relief.TryGetValue(key, out (RenderResource Image, Material[] Layers) known)) return known.Layers;
         RenderResource image = _engine.Graphics.OpenTexture(_engine.Content, art.File.Path, art.File.Sha256, TextureFilter.Nearest, TextureWrap.Repeat).Handle;
-        int layers = Math.Max(1, Enumerable.Range(0, _tuning.ShellLayers).Count(layer => (layer + 1f) / (_tuning.ShellLayers + 1f) < art.Height));
-        float sway = art.Sways ? _tuning.ShellSway : 0;
-        Material[] materials = [.. Enumerable.Range(0, layers).Select(layer => _engine.Graphics.CreateMaterial(
-            new MaterialRequest(new Color(1, 1, 1, 1), new RenderResourceReference(image), .9f, new Color(1, 1, 1, 1), Vector3.Zero, 0, false) with
-            {
-                AlphaMode = MaterialAlphaMode.Mask,
-                AlphaCutoff = (layer + 1f) / (_tuning.ShellLayers + 1f),
-                SinksUnderSnow = art.SinksUnderSnow,
-                Shader = new MaterialShader(new RenderResourceReference(_shader),
-                    new Vector4(art.Texels / _groundRepeat, sway, GustRate, layer / Math.Max(_tuning.ShellLayers - 1f, 1)),
-                    default, default, default, default, default, sway),
-            }))];
+        int layers = Math.Max(1, Enumerable.Range(0, _tuning.ShellLayers).Count(layer => Cutoff(layer) < art.Height));
+        Material[] materials = [.. Enumerable.Range(0, layers).Select(layer =>
+            // Only the top half of a stack glints, where light catches a drift's crest.
+            ShellLayer(image, layer, art.Texels, art.Texels / _groundRepeat, art.Sway * _tuning.ShellSway,
+                layer >= layers / 2 ? art.Glints : 0, art.SinksUnderSnow))];
         _relief[key] = (image, materials);
         return materials;
     }
+
+    /// <summary>The height a layer's texels must reach to show, as a share of the stack.</summary>
+    private float Cutoff(int layer) => (layer + 1f) / (_tuning.ShellLayers + 1f);
+
+    /// <summary>
+    /// One layer of a shell stack. The shader makes the layer's cut (<see cref="Cutoff"/>), raggedly where the ground thins,
+    /// so the material's own mask keeps all but the empty texels for it.
+    /// </summary>
+    private Material ShellLayer(RenderResource image, int layer, int texels, float texelsPerMetre, float sway, float glints, bool sinksUnderSnow) =>
+        _engine.Graphics.CreateMaterial(
+            new MaterialRequest(new Color(1, 1, 1, 1), new RenderResourceReference(image), .9f, new Color(1, 1, 1, 1), Vector3.Zero, 0, false) with
+            {
+                AlphaMode = MaterialAlphaMode.Mask,
+                AlphaCutoff = 1f / 512,
+                SinksUnderSnow = sinksUnderSnow,
+                Shader = new MaterialShader(new RenderResourceReference(_shader),
+                    new Vector4(texelsPerMetre, sway, GustRate, layer / (_tuning.ShellLayers - 1f)),
+                    new Vector4(Cutoff(layer), _tuning.ShellRagged, glints, texels),
+                    default, default, default, default, sway),
+            });
 
     /// <summary>Three quads crossed at a third of a turn, standing on their foot, their tips (vertex alpha 1) free to flutter.</summary>
     private static MeshResourceCreateRequest Tuft(Material material, float width, float height)

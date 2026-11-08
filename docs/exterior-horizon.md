@@ -242,9 +242,16 @@ the layers where the art set has them, and the classic's where it doesn't.
   `repeatMetres`), so its texels stand on the ground's texels; its alpha is each texel's
   height. The tool sets the heights by kind: dirt rises in clods with its green texels
   standing as stray grass, rock in pebbles, sand and snow in broad heaps, and lush ground as
-  tall grass that sways. Lying snow buries every relief but the snow's own. A layer's weight at a vertex thins its stack, so relief fades where
-  layers meet, and a stack draws only the layers its tallest texel reaches and only the
-  triangles its texels can stand on. `world.groundcover` draws only the kinds it names
+  tall grass that sways. Each kind's look (in the art set beside its texture) sets how its
+  lowest layer is shaded, how far its top sways and how many of its top texels glint: snow's
+  hollows go cold blue, its loose top drifts downwind by whole texels and its crests glint
+  as the view moves; and lying snow buries every relief but the snow's own.
+- **Where ground kinds meet,** a stack's weight at each vertex thins it. The shells' shader
+  makes every layer's cut itself, so with `shellRagged` at 1 a thinning layer keeps its
+  texels at full height in clumps of a few texels that drop out one by one, and one ground
+  gives way to the next in patches rather than shrinking evenly (0 shrinks it evenly). The
+  shadow takes the even cut. A stack draws only the layers its tallest texel reaches and
+  only the triangles where some of it remains. `world.groundcover` draws only the kinds it names
   (grass, relief, tufts) for a run.
 - **Classic nature** stays the donor's: one record chosen at random on a tile, by the
   classic's tile kinds, in the walked window's cells.

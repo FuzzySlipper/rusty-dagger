@@ -90633,8 +90633,8 @@
    },
    "shader": {
     "path": "worldrpg/media/refreshed/groundcover/shells.wgsl",
-    "byteLength": 1291,
-    "sha256": "7ca182dc90d02b9b4b49717eac4e23a7f0a0755e80ef7a688dfea4b37254e28f"
+    "byteLength": 3872,
+    "sha256": "2e471aa1fec99fcc6fbdb9279bb42e71c58797572aa484cd40b1ce0d9bb01d01"
    },
    "grass": {
     "102": {
@@ -90682,7 +90682,13 @@
      "width": 128,
      "height": 0.5961,
      "kind": "clods",
-     "sways": false,
+     "sway": 0,
+     "shade": [
+      0.6,
+      0.6,
+      0.6
+     ],
+     "glints": 0,
      "sinksUnderSnow": true
     },
     "302-1": {
@@ -90692,7 +90698,13 @@
      "width": 128,
      "height": 0.4431,
      "kind": "clods",
-     "sways": false,
+     "sway": 0,
+     "shade": [
+      0.6,
+      0.6,
+      0.6
+     ],
+     "glints": 0,
      "sinksUnderSnow": true
     },
     "402-1": {
@@ -90702,7 +90714,13 @@
      "width": 128,
      "height": 0.5961,
      "kind": "clods",
-     "sways": false,
+     "sway": 0,
+     "shade": [
+      0.6,
+      0.6,
+      0.6
+     ],
+     "glints": 0,
      "sinksUnderSnow": true
     },
     "102-3": {
@@ -90712,7 +90730,13 @@
      "width": 128,
      "height": 0.349,
      "kind": "stones",
-     "sways": false,
+     "sway": 0,
+     "shade": [
+      0.6,
+      0.6,
+      0.6
+     ],
+     "glints": 0,
      "sinksUnderSnow": true
     },
     "302-3": {
@@ -90722,7 +90746,13 @@
      "width": 128,
      "height": 0.3529,
      "kind": "stones",
-     "sways": false,
+     "sway": 0,
+     "shade": [
+      0.6,
+      0.6,
+      0.6
+     ],
+     "glints": 0,
      "sinksUnderSnow": true
     },
     "2-1": {
@@ -90732,7 +90762,13 @@
      "width": 128,
      "height": 0.5137,
      "kind": "sand",
-     "sways": false,
+     "sway": 0,
+     "shade": [
+      0.6,
+      0.6,
+      0.6
+     ],
+     "glints": 0,
      "sinksUnderSnow": true
     },
     "2-2": {
@@ -90742,7 +90778,13 @@
      "width": 128,
      "height": 0.5098,
      "kind": "sand",
-     "sways": false,
+     "sway": 0,
+     "shade": [
+      0.6,
+      0.6,
+      0.6
+     ],
+     "glints": 0,
      "sinksUnderSnow": true
     },
     "2-3": {
@@ -90752,7 +90794,13 @@
      "width": 128,
      "height": 0.5569,
      "kind": "sand",
-     "sways": false,
+     "sway": 0,
+     "shade": [
+      0.6,
+      0.6,
+      0.6
+     ],
+     "glints": 0,
      "sinksUnderSnow": true
     },
     "103-2": {
@@ -90762,7 +90810,13 @@
      "width": 128,
      "height": 0.4353,
      "kind": "snow",
-     "sways": false,
+     "sway": 0.5,
+     "shade": [
+      0.52,
+      0.62,
+      0.86
+     ],
+     "glints": 0.012,
      "sinksUnderSnow": false
     },
     "303-2": {
@@ -90772,7 +90826,13 @@
      "width": 128,
      "height": 0.4118,
      "kind": "snow",
-     "sways": false,
+     "sway": 0.5,
+     "shade": [
+      0.52,
+      0.62,
+      0.86
+     ],
+     "glints": 0.012,
      "sinksUnderSnow": false
     },
     "403-2": {
@@ -90782,7 +90842,13 @@
      "width": 128,
      "height": 0.4353,
      "kind": "snow",
-     "sways": false,
+     "sway": 0.5,
+     "shade": [
+      0.52,
+      0.62,
+      0.86
+     ],
+     "glints": 0.012,
      "sinksUnderSnow": false
     },
     "103-1": {
@@ -90792,7 +90858,13 @@
      "width": 128,
      "height": 0.4118,
      "kind": "snow",
-     "sways": false,
+     "sway": 0.5,
+     "shade": [
+      0.52,
+      0.62,
+      0.86
+     ],
+     "glints": 0.012,
      "sinksUnderSnow": false
     },
     "303-1": {
@@ -90802,7 +90874,13 @@
      "width": 128,
      "height": 0.3882,
      "kind": "snow",
-     "sways": false,
+     "sway": 0.5,
+     "shade": [
+      0.52,
+      0.62,
+      0.86
+     ],
+     "glints": 0.012,
      "sinksUnderSnow": false
     },
     "403-1": {
@@ -90812,7 +90890,13 @@
      "width": 128,
      "height": 0.7961,
      "kind": "snow",
-     "sways": false,
+     "sway": 0.5,
+     "shade": [
+      0.52,
+      0.62,
+      0.86
+     ],
+     "glints": 0.012,
      "sinksUnderSnow": false
     },
     "402-3": {
@@ -90822,7 +90906,13 @@
      "width": 128,
      "height": 0.8078,
      "kind": "lush",
-     "sways": true,
+     "sway": 1,
+     "shade": [
+      0.6,
+      0.6,
+      0.6
+     ],
+     "glints": 0,
      "sinksUnderSnow": true
     }
    }
