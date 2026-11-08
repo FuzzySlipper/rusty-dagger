@@ -88,8 +88,17 @@ alone.
   Weighted to the waist alone, it stays as wide as the stance it was painted in and covers the legs;
   with the default blend, it follows each leg fully and shrinks to a strip. Its turn depth sits just
   in front of the legs, which ride it.
-- **Back skirt:** drawn behind everything and hung from the hip on three sway chains of its own,
-  running from the waist to the hem, so it shows past the legs at the sides and swings on its own.
+- **Back skirt:** drawn behind everything and hung from the hip on three chains of its own, running
+  from the waist to the hem, so it shows past the legs at the sides. The chains are on physics, not
+  keyed sway, with rig-c's cloth recipe values: the edges softer than the centre, the centre damped
+  apart so they fall out of phase, the response growing toward the hem. The recipe itself only drafts
+  trees on See-through's skirt, so the constraints go on the author layer's chains directly.
+  - Gravity is off: the skirt is painted flared, and gravity pulls its edges straight down.
+  - The wind response is low, so the runtime's steady default wind only leans it.
+  - A standing figure's hips barely move, so physics alone leaves the skirt still. What swings it is
+    the wind the render is given: a gust that rises from calm and dies back before the loop's end,
+    so the skirt is at rest on both ends and the loop closes. A render at 8 fps takes the gust on
+    its own frames, since wind steps can't fall between them.
 - **Hidden skin:** See-through bleeds cloth colour into skin it paints in. In bare-skin limb parts,
   a pixel greener than it is red is refilled from the skin around it, after assembly.
 - **Rigging:** a held staff rides the hip, not the forearm. Eyes get iris bones for gaze.
