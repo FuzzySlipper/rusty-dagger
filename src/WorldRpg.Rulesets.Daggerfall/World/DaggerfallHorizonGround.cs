@@ -231,16 +231,16 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     }
 
     /// <summary>
-    /// Flora's ground, in near ground's frame: the walked surface's heights; each vertex's class, its climate's nature archive
+    /// Flora's ground, in map metres: the walked surface's heights; each vertex's class, its climate's nature archive
     /// counted from the first; and its cover, the share of the donor's chance its ground's look keeps (<see cref="FloraCover"/>),
     /// or for a field of <paramref name="grass"/> the ground's grass, thinned in towns (<see cref="CoverLook"/>).
     /// </summary>
-    internal void SampleFlora(VegetationTileRequest tile, VegetationTileSamples samples, double offsetX, double offsetZ, bool winter,
+    internal void SampleFlora(VegetationTileRequest tile, VegetationTileSamples samples, bool winter,
         DaggerfallFloraTuning flora, (float TownShare, double TownRamp)? grass = null)
     {
         GroundMaterials materials = Materials;
         int heightSide = tile.HeightSide, side = tile.Side;
-        double[] ground = WalkedHeights(tile.OriginX + offsetX, tile.OriginZ + offsetZ, tile.CellSize, side);
+        double[] ground = WalkedHeights(tile.OriginX, tile.OriginZ, tile.CellSize, side);
         for (int j = -1; j <= side; j++)
         for (int i = -1; i <= side; i++)
             samples.SetHeight(i, j, (float)ground[((j + 1) * heightSide) + i + 1]);
@@ -248,7 +248,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         for (int j = 0; j < side; j++)
         for (int i = 0; i < side; i++)
         {
-            double x = tile.SampleX(i) + offsetX, z = tile.SampleZ(j) + offsetZ;
+            double x = tile.SampleX(i), z = tile.SampleZ(j);
             (int mapX, int mapY) = MapPixel(x, z);
             int climate = Climate(mapX, mapY);
             samples.SetGround(i, j, (uint)(DaggerfallExteriorEnvironment.NatureTextureArchive(climate, season) - DaggerfallExteriorEnvironment.FirstNatureArchive));

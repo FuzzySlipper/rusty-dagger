@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Reflection;
 using Rusty.Engine;
 using Rusty.Engine.Heightfields;
@@ -296,19 +297,53 @@ public sealed class DaggerfallHorizonGroundTests
         HeightfieldTileSamples near = Samples(new(16, 0, 0, 0, 0, clearing.X, clearing.Z, cell));
         ground.SampleNear(near.Tile, near, 0, 0);
         VegetationTileSamples cleared = Flora(new(16, 0, 0, 0, clearing.X, clearing.Z, cell));
-        ground.SampleFlora(cleared.Tile, cleared, 0, 0, false, DaggerfallFloraTuning.Default);
+        ground.SampleFlora(cleared.Tile, cleared, false, DaggerfallFloraTuning.Default);
         Assert.Equal(near.Heights, cleared.Heights);
         Assert.All(cleared.Cover!, cover => Assert.Equal(0, cover));
         // Woodlands (231) grows archive 504, and its winter set 505.
         Assert.All(cleared.Grounds!, value => Assert.Equal(4u, value));
 
         VegetationTileSamples summer = Flora(new(16, 0, 0, 0, open.X, open.Z, cell));
-        ground.SampleFlora(summer.Tile, summer, 0, 0, false, DaggerfallFloraTuning.Default);
+        ground.SampleFlora(summer.Tile, summer, false, DaggerfallFloraTuning.Default);
         Assert.Contains(summer.Cover!, cover => cover > 0);
         Assert.All(summer.Cover!, cover => Assert.InRange(cover, 0, DaggerfallFloraTuning.Default.GrassChance));
         VegetationTileSamples winter = Flora(new(16, 0, 0, 0, open.X, open.Z, cell));
-        ground.SampleFlora(winter.Tile, winter, 0, 0, true, DaggerfallFloraTuning.Default);
+        ground.SampleFlora(winter.Tile, winter, true, DaggerfallFloraTuning.Default);
         Assert.All(winter.Grounds!, value => Assert.Equal(5u, value));
+    }
+
+    /// <summary>
+    /// The Engine places a field's copies by a lattice hashed in field units, so flora's field is laid in map metres whatever
+    /// the arrival: one patch of ground reached in frames at two map pixels has the same field point, and its tile samples
+    /// the same ground, so it grows the same plants.
+    /// </summary>
+    [Fact]
+    public void Flora_grows_on_one_map_patch_alike_whichever_frame_the_player_arrived_in()
+    {
+        DaggerfallHorizonGround ground = new(Terrain(8, 8), (_, _) => 231, DaggerfallHorizonTuning.Default, DaggerfallGroundTuning.Default,
+            new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior>()) { Materials = Materials };
+        (double X, double Z) patch = ((5 * Size) + 123.4, (5 * Size) + 56.7);
+        (int, int) arrivedAt = (3, 4), travelledTo = (6, 2);
+        foreach ((int MapX, int MapY) frame in new[] { arrivedAt, travelledTo })
+        {
+            // The field's (0, 0) is the map's, and the patch, seen from this frame, is its own map point in the field.
+            Vector3 origin = DaggerfallFloraField.FieldOrigin(frame);
+            Assert.Equal(0, origin.X + (frame.MapX * Size), 3);
+            Assert.Equal(0, origin.Z + (frame.MapY * Size), 3);
+            Vector3 local = new((float)(patch.X - (frame.MapX * Size)), 0, (float)(patch.Z - (frame.MapY * Size)));
+            (double x, _, double z) = DaggerfallFloraField.FieldPoint(frame, local);
+            Assert.Equal(patch.X, x, 2);
+            Assert.Equal(patch.Z, z, 2);
+        }
+
+        // A tile at the same field point samples the same ground, with no frame to differ by.
+        VegetationTileSamples first = Flora(new(16, 0, 0, 0, patch.X, patch.Z, DaggerfallTerrainSurfaceBuilder.SampleSpacing));
+        VegetationTileSamples second = Flora(new(16, 0, 0, 0, patch.X, patch.Z, DaggerfallTerrainSurfaceBuilder.SampleSpacing));
+        ground.SampleFlora(first.Tile, first, false, DaggerfallFloraTuning.Default);
+        ground.SampleFlora(second.Tile, second, false, DaggerfallFloraTuning.Default);
+        Assert.Equal(first.Heights, second.Heights);
+        Assert.Equal(first.Cover, second.Cover);
+        Assert.Equal(first.Grounds, second.Grounds);
     }
 
     /// <summary>A climate's density share holds for its nature archive and its winter set, and a climate the world lacks is refused.</summary>

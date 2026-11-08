@@ -9,8 +9,9 @@ namespace WorldRpg.Rulesets.Daggerfall.World;
 /// <summary>
 /// Refreshed nature, grown by the Engine over near ground (<see cref="DaggerfallHorizonGround.SampleFlora"/>): each nature
 /// record is a sprite layer that grows on its own climate's ground, as often as the others, where the ground's look keeps the
-/// donor's chance, and shrinks away before its reach, so nothing pops at the edge. It stands in near ground's frame and is
-/// made again when that frame moves. Classic art keeps the donor's placement in the walked cells instead.
+/// donor's chance, and shrinks away before its reach, so nothing pops at the edge. Its units are the map's, (0, 0) at map
+/// pixel (0, 0), so the same ground grows the same plants whichever way the player arrived; it stands in near ground's
+/// session and is made again when that frame moves. Classic art keeps the donor's placement in the walked cells instead.
 /// </summary>
 internal sealed class DaggerfallFloraField : IDisposable
 {
@@ -80,10 +81,11 @@ internal sealed class DaggerfallFloraField : IDisposable
         {
             _frame = frame;
             _winter = winter ? 1 : 0;
-            double offsetX = frame.MapX * DaggerfallExteriorCellResidency.CellSize, offsetZ = frame.MapY * DaggerfallExteriorCellResidency.CellSize;
-            _field = _engine.Vegetation.Create(new VegetationFieldCreateRequest(session, TileCells * CellMetres, TileCells,
-                VegetationFocus.At(local.X, local.Y, local.Z)));
-            _streamer = new VegetationStreamer(_engine, _field, new Sampler(this, offsetX, offsetZ));
+            // The field's (0, 0) is the map's: the Engine places copies by a lattice hashed in field units, so a field whose
+            // origin were the arrival's would grow other trees on the same ground after a different arrival.
+            _field = _engine.Vegetation.Create(new VegetationFieldCreateRequest(session, TileCells * CellMetres, TileCells, Focus(local))
+                with { Origin = FieldOrigin(_frame) });
+            _streamer = new VegetationStreamer(_engine, _field, new Sampler(this));
             _seen = true;
             foreach (VegetationLayerRequest extra in _extras.Values) _engine.Vegetation.SetLayer(extra with { Field = _field });
         }
@@ -101,7 +103,7 @@ internal sealed class DaggerfallFloraField : IDisposable
             _engine.Vegetation.Invalidate(new(_field, double.MinValue / 4, double.MinValue / 4, double.MaxValue / 4, double.MaxValue / 4));
         }
 
-        _engine.Vegetation.SetFocus(new(_field, VegetationFocus.At(local.X, local.Y, local.Z)));
+        _engine.Vegetation.SetFocus(new(_field, Focus(local)));
         // A field asks for tiles only within its layers' reach, so the climate underfoot grows at once; the workers find the rest.
         int underfoot = _ground.NatureArchive(local.X + (frame.MapX * DaggerfallExteriorCellResidency.CellSize),
             local.Z + (frame.MapY * DaggerfallExteriorCellResidency.CellSize), winter) - DaggerfallExteriorEnvironment.FirstNatureArchive;
@@ -110,6 +112,23 @@ internal sealed class DaggerfallFloraField : IDisposable
         for (int index = 0; index < DaggerfallExteriorEnvironment.NatureArchiveCount; index++)
             if ((found & (1 << index)) != 0 && _grown.Add(index)) Grow(DaggerfallExteriorEnvironment.FirstNatureArchive + index, looks);
         _streamer!.Update();
+    }
+
+    /// <summary>
+    /// Where the field's (0, 0, 0) stands in near ground's frame at map pixel <paramref name="frame"/>: at the map's own
+    /// (0, 0), so a field unit is a map metre whatever the frame.
+    /// </summary>
+    internal static Vector3 FieldOrigin((int MapX, int MapY) frame) =>
+        new((float)-(frame.MapX * DaggerfallExteriorCellResidency.CellSize), 0, (float)-(frame.MapY * DaggerfallExteriorCellResidency.CellSize));
+
+    /// <summary>A point <paramref name="local"/> in near ground's frame at map pixel <paramref name="frame"/>, as a point of the field: its map point.</summary>
+    internal static (double X, double Y, double Z) FieldPoint((int MapX, int MapY) frame, Vector3 local) =>
+        (local.X + (frame.MapX * DaggerfallExteriorCellResidency.CellSize), local.Y, local.Z + (frame.MapY * DaggerfallExteriorCellResidency.CellSize));
+
+    private VegetationFocus Focus(Vector3 local)
+    {
+        (double x, double y, double z) = FieldPoint(_frame, local);
+        return VegetationFocus.At(x, y, z);
     }
 
     /// <summary>Stops drawing flora, keeping its tiles for the next time outdoors.</summary>
@@ -322,11 +341,11 @@ internal sealed class DaggerfallFloraField : IDisposable
     }
 
     /// <summary>Samples flora's ground on the streamer's workers, noting each climate's archive it finds.</summary>
-    private sealed class Sampler(DaggerfallFloraField owner, double offsetX, double offsetZ) : IVegetationSampler
+    private sealed class Sampler(DaggerfallFloraField owner) : IVegetationSampler
     {
         public void Sample(VegetationTileRequest tile, VegetationTileSamples samples)
         {
-            owner._ground.SampleFlora(tile, samples, offsetX, offsetZ, Volatile.Read(ref owner._winter) == 1, owner._tuning, owner._grass);
+            owner._ground.SampleFlora(tile, samples, Volatile.Read(ref owner._winter) == 1, owner._tuning, owner._grass);
             int found = 0;
             foreach (uint ground in samples.Grounds ?? []) found |= 1 << (int)ground;
             Interlocked.Or(ref owner._found, found);
