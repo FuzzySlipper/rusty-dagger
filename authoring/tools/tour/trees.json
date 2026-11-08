@@ -104,7 +104,7 @@
    "name": "winter woods",
    "scout": "snow",
    "km": 10,
-   "pitch": 2,
+   "pitch": 8,
    "settle": 25,
    "compare": {
     "sprite": "world.trees sprite",
@@ -146,6 +146,19 @@
     "world.trees mesh"
    ],
    "travel": "Sentinel"
+  },
+  {
+   "name": "winter woods far",
+   "yaw": 90,
+   "pitch": 2,
+   "settle": 25,
+   "compare": {
+    "sprite": "world.trees sprite",
+    "mesh": "world.trees mesh"
+   },
+   "reset": [
+    "world.trees mesh"
+   ]
   }
  ]
 }

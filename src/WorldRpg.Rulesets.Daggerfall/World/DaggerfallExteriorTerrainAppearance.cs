@@ -352,6 +352,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         return new(art.File, Uv(rect.X, rect.Y, art.Width, art.Height), Uv(rect.X + rect.Width, rect.Y + rect.Height, art.Width, art.Height), size, pivot)
         {
             Tree = _art.Trees.GetValueOrDefault((archive, record)),
+            TreeSnow = _art.TreeSnow,
         };
     }
 
@@ -435,4 +436,7 @@ internal sealed record DaggerfallFloraLook(DaggerfallArtFile Image, Vector2 UvMi
 {
     /// <summary>The tree mesh that may stand in for the sprite, where the refreshed set has one.</summary>
     internal DaggerfallTreeArt? Tree { get; init; }
+
+    /// <summary>The shader that lays a winter tree's snow on its leaves.</summary>
+    internal DaggerfallArtFile? TreeSnow { get; init; }
 }

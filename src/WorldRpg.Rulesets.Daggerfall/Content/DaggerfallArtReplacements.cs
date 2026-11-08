@@ -72,9 +72,11 @@ internal sealed record DaggerfallGroundCoverArt(DaggerfallArtFile Shell, int She
 /// <summary>
 /// A refreshed tree mesh standing in for a flora sprite: a prop mesh (bark and leaf parts, its vertex alpha the share each
 /// vertex flutters) and its own height in metres; the sprite's drawn height and where its foot stands, as shares of its
-/// frame height, which the mesh is drawn to; and its bark and leaves, which a bare tree has none of.
+/// frame height, which the mesh is drawn to; its bark and leaves, which a bare tree has none of; and the snow a winter
+/// tree's leaves carry: the share of their upward faces it covers, its linear colour and the leaf texture's texels a side.
 /// </summary>
-internal sealed record DaggerfallTreeArt(DaggerfallArtFile Mesh, float MeshHeight, float Height, float Foot, DaggerfallArtFile Bark, DaggerfallArtFile? Leaves);
+internal sealed record DaggerfallTreeArt(DaggerfallArtFile Mesh, float MeshHeight, float Height, float Foot, DaggerfallArtFile Bark, DaggerfallArtFile? Leaves,
+    (float Share, Vector3 Colour, int Texels)? Snow = null);
 
 /// <summary>
 /// A ground layer's relief: its own texture, whose alpha is each texel's height as a share of the shell stack; the tallest
@@ -150,6 +152,9 @@ internal sealed class DaggerfallArtReplacements
     /// <summary>The refreshed grass that covers open ground near the player, when the set has it.</summary>
     internal DaggerfallGroundCoverArt? GroundCover { get; private init; }
 
+    /// <summary>The shader that lays a winter tree's snow on its leaves, where the set has snowy trees.</summary>
+    internal DaggerfallArtFile? TreeSnow { get; private init; }
+
     /// <summary>The tree meshes standing in for flora sprites, by nature archive and record.</summary>
     internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallTreeArt> Trees { get; private init; } = new Dictionary<(int, int), DaggerfallTreeArt>();
 
@@ -210,6 +215,7 @@ internal sealed class DaggerfallArtReplacements
         DaggerfallArtFile? glow = null;
         DaggerfallGroundCoverArt? groundCover = null;
         Dictionary<(int, int), DaggerfallTreeArt> trees = [];
+        DaggerfallArtFile? treeSnow = null;
         Dictionary<(int Archive, int Record), DaggerfallArtMesh> meshes = [];
         Dictionary<(int Archive, int Record), DaggerfallArtSurface> surfaces = [];
         Dictionary<(int Archive, int Record), DaggerfallArtFlat> flats = [], people = [];
@@ -321,6 +327,7 @@ internal sealed class DaggerfallArtReplacements
                             DaggerfallContentHash.Parse(flat.GetProperty("sha256").GetString()!, $"The refreshed flat for {replaces.Item1}/{replaces.Item2}")), width, height, frames, classic, emission)))
                         throw new InvalidOperationException($"Content pack '{packId}' names two flats for {replaces.Item1}/{replaces.Item2}.");
                 }
+            if (section.TryGetProperty("treeSnow", out JsonElement snowShader)) treeSnow = File(snowShader, "The trees' snow shader");
             if (section.TryGetProperty("trees", out JsonElement treeArt))
                 foreach (JsonProperty tree in treeArt.EnumerateObject())
                 {
@@ -331,7 +338,8 @@ internal sealed class DaggerfallArtReplacements
                     trees.Add((int.Parse(key[0], System.Globalization.CultureInfo.InvariantCulture), int.Parse(key[1], System.Globalization.CultureInfo.InvariantCulture)),
                         new(File(mesh, $"Tree {tree.Name}'s mesh"), mesh.GetProperty("height").GetSingle(), t.GetProperty("height").GetSingle(),
                             t.GetProperty("foot").GetSingle(), File(t.GetProperty("bark"), $"Tree {tree.Name}'s bark"),
-                            t.TryGetProperty("leaves", out JsonElement treeLeaves) ? File(treeLeaves, $"Tree {tree.Name}'s leaves") : null));
+                            t.TryGetProperty("leaves", out JsonElement treeLeaves) ? File(treeLeaves, $"Tree {tree.Name}'s leaves") : null,
+                            t.TryGetProperty("snow", out JsonElement snow) ? (snow.GetProperty("share").GetSingle(), Tint(snow.GetProperty("colour")), snow.GetProperty("texels").GetInt32()) : null));
                 }
             if (section.TryGetProperty("groundCover", out JsonElement cover))
             {
@@ -367,7 +375,7 @@ internal sealed class DaggerfallArtReplacements
             throw new InvalidOperationException($"Content pack '{packId}' carries an unreadable artReplacements section: {exception.Message}", exception);
         }
 
-        return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, flats, people) { GroundCover = groundCover, Trees = trees };
+        return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, flats, people) { GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow };
 
         DaggerfallArtWorldImage? World(JsonElement owner, string mediaId)
         {

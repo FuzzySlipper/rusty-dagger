@@ -130,6 +130,8 @@ internal sealed class DaggerfallFloraField : IDisposable
         _field?.Dispose(); _field = null;
         foreach (Grown grown in _layers.Values)
             foreach (IDisposable held in grown.Owned) held.Dispose();
+        _snowShader?.Dispose();
+        _snowShader = null;
         _layers.Clear();
         _grown.Clear();
         Volatile.Write(ref _found, 0);
@@ -222,11 +224,19 @@ internal sealed class DaggerfallFloraField : IDisposable
             {
                 RenderResource leaves = _engine.Graphics.OpenTexture(_engine.Content, leafArt.Path, leafArt.Sha256, TextureFilter.NearestMipmapped).Handle;
                 owned.Add(leaves);
-                leafMaterial = _engine.Graphics.CreateMaterial(new MaterialRequest(new Color(1, 1, 1, 1), new RenderResourceReference(leaves), .9f,
+                MaterialRequest request = new MaterialRequest(new Color(1, 1, 1, 1), new RenderResourceReference(leaves), .9f,
                     new Color(1, 1, 1, 1), Vector3.Zero, 0, false) with
                 {
                     AlphaMode = MaterialAlphaMode.Mask, AlphaCutoff = .5f, WindBend = _flats.FloraWindBend, WindFlutter = LeafFlutter,
-                });
+                };
+                // A winter tree's leaves carry snow where they face up, as its sprite paints it.
+                if (tree.Snow is { } snow && look.TreeSnow is { } shader)
+                    request = request with
+                    {
+                        Shader = new MaterialShader(new RenderResourceReference(SnowShader(shader)), new Vector4(snow.Share, snow.Texels, SnowClumpTexels, 0),
+                            new Vector4(snow.Colour, 0), default, default, default, default, 0),
+                    };
+                leafMaterial = _engine.Graphics.CreateMaterial(request);
                 owned.Add(leafMaterial);
             }
             MeshResource mesh = _engine.Graphics.CreateMeshResource(DaggerfallTreeMesh.Read(_engine.Content, tree, look.Size.Y, barkMaterial, leafMaterial));
@@ -244,6 +254,14 @@ internal sealed class DaggerfallFloraField : IDisposable
             throw;
         }
     }
+
+    /// <summary>The snow shader, opened the first time a winter tree grows and held while the field is.</summary>
+    private RenderResource SnowShader(DaggerfallArtFile shader) =>
+        _snowShader ??= _engine.Graphics.OpenShader(_engine.Content, shader.Path, shader.Sha256);
+
+    private RenderResource? _snowShader;
+    /// <summary>How many of the leaf texture's texels a drift of snow spans.</summary>
+    private const float SnowClumpTexels = 12;
 
     /// <summary>Grows records with tree meshes as the meshes, or as their sprites, for a developer to compare them.</summary>
     internal void UseTreeMeshes(bool meshes)

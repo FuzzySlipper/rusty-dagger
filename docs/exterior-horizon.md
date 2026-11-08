@@ -273,7 +273,10 @@ the layers where the art set has them, and the classic's where it doesn't.
   rank of brightness, leaves from its crown and bark from its trunk (both without the
   outline's darkest). A leaf is one flat tone, so leaves take the crown's leading hue (green,
   or an autumn tree's orange) and its shadows, other hues at most a tenth of them, and no
-  snow, which is left to the weather; leaves leaning toward the darks that lit cards lose, each leaf's edge a step
+  snow. A winter tree's leaves carry snow instead through a shader (`snow.wgsl`): where a
+  card faces up, drifts of smooth noise over the leaf texture's texels are drawn in the
+  sprite's snow colour, cut at the texture's pixels and leaving its dark outlines bare, over
+  a share of the upward faces measured from how much of the sprite's crown is snow; leaves leaning toward the darks that lit cards lose, each leaf's edge a step
   darker as the sprites outline theirs. A mesh is drawn at its sprite's drawn height.
   Bark bends with the wind as the sprites do; leaves flutter too. Past
   `treeImpostorHeights` times its height (where it stands about as tall on screen as the

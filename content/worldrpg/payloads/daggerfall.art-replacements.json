@@ -91437,6 +91437,15 @@
     },
     "height": 0.9953,
     "foot": 0.0,
+    "snow": {
+     "share": 0.795,
+     "colour": [
+      0.5998,
+      0.6104,
+      0.6878
+     ],
+     "texels": 256
+    },
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-505-11-leaves.png",
      "byteLength": 14795,
@@ -91457,6 +91466,15 @@
     },
     "height": 1.0,
     "foot": 0.0,
+    "snow": {
+     "share": 1.0,
+     "colour": [
+      0.6482,
+      0.6498,
+      0.6736
+     ],
+     "texels": 256
+    },
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-505-12-leaves.png",
      "byteLength": 15706,
@@ -91477,6 +91495,15 @@
     },
     "height": 1.0,
     "foot": 0.0,
+    "snow": {
+     "share": 0.674,
+     "colour": [
+      0.5976,
+      0.5976,
+      0.6662
+     ],
+     "texels": 256
+    },
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-505-13-leaves.png",
      "byteLength": 20767,
@@ -91497,6 +91524,15 @@
     },
     "height": 1.0,
     "foot": 0.0,
+    "snow": {
+     "share": 0.677,
+     "colour": [
+      0.575,
+      0.575,
+      0.6511
+     ],
+     "texels": 256
+    },
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-505-14-leaves.png",
      "byteLength": 15027,
@@ -91517,6 +91553,15 @@
     },
     "height": 1.0,
     "foot": 0.0,
+    "snow": {
+     "share": 0.86,
+     "colour": [
+      0.6001,
+      0.6005,
+      0.6594
+     ],
+     "texels": 256
+    },
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-505-16-leaves.png",
      "byteLength": 11822,
@@ -91537,6 +91582,15 @@
     },
     "height": 0.9931,
     "foot": 0.0,
+    "snow": {
+     "share": 0.684,
+     "colour": [
+      0.5987,
+      0.5987,
+      0.6737
+     ],
+     "texels": 256
+    },
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-505-17-leaves.png",
      "byteLength": 12394,
@@ -91557,6 +91611,15 @@
     },
     "height": 1.0,
     "foot": 0.0,
+    "snow": {
+     "share": 0.757,
+     "colour": [
+      0.6244,
+      0.6251,
+      0.6578
+     ],
+     "texels": 256
+    },
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-505-18-leaves.png",
      "byteLength": 13089,
@@ -91592,6 +91655,15 @@
     },
     "height": 1.0,
     "foot": 0.0,
+    "snow": {
+     "share": 0.591,
+     "colour": [
+      0.6165,
+      0.6165,
+      0.6738
+     ],
+     "texels": 256
+    },
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-505-25-leaves.png",
      "byteLength": 20081,
@@ -91787,6 +91859,15 @@
     },
     "height": 1.0,
     "foot": 0.0,
+    "snow": {
+     "share": 0.75,
+     "colour": [
+      0.5993,
+      0.5998,
+      0.6278
+     ],
+     "texels": 256
+    },
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-507-11-leaves.png",
      "byteLength": 21099,
@@ -91807,6 +91888,15 @@
     },
     "height": 0.9953,
     "foot": 0.0,
+    "snow": {
+     "share": 0.579,
+     "colour": [
+      0.5891,
+      0.6314,
+      0.6815
+     ],
+     "texels": 256
+    },
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-507-12-leaves.png",
      "byteLength": 21025,
@@ -91827,6 +91917,15 @@
     },
     "height": 1.0,
     "foot": 0.0,
+    "snow": {
+     "share": 0.674,
+     "colour": [
+      0.5976,
+      0.5976,
+      0.6662
+     ],
+     "texels": 256
+    },
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-507-13-leaves.png",
      "byteLength": 20767,
@@ -91847,6 +91946,15 @@
     },
     "height": 1.0,
     "foot": 0.0,
+    "snow": {
+     "share": 0.677,
+     "colour": [
+      0.575,
+      0.575,
+      0.6511
+     ],
+     "texels": 256
+    },
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-507-14-leaves.png",
      "byteLength": 15027,
@@ -91867,6 +91975,15 @@
     },
     "height": 1.0,
     "foot": 0.0,
+    "snow": {
+     "share": 0.86,
+     "colour": [
+      0.6001,
+      0.6005,
+      0.6594
+     ],
+     "texels": 256
+    },
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-507-16-leaves.png",
      "byteLength": 11822,
@@ -91902,6 +92019,15 @@
     },
     "height": 1.0,
     "foot": 0.0,
+    "snow": {
+     "share": 0.591,
+     "colour": [
+      0.6165,
+      0.6165,
+      0.6738
+     ],
+     "texels": 256
+    },
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-507-25-leaves.png",
      "byteLength": 20081,
@@ -92127,6 +92253,15 @@
     },
     "height": 1.0,
     "foot": 0.0,
+    "snow": {
+     "share": 0.75,
+     "colour": [
+      0.5993,
+      0.5998,
+      0.6278
+     ],
+     "texels": 256
+    },
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-511-11-leaves.png",
      "byteLength": 21099,
@@ -92147,6 +92282,15 @@
     },
     "height": 1.0,
     "foot": 0.0,
+    "snow": {
+     "share": 0.674,
+     "colour": [
+      0.5976,
+      0.5976,
+      0.6662
+     ],
+     "texels": 256
+    },
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-511-13-leaves.png",
      "byteLength": 20767,
@@ -92182,6 +92326,15 @@
     },
     "height": 1.0,
     "foot": 0.0,
+    "snow": {
+     "share": 0.591,
+     "colour": [
+      0.6165,
+      0.6165,
+      0.6738
+     ],
+     "texels": 256
+    },
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-511-25-leaves.png",
      "byteLength": 20081,
@@ -92193,6 +92346,11 @@
      "sha256": "e3552ff6ad78b070c41fc421cf393cfdadafc8f0e2be43dd5ae7b321090ff738"
     }
    }
+  },
+  "treeSnow": {
+   "path": "worldrpg/media/refreshed/trees/snow.wgsl",
+   "byteLength": 2392,
+   "sha256": "b7e22fbffa68d71d8fdb21d7aae9e58bd1bb33174081c2b1de029f21661941f1"
   }
  }
 }

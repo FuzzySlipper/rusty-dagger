@@ -949,7 +949,8 @@ public sealed class PublishedContentDeliveryTests
             .. section.GetProperty("trees").EnumerateObject().SelectMany(tree => new[] { "bark", "leaves", "mesh" }
                 .Where(file => tree.Value.TryGetProperty(file, out _)).Select(file => tree.Value.GetProperty(file)))
                 // Trees trimmed alike share a mesh.
-                .DistinctBy(file => file.GetProperty("path").GetString())];
+                .DistinctBy(file => file.GetProperty("path").GetString()),
+            section.GetProperty("treeSnow")];
         foreach (JsonElement file in files)
         {
             byte[] bytes = content.ReadBytes(file.GetProperty("path").GetString()!).ToArray();

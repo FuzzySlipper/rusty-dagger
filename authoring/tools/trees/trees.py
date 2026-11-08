@@ -66,6 +66,10 @@ OUTLINE = .06
 ACCENT = .1
 # A texel this bright in every channel is snow.
 SNOW = 170
+# A crown with less snow than this carries none.
+SNOW_LEAST = .03
+# Snow lies only on what faces up, a part of a crown's cards, so its share there is this many times the sprite's.
+SNOW_FACING = 3.2
 # The share of the trunk's darkest texels left out of its bark's colours: they are the sprite's outline, not its bark.
 BARK_OUTLINE = .15
 # A leaf card is a quad drawn both ways: four vertices and twelve indices.
@@ -112,10 +116,22 @@ def hues(rgb):
     return hue, (high - low) / np.maximum(high, 1e-6)
 
 
+def snowfall(crown):
+    """The snow a crown carries: the share of it that is snow, scaled to the share of a card that faces up, and the
+    snow's mean linear colour; none for a crown with hardly any."""
+    white = crown.min(1) >= SNOW
+    share = white.mean() if len(crown) else 0
+    if share < SNOW_LEAST:
+        return None
+    linear = np.where(crown[white] / 255 <= .04045, crown[white] / 255 / 12.92, ((crown[white] / 255 + .055) / 1.055) ** 2.4)
+    return {"share": round(min(1.0, share * SNOW_FACING), 3), "colour": [round(float(v), 4) for v in linear.mean(0)]}
+
+
 def palette(rgba, m):
     """The sprite's crown and trunk colours, each sorted by brightness."""
     solid = rgba[..., 3] > SOLID
     crown = rgba[m["top"]:m["crown"]][solid[m["top"]:m["crown"]]][:, :3]
+    snow = snowfall(crown)
     # The crown's outline is near black; a leaf ranked among it would be drawn black, so its colours are left out.
     crown = crown[light(crown) > OUTLINE * 255]
     # A leaf is one flat tone, so a colour the sprite only dabs (its blossoms, the branches in its crown, its snow) would
@@ -150,7 +166,7 @@ def palette(rgba, m):
     else:
         raise SystemExit("A sprite has no texel of bark to take its colours from.")
     trunk = trunk[np.argsort(light(trunk))]
-    return crown, trunk[int(len(trunk) * BARK_OUTLINE):]
+    return crown, trunk[int(len(trunk) * BARK_OUTLINE):], snow
 
 
 def repaint(source, colours, outline, darken=1.0):
@@ -209,7 +225,7 @@ def tree(flat, archive, record, species, variant, folder):
     """One tree's mesh, trimmed under its sprite's crown, and its textures in the sprite's colours."""
     rgba = frame(flat)
     m = measures(rgba)
-    crown, trunk = palette(rgba, m)
+    crown, trunk, snow = palette(rgba, m)
     model = f"{species}-p{variant}"
     mesh = json.loads((CRAFTSURVIVE / f"models/trees/{model}.prop-mesh.json").read_text())
     # The sprite's crown begins this far up its drawn height; the mesh's leaves start no lower, a little short of it. A
@@ -228,6 +244,8 @@ def tree(flat, archive, record, species, variant, folder):
         "height": round(m["height"] / h, 4),
         "foot": round((h - 1 - m["foot"]) / h, 4),
     }
+    if leaves and snow:
+        entry["snow"] = snow | {"texels": Image.open(CRAFTSURVIVE / f"textures/trees/{leaves}-leaves.png").width}
     if leaves:
         repaint(CRAFTSURVIVE / f"textures/trees/{leaves}-leaves.png", crown, True, LEAF_DARKEN).save(folder / f"{name}-leaves.png")
         entry["leaves"] = publish(f"{name}-leaves.png", folder / f"{name}-leaves.png")
@@ -241,6 +259,8 @@ def main():
     flats = {(f["replaces"]["archive"], f["replaces"]["record"]): f for f in payload["artReplacements"]["flats"]}
     folder = CONTENT / MEDIA
     folder.mkdir(parents=True, exist_ok=True)
+    global SNOW_SHADER
+    SNOW_SHADER = (folder / "snow.wgsl").read_text()
     for old in folder.glob("*"):
         old.unlink()
     trees = {}
@@ -248,6 +268,10 @@ def main():
         for record, (species, variant) in forms.items():
             trees[f"{archive}-{record}"] = tree(flats[(archive, record)], archive, record, species, variant, folder)
     payload["artReplacements"]["trees"] = trees
+    # The shader that lays the winter trees' snow on their leaves, written by hand beside them.
+    shader = CONTENT / MEDIA / "snow.wgsl"
+    shader.write_text(SNOW_SHADER)
+    payload["artReplacements"]["treeSnow"] = publish("snow.wgsl", shader)
     PAYLOAD.write_text(json.dumps(payload, indent=1) + "\n")
     print(f"{len(trees)} trees, {len(list(folder.glob('*.prop-mesh.json')))} meshes")
 
