@@ -80,9 +80,14 @@ drops small accents such as gold amulets and jewels. Each is one standing frame;
 A dropped item's ground image (the `world` PNG of an icon or worn image) is crunched the same way at `GROUND_CRUNCH` (2), sized
 by its classic pixels or doll units, and drawn with nearest filtering. Everything drawn in the world is crunched; the menus
 (inventory, paper doll, shops) draw the smooth images.
-Once people's art is settled, `matte.py` cleans their cut-outs with a BiRefNet mask from ComfyUI, about a second a figure: it removes the
-generation ground left inside the silhouette and fills holes opened in the figure, and leaves everything else, including hand edits. It
-keeps each final and mask under `gen-raw/people/pre-matte/`, so reruns start from the same art; `finalize.py` drops them when a final is replaced.
+Once an area's art is settled, `matte.py --area people|flats` cleans its cut-outs with a BiRefNet mask from ComfyUI (den-m5's serves),
+about a second a final: it removes the generation ground left inside the silhouette, such as the gap under an arm or between a bush's
+leaves, softens and decontaminates the new edge, and leaves everything else, including hand edits. People also fill holes the cut-out
+opened in the figure, such as grey skin. Flats only remove: their cut-out already opens the gaps their source draws open, such as an
+hourglass's waist or a chain's links, and a fill packed ground back into them. It keeps each final and mask under
+`gen-raw/AREA/pre-matte/`, so reruns start from the same art; `finalize.py` drops them when a final is replaced. A final needs its
+generation image (`gen-raw/studies/…/bp-broad-half.png`); the hanging lanterns (texture 200, records 7 to 9) have none and keep their
+cut-out, which shows no leftover ground. Run it for any new area once its finals are accepted, and check per area whether filling helps.
 
 A world flat's subject is a design choice, not always a copy. Gore translates to gothic Halloween content in the same rough
 outline and place: bodies on stakes become skeletons, severed heads become skulls, heaps of corpses become heaps of bones, in

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Clean the cut-out of finished people finals with a BiRefNet mask, as a last step once their art is settled.
+"""Clean the cut-out of finished finals with a BiRefNet mask, as a last step once their art is settled.
 
 The cut-out keys on the flat generation ground, which leaves that ground wherever it sits inside the classic silhouette,
 such as the gap under an arm, and opens holes in art near its colour, such as grey skin. BiRefNet tells figure from ground
@@ -7,10 +7,14 @@ there, but it also drops what stands apart from a figure, such as a floating orb
 the ground-coloured parts: each final loses the ground the mask calls background and regains what its figure holds inside.
 Everything else stays as it was, including anything edited by hand.
 
-The first run keeps each final under gen-raw/people/pre-matte/, with the mask it was given, and every later run starts from
+Each area says whether its holes fill. People fill: their cut-out opens holes in grey skin and hair. Flats only lose ground:
+their cut-out already opens the gaps their source draws open, such as an hourglass's waist or a chain's links, so a filled
+hole there would pack ground back in.
+
+The first run keeps each final under gen-raw/AREA/pre-matte/, with the mask it was given, and every later run starts from
 those, so reruns are safe. Each final's generation image comes from its study: the one its opaque pixels match.
 
-    matte.py [KEY ...]      e.g. matte.py texture-184-record-015-frame-000; no key cleans the whole area
+    matte.py [--area people|flats] [KEY ...]      e.g. matte.py texture-184-record-015-frame-000; no key cleans the area
 """
 import argparse
 import glob
@@ -32,19 +36,25 @@ from doll_preview import AUTHORING
 from postprocess import blur
 
 COMFY = os.environ.get("COMFY_URL", "http://192.168.1.24:8188")
-FINALS = AUTHORING / "gen-raw/people"
-KEPT = FINALS / "pre-matte"
+# Each area's finals, its study images by archive, record and frame, its finals' names, whether its holes fill, and how far
+# from the ground colour a leftover may stray. Flats paint some art in the ground's own grey, such as a potion's cloth, which
+# sits a little further from it than leftover ground does, so they take a tighter match.
+AREAS = {
+    "people": dict(studies="people-*-bp-*/images/person-{archive}-{record}", key=r"texture-(\d+)-record-(\d+)-frame-(000)", fill=True, ground=0.05),
+    "flats": dict(studies="flats-*-bp-*/images/flat-{archive}-{record}{frame}", key=r"texture-(\d+)-record-(\d+)-frame-(\d+)", fill=False, ground=0.025),
+}
 LO, HI = 0.035, 0.11   # the cut-out's distances from the ground: below LO is ground, above HI is art
-GROUND = 0.05          # how far from the ground colour a leftover may stray
 PATCH = 40             # the fewest pixels of leftover ground; fewer are flecks in the art
 INSET = 3              # pixels inside the mask's edge before a hole counts as held by the figure
 RIM = 4                # pixels beside removed ground that get a soft edge, as the cut-out's
 
 
-def generation(key, final):
-    """The study image a final was cut from: of those made for its figure, the closest over its opaque pixels."""
-    archive, record = (int(n) for n in re.fullmatch(r"texture-(\d+)-record-(\d+)-frame-000", key).groups())
-    paths = glob.glob(str(AUTHORING / f"gen-raw/studies/people-*-bp-*/images/person-{archive}-{record}/bp-broad-half.png"))
+def generation(area, key, final):
+    """The study image a final was cut from: of those made for its figure, the closest over its opaque pixels. A frame
+    after the first has its own study folder, ending -fN."""
+    archive, record, frame = (int(n) for n in re.fullmatch(AREAS[area]["key"], key).groups())
+    folder = AREAS[area]["studies"].format(archive=archive, record=record, frame=f"-f{frame}" if frame else "")
+    paths = glob.glob(str(AUTHORING / f"gen-raw/studies/{folder}/bp-broad-half.png"))
     if not paths:
         raise SystemExit(f"{key} has no study image.")
     solid = final[..., 3] > 0.99
@@ -80,17 +90,18 @@ def ask_mask(image):
     return Image.open(io.BytesIO(urllib.request.urlopen(view).read())).convert("L")
 
 
-def cleaned(final, painted, mask):
-    """A final, 0 to 1 RGBA, cleaned against the mask. `painted` is the final over its generation image."""
+def cleaned(final, painted, mask, fill=True, ground_match=0.05):
+    """A final, 0 to 1 RGBA, cleaned against the mask. `painted` is the final over its generation image. With `fill`,
+    holes the figure holds take their painted colour back. A leftover is ground-coloured within `ground_match`."""
     border = np.concatenate([painted[:16].reshape(-1, 3), painted[-16:].reshape(-1, 3)])
     ground_colour = np.median(border, 0)
     distance = np.abs(painted - ground_colour).max(-1)
-    labels, count = ndimage.label((mask < 0.5) & (distance < GROUND))
+    labels, count = ndimage.label((mask < 0.5) & (distance < ground_match))
     sizes = ndimage.sum(np.ones_like(labels), labels, np.arange(1, count + 1))
     ground = np.isin(labels, 1 + np.flatnonzero(sizes >= PATCH))
     alpha, colour = final[..., 3].copy(), final[..., :3].copy()
     # A hole the figure holds takes its painted colour back, and ground taken out leaves a soft rim.
-    held = ndimage.binary_erosion(mask > 0.75, iterations=INSET) & (alpha < 0.99)
+    held = ndimage.binary_erosion(mask > 0.75, iterations=INSET) & (alpha < 0.99) & fill
     alpha[held], colour[held] = 1, painted[held]
     taken = ground & (alpha > 0)
     near = ndimage.binary_dilation(taken, iterations=RIM)
@@ -102,27 +113,30 @@ def cleaned(final, painted, mask):
     return np.dstack([colour, np.where(ground, 0, alpha)])
 
 
-def clean(key):
-    kept = KEPT / f"{key}.png"
+def clean(area, key):
+    finals = AUTHORING / "gen-raw" / area
+    kept = finals / "pre-matte" / f"{key}.png"
     if not kept.exists():
-        KEPT.mkdir(exist_ok=True)
-        shutil.copyfile(FINALS / f"{key}.png", kept)
+        kept.parent.mkdir(exist_ok=True)
+        shutil.copyfile(finals / f"{key}.png", kept)
     final = np.array(Image.open(kept).convert("RGBA"), np.float32) / 255
     alpha = final[..., 3:]
-    painted = final[..., :3] * alpha + generation(key, final) * (1 - alpha)
-    masked = KEPT / f"{key}-mask.png"
+    painted = final[..., :3] * alpha + generation(area, key, final) * (1 - alpha)
+    masked = kept.parent / f"{key}-mask.png"
     if not masked.exists():
         ask_mask(Image.fromarray((painted * 255 + 0.5).astype(np.uint8))).save(masked)
-    result = cleaned(final, painted, np.array(Image.open(masked), np.float32) / 255)
-    Image.fromarray((result * 255 + 0.5).astype(np.uint8), "RGBA").save(FINALS / f"{key}.png")
+    result = cleaned(final, painted, np.array(Image.open(masked), np.float32) / 255, AREAS[area]["fill"], AREAS[area]["ground"])
+    Image.fromarray((result * 255 + 0.5).astype(np.uint8), "RGBA").save(finals / f"{key}.png")
     print(key, f"opaque {(final[..., 3] > 0.5).mean():.1%} to {(result[..., 3] > 0.5).mean():.1%}", flush=True)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--area", choices=sorted(AREAS), default="people")
     parser.add_argument("keys", nargs="*", help="finals to clean; none cleans the whole area")
-    for key in parser.parse_args().keys or sorted(path.stem for path in FINALS.glob("texture-*.png")):
-        clean(key)
+    args = parser.parse_args()
+    for key in args.keys or sorted(path.stem for path in (AUTHORING / "gen-raw" / args.area).glob("texture-*.png")):
+        clean(args.area, key)
 
 
 if __name__ == "__main__":

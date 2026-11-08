@@ -1,0 +1,8 @@
+{
+ "name": "flats",
+ "scenes": [
+  {"name": "town by day", "travel": "Daggerfall", "hour": 12, "pitch": 0, "settle": 20},
+  {"name": "town by night", "hour": 22, "pitch": 0, "settle": 10, "compare": {"refreshed": "world.groundcover all", "classic art": "world.groundcover all"}},
+  {"name": "woods", "travel": "17/0", "scout": "grass", "km": 5, "pitch": 0, "settle": 20}
+ ]
+}
