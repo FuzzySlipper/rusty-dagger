@@ -38,7 +38,10 @@ public sealed record DaggerfallWorldBlockSpatial(
 /// <param name="ModelId">The ARCH3D model number.</param>
 /// <param name="MeshArtifactId">
 /// The world media publication's mesh artifact for the model, or null when the archive cannot serve it
-/// (<see cref="UnresolvedReason"/> says why): no geometry stands in for a mesh that is not there.
+/// (<see cref="UnresolvedReason"/> says why): no geometry stands in for a mesh that is not there. An RMB
+/// exterior placement whose faces an earlier placement covers names its trimmed mesh instead
+/// (<see cref="Normalization.RmbPlacementTrims"/>), drawn with the same pose, and names none, with no
+/// unresolved reason, when earlier placements cover all of it.
 /// </param>
 /// <param name="Position">The model origin in the block's right-handed metre frame.</param>
 /// <param name="RotationDegrees">

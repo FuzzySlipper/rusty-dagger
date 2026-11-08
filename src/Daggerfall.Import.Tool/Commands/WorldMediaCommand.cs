@@ -1,3 +1,4 @@
+using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
 
 namespace Daggerfall.Import.Tool.Commands;
@@ -8,8 +9,8 @@ namespace Daggerfall.Import.Tool.Commands;
 /// beside the site closures rather than copied into each of them.
 /// </summary>
 /// <remarks>
-/// It reads the imported payload for the actors and flats the runtime may materialize anywhere, so it runs
-/// after the payload's sections; the classic media group is read so the classic images it already publishes
+/// It reads the imported payload for the actors and flats the runtime may materialize anywhere, and for the
+/// locations whose placed blocks it trims where placements overlap, so it runs after the payload's sections; the classic media group is read so the classic images it already publishes
 /// are referenced rather than published again. The site
 /// commands then reference this publication with <c>--shared</c>.
 /// </remarks>
@@ -24,7 +25,8 @@ internal static class WorldMediaCommand
         Arena2WorldMediaPublication publication = Arena2SitePublication.WorldMedia(
             Arena2SiteSources.ForWorldMedia(Path.GetFullPath(args[Options.Arena2.Name])),
             SiteInputs.Media(args, AuthoredUi.Profile(args, required: true)),
-            ProductWorldMedia.ReadClassicGroup(args[SiteInputs.ClassicGroup.Name]));
+            ProductWorldMedia.ReadClassicGroup(args[SiteInputs.ClassicGroup.Name]),
+            PayloadFiles.ReadSection<DaggerfallLocations>(args[Options.Pack.Name], "locations"));
         ImportPublicationPlan plan = publication.Plan.WithInvocation(SiteInputs.Invocation(args));
         SiteInputs.PrintComparison(ImportPublicationWriter.Write(plan, Path.GetFullPath(args[SiteInputs.Output.Name])));
         SiteInputs.WriteSourceManifest(args, plan);
@@ -37,6 +39,7 @@ internal static class WorldMediaCommand
         }
 
         Console.WriteLine($"  meshes: {publication.Geometry.Published} published of {publication.Geometry.Records} archive records, {publication.Geometry.Unresolvable} unresolvable, {publication.Geometry.Duplicate} duplicate numbers");
+        Console.WriteLine($"  {publication.PlacementMeshes} block placements trimmed where an earlier placement covers their faces");
         return 0;
     }
 }

@@ -140,7 +140,9 @@ internal sealed partial class DaggerfallLocationAssembly
         try
         {
             using JsonDocument document = JsonDocument.Parse(index);
-            foreach (JsonElement mesh in DaggerfallBaseContent.Array(document.RootElement, "meshes", diagnostics))
+            // A block placement an earlier one partly covers draws its own trimmed mesh, indexed beside the models'.
+            foreach (JsonElement mesh in DaggerfallBaseContent.Array(document.RootElement, "meshes", diagnostics)
+                .Concat(DaggerfallBaseContent.Array(document.RootElement, "placementMeshes", diagnostics)))
             {
                 string id = DaggerfallBaseContent.Text(mesh, "artifactId", diagnostics);
                 string path = $"{DaggerfallWorldMedia.Root}/{DaggerfallBaseContent.Text(mesh, "relativePath", diagnostics)}";

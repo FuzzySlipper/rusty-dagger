@@ -59,7 +59,9 @@ internal static class WorldBlocksCommand
     {
         string index = Path.Combine(Path.GetFullPath(shared), GeometryPublication.IndexRelativePath);
         using JsonDocument document = JsonDocument.Parse(File.ReadAllBytes(index));
-        HashSet<string> published = [.. document.RootElement.GetProperty("meshes").EnumerateArray().Select(mesh => mesh.GetProperty("artifactId").GetString()!)];
+        HashSet<string> published = [.. new[] { "meshes", "placementMeshes" }
+            .SelectMany(list => document.RootElement.GetProperty(list).EnumerateArray())
+            .Select(mesh => mesh.GetProperty("artifactId").GetString()!)];
         string[] missing = [.. publication.MeshArtifactIds.Where(mesh => !published.Contains(mesh))];
         if (missing.Length != 0)
             throw new InvalidOperationException($"Placed blocks name {missing.Length} meshes the world media publication at '{shared}' does not carry, for example {string.Join(", ", missing.Take(5))}: run world-media first.");

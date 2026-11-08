@@ -459,6 +459,37 @@ public sealed class GeometryPublicationTests
             again.Meshes.Select(mesh => (mesh.MeshId, mesh.ContentDigest)));
     }
 
+    [CorpusFact]
+    public void Publishes_a_trimmed_mesh_per_overlapping_block_placement_beside_the_models_it_cuts()
+    {
+        // GRVEAS07, the Hawkston Cemetery's block, lays hedge pieces over each other; each placement an earlier
+        // one partly covers is published as its own mesh, indexed beside the archive's records.
+        byte[] archive = File.ReadAllBytes(TestData.Corpus("ARCH3D.BSA"));
+        TextureLeafInventory textures = Textures();
+        IReadOnlyList<RmbPlacementTrim> trims = RmbPlacementTrims.Read(
+            BsaArchive.Parse(File.ReadAllBytes(TestData.Corpus("BLOCKS.BSA")), "arena2/BLOCKS.BSA"), BsaArchive.Parse(archive, "arena2/ARCH3D.BSA"),
+            ["GRVEAS07.RMB"], (plane, point) => GeometryPublicationBuilder.PlaneUv(plane, point, textures));
+        RmbPlacementTrim[] drawn = [.. trims.Where(trim => trim.MeshArtifactId is not null)];
+        Assert.NotEmpty(drawn);
+        string[] models = [.. trims.Select(trim => trim.ModelNumber.ToString(System.Globalization.CultureInfo.InvariantCulture)).Distinct()];
+        GeometryPublication publication = GeometryPublicationBuilder.Create(new GeometryPublicationRequest(Archive.Value, archive, models, textures) { Placements = trims });
+
+        Assert.Equal(drawn.Select(trim => trim.MeshArtifactId).Order(StringComparer.Ordinal), publication.PlacementMeshes.Select(mesh => mesh.ArtifactId));
+        Assert.All(publication.PlacementMeshes, mesh =>
+        {
+            Assert.StartsWith("geometry/placement/grveas07-rmb/", mesh.ArtifactId, StringComparison.Ordinal);
+            Assert.Equal($"{mesh.ArtifactId}{StaticMeshBinary.Extension}", mesh.RelativePath);
+            Assert.Contains(publication.Meshes, model => model.SourceRecordId == mesh.SourceRecordId && model.SourceOrdinal == mesh.SourceOrdinal);
+            Assert.NotEmpty(mesh.MaterialSlots);
+        });
+        // The record count is the archive's, untouched by the placements.
+        Assert.Equal(models.Length, publication.Summary.Published);
+
+        // A trim of a model the publication does not publish names geometry nobody wrote, so it is refused.
+        Assert.Throws<InvalidOperationException>(() => GeometryPublicationBuilder.Create(
+            new GeometryPublicationRequest(Archive.Value, archive, ["55000"], textures) { Placements = trims }));
+    }
+
     private static GeometryPublication Publish(IReadOnlyList<string> referenced, TextureLeafInventory textures) =>
         GeometryPublicationBuilder.Create(new GeometryPublicationRequest(Archive.Value, File.ReadAllBytes(TestData.Corpus("ARCH3D.BSA")), referenced, textures));
 

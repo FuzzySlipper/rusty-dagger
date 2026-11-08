@@ -113,6 +113,12 @@ public sealed record GeometryPublication(
     IReadOnlyList<GeometryMaterialLink> UnresolvedMaterials,
     GeometryPublicationSummary Summary)
 {
+    /// <summary>
+    /// The trimmed meshes of block placements an earlier placement partly covers (<see cref="RmbPlacementTrims"/>),
+    /// beside the archive's records: each is cut from a published record's mesh and names it.
+    /// </summary>
+    public IReadOnlyList<GeometryMeshArtifact> PlacementMeshes { get; init; } = [];
+
     /// <summary>The artifact that lists what was published and what could not be.</summary>
     public const string IndexRelativePath = "geometry/index.json";
 
@@ -196,6 +202,18 @@ public sealed record GeometryPublication(
             }
         }
 
+        NormalizedImportDocument.ValidateUnique(PlacementMeshes, mesh => mesh.MeshId, "geometry placement mesh");
+        foreach (GeometryMeshArtifact mesh in PlacementMeshes)
+        {
+            GeometryMeshArtifact? model = Meshes.SingleOrDefault(candidate => candidate.SourceRecordId == mesh.SourceRecordId);
+            if (model is null || model.SourceOrdinal != mesh.SourceOrdinal || mesh.Vertices <= 0 || mesh.Triangles <= 0
+                || !byId.TryGetValue(mesh.ArtifactId, out GeneratedSpatialArtifact? artifact) || artifact.RelativePath != mesh.RelativePath
+                || !StringComparer.Ordinal.Equals(mesh.ContentDigest, ContentDigest.Compute(artifact.Bytes.Span).Value))
+            {
+                throw new InvalidOperationException($"Published geometry placement mesh '{mesh.MeshId}' trims model {mesh.SourceRecordId}, which the publication does not carry, or its artifact does not agree with it.");
+            }
+        }
+
         foreach (GeometryUnresolvedMeshReference unresolved in UnresolvedMeshes)
         {
             if (Meshes.Any(mesh => StringComparer.Ordinal.Equals(mesh.MeshId, unresolved.MeshId)))
@@ -237,6 +255,8 @@ public sealed record GeometryPublication(
                 .SequenceEqual(Meshes.Select(mesh => (mesh.MeshId, mesh.SourceRecordId, mesh.SourceOrdinal, mesh.ArtifactId, mesh.RelativePath, mesh.Vertices, mesh.Triangles, mesh.ContentDigest)))
             || !document.Meshes.SelectMany(mesh => mesh.MaterialSlots.Select(slot => (mesh.MeshId, slot)))
                 .SequenceEqual(Meshes.SelectMany(mesh => mesh.MaterialSlots.Select(slot => (mesh.MeshId, slot))))
+            || !document.PlacementMeshes.Select(mesh => (mesh.MeshId, mesh.SourceRecordId, mesh.ArtifactId, mesh.RelativePath, mesh.ContentDigest))
+                .SequenceEqual(PlacementMeshes.Select(mesh => (mesh.MeshId, mesh.SourceRecordId, mesh.ArtifactId, mesh.RelativePath, mesh.ContentDigest)))
             || !document.UnresolvedMeshes.Select(mesh => (mesh.MeshId, mesh.Reason))
                 .SequenceEqual(UnresolvedMeshes.Select(mesh => (mesh.MeshId, mesh.Reason))))
         {
@@ -282,7 +302,11 @@ public sealed record GeometryPublicationRequest(
     Arch3dMeshInventory Inventory,
     ReadOnlyMemory<byte> MeshArchiveBytes,
     IReadOnlyList<string> ReferencedMeshIds,
-    TextureLeafInventory Textures);
+    TextureLeafInventory Textures)
+{
+    /// <summary>The block placements to publish trimmed meshes of; each trims a referenced mesh.</summary>
+    public IReadOnlyList<RmbPlacementTrim> Placements { get; init; } = [];
+}
 
 /// <summary>Builds the geometry a normalized pack and a site's world visuals reference from the archive and the inventory.</summary>
 public static class GeometryPublicationBuilder
@@ -344,76 +368,32 @@ public static class GeometryPublicationBuilder
             }
 
             Arch3dMesh mesh = Arch3dDecoder.Decode(Payload(request.MeshArchiveBytes, record), inventory.Source, number);
-            List<GeometryMaterialLink> materials = [];
-            Dictionary<(ushort Archive, ushort Record), GeometryMaterialLink> byTexture = [];
-            List<NormalizedVector3> vertices = [];
-            List<NormalizedVector3> normals = [];
-            List<NormalizedVector2> uvs = [];
-            List<NormalizedTriangle> triangles = [];
-            List<NormalizedMaterialGroup> groups = [];
-            foreach (Arch3dPlane plane in mesh.Planes)
-            {
-                if (plane.Points.Count < 3)
-                {
-                    continue;
-                }
-
-                (ushort archive, ushort textureRecord) = (plane.TextureArchive, plane.TextureRecord);
-                if (!byTexture.TryGetValue((archive, textureRecord), out GeometryMaterialLink? material))
-                {
-                    material = Resolve(archive, textureRecord, request.Textures);
-                    byTexture.Add((archive, textureRecord), material);
-                    materials.Add(material);
-                    if (material.Disposition != GeometryMaterialDisposition.Resolved)
-                    {
-                        unresolvedMaterials.Add(material);
-                    }
-                }
-
-                // The mesh is drawn with whole repeats of its texture per uv unit, so the source's sub-texel
-                // coordinates become fractions of the record's own extent here, as the donor scales them by
-                // the base archive's record. A climate swap draws a record of the same extent. A record with
-                // no extent has no picture to place, and its material is already reported unresolved.
-                (int Width, int Height)? extent = request.Textures.TryGetRecord(archive, textureRecord, out TextureRecordFacts? facts)
-                    && facts is { Width: > 0, Height: > 0 } ? (facts.Width, facts.Height) : null;
-                List<NormalizedVector3> polygon = new(plane.Points.Count);
-                List<NormalizedVector2> planeUvs = new(plane.Points.Count);
-                foreach (Arch3dPoint point in plane.Points)
-                {
-                    polygon.Add(MeshGeometry.ToRightHanded(Arena2SourceTransform.ToImportPoint(point)));
-                    Arena2TextureUv uv = extent is { } size ? Arena2SourceTransform.ToTextureUv(point, size.Width, size.Height) : default;
-                    planeUvs.Add(new(uv.U, uv.V));
-                }
-
-                (int fanStart, int fanCount) = MeshGeometry.AppendPolygon(vertices, normals, uvs, triangles, polygon, planeUvs, MeshGeometry.Normal(polygon));
-                groups.Add(new NormalizedMaterialGroup(material.MaterialResourceId, fanStart, fanCount, false));
-            }
-
-            if (triangles.Count == 0 || groups.Count == 0)
+            string meshId = number.ToString(CultureInfo.InvariantCulture);
+            GeometryMeshArtifact? published = Publish(meshId, MeshArtifactId(number), MeshRelativePath(number), number, record.Ordinal,
+                [.. mesh.Planes.Where(plane => plane.Points.Count >= 3).Select(plane => new RmbTrimFace(plane.TextureArchive, plane.TextureRecord,
+                    [.. plane.Points.Select(point => MeshGeometry.ToRightHanded(Arena2SourceTransform.ToImportPoint(point)))],
+                    [.. plane.Points.Select(point => PlaneUv(plane, point, request.Textures))]))],
+                request.Textures, artifacts, unresolvedMaterials);
+            if (published is null)
             {
                 unresolvable++;
                 unresolved.Add(new GeometryUnresolvedMeshReference(spelling, $"record {record.Ordinal} carries number {number} and declares no drawable plane"));
                 continue;
             }
 
-            string meshId = number.ToString(CultureInfo.InvariantCulture);
-            NormalizedMesh normalized = new NormalizedMesh(meshId, MeshArtifactId(number), vertices, normals, uvs, triangles, groups).Canonicalize();
-            normalized.Validate();
-            MeshAssembly assembly = MeshAssembly.Create([normalized]);
-            byte[] bytes = StaticMeshArtifact.Serialize(meshId, MeshGeometry.Bounds(vertices), assembly);
-            GeneratedSpatialArtifact artifact = new(MeshArtifactId(number), MeshRelativePath(number), bytes, []);
-            artifacts.Add(artifact);
-            meshes.Add(new GeometryMeshArtifact(
-                meshId,
-                number,
-                record.Ordinal,
-                artifact.Id,
-                artifact.RelativePath,
-                vertices.Count,
-                triangles.Count,
-                materials,
-                artifact.ContentDigest.Value,
-                [.. assembly.MaterialSlots.Select(binding => new StaticMeshMaterialBinding(binding.Material, binding.Slot))]));
+            meshes.Add(published);
+        }
+
+        // A trimmed placement's materials are its model's, already counted among the publication's unresolved ones.
+        List<GeometryMeshArtifact> placements = [];
+        foreach (RmbPlacementTrim trim in request.Placements.Where(trim => trim.MeshArtifactId is not null).OrderBy(trim => trim.MeshArtifactId, StringComparer.Ordinal))
+        {
+            string id = trim.MeshArtifactId!;
+            GeometryMeshArtifact model = meshes.SingleOrDefault(mesh => mesh.SourceRecordId == trim.ModelNumber)
+                ?? throw new InvalidOperationException($"Block placement '{trim.PlacementId}' trims model {trim.ModelNumber}, which the publication does not publish.");
+            placements.Add(Publish(id["geometry/".Length..], id, $"{id}{StaticMeshBinary.Extension}", trim.ModelNumber, model.SourceOrdinal,
+                trim.Faces, request.Textures, artifacts, null)
+                ?? throw new InvalidOperationException($"Block placement '{trim.PlacementId}' keeps faces with no drawable fan."));
         }
 
         // Every record the archive declares is published, unresolved, a reused number, or unused: the
@@ -429,11 +409,14 @@ public static class GeometryPublicationBuilder
 
         GeometryPublication publication = new(
             inventory.Source,
-            [.. artifacts, Index(inventory.Source, summary, meshes, unresolved)],
+            [.. artifacts, Index(inventory.Source, summary, meshes, placements, unresolved)],
             meshes,
             unresolved,
             unresolvedMaterials,
-            summary);
+            summary)
+        {
+            PlacementMeshes = placements,
+        };
         publication.Validate();
         return publication;
     }
@@ -485,11 +468,69 @@ public static class GeometryPublicationBuilder
         string inventorySource,
         GeometryPublicationSummary summary,
         IReadOnlyList<GeometryMeshArtifact> meshes,
+        IReadOnlyList<GeometryMeshArtifact> placements,
         IReadOnlyList<GeometryUnresolvedMeshReference> unresolved)
     {
-        GeometryIndex index = new(inventorySource, summary, meshes, unresolved);
+        GeometryIndex index = new(inventorySource, summary, meshes, unresolved) { PlacementMeshes = placements };
         byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(index, PublishedJson.Section);
-        return new GeneratedSpatialArtifact(GeometryPublication.IndexArtifactId, GeometryPublication.IndexRelativePath, bytes, [.. meshes.Select(mesh => mesh.ArtifactId).OrderBy(id => id, StringComparer.Ordinal)]);
+        return new GeneratedSpatialArtifact(GeometryPublication.IndexArtifactId, GeometryPublication.IndexRelativePath, bytes,
+            [.. meshes.Concat(placements).Select(mesh => mesh.ArtifactId).OrderBy(id => id, StringComparer.Ordinal)]);
+    }
+
+    /// <summary>
+    /// The texture coordinate a source point takes on its plane. The mesh is drawn with whole repeats of its
+    /// texture per uv unit, so the source's sub-texel coordinates become fractions of the record's own extent,
+    /// as the donor scales them by the base archive's record. A climate swap draws a record of the same extent.
+    /// A record with no extent has no picture to place, and its material is reported unresolved.
+    /// </summary>
+    public static NormalizedVector2 PlaneUv(Arch3dPlane plane, Arch3dPoint point, TextureLeafInventory textures)
+    {
+        ArgumentNullException.ThrowIfNull(plane);
+        ArgumentNullException.ThrowIfNull(textures);
+        if (!textures.TryGetRecord(plane.TextureArchive, plane.TextureRecord, out TextureRecordFacts? facts) || facts is not { Width: > 0, Height: > 0 })
+            return default;
+        Arena2TextureUv uv = Arena2SourceTransform.ToTextureUv(point, facts.Width, facts.Height);
+        return new(uv.U, uv.V);
+    }
+
+    /// <summary>
+    /// Publishes one mesh from its faces, a material group per face, or nothing when no face has a drawable fan.
+    /// A material the faces select first is resolved and, when <paramref name="unresolvedMaterials"/> is given,
+    /// recorded there if the corpus cannot serve it.
+    /// </summary>
+    private static GeometryMeshArtifact? Publish(string meshId, string artifactId, string relativePath, long recordId, int ordinal,
+        IReadOnlyList<RmbTrimFace> faces, TextureLeafInventory textures, List<GeneratedSpatialArtifact> artifacts, List<GeometryMaterialLink>? unresolvedMaterials)
+    {
+        List<GeometryMaterialLink> materials = [];
+        Dictionary<(ushort Archive, ushort Record), GeometryMaterialLink> byTexture = [];
+        List<NormalizedVector3> vertices = [];
+        List<NormalizedVector3> normals = [];
+        List<NormalizedVector2> uvs = [];
+        List<NormalizedTriangle> triangles = [];
+        List<NormalizedMaterialGroup> groups = [];
+        foreach (RmbTrimFace face in faces)
+        {
+            if (!byTexture.TryGetValue((face.TextureArchive, face.TextureRecord), out GeometryMaterialLink? material))
+            {
+                material = Resolve(face.TextureArchive, face.TextureRecord, textures);
+                byTexture.Add((face.TextureArchive, face.TextureRecord), material);
+                materials.Add(material);
+                if (material.Disposition != GeometryMaterialDisposition.Resolved) unresolvedMaterials?.Add(material);
+            }
+
+            (int fanStart, int fanCount) = MeshGeometry.AppendPolygon(vertices, normals, uvs, triangles, face.Polygon, face.Uvs, MeshGeometry.Normal(face.Polygon));
+            groups.Add(new NormalizedMaterialGroup(material.MaterialResourceId, fanStart, fanCount, false));
+        }
+
+        if (triangles.Count == 0 || groups.Count == 0) return null;
+        NormalizedMesh normalized = new NormalizedMesh(meshId, artifactId, vertices, normals, uvs, triangles, groups).Canonicalize();
+        normalized.Validate();
+        MeshAssembly assembly = MeshAssembly.Create([normalized]);
+        byte[] bytes = StaticMeshArtifact.Serialize(meshId, MeshGeometry.Bounds(vertices), assembly);
+        GeneratedSpatialArtifact artifact = new(artifactId, relativePath, bytes, []);
+        artifacts.Add(artifact);
+        return new GeometryMeshArtifact(meshId, recordId, ordinal, artifact.Id, artifact.RelativePath, vertices.Count, triangles.Count, materials,
+            artifact.ContentDigest.Value, [.. assembly.MaterialSlots.Select(binding => new StaticMeshMaterialBinding(binding.Material, binding.Slot))]);
     }
 
 }
@@ -503,7 +544,11 @@ public sealed record GeometryIndex(
     string InventorySource,
     GeometryPublicationSummary Summary,
     IReadOnlyList<GeometryMeshArtifact> Meshes,
-    IReadOnlyList<GeometryUnresolvedMeshReference> UnresolvedMeshes);
+    IReadOnlyList<GeometryUnresolvedMeshReference> UnresolvedMeshes)
+{
+    /// <summary>Every trimmed block placement mesh, in identity order.</summary>
+    public IReadOnlyList<GeometryMeshArtifact> PlacementMeshes { get; init; } = [];
+}
 
 /// <summary>Checks one material reference against what its disposition claims.</summary>
 internal static class GeometryMaterialLinkValidation

@@ -152,14 +152,20 @@ public static class Arena2SitePublication
     /// The artifacts the product-wide classic media group publishes, by group-relative path. A classic artifact
     /// the group already carries is referenced through it, never copied a second time.
     /// </param>
+    /// <param name="locations">
+    /// The catalog's locations, whose placed RMB blocks are read for placements an earlier one partly covers:
+    /// each is published as its model's mesh trimmed to what it adds (<see cref="RmbPlacementTrims"/>).
+    /// </param>
     public static Arena2WorldMediaPublication WorldMedia(
         Arena2SiteSources sources,
         Arena2SiteMedia media,
-        IReadOnlyDictionary<string, ImportPublicationManifestArtifact> classicGroup)
+        IReadOnlyDictionary<string, ImportPublicationManifestArtifact> classicGroup,
+        DaggerfallLocations locations)
     {
         ArgumentNullException.ThrowIfNull(sources);
         ArgumentNullException.ThrowIfNull(media);
         ArgumentNullException.ThrowIfNull(classicGroup);
+        ArgumentNullException.ThrowIfNull(locations);
         Arena2WorldTextureSelection textures = Arena2WorldTextureSelection.Select(sources.TextureLeaves(), sources.ParseTextureLeaf, WorldMediaQuotas);
         // The texture closure is exact, so exactly the leaves a selected record lives in are admitted; a
         // leaf an actor or terrain set needs beyond them is loaded on demand like any site's.
@@ -171,15 +177,24 @@ public static class Arena2SitePublication
         return sources.LoadingOnDemand(() =>
         {
             (GeometryPublication geometry, Arena2DungeonMediaPublication dungeonMedia, Arena2ClassicMediaPublication classicMedia) = PublishMedia(
-                sources, null, meshIds, media with { DungeonOverlays = [] }, "product-wide world media", textures.Materials, textures.Billboards, WorldMediaQuotas);
+                sources, null, meshIds, media with { DungeonOverlays = [] }, "product-wide world media", textures.Materials, textures.Billboards, WorldMediaQuotas,
+                leaves => PlacementTrims(sources, locations, leaves));
             ImportProvenance provenance = new(WorldMediaImporterId, ImporterBuild.Revision, [.. sources.DungeonSources
                 .Select(source => new LogicalSourceRecord(source.Label, ContentDigest.Compute(source.Bytes.Span), source.Bytes.Length))]);
             return new Arena2WorldMediaPublication(
                 Arena2MediaBundlePublication.CreateWorldMedia(provenance, dungeonMedia, classicMedia, geometry, classicGroup),
                 textures,
-                geometry.Summary);
+                geometry.Summary) { PlacementMeshes = geometry.PlacementMeshes.Count };
         });
     }
+
+    /// <summary>The trimmed placements of every RMB block a location places, their texture coordinates as the published meshes state them.</summary>
+    private static IReadOnlyList<RmbPlacementTrim> PlacementTrims(Arena2SiteSources sources, DaggerfallLocations locations, TextureLeafInventory textures) =>
+        RmbPlacementTrims.Read(
+            BsaArchive.Parse(sources.BlockArchive.Bytes.Span, sources.BlockArchive.Label),
+            BsaArchive.Parse(sources.MeshArchive.Bytes.Span, sources.MeshArchive.Label),
+            Arena2WorldBlocksPublication.PlacedRmbBlocks(locations),
+            (plane, point) => GeometryPublicationBuilder.PlaneUv(plane, point, textures));
 
     /// <summary>The importer identity the product-wide world media publication records.</summary>
     public const string WorldMediaImporterId = "daggerfall-import/world-media";
@@ -202,11 +217,12 @@ public static class Arena2SitePublication
         string textureLeafConsumer,
         IReadOnlyList<string>? runtimeMaterials = null,
         IReadOnlyList<string>? runtimeBillboards = null,
-        Arena2DungeonMediaQuotas? quotas = null)
+        Arena2DungeonMediaQuotas? quotas = null,
+        Func<TextureLeafInventory, IReadOnlyList<RmbPlacementTrim>>? placements = null)
     {
         TextureLeafInventory textureLeaves = sources.TextureLeaves();
         (GeometryPublication geometry, IReadOnlyList<ClassicWorldVisualRequest> worldVisuals) =
-            PublishGeometryAndSiteVisuals(sources.MeshArchive, referencedMeshIds, textureLeaves);
+            PublishGeometryAndSiteVisuals(sources.MeshArchive, referencedMeshIds, textureLeaves, placements?.Invoke(textureLeaves) ?? []);
         foreach (ushort archive in worldVisuals.SelectMany(visual => visual.Materials).Select(material => material.Archive).Distinct().Order())
         {
             sources.AdmitWorldVisualTextureLeaf(archive);
@@ -249,14 +265,15 @@ public static class Arena2SitePublication
     private static (GeometryPublication Geometry, IReadOnlyList<ClassicWorldVisualRequest> WorldVisuals) PublishGeometryAndSiteVisuals(
         DungeonLogicalSource archSource,
         IReadOnlyList<string> referencedMeshIds,
-        TextureLeafInventory textures)
+        TextureLeafInventory textures,
+        IReadOnlyList<RmbPlacementTrim> placements)
     {
         Arch3dMeshInventory inventory = Arch3dInventoryReader.Read(archSource.Bytes.ToArray(), archSource.Label);
         GeometryPublication geometry = GeometryPublicationBuilder.Create(new GeometryPublicationRequest(
             inventory,
             archSource.Bytes,
             [.. referencedMeshIds, .. ClassicMissileVisuals.MeshIds],
-            textures));
+            textures) { Placements = placements });
         IReadOnlyList<ClassicWorldVisualRequest> worldVisuals =
             [.. ClassicMissileVisuals.Published.Select(visual => ClassicWorldVisualRequest.FromGeometry(visual, geometry, inventory, archSource.Bytes))];
         return (geometry, worldVisuals);

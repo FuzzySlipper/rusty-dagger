@@ -213,6 +213,12 @@ public sealed class RmbExteriorNormalizerTests
                 new[] { mesh.Vertices[triangle.FirstVertex], mesh.Vertices[triangle.SecondVertex], mesh.Vertices[triangle.ThirdVertex] }));
         Assert.Contains(exterior.Document.Meshes, mesh => mesh.Id.EndsWith("/texture-33-0", StringComparison.Ordinal));
 
+        AssertNoOverlaps(drawn);
+    }
+
+    /// <summary>Refuses two drawn triangles sharing more than an edge in one plane and facing.</summary>
+    internal static void AssertNoOverlaps(IEnumerable<NormalizedVector3[]> drawn)
+    {
         List<string> overlaps = [];
         foreach (IGrouping<(int, int, int, int), NormalizedVector3[]> plane in drawn.Where(triangle => Normal(triangle) != default).GroupBy(PlaneKey))
         {
@@ -225,14 +231,14 @@ public sealed class RmbExteriorNormalizerTests
         Assert.True(overlaps.Count == 0, $"{overlaps.Count} overlapping coplanar pairs, first: {overlaps.FirstOrDefault()}");
     }
 
-    private static (int, int, int, int) PlaneKey(NormalizedVector3[] triangle)
+    internal static (int, int, int, int) PlaneKey(NormalizedVector3[] triangle)
     {
         NormalizedVector3 normal = Normal(triangle);
         return ((int)MathF.Round(normal.X * 100F), (int)MathF.Round(normal.Y * 100F), (int)MathF.Round(normal.Z * 100F),
             (int)MathF.Round(((normal.X * triangle[0].X) + (normal.Y * triangle[0].Y) + (normal.Z * triangle[0].Z)) * 100F));
     }
 
-    private static NormalizedVector3 Normal(NormalizedVector3[] triangle)
+    internal static NormalizedVector3 Normal(NormalizedVector3[] triangle)
     {
         NormalizedVector3 a = new(triangle[1].X - triangle[0].X, triangle[1].Y - triangle[0].Y, triangle[1].Z - triangle[0].Z);
         NormalizedVector3 b = new(triangle[2].X - triangle[0].X, triangle[2].Y - triangle[0].Y, triangle[2].Z - triangle[0].Z);
@@ -242,7 +248,7 @@ public sealed class RmbExteriorNormalizerTests
     }
 
     /// <summary>Whether two triangles in one plane share more than an edge, by the separating edges of either.</summary>
-    private static bool Overlap(NormalizedVector3[] first, NormalizedVector3[] second, NormalizedVector3 normal)
+    internal static bool Overlap(NormalizedVector3[] first, NormalizedVector3[] second, NormalizedVector3 normal)
     {
         int drop = MathF.Abs(normal.X) > MathF.Abs(normal.Y) ? (MathF.Abs(normal.X) > MathF.Abs(normal.Z) ? 0 : 2) : (MathF.Abs(normal.Y) > MathF.Abs(normal.Z) ? 1 : 2);
         (float, float) Flat(NormalizedVector3 point) => drop switch { 0 => (point.Y, point.Z), 1 => (point.X, point.Z), _ => (point.X, point.Y) };
@@ -261,7 +267,7 @@ public sealed class RmbExteriorNormalizerTests
         return true;
     }
 
-    private static DungeonLogicalSourceSet Sources()
+    internal static DungeonLogicalSourceSet Sources()
     {
         string arena2 = TestData.CorpusRoot;
         return new DungeonLogicalSourceSet(Directory.EnumerateFiles(arena2)

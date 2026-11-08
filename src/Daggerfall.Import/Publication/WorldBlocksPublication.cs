@@ -21,6 +21,17 @@ public static class Arena2WorldBlocksPublication
     /// <summary>The block index's path in the publication.</summary>
     public const string IndexRelativePath = "blocks.json";
 
+    /// <summary>Every RMB block a location places, once each, in name order.</summary>
+    public static IReadOnlyList<string> PlacedRmbBlocks(DaggerfallLocations locations)
+    {
+        ArgumentNullException.ThrowIfNull(locations);
+        return [.. locations.Locations
+            .SelectMany(location => location.Exterior?.Blocks ?? [])
+            .Select(block => block.SourceName)
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)];
+    }
+
     /// <summary>
     /// Normalizes every placed block.
     /// </summary>
@@ -44,11 +55,7 @@ public static class Arena2WorldBlocksPublication
         ArgumentNullException.ThrowIfNull(locations);
         ArgumentException.ThrowIfNullOrWhiteSpace(meshPublication);
         WorldBlockNormalizer normalizer = new(sources);
-        string[] rmb = [.. locations.Locations
-            .SelectMany(location => location.Exterior?.Blocks ?? [])
-            .Select(block => block.SourceName)
-            .Distinct(StringComparer.Ordinal)
-            .Order(StringComparer.Ordinal)];
+        string[] rmb = [.. PlacedRmbBlocks(locations)];
         string[] rdb = [.. locations.Dungeons
             .SelectMany(dungeon => dungeon.Blocks)
             .Distinct(StringComparer.Ordinal)

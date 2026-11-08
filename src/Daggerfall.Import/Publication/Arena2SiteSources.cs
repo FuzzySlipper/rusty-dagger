@@ -91,12 +91,14 @@ public sealed class Arena2SiteSources
 
     /// <summary>
     /// The sources the product-wide world media publication starts from: the classic media inputs, the mesh
-    /// archive and the palette. Texture leaves are admitted by the selection that names them.
+    /// archive, the block archive whose overlapping placements it trims, and the palette. Texture leaves are
+    /// admitted by the selection that names them.
     /// </summary>
     public static Arena2SiteSources ForWorldMedia(string arena2Directory)
     {
         Arena2SiteSources sources = ForClassicMedia(arena2Directory);
         sources.LoadDungeon("ARCH3D.BSA");
+        sources.LoadDungeon("BLOCKS.BSA");
         sources.LoadDungeon("PAL.PAL");
         return sources;
     }
@@ -129,6 +131,9 @@ public sealed class Arena2SiteSources
 
     /// <summary>The mesh archive every site's geometry is cut from.</summary>
     public DungeonLogicalSource MeshArchive => loaded["ARCH3D.BSA"];
+
+    /// <summary>The block archive whose placements the world media trims where they overlap.</summary>
+    public DungeonLogicalSource BlockArchive => loaded["BLOCKS.BSA"];
 
     /// <summary>
     /// Only PAL.PAL and the exact dynamically selected dungeon texture closure enter this source set.

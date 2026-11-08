@@ -160,7 +160,11 @@ public sealed class AssembledSiteProfileTests
         Assert.Contains(assembled.Geometry.Spatial, part => part.Id == "block/3/5" && (part.ColumnOffset, part.RowOffset) == (3 * 128, -5 * 128));
         Assert.All(assembled.Geometry.Spatial, part => Assert.StartsWith(DaggerfallWorldBlocks.Root + "/rmb/", part.Path, StringComparison.Ordinal));
         Assert.NotEmpty(assembled.Geometry.Meshes);
-        Assert.All(assembled.Geometry.Meshes, mesh => Assert.StartsWith(DaggerfallWorldMedia.Root + "/geometry/mesh-", mesh.Path, StringComparison.Ordinal));
+        // Each model draws its world media mesh, or the trimmed mesh of it when an earlier placement covers some of its faces.
+        Assert.All(assembled.Geometry.Meshes, mesh => Assert.True(
+            mesh.Path.StartsWith(DaggerfallWorldMedia.Root + "/geometry/mesh-", StringComparison.Ordinal)
+                || mesh.Path.StartsWith(DaggerfallWorldMedia.Root + "/geometry/placement/", StringComparison.Ordinal), mesh.Path));
+        Assert.Contains(assembled.Geometry.Meshes, mesh => mesh.Path.StartsWith(DaggerfallWorldMedia.Root + "/geometry/placement/", StringComparison.Ordinal));
         HashSet<uint> slots = [.. assembled.Materials.Select(material => material.Slot)];
         Assert.All(assembled.Geometry.Meshes, mesh => Assert.All(mesh.Materials!, binding => Assert.Contains(binding.WorldMaterialSlot, slots)));
     }

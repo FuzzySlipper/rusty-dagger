@@ -15,7 +15,11 @@ namespace Daggerfall.Import.Publication;
 public sealed record Arena2WorldMediaPublication(
     ImportPublicationPlan Plan,
     Arena2WorldTextureSelection Textures,
-    GeometryPublicationSummary Geometry);
+    GeometryPublicationSummary Geometry)
+{
+    /// <summary>How many block placements it publishes a trimmed mesh of.</summary>
+    public int PlacementMeshes { get; init; }
+}
 
 /// <summary>One texture record the product-wide publication does not carry in a form, and why.</summary>
 /// <param name="Archive">The texture leaf.</param>

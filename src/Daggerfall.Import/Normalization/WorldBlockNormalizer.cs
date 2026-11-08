@@ -74,13 +74,16 @@ public sealed class WorldBlockNormalizer
         List<DaggerfallWorldBlockGate> gates = [];
         BlockGeometry geometry = new();
         int doorOrdinal = 0;
+        // A placement whose faces an earlier one covers draws the world media's trimmed mesh of it instead of its
+        // model's, and one they cover wholly draws nothing.
+        Dictionary<string, string?> trimmed = RmbPlacementTrims.Read(content, RmbMesh, (_, _) => default)
+            .ToDictionary(trim => trim.PlacementId, trim => trim.MeshArtifactId, StringComparer.Ordinal);
         foreach (RmbBlockModel model in content.ExteriorModels)
         {
-            string id = model.BuildingIndex is int building
-                ? $"model/{slug}/{building}/{model.Ordinal}"
-                : $"model/{slug}/misc/{model.Ordinal}";
+            string id = RmbPlacementTrims.PlacementId(content.SourceKey, model.BuildingIndex, model.Ordinal);
             Arch3dMesh mesh = RmbMesh(model);
             DaggerfallWorldBlockModel placement = RmbModel(id, model);
+            if (trimmed.TryGetValue(id, out string? trim)) placement = placement with { MeshArtifactId = trim };
             models.Add(placement);
             // A gate swaps its model by the time of day, so neither variant is static collision; its door planes
             // stay the doors the site closure states.
