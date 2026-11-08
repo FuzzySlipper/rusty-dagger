@@ -65,38 +65,55 @@ def piece(m):
     return max(8, int(m["crown_width"] * .2))
 
 
-def leaves(rgba, m):
-    """CELLS x CELLS pieces of the crown, each a window cut to a ragged round edge. The windows richest in foliage (green
-    or blossom, lit) are taken, and the crown's near-black outlines are cut away, so the gaps between leaves show through."""
+def leaves(rgba, m, form):
+    """CELLS x CELLS pieces of the crown, each a window cut to a ragged oval edge. The windows richest in foliage (green
+    or blossom, lit) are taken, and the crown's near-black outlines are cut away, so the gaps between leaves show through.
+    A broadleaf's pieces are square clumps from anywhere in the crown. A conifer's are sprays: strips twice as wide as
+    they are tall, running from the trunk out along one side of a tier, turned so the trunk's end is always on the left."""
     crown = rgba[m["top"]:m["crown"] + 1].copy()
     rgb = crown[..., :3] / 255
     light = rgb @ [.2126, .7152, .0722]
     crown[..., 3] = np.where(light < .09, 0, crown[..., 3])
     solid = crown[..., 3] > SOLID
     foliage = solid & (light > .16) & ((rgb[..., 1] >= rgb[..., 0] * .95) | (rgb[..., 0] > rgb[..., 2] * 1.6) & (light > .3))
-    size = piece(m)
+    width, height = spray(m) if form == "conifer" else (piece(m), piece(m))
+    centre = m["centre"]
     candidates = []
     for _ in range(3000):
-        y = int(rng.integers(0, max(1, crown.shape[0] - size + 1)))
-        x = int(rng.integers(0, max(1, crown.shape[1] - size + 1)))
-        if crown[y:y + size, x:x + size].shape[:2] == (size, size):
-            candidates.append((foliage[y:y + size, x:x + size].mean(), y, x))
-    candidates.sort(reverse=True)
+        y = int(rng.integers(0, max(1, crown.shape[0] - height + 1)))
+        if form == "conifer":
+            right = bool(rng.integers(0, 2))
+            x = centre + int(rng.integers(0, max(1, width // 6))) if right else centre - width - int(rng.integers(0, max(1, width // 6)))
+            flip = not right
+        else:
+            x, flip = int(rng.integers(0, max(1, crown.shape[1] - width + 1))), False
+        if x >= 0 and crown[y:y + height, x:x + width].shape[:2] == (height, width):
+            candidates.append((foliage[y:y + height, x:x + width].mean(), y, x, flip))
+    candidates.sort(key=lambda c: c[0], reverse=True)
     chosen = []
-    for score, y, x in candidates:
+    for score, y, x, flip in candidates:
         # Pieces apart from one another, so the atlas holds the crown's variety rather than one patch many times.
-        if all(abs(y - cy) + abs(x - cx) > size * .35 for cy, cx in chosen):
-            chosen.append((y, x))
+        if all(abs(y - cy) + abs(x - cx) > height * .35 for cy, cx, _ in chosen):
+            chosen.append((y, x, flip))
         if len(chosen) == CELLS * CELLS:
             break
-    atlas = np.zeros((size * CELLS, size * CELLS, 4))
-    for i, (y, x) in enumerate(chosen):
-        window = crown[y:y + size, x:x + size].copy()
-        yy, xx = (np.mgrid[:size, :size] - (size - 1) / 2) / (size / 2)
-        edge = np.hypot(yy, xx) + ndimage.gaussian_filter(rng.random((size, size)), 1.2) * .9 - .45
+    atlas = np.zeros((height * CELLS, width * CELLS, 4))
+    yy, xx = np.mgrid[:height, :width]
+    oval = np.hypot((yy - (height - 1) / 2) / (height / 2), (xx - (width - 1) / 2) / (width / 2))
+    for i, (y, x, flip) in enumerate(chosen):
+        window = crown[y:y + height, x:x + width].copy()
+        if flip:
+            window = window[:, ::-1]
+        edge = oval + ndimage.gaussian_filter(rng.random((height, width)), 1.2) * .9 - .45
         window[..., 3] = np.where(edge < .85, window[..., 3], 0)
-        atlas[(i // CELLS) * size:(i // CELLS + 1) * size, (i % CELLS) * size:(i % CELLS + 1) * size] = window
+        atlas[(i // CELLS) * height:(i // CELLS + 1) * height, (i % CELLS) * width:(i % CELLS + 1) * width] = window
     return Image.fromarray(atlas.astype(np.uint8), "RGBA")
+
+
+def spray(m):
+    """A conifer spray's piece of the crown, in sprite texels: nearly half the crown's width, half as tall."""
+    width = max(12, int(m["crown_width"] * .46))
+    return width, max(6, width // 2)
 
 
 def bark(rgba, m):
@@ -138,10 +155,11 @@ def main():
             "crownBase": round((m["foot"] - m["crown"]) / h, 4),
             "crownRadius": round(m["crown_width"] / 2 / h, 4),
             "trunkRadius": round(m["trunk"] / 2 / h, 4),
-            "cardSize": round(piece(m) / h, 4),
+            # A leaf card's size: a broadleaf card's side, or a conifer spray's height (its width is twice that).
+            "cardSize": round((spray(m)[1] if form == "conifer" else piece(m)) / h, 4),
             # The bark tile's size, as the sprite draws it: across its width, up its height.
             "barkSize": [round(bark_image.width / h, 4), round(bark_image.height / h, 4)],
-            "leaves": publish(f"tree-{archive:03d}-{record:02d}-leaves", leaves(rgba, m)) | {"cells": CELLS},
+            "leaves": publish(f"tree-{archive:03d}-{record:02d}-leaves", leaves(rgba, m, form)) | {"cells": CELLS},
             "bark": publish(f"tree-{archive:03d}-{record:02d}-bark", bark_image),
         }
     payload["artReplacements"]["trees"] = trees

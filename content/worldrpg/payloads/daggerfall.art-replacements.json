@@ -90925,17 +90925,17 @@
     "crownBase": 0.1974,
     "crownRadius": 0.2557,
     "trunkRadius": 0.0324,
-    "cardSize": 0.1003,
+    "cardSize": 0.1165,
     "barkSize": [
      0.0841,
      0.2201
     ],
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-506-13-leaves.png",
-     "byteLength": 21276,
-     "sha256": "fef1e71814de66502504868705a44f1ec52915abf544bd5aa8161b25436ebc2c",
-     "width": 124,
-     "height": 124,
+     "byteLength": 43778,
+     "sha256": "ddb638e0315c087bfb75e0fe5fb21aeb16a114378d3c0d0ae157f62c5b72c6e2",
+     "width": 288,
+     "height": 144,
      "cells": 4
     },
     "bark": {
@@ -90953,17 +90953,17 @@
     "crownBase": 0.1607,
     "crownRadius": 0.2754,
     "trunkRadius": 0.0623,
-    "cardSize": 0.1082,
+    "cardSize": 0.1246,
     "barkSize": [
      0.1508,
      0.1574
     ],
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-506-30-leaves.png",
-     "byteLength": 25648,
-     "sha256": "d8ff79c3776c5190543c86454e823a22f0ecc7bf8d73fb9c46066771314c804b",
-     "width": 132,
-     "height": 132,
+     "byteLength": 49222,
+     "sha256": "4aef02d014ae4ef2cf551df611fca627a41d4cb8d189839bf99552e1de879eea",
+     "width": 308,
+     "height": 152,
      "cells": 4
     },
     "bark": {
@@ -90988,8 +90988,8 @@
     ],
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-506-15-leaves.png",
-     "byteLength": 24038,
-     "sha256": "e87424965167948494b9ac9ee7ae704740525bde901218a3256a45193f6ec527",
+     "byteLength": 24762,
+     "sha256": "270cbaa87aca42438f40b629ddc8f1f26d758c2bbf313548e389779b00a8e6bd",
      "width": 128,
      "height": 128,
      "cells": 4
@@ -91016,8 +91016,8 @@
     ],
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-506-16-leaves.png",
-     "byteLength": 52421,
-     "sha256": "8c678f1df18af6de772ab4541e4e522c535fdb1880e2d445b84a89ce6b1e9d28",
+     "byteLength": 51029,
+     "sha256": "9a69257c9559653aed0aa142de4445e53e03002ff47c13c7732d3d04228325da",
      "width": 200,
      "height": 200,
      "cells": 4

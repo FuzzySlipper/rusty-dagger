@@ -263,7 +263,8 @@ the layers where the art set has them, and the classic's where it doesn't.
   (`DaggerfallTreeMesh`): a procedural trunk and limbs wearing bark cut from the sprite's
   trunk, and leaf cards wearing pieces of its painted crown, laid on a rounded crown for a
   broadleaf and in tiers on a cone for a conifer. Bark bends with the wind; the cards
-  flutter too. Past `treeImpostorMetres` the renderer draws a card it bakes of the mesh, and
+  flutter too. Past `treeImpostorHeights` times its height (where it stands about as tall on screen as
+  the card's 64 texels) the renderer draws a card it bakes of the mesh, and
   a mesh casts shade where a sprite cannot. `authoring/tools/trees/trees.py` measures each
   sprite and cuts its textures. They grow only with flora's `treeMeshes`, off by default
   while their look is worked out; `world.trees mesh` grows them for a run.

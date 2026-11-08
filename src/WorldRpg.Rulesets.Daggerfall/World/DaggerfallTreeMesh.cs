@@ -7,7 +7,7 @@ namespace WorldRpg.Rulesets.Daggerfall.World;
 /// <summary>
 /// A tree grown in the round from a flora sprite's measures (<see cref="DaggerfallTreeArt"/>): a trunk and limbs as low-sided
 /// tubes wearing bark, and leaf cards wearing pieces of the sprite's own painted crown. A conifer rings its trunk to the top
-/// with whorls of drooping branches, shorter toward the tip, each carrying cards laid along it; a broadleaf's trunk forks
+/// with tiers of drooping sprays, shorter toward the tip, each a strip of the sprite's own tier; a broadleaf's trunk forks
 /// into limbs and twigs whose ends carry the cards in a rounded crown. Bark holds still in the wind (vertex alpha 0) and
 /// the cards flutter, more the farther out they stand. Seeded, so a seed always grows the same tree.
 /// </summary>
@@ -29,7 +29,8 @@ internal static class DaggerfallTreeMesh
         float radius = art.CrownRadius * s, trunk = art.TrunkRadius * s, card = art.CardSize * s;
         List<Limb> limbs = [];
         List<(Vector3 At, Vector3 Along, float Size, float Sway)> cards = [];
-        if (art.Form == "conifer") Conifer(rng, limbs, cards, foot, top, crownBase, radius, trunk, card);
+        List<(Vector3 Root, Vector3 Out, Vector3 Up, float Length, float Width)> sprays = [];
+        if (art.Form == "conifer") Conifer(rng, limbs, sprays, foot, top, crownBase, radius, trunk, card);
         else Broadleaf(rng, limbs, cards, foot, top, crownBase, radius, trunk, card);
 
         List<Vector3> positions = [], normals = [];
@@ -41,53 +42,50 @@ internal static class DaggerfallTreeMesh
         Vector3 centre = new(0, (crownBase + top) / 2, 0);
         foreach ((Vector3 at, Vector3 along, float size, float sway) in cards)
             Card(rng, at, along, size, sway, centre, art.LeafCells, positions, normals, uvs, colours, indices);
+        foreach ((Vector3 root, Vector3 out_, Vector3 up, float length, float width) in sprays)
+            Spray(rng, root, out_, up, length, width, art.LeafCells, positions, normals, uvs, colours, indices);
         return new MeshResourceCreateRequest(positions.ToArray(), normals.ToArray(), uvs.ToArray(), colours.ToArray(), indices.ToArray(),
             new MeshGroup[] { new(0, 0, barkCount), new(1, barkCount, (uint)indices.Count - barkCount) },
             new MeshMaterialBinding[] { new(0, bark), new(1, leaves) }, ReadOnlyMemory<Vector4>.Empty);
     }
 
-    /// <summary>A trunk to the tip, ringed by whorls of drooping branches that shorten toward it, each carrying cards along it.</summary>
-    private static void Conifer(Random rng, List<Limb> limbs, List<(Vector3, Vector3, float, float)> cards, float foot, float top, float crownBase,
-        float radius, float trunk, float card)
+    /// <summary>A trunk to the tip, ringed by tiers of drooping sprays that shorten toward it.</summary>
+    private static void Conifer(Random rng, List<Limb> limbs, List<(Vector3 Root, Vector3 Out, Vector3 Up, float Length, float Width)> sprays,
+        float foot, float top, float crownBase, float radius, float trunk, float card)
     {
         Limb stem = Grow(rng, new Vector3(0, foot - (Sink * (top - foot)), 0), Lean(rng, .03f), top - foot, trunk, .25f, 6, .04f, 0, TrunkSides);
         limbs.Add(stem);
-        int whorls = 7;
-        float azimuth = (float)(rng.NextDouble() * MathF.Tau);
-        for (int w = 0; w < whorls; w++)
-        {
-            float t = (crownBase - foot + ((top - crownBase) * (w + .3f) / whorls)) / (top - foot);
-            (Vector3 at, _, float r) = At(stem, t);
-            float share = 1 - ((at.Y - crownBase) / (top - crownBase));
-            int count = 4 + rng.Next(2);
-            for (int k = 0; k < count; k++)
-            {
-                azimuth += (MathF.Tau / count) + (float)((rng.NextDouble() - .5) * .6);
-                // Inside the tier's cards, which carry the branch's look; the limb only shows through their gaps.
-                float length = radius * (.2f + (.55f * share)) * (float)(.85 + (rng.NextDouble() * .3));
-                Vector3 out_ = Vector3.Normalize(new Vector3(MathF.Cos(azimuth), -.15f + (float)(rng.NextDouble() * .25), MathF.Sin(azimuth)));
-                limbs.Add(Grow(rng, at, out_, length, r * .22f, .3f, 2, .08f, -.12f, LimbSides));
-            }
-        }
-
-        // The cards lie in tiers on a cone, each tier drooping from its whorl, so the crown keeps the sprite's stacked shape.
-        int tiers = whorls, perTier = CardCount(radius, top - crownBase, card) / tiers;
+        // No limbs: each spray is a painted branch, root at the trunk.
+        // Each tier is a ring of sprays from the trunk, drooping outward, each a strip of the sprite's own tier with its
+        // branch's root at the trunk. Each is rolled from lying flat toward standing, so from the side some face the eye
+        // and some lie edge-on, and the crown keeps the sprite's stacked, gapped tiers.
+        int tiers = 8;
         for (int w = 0; w < tiers; w++)
         {
-            float y = crownBase + ((top - crownBase) * (w + .5f) / tiers);
+            float y = crownBase + ((top - crownBase) * (w + .35f) / tiers);
             float share = 1 - ((y - crownBase) / (top - crownBase));
-            float reach = radius * (.2f + (.85f * share));
-            int count = Math.Max(3, (int)(perTier * (.3f + share)));
+            float reach = radius * (.25f + (.85f * share));
+            // An outer ring and, half as many, an inner one, shorter and higher, filling the tier toward the trunk.
+            int outer = 13 + rng.Next(4), count = outer + (outer / 2);
+            float turn = (float)(rng.NextDouble() * MathF.Tau);
             for (int c = 0; c < count; c++)
             {
-                float a = (float)(rng.NextDouble() * MathF.Tau), out_ = reach * MathF.Sqrt(.35f + (.65f * (float)rng.NextDouble()));
-                Vector3 at = new(MathF.Cos(a) * out_, y - (out_ / Math.Max(reach, 1e-3f) * (top - crownBase) / tiers * .5f), MathF.Sin(a) * out_);
-                Vector3 outward = Vector3.Normalize(new Vector3(MathF.Cos(a), .2f, MathF.Sin(a)));
-                cards.Add((at, outward, card * (float)(.85 + (rng.NextDouble() * .3)), .3f + (.6f * out_ / Math.Max(reach, 1e-3f))));
+                bool inner = c >= outer;
+                float a = turn + (MathF.Tau * (inner ? c - outer + .5f : c) / (inner ? outer / 2 : outer)) + (float)((rng.NextDouble() - .5) * .4);
+                // Nearly level, as the sprite's tiers stand, dipping a little toward the tip.
+                Vector3 radial = Vector3.Normalize(new Vector3(MathF.Cos(a), -.06f - (float)(rng.NextDouble() * .14), MathF.Sin(a)));
+                Vector3 tangent = new(-MathF.Sin(a), 0, MathF.Cos(a));
+                float roll = (10 + (float)(rng.NextDouble() * 30)) * MathF.PI / 180;
+                Vector3 up = Vector3.Normalize((tangent * MathF.Cos(roll)) + (Vector3.UnitY * MathF.Sin(roll)));
+                up = Vector3.Normalize(up - (radial * Vector3.Dot(up, radial)));
+                float length = reach * (inner ? .6f : 1) * (float)(.95 + (rng.NextDouble() * .2));
+                sprays.Add((new Vector3(0, y + (float)((rng.NextDouble() - .5) * .2 * (top - crownBase) / tiers), 0) + (radial * trunk), radial, up,
+                    length, Math.Max(card, length / 2)));
             }
         }
 
-        cards.Add((new Vector3(stem.Points[^1].X, top - (card * .35f), stem.Points[^1].Z), Vector3.UnitY, card * .7f, .6f));
+        // A last spray stands at the tip.
+        sprays.Add((new Vector3(0, top - (card * 1.5f), 0), Vector3.UnitY, Vector3.UnitX, card * 2, card));
     }
 
     /// <summary>A trunk forking below the crown into limbs, each into twigs, their ends carrying the crown's cards.</summary>
@@ -208,7 +206,8 @@ internal static class DaggerfallTreeMesh
         for (int j = 0; j < sides; j++)
         {
             uint a = first + (uint)((i * (sides + 1)) + j), b = first + (uint)(((i + 1) * (sides + 1)) + j);
-            indices.AddRange([a, b, b + 1, a, b + 1, a + 1]);
+            // Wound so each face's front looks out of the tube: around the ring runs from u toward v, a turn the other way about the axis.
+            indices.AddRange([a, b + 1, b, a, a + 1, b + 1]);
         }
     }
 
@@ -236,6 +235,32 @@ internal static class DaggerfallTreeMesh
         Vector3 halfA = across * size / 2, halfB = length * size / 2;
         foreach ((Vector3 corner, Vector2 uv) in new[] { (middle - halfA - halfB, new Vector2(u0, v1)), (middle + halfA - halfB, new Vector2(u1, v1)),
                      (middle + halfA + halfB, new Vector2(u1, v0)), (middle - halfA + halfB, new Vector2(u0, v0)) })
+        {
+            positions.Add(corner);
+            normals.Add(shade);
+            uvs.Add(uv);
+            colours.Add(new Color(tone, tone, tone, sway));
+        }
+
+        indices.AddRange([first, first + 1, first + 2, first, first + 2, first + 3, first, first + 2, first + 1, first, first + 3, first + 2]);
+    }
+
+    /// <summary>
+    /// A conifer's spray: a strip from <paramref name="root"/> out along <paramref name="out_"/>, <paramref name="width"/>
+    /// across toward <paramref name="up"/>, showing one spray of the atlas with its branch's root at the trunk. Its tip
+    /// flutters and its root holds; both windings, lit as if facing out and up.
+    /// </summary>
+    private static void Spray(Random rng, Vector3 root, Vector3 out_, Vector3 up, float length, float width, int cells,
+        List<Vector3> positions, List<Vector3> normals, List<Vector2> uvs, List<Color> colours, List<uint> indices)
+    {
+        int cell = rng.Next(cells * cells);
+        float u0 = (float)(cell % cells) / cells, v0 = (float)(cell / cells) / cells, u1 = u0 + (1f / cells), v1 = v0 + (1f / cells);
+        Vector3 shade = Vector3.Normalize((out_ * .6f) + (Vector3.UnitY * .6f));
+        float tone = (float)(.88 + (rng.NextDouble() * .12));
+        Vector3 half = up * width / 2, tip = root + (out_ * length);
+        uint first = (uint)positions.Count;
+        foreach ((Vector3 corner, Vector2 uv, float sway) in new[] { (root - half, new Vector2(u0, v1), .1f), (tip - half, new Vector2(u1, v1), .9f),
+                     (tip + half, new Vector2(u1, v0), .9f), (root + half, new Vector2(u0, v0), .1f) })
         {
             positions.Add(corner);
             normals.Add(shade);

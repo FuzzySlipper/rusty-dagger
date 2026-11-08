@@ -956,7 +956,7 @@
     "fade": 600,
     "slopeLimitDegrees": 50,
     "treeMeshes": false,
-    "treeImpostorMetres": 60
+    "treeImpostorHeights": 12
   },
   "groundCover": {
     "shellLayers": 8,

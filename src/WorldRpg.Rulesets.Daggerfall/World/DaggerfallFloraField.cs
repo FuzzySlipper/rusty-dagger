@@ -175,9 +175,9 @@ internal sealed class DaggerfallFloraField : IDisposable
                 // A tree in the round casts its shade; a billboard can cast none.
                 CastsShadows = grown.Mesh,
             });
-            // Past a few dozen metres a tree mesh is a card the renderer bakes of it, as cheap as its sprite.
+            // Far enough out to be small on screen, a tree mesh is a card the renderer bakes of it, as cheap as its sprite.
             if (grown.Mesh) _engine.Vegetation.SetLayerDetail(new VegetationLayerDetailRequest(_field!, layer,
-                new[] { VegetationLod.ImpostorOf(grown.Look, _tuning.TreeImpostorMetres) }, ImpostorBand, ReadOnlyMemory<VegetationThinningPoint>.Empty, 1));
+                new[] { VegetationLod.ImpostorOf(grown.Look, _tuning.TreeImpostorHeights * grown.Height) }, ImpostorBand, ReadOnlyMemory<VegetationThinningPoint>.Empty, 1));
         }
     }
 
