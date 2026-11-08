@@ -58,6 +58,16 @@ public sealed class DeveloperWorldCommandsTests
         Assert.Equal(new Vector2(before.X + 5, before.Z), Planar(Position(session)), new PlanarComparer());
         run.Spatial.OverlapHit = _ => default;
 
+        // An actor brought in stands along the facing; a name no definition has is refused.
+        session.State.PlayerControl.YawRadians = 0;
+        Vector3 eye = Position(session);
+        DebugCommandResult spawned = session.Spawn("fire-daedra", 3);
+        Assert.True(spawned.Succeeded, spawned.Message);
+        long daedra = Assert.Single(session.DynamicActors, actor => actor.Value.Value == "fire-daedra").Key;
+        Assert.Equal(new Vector2(eye.X, eye.Z - 3), Planar(session.State.Actors.Get(daedra).Position.ToVector()), new PlanarComparer());
+        Assert.False(session.Spawn("no-such-actor", 3).Succeeded);
+        session.RetireActor(daedra);
+
         // Relative moves: an offset, and a distance along the facing.
         Vector3 here = Position(session);
         Assert.True(session.Move(-1, 0, 1).Succeeded);

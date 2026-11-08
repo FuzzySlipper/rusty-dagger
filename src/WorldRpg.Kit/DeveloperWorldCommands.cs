@@ -31,6 +31,9 @@ public interface IDeveloperWorldSession
     /// <summary>The current place, profile, building and pose, and the nearest named targets.</summary>
     DebugCommandResult Where();
 
+    /// <summary>Brings one actor of a published definition into the scene <paramref name="metres"/> along the player's facing, facing back.</summary>
+    DebugCommandResult Spawn(string actor, double metres);
+
     /// <summary>The people of the current place who offer a service, and where they stand.</summary>
     DebugCommandResult Find(string service);
 
@@ -85,6 +88,9 @@ public sealed class DeveloperWorldDebugModule(Func<IDeveloperWorldSession> curre
 
     [DebugCommand("world.goto", Description = "Developer: stand within reach of a loaded person, door or container (its label or navigation.targets id), facing it.")]
     public DebugCommandResult GoTo(string target) => current().GoTo(target);
+
+    [DebugCommand("world.spawn", Description = "Developer: bring one ACTOR (a published actor definition id, such as fire-daedra) into the scene METRES along the player's facing, facing back.")]
+    public DebugCommandResult Spawn(string actor, double metres) => current().Spawn(actor, metres);
 
     [DebugCommand("world.where", Description = "Developer: the current place, profile, building and pose, and the nearest named targets.")]
     public DebugCommandResult Where() => current().Where();

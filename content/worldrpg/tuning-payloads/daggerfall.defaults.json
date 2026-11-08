@@ -651,7 +651,7 @@
     "windowColor": [1, 0.47, 0.04],
     "windowLevel": 0.8,
     "lampLevel": 1,
-    "creatureGlow": 1,
+    "creatureGlow": 0.6,
     "spellGlow": 1.5
   },
   "weather": {

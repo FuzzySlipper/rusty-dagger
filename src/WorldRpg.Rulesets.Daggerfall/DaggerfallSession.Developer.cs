@@ -59,6 +59,18 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
         return Move(offset.X, 0, offset.Z);
     }
 
+    public DebugCommandResult Spawn(string actor, double metres)
+    {
+        if (!double.IsFinite(metres) || metres <= 0) return Refused("A distance is finite and above 0.");
+        if (!_definitions.Actors.TryGetValue(new DaggerfallActorId(actor), out DaggerfallActorDefinition? definition) || definition.Kind == DaggerfallActorKinds.Player)
+            return Refused($"'{actor}' is no actor definition that can be spawned.");
+        if (State.PlayerControl.Position is not WorldPoint position) return Refused("The player has no position.");
+        float yaw = State.PlayerControl.YawRadians;
+        Vector3 at = position.ToVector() + (ActorHeading.Forward(yaw) * (float)metres);
+        long spawned = SpawnActor(actor, new ActorPose(WorldPoint.From(at), yaw + MathF.PI));
+        return DebugCommandResult.Success($"{actor} ({spawned}) stands {metres:0.#} m ahead.");
+    }
+
     public DebugCommandResult Travel(string place)
     {
         if (DeveloperMoveRefusal() is { } refusal) return Refused(refusal);

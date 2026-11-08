@@ -695,9 +695,9 @@ internal sealed record DaggerfallSiteLightingTuning(
     /// <summary>How brightly a refreshed lamp's flame or glass shines over its painted colour, added to the light the lamp takes.</summary>
     internal float LampLevel { get; init; } = 1f;
     /// <summary>How brightly a glowing creature (a fire or frost daedra, a fire atronach) shines over its painted colour, added to the light it takes.</summary>
-    internal float CreatureGlow { get; init; } = 1f;
+    internal float CreatureGlow { get; init; } = .6f;
     /// <summary>How brightly a fire, shock or magic effect shines over its painted colour; above 1 it blooms.</summary>
-    internal float SpellGlow { get; init; } = 1f;
+    internal float SpellGlow { get; init; } = 1.5f;
     /// <summary>How much of the light above 1 spreads as a glow; 0 for none.</summary>
     internal float Bloom { get; init; } = .25f;
     internal static DaggerfallSiteLightingTuning Classic { get; } = new(
