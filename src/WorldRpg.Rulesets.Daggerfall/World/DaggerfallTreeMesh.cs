@@ -14,6 +14,8 @@ namespace WorldRpg.Rulesets.Daggerfall.World;
 internal static class DaggerfallTreeMesh
 {
     private const int TrunkSides = 6, LimbSides = 4;
+    /// <summary>How dark a conifer's spray is at the trunk, rising to its own colour at the tip.</summary>
+    private const float RootShade = .55f;
     /// <summary>How far the trunk's foot sinks into the ground, as a share of the tree's height, so slopes never show it.</summary>
     private const float Sink = .03f;
 
@@ -59,28 +61,29 @@ internal static class DaggerfallTreeMesh
         // Each tier is a ring of sprays from the trunk, drooping outward, each a strip of the sprite's own tier with its
         // branch's root at the trunk. Each is rolled from lying flat toward standing, so from the side some face the eye
         // and some lie edge-on, and the crown keeps the sprite's stacked, gapped tiers.
-        int tiers = 8;
+        int tiers = 10;
         for (int w = 0; w < tiers; w++)
         {
             float y = crownBase + ((top - crownBase) * (w + .35f) / tiers);
             float share = 1 - ((y - crownBase) / (top - crownBase));
             float reach = radius * (.25f + (.85f * share));
-            // An outer ring and, half as many, an inner one, shorter and higher, filling the tier toward the trunk.
-            int outer = 13 + rng.Next(4), count = outer + (outer / 2);
+            // An outer ring, then a middle and an inner one, shorter, filling the tier toward the trunk.
+            int outer = 14 + rng.Next(4), middle = outer * 3 / 5, inner = outer * 2 / 5, count = outer + middle + inner;
             float turn = (float)(rng.NextDouble() * MathF.Tau);
             for (int c = 0; c < count; c++)
             {
-                bool inner = c >= outer;
-                float a = turn + (MathF.Tau * (inner ? c - outer + .5f : c) / (inner ? outer / 2 : outer)) + (float)((rng.NextDouble() - .5) * .4);
+                int ring = c < outer ? 0 : c < outer + middle ? 1 : 2;
+                int index = ring == 0 ? c : ring == 1 ? c - outer : c - outer - middle, around = ring == 0 ? outer : ring == 1 ? middle : inner;
+                float a = turn + (MathF.Tau * (index + (ring * .33f)) / around) + (float)((rng.NextDouble() - .5) * .4);
                 // Nearly level, as the sprite's tiers stand, dipping a little toward the tip.
                 Vector3 radial = Vector3.Normalize(new Vector3(MathF.Cos(a), -.06f - (float)(rng.NextDouble() * .14), MathF.Sin(a)));
                 Vector3 tangent = new(-MathF.Sin(a), 0, MathF.Cos(a));
                 float roll = (10 + (float)(rng.NextDouble() * 30)) * MathF.PI / 180;
                 Vector3 up = Vector3.Normalize((tangent * MathF.Cos(roll)) + (Vector3.UnitY * MathF.Sin(roll)));
                 up = Vector3.Normalize(up - (radial * Vector3.Dot(up, radial)));
-                float length = reach * (inner ? .6f : 1) * (float)(.95 + (rng.NextDouble() * .2));
+                float length = reach * (ring == 0 ? 1 : ring == 1 ? .72f : .45f) * (float)(.95 + (rng.NextDouble() * .2));
                 sprays.Add((new Vector3(0, y + (float)((rng.NextDouble() - .5) * .2 * (top - crownBase) / tiers), 0) + (radial * trunk), radial, up,
-                    length, Math.Max(card, length / 2)));
+                    length, Math.Max(card, length / 2) * 1.25f));
             }
         }
 
@@ -259,13 +262,14 @@ internal static class DaggerfallTreeMesh
         float tone = (float)(.88 + (rng.NextDouble() * .12));
         Vector3 half = up * width / 2, tip = root + (out_ * length);
         uint first = (uint)positions.Count;
-        foreach ((Vector3 corner, Vector2 uv, float sway) in new[] { (root - half, new Vector2(u0, v1), .1f), (tip - half, new Vector2(u1, v1), .9f),
-                     (tip + half, new Vector2(u1, v0), .9f), (root + half, new Vector2(u0, v0), .1f) })
+        // Darker toward the trunk, where the tier above shades it, so the crown has depth as the painted one does.
+        foreach ((Vector3 corner, Vector2 uv, float sway, float light) in new[] { (root - half, new Vector2(u0, v1), .1f, RootShade),
+                     (tip - half, new Vector2(u1, v1), .9f, 1f), (tip + half, new Vector2(u1, v0), .9f, 1f), (root + half, new Vector2(u0, v0), .1f, RootShade) })
         {
             positions.Add(corner);
             normals.Add(shade);
             uvs.Add(uv);
-            colours.Add(new Color(tone, tone, tone, sway));
+            colours.Add(new Color(tone * light, tone * light, tone * light, sway));
         }
 
         indices.AddRange([first, first + 1, first + 2, first, first + 2, first + 3, first, first + 2, first + 1, first, first + 3, first + 2]);

@@ -67,13 +67,15 @@ def piece(m):
 
 def leaves(rgba, m, form):
     """CELLS x CELLS pieces of the crown, each a window cut to a ragged oval edge. The windows richest in foliage (green
-    or blossom, lit) are taken, and the crown's near-black outlines are cut away, so the gaps between leaves show through.
+    or blossom, lit) are taken.
     A broadleaf's pieces are square clumps from anywhere in the crown. A conifer's are sprays: strips twice as wide as
     they are tall, running from the trunk out along one side of a tier, turned so the trunk's end is always on the left."""
     crown = rgba[m["top"]:m["crown"] + 1].copy()
     rgb = crown[..., :3] / 255
     light = rgb @ [.2126, .7152, .0722]
-    crown[..., 3] = np.where(light < .09, 0, crown[..., 3])
+    # The near-black outlines are cut, so a broadleaf's clumps show gaps; a conifer keeps all but the blackest, its dark
+    # between and under the tiers that gives it depth.
+    crown[..., 3] = np.where(light < (.012 if form == "conifer" else .09), 0, crown[..., 3])
     solid = crown[..., 3] > SOLID
     foliage = solid & (light > .16) & ((rgb[..., 1] >= rgb[..., 0] * .95) | (rgb[..., 0] > rgb[..., 2] * 1.6) & (light > .3))
     width, height = spray(m) if form == "conifer" else (piece(m), piece(m))

@@ -90932,8 +90932,8 @@
     ],
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-506-13-leaves.png",
-     "byteLength": 43778,
-     "sha256": "ddb638e0315c087bfb75e0fe5fb21aeb16a114378d3c0d0ae157f62c5b72c6e2",
+     "byteLength": 43384,
+     "sha256": "937b9bf4ba687d7ca244372ee88260b7f66c771ee330a95cf358817e0bd67f03",
      "width": 288,
      "height": 144,
      "cells": 4
@@ -90960,8 +90960,8 @@
     ],
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-506-30-leaves.png",
-     "byteLength": 49222,
-     "sha256": "4aef02d014ae4ef2cf551df611fca627a41d4cb8d189839bf99552e1de879eea",
+     "byteLength": 48777,
+     "sha256": "8d06d082389d0b1fcfce2819cf434978d5b61f60eaba132064d56ad401b57768",
      "width": 308,
      "height": 152,
      "cells": 4
