@@ -103,6 +103,11 @@ alone.
     the wind the render is given: a gust that rises from calm and dies back before the loop's end,
     so the skirt is at rest on both ends and the loop closes. A render at 8 fps takes the gust on
     its own frames, since wind steps can't fall between them.
+- **Hidden back hair:** See-through paints back hair it could not see as a washed-out grey mass,
+  which shows in the gaps beside the jaw and when the head tilts. After assembly, back-hair pixels
+  are recoloured from the front hair's own colours, matched by brightness and a shade darker, since
+  hair behind the head is in shadow. Only back hair that no other part covers and that is clearly
+  hair-coloured keeps its pixels: the cut-out leaves the white backing in the gaps beside the jaw.
 - **Hidden skin:** See-through bleeds cloth colour into skin it paints in. In bare-skin limb parts,
   a pixel greener than it is red is refilled from the skin around it, after assembly.
 - **Held staff:** a bone from its planted foot to the grip, aimed by a one-bone IK at a grip bone on
