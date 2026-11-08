@@ -260,14 +260,17 @@ the layers where the art set has them, and the classic's where it doesn't.
   only the triangles where some of it remains. `world.groundcover` draws only the kinds it names
   (grass, relief, tufts) for a run.
 - **Tree meshes** can stand in for refreshed tree sprites that the art set's `trees` names
-  (`DaggerfallTreeMesh`): a procedural trunk and limbs wearing bark cut from the sprite's
-  trunk, and leaf cards wearing pieces of its painted crown, laid on a rounded crown for a
-  broadleaf and in tiers on a cone for a conifer. Bark bends with the wind; the cards
-  flutter too. Past `treeImpostorHeights` times its height (where it stands about as tall on screen as
-  the card's 64 texels) the renderer draws a card it bakes of the mesh, and
-  a mesh casts shade where a sprite cannot. `authoring/tools/trees/trees.py` measures each
-  sprite and cuts its textures. They grow only with flora's `treeMeshes`, off by default
-  while their look is worked out; `world.trees mesh` grows them for a run.
+  (`DaggerfallTreeMesh`). They are rusty-craftsurvive's scripted trees, copied as they are:
+  low-poly trunks and branches in tiling bark, and leaf cards whose vertex alpha is how much
+  each flutters. `authoring/tools/trees/trees.py` copies them and repaints their textures in
+  the sprite's own colours: each texel takes the colour of the sprite's texel at the same
+  rank of brightness, leaves from its crown and bark from its trunk, with each leaf's edge a
+  step darker as the sprites outline theirs. A mesh is drawn at its sprite's drawn height.
+  Bark bends with the wind as the sprites do; leaves flutter too. Past
+  `treeImpostorHeights` times its height (where it stands about as tall on screen as the
+  card's 64 texels) the renderer draws a card it bakes of the mesh, and a mesh casts shade
+  where a sprite cannot. They grow only with flora's `treeMeshes`, off by default while their
+  look is worked out; `world.trees mesh` grows them for a run.
 - **Classic nature** stays the donor's: one record chosen at random on a tile, by the
   classic's tile kinds, in the walked window's cells.
 - **Swamps** weigh lush ground in place of snow, below the snow.

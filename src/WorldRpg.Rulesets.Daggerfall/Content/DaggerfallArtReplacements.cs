@@ -70,13 +70,11 @@ internal sealed record DaggerfallGroundCoverArt(DaggerfallArtFile Shell, int She
     IReadOnlyDictionary<int, (Vector3 Shells, Vector3 Tufts)> Grass, IReadOnlyDictionary<(int Archive, int Record), DaggerfallGroundRelief> Relief);
 
 /// <summary>
-/// A refreshed tree mesh standing in for a flora sprite: its form (a conifer's whorled branches or a broadleaf's forked
-/// crown) and its measures, each a share of the sprite's frame height (where its foot stands above the frame's bottom, its
-/// drawn height, its crown's base and radius, its trunk's radius and a leaf card's size); its bark, and the bark tile's
-/// size across and up; and its leaves, an atlas of <see cref="LeafCells"/> by <see cref="LeafCells"/> pieces of the crown.
+/// A refreshed tree mesh standing in for a flora sprite: a prop mesh (bark and leaf parts, its vertex alpha the share each
+/// vertex flutters) and its own height in metres; the sprite's drawn height and where its foot stands, as shares of its
+/// frame height, which the mesh is drawn to; and its bark and leaves.
 /// </summary>
-internal sealed record DaggerfallTreeArt(string Form, float Foot, float Height, float CrownBase, float CrownRadius, float TrunkRadius, float CardSize,
-    Vector2 BarkSize, DaggerfallArtFile Bark, DaggerfallArtFile Leaves, int LeafCells);
+internal sealed record DaggerfallTreeArt(DaggerfallArtFile Mesh, float MeshHeight, float Height, float Foot, DaggerfallArtFile Bark, DaggerfallArtFile Leaves);
 
 /// <summary>
 /// A ground layer's relief: its own texture, whose alpha is each texel's height as a share of the shell stack; the tallest
@@ -327,15 +325,12 @@ internal sealed class DaggerfallArtReplacements
                 foreach (JsonProperty tree in treeArt.EnumerateObject())
                 {
                     string[] key = tree.Name.Split('-');
-                    JsonElement t = tree.Value, barkSize = t.GetProperty("barkSize"), leaves = t.GetProperty("leaves");
-                    string form = t.GetProperty("form").GetString()!;
-                    if (key.Length != 2 || form is not ("conifer" or "broadleaf"))
-                        throw new InvalidOperationException($"Content pack '{packId}' states tree '{tree.Name}' without an archive, record and form.");
+                    JsonElement t = tree.Value, mesh = t.GetProperty("mesh");
+                    if (key.Length != 2)
+                        throw new InvalidOperationException($"Content pack '{packId}' states tree '{tree.Name}' without an archive and record.");
                     trees.Add((int.Parse(key[0], System.Globalization.CultureInfo.InvariantCulture), int.Parse(key[1], System.Globalization.CultureInfo.InvariantCulture)),
-                        new(form, t.GetProperty("foot").GetSingle(), t.GetProperty("height").GetSingle(), t.GetProperty("crownBase").GetSingle(),
-                            t.GetProperty("crownRadius").GetSingle(), t.GetProperty("trunkRadius").GetSingle(), t.GetProperty("cardSize").GetSingle(),
-                            new(barkSize[0].GetSingle(), barkSize[1].GetSingle()), File(t.GetProperty("bark"), $"Tree {tree.Name}'s bark"),
-                            File(leaves, $"Tree {tree.Name}'s leaves"), leaves.GetProperty("cells").GetInt32()));
+                        new(File(mesh, $"Tree {tree.Name}'s mesh"), mesh.GetProperty("height").GetSingle(), t.GetProperty("height").GetSingle(),
+                            t.GetProperty("foot").GetSingle(), File(t.GetProperty("bark"), $"Tree {tree.Name}'s bark"), File(t.GetProperty("leaves"), $"Tree {tree.Name}'s leaves")));
                 }
             if (section.TryGetProperty("groundCover", out JsonElement cover))
             {

@@ -159,7 +159,7 @@ internal sealed class DaggerfallFloraField : IDisposable
             if (!_layers.TryGetValue(layer, out Grown? grown))
             {
                 if (looks(archive, record) is not { } look) continue;
-                grown = _treeMeshes && look.Tree is { } tree ? Tree(tree, look, layer) : Sprite(look);
+                grown = _treeMeshes && look.Tree is { } tree ? Tree(tree, look) : Sprite(look);
                 _layers.Add(layer, grown);
             }
 
@@ -183,8 +183,8 @@ internal sealed class DaggerfallFloraField : IDisposable
 
     /// <summary>How far a tree mesh and its card overlap, dithered, as one gives way to the other.</summary>
     private const float ImpostorBand = 6;
-    /// <summary>How far a tree's leaf cards circle in the wind at unit strength, times their vertex alpha.</summary>
-    private const float LeafFlutter = .06f;
+    /// <summary>How far a tree's leaf cards circle in the wind at unit strength, times their vertex alpha, as rusty-craftsurvive's do.</summary>
+    private const float LeafFlutter = .12f;
 
     /// <summary>A record as a layer grows it: what draws, what it holds, its height, which sets its reach, and whether it is a mesh.</summary>
     private sealed record Grown(Appearance Look, IDisposable[] Owned, float Height, bool Mesh);
@@ -205,15 +205,15 @@ internal sealed class DaggerfallFloraField : IDisposable
         }
     }
 
-    /// <summary>A record's tree mesh (<see cref="DaggerfallTreeMesh"/>): bark that bends with the trunk, and leaves that flutter too.</summary>
-    private Grown Tree(DaggerfallTreeArt tree, DaggerfallFloraLook look, uint layer)
+    /// <summary>A record's tree mesh (<see cref="DaggerfallTreeMesh"/>): bark that bends as the sprites do, and leaves that flutter too.</summary>
+    private Grown Tree(DaggerfallTreeArt tree, DaggerfallFloraLook look)
     {
         List<IDisposable> owned = [];
         try
         {
             RenderResource bark = _engine.Graphics.OpenTexture(_engine.Content, tree.Bark.Path, tree.Bark.Sha256, TextureFilter.Nearest, TextureWrap.Repeat).Handle;
             owned.Add(bark);
-            RenderResource leaves = _engine.Graphics.OpenTexture(_engine.Content, tree.Leaves.Path, tree.Leaves.Sha256, TextureFilter.Nearest).Handle;
+            RenderResource leaves = _engine.Graphics.OpenTexture(_engine.Content, tree.Leaves.Path, tree.Leaves.Sha256, TextureFilter.NearestMipmapped).Handle;
             owned.Add(leaves);
             Material barkMaterial = _engine.Graphics.CreateMaterial(new MaterialRequest(new Color(1, 1, 1, 1), new RenderResourceReference(bark), .95f,
                 new Color(1, 1, 1, 1), Vector3.Zero, 0, false) with { WindBend = _flats.FloraWindBend });
@@ -224,7 +224,7 @@ internal sealed class DaggerfallFloraField : IDisposable
                 AlphaMode = MaterialAlphaMode.Mask, AlphaCutoff = .5f, WindBend = _flats.FloraWindBend, WindFlutter = LeafFlutter,
             });
             owned.Add(leafMaterial);
-            MeshResource mesh = _engine.Graphics.CreateMeshResource(DaggerfallTreeMesh.Build(tree, look.Size.Y, (int)layer, barkMaterial, leafMaterial));
+            MeshResource mesh = _engine.Graphics.CreateMeshResource(DaggerfallTreeMesh.Read(_engine.Content, tree, look.Size.Y, barkMaterial, leafMaterial));
             owned.Add(mesh);
             Appearance appearance = _engine.Graphics.CreateMeshAppearance(mesh);
             owned.Add(appearance);
