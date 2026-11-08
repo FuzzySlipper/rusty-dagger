@@ -213,7 +213,9 @@ the layers where the art set has them, and the classic's where it doesn't.
   and rock, none on snow), thinned by its map pixel's height and in deserts
   (`desertShare`), and none on a beach or bank or in a location's clearing. So dirt
   patches thin nature where they show, not where the classic's tiles were. `density`
-  multiplies the count. A record is drawn out to `reachPerMetre` times its height, at most
+  multiplies the donor's count (three times by default, which reads as forest where the
+  donor's read as parkland), and `climateDensity` gives each named climate its own share of
+  that. `world.flora DENSITY` changes it for a run. A record is drawn out to `reachPerMetre` times its height, at most
   `reach`, and shrinks away over its last `fade`, so the edge never pops. Winter swaps every
   climate for its winter set and samples the ground again. Past near ground's reach the
   field would have to stand in the backdrop with far ground, which vegetation fields can't

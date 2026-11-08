@@ -189,6 +189,13 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
         return DebugCommandResult.Success(_horizon.Readout());
     }
 
+    public DebugCommandResult Flora(double density)
+    {
+        if (!double.IsFinite(density) || density < 0) return Refused("A density is finite and 0 or more.");
+        _horizon.UseFloraDensity((float)density);
+        return DebugCommandResult.Success(_horizon.Readout());
+    }
+
     public DebugCommandResult Find(string service)
     {
         if (_site.ActiveSite is not { } site) return Refused("The player is at no place with people.");

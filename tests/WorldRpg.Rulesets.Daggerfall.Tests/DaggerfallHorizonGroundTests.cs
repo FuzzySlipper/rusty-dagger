@@ -311,6 +311,18 @@ public sealed class DaggerfallHorizonGroundTests
         Assert.All(winter.Grounds!, value => Assert.Equal(5u, value));
     }
 
+    /// <summary>A climate's density share holds for its nature archive and its winter set, and a climate the world lacks is refused.</summary>
+    [Fact]
+    public void A_climates_flora_density_holds_summer_and_winter_and_an_unknown_climate_is_refused()
+    {
+        DaggerfallClimateValueDefinition[] climates = [new(231, "Woodlands", DaggerfallClimateDisposition.Named), new(227, "Rainforest", DaggerfallClimateDisposition.Named)];
+        DaggerfallFloraTuning tuning = DaggerfallFloraTuning.Default with { ClimateDensity = new Dictionary<string, float> { ["Woodlands"] = 3 } };
+
+        IReadOnlyDictionary<int, float> density = tuning.ArchiveDensity(climates);
+        Assert.Equal(new Dictionary<int, float> { [504] = 3, [505] = 3 }, density);
+        Assert.Throws<InvalidOperationException>(() => (tuning with { ClimateDensity = new Dictionary<string, float> { ["Atlantis"] = 2 } }).ArchiveDensity(climates));
+    }
+
     private static VegetationTileSamples Flora(VegetationTileRequest tile) =>
         (VegetationTileSamples)Activator.CreateInstance(typeof(VegetationTileSamples), BindingFlags.NonPublic | BindingFlags.Instance, null, [tile], null)!;
 

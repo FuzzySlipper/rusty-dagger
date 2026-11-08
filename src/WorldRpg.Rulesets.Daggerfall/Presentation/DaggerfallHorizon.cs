@@ -296,6 +296,9 @@ internal sealed class DaggerfallHorizon : IDisposable
         _link = null;
     }
 
+    /// <summary>For tuning by eye: flora at a new density, each climate keeping its share.</summary>
+    internal void UseFloraDensity(float density) => _flora.UseDensity(density);
+
     /// <summary>For tuning by eye: a new lift and haze, every tile sampled again.</summary>
     internal void Adjust(double lift, double fogDensity)
     {

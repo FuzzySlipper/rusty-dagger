@@ -57,6 +57,9 @@ public interface IDeveloperWorldSession
 
     /// <summary>Sets the horizon's lift and haze for this run, for judging them by eye.</summary>
     DebugCommandResult HorizonSet(double lift, double fogDensity);
+
+    /// <summary>Grows flora at a density for this run, for judging it by eye.</summary>
+    DebugCommandResult Flora(double density);
 }
 
 /// <summary>The live-debug commands over <see cref="IDeveloperWorldSession"/>; the delegate follows session replacement.</summary>
@@ -115,4 +118,7 @@ public sealed class DeveloperWorldDebugModule(Func<IDeveloperWorldSession> curre
 
     [DebugCommand("world.horizon-set", Description = "Developer: set the horizon's LIFT (1 is true height) and haze per metre FOG for this run.")]
     public DebugCommandResult HorizonSet(double lift, double fogDensity) => current().HorizonSet(lift, fogDensity);
+
+    [DebugCommand("world.flora", Description = "Developer: grow flora at DENSITY times the ruleset's base count for this run, each climate keeping its share.")]
+    public DebugCommandResult Flora(double density) => current().Flora(density);
 }

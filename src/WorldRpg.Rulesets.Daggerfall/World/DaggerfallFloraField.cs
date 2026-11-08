@@ -15,7 +15,8 @@ internal sealed class DaggerfallFloraField : IDisposable
 {
     /// <summary>Flora samples the ground at the walked spacing, on which the walked surface is straight between vertices.</summary>
     private const double CellMetres = DaggerfallTerrainSurfaceBuilder.SampleSpacing;
-    private const uint TileCells = 16;
+    /// <summary>A layer's copies on a tile are one patch the renderer selects from, so larger tiles mean fewer of them.</summary>
+    private const uint TileCells = 32;
     /// <summary>The records of a nature archive, which the donor chooses among alike.</summary>
     private const int Records = 31;
     /// <summary>The donor's chance is a tile's, and a tile is the walked spacing square.</summary>
@@ -27,7 +28,12 @@ internal sealed class DaggerfallFloraField : IDisposable
     private readonly DaggerfallHorizonGround _ground;
     private readonly DaggerfallFloraTuning _tuning;
     private readonly DaggerfallFlatsTuning _flats;
-    private readonly Dictionary<uint, (VegetationSprite Sprite, RenderResource Image)> _layers = [];
+    /// <summary>Each nature archive's share of the whole's density, where its climate's tuning names one.</summary>
+    private readonly IReadOnlyDictionary<int, float> _archiveDensity;
+    /// <summary>The whole's density for this run, which a developer may change.</summary>
+    private float _density;
+    private Func<int, int, DaggerfallFloraLook?>? _looks;
+    private readonly Dictionary<uint, Grown> _layers = [];
     private readonly HashSet<int> _grown = [];
     private VegetationField? _field;
     private VegetationStreamer? _streamer;
@@ -38,8 +44,11 @@ internal sealed class DaggerfallFloraField : IDisposable
     private int _found;
     private bool _disposed;
 
-    internal DaggerfallFloraField(IEngineContext engine, DaggerfallHorizonGround ground, DaggerfallFloraTuning tuning, DaggerfallFlatsTuning flats)
+    internal DaggerfallFloraField(IEngineContext engine, DaggerfallHorizonGround ground, DaggerfallFloraTuning tuning, DaggerfallFlatsTuning flats,
+        IReadOnlyDictionary<int, float> archiveDensity)
     {
+        _archiveDensity = archiveDensity ?? throw new ArgumentNullException(nameof(archiveDensity));
+        _density = tuning.Density;
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _ground = ground ?? throw new ArgumentNullException(nameof(ground));
         _tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
@@ -53,6 +62,7 @@ internal sealed class DaggerfallFloraField : IDisposable
     internal void Show(SpatialSession session, (int MapX, int MapY) frame, Vector3 local, bool winter, Func<int, int, DaggerfallFloraLook?> looks)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        _looks = looks;
         if (_field is not null && _frame != frame) Drop();
         if (_field is null)
         {
@@ -105,40 +115,57 @@ internal sealed class DaggerfallFloraField : IDisposable
     {
         _streamer?.Dispose(); _streamer = null;
         _field?.Dispose(); _field = null;
-        foreach ((VegetationSprite sprite, RenderResource image) in _layers.Values)
+        foreach (Grown grown in _layers.Values)
         {
-            sprite.Dispose();
-            image.Dispose();
+            grown.Sprite.Dispose();
+            grown.Image.Dispose();
         }
         _layers.Clear();
         _grown.Clear();
         Volatile.Write(ref _found, 0);
     }
 
-    /// <summary>Sets an archive's records as layers, each its own sprite growing on the archive's ground alone.</summary>
+    /// <summary>
+    /// Grows every climate at <paramref name="density"/> times the donor's count for this run, in place of the tuned
+    /// whole, each climate keeping its own share; the layers are set again with the sprites they have, and grow as calls allow.
+    /// </summary>
+    internal void UseDensity(float density)
+    {
+        _density = density;
+        if (_field is null || _looks is null) return;
+        foreach (int index in _grown) Grow(DaggerfallExteriorEnvironment.FirstNatureArchive + index, _looks);
+    }
+
+    /// <summary>
+    /// Sets an archive's records as layers, each its own sprite growing on the archive's ground alone. A layer set again
+    /// keeps its sprite, since its copies draw it until the new ones are placed.
+    /// </summary>
     private void Grow(int archive, Func<int, int, DaggerfallFloraLook?> looks)
     {
-        float density = _tuning.Density / TileArea / Records;
+        float density = _density * _archiveDensity.GetValueOrDefault(archive, 1) / TileArea / Records;
         for (int record = 1; record <= Records; record++)
         {
-            if (looks(archive, record) is not { } look) continue;
-            RenderResource image = _engine.Graphics.OpenTexture(_engine.Content, look.Image.Path, look.Image.Sha256, TextureFilter.NearestMipmapped).Handle;
-            VegetationSprite sprite;
-            try
+            uint layer = Layer(archive, record);
+            if (!_layers.TryGetValue(layer, out Grown? grown))
             {
-                sprite = new VegetationSprite(_engine, new RenderResourceReference(image), look.UvMin, look.UvMax, look.Size, look.Pivot,
-                    _flats.Flora(DaggerfallSiteAppearance.LitSprite), _flats.Nature);
-            }
-            catch
-            {
-                image.Dispose();
-                throw;
+                if (looks(archive, record) is not { } look) continue;
+                RenderResource image = _engine.Graphics.OpenTexture(_engine.Content, look.Image.Path, look.Image.Sha256, TextureFilter.NearestMipmapped).Handle;
+                try
+                {
+                    grown = new(new VegetationSprite(_engine, new RenderResourceReference(image), look.UvMin, look.UvMax, look.Size, look.Pivot,
+                        _flats.Flora(DaggerfallSiteAppearance.LitSprite), _flats.Nature), image, look.Size.Y);
+                }
+                catch
+                {
+                    image.Dispose();
+                    throw;
+                }
+
+                _layers.Add(layer, grown);
             }
 
-            uint layer = Layer(archive, record);
-            _layers.Add(layer, (sprite, image));
-            float reach = _tuning.ReachOf(look.Size.Y);
-            _engine.Vegetation.SetLayer(new VegetationLayerRequest(_field!, layer, sprite.Look, default, density, reach) with
+            float reach = _tuning.ReachOf(grown.Height);
+            _engine.Vegetation.SetLayer(new VegetationLayerRequest(_field!, layer, grown.Sprite.Look, default, density, reach) with
             {
                 Grounds = VegetationLayerRequest.Ground((uint)(archive - DaggerfallExteriorEnvironment.FirstNatureArchive)),
                 SlopeLimitDegrees = _tuning.SlopeLimitDegrees,
@@ -150,6 +177,9 @@ internal sealed class DaggerfallFloraField : IDisposable
             });
         }
     }
+
+    /// <summary>A record's sprite as a layer grows it, the image it draws from, and its height, which sets its reach.</summary>
+    private sealed record Grown(VegetationSprite Sprite, RenderResource Image, float Height);
 
     /// <summary>What the field holds and draws, for looking at by eye.</summary>
     internal string Readout()

@@ -935,7 +935,18 @@
     "floraWindWholeTexels": true
   },
   "flora": {
-    "density": 1,
+    "density": 3,
+    "climateDensity": {
+      "Woodlands": 1,
+      "MountainWoods": 1,
+      "HauntedWoodlands": 1,
+      "Swamp": 1,
+      "Rainforest": 1,
+      "Subtropical": 1,
+      "Desert": 1,
+      "Desert2": 1,
+      "Mountain": 1
+    },
     "grassChance": 0.9,
     "dirtChance": 0.2,
     "stoneChance": 0.05,
