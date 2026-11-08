@@ -259,6 +259,13 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
         return DebugCommandResult.Success(_horizon.Readout());
     }
 
+    public DebugCommandResult FarForest(string state)
+    {
+        if (state is not ("on" or "off")) return Refused("The far forest is on or off.");
+        _horizon.UseFarForest(state == "on");
+        return DebugCommandResult.Success($"The far forest is {state}.");
+    }
+
     public DebugCommandResult Trees(string kind)
     {
         if (kind is not ("mesh" or "sprite")) return Refused("Trees grow as mesh or sprite.");

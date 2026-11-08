@@ -955,6 +955,10 @@
     "reach": 3200,
     "fade": 600,
     "slopeLimitDegrees": 50,
+    "farReach": 8192,
+    "farShare": 0.2,
+    "farScale": 1.6,
+    "farTreeMetres": 6,
     "treeMeshes": true,
     "treeImpostorHeights": 12
   },

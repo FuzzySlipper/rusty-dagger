@@ -9,7 +9,7 @@ choice), the host's live debug moves the player
 (world.travel, world.scout, world.season, world.hour, world.weather) and its frame capture takes the pictures. A host
 that restarted after a rebuild is back at the title, so a tour begins the game whenever none is running.
 
-    tour.py TOUR.json [--session ID] [--out DIR] [--only NAME ...] [--keep]
+    tour.py TOUR.json [--session ID | --profile PROFILE] [--out DIR] [--only NAME ...] [--keep]
 
 Without --session it starts a session and stops it at the end (--keep leaves it running). Frames go to
 local/evidence/tour-NAME-TIME/ unless --out says otherwise, beside a scenes.json of what each one shows.
@@ -162,12 +162,13 @@ def main():
     parser.add_argument("--out", type=Path)
     parser.add_argument("--only", nargs="*", help="run only the scenes with these names")
     parser.add_argument("--keep", action="store_true", help="leave a session this tour started running")
+    parser.add_argument("--profile", default=PROFILE, help="the hosted playtest profile to start, when no --session is given")
     args = parser.parse_args()
     tour = json.loads(args.tour.read_text())
     scenes = [scene for scene in tour["scenes"] if not args.only or scene["name"] in args.only]
     out = args.out or REPOSITORY / "local/evidence" / f"tour-{tour['name']}-{datetime.now():%Y%m%d-%H%M}"
     out.mkdir(parents=True, exist_ok=True)
-    session = args.session or playtest("start", PROFILE, *(["--keep"] if args.keep else []))["id"]
+    session = args.session or playtest("start", args.profile, *(["--keep"] if args.keep else []))["id"]
     try:
         driver = Tour(session)
         results = [driver.scene(scene, out, index) for index, scene in enumerate(scenes)]

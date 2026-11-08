@@ -219,9 +219,20 @@ the layers where the art set has them, and the classic's where it doesn't.
   donor's read as parkland), and `climateDensity` gives each named climate its own share of
   that. `world.flora DENSITY` changes it for a run. A record is drawn out to `reachPerMetre` times its height, at most
   `reach`, and shrinks away over its last `fade`, so the edge never pops. Winter swaps every
-  climate for its winter set and samples the ground again. Past near ground's reach the
-  field would have to stand in the backdrop with far ground, which vegetation fields can't
-  do yet.
+  climate for its winter set and samples the ground again. Treeline: flora's cover
+  is the ground's look, so trees thin where slope bares rock and stop where snow lies, a
+  soft edge rather than a line.
+- **The far forest** (`DaggerfallFarForest`) grows on the far hills: a vegetation field
+  in the backdrop over far ground, in its frame (map metres at 1:1000), standing on far
+  ground's own lifted heights, so ridges hide what stands behind them and the world draws
+  over it. It grows each climate's records at least `farTreeMetres` tall as sprites, by the
+  same cover as near flora but at `farShare` of its density and `farScale` their size,
+  fading in over the band where near flora fades out, out to `farReach`. It is sampled
+  again wherever far ground's lift changes. `world.farforest off` hides it for a run.
+- **Ground layer palettes** are not used. A ground vertex picks one of four four-layer
+  materials (open, a swamp's lush, a town's, a shore's), and where two meet the edge
+  follows the layers' own pixels without a seam, so palettes would add nothing seen; a
+  town's straight edge is its authored tiles' and stays either way.
 - **Ground cover** is refreshed grass near the player (`DaggerfallGroundCover`), two ways at
   once. Shells are a stack of `shellLayers` layers `shellGap` apart over near ground, out to
   `shellReach`, on near ground's own finest vertices and diagonals so they never part from

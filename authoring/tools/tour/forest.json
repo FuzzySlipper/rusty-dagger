@@ -1,0 +1,58 @@
+{
+ "name": "forest",
+ "scenes": [
+  {
+   "name": "woods to the hills",
+   "travel": "17/0",
+   "scout": "grass",
+   "km": 5,
+   "pitch": 3,
+   "settle": 40,
+   "compare": {
+    "near only": "world.farforest off",
+    "far forest": "world.farforest on"
+   },
+   "reset": [
+    "world.farforest on"
+   ]
+  },
+  {
+   "name": "mountains",
+   "travel": "Orsinium",
+   "scout": "dirt",
+   "km": 10,
+   "pitch": 3,
+   "settle": 40,
+   "compare": {
+    "near only": "world.farforest off",
+    "far forest": "world.farforest on"
+   },
+   "reset": [
+    "world.farforest on"
+   ]
+  },
+  {
+   "name": "treeline",
+   "travel": "Orsinium",
+   "scout": "rock",
+   "km": 30,
+   "pitch": 5,
+   "settle": 40
+  },
+  {
+   "name": "wayrest hills",
+   "travel": "Wayrest",
+   "scout": "grass",
+   "km": 10,
+   "pitch": 2,
+   "settle": 40,
+   "compare": {
+    "near only": "world.farforest off",
+    "far forest": "world.farforest on"
+   },
+   "reset": [
+    "world.farforest on"
+   ]
+  }
+ ]
+}

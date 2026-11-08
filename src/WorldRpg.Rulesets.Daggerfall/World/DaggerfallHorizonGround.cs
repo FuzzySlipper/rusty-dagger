@@ -146,6 +146,39 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         }
     }
 
+    /// <summary>
+    /// The far forest's ground, in far ground's own frame (map metres): far ground's lifted and sunk heights, so copies stand
+    /// on its triangles; each point's climate's nature archive, counted from the first; and flora's cover there.
+    /// </summary>
+    internal void SampleFarFlora(VegetationTileRequest tile, VegetationTileSamples samples, bool winter, DaggerfallFloraTuning flora)
+    {
+        Frame now = Current;
+        GroundMaterials materials = Materials;
+        int heightSide = tile.HeightSide, side = tile.Side;
+        double[] ground = new double[heightSide * heightSide];
+        Dictionary<(int X, int Y), DaggerfallTerrainWindow> windows = [];
+        for (int j = -1; j <= side; j++)
+        for (int i = -1; i <= side; i++)
+        {
+            double x = tile.SampleX(i), z = tile.SampleZ(j);
+            double height = Ground(x, z, tile.CellSize * 2, windows);
+            ground[((j + 1) * heightSide) + i + 1] = height;
+            samples.SetHeight(i, j, (float)(Lifted(height, x, z, now) - Sink(x, z, now)));
+        }
+
+        DaggerfallExteriorSeason season = winter ? DaggerfallExteriorSeason.Winter : DaggerfallExteriorSeason.Summer;
+        for (int j = 0; j < side; j++)
+        for (int i = 0; i < side; i++)
+        {
+            double x = tile.SampleX(i), z = tile.SampleZ(j);
+            (int mapX, int mapY) = MapPixel(x, z);
+            int climate = Climate(mapX, mapY);
+            samples.SetGround(i, j, (uint)(DaggerfallExteriorEnvironment.NatureTextureArchive(climate, season) - DaggerfallExteriorEnvironment.FirstNatureArchive));
+            samples.SetCover(i, j, FloraCover(x, z, ground[((j + 1) * heightSide) + i + 1], Slope(ground, heightSide, i, j, tile.CellSize),
+                climate, winter, materials, flora));
+        }
+    }
+
     /// <summary>Near ground: the walked surface, in a frame whose (0, 0) stands at this offset on the map, so its numbers stay small enough to keep every texel.</summary>
     internal void SampleNear(HeightfieldTileRequest tile, HeightfieldTileSamples samples, double offsetX, double offsetZ)
     {

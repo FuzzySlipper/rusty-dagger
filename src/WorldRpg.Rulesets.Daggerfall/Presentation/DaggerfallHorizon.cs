@@ -40,6 +40,8 @@ internal sealed class DaggerfallHorizon : IDisposable
     private readonly List<(ulong Id, Vector3 At)> _sheets = [];
     private readonly DaggerfallRiverWater? _rivers;
     private readonly DaggerfallFloraField _flora;
+    /// <summary>Forest on the far hills, standing on far ground in the backdrop.</summary>
+    private readonly DaggerfallFarForest _farForest;
     private DaggerfallGroundCover? _cover;
     private readonly float _repeatMetres;
     private Func<DaggerfallGroundCover>? _growCover;
@@ -61,9 +63,10 @@ internal sealed class DaggerfallHorizon : IDisposable
     private bool _disposed;
 
     internal DaggerfallHorizon(IEngineContext engine, DaggerfallHorizonGround ground, DaggerfallHorizonTuning tuning, DaggerfallWaterTuning water, float repeatMetres, DaggerfallTerrainRivers? rivers,
-        DaggerfallFloraField flora)
+        DaggerfallFloraField flora, DaggerfallFarForest farForest)
     {
         _flora = flora ?? throw new ArgumentNullException(nameof(flora));
+        _farForest = farForest ?? throw new ArgumentNullException(nameof(farForest));
         ArgumentNullException.ThrowIfNull(water);
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _ground = ground ?? throw new ArgumentNullException(nameof(ground));
@@ -118,7 +121,12 @@ internal sealed class DaggerfallHorizon : IDisposable
         }
         ShowSea(origin, x, z, winter);
         _rivers?.Follow(origin, x, z);
-        if (far) ShowFar(session, origin, seen);
+        if (far)
+        {
+            ShowFar(session, origin, seen);
+            if (seen && _farForestOn) _farForest.Show(x, z, winter, flora);
+            else _farForest.Hide();
+        }
         else HideFar();
     }
 
@@ -227,6 +235,7 @@ internal sealed class DaggerfallHorizon : IDisposable
         HideFar();
         DropNear();
         _flora.Drop();
+        _farForest.Drop();
         _cover?.DropTufts();
         _streamer?.Dispose(); _streamer = null;
         _heightfield?.Dispose(); _heightfield = null;
@@ -332,6 +341,7 @@ internal sealed class DaggerfallHorizon : IDisposable
 
     private void HideFar()
     {
+        _farForest.Hide();
         if (_link is null) return;
         _engine.CameraView.ClearBackdrop(new(default));
         _engine.Heightfield.SetVisible(new(_heightfield!, false));
@@ -340,6 +350,11 @@ internal sealed class DaggerfallHorizon : IDisposable
 
     /// <summary>For tuning by eye: flora at a new density, each climate keeping its share.</summary>
     internal void UseFloraDensity(float density) => _flora.UseDensity(density);
+
+    /// <summary>Grows forest on the far hills, or none, for this run.</summary>
+    internal void UseFarForest(bool on) => _farForestOn = on;
+
+    private bool _farForestOn = true;
 
     /// <summary>Grows trees with meshes as meshes or as their sprites for this run.</summary>
     internal void UseTreeMeshes(bool meshes) => _flora.UseTreeMeshes(meshes);
@@ -426,7 +441,7 @@ internal sealed class DaggerfallHorizon : IDisposable
         string state = _link is null ? "hidden" : "shown";
         string tiles = _heightfield is null ? "not built" : Describe(_engine.Heightfield.Read(_heightfield));
         return string.Create(CultureInfo.InvariantCulture,
-            $"{state}: lift {frame.Lift:F2} about ({frame.CentreX:F0}, {frame.CentreZ:F0}), haze {_fogDensity:F6}/m; {tiles}; flora: {_flora.Readout()}");
+            $"{state}: lift {frame.Lift:F2} about ({frame.CentreX:F0}, {frame.CentreZ:F0}), haze {_fogDensity:F6}/m; {tiles}; flora: {_flora.Readout()}; far forest: {_farForest.Readout()}");
     }
 
     public void Dispose()
@@ -436,6 +451,7 @@ internal sealed class DaggerfallHorizon : IDisposable
         // Flora goes before it would be hidden: the Engine applies a field's removal ahead of the call's other changes,
         // so hiding a field and removing it in one call updates a node already gone.
         _flora.Dispose();
+        _farForest.Dispose();
         _cover?.DropTufts();
         Hide();
         DropNear();
@@ -474,6 +490,8 @@ internal sealed class DaggerfallHorizon : IDisposable
         double fromX = double.IsFinite(frame.CentreX) ? frame.CentreX : x, fromZ = double.IsFinite(frame.CentreZ) ? frame.CentreZ : z;
         _engine.Heightfield.Invalidate(new HeightfieldInvalidateRequest(_heightfield, Math.Min(x, fromX) - reach, Math.Min(z, fromZ) - reach,
             Math.Max(x, fromX) + reach, Math.Max(z, fromZ) + reach));
+        // The far forest stands on far ground's lifted heights, so it is sampled again where they changed.
+        _farForest.Invalidate(Math.Min(x, fromX) - reach, Math.Min(z, fromZ) - reach, Math.Max(x, fromX) + reach, Math.Max(z, fromZ) + reach);
     }
 
     private static string Describe(HeightfieldReadout read) => string.Create(CultureInfo.InvariantCulture,
