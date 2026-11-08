@@ -341,6 +341,9 @@ internal sealed class DaggerfallHorizon : IDisposable
     /// <summary>For tuning by eye: flora at a new density, each climate keeping its share.</summary>
     internal void UseFloraDensity(float density) => _flora.UseDensity(density);
 
+    /// <summary>Grows trees with meshes as meshes or as their sprites for this run.</summary>
+    internal void UseTreeMeshes(bool meshes) => _flora.UseTreeMeshes(meshes);
+
     /// <summary>For tuning by eye: a new lift and haze, every tile sampled again.</summary>
     internal void Adjust(double lift, double fogDensity)
     {

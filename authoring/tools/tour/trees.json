@@ -1,0 +1,47 @@
+{
+ "name": "trees",
+ "scenes": [
+  {
+   "name": "trees near",
+   "travel": "17/0",
+   "scout": "grass",
+   "km": 5,
+   "pitch": 4,
+   "settle": 25,
+   "compare": {
+    "sprite": "world.trees sprite",
+    "mesh": "world.trees mesh"
+   },
+   "reset": [
+    "world.trees mesh"
+   ]
+  },
+  {
+   "name": "forest far",
+   "pitch": -2,
+   "yaw": 90,
+   "settle": 25,
+   "compare": {
+    "sprite": "world.trees sprite",
+    "mesh": "world.trees mesh"
+   },
+   "reset": [
+    "world.trees mesh"
+   ]
+  },
+  {
+   "name": "forest windy",
+   "weather": "Thunder",
+   "pitch": 4,
+   "yaw": 180,
+   "settle": 25,
+   "compare": {
+    "sprite": "world.trees sprite",
+    "mesh": "world.trees mesh"
+   },
+   "reset": [
+    "world.trees mesh"
+   ]
+  }
+ ]
+}

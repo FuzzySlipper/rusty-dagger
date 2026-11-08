@@ -72,6 +72,9 @@ public interface IDeveloperWorldSession
 
     /// <summary>Which ground cover draws for this run, for comparing its kinds by eye.</summary>
     DebugCommandResult GroundCover(string kinds);
+
+    /// <summary>Whether trees with meshes grow as meshes or sprites for this run, for comparing them by eye.</summary>
+    DebugCommandResult Trees(string kind);
 }
 
 /// <summary>The live-debug commands over <see cref="IDeveloperWorldSession"/>; the delegate follows session replacement.</summary>
@@ -142,6 +145,9 @@ public sealed class DeveloperWorldDebugModule(Func<IDeveloperWorldSession> curre
 
     [DebugCommand("world.flora", Description = "Developer: grow flora at DENSITY times the ruleset's base count for this run, each climate keeping its share.")]
     public DebugCommandResult Flora(double density) => current().Flora(density);
+
+    [DebugCommand("world.trees", Description = "Developer: grow trees that have meshes as KIND for this run: mesh or sprite.")]
+    public DebugCommandResult Trees(string kind) => current().Trees(kind);
 
     [DebugCommand("world.groundcover", Description = "Developer: draw only these KINDS of ground cover for this run: grass, relief and tufts, separated by commas, or all or none.")]
     public DebugCommandResult GroundCover(string kinds) => current().GroundCover(kinds);

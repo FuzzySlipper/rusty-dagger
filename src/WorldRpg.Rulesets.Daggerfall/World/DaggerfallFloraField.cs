@@ -1,6 +1,7 @@
 using System.Numerics;
 using Rusty.Engine;
 using Rusty.Engine.VegetationTiles;
+using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 
 namespace WorldRpg.Rulesets.Daggerfall.World;
@@ -31,6 +32,7 @@ internal sealed class DaggerfallFloraField : IDisposable
     /// <summary>Each nature archive's share of the whole's density, where its climate's tuning names one.</summary>
     private readonly IReadOnlyDictionary<int, float> _archiveDensity;
     private readonly (float TownShare, double TownRamp)? _grass;
+    private bool _treeMeshes;
     /// <summary>The whole's density for this run, which a developer may change.</summary>
     private float _density;
     private Func<int, int, DaggerfallFloraLook?>? _looks;
@@ -56,6 +58,7 @@ internal sealed class DaggerfallFloraField : IDisposable
         IReadOnlyDictionary<int, float> archiveDensity, (float TownShare, double TownRamp)? grass = null)
     {
         _grass = grass;
+        _treeMeshes = tuning.TreeMeshes;
         _archiveDensity = archiveDensity ?? throw new ArgumentNullException(nameof(archiveDensity));
         _density = tuning.Density;
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
@@ -126,10 +129,7 @@ internal sealed class DaggerfallFloraField : IDisposable
         _streamer?.Dispose(); _streamer = null;
         _field?.Dispose(); _field = null;
         foreach (Grown grown in _layers.Values)
-        {
-            grown.Sprite.Dispose();
-            grown.Image.Dispose();
-        }
+            foreach (IDisposable held in grown.Owned) held.Dispose();
         _layers.Clear();
         _grown.Clear();
         Volatile.Write(ref _found, 0);
@@ -159,23 +159,12 @@ internal sealed class DaggerfallFloraField : IDisposable
             if (!_layers.TryGetValue(layer, out Grown? grown))
             {
                 if (looks(archive, record) is not { } look) continue;
-                RenderResource image = _engine.Graphics.OpenTexture(_engine.Content, look.Image.Path, look.Image.Sha256, TextureFilter.NearestMipmapped).Handle;
-                try
-                {
-                    grown = new(new VegetationSprite(_engine, new RenderResourceReference(image), look.UvMin, look.UvMax, look.Size, look.Pivot,
-                        _flats.Flora(DaggerfallSiteAppearance.LitSprite), _flats.Nature), image, look.Size.Y);
-                }
-                catch
-                {
-                    image.Dispose();
-                    throw;
-                }
-
+                grown = _treeMeshes && look.Tree is { } tree ? Tree(tree, look, layer) : Sprite(look);
                 _layers.Add(layer, grown);
             }
 
             float reach = _tuning.ReachOf(grown.Height);
-            _engine.Vegetation.SetLayer(new VegetationLayerRequest(_field!, layer, grown.Sprite.Look, default, density, reach) with
+            _engine.Vegetation.SetLayer(new VegetationLayerRequest(_field!, layer, grown.Look, default, density, reach) with
             {
                 Grounds = VegetationLayerRequest.Ground((uint)(archive - DaggerfallExteriorEnvironment.FirstNatureArchive)),
                 SlopeLimitDegrees = _tuning.SlopeLimitDegrees,
@@ -183,13 +172,81 @@ internal sealed class DaggerfallFloraField : IDisposable
                 Fade = Math.Min(_tuning.Fade, reach / 2),
                 Seed = layer,
                 MaximumInstances = (uint)Math.Min(uint.MaxValue, Math.Ceiling(MathF.PI * reach * reach * density * Headroom)),
-                CastsShadows = false,
+                // A tree in the round casts its shade; a billboard can cast none.
+                CastsShadows = grown.Mesh,
             });
+            // Past a few dozen metres a tree mesh is a card the renderer bakes of it, as cheap as its sprite.
+            if (grown.Mesh) _engine.Vegetation.SetLayerDetail(new VegetationLayerDetailRequest(_field!, layer,
+                new[] { VegetationLod.ImpostorOf(grown.Look, _tuning.TreeImpostorMetres) }, ImpostorBand, ReadOnlyMemory<VegetationThinningPoint>.Empty, 1));
         }
     }
 
-    /// <summary>A record's sprite as a layer grows it, the image it draws from, and its height, which sets its reach.</summary>
-    private sealed record Grown(VegetationSprite Sprite, RenderResource Image, float Height);
+    /// <summary>How far a tree mesh and its card overlap, dithered, as one gives way to the other.</summary>
+    private const float ImpostorBand = 6;
+    /// <summary>How far a tree's leaf cards circle in the wind at unit strength, times their vertex alpha.</summary>
+    private const float LeafFlutter = .06f;
+
+    /// <summary>A record as a layer grows it: what draws, what it holds, its height, which sets its reach, and whether it is a mesh.</summary>
+    private sealed record Grown(Appearance Look, IDisposable[] Owned, float Height, bool Mesh);
+
+    private Grown Sprite(DaggerfallFloraLook look)
+    {
+        RenderResource image = _engine.Graphics.OpenTexture(_engine.Content, look.Image.Path, look.Image.Sha256, TextureFilter.NearestMipmapped).Handle;
+        try
+        {
+            VegetationSprite sprite = new(_engine, new RenderResourceReference(image), look.UvMin, look.UvMax, look.Size, look.Pivot,
+                _flats.Flora(DaggerfallSiteAppearance.LitSprite), _flats.Nature);
+            return new(sprite.Look, [sprite, image], look.Size.Y, false);
+        }
+        catch
+        {
+            image.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>A record's tree mesh (<see cref="DaggerfallTreeMesh"/>): bark that bends with the trunk, and leaves that flutter too.</summary>
+    private Grown Tree(DaggerfallTreeArt tree, DaggerfallFloraLook look, uint layer)
+    {
+        List<IDisposable> owned = [];
+        try
+        {
+            RenderResource bark = _engine.Graphics.OpenTexture(_engine.Content, tree.Bark.Path, tree.Bark.Sha256, TextureFilter.Nearest, TextureWrap.Repeat).Handle;
+            owned.Add(bark);
+            RenderResource leaves = _engine.Graphics.OpenTexture(_engine.Content, tree.Leaves.Path, tree.Leaves.Sha256, TextureFilter.Nearest).Handle;
+            owned.Add(leaves);
+            Material barkMaterial = _engine.Graphics.CreateMaterial(new MaterialRequest(new Color(1, 1, 1, 1), new RenderResourceReference(bark), .95f,
+                new Color(1, 1, 1, 1), Vector3.Zero, 0, false) with { WindBend = _flats.FloraWindBend });
+            owned.Add(barkMaterial);
+            Material leafMaterial = _engine.Graphics.CreateMaterial(new MaterialRequest(new Color(1, 1, 1, 1), new RenderResourceReference(leaves), .9f,
+                new Color(1, 1, 1, 1), Vector3.Zero, 0, false) with
+            {
+                AlphaMode = MaterialAlphaMode.Mask, AlphaCutoff = .5f, WindBend = _flats.FloraWindBend, WindFlutter = LeafFlutter,
+            });
+            owned.Add(leafMaterial);
+            MeshResource mesh = _engine.Graphics.CreateMeshResource(DaggerfallTreeMesh.Build(tree, look.Size.Y, (int)layer, barkMaterial, leafMaterial));
+            owned.Add(mesh);
+            Appearance appearance = _engine.Graphics.CreateMeshAppearance(mesh);
+            owned.Add(appearance);
+            // Held last-made first, so the appearance goes before its mesh and the mesh before its materials.
+            owned.Reverse();
+            return new(appearance, [.. owned], look.Size.Y, true);
+        }
+        catch
+        {
+            owned.Reverse();
+            foreach (IDisposable held in owned) held.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>Grows records with tree meshes as the meshes, or as their sprites, for a developer to compare them.</summary>
+    internal void UseTreeMeshes(bool meshes)
+    {
+        if (_treeMeshes == meshes) return;
+        _treeMeshes = meshes;
+        Drop();
+    }
 
     /// <summary>What the field holds and draws, for looking at by eye.</summary>
     internal string Readout()

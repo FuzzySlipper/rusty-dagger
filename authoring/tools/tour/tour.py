@@ -20,8 +20,11 @@ A tour file is {"name": ..., "scenes": [scene, ...]}; a scene is
      "scout": "sand", "km": 20,        then the nearest open ground mostly of this kind (world.scout), optional
      "season": "Winter",               optional; the hour defaults to 12 and the weather to Sunny
      "pitch": -15, "yaw": 0,           degrees: the view's pitch, and its turn from the scene's arrival
-     "compare": {"flat": "none", "cover": "all"}}
-`compare` names world.groundcover settings to capture one after another; without it the scene takes one frame as it is.
+     "compare": {"flat": "none", "cover": "all"},
+     "reset": ["world.groundcover all"], "settle": 2}
+`compare` names settings to capture one after another, each a developer command or, for short, a world.groundcover
+setting, waiting `settle` seconds after each; `reset` runs after them (by default world.groundcover all). Without
+`compare` the scene takes one frame as it is.
 """
 import argparse, json, subprocess, sys, time, urllib.error, urllib.request
 from datetime import datetime
@@ -118,15 +121,16 @@ class Tour:
         self.settle()
         self.look(scene.get("yaw", 0), scene.get("pitch", -15))
         frames = []
-        for label, cover in (scene.get("compare") or {"": None}).items():
-            if cover:
-                said.append(self.debug(f"world.groundcover {cover}"))
-                time.sleep(2)
+        for label, setting in (scene.get("compare") or {"": None}).items():
+            if setting:
+                # A setting is a developer command, or a world.groundcover setting for short.
+                said.append(self.debug(setting if setting.startswith("world.") else f"world.groundcover {setting}"))
+                time.sleep(scene.get("settle", 2))
             path = out / f"{index:02d}-{slug(scene['name'])}{'-' + slug(label) if label else ''}.png"
             self.capture(path)
             frames.append({"label": label, "path": path.name})
-        if scene.get("compare"):
-            self.debug("world.groundcover all")
+        for command in scene.get("reset", ["world.groundcover all"] if scene.get("compare") else []):
+            self.debug(command)
         where = json.loads(self.debug("world.where"))
         print(f"{scene['name']}: {where.get('place')} {' | '.join(s[:90] for s in said)}", flush=True)
         name = f"{scene['name']} (NOT REACHED: {refused[:80]})" if refused else scene["name"]

@@ -18,10 +18,12 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="Reach">The farthest any record is drawn, inside near ground's own reach.</param>
 /// <param name="Fade">How far before its reach a record shrinks away, so the edge never pops.</param>
 /// <param name="SlopeLimitDegrees">The steepest ground anything grows on.</param>
+/// <param name="TreeMeshes">Whether a record with a refreshed tree mesh grows as the mesh rather than its sprite.</param>
+/// <param name="TreeImpostorMetres">How far from the eye a tree mesh gives way to a card the renderer bakes of it.</param>
 internal sealed record DaggerfallFloraTuning(float Density, IReadOnlyDictionary<string, float> ClimateDensity, float GrassChance, float DirtChance, float StoneChance, float DesertShare,
-    float ReachPerMetre, float Reach, float Fade, float SlopeLimitDegrees)
+    float ReachPerMetre, float Reach, float Fade, float SlopeLimitDegrees, bool TreeMeshes, float TreeImpostorMetres)
 {
-    internal static DaggerfallFloraTuning Default { get; } = new(3, new Dictionary<string, float>(), .9f, .2f, .05f, .25f, 400, 3_200, 600, 50);
+    internal static DaggerfallFloraTuning Default { get; } = new(3, new Dictionary<string, float>(), .9f, .2f, .05f, .25f, 400, 3_200, 600, 50, false, 60);
 
     internal DaggerfallFloraTuning Validate()
     {
@@ -32,6 +34,7 @@ internal sealed record DaggerfallFloraTuning(float Density, IReadOnlyDictionary<
         if (!float.IsFinite(ReachPerMetre) || ReachPerMetre <= 0 || !float.IsFinite(Reach) || Reach <= 0 || !float.IsFinite(Fade) || Fade < 0 || Fade > Reach)
             throw new ArgumentException("Flora reaches a positive distance and fades within it.");
         if (SlopeLimitDegrees is <= 0 or > 90) throw new ArgumentException("Flora grows on slopes up to some angle of 90 degrees or less.");
+        if (!float.IsFinite(TreeImpostorMetres) || TreeImpostorMetres <= 0) throw new ArgumentException("Tree meshes give way to their cards some distance out.");
         return this;
     }
 
@@ -59,5 +62,6 @@ internal sealed record DaggerfallFloraTuning(float Density, IReadOnlyDictionary<
         e.GetProperty("climateDensity").EnumerateObject().ToDictionary(climate => climate.Name, climate => climate.Value.GetSingle(), StringComparer.Ordinal),
         e.GetProperty("grassChance").GetSingle(), e.GetProperty("dirtChance").GetSingle(),
         e.GetProperty("stoneChance").GetSingle(), e.GetProperty("desertShare").GetSingle(), e.GetProperty("reachPerMetre").GetSingle(),
-        e.GetProperty("reach").GetSingle(), e.GetProperty("fade").GetSingle(), e.GetProperty("slopeLimitDegrees").GetSingle());
+        e.GetProperty("reach").GetSingle(), e.GetProperty("fade").GetSingle(), e.GetProperty("slopeLimitDegrees").GetSingle(),
+        e.GetProperty("treeMeshes").GetBoolean(), e.GetProperty("treeImpostorMetres").GetSingle());
 }

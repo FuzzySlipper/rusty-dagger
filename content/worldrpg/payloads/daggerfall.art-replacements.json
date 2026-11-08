@@ -90916,6 +90916,120 @@
      "sinksUnderSnow": true
     }
    }
+  },
+  "trees": {
+   "506-13": {
+    "form": "conifer",
+    "foot": 0.0,
+    "height": 1.0,
+    "crownBase": 0.1974,
+    "crownRadius": 0.2557,
+    "trunkRadius": 0.0324,
+    "cardSize": 0.1003,
+    "barkSize": [
+     0.0841,
+     0.2201
+    ],
+    "leaves": {
+     "path": "worldrpg/media/refreshed/trees/tree-506-13-leaves.png",
+     "byteLength": 21276,
+     "sha256": "fef1e71814de66502504868705a44f1ec52915abf544bd5aa8161b25436ebc2c",
+     "width": 124,
+     "height": 124,
+     "cells": 4
+    },
+    "bark": {
+     "path": "worldrpg/media/refreshed/trees/tree-506-13-bark.png",
+     "byteLength": 2106,
+     "sha256": "e61a0147c7ebe6eb30e85797fd2905ec556a9e3bbe5626f3d187319cae264f31",
+     "width": 26,
+     "height": 68
+    }
+   },
+   "506-30": {
+    "form": "conifer",
+    "foot": 0.0,
+    "height": 1.0,
+    "crownBase": 0.1607,
+    "crownRadius": 0.2754,
+    "trunkRadius": 0.0623,
+    "cardSize": 0.1082,
+    "barkSize": [
+     0.1508,
+     0.1574
+    ],
+    "leaves": {
+     "path": "worldrpg/media/refreshed/trees/tree-506-30-leaves.png",
+     "byteLength": 25648,
+     "sha256": "d8ff79c3776c5190543c86454e823a22f0ecc7bf8d73fb9c46066771314c804b",
+     "width": 132,
+     "height": 132,
+     "cells": 4
+    },
+    "bark": {
+     "path": "worldrpg/media/refreshed/trees/tree-506-30-bark.png",
+     "byteLength": 3070,
+     "sha256": "5792bde01805bf2f10e739c6a122c8d9be4967ea4a38287a7bb833255ed2efcf",
+     "width": 46,
+     "height": 48
+    }
+   },
+   "506-15": {
+    "form": "broadleaf",
+    "foot": 0.0,
+    "height": 1.0,
+    "crownBase": 0.3272,
+    "crownRadius": 0.3779,
+    "trunkRadius": 0.0346,
+    "cardSize": 0.1475,
+    "barkSize": [
+     0.0829,
+     0.4424
+    ],
+    "leaves": {
+     "path": "worldrpg/media/refreshed/trees/tree-506-15-leaves.png",
+     "byteLength": 24038,
+     "sha256": "e87424965167948494b9ac9ee7ae704740525bde901218a3256a45193f6ec527",
+     "width": 128,
+     "height": 128,
+     "cells": 4
+    },
+    "bark": {
+     "path": "worldrpg/media/refreshed/trees/tree-506-15-bark.png",
+     "byteLength": 3318,
+     "sha256": "bdc8e9dd5572ef401c7f813dafb7122bcc33379bd54dac8a7bdbb5a9d10bb432",
+     "width": 18,
+     "height": 96
+    }
+   },
+   "506-16": {
+    "form": "broadleaf",
+    "foot": 0.0,
+    "height": 0.993,
+    "crownBase": 0.4021,
+    "crownRadius": 0.4371,
+    "trunkRadius": 0.0332,
+    "cardSize": 0.1748,
+    "barkSize": [
+     0.0769,
+     0.5664
+    ],
+    "leaves": {
+     "path": "worldrpg/media/refreshed/trees/tree-506-16-leaves.png",
+     "byteLength": 52421,
+     "sha256": "8c678f1df18af6de772ab4541e4e522c535fdb1880e2d445b84a89ce6b1e9d28",
+     "width": 200,
+     "height": 200,
+     "cells": 4
+    },
+    "bark": {
+     "path": "worldrpg/media/refreshed/trees/tree-506-16-bark.png",
+     "byteLength": 3288,
+     "sha256": "c8ae5b06d90424ff6022cf01c825cae9eee5545f02e530255f97d23606440c5f",
+     "width": 22,
+     "height": 162
+    }
+   }
   }
  }
 }

@@ -945,7 +945,8 @@ public sealed class PublishedContentDeliveryTests
             .. flats, .. flats.Where(flat => flat.TryGetProperty("emission", out _)).Select(flat => flat.GetProperty("emission")),
             .. people.DistinctBy(person => person.GetProperty("path").GetString()),
             .. new[] { "shell", "shader", "tuft" }.Select(file => section.GetProperty("groundCover").GetProperty(file)),
-            .. section.GetProperty("groundCover").GetProperty("relief").EnumerateObject().Select(relief => relief.Value)];
+            .. section.GetProperty("groundCover").GetProperty("relief").EnumerateObject().Select(relief => relief.Value),
+            .. section.GetProperty("trees").EnumerateObject().SelectMany(tree => new[] { tree.Value.GetProperty("bark"), tree.Value.GetProperty("leaves") })];
         foreach (JsonElement file in files)
         {
             byte[] bytes = content.ReadBytes(file.GetProperty("path").GetString()!).ToArray();

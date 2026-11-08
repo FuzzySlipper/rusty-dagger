@@ -349,7 +349,10 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
 
         DaggerfallArtRect rect = art.Frames[frame];
         (Vector2 size, Vector2 pivot) = art.Placed(sprite.Size, NatureFoot);
-        return new(art.File, Uv(rect.X, rect.Y, art.Width, art.Height), Uv(rect.X + rect.Width, rect.Y + rect.Height, art.Width, art.Height), size, pivot);
+        return new(art.File, Uv(rect.X, rect.Y, art.Width, art.Height), Uv(rect.X + rect.Width, rect.Y + rect.Height, art.Width, art.Height), size, pivot)
+        {
+            Tree = _art.Trees.GetValueOrDefault((archive, record)),
+        };
     }
 
     private static Vector2 Uv(double x, double y, int width, int height) => new((float)(x / width), (float)(y / height));
@@ -428,4 +431,8 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
 }
 
 /// <summary>One nature record as the flora field draws it: an image, the frame's corners in it (0 to 1, top-down), and its world size and pivot.</summary>
-internal sealed record DaggerfallFloraLook(DaggerfallArtFile Image, Vector2 UvMin, Vector2 UvMax, Vector2 Size, Vector2 Pivot);
+internal sealed record DaggerfallFloraLook(DaggerfallArtFile Image, Vector2 UvMin, Vector2 UvMax, Vector2 Size, Vector2 Pivot)
+{
+    /// <summary>The tree mesh that may stand in for the sprite, where the refreshed set has one.</summary>
+    internal DaggerfallTreeArt? Tree { get; init; }
+}

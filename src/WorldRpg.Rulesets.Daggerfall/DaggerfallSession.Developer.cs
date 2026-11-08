@@ -259,6 +259,13 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
         return DebugCommandResult.Success(_horizon.Readout());
     }
 
+    public DebugCommandResult Trees(string kind)
+    {
+        if (kind is not ("mesh" or "sprite")) return Refused("Trees grow as mesh or sprite.");
+        _horizon.UseTreeMeshes(kind == "mesh");
+        return DebugCommandResult.Success($"Trees grow as {kind}s.");
+    }
+
     public DebugCommandResult GroundCover(string kinds)
     {
         if (_horizon.GroundCover is not { } cover) return Refused("Ground cover draws outdoors in refreshed art.");

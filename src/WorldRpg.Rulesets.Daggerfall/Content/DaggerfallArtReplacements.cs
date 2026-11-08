@@ -70,6 +70,15 @@ internal sealed record DaggerfallGroundCoverArt(DaggerfallArtFile Shell, int She
     IReadOnlyDictionary<int, (Vector3 Shells, Vector3 Tufts)> Grass, IReadOnlyDictionary<(int Archive, int Record), DaggerfallGroundRelief> Relief);
 
 /// <summary>
+/// A refreshed tree mesh standing in for a flora sprite: its form (a conifer's whorled branches or a broadleaf's forked
+/// crown) and its measures, each a share of the sprite's frame height (where its foot stands above the frame's bottom, its
+/// drawn height, its crown's base and radius, its trunk's radius and a leaf card's size); its bark, and the bark tile's
+/// size across and up; and its leaves, an atlas of <see cref="LeafCells"/> by <see cref="LeafCells"/> pieces of the crown.
+/// </summary>
+internal sealed record DaggerfallTreeArt(string Form, float Foot, float Height, float CrownBase, float CrownRadius, float TrunkRadius, float CardSize,
+    Vector2 BarkSize, DaggerfallArtFile Bark, DaggerfallArtFile Leaves, int LeafCells);
+
+/// <summary>
 /// A ground layer's relief: its own texture, whose alpha is each texel's height as a share of the shell stack; the tallest
 /// texel's share, so the stack draws only the layers it reaches; its texels a side; how far its top sways in the wind, as a
 /// share of the shells' sway; the linear colour its lowest layer is shaded to, rising to its own at the top; what share of
@@ -143,6 +152,9 @@ internal sealed class DaggerfallArtReplacements
     /// <summary>The refreshed grass that covers open ground near the player, when the set has it.</summary>
     internal DaggerfallGroundCoverArt? GroundCover { get; private init; }
 
+    /// <summary>The tree meshes standing in for flora sprites, by nature archive and record.</summary>
+    internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallTreeArt> Trees { get; private init; } = new Dictionary<(int, int), DaggerfallTreeArt>();
+
     /// <summary>The refreshed surface textures, by the classic texture archive and record each replaces.</summary>
     internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtSurface> Surfaces { get; }
 
@@ -199,6 +211,7 @@ internal sealed class DaggerfallArtReplacements
         Dictionary<string, DaggerfallEffectArt> effects = new(StringComparer.Ordinal);
         DaggerfallArtFile? glow = null;
         DaggerfallGroundCoverArt? groundCover = null;
+        Dictionary<(int, int), DaggerfallTreeArt> trees = [];
         Dictionary<(int Archive, int Record), DaggerfallArtMesh> meshes = [];
         Dictionary<(int Archive, int Record), DaggerfallArtSurface> surfaces = [];
         Dictionary<(int Archive, int Record), DaggerfallArtFlat> flats = [], people = [];
@@ -310,6 +323,20 @@ internal sealed class DaggerfallArtReplacements
                             DaggerfallContentHash.Parse(flat.GetProperty("sha256").GetString()!, $"The refreshed flat for {replaces.Item1}/{replaces.Item2}")), width, height, frames, classic, emission)))
                         throw new InvalidOperationException($"Content pack '{packId}' names two flats for {replaces.Item1}/{replaces.Item2}.");
                 }
+            if (section.TryGetProperty("trees", out JsonElement treeArt))
+                foreach (JsonProperty tree in treeArt.EnumerateObject())
+                {
+                    string[] key = tree.Name.Split('-');
+                    JsonElement t = tree.Value, barkSize = t.GetProperty("barkSize"), leaves = t.GetProperty("leaves");
+                    string form = t.GetProperty("form").GetString()!;
+                    if (key.Length != 2 || form is not ("conifer" or "broadleaf"))
+                        throw new InvalidOperationException($"Content pack '{packId}' states tree '{tree.Name}' without an archive, record and form.");
+                    trees.Add((int.Parse(key[0], System.Globalization.CultureInfo.InvariantCulture), int.Parse(key[1], System.Globalization.CultureInfo.InvariantCulture)),
+                        new(form, t.GetProperty("foot").GetSingle(), t.GetProperty("height").GetSingle(), t.GetProperty("crownBase").GetSingle(),
+                            t.GetProperty("crownRadius").GetSingle(), t.GetProperty("trunkRadius").GetSingle(), t.GetProperty("cardSize").GetSingle(),
+                            new(barkSize[0].GetSingle(), barkSize[1].GetSingle()), File(t.GetProperty("bark"), $"Tree {tree.Name}'s bark"),
+                            File(leaves, $"Tree {tree.Name}'s leaves"), leaves.GetProperty("cells").GetInt32()));
+                }
             if (section.TryGetProperty("groundCover", out JsonElement cover))
             {
                 JsonElement shell = cover.GetProperty("shell"), tuft = cover.GetProperty("tuft");
@@ -344,7 +371,7 @@ internal sealed class DaggerfallArtReplacements
             throw new InvalidOperationException($"Content pack '{packId}' carries an unreadable artReplacements section: {exception.Message}", exception);
         }
 
-        return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, flats, people) { GroundCover = groundCover };
+        return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, flats, people) { GroundCover = groundCover, Trees = trees };
 
         DaggerfallArtWorldImage? World(JsonElement owner, string mediaId)
         {
