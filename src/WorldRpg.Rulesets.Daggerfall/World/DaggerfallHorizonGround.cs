@@ -229,14 +229,21 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     /// </summary>
     internal double[] WalkedGrid(double originX, double originZ, double cellSize, int side) => WalkedHeights(originX, originZ, cellSize, side);
 
-    /// <summary>How much of open ground is grass by its look, none on a beach or bank, under snow or in a location's clearing.</summary>
-    internal float GrassCover(double x, double z, double height, float slope, bool winter)
+    /// <summary>
+    /// Open ground's look at a point: its ground archive, its layers' weights (grass, dirt, rock, and snow or a swamp's
+    /// lush ground), and whether the last is lush ground. None on a beach or bank, or in a location's clearing.
+    /// </summary>
+    internal (int Archive, System.Numerics.Vector4 Weights, bool Lush)? OpenLook(double x, double z, double height, float slope, bool winter)
     {
-        if (height <= OceanMetres + BeachMetres || OnBank(x, z) || InClearing(x, z)) return 0;
-        (int vertexX, int vertexZ) = ((int)Math.Round(x / Spacing), (int)Math.Round(z / Spacing));
-        float noise = DaggerfallTerrainSurfaceBuilder.DonorTerrainWeight(vertexX, 64_000 - vertexZ);
-        return DaggerfallGroundBlend.Weights(_groundTuning, noise, slope, (float)height, Archive(x, z, winter, Materials).NoiseStone).X;
+        if (height <= OceanMetres + BeachMetres || OnBank(x, z) || InClearing(x, z)) return null;
+        int archive = GroundArchive(x, z, winter);
+        ArchiveMaterials materials = Materials.Archives[archive];
+        Paint paint = PaintOpen(x, z, height, slope, winter, Materials);
+        return (archive, paint.Weights, materials.HasLush && paint.Material == materials.Lush);
     }
+
+    /// <summary>How much of open ground is grass by its look, none on a beach or bank, under snow or in a location's clearing.</summary>
+    internal float GrassCover(double x, double z, double height, float slope, bool winter) => OpenLook(x, z, height, slope, winter)?.Weights.X ?? 0;
 
     /// <summary>
     /// How much of the donor's chance a point of open ground keeps: by its look, grass, dirt and rock at their chances and

@@ -90626,8 +90626,8 @@
    },
    "tuft": {
     "path": "worldrpg/media/refreshed/groundcover/tuft.png",
-    "byteLength": 930,
-    "sha256": "9999d7fa63b2ee0fe7e0f63437f1331517d1beff1a83e0446f56511cde486e8d",
+    "byteLength": 968,
+    "sha256": "a97e6c6ea4f2758dac81504f325fb7968ad027d6ac4a97110830d4c7ad52a6d7",
     "width": 32,
     "height": 32
    },
@@ -90644,9 +90644,9 @@
       0.0675
      ],
      "tufts": [
-      0.091,
-      0.111,
-      0.0604
+      0.0591,
+      0.0721,
+      0.0392
      ]
     },
     "302": {
@@ -90656,9 +90656,9 @@
       0.0558
      ],
      "tufts": [
-      0.0725,
-      0.1492,
-      0.0499
+      0.0471,
+      0.0969,
+      0.0324
      ]
     },
     "402": {
@@ -90668,10 +90668,120 @@
       0.0473
      ],
      "tufts": [
-      0.116,
-      0.0919,
-      0.0423
+      0.0753,
+      0.0597,
+      0.0275
      ]
+    }
+   },
+   "relief": {
+    "102-1": {
+     "path": "worldrpg/media/refreshed/groundcover/relief-102-1.png",
+     "byteLength": 45865,
+     "sha256": "304e2b452852d01b513d79abf35d0705180b8150ce7305c60c4c0b3aaa5e55f0",
+     "width": 128,
+     "height": 0.5961,
+     "kind": "clods",
+     "sways": false
+    },
+    "302-1": {
+     "path": "worldrpg/media/refreshed/groundcover/relief-302-1.png",
+     "byteLength": 38296,
+     "sha256": "5409ce571014b27045f9f6c4274ea6301bc061bc08a3cdcdf2ccb9ccfc6a3729",
+     "width": 128,
+     "height": 0.4431,
+     "kind": "clods",
+     "sways": false
+    },
+    "402-1": {
+     "path": "worldrpg/media/refreshed/groundcover/relief-402-1.png",
+     "byteLength": 48870,
+     "sha256": "3bb2edf0ffe7bfd4afa24a8663d49cf346a2faaea2cf3b8e05f10afa63da346c",
+     "width": 128,
+     "height": 0.5961,
+     "kind": "clods",
+     "sways": false
+    },
+    "102-3": {
+     "path": "worldrpg/media/refreshed/groundcover/relief-102-3.png",
+     "byteLength": 43719,
+     "sha256": "1f93a3963953f9220d36beb8816c28a77579f78b4f3b917b69748e8047883071",
+     "width": 128,
+     "height": 0.349,
+     "kind": "stones",
+     "sways": false
+    },
+    "302-3": {
+     "path": "worldrpg/media/refreshed/groundcover/relief-302-3.png",
+     "byteLength": 44537,
+     "sha256": "342086f1a8d38e73028db80be46f4b54536ad5ffec1c93ffe9029ee1c88f35a4",
+     "width": 128,
+     "height": 0.3529,
+     "kind": "stones",
+     "sways": false
+    },
+    "2-1": {
+     "path": "worldrpg/media/refreshed/groundcover/relief-002-1.png",
+     "byteLength": 38088,
+     "sha256": "36af3bd264ef00ea150a06edeb417fb54fc55095f821d3083d44ad91717ec0e1",
+     "width": 128,
+     "height": 0.5137,
+     "kind": "sand",
+     "sways": false
+    },
+    "2-2": {
+     "path": "worldrpg/media/refreshed/groundcover/relief-002-2.png",
+     "byteLength": 48666,
+     "sha256": "41d31a4fdec4ebc3c97990a610d3c3d1dec7a572d6245ae2ec2c75996ebbb22d",
+     "width": 128,
+     "height": 0.5098,
+     "kind": "sand",
+     "sways": false
+    },
+    "2-3": {
+     "path": "worldrpg/media/refreshed/groundcover/relief-002-3.png",
+     "byteLength": 41284,
+     "sha256": "0376a089f40d1262c5e6b32138dfaf5e865864a59c10f7f0a9be7f02a5c50487",
+     "width": 128,
+     "height": 0.5569,
+     "kind": "sand",
+     "sways": false
+    },
+    "103-2": {
+     "path": "worldrpg/media/refreshed/groundcover/relief-103-2.png",
+     "byteLength": 25967,
+     "sha256": "6d667f6eab0ba6325988fb3bc1f32f5cd620437a30b28b91a2a3c035c4c3d196",
+     "width": 128,
+     "height": 0.4353,
+     "kind": "snow",
+     "sways": false
+    },
+    "303-2": {
+     "path": "worldrpg/media/refreshed/groundcover/relief-303-2.png",
+     "byteLength": 25037,
+     "sha256": "144e16f811184845f3f6bdc67f0aa9f1a1165656e243835033f7968bfefb1f41",
+     "width": 128,
+     "height": 0.4118,
+     "kind": "snow",
+     "sways": false
+    },
+    "403-2": {
+     "path": "worldrpg/media/refreshed/groundcover/relief-403-2.png",
+     "byteLength": 27888,
+     "sha256": "3bda4210d9325506e110fc87f4ad19f4234da7da198aa095c8030f01b367e28e",
+     "width": 128,
+     "height": 0.4353,
+     "kind": "snow",
+     "sways": false
+    },
+    "402-3": {
+     "path": "worldrpg/media/refreshed/groundcover/relief-402-3.png",
+     "byteLength": 41912,
+     "sha256": "710f91b63078f78fee98479c5285d523e2be47eb1728e3a6803d8986d3087fe6",
+     "width": 128,
+     "height": 0.8196,
+     "kind": "lush",
+     "sways": true
     }
    }
   }

@@ -8,6 +8,7 @@ using Rusty.Engine;
 using WorldRpg.Host;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
+using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -786,9 +787,11 @@ public sealed class PublishedContentDeliveryTests
     /// <summary>
     /// The refreshed ground cover ships its shells' texture, their shader and a tuft at the bytes it states, and grass
     /// colours for the temperate, mountain and swamp summers alone: the deserts' sand and the winters' snow grow none.
+    /// Every other open ground layer of those climates, the desert's and the snow its winters wear has relief, and each
+    /// relief texture is as many texels a side as its layer's own ground texture, so it lies on the ground it lifts.
     /// </summary>
     [Fact]
-    public void Refreshed_ground_cover_ships_its_files_and_grass_for_the_green_summers_alone()
+    public void Refreshed_ground_cover_ships_its_files_grass_for_the_green_summers_alone_and_relief_for_open_ground()
     {
         ProductContent content = AdmittedContent();
         const string payloadPath = "worldrpg/payloads/daggerfall.art-replacements.json";
@@ -799,6 +802,17 @@ public sealed class PublishedContentDeliveryTests
         Assert.True(cover.ShellTexels > 0 && cover.ShellTexelsPerMetre > 0);
         Assert.Equal([102, 302, 402], cover.Grass.Keys.Order());
         Assert.All(cover.Grass.Values, grass => Assert.True(grass.Shells.Y > grass.Shells.Z && grass.Tufts.Y > grass.Tufts.Z, "Grass is greener than it is blue."));
+
+        DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(content.ReadBytes(payloadPath), "daggerfall.art-replacements");
+        (int, int)[] open = [.. new[] { 2, 102, 302, 402 }.SelectMany(archive => DaggerfallGroundLayers.Records(archive).Take(archive == 402 ? 5 : 4)
+            .Where((_, layer) => layer > 0 || !cover.Grass.ContainsKey(archive)))
+            .Distinct()];
+        Assert.Equal(open.Order(), cover.Relief.Keys.Order());
+        foreach (((int archive, int record), DaggerfallGroundRelief relief) in cover.Relief)
+        {
+            Assert.True(relief.Height is > 0 and <= 1);
+            Assert.Equal(art.Surfaces[(archive, record)].Width, relief.Texels);
+        }
     }
 
     [Fact]
@@ -930,7 +944,8 @@ public sealed class PublishedContentDeliveryTests
             .. section.GetProperty("meshes").EnumerateArray().DistinctBy(mesh => mesh.GetProperty("path").GetString()), .. surfaces,
             .. flats, .. flats.Where(flat => flat.TryGetProperty("emission", out _)).Select(flat => flat.GetProperty("emission")),
             .. people.DistinctBy(person => person.GetProperty("path").GetString()),
-            .. new[] { "shell", "shader", "tuft" }.Select(file => section.GetProperty("groundCover").GetProperty(file))];
+            .. new[] { "shell", "shader", "tuft" }.Select(file => section.GetProperty("groundCover").GetProperty(file)),
+            .. section.GetProperty("groundCover").GetProperty("relief").EnumerateObject().Select(relief => relief.Value)];
         foreach (JsonElement file in files)
         {
             byte[] bytes = content.ReadBytes(file.GetProperty("path").GetString()!).ToArray();

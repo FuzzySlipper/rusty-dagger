@@ -211,9 +211,11 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
     public DebugCommandResult GroundCover(string kinds)
     {
         if (_horizon.GroundCover is not { } cover) return Refused("Ground cover draws outdoors in refreshed art.");
-        if (kinds is not ("shells" or "tufts" or "both" or "none")) return Refused("Ground cover is shells, tufts, both or none.");
-        cover.Shells = kinds is "shells" or "both";
-        cover.Tufts = kinds is "tufts" or "both";
+        string[] named = kinds.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (named.Length == 0 || named.Any(kind => kind is not ("grass" or "relief" or "tufts" or "all" or "none")))
+            return Refused("Ground cover is grass, relief and tufts, separated by commas, or all or none.");
+        bool all = named.Contains("all");
+        cover.Show(all || named.Contains("grass"), all || named.Contains("relief"), all || named.Contains("tufts"));
         return DebugCommandResult.Success($"Ground cover: {kinds}.");
     }
 

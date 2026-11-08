@@ -131,6 +131,6 @@ public sealed class DeveloperWorldDebugModule(Func<IDeveloperWorldSession> curre
     [DebugCommand("world.flora", Description = "Developer: grow flora at DENSITY times the ruleset's base count for this run, each climate keeping its share.")]
     public DebugCommandResult Flora(double density) => current().Flora(density);
 
-    [DebugCommand("world.groundcover", Description = "Developer: draw ground cover as KINDS for this run: shells, tufts, both or none.")]
+    [DebugCommand("world.groundcover", Description = "Developer: draw only these KINDS of ground cover for this run: grass, relief and tufts, separated by commas, or all or none.")]
     public DebugCommandResult GroundCover(string kinds) => current().GroundCover(kinds);
 }

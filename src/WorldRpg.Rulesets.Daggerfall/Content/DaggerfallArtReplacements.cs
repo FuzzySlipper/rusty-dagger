@@ -63,10 +63,17 @@ internal sealed record DaggerfallArtSurface(DaggerfallArtFile File, int Width, i
 /// <summary>
 /// The refreshed ground cover: a tileable shell texture whose alpha is each texel's blade height, this many texels square and
 /// drawn this many to the metre, the shader that sways the shells, and a grass tuft, both images greyscale; and each ground archive's grass, the
-/// linear tints that colour the shells and the tufts there. An archive the set names no grass for grows no cover.
+/// linear tints that colour the shells and the tufts there. An archive the set names no grass for grows no grass. Each
+/// open ground layer's relief, by the ground archive and record it lifts, is that layer's own texture with its heights.
 /// </summary>
 internal sealed record DaggerfallGroundCoverArt(DaggerfallArtFile Shell, int ShellTexels, float ShellTexelsPerMetre, DaggerfallArtFile Shader, DaggerfallArtFile Tuft,
-    IReadOnlyDictionary<int, (Vector3 Shells, Vector3 Tufts)> Grass);
+    IReadOnlyDictionary<int, (Vector3 Shells, Vector3 Tufts)> Grass, IReadOnlyDictionary<(int Archive, int Record), DaggerfallGroundRelief> Relief);
+
+/// <summary>
+/// A ground layer's relief: its own texture, whose alpha is each texel's height as a share of the shell stack; the tallest
+/// texel's share, so the stack draws only the layers it reaches; its texels a side; and whether it sways in the wind, as tall grass does.
+/// </summary>
+internal sealed record DaggerfallGroundRelief(DaggerfallArtFile File, float Height, int Texels, bool Sways);
 
 /// <summary>
 /// A refreshed world billboard standing in for one classic texture record: a PNG atlas of its frames in classic order, each
@@ -314,8 +321,18 @@ internal sealed class DaggerfallArtReplacements
                 foreach (JsonProperty archive in cover.GetProperty("grass").EnumerateObject())
                     grass.Add(int.Parse(archive.Name, System.Globalization.CultureInfo.InvariantCulture),
                         (Tint(archive.Value.GetProperty("shells")), Tint(archive.Value.GetProperty("tufts"))));
+                Dictionary<(int, int), DaggerfallGroundRelief> relief = [];
+                foreach (JsonProperty layer in cover.GetProperty("relief").EnumerateObject())
+                {
+                    string[] key = layer.Name.Split('-');
+                    float height = layer.Value.GetProperty("height").GetSingle();
+                    if (key.Length != 2 || !float.IsFinite(height) || height is <= 0 or > 1)
+                        throw new InvalidOperationException($"Content pack '{packId}' states ground relief '{layer.Name}' without an archive, record and height.");
+                    relief.Add((int.Parse(key[0], System.Globalization.CultureInfo.InvariantCulture), int.Parse(key[1], System.Globalization.CultureInfo.InvariantCulture)),
+                        new(File(layer.Value, $"The ground relief {layer.Name}"), height, layer.Value.GetProperty("width").GetInt32(), layer.Value.GetProperty("sways").GetBoolean()));
+                }
                 groundCover = new(File(shell, "The ground cover's shell texture"), side, texels, File(cover.GetProperty("shader"), "The ground cover's shader"),
-                    File(tuft, "The ground cover's tuft"), grass);
+                    File(tuft, "The ground cover's tuft"), grass, relief);
             }
         }
         catch (Exception exception) when (exception is JsonException or KeyNotFoundException or FormatException)

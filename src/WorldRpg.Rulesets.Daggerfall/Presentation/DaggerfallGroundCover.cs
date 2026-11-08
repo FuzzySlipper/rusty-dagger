@@ -17,7 +17,11 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// <item><b>Tufts:</b> three crossed quads of pixel grass, a flora layer for each climate's nature archive in its grass
 /// colour, their tips fluttering in the wind.</item>
 /// </list>
-/// The art set's ground cover (<see cref="DaggerfallGroundCoverArt"/>) holds the images, the shader and each archive's grass.
+/// Every other layer of open ground (dirt, rock, sand, snow, a swamp's lush ground) rises in relief by the same shells: a
+/// stack of its own texture, laid on the ground's texels exactly, cut out by each texel's height, thinned by the layer's
+/// weight. The ground itself seems to stand up in pixels: clods, pebbles, ripples, drifts.
+/// The art set's ground cover (<see cref="DaggerfallGroundCoverArt"/>) holds the images, the shader, each archive's grass
+/// and each layer's relief.
 /// </summary>
 internal sealed class DaggerfallGroundCover : IDisposable
 {
@@ -27,6 +31,8 @@ internal sealed class DaggerfallGroundCover : IDisposable
     private const int Rebuild = 2;
     /// <summary>The lowest layer's brightness, rising to full at the top: the blades darken toward their roots.</summary>
     private const float Floor = .55f;
+    /// <summary>Relief's lowest layer's brightness: the ground's own colours, a little shaded at their foot.</summary>
+    private const float ReliefFloor = .6f;
     /// <summary>How fast the shells' gusts rise and fall.</summary>
     private const float GustRate = 1.3f;
     /// <summary>The texture's place on the map wraps this many metres, so its coordinates keep their precision.</summary>
@@ -47,6 +53,8 @@ internal sealed class DaggerfallGroundCover : IDisposable
     private readonly RenderResource _shellImage;
     private readonly RenderResource _shader;
     private readonly Material[] _shellMaterials;
+    private readonly float _groundRepeat;
+    private readonly Dictionary<(int Archive, int Record), (RenderResource Image, Material[] Layers)> _relief = [];
     private readonly RenderResource _tuftImage;
     private readonly Material _tuftMaterial;
     private readonly MeshResource _tuftMesh;
@@ -56,10 +64,12 @@ internal sealed class DaggerfallGroundCover : IDisposable
     private (long X, long Z, (int, int) Frame, bool Winter)? _built;
     private bool _tufting;
 
+    /// <param name="groundRepeat">How far a ground texture spans before it repeats, which relief matches.</param>
     /// <param name="tuftGrounds">Each summer nature archive's ground archive, whose grass its tufts wear (<see cref="TuftGrounds"/>).</param>
     internal DaggerfallGroundCover(IEngineContext engine, DaggerfallHorizonGround ground, DaggerfallFloraField flora, DaggerfallGroundCoverArt art,
-        DaggerfallGroundCoverTuning tuning, IReadOnlyDictionary<int, int> tuftGrounds)
+        DaggerfallGroundCoverTuning tuning, IReadOnlyDictionary<int, int> tuftGrounds, float groundRepeat)
     {
+        _groundRepeat = groundRepeat;
         _engine = engine;
         _ground = ground;
         _flora = flora;
@@ -106,9 +116,17 @@ internal sealed class DaggerfallGroundCover : IDisposable
     /// <summary>A nature archive's tuft layer in the flora field.</summary>
     internal static uint TuftLayer(int natureArchive) => TuftLayerBase + (uint)(natureArchive - DaggerfallExteriorEnvironment.FirstNatureArchive);
 
-    /// <summary>Which ways draw, which a developer may change for a run to compare them.</summary>
-    internal bool Shells { get; set; } = true;
-    internal bool Tufts { get; set; } = true;
+    private bool _grass = true, _reliefShown = true;
+
+    /// <summary>Whether tufts draw, which a developer may change for a run to compare them.</summary>
+    internal bool Tufts { get; private set; } = true;
+
+    /// <summary>Draws only these kinds of cover, which a developer may choose for a run to compare them.</summary>
+    internal void Show(bool grass, bool relief, bool tufts)
+    {
+        (_grass, _reliefShown, Tufts) = (grass, relief, tufts);
+        Retire();
+    }
 
     /// <summary>Grows the cover about a player at map point (x, z) in near ground's frame at <paramref name="origin"/>.</summary>
     internal void Show(DaggerfallExteriorWorldOrigin origin, double x, double z, bool winter)
@@ -126,7 +144,7 @@ internal sealed class DaggerfallGroundCover : IDisposable
             }
         }
 
-        if (!Shells)
+        if (!_grass && !_reliefShown)
         {
             Retire();
             return;
@@ -138,11 +156,14 @@ internal sealed class DaggerfallGroundCover : IDisposable
             && Math.Abs(built.X - cellX) < Rebuild && Math.Abs(built.Z - cellZ) < Rebuild) return;
         Retire();
         double centreX = cellX * Cell, centreZ = cellZ * Cell;
-        MeshResource mesh = _engine.Graphics.CreateMeshResource(ShellMesh(centreX, centreZ, winter));
+        _built = (cellX, cellZ, frame, winter);
+        // Ground with nothing to lift, a town's or the sea's, stands no shells.
+        MeshResourceCreateRequest request = ShellMesh(centreX, centreZ, winter);
+        if (request.Groups.Length == 0) return;
+        MeshResource mesh = _engine.Graphics.CreateMeshResource(request);
         Appearance look = _engine.Graphics.CreateMeshAppearance(mesh);
         double offsetX = origin.MapPixelX * DaggerfallExteriorCellResidency.CellSize, offsetZ = origin.MapPixelY * DaggerfallExteriorCellResidency.CellSize;
         _shells = (mesh, look, new Vector3((float)(centreX - offsetX), 0, (float)(centreZ - offsetZ)) + origin.Compensation);
-        _built = (cellX, cellZ, frame, winter);
     }
 
     /// <summary>Takes the shells down, outdoors left behind; the tufts go with the flora field.</summary>
@@ -175,21 +196,20 @@ internal sealed class DaggerfallGroundCover : IDisposable
     }
 
     /// <summary>
-    /// The shells over a square of near ground's finest vertices about (x, z): each layer a lattice lifted above the
-    /// ground, split on the diagonal near ground splits on. A vertex carries its layer's brightness in its archive's grass
-    /// colour, and as alpha the grass's share of the ground there, fading over the last of the reach.
+    /// The shells over a square of near ground's finest vertices about (x, z): a stack for the grass and one for each
+    /// layer's relief found there, each layer a lattice lifted above the ground, split on the diagonal near ground splits
+    /// on. A vertex carries its layer's brightness (in its archive's grass colour, for grass) and as alpha its layer's
+    /// share of the ground there, fading over the last of the reach. A stack draws only the triangles its texels reach.
     /// </summary>
     internal MeshResourceCreateRequest ShellMesh(double centreX, double centreZ, bool winter)
     {
-        int cells = _cells, side = (cells * 2) + 1, heightSide = side + 2, layers = _tuning.ShellLayers, count = side * side;
+        int cells = _cells, side = (cells * 2) + 1, heightSide = side + 2, count = side * side;
         double cornerX = centreX - (cells * Cell), cornerZ = centreZ - (cells * Cell);
         double[] ground = _ground.WalkedGrid(cornerX, cornerZ, Cell, side);
         double At(int i, int j) => ground[((j + 1) * heightSide) + i + 1];
-        Vector3[] positions = new Vector3[count * layers], normals = new Vector3[count * layers];
-        Vector2[] uvs = new Vector2[count * layers];
-        Color[] colours = new Color[count * layers];
-        Vector3[] up = new Vector3[count], grass = new Vector3[count];
-        float[] cover = new float[count];
+        Vector3[] up = new Vector3[count];
+        Stack grass = new(_shellMaterials, 1, Floor, false, count);
+        Dictionary<(int, int), Stack> relief = [];
         for (int j = 0; j < side; j++)
         for (int i = 0; i < side; i++)
         {
@@ -197,52 +217,117 @@ internal sealed class DaggerfallGroundCover : IDisposable
             double x = cornerX + (i * Cell), z = cornerZ + (j * Cell), height = At(i, j);
             double slopeX = (At(i + 1, j) - At(i - 1, j)) / (2 * Cell), slopeZ = (At(i, j + 1) - At(i, j - 1)) / (2 * Cell);
             up[vertex] = Vector3.Normalize(new Vector3((float)-slopeX, 1, (float)-slopeZ));
-            if (!_art.Grass.TryGetValue(_ground.GroundArchive(x, z, winter), out (Vector3 Shells, Vector3 Tufts) colour)) continue;
+            if (_ground.OpenLook(x, z, height, (float)Math.Sqrt((slopeX * slopeX) + (slopeZ * slopeZ)), winter) is not { } look) continue;
             double away = Math.Sqrt(((i - cells) * (i - cells)) + ((j - cells) * (j - cells))) * Cell;
             float fade = (float)Math.Clamp((_tuning.ShellReach - away) / Math.Max(_tuning.ShellFade, 1e-3), 0, 1);
-            cover[vertex] = _ground.GrassCover(x, z, height, (float)Math.Sqrt((slopeX * slopeX) + (slopeZ * slopeZ)), winter) * fade;
-            grass[vertex] = colour.Shells;
-        }
-
-        double repeat = _art.ShellTexels / _art.ShellTexelsPerMetre;
-        for (int layer = 0; layer < layers; layer++)
-        {
-            float brightness = Floor + ((1 - Floor) * layer / (layers - 1f));
-            for (int j = 0; j < side; j++)
-            for (int i = 0; i < side; i++)
+            (int Archive, int Record)[] records = DaggerfallGroundLayers.Records(look.Archive);
+            for (int layer = 0; layer < 4; layer++)
             {
-                int vertex = (j * side) + i, at = (layer * count) + vertex;
-                double x = cornerX + (i * Cell), z = cornerZ + (j * Cell);
-                positions[at] = new Vector3((float)((i - cells) * Cell), (float)At(i, j) + _tuning.ShellLift + (layer * _tuning.ShellGap), (float)((j - cells) * Cell));
-                normals[at] = up[vertex];
-                // The texture lies on the map, so it runs on unchanged as the shells are made again.
-                uvs[at] = new Vector2((float)(Wrap(x) / repeat), (float)(Wrap(z) / repeat));
-                Vector3 tint = grass[vertex] * brightness;
-                colours[at] = new Color(tint.X, tint.Y, tint.Z, cover[vertex]);
+                float weight = look.Weights[layer] * fade;
+                if (weight <= 0) continue;
+                if (layer == 0 && _art.Grass.TryGetValue(look.Archive, out (Vector3 Shells, Vector3 Tufts) colour))
+                {
+                    if (!_grass) continue;
+                    grass.Cover[vertex] += weight;
+                    grass.Tint[vertex] = colour.Shells;
+                    continue;
+                }
+
+                (int, int) key = records[layer == 3 && look.Lush ? 4 : layer];
+                if (!_reliefShown || !_art.Relief.TryGetValue(key, out DaggerfallGroundRelief? art)) continue;
+                if (!relief.TryGetValue(key, out Stack? stack))
+                    relief[key] = stack = new(ReliefMaterials(key, art), art.Height, ReliefFloor, true, count);
+                stack.Cover[vertex] += weight;
+                stack.Tint[vertex] = Vector3.One;
             }
         }
 
+        List<Vector3> positions = [], normals = [];
+        List<Vector2> uvs = [];
+        List<Color> colours = [];
         List<uint> indices = [];
         List<MeshGroup> groups = [];
-        for (int layer = 0; layer < layers; layer++)
+        List<MeshMaterialBinding> bindings = [];
+        double shellRepeat = _art.ShellTexels / _art.ShellTexelsPerMetre;
+        foreach (Stack stack in relief.Values.Prepend(grass))
         {
-            int start = indices.Count;
-            uint first = (uint)(layer * count);
-            for (int j = 0; j < cells * 2; j++)
-            for (int i = 0; i < cells * 2; i++)
+            int layers = stack.Materials.Length;
+            for (int layer = 0; layer < layers; layer++)
             {
-                uint a = first + (uint)((j * side) + i), b = a + 1, c = a + (uint)side, d = c + 1;
-                // Near ground splits each cell on the diagonal whose ends are nearer in height; so do the shells.
-                if (Math.Abs(At(i, j) - At(i + 1, j + 1)) <= Math.Abs(At(i + 1, j) - At(i, j + 1))) indices.AddRange([a, c, d, a, d, b]);
-                else indices.AddRange([a, c, b, b, c, d]);
+                // A layer shows a texel whose height beats its cutoff, so where no vertex's share could, it has nothing to draw.
+                float cutoff = (layer + 1f) / (_tuning.ShellLayers + 1f) / stack.Height;
+                uint first = (uint)positions.Count;
+                float brightness = stack.Floor + ((1 - stack.Floor) * layer / Math.Max(layers - 1f, 1));
+                int start = indices.Count;
+                for (int j = 0; j < cells * 2; j++)
+                for (int i = 0; i < cells * 2; i++)
+                {
+                    int a = (j * side) + i, b = a + 1, c = a + side, d = c + 1;
+                    if (Math.Max(Math.Max(stack.Cover[a], stack.Cover[b]), Math.Max(stack.Cover[c], stack.Cover[d])) <= cutoff) continue;
+                    // Near ground splits each cell on the diagonal whose ends are nearer in height; so do the shells.
+                    uint ua = first + (uint)a, ub = first + (uint)b, uc = first + (uint)c, ud = first + (uint)d;
+                    if (Math.Abs(At(i, j) - At(i + 1, j + 1)) <= Math.Abs(At(i + 1, j) - At(i, j + 1))) indices.AddRange([ua, uc, ud, ua, ud, ub]);
+                    else indices.AddRange([ua, uc, ub, ub, uc, ud]);
+                }
+
+                if (indices.Count == start) break;
+                for (int j = 0; j < side; j++)
+                for (int i = 0; i < side; i++)
+                {
+                    int vertex = (j * side) + i;
+                    double x = cornerX + (i * Cell), z = cornerZ + (j * Cell);
+                    positions.Add(new Vector3((float)((i - cells) * Cell), (float)At(i, j) + _tuning.ShellLift + (layer * _tuning.ShellGap), (float)((j - cells) * Cell)));
+                    normals.Add(up[vertex]);
+                    // The texture lies on the map, so it runs on unchanged as the shells are made again. Relief lies as
+                    // the ground's own texture does, from above: across the map's z, down its x.
+                    uvs.Add(stack.OnGround ? new Vector2((float)(Wrap(z) / _groundRepeat), (float)(Wrap(x) / _groundRepeat))
+                        : new Vector2((float)(Wrap(x) / shellRepeat), (float)(Wrap(z) / shellRepeat)));
+                    Vector3 tint = stack.Tint[vertex] * brightness;
+                    colours.Add(new Color(tint.X, tint.Y, tint.Z, Math.Min(stack.Cover[vertex], 1)));
+                }
+
+                uint slot = (uint)bindings.Count;
+                bindings.Add(new MeshMaterialBinding(slot, stack.Materials[layer]));
+                groups.Add(new MeshGroup(slot, (uint)start, (uint)(indices.Count - start)));
             }
-            groups.Add(new MeshGroup((uint)layer, (uint)start, (uint)(indices.Count - start)));
         }
 
-        return new MeshResourceCreateRequest(positions, normals, uvs, colours, indices.ToArray(), groups.ToArray(),
-            _shellMaterials.Select((material, layer) => new MeshMaterialBinding((uint)layer, material)).ToArray(), ReadOnlyMemory<Vector4>.Empty);
+        return new MeshResourceCreateRequest(positions.ToArray(), normals.ToArray(), uvs.ToArray(), colours.ToArray(), indices.ToArray(), groups.ToArray(),
+            bindings.ToArray(), ReadOnlyMemory<Vector4>.Empty);
 
         static double Wrap(double metres) => ((metres % TextureWrapMetres) + TextureWrapMetres) % TextureWrapMetres;
+    }
+
+    /// <summary>A stack's layers' materials, each vertex's share of it and its tint, its tallest texel and its roots' brightness.</summary>
+    private sealed class Stack(Material[] materials, float height, float floor, bool onGround, int count)
+    {
+        internal Material[] Materials { get; } = materials;
+        internal float Height { get; } = height;
+        internal float Floor { get; } = floor;
+        internal bool OnGround { get; } = onGround;
+        internal float[] Cover { get; } = new float[count];
+        internal Vector3[] Tint { get; } = new Vector3[count];
+    }
+
+    /// <summary>A relief layer's materials, opened the first time it is found: the shell stack's layers up to its tallest texel.</summary>
+    private Material[] ReliefMaterials((int Archive, int Record) key, DaggerfallGroundRelief art)
+    {
+        if (_relief.TryGetValue(key, out (RenderResource Image, Material[] Layers) known)) return known.Layers;
+        RenderResource image = _engine.Graphics.OpenTexture(_engine.Content, art.File.Path, art.File.Sha256, TextureFilter.Nearest, TextureWrap.Repeat).Handle;
+        int layers = Math.Max(1, Enumerable.Range(0, _tuning.ShellLayers).Count(layer => (layer + 1f) / (_tuning.ShellLayers + 1f) < art.Height));
+        float sway = art.Sways ? _tuning.ShellSway : 0;
+        Material[] materials = [.. Enumerable.Range(0, layers).Select(layer => _engine.Graphics.CreateMaterial(
+            new MaterialRequest(new Color(1, 1, 1, 1), new RenderResourceReference(image), .9f, new Color(1, 1, 1, 1), Vector3.Zero, 0, false) with
+            {
+                AlphaMode = MaterialAlphaMode.Mask,
+                AlphaCutoff = (layer + 1f) / (_tuning.ShellLayers + 1f),
+                SinksUnderSnow = true,
+                Shader = new MaterialShader(new RenderResourceReference(_shader),
+                    new Vector4(art.Texels / _groundRepeat, sway, GustRate, layer / Math.Max(_tuning.ShellLayers - 1f, 1)),
+                    default, default, default, default, default, sway),
+            }))];
+        _relief[key] = (image, materials);
+        return materials;
     }
 
     /// <summary>Three quads crossed at a third of a turn, standing on their foot, their tips (vertex alpha 1) free to flutter.</summary>
@@ -279,6 +364,11 @@ internal sealed class DaggerfallGroundCover : IDisposable
         _tuftMaterial.Dispose();
         _tuftImage.Dispose();
         foreach (Material material in _shellMaterials) material.Dispose();
+        foreach ((RenderResource image, Material[] layers) in _relief.Values)
+        {
+            foreach (Material material in layers) material.Dispose();
+            image.Dispose();
+        }
         _shader.Dispose();
         _shellImage.Dispose();
     }

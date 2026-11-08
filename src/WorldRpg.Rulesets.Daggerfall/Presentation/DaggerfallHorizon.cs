@@ -41,6 +41,7 @@ internal sealed class DaggerfallHorizon : IDisposable
     private readonly DaggerfallRiverWater? _rivers;
     private readonly DaggerfallFloraField _flora;
     private DaggerfallGroundCover? _cover;
+    private readonly float _repeatMetres;
     private Func<DaggerfallGroundCover>? _growCover;
     private readonly DaggerfallWaterTuning _waterTuning;
     private readonly Dictionary<int, RenderResource> _waterArt = [];
@@ -72,6 +73,7 @@ internal sealed class DaggerfallHorizon : IDisposable
         _sea = engine.Graphics.CreateMaterial(Sea(Vector3.One));
         _waterTuning = water;
         _water = engine.Graphics.CreateMaterial(water.Material(default, Vector3.One));
+        _repeatMetres = repeatMetres;
         _sheet = engine.Graphics.CreateMeshResource(Sheet(_water, repeatMetres));
         _sheetLook = engine.Graphics.CreateMeshAppearance(_sheet);
         _rivers = rivers is null ? null : new(engine, rivers, _water, repeatMetres);
@@ -280,7 +282,7 @@ internal sealed class DaggerfallHorizon : IDisposable
 
     /// <summary>Grows the art set's grass over near ground, made the first time refreshed ground stands outdoors.</summary>
     internal void UseGroundCover(DaggerfallGroundCoverArt art, DaggerfallGroundCoverTuning tuning, IReadOnlyDictionary<int, int> tuftGrounds) =>
-        _growCover = () => new DaggerfallGroundCover(_engine, _ground, _flora, art, tuning, tuftGrounds);
+        _growCover = () => new DaggerfallGroundCover(_engine, _ground, _flora, art, tuning, tuftGrounds, _repeatMetres);
 
     /// <summary>
     /// One map pixel of flat water at the sea's surface. Land stands through it, so the shore is wherever ground meets the

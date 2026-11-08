@@ -234,8 +234,18 @@ the layers where the art set has them, and the classic's where it doesn't.
   Both wear the climate's grass: the art set's `groundCover` names each ground archive's
   grass colour, measured from its refreshed grass surface by
   `authoring/tools/groundcover/groundcover.py`, which also makes the textures. The deserts'
-  sand and every winter set have none, so they grow no cover. `world.groundcover` shows one
-  kind or the other for a run.
+  sand and every winter set have none, so they grow no grass. A tuft's foot is as light as
+  the ground, so it stands in it rather than over it.
+- **Relief** lifts every other layer of open ground the same way: dirt, rock, the desert's
+  sands, the snow and a swamp's lush ground. Its texture is the layer's own refreshed ground
+  texture, laid as the ground lays it (across the map's z, down its x, one repeat to
+  `repeatMetres`), so its texels stand on the ground's texels; its alpha is each texel's
+  height. The tool sets the heights by kind: dirt rises in clods with its green texels
+  standing as stray grass, rock in pebbles, sand and snow in broad heaps, and lush ground as
+  tall grass that sways. A layer's weight at a vertex thins its stack, so relief fades where
+  layers meet, and a stack draws only the layers its tallest texel reaches and only the
+  triangles its texels can stand on. `world.groundcover` draws only the kinds it names
+  (grass, relief, tufts) for a run.
 - **Classic nature** stays the donor's: one record chosen at random on a tile, by the
   classic's tile kinds, in the walked window's cells.
 - **Swamps** weigh lush ground in place of snow, below the snow.

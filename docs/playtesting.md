@@ -120,7 +120,7 @@ report them; names with spaces are quoted.
 | `world.ground-survey` | Slopes at walking scale from random land points, and what a surface costs to build. |
 | `world.horizon` | What the distant horizon is drawing: its lift and base, the haze, and its tiles. |
 | `world.horizon-set LIFT FOG` | Sets the horizon's lift (1 is true height) and haze per metre for this run, to judge them by eye. |
-| `world.groundcover KINDS` | Draws refreshed ground cover as `shells`, `tufts`, `both` or `none` for this run, to compare them. |
+| `world.groundcover KINDS` | Draws only these kinds of refreshed ground cover for this run, to compare them: `grass`, `relief` and `tufts`, separated by commas, or `all` or `none`. |
 | `world.flora DENSITY` | Grows refreshed nature at DENSITY times the donor's count for this run, each climate keeping its `climateDensity` share, to judge density by eye. `world.horizon` reports what the field holds. |
 | `world.goto TARGET` | Stands within reach of a loaded person, door or container, facing it. The target is a `navigation.targets` id or label. A door or portal is approached from its outside; other targets from the side nearest the player. The spot must fit the body, have floor below, and have a clear line from the eye to the target. |
 
