@@ -17,8 +17,10 @@ part.
 ## Rig sources
 
 A rig source is the figure repainted in a stance that parts can be cut from. It keeps the figure's
-identity, costume and look. Bones move it back into the classic pose, so the change stays small:
-rigid parts bend badly far from how they were drawn.
+identity, costume and look. The animated figure doesn't have to return to the classic pose: shift
+its pose and design toward what the rig does well, such as an open stance or a panel that can stay
+in front of the legs, rather than fighting the technique. Keep each change modest, since rigid
+parts bend badly far from how they were drawn.
 
 What a source should show:
 - legs slightly apart, with each leg drawn whole;
@@ -87,7 +89,9 @@ alone.
   the waist, with a soft blend (`exponent` 0.5), so its hem narrows partway as the legs close.
   Weighted to the waist alone, it stays as wide as the stance it was painted in and covers the legs;
   with the default blend, it follows each leg fully and shrinks to a strip. Its turn depth sits just
-  in front of the legs, which ride it.
+  in front of the legs, which ride it. A part has one place in the draw order on any frame: a panel
+  meant to pass between the legs toward its hem would have to be cut into pieces, so prefer a pose
+  where it can stay in front.
 - **Back skirt:** drawn behind everything and hung from the hip on three chains of its own, running
   from the waist to the hem, so it shows past the legs at the sides. The chains are on physics, not
   keyed sway, with rig-c's cloth recipe values: the edges softer than the centre, the centre damped
@@ -101,7 +105,13 @@ alone.
     its own frames, since wind steps can't fall between them.
 - **Hidden skin:** See-through bleeds cloth colour into skin it paints in. In bare-skin limb parts,
   a pixel greener than it is red is refilled from the skin around it, after assembly.
-- **Rigging:** a held staff rides the hip, not the forearm. Eyes get iris bones for gaze.
+- **Held staff:** a bone from its planted foot to the grip, aimed by a one-bone IK at a grip bone on
+  the forearm, so it pivots on the ground and stays in the hand. Riding the forearm alone swings a
+  long staff wildly; riding the hip leaves the hand behind.
+- **Eyes:** iris bones for gaze.
+- **Stance:** the video's pose sequence is an input like any other. Where its legs close further
+  than the rig source's stance, each knee and ankle is turned outward about its hip by a few
+  degrees, which keeps leg lengths; the witch takes 4°.
 - **Head turns:** a turned head is a key drawing, not a bend. Video frames from the turn are cut out,
   shifted so their neck lands on the rig's neck, and run through See-through (full and head) like the
   source. Their head parts become alternate sets on the head chain, bound to the frames of the turn,
