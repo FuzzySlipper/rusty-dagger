@@ -155,8 +155,9 @@ and snow lies through winter and melts after it. They save with the game. Presen
 draws these facts and rules should read them too, through
 `DaggerfallSession.CurrentConditions`, rather than asking which sky is up.
 
-- **Falling.** Rain and snow are the Engine's precipitation, small enough that a drop
-  near the eye doesn't swell past the pixel art. The day's wind slants them. They ease
+- **Falling.** Rain and snow are the Engine's precipitation, drawn as hard blocks of
+  `precipitationPixels` screen pixels: a flake is a block, or a few as it nears the eye, and
+  rain a stepped line, so neither swells soft past the pixel art. The day's wind slants them. They ease
   with the weather and at a shelter's edge; through a door they are there or gone at once.
   Their colour follows the daylight, down to `nightFall`.
 - **Ground.** `wetLook` and `snowLook` map the facts to the Engine's wetness and snow.

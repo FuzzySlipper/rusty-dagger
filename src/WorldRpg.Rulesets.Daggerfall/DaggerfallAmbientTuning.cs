@@ -8,20 +8,20 @@ internal sealed record DaggerfallAmbientTuning(float ClearFogEnd, float RainFogD
     int MinimumWaitSeconds, int MaximumWaitSeconds, float FlashSeconds, float FlashSkipChance,
     float FlashIntensity, float RollingThunderDelay, float ShelterProbeHeight,
     float PrecipitationRadius, float PrecipitationHeight, uint RainDrops, uint SnowDrops, float RainSpeed, float SnowSpeed,
-    float RainSize, float SnowSize, float RainStreakSeconds, float FallEaseSeconds, float NightFall, float WindDrift, float SnowTexelsPerMetre, float PuddleShare, float WetLook, float SnowLook)
+    float RainSize, float SnowSize, float RainStreakSeconds, float PrecipitationPixels, float FallEaseSeconds, float NightFall, float WindDrift, float SnowTexelsPerMetre, float PuddleShare, float WetLook, float SnowLook)
 {
     // WeatherManager fog; PlayerAdvanced castle/special light; AmbientEffectsPlayer cadence and flash
     // probability/intensity. How rain and snow draw is explicit product presentation tuning.
     internal static DaggerfallAmbientTuning Classic { get; } = new(2400, .003f, .005f, .05f, .001f,
         .005f, 165f/255f, 4, 35, 1f/30f, .6f, 2, 1.7f, 12, 18, 10,
-        16_000, 9_000, 14, 1.6f, .025f, .06f, .05f, 2, .2f, 3, 20, .6f, .6f, .65f);
+        16_000, 9_000, 14, 1.6f, .025f, .06f, .05f, 3, 2, .2f, 3, 20, .6f, .6f, .65f);
 
     internal DaggerfallAmbientTuning Validate()
     {
         foreach (float value in new[] {ClearFogEnd, RainFogDensity, SnowFogDensity, HeavyFogDensity,
             InteriorFogDensity, DungeonFogDensity, FlashSeconds, FlashIntensity, ShelterProbeHeight,
             PrecipitationRadius, PrecipitationHeight, RainSpeed, SnowSpeed, RainSize, SnowSize, RainStreakSeconds,
-            FallEaseSeconds, NightFall, WindDrift, SnowTexelsPerMetre, PuddleShare, WetLook, SnowLook})
+            PrecipitationPixels, FallEaseSeconds, NightFall, WindDrift, SnowTexelsPerMetre, PuddleShare, WetLook, SnowLook})
             if (!float.IsFinite(value) || value <= 0) throw new ArgumentException("Ambient presentation values must be finite and positive.");
         if (!float.IsFinite(ZoneAmbient) || ZoneAmbient is < 0 or > 1
             || !float.IsFinite(FlashSkipChance) || FlashSkipChance is < 0 or > 1
@@ -44,7 +44,8 @@ internal sealed record DaggerfallAmbientTuning(float ClearFogEnd, float RainFogD
         e.GetProperty("rainDrops").GetUInt32(), e.GetProperty("snowDrops").GetUInt32(),
         e.GetProperty("rainSpeed").GetSingle(), e.GetProperty("snowSpeed").GetSingle(),
         e.GetProperty("rainSize").GetSingle(), e.GetProperty("snowSize").GetSingle(),
-        e.GetProperty("rainStreakSeconds").GetSingle(), e.GetProperty("fallEaseSeconds").GetSingle(),
+        e.GetProperty("rainStreakSeconds").GetSingle(), e.GetProperty("precipitationPixels").GetSingle(),
+        e.GetProperty("fallEaseSeconds").GetSingle(),
         e.GetProperty("nightFall").GetSingle(), e.GetProperty("windDrift").GetSingle(),
         e.GetProperty("snowTexelsPerMetre").GetSingle(), e.GetProperty("puddleShare").GetSingle(),
         e.GetProperty("wetLook").GetSingle(), e.GetProperty("snowLook").GetSingle());

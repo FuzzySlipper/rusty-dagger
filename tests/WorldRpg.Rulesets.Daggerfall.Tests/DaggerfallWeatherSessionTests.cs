@@ -227,6 +227,7 @@ public sealed class DaggerfallWeatherSessionTests
             Assert.Equal(PrecipitationShape.Streak, rain.Shape);
             Assert.True(rain.Drops > 0);
             Assert.True(rain.Velocity.Y < 0);
+            Assert.Equal(tuning.Ambient.PrecipitationPixels, rain.PixelSize);
             session.GroundWeather(1, 1);
             session.Update(Update(3));
             Assert.Equal(tuning.Ambient.WetLook, fixture.Engine.Wetness.Last().Wetness);

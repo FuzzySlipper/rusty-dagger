@@ -111,11 +111,12 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
         if (_fallingSnow)
             _engine.CameraView.SetPrecipitation(new((uint)(_tuning.SnowDrops * _falling), PrecipitationShape.Flake,
                 new(wind.X * drift, -_tuning.SnowSpeed, wind.Y * drift), _tuning.SnowSize, 0, new(light, light, light * 1.04f, .9f), false,
-                _tuning.PrecipitationRadius, _tuning.PrecipitationHeight));
+                _tuning.PrecipitationRadius, _tuning.PrecipitationHeight, _tuning.PrecipitationPixels));
         else
             _engine.CameraView.SetPrecipitation(new((uint)(_tuning.RainDrops * _falling), PrecipitationShape.Streak,
                 new(wind.X * drift * 2, -_tuning.RainSpeed, wind.Y * drift * 2), _tuning.RainSize, _tuning.RainStreakSeconds,
-                new(light * .8f, light * .85f, light * .95f, .55f), false, _tuning.PrecipitationRadius, _tuning.PrecipitationHeight));
+                new(light * .8f, light * .85f, light * .95f, .55f), false, _tuning.PrecipitationRadius, _tuning.PrecipitationHeight,
+                _tuning.PrecipitationPixels));
     }
 
     /// <summary>What the weather has left on open ground, and the wind. Under a roof none of it shows.</summary>
