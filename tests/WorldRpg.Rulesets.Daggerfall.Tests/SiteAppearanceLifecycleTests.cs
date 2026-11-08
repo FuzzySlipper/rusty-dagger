@@ -121,7 +121,7 @@ public sealed class SiteAppearanceLifecycleTests
         Assert.Equal(sprite.InitialFrameId, request.FrameId);
         Assert.Equal(sprite.Pivot, request.Pivot);
         Assert.Equal(sprite.Size, request.Size);
-        Assert.Equal(BillboardMode.Cylindrical, request.Billboard);
+        Assert.Equal(DaggerfallFlatsTuning.Default.Items, request.Billboard);
         Assert.Equal(SpriteSizeMode.World, request.SizeMode);
 
         // A profile switch or a fully looted pile is represented by the owner's filtered empty

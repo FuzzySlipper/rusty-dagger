@@ -44,6 +44,7 @@ internal sealed record DaggerfallTuning(
     internal DaggerfallAmbientTuning Ambient { get; init; } = DaggerfallAmbientTuning.Classic;
     internal DaggerfallHorizonTuning Horizon { get; init; } = DaggerfallHorizonTuning.Default;
     internal DaggerfallGroundTuning Ground { get; init; } = DaggerfallGroundTuning.Default;
+    internal DaggerfallFlatsTuning Flats { get; init; } = DaggerfallFlatsTuning.Default;
     internal DaggerfallWaterTuning Water { get; init; } = DaggerfallWaterTuning.Default;
     internal DaggerfallContactTuning Contact { get; init; } = DaggerfallContactTuning.Default;
     internal DaggerfallAttackTuning Attacks { get; init; } = DaggerfallAttackTuning.Default;
@@ -130,6 +131,7 @@ internal sealed record DaggerfallTuning(
         Ambient = Ambient.Validate(),
         Horizon = Horizon.Validate(),
         Water = Water.Validate(),
+        Flats = Flats.Validate(),
         Lycanthropy = Lycanthropy.Validate(),
         Vampirism = Vampirism.Validate(),
         NormalLight = NormalLight.Validate(),
@@ -368,6 +370,7 @@ internal sealed record DaggerfallTuning(
             Ambient = DaggerfallAmbientTuning.Read(root.GetProperty("ambient")),
             Horizon = DaggerfallHorizonTuning.Read(root.GetProperty("horizon")),
             Ground = DaggerfallGroundTuning.Read(root.GetProperty("ground")),
+            Flats = DaggerfallFlatsTuning.Read(root.GetProperty("flats")),
             Water = DaggerfallWaterTuning.Read(root.GetProperty("water")),
             Contact = DaggerfallContactTuning.Read(root.GetProperty("contact")),
             Attacks = DaggerfallAttackTuning.Read(root.GetProperty("attacks")),

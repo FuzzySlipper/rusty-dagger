@@ -118,6 +118,13 @@ off, and that is what `bloom` spreads.
   across their faces. Static flats neither cast nor receive; enemies cast as before.
 - **Sprites.** Flats, nature, people and items take the light around them
   (`SpriteLightingMode.Synthetic`), so they fall with the day.
+  Each kind of flat in the `flats` tuning (nature, decorations, actors, items) stands
+  upright and faces by `heading`, taking the camera's heading as the original game's flats
+  do, so walking past a tree doesn't turn it, or by `position`, turning toward the eye.
+- **Flora in the wind.** Wild nature and placed flats from the nature archives lean in the
+  day's wind from a planted base (`floraWindBend`, metres per metre of height at full
+  wind), each by where it stands, and by whole texels (`floraWindWholeTexels`) so the
+  pixel art steps rather than slides. Lamps, signs and the rest stand still.
 - **Windows.** Building windows glow on the city lamps' hours through mesh emission. The
   importer publishes each window texture's glass as a mask beside it, and the location's
   material holds that mask as its emission map, so nightfall changes only the emission's
@@ -164,8 +171,8 @@ draws these facts and rules should read them too, through
   (`SpriteAlphaMode.Mask`). The Engine fogs by depth, so a blended sprite takes the fog of
   what is behind it, and a tree against the sky would stay sharp in mist. Only glowing and
   translucent sprites blend.
-- **Wind** turns each day (`windDegrees` in the save), and drives the clouds' drift
-  and the rain's slant. Cloud colour is by weather too (`cloudColors`), so foul skies close
+- **Wind** turns each day (`windDegrees` in the save), and drives the clouds' drift,
+  the rain's slant and the flora's lean. Cloud colour is by weather too (`cloudColors`), so foul skies close
   dark.
 - **Classic art** keeps its painted sky under every weather, with the same falling, ground
   and wind.

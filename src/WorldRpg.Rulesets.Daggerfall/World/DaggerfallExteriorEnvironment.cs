@@ -370,6 +370,9 @@ internal sealed class DaggerfallExteriorEnvironment
 
     internal static bool GroundSupportsWinter(int climateValue) => !IsDesertClimate(climateValue);
 
+    /// <summary>The donor's nature archives, 500 to 511: the climates' trees, plants and rocks and their winter sets.</summary>
+    internal static bool IsNatureArchive(int archive) => archive is >= 500 and <= 511;
+
     internal static bool NatureSupportsWinter(int climateValue) => climateValue is 223 or 226 or 230 or 231 or 232;
 
     private static IReadOnlyList<DaggerfallExteriorWaterVolume> BuildWater(

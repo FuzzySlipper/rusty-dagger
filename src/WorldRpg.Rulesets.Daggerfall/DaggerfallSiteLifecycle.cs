@@ -2148,7 +2148,7 @@ internal sealed class DaggerfallSiteLifecycle
 
     private DaggerfallExteriorTerrainAppearance NewTerrainAppearance()
     {
-        DaggerfallExteriorTerrainAppearance appearance = new(_engine.Content, _engine.Graphics, Projection.Inputs);
+        DaggerfallExteriorTerrainAppearance appearance = new(_engine.Content, _engine.Graphics, Projection.Inputs, _tuning.Flats);
         if (_groundArt is var (art, refreshed)) appearance.UseArt(art, refreshed);
         appearance.UseBlend(_engine.AuthoredContent, _tuning.Ground, _groundBlend);
         return appearance;

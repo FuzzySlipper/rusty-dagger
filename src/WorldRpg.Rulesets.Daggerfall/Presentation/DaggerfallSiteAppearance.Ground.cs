@@ -58,7 +58,7 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         NormalizedBillboardSprite sprite = groundContainerSprites[index];
         Appearance visual = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(groundContainerAtlases[index],
-            sprite.InitialFrameId, sprite.Pivot, sprite.Size, BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default,
+            sprite.InitialFrameId, sprite.Pivot, sprite.Size, flats.Items, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default,
             new Color(1F, 1F, 1F, 1F), LitSprite));
         return (visual, sprite.Pivot.Y * sprite.Size.Y);
     }
@@ -83,7 +83,7 @@ internal sealed partial class DaggerfallSiteAppearance
         SpriteAtlas atlas = GroundItemAtlas(look.Image);
         RenderResource? mask = look.Mask is { } image ? GroundItemMask(image) : null;
         Color tint = look.Color is { } color ? Linear(color, look.Brightness) : new Color(1F, 1F, 1F, 1F);
-        SpriteFromAtlasRequest request = new(atlas, 0, new Vector2(.5F, 0F), size, BillboardMode.Cylindrical, SpriteSizeMode.World, 0,
+        SpriteFromAtlasRequest request = new(atlas, 0, new Vector2(.5F, 0F), size, flats.Items, SpriteSizeMode.World, 0,
             SpriteDepthPolicy.Default, tint, LitSprite);
         if (mask is not null) request = request with { Material = LitSprite with { TintMask = new RenderResourceReference(mask) } };
         return (appearance.CreateSpriteFromAtlas(request), 0F);

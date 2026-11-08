@@ -127,6 +127,10 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         {
             Assert.Equal(new Vector2(3F, 6F), request.Size);
             Assert.Equal(SpriteLightingMode.Synthetic, request.Material.Lighting);
+            // Nature takes the camera's heading and leans in the wind by whole texels, as the flats tuning says.
+            Assert.Equal(DaggerfallFlatsTuning.Default.Nature, request.Billboard);
+            Assert.Equal(DaggerfallFlatsTuning.Default.FloraWindBend, request.Material.WindBend);
+            Assert.True(request.Material.WindWholeTexels);
         });
 
         refreshed = true;
@@ -202,7 +206,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
             Assert.All(request.Instances.ToArray(), instance => Assert.Equal((1F, 7U), (instance.Scale, instance.FrameId)));
             Assert.Equal(new Vector2(records[index], 2F * records[index]), request.Size);
             Assert.Equal(new Vector2(.5F, 0F), request.Pivot);
-            Assert.Equal(BillboardMode.Cylindrical, request.Billboard);
+            Assert.Equal(DaggerfallFlatsTuning.Default.Nature, request.Billboard);
             Assert.Equal(SpriteDepthPolicy.Default, request.Depth);
         }
         Assert.All(graphics.AtlasTextures, path => Assert.StartsWith("sprite/texture-504-", path));

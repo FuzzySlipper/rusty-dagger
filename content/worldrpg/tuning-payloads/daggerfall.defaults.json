@@ -924,6 +924,14 @@
     "snowFullMetres": 2200,
     "rockHoldsSnow": 0.3
   },
+  "flats": {
+    "nature": "heading",
+    "decorations": "heading",
+    "actors": "heading",
+    "items": "heading",
+    "floraWindBend": 0.05,
+    "floraWindWholeTexels": true
+  },
   "water": {
     "shallow": [0.85, 0.95, 0.95],
     "deep": [0.5, 0.6, 0.7],

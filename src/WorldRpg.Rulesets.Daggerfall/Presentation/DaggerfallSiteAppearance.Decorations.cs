@@ -2,6 +2,7 @@ using System.Numerics;
 using Rusty.Engine;
 using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
@@ -45,9 +46,13 @@ internal sealed partial class DaggerfallSiteAppearance
         }
     }
 
-    /// <summary>A decoration takes the light around it, unless it is a lamp: a light source shows at its own brightness.</summary>
-    private static SpriteMaterialDescriptor Material(DaggerfallSiteDecoration flat) =>
-        flat.Source.Archive == LightFlatArchive ? UnlitSprite : LitSprite;
+    /// <summary>
+    /// A decoration takes the light around it, unless it is a lamp: a light source shows at its own brightness. A tree or
+    /// plant from the nature archives leans in the wind as wild nature does.
+    /// </summary>
+    private SpriteMaterialDescriptor Material(DaggerfallSiteDecoration flat) =>
+        flat.Source.Archive == LightFlatArchive ? UnlitSprite
+            : DaggerfallExteriorEnvironment.IsNatureArchive(flat.Source.Archive) ? flats.Flora(LitSprite) : LitSprite;
 
     private DecorationSprite CreateDecorationSprite(NormalizedBillboardSprite sprite, bool baseAligned, SpriteMaterialDescriptor material)
     {
@@ -62,7 +67,7 @@ internal sealed partial class DaggerfallSiteAppearance
             decorationAtlases.Add(sprite.TexturePath, atlas);
         }
         var result = new DecorationSprite(appearance.CreateSpriteFromAtlas(new(atlas, sprite.InitialFrameId,
-            baseAligned ? new Vector2(.5f, 0f) : sprite.Pivot, sprite.Size, BillboardMode.Cylindrical,
+            baseAligned ? new Vector2(.5f, 0f) : sprite.Pivot, sprite.Size, flats.Decorations,
             SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f), material)));
         decorationSprites.Add(result);
         StartDecorationPlayback(result, atlas, sprite);
@@ -97,7 +102,7 @@ internal sealed partial class DaggerfallSiteAppearance
         }
         (Vector2 size, Vector2 pivot) = art.Placed(sprite.Size, baseAligned ? new Vector2(.5f, 0f) : sprite.Pivot);
         var result = new DecorationSprite(appearance.CreateSpriteFromAtlas(new(atlas, sprite.InitialFrameId, pivot, size,
-            BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f),
+            flats.Decorations, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f),
             art.Emission is { } emission ? GlowingSprite(emission) : material)));
         if (art.Emission is not null) glowingDecorations.Add(result.Visual);
         decorationSprites.Add(result);

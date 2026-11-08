@@ -25,6 +25,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     private bool _refreshedDrawn;
     private IAuthoredContentService? _authored;
     private DaggerfallGroundTuning _ground = DaggerfallGroundTuning.Default;
+    private readonly DaggerfallFlatsTuning _flats;
     private DaggerfallGroundBlendSettings _blend;
     private readonly Dictionary<int, DaggerfallGroundLayers> _groundLayers = [];
     private readonly List<DaggerfallGroundLayers> _retiredLayers = [];
@@ -32,11 +33,13 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     private bool _hasOrigin;
     private bool _disposed;
 
-    internal DaggerfallExteriorTerrainAppearance(IContentService content, IGraphicsService graphics, DaggerfallSiteProfile? profile = null)
+    internal DaggerfallExteriorTerrainAppearance(IContentService content, IGraphicsService graphics, DaggerfallSiteProfile? profile = null,
+        DaggerfallFlatsTuning? flats = null)
     {
         _content = content ?? throw new ArgumentNullException(nameof(content));
         _graphics = graphics ?? throw new ArgumentNullException(nameof(graphics));
         _profile = profile;
+        _flats = flats ?? DaggerfallFlatsTuning.Default;
     }
 
     /// <summary>
@@ -285,8 +288,8 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     /// Draws one cell's nature as one batch per sprite record, as the donor's DaggerfallBillboardBatch draws a
     /// terrain's nature in one batch per atlas. Each normalized record is its own atlas with its own world size, which
     /// a batch shares, so the record is the batch: every sprite of it stands on its cell-local placement by its foot,
-    /// its record's initial frame and size, the cylindrical facing and the default depth and sprite material it
-    /// had as a sprite of its own.
+    /// its record's initial frame and size, the tuned facing and the default depth, in the lit sprite material leaning in the
+    /// wind as flora does.
     /// </summary>
     private NatureCell CreateNatureCell(DaggerfallExteriorCellId cell, IReadOnlyList<DaggerfallExteriorNaturePlacement> placements)
     {
@@ -311,11 +314,11 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
                     instances,
                     pivot,
                     size,
-                    BillboardMode.Cylindrical,
+                    _flats.Nature,
                     0,
                     SpriteDepthPolicy.Default,
                     new Color(1F, 1F, 1F, 1F),
-                    DaggerfallSiteAppearance.LitSprite));
+                    _flats.Flora(DaggerfallSiteAppearance.LitSprite)));
                 batches.Add(new(objectId, key, appearance, instances.Length));
             }
         }

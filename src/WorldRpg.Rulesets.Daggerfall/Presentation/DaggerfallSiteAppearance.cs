@@ -25,6 +25,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private readonly DaggerfallAudioBundle? audioBundle;
     private readonly IRandomService? random;
     private readonly DaggerfallPresentationAudioTuning audioTuning;
+    private readonly DaggerfallFlatsTuning flats;
     private readonly DaggerfallSiteProfile inputs;
     private readonly Dictionary<string, AudioClip> audioClips = new(StringComparer.Ordinal);
     private readonly HashSet<AudioSignalHandle> oneShotSignals = [];
@@ -66,7 +67,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             (candleAtlas, candleAppearance) = CreateSprite(content, new NormalizedActorSprite(sprite.TexturePath,
                 sprite.TextureSha256, sprite.AtlasWidth, sprite.AtlasHeight, sprite.Frames, sprite.InitialFrameId, sprite.Pivot, sprite.Size));
         else candleAppearance = appearance.CreateSpriteFromAtlas(new(candleAtlas, sprite.InitialFrameId, sprite.Pivot,
-            sprite.Size, BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f)));
+            sprite.Size, flats.Decorations, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f)));
     }
 
     private Func<float> enemyAudibleRange = () => 16F;
@@ -205,7 +206,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// The session's classic presentation (weapon viewmodels, held-item visuals, spell effects), which the
     /// start site publishes for the whole session; null uses this site's own, as a lone-site composition does.
     /// </param>
-    internal DaggerfallSiteAppearance(IContentService content, IGraphicsService appearance, DaggerfallSiteProfile inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallDoorRuntime? doors = null, DaggerfallDungeonMotionProjection? dungeonMotion = null, NormalizedClassicPresentation? sessionPresentation = null, DaggerfallCityGates? cityGates = null, DaggerfallDefinitions? definitions = null)
+    internal DaggerfallSiteAppearance(IContentService content, IGraphicsService appearance, DaggerfallSiteProfile inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallDoorRuntime? doors = null, DaggerfallDungeonMotionProjection? dungeonMotion = null, NormalizedClassicPresentation? sessionPresentation = null, DaggerfallCityGates? cityGates = null, DaggerfallDefinitions? definitions = null, DaggerfallFlatsTuning? flats = null)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(appearance);
@@ -222,6 +223,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         this.audioBundle = audioBundle;
         this.random = random;
         this.audioTuning = (audioTuning ?? DaggerfallTuning.Defaults.PresentationAudio).Validate();
+        this.flats = (flats ?? DaggerfallTuning.Defaults.Flats).Validate();
         hitCues = inputs.Audio.Count == 0 ? [] : DaggerfallSiteContent.OrderedHitCues(inputs.Audio);
         classicPresentation = sessionPresentation ?? inputs.ClassicPresentation;
         classicEffects = classicPresentation.Effects.ToDictionary(effect => effect.Name, StringComparer.Ordinal);
@@ -1097,7 +1099,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         SpriteAtlas atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
         atlases.Add(atlas);
         var request = new SpriteFromAtlasRequest(atlas, sprite.InitialFrameId, sprite.Pivot, sprite.Size,
-            BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F));
+            flats.Actors, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F));
         if (material is { } chosen) request = request with { Material = chosen };
         if (mobile is not null)
             request = request with { Material = new SpriteMaterialDescriptor(

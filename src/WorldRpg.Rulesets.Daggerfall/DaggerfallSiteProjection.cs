@@ -91,7 +91,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
                 DaggerfallCityGateDefinition.OpenAt(calendar));
             if (!deferMotionCollisionAdmission) gates.ActivateCollisionResidency();
             appearance = new(engine.Content, engine.Graphics, inputs, engine.Audio,
-                tuning.PresentationAudio, random, audioBundle, doors, motion, sessionPresentation, gates, definitions);
+                tuning.PresentationAudio, random, audioBundle, doors, motion, sessionPresentation, gates, definitions, tuning.Flats);
             configureAppearance(appearance);
             lighting = new(engine.Graphics, engine.CameraView, inputs, tuning.SiteLighting, calendar, carriesSky);
             portals = new(actors, inputs.ProfileKey, inputs.Portals);
