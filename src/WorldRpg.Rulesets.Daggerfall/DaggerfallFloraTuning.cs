@@ -24,7 +24,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed record DaggerfallFloraTuning(float Density, IReadOnlyDictionary<string, float> ClimateDensity, float GrassChance, float DirtChance, float StoneChance, float DesertShare,
     float ReachPerMetre, float Reach, float Fade, float SlopeLimitDegrees, bool TreeMeshes, float TreeImpostorHeights)
 {
-    internal static DaggerfallFloraTuning Default { get; } = new(3, new Dictionary<string, float>(), .9f, .2f, .05f, .25f, 400, 3_200, 600, 50, false, 12);
+    internal static DaggerfallFloraTuning Default { get; } = new(3, new Dictionary<string, float>(), .9f, .2f, .05f, .25f, 400, 3_200, 600, 50, true, 12);
 
     internal DaggerfallFloraTuning Validate()
     {

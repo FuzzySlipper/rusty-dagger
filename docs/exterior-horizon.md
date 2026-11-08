@@ -263,16 +263,18 @@ the layers where the art set has them, and the classic's where it doesn't.
   (`DaggerfallTreeMesh`). They are rusty-craftsurvive's scripted trees: low-poly trunks and
   branches in tiling bark, and leaf cards whose vertex alpha is how much each flutters,
   copied with the cards and branches below the sprite's crown left out so its bare trunk
-  shows. `authoring/tools/trees/trees.py` copies them and repaints their textures in
+  shows, and each bark triangle turned to face along its normals (the source winds its
+  tubes inward). `authoring/tools/trees/trees.py` copies them and repaints their textures in
   the sprite's own colours: each texel takes the colour of the sprite's texel at the same
-  rank of brightness, leaves from its crown and bark from its trunk (without the outline's
-  darkest), leaves leaning toward the darks that lit cards lose, each leaf's edge a step
+  rank of brightness, leaves from its crown and bark from its trunk (both without the
+  outline's darkest), leaves leaning toward the darks that lit cards lose, each leaf's edge a step
   darker as the sprites outline theirs. A mesh is drawn at its sprite's drawn height.
   Bark bends with the wind as the sprites do; leaves flutter too. Past
   `treeImpostorHeights` times its height (where it stands about as tall on screen as the
   card's 64 texels) the renderer draws a card it bakes of the mesh, and a mesh casts shade
-  where a sprite cannot. They grow only with flora's `treeMeshes`, off by default while their
-  look is worked out; `world.trees mesh` grows them for a run.
+  where a sprite cannot. Large trees are meshes, where the art set has one, because a big sprite reads as a standee
+  at near and middle range; bushes, rocks and small plants stay sprites. Flora's
+  `treeMeshes` turns them off, and `world.trees sprite` for a run.
 - **Classic nature** stays the donor's: one record chosen at random on a tile, by the
   classic's tile kinds, in the walked window's cells.
 - **Swamps** weigh lush ground in place of snow, below the snow.

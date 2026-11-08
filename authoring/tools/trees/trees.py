@@ -36,7 +36,9 @@ TREES = {(506, 13): ("fir-p1", "fir", "oak"), (506, 30): ("pine-p1", "pine", "oa
 SOLID = 128
 # How far the leaves' colours lean toward the sprite's darks: a rank is raised to this power, so the painted crown's deep
 # shadow, which lit cards would otherwise lose, comes back.
-LEAF_DARKEN = 1.35
+LEAF_DARKEN = 1.2
+# How dark, as a share of full brightness, a sprite's outline texels are.
+OUTLINE = .06
 # The share of the trunk's darkest texels left out of its bark's colours: they are the sprite's outline, not its bark.
 BARK_OUTLINE = .15
 # A leaf card is a quad drawn both ways: four vertices and twelve indices.
@@ -78,6 +80,8 @@ def palette(rgba, m):
     """The sprite's crown and trunk colours, each sorted by brightness."""
     solid = rgba[..., 3] > SOLID
     crown = rgba[m["top"]:m["crown"]][solid[m["top"]:m["crown"]]][:, :3]
+    # The crown's outline is near black; a leaf ranked among it would be drawn black, so its colours are left out.
+    crown = crown[light(crown) > OUTLINE * 255]
     # The trunk's middle, below where the crown's leaves hang over it, and none of its green.
     half = max(1, int(m["trunk"] * .3))
     trunk = rgba[m["crown"] + int((m["foot"] - m["crown"]) * .3):m["foot"], m["centre"] - half:m["centre"] + half + 1]
@@ -119,6 +123,20 @@ def trim(mesh, below):
     return mesh
 
 
+def outward(mesh):
+    """Turns each bark triangle to face the way its vertices' normals point. rusty-craftsurvive winds its tubes inward,
+    which this Engine culls as their outside, so a trunk showed its far wall from within."""
+    for part in mesh["parts"]:
+        if part["role"] != "bark":
+            continue
+        p, n, idx = np.array(part["positions"]).reshape(-1, 3), np.array(part["normals"]).reshape(-1, 3), part["indices"]
+        for t in range(0, len(idx), 3):
+            a, b, c = idx[t:t + 3]
+            if np.dot(np.cross(p[b] - p[a], p[c] - p[a]), n[a] + n[b] + n[c]) < 0:
+                idx[t + 1], idx[t + 2] = c, b
+    return mesh
+
+
 def publish(name, path):
     data = path.read_bytes()
     return {"path": f"{MEDIA}/{name}", "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest()}
@@ -139,7 +157,7 @@ def main():
         mesh = json.loads((CRAFTSURVIVE / f"models/trees/{model}.prop-mesh.json").read_text())
         # The sprite's crown begins this far up its drawn height; the mesh's leaves start no lower, a little short of it.
         base = (m["foot"] - m["crown"]) / m["height"] * mesh["height"] * .85
-        (folder / f"{model}.prop-mesh.json").write_text(json.dumps(trim(mesh, base), separators=(",", ":")))
+        (folder / f"{model}.prop-mesh.json").write_text(json.dumps(outward(trim(mesh, base)), separators=(",", ":")))
         name = f"tree-{archive:03d}-{record:02d}"
         repaint(CRAFTSURVIVE / f"textures/trees/{leaves}-leaves.png", crown, True, LEAF_DARKEN).save(folder / f"{name}-leaves.png")
         repaint(CRAFTSURVIVE / f"textures/trees/{bark}-bark.png", trunk, False).save(folder / f"{name}-bark.png")
