@@ -89,6 +89,21 @@ public sealed class EnemySetupSessionTests
         f.Update();
         Assert.True(f.Appearance.DisposedLights > before);
     }
+    [Theory]
+    [InlineData("ghost", 18)]
+    [InlineData("wraith", 23)]
+    public void A_spectral_enemy_takes_the_light_and_shines_through_its_imported_glow(string actor, int mobileId)
+    {
+        using var f = new SanguineRoseSessionTests.Fixture();
+        int before = f.Appearance.SpriteRequests.Count;
+        f.Session.SpawnActor(actor, new(new(3, 0, -4), 0));
+        SpriteMaterialDescriptor live = f.Appearance.SpriteRequests[before].Material;
+        Assert.Equal(SpriteLightingMode.Synthetic, live.Lighting);
+        Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.CreatureGlow, live.EmissionIntensity);
+        Assert.NotEqual(default, live.EmissionMap);
+        Assert.Contains(f.Appearance.OpenedResourcePaths, path => path.EndsWith($"actors/mobile-{mobileId}-glow.png", StringComparison.Ordinal));
+    }
+
     private sealed class LethalStrike : ICombatContribution
     {
         public void Damage(DamageEvent damage) { damage.Damage = 1000; }

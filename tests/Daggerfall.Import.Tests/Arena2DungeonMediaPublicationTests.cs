@@ -251,6 +251,54 @@ public sealed class Arena2DungeonMediaPublicationTests
         }
     }
 
+    [CorpusTheory("PAL.PAL", "TEXTURE.002", "TEXTURE.273", "TEXTURE.278", "TEXTURE.306")]
+    [InlineData(18)]
+    [InlineData(23)]
+    public void SpectralMobilesPublishARedEyedGlowInTheirAtlasLayout(byte mobileId)
+    {
+        Arena2Palette palette = PaletteDecoder.Decode(File.ReadAllBytes(TestData.Corpus("PAL.PAL")), "PAL.PAL");
+        Rgb24 eye = palette.Colors.Span[247];
+        Arena2DungeonMediaPublication publication = Arena2DungeonMediaPublication.Create(CreateCorpusActorRequest(mobileId));
+        DungeonActorSpriteMedia actor = Assert.Single(publication.Actors);
+        ImportPublicationArtifact glowArtifact = Assert.Single(publication.Artifacts, artifact => artifact.RelativePath == $"media/dungeon/actors/mobile-{mobileId}-glow.png");
+        NormalizedMediaDescriptor descriptor = Assert.Single(publication.MediaManifest.Resources, resource => resource.Id == $"{actor.SpriteResourceId}-glow");
+        Assert.Equal(NormalizedMediaKind.Texture, descriptor.Kind);
+        DeterministicPngImage atlas = DeterministicPngReader.ReadRgba8(actor.Artifact.Bytes.ToArray(), actor.SpriteResourceId);
+        DeterministicPngImage glow = DeterministicPngReader.ReadRgba8(glowArtifact.Bytes.ToArray(), descriptor.Id);
+        Assert.Equal((atlas.Width, atlas.Height), (glow.Width, glow.Height));
+
+        int eyes = 0, body = 0;
+        for (int offset = 0; offset < atlas.Rgba.Length; offset += 4)
+        {
+            (byte r, byte g, byte b, byte a) = (atlas.Rgba[offset], atlas.Rgba[offset + 1], atlas.Rgba[offset + 2], atlas.Rgba[offset + 3]);
+            (byte gr, byte gg, byte gb, byte ga) = (glow.Rgba[offset], glow.Rgba[offset + 1], glow.Rgba[offset + 2], glow.Rgba[offset + 3]);
+            if (a == 0) { Assert.Equal(((byte)0, (byte)0, (byte)0, (byte)0), (gr, gg, gb, ga)); continue; }
+            Assert.Equal(byte.MaxValue, ga);
+            if (a == byte.MaxValue && (r, g, b) == (eye.Red, eye.Green, eye.Blue))
+            {
+                eyes++;
+                Assert.Equal(((byte)255, (byte)0, (byte)0), (gr, gg, gb));
+                continue;
+            }
+
+            // The body shines its own grey, dimmed by its brightness to the 1.9, so pale bones glow and the shroud barely does.
+            body++;
+            double glowLevel = Math.Pow(Math.Max(r, Math.Max(g, b)) / 255d, 1.9);
+            byte Dimmed(byte channel) => (byte)Math.Round(channel * glowLevel);
+            Assert.Equal((Dimmed(r), Dimmed(g), Dimmed(b)), (gr, gg, gb));
+        }
+
+        Assert.True(eyes > 0, "the eyes glow");
+        Assert.True(body > eyes, "the body glows too");
+    }
+
+    [Fact]
+    public void AnOrdinaryMobilePublishesNoGlow()
+    {
+        Arena2DungeonMediaPublication publication = Arena2DungeonMediaPublication.Create(CreateActorRequest(7, 262));
+        Assert.DoesNotContain(publication.MediaManifest.Resources, resource => resource.Id.EndsWith("-glow", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void PublishesTheDonorRangedGroupOnlyForAMobileThatDeclaresIt()
     {

@@ -1655,6 +1655,7 @@ internal static partial class DaggerfallSiteContent
                     RangedAttackSequence = rangedAttack,
                     Corpse = corpse,
                     Feedback = ReadActorFeedback(actor, mobileId, diagnostics),
+                    Glow = resources.TryGetValue($"{spriteId}-glow", out MediaResource? glow) ? new(glow.Path, glow.Hash) : null,
                     Female = actor.TryGetProperty("female", out var female) && female.ValueKind == JsonValueKind.Object ? ReadSprite(female) : null,
                 };
             }
@@ -2719,6 +2720,11 @@ internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 T
     /// <summary>The classic texture archive and record this sprite was cut from, when the publication states it.</summary>
     internal (int Archive, int Record)? SourceTexture { get; init; }
     internal NormalizedActorSprite? Female { get; init; }
+    /// <summary>
+    /// What of the sprite shines and in what colour, in the atlas's own layout: a spectral actor's red eyes and pale bones,
+    /// cut by the importer from shade levels the published atlas no longer carries.
+    /// </summary>
+    internal ContentArtifact? Glow { get; init; }
 
     internal NormalizedActorSprite ForGender(string gender) => gender == "female" && Female is { } female
         ? female with { Corpse = female.Corpse ?? Corpse } : this;

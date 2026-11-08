@@ -369,6 +369,7 @@ internal static class TestSessions
             {
                 yield return (variant.TexturePath, variant.TextureSha256);
                 if (variant.Corpse is { } corpse) yield return (corpse.TexturePath, corpse.TextureSha256);
+                if (variant.Glow is { } glow) yield return (glow.Path, glow.Sha256);
             }
         }
         foreach (NormalizedBillboardSprite sprite in inputs.BillboardSprites.Values) yield return (sprite.TexturePath, sprite.TextureSha256);

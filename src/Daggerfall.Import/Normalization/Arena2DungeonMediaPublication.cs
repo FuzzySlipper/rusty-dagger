@@ -768,7 +768,9 @@ public sealed record Arena2DungeonMediaPublication(
         foreach (ActorSelection selection in selections)
         {
             TextureArchive archive = archives[selection.Source.TextureArchive.Value];
+            bool spectral = Arena2SpectralTextures.IsSpectralArchive(selection.Source.TextureArchive.Value);
             List<ActorFrameDraft> sourceFrames = [];
+            List<DecodedSpriteFrame> glowFrames = [];
             List<StateDraft> states = [];
             foreach ((DungeonActorSpriteState state, Arena2MobileFrameGroup group, DungeonSpritePlaybackSource sourcePlayback) in ActorStates(selection.Source))
             {
@@ -811,6 +813,13 @@ public sealed record Arena2DungeonMediaPublication(
                                 decoded.Height,
                                 SpriteRgba(selection.Source.TextureArchive.Value, decoded, palette),
                                 record.IsHorizontallyMirrored)));
+                        if (spectral)
+                        {
+                            glowFrames.Add(sourceFrames[^1].Decoded with
+                            {
+                                Rgba = Arena2SpectralTextures.ToGlowRgbaBytes(decoded.Pixels.Span, palette, decoded.Source),
+                            });
+                        }
                     }
                 }
 
@@ -839,6 +848,11 @@ public sealed record Arena2DungeonMediaPublication(
                 $"media/dungeon/actors/mobile-{selection.Source.Id.Value}{suffix}.png",
                 atlas);
             generated.Add(artifact);
+            if (spectral)
+            {
+                generated.Add(SpectralGlow(spriteResourceId, $"media/dungeon/actors/mobile-{selection.Source.Id.Value}{suffix}-glow.png", glowFrames, atlas, quotas));
+            }
+
             DungeonMediaFrameLayout[] layouts = sourceFrames.Select((frame, index) => new DungeonMediaFrameLayout(
                 index,
                 frame.SourceRecord,
@@ -875,6 +889,23 @@ public sealed record Arena2DungeonMediaPublication(
         }
 
         return drafts;
+    }
+
+    /// <summary>
+    /// A spectral actor's glow, published beside its atlas as <c>{sprite}-glow</c> in the same layout so a renderer
+    /// samples it with the sprite's own frame rectangles. Only the importer still reads the shade levels that mark the
+    /// eyes; a glow that fell out of step with its atlas would light the wrong pixels.
+    /// </summary>
+    private static GeneratedMediaArtifact SpectralGlow(string spriteResourceId, string relativePath, IReadOnlyList<DecodedSpriteFrame> frames, NormalizedSpriteAtlas atlas, Arena2DungeonMediaQuotas quotas)
+    {
+        NormalizedSpriteAtlas glow = SpriteAtlasNormalizer.Normalize(frames, SpriteAtlasOptions.Grid(quotas.MaximumAtlasDimension, cropTransparentPixels: false, bottomAlign: true));
+        if (glow.Width != atlas.Width || glow.Height != atlas.Height || !glow.Frames.SequenceEqual(atlas.Frames))
+        {
+            throw new InvalidOperationException($"The glow of '{spriteResourceId}' does not share its atlas layout.");
+        }
+
+        RequireArtifactSize(glow.PngBytes, quotas, $"glow of actor '{spriteResourceId}'");
+        return new($"{spriteResourceId}-glow", NormalizedMediaKind.Texture, relativePath, glow.PngBytes, glow.Width, glow.Height, null, "image/png");
     }
 
     private static CorpseDraft? BuildCorpse(

@@ -146,8 +146,10 @@ off, and that is what `bloom` spreads.
   daedra, the fire atronach) takes the light like any enemy and shines over it through its
   own texture at `creatureGlow`, as do its remains; its point light still lights the room.
   Fire, shock and magic effects, missiles and impacts, shine over their colours at
-  `spellGlow`, above 1 so they bloom. Ghosts' and wraiths' eyes need a mask cut from the
-  classic palette, which no art carries yet.
+  `spellGlow`, above 1 so they bloom. Ghosts and wraiths shine at `creatureGlow` through a
+  glow the importer publishes beside their atlas in its layout (`{sprite}-glow`), since
+  only the source still marks their eyes: the eyes red, the body its own grey times its
+  brightness to the 1.9, so bones and skulls stand out of a dim shroud.
 - **First person.** The viewmodel layer doesn't take the scene's lights, so the view takes a
   tint from the light the eye stands in (`DaggerfallViewLight`): the sky plus any lamp, glowing
   mobile, spell or magic candle in reach, by the renderer's own falloff. `viewFull` is the light

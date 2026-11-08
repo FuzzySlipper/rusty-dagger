@@ -1105,6 +1105,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// An actor's sprite. A glowing creature (one with a glow colour: the fire and frost daedra, the fire atronach) takes
     /// the light around it like any other and shines over it through emission at <see cref="DaggerfallSiteLightingTuning.CreatureGlow"/>,
     /// its own texture as the map, as the donor reuses its colours for its glow; so does whatever <paramref name="glows"/> marks.
+    /// A sprite that publishes its own glow (a ghost's or wraith's eyes) shines through that at the same level.
     /// </summary>
     private (SpriteAtlas Atlas, Appearance Appearance) CreateSprite(IContentService content, NormalizedActorSprite sprite, DaggerfallMobileDefinition? mobile = null, SpriteMaterialDescriptor? material = null, bool glows = false)
     {
@@ -1117,7 +1118,13 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 default, default, 1f, 0f, SpriteAlphaMode.Mask, .5f,
                 mobile.GlowColor is not null ? SpriteShadowPolicy.None
                     : mobile.NoShadow ? SpriteShadowPolicy.Receive : SpriteShadowPolicy.CastAndReceive) };
-        if (glows || mobile?.GlowColor is not null) request = request with { Material = Glowing(request.Material, texture, lighting.CreatureGlow) };
+        if (sprite.Glow is { } glow)
+        {
+            RenderResource map = appearance.OpenTexture(content, glow.Path, glow.Sha256).Handle;
+            ownedResources.Add(map);
+            request = request with { Material = Glowing(request.Material, map, lighting.CreatureGlow) };
+        }
+        else if (glows || mobile?.GlowColor is not null) request = request with { Material = Glowing(request.Material, texture, lighting.CreatureGlow) };
         Appearance value = appearance.CreateSpriteFromAtlas(request);
         return (atlas, value);
     }

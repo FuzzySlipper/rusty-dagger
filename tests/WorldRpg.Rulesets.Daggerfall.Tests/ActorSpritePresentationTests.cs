@@ -62,6 +62,26 @@ public sealed class ActorSpritePresentationTests
     }
 
     [Fact]
+    public void A_sprite_with_its_own_glow_shines_through_that_glow_at_the_creature_level()
+    {
+        List<string> releases = []; var graphics = new AppearanceFake(releases);
+        ContentFake content = MediaContent(releases);
+        content.Add("sprite/enemy-glow.png", Hash);
+        DaggerfallSiteProfile inputs = MediaInputs();
+        NormalizedActorSprite ghost = inputs.ActorSprites.Values.Single() with { Glow = new("sprite/enemy-glow.png", Hash) };
+        using var presentation = new DaggerfallSiteAppearance(content, graphics, inputs);
+        Assert.DoesNotContain(graphics.SpriteRequests, request => request.Material.EmissionMap != default);
+
+        presentation.AddActor(21, ghost);
+
+        SpriteMaterialDescriptor drawn = graphics.SpriteRequests[^1].Material;
+        Assert.Equal(Vector3.One, drawn.EmissionColor);
+        Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.CreatureGlow, drawn.EmissionIntensity);
+        Assert.NotEqual(default, drawn.EmissionMap);
+        Assert.Contains("sprite/enemy-glow.png", graphics.OpenedResourcePaths);
+    }
+
+    [Fact]
     public void Window_glass_lights_only_at_its_level_and_follows_the_season_without_changing_the_texture()
     {
         List<string> releases = []; var graphics = new AppearanceFake(releases); var source = MediaInputs();
