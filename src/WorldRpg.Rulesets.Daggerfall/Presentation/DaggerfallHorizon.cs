@@ -339,6 +339,23 @@ internal sealed class DaggerfallHorizon : IDisposable
         return _ground.Height(x + east, z + south) - _ground.Height(x, z);
     }
 
+    /// <summary>
+    /// The map point of the nearest ground to a player at <paramref name="local"/> that is mostly <paramref name="kind"/>,
+    /// within <paramref name="radius"/> metres (<see cref="DaggerfallHorizonGround.Kind"/>).
+    /// </summary>
+    internal (double X, double Z)? FindGround(DaggerfallExteriorWorldOrigin origin, Vector3 local, string kind, double radius, bool winter)
+    {
+        (double x, double z) = MapPoint(origin, local);
+        return _ground.Find(x, z, kind, radius, winter);
+    }
+
+    /// <summary>The map point under <paramref name="local"/> in near ground's frame at <paramref name="origin"/>.</summary>
+    internal static (double X, double Z) MapPoint(DaggerfallExteriorWorldOrigin origin, Vector3 local)
+    {
+        Vector3 engineLocal = local - origin.Compensation;
+        return (engineLocal.X + (origin.MapPixelX * CellSize), engineLocal.Z + (origin.MapPixelY * CellSize));
+    }
+
     /// <summary>Where the nearest river lies from a player at <paramref name="local"/>, for finding water by hand.</summary>
     internal string NearestRiver(DaggerfallExteriorWorldOrigin origin, Vector3 local, DaggerfallTerrainSet terrain)
     {

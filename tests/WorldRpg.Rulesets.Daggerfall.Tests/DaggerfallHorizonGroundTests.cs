@@ -338,6 +338,25 @@ public sealed class DaggerfallHorizonGroundTests
         Assert.Equal(0, ground.GrassCover(5 * Size, 5 * Size, sea + 1, 0, false));
     }
 
+    /// <summary>
+    /// A developer finds ground by its kind: the nearest spot whose ground and the ground about it are mostly that kind, in
+    /// winter the climate's snow, and nothing where the climate has none.
+    /// </summary>
+    [Fact]
+    public void Ground_is_found_by_its_kind_and_winter_turns_it_to_snow()
+    {
+        DaggerfallHorizonGround ground = new(Terrain(8, 8), (_, _) => 231, DaggerfallHorizonTuning.Default, DaggerfallGroundTuning.Default,
+            new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior>()) { Materials = Materials };
+        (double x, double z) = (4.5 * Size, 4.5 * Size);
+
+        (double X, double Z) grass = Assert.NotNull(ground.Find(x, z, "grass", 3 * Size, winter: false));
+        Assert.Equal("grass", ground.Kind(grass.X, grass.Z, winter: false));
+        Assert.True(Math.Max(Math.Abs(grass.X - x), Math.Abs(grass.Z - z)) <= 3 * Size);
+        (double X, double Z) snow = Assert.NotNull(ground.Find(x, z, "snow", 3 * Size, winter: true));
+        Assert.Equal("snow", ground.Kind(snow.X, snow.Z, winter: true));
+        Assert.Null(ground.Find(x, z, "sand", 3 * Size, winter: false));
+    }
+
     /// <summary>Tufts grow on each land climate's nature, in its ground's grass; the open sea lends its nature none.</summary>
     [Fact]
     public void Tufts_wear_each_land_climates_ground_and_the_sea_lends_none()

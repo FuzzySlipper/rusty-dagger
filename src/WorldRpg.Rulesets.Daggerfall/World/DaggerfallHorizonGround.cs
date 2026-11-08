@@ -242,6 +242,59 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         return (archive, paint.Weights, materials.HasLush && paint.Material == materials.Lush);
     }
 
+    /// <summary>The kinds of ground <see cref="Kind"/> tells apart, for a developer to find one.</summary>
+    internal static IReadOnlyList<string> Kinds { get; } = ["grass", "dirt", "rock", "sand", "snow", "lush", "beach"];
+
+    /// <summary>
+    /// What a point of open ground mostly is, by the layer that weighs most there and only where it weighs at least
+    /// <paramref name="share"/>: grass, dirt, rock, a desert's sand, snow (a winter set's ground, or the snow on high ground)
+    /// or a swamp's lush ground; or beach. None on a bank, in a river, in a location's clearing, or where no layer leads.
+    /// </summary>
+    internal string? Kind(double x, double z, bool winter, float share = .7f)
+    {
+        double height = Height(x, z);
+        if (height <= OceanMetres || InChannel(x, z, Spacing * 2)) return null;
+        if (height <= OceanMetres + BeachMetres) return OnBank(x, z) || InClearing(x, z) ? null : "beach";
+        double east = (Height(x + Spacing, z) - height) / Spacing, south = (Height(x, z + Spacing) - height) / Spacing;
+        if (OpenLook(x, z, height, (float)Math.Sqrt((east * east) + (south * south)), winter) is not { } look) return null;
+        int layer = 0;
+        for (int i = 1; i < 4; i++) if (look.Weights[i] > look.Weights[layer]) layer = i;
+        if (look.Weights[layer] < share) return null;
+        (int mapX, int mapY) = MapPixel(x, z);
+        if (DaggerfallExteriorEnvironment.IsDesertClimate(Climate(mapX, mapY))) return "sand";
+        return layer switch
+        {
+            0 => look.Archive % 100 == 3 ? "snow" : "grass",
+            1 => look.Archive % 100 == 3 ? "snow" : "dirt",
+            2 => "rock",
+            _ => look.Lush ? "lush" : "snow",
+        };
+    }
+
+    /// <summary>
+    /// The nearest point to map point (x, z), within <paramref name="radius"/> metres, whose ground is mostly
+    /// <paramref name="kind"/>; searched ring by ring, finer near the start.
+    /// </summary>
+    internal (double X, double Z)? Find(double x, double z, string kind, double radius, bool winter)
+    {
+        double step = Math.Max(Spacing * 4, radius / 400);
+        for (double ring = 0; ring <= radius; ring += step)
+        {
+            int points = Math.Max(1, (int)Math.Ceiling(2 * Math.PI * ring / step));
+            for (int i = 0; i < points; i++)
+            {
+                double angle = 2 * Math.PI * i / points, px = x + (ring * Math.Cos(angle)), pz = z + (ring * Math.Sin(angle));
+                if (px < Spacing || pz < Spacing || px >= _terrain.Width * DaggerfallTerrainSurfaceBuilder.HorizontalSize
+                    || pz >= _terrain.Height * DaggerfallTerrainSurfaceBuilder.HorizontalSize) continue;
+                // A spot in the middle of its kind, not on its edge, so the whole view about it shows it.
+                if (Kind(px, pz, winter) == kind && Kind(px + 12, pz, winter) == kind && Kind(px, pz + 12, winter) == kind
+                    && Kind(px - 12, pz, winter) == kind && Kind(px, pz - 12, winter) == kind) return (px, pz);
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>How much of open ground is grass by its look, none on a beach or bank, under snow or in a location's clearing.</summary>
     internal float GrassCover(double x, double z, double height, float slope, bool winter) => OpenLook(x, z, height, slope, winter)?.Weights.X ?? 0;
 

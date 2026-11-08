@@ -1,0 +1,14 @@
+{
+ "name": "environments",
+ "scenes": [
+  {"name": "temperate grass", "travel": "17/0", "scout": "grass", "km": 5, "compare": {"flat": "none", "cover": "all"}},
+  {"name": "temperate dirt", "scout": "dirt", "km": 10, "compare": {"flat": "none", "cover": "all"}},
+  {"name": "rock slope", "scout": "rock", "km": 30, "pitch": -5, "compare": {"flat": "none", "cover": "all"}},
+  {"name": "beach", "scout": "beach", "km": 60, "compare": {"flat": "none", "cover": "all"}},
+  {"name": "desert sand", "travel": "0/5", "scout": "sand", "km": 10, "pitch": -8, "compare": {"flat": "none", "cover": "all"}},
+  {"name": "swamp lush ground", "scout": "lush", "km": 100, "compare": {"flat": "none", "cover": "all"}},
+  {"name": "mountain dirt", "travel": "Orsinium", "scout": "dirt", "km": 10, "compare": {"flat": "none", "cover": "all"}},
+  {"name": "winter snow", "travel": "17/0", "season": "Winter", "scout": "snow", "km": 10, "compare": {"flat": "none", "cover": "all"}},
+  {"name": "summer again", "season": "Summer", "scout": "grass", "km": 5}
+ ]
+}

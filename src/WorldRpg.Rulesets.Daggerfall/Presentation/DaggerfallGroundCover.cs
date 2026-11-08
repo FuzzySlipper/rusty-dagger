@@ -321,7 +321,7 @@ internal sealed class DaggerfallGroundCover : IDisposable
             {
                 AlphaMode = MaterialAlphaMode.Mask,
                 AlphaCutoff = (layer + 1f) / (_tuning.ShellLayers + 1f),
-                SinksUnderSnow = true,
+                SinksUnderSnow = art.SinksUnderSnow,
                 Shader = new MaterialShader(new RenderResourceReference(_shader),
                     new Vector4(art.Texels / _groundRepeat, sway, GustRate, layer / Math.Max(_tuning.ShellLayers - 1f, 1)),
                     default, default, default, default, default, sway),

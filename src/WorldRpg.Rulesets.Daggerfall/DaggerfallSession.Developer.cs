@@ -126,6 +126,8 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
             DaggerfallSiteRecord? site = _site.ActiveSite;
             w.WriteString("place", site?.Name); w.WriteString("site", site?.Id.ToString());
             w.WriteString("profile", _activeProfileKey.LogicalId); w.WriteString("kind", _activeProfileKey.Kind.ToString());
+            // The title stands a world behind it too, so whether a game is running is said outright.
+            w.WriteBoolean("playing", _mode != ProductMode.Title);
             if (site is not null && _sites.Projection.Inputs.InteriorBuilding is { } interior)
                 w.WriteString("building", BuildingLabel(site, new(interior.BlockX, interior.BlockY, interior.Building.Index)));
             Vector(w, "feet", PlayerFloor()); Vector(w, "centre", position.ToVector());
@@ -150,6 +152,19 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
         int seconds = ((hour * 3_600) - (int)_time.Calendar.SecondOfDay + secondsPerDay) % secondsPerDay;
         _ = AdvanceElapsedTime(seconds, idleFatigue: false);
         return DebugCommandResult.Success($"It is {_time.Calendar.SecondOfDay / 3_600}:00, {_time.Calendar.Season}.");
+    }
+
+    public DebugCommandResult Season(string season)
+    {
+        if (!Enum.TryParse(season, ignoreCase: true, out DaggerfallSeason target) || !Enum.IsDefined(target))
+            return Refused($"A season is one of {string.Join(", ", Enum.GetNames<DaggerfallSeason>())}.");
+        DaggerfallCalendar now = _time.Calendar;
+        if (now.Season == target) return DebugCommandResult.Success($"It is already {target}.");
+        // Each season opens on its first month, by the calendar's own table.
+        int first = target switch { DaggerfallSeason.Winter => 11, DaggerfallSeason.Spring => 2, DaggerfallSeason.Summer => 5, _ => 8 };
+        int days = ((first - now.Month + DaggerfallCalendar.MonthsPerYear) % DaggerfallCalendar.MonthsPerYear * DaggerfallCalendar.DaysPerMonth) - now.Day;
+        _ = AdvanceElapsedTime((long)days * DaggerfallCalendar.SecondsPerDay, idleFatigue: false);
+        return DebugCommandResult.Success($"It is day {_time.Calendar.Day + 1} of month {_time.Calendar.Month + 1}, {_time.Calendar.Season}.");
     }
 
     public DebugCommandResult GroundBlend(double contrast, double repeatMetres, double triplanarSharpness)
@@ -184,6 +199,42 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
         double rise = _horizon.GroundRise(origin, position.ToVector(), east, south);
         return Teleport(feet.X + east, feet.Y + rise + .05, feet.Z + south, force: true);
     }
+
+    public DebugCommandResult Scout(string kind, double kilometres)
+    {
+        if (DeveloperMoveRefusal() is { } refusal) return Refused(refusal);
+        if (!DaggerfallHorizonGround.Kinds.Contains(kind)) return Refused($"Ground is one of {string.Join(", ", DaggerfallHorizonGround.Kinds)}.");
+        if (!double.IsFinite(kilometres) || kilometres is <= 0 or > 100) return Refused("Search out to more than 0 and at most 100 kilometres.");
+        if (_sites.ActiveExteriorOrigin is not { } origin || State.PlayerControl.Position is not { } position) return Refused("The player is not outdoors.");
+        bool winter = _time.Calendar.Season == DaggerfallSeason.Winter;
+        if (_horizon.FindGround(origin, position.ToVector(), kind, kilometres * 1000, winter) is not { } found)
+            return Refused($"No open ground within {kilometres} km is mostly {kind}{(winter ? " in winter" : "")}; travel nearer first.");
+        (double fromX, double fromZ) = DaggerfallHorizon.MapPoint(origin, position.ToVector());
+        string by = "";
+        // A stand moves the player within the Engine's local envelope; farther, the player lands at the place nearest the spot first.
+        if (Math.Max(Math.Abs(found.X - fromX), Math.Abs(found.Z - fromZ)) > ScoutStandMetres)
+        {
+            DaggerfallSiteProfiles profiles = _sites.RequireProfiles();
+            DaggerfallSiteRecord? nearest = _site.Records
+                .Where(record => record.Exterior is not null && profiles.TryGet(DaggerfallWorldProfileIds.Exterior(record.Id), out _))
+                .MinBy(record => Math.Pow(((record.MapPixelX + .5) * DaggerfallExteriorCellResidency.CellSize) - found.X, 2)
+                    + Math.Pow(((record.MapPixelY + .5) * DaggerfallExteriorCellResidency.CellSize) - found.Z, 2));
+            if (nearest is null || !profiles.TryGet(DaggerfallWorldProfileIds.Exterior(nearest.Id), out DaggerfallSiteProfile exterior) || !ArriveAt(exterior))
+                return Refused($"Ground that is mostly {kind} lies {Math.Max(Math.Abs(found.X - fromX), Math.Abs(found.Z - fromZ)) / 1000:F0} km away, and no place near it could be landed at.");
+            if (_sites.ActiveExteriorOrigin is not { } landed || State.PlayerControl.Position is not { } there) return Refused($"{nearest.Name} has no ground to stand on.");
+            (fromX, fromZ) = DaggerfallHorizon.MapPoint(landed, there.ToVector());
+            by = $" by way of {nearest.Name}";
+        }
+
+        double east = found.X - fromX, south = found.Z - fromZ;
+        DebugCommandResult stood = Stand(east, south);
+        return stood.Status == DebugCommandStatus.Success
+            ? DebugCommandResult.Success(string.Create(CultureInfo.InvariantCulture, $"Standing in {kind}, {east:F0} m east and {south:F0} m south of where the player was{by}."))
+            : stood;
+    }
+
+    /// <summary>The farthest a scout stands the player from where they are, well inside the Engine's local envelope.</summary>
+    private const double ScoutStandMetres = 4000;
 
     public DebugCommandResult NearestRiver() => _sites.ActiveExteriorOrigin is { } origin && State.PlayerControl.Position is { } position
         ? DebugCommandResult.Success(_horizon.NearestRiver(origin, position.ToVector(), _definitions.Terrain))

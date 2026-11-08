@@ -43,6 +43,9 @@ public interface IDeveloperWorldSession
     /// <summary>Changes how ground layers for this run.</summary>
     DebugCommandResult GroundBlend(double contrast, double repeatMetres, double triplanarSharpness);
 
+    /// <summary>Lets world time run on to the first day of the next <paramref name="season"/>.</summary>
+    DebugCommandResult Season(string season);
+
     /// <summary>Sets the weather everywhere until the day's next change.</summary>
     DebugCommandResult Weather(string kind);
     /// <summary>Leaves open ground this wet and this snowed, for a developer.</summary>
@@ -50,6 +53,9 @@ public interface IDeveloperWorldSession
 
     /// <summary>Stands the player on the ground <paramref name="east"/> and <paramref name="south"/> metres away, as far as the walked window reaches.</summary>
     DebugCommandResult Stand(double east, double south);
+
+    /// <summary>Stands the player in the nearest ground of a <paramref name="kind"/> the ruleset tells apart, within <paramref name="kilometres"/>.</summary>
+    DebugCommandResult Scout(string kind, double kilometres);
 
     /// <summary>Slopes at walking scale from random points across the land, and what a map pixel's surface costs to build.</summary>
     DebugCommandResult GroundSurvey();
@@ -107,6 +113,9 @@ public sealed class DeveloperWorldDebugModule(Func<IDeveloperWorldSession> curre
     [DebugCommand("world.ground-blend", Description = "Developer: layer ground at CONTRAST (1 or more) with textures repeating every METRES, triplanar at SHARPNESS (0 for none).")]
     public DebugCommandResult GroundBlend(double contrast, double repeatMetres, double triplanarSharpness) => current().GroundBlend(contrast, repeatMetres, triplanarSharpness);
 
+    [DebugCommand("world.season", Description = "Developer: let world time run on to the first day of the next SEASON (Winter, Spring, Summer or Autumn), at this hour.")]
+    public DebugCommandResult Season(string season) => current().Season(season);
+
     [DebugCommand("world.weather", Description = "Developer: set the weather everywhere until the next day: Sunny, Cloudy, Overcast, Fog, Rain, Thunder or Snow.")]
     public DebugCommandResult Weather(string kind) => current().Weather(kind);
 
@@ -115,6 +124,9 @@ public sealed class DeveloperWorldDebugModule(Func<IDeveloperWorldSession> curre
 
     [DebugCommand("world.stand", Description = "Developer: stand the player on the ground EAST and SOUTH metres away, inside the walked window.")]
     public DebugCommandResult Stand(double east, double south) => current().Stand(east, south);
+
+    [DebugCommand("world.scout", Description = "Developer: stand in the middle of the nearest open ground that is mostly KIND (the ruleset names its kinds), searching out to KILOMETRES.")]
+    public DebugCommandResult Scout(string kind, double kilometres) => current().Scout(kind, kilometres);
 
     [DebugCommand("world.river", Description = "Developer: the nearest river's bearing, surface and width.")]
     public DebugCommandResult NearestRiver() => current().NearestRiver();

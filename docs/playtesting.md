@@ -103,7 +103,7 @@ report them; names with spaces are quoted.
 
 | Command | What it does |
 |---|---|
-| `world.where` | Current place, site, profile, building, feet and centre, facing, and the nearest targets with their ids. |
+| `world.where` | Current place, site, profile, building, feet and centre, facing, the nearest targets with their ids, and `playing`: false on the title, which stands a world behind it too. |
 | `world.teleport X Y Z` | Stands the player on feet `X Y Z` in the current scene. A spot with no floor within three metres below is refused (an interior is a box in empty space), and so is one the standing body would overlap, with the Engine's clearance facts. |
 | `world.teleport-force X Y Z` | The same, placed even with no floor or where the body overlaps collision. Outside, a spot past the world edge lands at the edge. |
 | `world.move DX DY DZ` | Moves by an offset from the current feet, refusing a spot as `world.teleport` does. |
@@ -114,8 +114,10 @@ report them; names with spaces are quoted.
 | `world.hour HOUR` | Lets world time run on to the next HOUR (0 to 23) of the clock, as resting would. |
 | `world.ground-blend CONTRAST METRES SHARPNESS` | Changes how open ground blends for this run, reporting the rebuild's time. Contrast `0` tiles it instead, for comparing the two on one spot. |
 | `world.weather KIND` | Sets the weather everywhere until the next day: `Sunny`, `Cloudy`, `Overcast`, `Fog`, `Rain`, `Thunder` or `Snow`. |
+| `world.season SEASON` | Lets world time run on to the first day of the next `Winter`, `Spring`, `Summer` or `Autumn`, at this hour: winter brings each climate's winter ground. |
 | `world.ground-weather WET SNOW` | Leaves open ground this wet and this snowed, both from 0 to 1; weather carries on from there. |
 | `world.stand EAST SOUTH` | Stands the player on the ground that far away, inside the walked window: a way out into the wilderness. |
+| `world.scout KIND KM` | Stands the player in the middle of the nearest open ground that is mostly `grass`, `dirt`, `rock`, `sand`, `snow`, `lush` or `beach`, out to KM kilometres. A spot farther than 4 km is reached by landing at the place nearest it first. |
 | `world.river` | The nearest river's bearing, surface and width, to find water with `world.stand`. |
 | `world.ground-survey` | Slopes at walking scale from random land points, and what a surface costs to build. |
 | `world.horizon` | What the distant horizon is drawing: its lift and base, the haze, and its tiles. |
@@ -173,6 +175,20 @@ The keys are the clip's four marks: 0 start, 1 strike, 2 recover, 3 end.
 `scripts/fp-arms/sheet.sh` drives these over a running host and writes a contact sheet per attack, its hit outlined.
 
 Without the container, or under `classic`, each command answers why and how to fix it.
+
+## Environment tours
+
+`authoring/tools/tour/tour.py TOUR.json` looks at many environments in one run. Each scene
+of a tour file lands somewhere (`world.travel`, then `world.scout` for a kind of ground),
+sets the season, hour and weather, looks one way and captures a world frame for each
+`world.groundcover` setting it compares. Frames, a `scenes.json` of what each shows and a
+labelled `sheet.png` go to `local/evidence/tour-NAME-TIME/`; a scene whose ground was not
+reached is labelled so. It runs on a hosted playtest session (`rusty-dagger-hosted`,
+started and stopped for the run unless `--session` names one) and presses Begin on the
+wilderness start, so choose that game on the title once; the host keeps the choice. A host
+that restarted after a rebuild is back at the title, and the tour begins again.
+`authoring/tools/tour/environments.json` visits each climate and ground kind, winter's snow
+included. `--only NAME ...` runs some scenes of a tour.
 
 ## Developer tools
 

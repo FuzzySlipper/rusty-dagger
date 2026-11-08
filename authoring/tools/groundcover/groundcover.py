@@ -47,12 +47,13 @@ KINDS = {
     "lush": dict(cap=1, detail=.7, clump=.5, cell=10, bare=.1, green=0),
 }
 # The open ground layers that grow relief, by ground archive and record (DaggerfallGroundLayers.Records): each climate's
-# dirt and rock, the desert's three sands, the snow its winter wears, and the swamp's lush ground. Grass grows the shells
+# dirt and rock, the desert's three sands, the snow its winter wears (a winter set's grass and dirt alike), and the swamp's
+# lush ground. Grass grows the shells
 # above, and a location's paving and ruts and the water grow none.
 RELIEF = {(102, 1): "clods", (302, 1): "clods", (402, 1): "clods",
           (102, 3): "stones", (302, 3): "stones",
           (2, 1): "sand", (2, 2): "sand", (2, 3): "sand",
-          (103, 2): "snow", (303, 2): "snow", (403, 2): "snow",
+          (103, 2): "snow", (303, 2): "snow", (403, 2): "snow", (103, 1): "snow", (303, 1): "snow", (403, 1): "snow",
           (402, 3): "lush"}
 
 rng = np.random.default_rng(10647)
@@ -155,10 +156,12 @@ def hashed(name):
 
 
 def relief_entry(archive, record, kind):
-    """A relief texture's file, its tallest texel as a share of the stack, and whether it sways: only tall grass does."""
+    """A relief texture's file, its tallest texel as a share of the stack, whether it sways (only tall grass does) and
+    whether lying snow buries it (all but the snow itself)."""
     image = relief(Image.open(CONTENT / TERRAIN / f"texture-{archive:03d}-{record}.png"), kind)
     return publish(f"relief-{archive:03d}-{record}", image) | {
-        "kind": kind, "height": round(np.asarray(image)[..., 3].max() / 255, 4), "sways": kind == "lush"}
+        "kind": kind, "height": round(np.asarray(image)[..., 3].max() / 255, 4), "sways": kind == "lush",
+        "sinksUnderSnow": kind != "snow"}
 
 
 def main():

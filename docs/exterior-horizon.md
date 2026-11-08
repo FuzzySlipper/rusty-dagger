@@ -242,7 +242,7 @@ the layers where the art set has them, and the classic's where it doesn't.
   `repeatMetres`), so its texels stand on the ground's texels; its alpha is each texel's
   height. The tool sets the heights by kind: dirt rises in clods with its green texels
   standing as stray grass, rock in pebbles, sand and snow in broad heaps, and lush ground as
-  tall grass that sways. A layer's weight at a vertex thins its stack, so relief fades where
+  tall grass that sways. Lying snow buries every relief but the snow's own. A layer's weight at a vertex thins its stack, so relief fades where
   layers meet, and a stack draws only the layers its tallest texel reaches and only the
   triangles its texels can stand on. `world.groundcover` draws only the kinds it names
   (grass, relief, tufts) for a run.

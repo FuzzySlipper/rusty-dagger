@@ -90682,7 +90682,8 @@
      "width": 128,
      "height": 0.5961,
      "kind": "clods",
-     "sways": false
+     "sways": false,
+     "sinksUnderSnow": true
     },
     "302-1": {
      "path": "worldrpg/media/refreshed/groundcover/relief-302-1.png",
@@ -90691,7 +90692,8 @@
      "width": 128,
      "height": 0.4431,
      "kind": "clods",
-     "sways": false
+     "sways": false,
+     "sinksUnderSnow": true
     },
     "402-1": {
      "path": "worldrpg/media/refreshed/groundcover/relief-402-1.png",
@@ -90700,7 +90702,8 @@
      "width": 128,
      "height": 0.5961,
      "kind": "clods",
-     "sways": false
+     "sways": false,
+     "sinksUnderSnow": true
     },
     "102-3": {
      "path": "worldrpg/media/refreshed/groundcover/relief-102-3.png",
@@ -90709,7 +90712,8 @@
      "width": 128,
      "height": 0.349,
      "kind": "stones",
-     "sways": false
+     "sways": false,
+     "sinksUnderSnow": true
     },
     "302-3": {
      "path": "worldrpg/media/refreshed/groundcover/relief-302-3.png",
@@ -90718,7 +90722,8 @@
      "width": 128,
      "height": 0.3529,
      "kind": "stones",
-     "sways": false
+     "sways": false,
+     "sinksUnderSnow": true
     },
     "2-1": {
      "path": "worldrpg/media/refreshed/groundcover/relief-002-1.png",
@@ -90727,7 +90732,8 @@
      "width": 128,
      "height": 0.5137,
      "kind": "sand",
-     "sways": false
+     "sways": false,
+     "sinksUnderSnow": true
     },
     "2-2": {
      "path": "worldrpg/media/refreshed/groundcover/relief-002-2.png",
@@ -90736,7 +90742,8 @@
      "width": 128,
      "height": 0.5098,
      "kind": "sand",
-     "sways": false
+     "sways": false,
+     "sinksUnderSnow": true
     },
     "2-3": {
      "path": "worldrpg/media/refreshed/groundcover/relief-002-3.png",
@@ -90745,7 +90752,8 @@
      "width": 128,
      "height": 0.5569,
      "kind": "sand",
-     "sways": false
+     "sways": false,
+     "sinksUnderSnow": true
     },
     "103-2": {
      "path": "worldrpg/media/refreshed/groundcover/relief-103-2.png",
@@ -90754,7 +90762,8 @@
      "width": 128,
      "height": 0.4353,
      "kind": "snow",
-     "sways": false
+     "sways": false,
+     "sinksUnderSnow": false
     },
     "303-2": {
      "path": "worldrpg/media/refreshed/groundcover/relief-303-2.png",
@@ -90763,7 +90772,8 @@
      "width": 128,
      "height": 0.4118,
      "kind": "snow",
-     "sways": false
+     "sways": false,
+     "sinksUnderSnow": false
     },
     "403-2": {
      "path": "worldrpg/media/refreshed/groundcover/relief-403-2.png",
@@ -90772,16 +90782,48 @@
      "width": 128,
      "height": 0.4353,
      "kind": "snow",
-     "sways": false
+     "sways": false,
+     "sinksUnderSnow": false
+    },
+    "103-1": {
+     "path": "worldrpg/media/refreshed/groundcover/relief-103-1.png",
+     "byteLength": 25530,
+     "sha256": "de65ee028ffaab60fac866715a0b62bb19b399946d50b859a9c8470253233cc3",
+     "width": 128,
+     "height": 0.4118,
+     "kind": "snow",
+     "sways": false,
+     "sinksUnderSnow": false
+    },
+    "303-1": {
+     "path": "worldrpg/media/refreshed/groundcover/relief-303-1.png",
+     "byteLength": 25271,
+     "sha256": "b7d8486bd4bbd9f55256f2596479cf372569bdbe4caae0bb401236bf84f9c9f1",
+     "width": 128,
+     "height": 0.3882,
+     "kind": "snow",
+     "sways": false,
+     "sinksUnderSnow": false
+    },
+    "403-1": {
+     "path": "worldrpg/media/refreshed/groundcover/relief-403-1.png",
+     "byteLength": 31720,
+     "sha256": "cb57c2f57dc7f64c685bc4507a5da809f6e5510f1debbeca19dbc022de112037",
+     "width": 128,
+     "height": 0.7961,
+     "kind": "snow",
+     "sways": false,
+     "sinksUnderSnow": false
     },
     "402-3": {
      "path": "worldrpg/media/refreshed/groundcover/relief-402-3.png",
-     "byteLength": 41912,
-     "sha256": "710f91b63078f78fee98479c5285d523e2be47eb1728e3a6803d8986d3087fe6",
+     "byteLength": 41930,
+     "sha256": "f995309efb2044672a1b67792db99caae8b75f08e62710f438858e147ad9c708",
      "width": 128,
-     "height": 0.8196,
+     "height": 0.8078,
      "kind": "lush",
-     "sways": true
+     "sways": true,
+     "sinksUnderSnow": true
     }
    }
   }

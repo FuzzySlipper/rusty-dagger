@@ -787,7 +787,7 @@ public sealed class PublishedContentDeliveryTests
     /// <summary>
     /// The refreshed ground cover ships its shells' texture, their shader and a tuft at the bytes it states, and grass
     /// colours for the temperate, mountain and swamp summers alone: the deserts' sand and the winters' snow grow none.
-    /// Every other open ground layer of those climates, the desert's and the snow its winters wear has relief, and each
+    /// Every other open ground layer of those climates and their winters, and the desert's, has relief, and each
     /// relief texture is as many texels a side as its layer's own ground texture, so it lies on the ground it lifts.
     /// </summary>
     [Fact]
@@ -804,7 +804,7 @@ public sealed class PublishedContentDeliveryTests
         Assert.All(cover.Grass.Values, grass => Assert.True(grass.Shells.Y > grass.Shells.Z && grass.Tufts.Y > grass.Tufts.Z, "Grass is greener than it is blue."));
 
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(content.ReadBytes(payloadPath), "daggerfall.art-replacements");
-        (int, int)[] open = [.. new[] { 2, 102, 302, 402 }.SelectMany(archive => DaggerfallGroundLayers.Records(archive).Take(archive == 402 ? 5 : 4)
+        (int, int)[] open = [.. new[] { 2, 102, 103, 302, 303, 402, 403 }.SelectMany(archive => DaggerfallGroundLayers.Records(archive).Take(archive == 402 ? 5 : 4)
             .Where((_, layer) => layer > 0 || !cover.Grass.ContainsKey(archive)))
             .Distinct()];
         Assert.Equal(open.Order(), cover.Relief.Keys.Order());

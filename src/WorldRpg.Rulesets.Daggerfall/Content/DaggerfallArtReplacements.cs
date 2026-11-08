@@ -71,9 +71,10 @@ internal sealed record DaggerfallGroundCoverArt(DaggerfallArtFile Shell, int She
 
 /// <summary>
 /// A ground layer's relief: its own texture, whose alpha is each texel's height as a share of the shell stack; the tallest
-/// texel's share, so the stack draws only the layers it reaches; its texels a side; and whether it sways in the wind, as tall grass does.
+/// texel's share, so the stack draws only the layers it reaches; its texels a side; whether it sways in the wind, as tall
+/// grass does; and whether lying snow buries it, as it buries all but the snow's own relief.
 /// </summary>
-internal sealed record DaggerfallGroundRelief(DaggerfallArtFile File, float Height, int Texels, bool Sways);
+internal sealed record DaggerfallGroundRelief(DaggerfallArtFile File, float Height, int Texels, bool Sways, bool SinksUnderSnow);
 
 /// <summary>
 /// A refreshed world billboard standing in for one classic texture record: a PNG atlas of its frames in classic order, each
@@ -329,7 +330,8 @@ internal sealed class DaggerfallArtReplacements
                     if (key.Length != 2 || !float.IsFinite(height) || height is <= 0 or > 1)
                         throw new InvalidOperationException($"Content pack '{packId}' states ground relief '{layer.Name}' without an archive, record and height.");
                     relief.Add((int.Parse(key[0], System.Globalization.CultureInfo.InvariantCulture), int.Parse(key[1], System.Globalization.CultureInfo.InvariantCulture)),
-                        new(File(layer.Value, $"The ground relief {layer.Name}"), height, layer.Value.GetProperty("width").GetInt32(), layer.Value.GetProperty("sways").GetBoolean()));
+                        new(File(layer.Value, $"The ground relief {layer.Name}"), height, layer.Value.GetProperty("width").GetInt32(), layer.Value.GetProperty("sways").GetBoolean(),
+                            layer.Value.GetProperty("sinksUnderSnow").GetBoolean()));
                 }
                 groundCover = new(File(shell, "The ground cover's shell texture"), side, texels, File(cover.GetProperty("shader"), "The ground cover's shader"),
                     File(tuft, "The ground cover's tuft"), grass, relief);
