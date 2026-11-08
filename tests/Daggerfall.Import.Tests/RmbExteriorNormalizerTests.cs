@@ -201,6 +201,66 @@ public sealed class RmbExteriorNormalizerTests
         Assert.Equal(new NormalizedVector3(37.775F, 11.3F, -31.675003F), large.Document.World.StartMarker!.Position);
     }
 
+    [CorpusFact]
+    public void The_cemeterys_overlapping_hedge_pieces_draw_each_patch_of_hedge_once()
+    {
+        // The cemetery's hedge runs are short and long pieces laid over each other along one line; merged as
+        // placed, two faces of a hedge filled the same pixels with different texture offsets and shimmered.
+        RmbExteriorNormalizationResult exterior = RmbExteriorNormalizer.Normalize(new(Sources(), 17, "The Hawkston Cemetery", RmbWorldProfileKind.Exterior));
+        List<NormalizedVector3[]> drawn = [];
+        foreach (NormalizedMesh mesh in exterior.Document.Meshes.Where(mesh => mesh.MaterialGroups.All(group => !group.CollisionOnly)))
+            drawn.AddRange(mesh.Triangles.Select(triangle =>
+                new[] { mesh.Vertices[triangle.FirstVertex], mesh.Vertices[triangle.SecondVertex], mesh.Vertices[triangle.ThirdVertex] }));
+        Assert.Contains(exterior.Document.Meshes, mesh => mesh.Id.EndsWith("/texture-33-0", StringComparison.Ordinal));
+
+        List<string> overlaps = [];
+        foreach (IGrouping<(int, int, int, int), NormalizedVector3[]> plane in drawn.Where(triangle => Normal(triangle) != default).GroupBy(PlaneKey))
+        {
+            NormalizedVector3[][] triangles = [.. plane];
+            for (int first = 0; first < triangles.Length; first++)
+                for (int second = first + 1; second < triangles.Length; second++)
+                    if (Overlap(triangles[first], triangles[second], Normal(triangles[first])))
+                        overlaps.Add(string.Join(" ", triangles[first]) + " | " + string.Join(" ", triangles[second]));
+        }
+        Assert.True(overlaps.Count == 0, $"{overlaps.Count} overlapping coplanar pairs, first: {overlaps.FirstOrDefault()}");
+    }
+
+    private static (int, int, int, int) PlaneKey(NormalizedVector3[] triangle)
+    {
+        NormalizedVector3 normal = Normal(triangle);
+        return ((int)MathF.Round(normal.X * 100F), (int)MathF.Round(normal.Y * 100F), (int)MathF.Round(normal.Z * 100F),
+            (int)MathF.Round(((normal.X * triangle[0].X) + (normal.Y * triangle[0].Y) + (normal.Z * triangle[0].Z)) * 100F));
+    }
+
+    private static NormalizedVector3 Normal(NormalizedVector3[] triangle)
+    {
+        NormalizedVector3 a = new(triangle[1].X - triangle[0].X, triangle[1].Y - triangle[0].Y, triangle[1].Z - triangle[0].Z);
+        NormalizedVector3 b = new(triangle[2].X - triangle[0].X, triangle[2].Y - triangle[0].Y, triangle[2].Z - triangle[0].Z);
+        NormalizedVector3 cross = new((a.Y * b.Z) - (a.Z * b.Y), (a.Z * b.X) - (a.X * b.Z), (a.X * b.Y) - (a.Y * b.X));
+        float length = MathF.Sqrt((cross.X * cross.X) + (cross.Y * cross.Y) + (cross.Z * cross.Z));
+        return length > 1E-6F ? new(cross.X / length, cross.Y / length, cross.Z / length) : default;
+    }
+
+    /// <summary>Whether two triangles in one plane share more than an edge, by the separating edges of either.</summary>
+    private static bool Overlap(NormalizedVector3[] first, NormalizedVector3[] second, NormalizedVector3 normal)
+    {
+        int drop = MathF.Abs(normal.X) > MathF.Abs(normal.Y) ? (MathF.Abs(normal.X) > MathF.Abs(normal.Z) ? 0 : 2) : (MathF.Abs(normal.Y) > MathF.Abs(normal.Z) ? 1 : 2);
+        (float, float) Flat(NormalizedVector3 point) => drop switch { 0 => (point.Y, point.Z), 1 => (point.X, point.Z), _ => (point.X, point.Y) };
+        (float X, float Y)[] a = [.. first.Select(Flat)], b = [.. second.Select(Flat)];
+        foreach ((float X, float Y)[] triangle in new[] { a, b })
+            for (int edge = 0; edge < 3; edge++)
+            {
+                (float x0, float y0) = triangle[edge];
+                (float x1, float y1) = triangle[(edge + 1) % 3];
+                (float nx, float ny) = (y0 - y1, x1 - x0);
+                float length = MathF.Sqrt((nx * nx) + (ny * ny));
+                if (length < 1E-6F) continue;
+                float[] pa = [.. a.Select(p => ((p.X * nx) + (p.Y * ny)) / length)], pb = [.. b.Select(p => ((p.X * nx) + (p.Y * ny)) / length)];
+                if (pa.Max() <= pb.Min() + 0.002F || pb.Max() <= pa.Min() + 0.002F) return false;
+            }
+        return true;
+    }
+
     private static DungeonLogicalSourceSet Sources()
     {
         string arena2 = TestData.CorpusRoot;

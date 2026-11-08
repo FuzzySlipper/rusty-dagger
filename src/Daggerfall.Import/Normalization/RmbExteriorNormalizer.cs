@@ -117,6 +117,7 @@ public static class RmbExteriorNormalizer
         private readonly Dictionary<(ushort Archive, ushort Record, string? DoorId), NormalizedMeshBuilder> geometry = [];
         private readonly Dictionary<(ushort Archive, ushort Record), NormalizedMeshBuilder> groundPlane = [];
         private readonly Dictionary<(ushort Archive, ushort Record), TextureInfo> textures = [];
+        private readonly CoplanarSurfaces surfaces = new();
         private readonly SortedSet<string> referencedMeshes = new(StringComparer.Ordinal);
         private readonly Dictionary<(int X, int Y), int> doorOrdinals = [];
         private readonly List<DoorDraft> doorDrafts = [];
@@ -282,7 +283,6 @@ public static class RmbExteriorNormalizer
                     int ordinal = NextDoorOrdinal(block);
                     doorId = $"door/{Slug(block.SourceName)}-rmb/{block.X}/{block.Y}/{ordinal}";
                 }
-                NormalizedMeshBuilder group = Geometry(plane.TextureArchive, plane.TextureRecord, texture.MaterialId, doorId);
                 List<NormalizedVector3> polygon = [];
                 List<NormalizedVector2> uvs = [];
                 foreach (Arch3dPoint point in plane.Points)
@@ -298,7 +298,11 @@ public static class RmbExteriorNormalizer
                     var (centre, normal) = RmbBlockContent.DoorPlane(polygon);
                     interiorEntryDoors.Add(new(centre, normal));
                 }
-                group.Add(polygon, uvs, surfaceNormal);
+                // A door moves, so it keeps its whole face; every static face keeps only what no earlier placed
+                // face already covers in its plane, and a texture only covered faces use draws nothing.
+                var drawn = doorId is not null ? [(polygon, uvs)] : surfaces.Add(polygon, uvs, surfaceNormal);
+                foreach ((IReadOnlyList<NormalizedVector3> piece, IReadOnlyList<NormalizedVector2> pieceUvs) in drawn)
+                    Geometry(plane.TextureArchive, plane.TextureRecord, texture.MaterialId, doorId).Add(piece, pieceUvs, surfaceNormal);
                 if (request.ProfileKind == RmbWorldProfileKind.Interior)
                 { mapVertices.AddRange(polygon); mapMeshes.Add((plane.TextureArchive, plane.TextureRecord, doorId)); }
                 // Engine still decides whether a furniture surface point is visible.
