@@ -355,7 +355,11 @@ update to acknowledge in, so it runs the same phases at once.
   state. The panel mounts the first time Settings opens and reads the catalogue
   again on each opening after. The Engine's Advanced switches (clustered
   lighting, GPU and occlusion culling) are hidden as renderer diagnostics. Sun
-  shadows are one of its options, off by default.
+  shadows are one of its options, off by default. The game adds a Ground group
+  of its own beside them: ground cover on or off, and clutter distance. Those are
+  the player's preferences, kept by the ruleset with the controls, applied
+  through `controls-ground-cover` and `controls-clutter-distance`, and offered
+  only when the bundle carries a refreshed art set.
 - **Title, creation and death** (`entry.ts`, `character.ts`, `death.ts`): the
   title's game choice is a cycler. Creation sends every change at once and draws
   the ruleset's answer, including what blocks Start and whether Quick start can

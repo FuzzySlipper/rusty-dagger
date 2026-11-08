@@ -128,7 +128,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
   const controlsRoot = shell.querySelector<HTMLElement>('.dagger-controls-root')!;
   const controlsView = mountControls(controlsRoot, send);
   const videoRoot = shell.querySelector<HTMLElement>('.dagger-video-root')!;
-  const videoView = mountVideoSettings(videoRoot);
+  const videoView = mountVideoSettings(videoRoot, send);
   const characterRoot = shell.querySelector<HTMLElement>('.dagger-character-root')!;
   const characterView = mountCharacter(characterRoot, send);
   const notebookRoot = shell.querySelector<HTMLElement>('.dagger-notebook-root')!;
@@ -509,7 +509,10 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
         if (magic.length === 0) { const empty = document.createElement('p'); empty.textContent = 'No usable magic items or potions.'; magicItemsRoot.replaceChildren(empty); }
         else magicItemsRoot.replaceChildren(list);
       });
-      if (value.controls) controlsView.update(value.controls, host.uiScale());
+      if (value.controls) {
+        controlsView.update(value.controls, host.uiScale());
+        videoView.update(value.controls.groundCover);
+      }
       // The modes and their names are the ruleset's, so the menu's choice and the HUD's indicator agree.
       const modes = value.activation?.modes ?? [];
       if (modes.length > 0) redraw(activationMode, JSON.stringify(modes), () => activationMode.replaceChildren(...modes.map(mode => {

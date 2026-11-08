@@ -199,10 +199,11 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
 
     /// <summary>
     /// Flora's ground, in near ground's frame: the walked surface's heights; each vertex's class, its climate's nature archive
-    /// counted from the first; and its cover, the share of the donor's chance its ground's look keeps (<see cref="FloraCover"/>).
+    /// counted from the first; and its cover, the share of the donor's chance its ground's look keeps (<see cref="FloraCover"/>),
+    /// or for a field of <paramref name="grass"/> the ground's grass, thinned in towns (<see cref="CoverLook"/>).
     /// </summary>
     internal void SampleFlora(VegetationTileRequest tile, VegetationTileSamples samples, double offsetX, double offsetZ, bool winter,
-        DaggerfallFloraTuning flora)
+        DaggerfallFloraTuning flora, (float TownShare, double TownRamp)? grass = null)
     {
         GroundMaterials materials = Materials;
         int heightSide = tile.HeightSide, side = tile.Side;
@@ -218,8 +219,11 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
             (int mapX, int mapY) = MapPixel(x, z);
             int climate = Climate(mapX, mapY);
             samples.SetGround(i, j, (uint)(DaggerfallExteriorEnvironment.NatureTextureArchive(climate, season) - DaggerfallExteriorEnvironment.FirstNatureArchive));
-            samples.SetCover(i, j, FloraCover(x, z, ground[((j + 1) * heightSide) + i + 1], Slope(ground, heightSide, i, j, tile.CellSize),
-                climate, winter, materials, flora));
+            double height = ground[((j + 1) * heightSide) + i + 1];
+            float slope = Slope(ground, heightSide, i, j, tile.CellSize);
+            samples.SetCover(i, j, grass is { } g
+                ? CoverLook(x, z, height, slope, winter, g.TownShare, g.TownRamp)?.Weights.X ?? 0
+                : FloraCover(x, z, height, slope, climate, winter, materials, flora));
         }
     }
 
@@ -240,6 +244,43 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         ArchiveMaterials materials = Materials.Archives[archive];
         Paint paint = PaintOpen(x, z, height, slope, winter, Materials);
         return (archive, paint.Weights, materials.HasLush && paint.Material == materials.Lush);
+    }
+
+    /// <summary>
+    /// What ground cover grows on at a point: its ground archive, the weights of the four layers it draws there and
+    /// which archive and record each layer is. Open ground's are grass, dirt, rock, and snow or a swamp's lush ground; a
+    /// location's authored ground's are its grass, dirt, paving and ruts. A location thins it to
+    /// <paramref name="townShare"/> on its flattened ground, rising to full over <paramref name="rampMetres"/> beyond.
+    /// None on a beach, a bank or the water's edge.
+    /// </summary>
+    internal (int Archive, System.Numerics.Vector4 Weights, (int Archive, int Record)[] Layers)? CoverLook(double x, double z, double height, float slope,
+        bool winter, float townShare, double rampMetres)
+    {
+        if (height <= OceanMetres + BeachMetres || OnBank(x, z)) return null;
+        int archive = GroundArchive(x, z, winter);
+        (int Archive, int Record)[] records = DaggerfallGroundLayers.Records(archive);
+        (int mapX, int mapY, int vx, int vy) = Vertex(x, z);
+        float share = 1;
+        if (_locations.TryGetValue(new(mapX, mapY), out DaggerfallSiteExterior? location)
+            && DaggerfallExteriorEnvironment.TilesOutsideFlattening(location, vx, vy) is { } outside)
+        {
+            float t = (float)Math.Clamp(outside * Spacing / Math.Max(rampMetres, 1e-3), 0, 1);
+            share = townShare + ((1 - townShare) * t * t * (3 - (2 * t)));
+        }
+
+        if (Authored(x, z) is { } kinds)
+        {
+            if (kinds[DaggerfallGroundKinds.Water] > 0) return null;
+            float grass = kinds[DaggerfallGroundKinds.Grass], dirt = kinds[DaggerfallGroundKinds.Dirt];
+            float paving = kinds[DaggerfallGroundKinds.Stone] + kinds[DaggerfallGroundKinds.Paving], ruts = kinds[DaggerfallGroundKinds.Ruts];
+            float sum = Math.Max(grass + dirt + paving + ruts, .001F);
+            return (archive, new System.Numerics.Vector4(grass, dirt, paving, ruts) * (share / sum), [records[0], records[1], records[^3], records[^2]]);
+        }
+
+        ArchiveMaterials materials = Materials.Archives[archive];
+        Paint paint = PaintOpen(x, z, height, slope, winter, Materials);
+        bool lush = materials.HasLush && paint.Material == materials.Lush;
+        return (archive, paint.Weights * share, [records[0], records[1], records[2], lush ? records[4] : records[3]]);
     }
 
     /// <summary>The kinds of ground <see cref="Kind"/> tells apart, for a developer to find one.</summary>

@@ -109,7 +109,7 @@ internal sealed class DaggerfallHorizon : IDisposable
         if (far)
         {
             _flora.Show(session, (origin.MapPixelX, origin.MapPixelY), engineLocal, winter, flora);
-            if (_growCover is not null) (_cover ??= _growCover()).Show(origin, x, z, winter);
+            if (_growCover is not null) (_cover ??= Grow(_growCover())).Show(session, origin, engineLocal, x, z, winter);
         }
         else
         {
@@ -227,6 +227,7 @@ internal sealed class DaggerfallHorizon : IDisposable
         HideFar();
         DropNear();
         _flora.Drop();
+        _cover?.DropTufts();
         _streamer?.Dispose(); _streamer = null;
         _heightfield?.Dispose(); _heightfield = null;
         _bound = null;
@@ -281,8 +282,24 @@ internal sealed class DaggerfallHorizon : IDisposable
     internal DaggerfallGroundCover? GroundCover => _cover;
 
     /// <summary>Grows the art set's grass over near ground, made the first time refreshed ground stands outdoors.</summary>
-    internal void UseGroundCover(DaggerfallGroundCoverArt art, DaggerfallGroundCoverTuning tuning, IReadOnlyDictionary<int, int> tuftGrounds) =>
-        _growCover = () => new DaggerfallGroundCover(_engine, _ground, _flora, art, tuning, tuftGrounds, _repeatMetres);
+    /// <param name="tufts">The tufts' own field of grass, which the cover owns once grown.</param>
+    internal void UseGroundCover(DaggerfallGroundCoverArt art, DaggerfallGroundCoverTuning tuning, IReadOnlyDictionary<int, int> tuftGrounds, DaggerfallFloraField tufts) =>
+        _growCover = () => new DaggerfallGroundCover(_engine, _ground, tufts, art, tuning, tuftGrounds, _repeatMetres);
+
+    /// <summary>The player's choice of ground cover, kept for the cover whenever it grows.</summary>
+    internal void UseGroundCover(bool enabled, float distance)
+    {
+        _coverChoice = (enabled, distance);
+        _cover?.Use(enabled, distance);
+    }
+
+    private (bool Enabled, float Distance) _coverChoice = (true, 1);
+
+    private DaggerfallGroundCover Grow(DaggerfallGroundCover cover)
+    {
+        cover.Use(_coverChoice.Enabled, _coverChoice.Distance);
+        return cover;
+    }
 
     /// <summary>
     /// One map pixel of flat water at the sea's surface. Land stands through it, so the shore is wherever ground meets the
@@ -416,6 +433,7 @@ internal sealed class DaggerfallHorizon : IDisposable
         // Flora goes before it would be hidden: the Engine applies a field's removal ahead of the call's other changes,
         // so hiding a field and removing it in one call updates a node already gone.
         _flora.Dispose();
+        _cover?.DropTufts();
         Hide();
         DropNear();
         _streamer?.Dispose();

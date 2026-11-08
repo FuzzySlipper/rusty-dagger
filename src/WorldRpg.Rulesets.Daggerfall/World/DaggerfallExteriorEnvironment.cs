@@ -393,6 +393,19 @@ internal sealed class DaggerfallExteriorEnvironment
             && tileY >= rect.MinY - clearance && tileY < rect.MaxY + clearance;
     }
 
+    /// <summary>
+    /// How many tiles a tile lies outside a location's flattened rectangle, 0 inside it; none for a location that
+    /// flattens nothing.
+    /// </summary>
+    internal static int? TilesOutsideFlattening(DaggerfallSiteExterior location, int tileX, int tileY)
+    {
+        DaggerfallTerrainLocationFlattening rect = DaggerfallLocationTerrainFrame.Flattening(location);
+        if (rect.MinX <= 0 || rect.MinY <= 0) return null;
+        int x = Math.Max(Math.Max(rect.MinX - tileX, tileX - (rect.MaxX - 1)), 0);
+        int y = Math.Max(Math.Max(rect.MinY - tileY, tileY - (rect.MaxY - 1)), 0);
+        return Math.Max(x, y);
+    }
+
     internal static bool NatureSupportsWinter(int climateValue) => climateValue is 223 or 226 or 230 or 231 or 232;
 
     private static IReadOnlyList<DaggerfallExteriorWaterVolume> BuildWater(

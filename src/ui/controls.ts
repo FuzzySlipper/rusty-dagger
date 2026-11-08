@@ -11,12 +11,22 @@ export interface ControlsProjection {
   readonly uiScaleRange?: UiScaleRange;
   /** Whether the player chose classic art over the bundle's refreshed art; null when the bundle carries none. */
   readonly classicArt?: boolean | null;
+  /** Ground cover's video choices, offered only with a refreshed art set: whether it grows, and how far, as a share of its reach. */
+  readonly groundCover?: GroundCoverChoice | null;
   readonly bindings: readonly ControlBinding[];
   /** The categories in the order the screen groups the bindings, with their headings. */
   readonly categories?: readonly { readonly id: string; readonly label: string }[];
   /** Each sound bus's level, from 0 (silent) to 1 (full), and the step a level moves in. */
   readonly volumes?: readonly { readonly id: string; readonly label: string; readonly level: number }[];
   readonly volumeStep?: number;
+}
+
+export interface GroundCoverChoice {
+  readonly grows: boolean;
+  readonly distance: number;
+  readonly minimum: number;
+  readonly maximum: number;
+  readonly step: number;
 }
 
 export interface ControlBinding {

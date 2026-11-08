@@ -133,6 +133,8 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.ControlsLook:
             case DaggerfallUiActionKind.ControlsUiScale:
             case DaggerfallUiActionKind.ControlsClassicArt:
+            case DaggerfallUiActionKind.ControlsGroundCover:
+            case DaggerfallUiActionKind.ControlsClutterDistance:
             case DaggerfallUiActionKind.ControlsRebind:
             case DaggerfallUiActionKind.ControlsRebindButton:
             case DaggerfallUiActionKind.ControlsVolume:

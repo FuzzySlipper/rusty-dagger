@@ -214,6 +214,23 @@ public sealed class DaggerfallControlSettings
     public bool ClassicArt { get; private set; }
     public void SetClassicArt(bool classic) => ClassicArt = classic;
 
+    /// <summary>Whether refreshed ground cover (grass, relief and tufts) grows near the player: a video preference.</summary>
+    public bool GroundCover { get; private set; } = true;
+    public void SetGroundCover(bool grows) => GroundCover = grows;
+
+    /// <summary>How far ground cover reaches, as a share of its tuned reach, in steps of <see cref="ClutterDistanceStep"/>.</summary>
+    public float ClutterDistance { get; private set; } = 1;
+    public const float MinimumClutterDistance = .5f, MaximumClutterDistance = 2, ClutterDistanceStep = .1f;
+
+    public void SetClutterDistance(float share)
+    {
+        if (!float.IsFinite(share) || share < MinimumClutterDistance - 1e-4f || share > MaximumClutterDistance + 1e-4f
+            || MathF.Abs(share / ClutterDistanceStep - MathF.Round(share / ClutterDistanceStep)) > 1e-3f)
+            throw new ArgumentOutOfRangeException(nameof(share), share,
+                $"Clutter reaches {MinimumClutterDistance:0.#} to {MaximumClutterDistance:0.#} times its distance, in steps of {ClutterDistanceStep:0.#}.");
+        ClutterDistance = MathF.Round(share / ClutterDistanceStep) * ClutterDistanceStep;
+    }
+
     /// <summary>The sound buses the player sets levels for, in the order the settings show them, with their names.</summary>
     public static readonly IReadOnlyList<(string Id, string Label)> SoundBuses =
         [("music", "Music"), ("ambient", "Ambience"), ("effects", "Sound effects"), ("interface", "Interface sounds")];
@@ -254,6 +271,8 @@ public sealed class DaggerfallControlSettings
         ActionDrivenTime = preferences.ActionDrivenTime;
         SetUiScale(preferences.UiScale);
         ClassicArt = preferences.ClassicArt;
+        GroundCover = preferences.GroundCover;
+        SetClutterDistance(preferences.ClutterDistance);
         _controller = preferences.Controller?.ToDictionary(entry => entry.Key, entry => entry.Value.ToList(), StringComparer.Ordinal);
         foreach ((string bus, float level) in preferences.Volumes ?? []) SetVolume(bus, level);
     }
@@ -322,7 +341,7 @@ public sealed class DaggerfallControlSettings
     public void Reset() { ReplaceBindings(CreateDefaultBindings()); _controller = null; SetLook(1, DaggerfallTuning.Defaults.PlayerControl.InvertVertical); }
 
     /// <summary>Serializes the bindings for the settings holder.</summary>
-    public string Serialize() => JsonSerializer.Serialize(new DaggerfallControlPreferences(_bindings, LookSensitivity, InvertVertical, ActionDrivenTime, UiScale, _controller, _volumes, ClassicArt), DaggerfallControlSettingsJsonContext.Default.DaggerfallControlPreferences);
+    public string Serialize() => JsonSerializer.Serialize(new DaggerfallControlPreferences(_bindings, LookSensitivity, InvertVertical, ActionDrivenTime, UiScale, _controller, _volumes, ClassicArt, GroundCover, ClutterDistance), DaggerfallControlSettingsJsonContext.Default.DaggerfallControlPreferences);
 
     /// <summary>Parses a complete persisted binding set after validating every action and control.</summary>
     public static DaggerfallControlSettings Parse(string json)
@@ -493,7 +512,9 @@ internal sealed record DaggerfallControlPreferences(
     float? UiScale = null,
     Dictionary<string, List<int>>? Controller = null,
     Dictionary<string, float>? Volumes = null,
-    bool ClassicArt = false);
+    bool ClassicArt = false,
+    bool GroundCover = true,
+    float ClutterDistance = 1);
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(DaggerfallControlPreferences))]

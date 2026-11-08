@@ -227,10 +227,16 @@ the layers where the art set has them, and the classic's where it doesn't.
   `shellReach`, on near ground's own finest vertices and diagonals so they never part from
   it. Each layer is cut out where the shell texture's blade height (its alpha) falls below
   its own, so pixel blades rise out of the ground, darker toward their roots. The grass's
-  share of the ground's look thins them, beaches, banks and clearings stay bare, and the
-  blades shorten away over the last `shellFade`. Their shader slides the higher layers with
+  share of the ground's look thins them, beaches and banks stay bare, and the
+  blades shorten away over the last `shellFade`. A location's own ground grows cover from
+  its tiles (grass and dirt; paving, ruts and water stay bare) at `townShare` of its
+  share, rising to full over `townRamp` metres beyond its flattened ground. Their shader slides the higher layers with
   the wind by whole texels (`shellSway` at the top). Tufts are three crossed quads of pixel
-  grass, a flora layer per climate (`tuftDensity` to `tuftReach`), their tips fluttering.
+  grass, a layer per climate (`tuftDensity` to `tuftReach`), their tips fluttering, in a
+  vegetation field of their own whose cover is the grass's share, thinned in towns the same
+  way, rather than flora's, which keeps out of every clearing. The player chooses in the
+  video settings whether ground cover grows and how far it reaches (clutter distance, 0.5
+  to 2 times the shells' and tufts' reach and fade).
   Both wear the climate's grass: the art set's `groundCover` names each ground archive's
   grass colour, measured from its refreshed grass surface by
   `authoring/tools/groundcover/groundcover.py`, which also makes the textures. The deserts'

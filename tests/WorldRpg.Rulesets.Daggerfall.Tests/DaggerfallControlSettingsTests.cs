@@ -165,6 +165,30 @@ public sealed class DaggerfallControlSettingsTests
         Assert.Contains("not a supported", unknownControl.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// Ground cover is on and reaches its tuned distance by default; the player's choice of both round-trips, and a
+    /// distance off its steps or outside its range is refused without changing the one in force.
+    /// </summary>
+    [Fact]
+    public void Ground_cover_and_clutter_distance_default_on_and_full_and_round_trip_within_their_steps()
+    {
+        DaggerfallControlSettings settings = new();
+        Assert.True(settings.GroundCover);
+        Assert.Equal(1f, settings.ClutterDistance);
+        Assert.True(DaggerfallControlSettings.Parse(PersistedBindings(new("attack", "Primary"))).GroundCover);
+
+        settings.SetGroundCover(false);
+        settings.SetClutterDistance(1.6f);
+        DaggerfallControlSettings read = DaggerfallControlSettings.Parse(settings.Serialize());
+        Assert.False(read.GroundCover);
+        Assert.Equal(1.6f, read.ClutterDistance, 4);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetClutterDistance(1.65f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetClutterDistance(2.1f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetClutterDistance(.4f));
+        Assert.Equal(1.6f, settings.ClutterDistance, 4);
+    }
+
     private static string PersistedBindings(KeyValuePair<string, string?> replacement)
     {
         Dictionary<string, List<string>?> bindings = new(StringComparer.Ordinal);

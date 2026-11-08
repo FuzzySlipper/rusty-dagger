@@ -964,6 +964,8 @@
     "shellFade": 20,
     "shellSway": 0.12,
     "shellRagged": 1,
+    "townShare": 0.35,
+    "townRamp": 48,
     "tuftDensity": 2,
     "tuftReach": 70,
     "tuftFade": 25,

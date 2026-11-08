@@ -43,11 +43,11 @@ internal sealed class DaggerfallGroundCover : IDisposable
 
     private readonly IEngineContext _engine;
     private readonly DaggerfallHorizonGround _ground;
-    private readonly DaggerfallFloraField _flora;
+    /// <summary>The tufts' own field, whose cover is the ground's grass, thinned in towns.</summary>
+    private readonly DaggerfallFloraField _tufts;
     private readonly DaggerfallGroundCoverArt _art;
     private readonly DaggerfallGroundCoverTuning _tuning;
     private readonly IReadOnlyDictionary<int, int> _tuftGrounds;
-    private readonly int _cells;
     private readonly RenderResource _shellImage;
     private readonly RenderResource _shader;
     private readonly Material[] _shellMaterials;
@@ -60,21 +60,23 @@ internal sealed class DaggerfallGroundCover : IDisposable
     private readonly List<(MeshResource Mesh, Appearance Look)> _retired = [];
     private (MeshResource Mesh, Appearance Look, Vector3 At)? _shells;
     private (long X, long Z, (int, int) Frame, bool Winter)? _built;
-    private bool _tufting;
+    private (bool On, float Distance) _tufting;
+    private bool _enabled = true;
+    private float _distance = 1;
 
     /// <param name="groundRepeat">How far a ground texture spans before it repeats, which relief matches.</param>
+    /// <param name="tufts">A field of grass for the tufts to grow in, which the cover owns from here on.</param>
     /// <param name="tuftGrounds">Each summer nature archive's ground archive, whose grass its tufts wear (<see cref="TuftGrounds"/>).</param>
-    internal DaggerfallGroundCover(IEngineContext engine, DaggerfallHorizonGround ground, DaggerfallFloraField flora, DaggerfallGroundCoverArt art,
+    internal DaggerfallGroundCover(IEngineContext engine, DaggerfallHorizonGround ground, DaggerfallFloraField tufts, DaggerfallGroundCoverArt art,
         DaggerfallGroundCoverTuning tuning, IReadOnlyDictionary<int, int> tuftGrounds, float groundRepeat)
     {
         _groundRepeat = groundRepeat;
         _engine = engine;
         _ground = ground;
-        _flora = flora;
+        _tufts = tufts;
         _art = art;
         _tuning = tuning;
         _tuftGrounds = tuftGrounds;
-        _cells = (int)Math.Ceiling(tuning.ShellReach / Cell);
         _shellImage = engine.Graphics.OpenTexture(engine.Content, art.Shell.Path, art.Shell.Sha256, TextureFilter.Nearest, TextureWrap.Repeat).Handle;
         _shader = engine.Graphics.OpenShader(engine.Content, art.Shader.Path, art.Shader.Sha256);
         _shellMaterials = [.. Enumerable.Range(0, tuning.ShellLayers)
@@ -118,23 +120,44 @@ internal sealed class DaggerfallGroundCover : IDisposable
         Retire();
     }
 
-    /// <summary>Grows the cover about a player at map point (x, z) in near ground's frame at <paramref name="origin"/>.</summary>
-    internal void Show(DaggerfallExteriorWorldOrigin origin, double x, double z, bool winter)
+    /// <summary>
+    /// The player's choice: whether ground cover grows at all, and how far it reaches, as a share of its tuned reach (the
+    /// shells' and the tufts' alike, each fading over the same share of its own).
+    /// </summary>
+    internal void Use(bool enabled, float distance)
     {
-        if (Tufts != _tufting)
+        if (!float.IsFinite(distance) || distance <= 0) throw new ArgumentOutOfRangeException(nameof(distance), distance, "Ground cover reaches some distance.");
+        if ((_enabled, _distance) == (enabled, distance)) return;
+        (_enabled, _distance) = (enabled, distance);
+        Retire();
+    }
+
+    private float ShellReach => _tuning.ShellReach * _distance;
+
+    /// <summary>
+    /// Grows the cover about a player at map point (x, z), <paramref name="local"/> in near ground's frame at
+    /// <paramref name="origin"/>.
+    /// </summary>
+    internal void Show(SpatialSession session, DaggerfallExteriorWorldOrigin origin, Vector3 local, double x, double z, bool winter)
+    {
+        (bool On, float Distance) tufting = (_enabled && Tufts, _distance);
+        if (tufting != _tufting)
         {
-            _tufting = Tufts;
+            _tufting = tufting;
             foreach ((int nature, int ground) in _tuftGrounds)
             {
                 // A tuft layer grows on its summer archive's ground; the winter set is another class and grows none.
-                if (Tufts && _art.Grass.TryGetValue(ground, out (Vector3 Shells, Vector3 Tufts) grass))
-                    _flora.GrowOn(nature, TuftLayer(nature), _tuftLook, _tuning.TuftDensity, _tuning.TuftReach, _tuning.TuftFade,
+                if (tufting.On && _art.Grass.TryGetValue(ground, out (Vector3 Shells, Vector3 Tufts) grass))
+                    _tufts.GrowOn(nature, TuftLayer(nature), _tuftLook, _tuning.TuftDensity, _tuning.TuftReach * _distance, _tuning.TuftFade * _distance,
                         _tuning.TuftScaleMin, _tuning.TuftScaleMax, grass.Tufts * (1 - TuftTintSpread), grass.Tufts * (1 + TuftTintSpread));
-                else _flora.StopGrowing(TuftLayer(nature));
+                else _tufts.StopGrowing(TuftLayer(nature));
             }
         }
 
-        if (!_grass && !_reliefShown)
+        // The tufts' field grows no flora of the donor's: its looks are none.
+        if (tufting.On) _tufts.Show(session, (origin.MapPixelX, origin.MapPixelY), local, winter, static (_, _) => null);
+        else _tufts.Hide();
+        if (!_enabled || (!_grass && !_reliefShown))
         {
             Retire();
             return;
@@ -156,8 +179,22 @@ internal sealed class DaggerfallGroundCover : IDisposable
         _shells = (mesh, look, new Vector3((float)(centreX - offsetX), 0, (float)(centreZ - offsetZ)) + origin.Compensation);
     }
 
-    /// <summary>Takes the shells down, outdoors left behind; the tufts go with the flora field.</summary>
-    internal void Hide() => Retire();
+    /// <summary>Takes the cover down, outdoors left behind, keeping the tufts' tiles for the next time.</summary>
+    internal void Hide()
+    {
+        Retire();
+        _tufts.Hide();
+    }
+
+    /// <summary>
+    /// Lets go of the tufts' field, ahead of hiding it (the Engine applies a field's removal before a call's other
+    /// changes) or because the ground under it changes; the next showing grows it anew.
+    /// </summary>
+    internal void DropTufts()
+    {
+        _tufts.Drop();
+        _tufting = default;
+    }
 
     /// <summary>Adds the shells to the world's snapshot while they stand.</summary>
     internal void AppendFacts(List<AppearanceFact> facts)
@@ -193,7 +230,7 @@ internal sealed class DaggerfallGroundCover : IDisposable
     /// </summary>
     internal MeshResourceCreateRequest ShellMesh(double centreX, double centreZ, bool winter)
     {
-        int cells = _cells, side = (cells * 2) + 1, heightSide = side + 2, count = side * side;
+        int cells = (int)Math.Ceiling(ShellReach / Cell), side = (cells * 2) + 1, heightSide = side + 2, count = side * side;
         double cornerX = centreX - (cells * Cell), cornerZ = centreZ - (cells * Cell);
         double[] ground = _ground.WalkedGrid(cornerX, cornerZ, Cell, side);
         double At(int i, int j) => ground[((j + 1) * heightSide) + i + 1];
@@ -207,10 +244,10 @@ internal sealed class DaggerfallGroundCover : IDisposable
             double x = cornerX + (i * Cell), z = cornerZ + (j * Cell), height = At(i, j);
             double slopeX = (At(i + 1, j) - At(i - 1, j)) / (2 * Cell), slopeZ = (At(i, j + 1) - At(i, j - 1)) / (2 * Cell);
             up[vertex] = Vector3.Normalize(new Vector3((float)-slopeX, 1, (float)-slopeZ));
-            if (_ground.OpenLook(x, z, height, (float)Math.Sqrt((slopeX * slopeX) + (slopeZ * slopeZ)), winter) is not { } look) continue;
+            if (_ground.CoverLook(x, z, height, (float)Math.Sqrt((slopeX * slopeX) + (slopeZ * slopeZ)), winter, _tuning.TownShare, _tuning.TownRamp)
+                is not { } look) continue;
             double away = Math.Sqrt(((i - cells) * (i - cells)) + ((j - cells) * (j - cells))) * Cell;
-            float fade = (float)Math.Clamp((_tuning.ShellReach - away) / Math.Max(_tuning.ShellFade, 1e-3), 0, 1);
-            (int Archive, int Record)[] records = DaggerfallGroundLayers.Records(look.Archive);
+            float fade = (float)Math.Clamp((ShellReach - away) / Math.Max(_tuning.ShellFade * _distance, 1e-3), 0, 1);
             for (int layer = 0; layer < 4; layer++)
             {
                 float weight = look.Weights[layer] * fade;
@@ -223,7 +260,7 @@ internal sealed class DaggerfallGroundCover : IDisposable
                     continue;
                 }
 
-                (int, int) key = records[layer == 3 && look.Lush ? 4 : layer];
+                (int, int) key = look.Layers[layer];
                 if (!_reliefShown || !_art.Relief.TryGetValue(key, out DaggerfallGroundRelief? art)) continue;
                 if (!relief.TryGetValue(key, out Stack? stack))
                     relief[key] = stack = new(ReliefMaterials(key, art), art.Height, art.Shade, true, count);
@@ -361,6 +398,7 @@ internal sealed class DaggerfallGroundCover : IDisposable
     /// <summary>Lets go of everything, once the session's last snapshot without the shells has been accepted.</summary>
     public void Dispose()
     {
+        _tufts.Dispose();
         Retire();
         CompleteSnapshot();
         _tuftLook.Dispose();

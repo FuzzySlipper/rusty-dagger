@@ -30,6 +30,7 @@ internal sealed class DaggerfallFloraField : IDisposable
     private readonly DaggerfallFlatsTuning _flats;
     /// <summary>Each nature archive's share of the whole's density, where its climate's tuning names one.</summary>
     private readonly IReadOnlyDictionary<int, float> _archiveDensity;
+    private readonly (float TownShare, double TownRamp)? _grass;
     /// <summary>The whole's density for this run, which a developer may change.</summary>
     private float _density;
     private Func<int, int, DaggerfallFloraLook?>? _looks;
@@ -46,9 +47,15 @@ internal sealed class DaggerfallFloraField : IDisposable
     private int _found;
     private bool _disposed;
 
+    /// <param name="grass">
+    /// For a field of grass (ground cover's tufts) in place of the donor's flora: the share of its cover a location's
+    /// flattened ground keeps, and how far beyond it the cover rises back to full. Such a field's cover is the ground's
+    /// grass, in towns too, rather than the donor's chance, which keeps out of every clearing.
+    /// </param>
     internal DaggerfallFloraField(IEngineContext engine, DaggerfallHorizonGround ground, DaggerfallFloraTuning tuning, DaggerfallFlatsTuning flats,
-        IReadOnlyDictionary<int, float> archiveDensity)
+        IReadOnlyDictionary<int, float> archiveDensity, (float TownShare, double TownRamp)? grass = null)
     {
+        _grass = grass;
         _archiveDensity = archiveDensity ?? throw new ArgumentNullException(nameof(archiveDensity));
         _density = tuning.Density;
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
@@ -239,7 +246,7 @@ internal sealed class DaggerfallFloraField : IDisposable
     {
         public void Sample(VegetationTileRequest tile, VegetationTileSamples samples)
         {
-            owner._ground.SampleFlora(tile, samples, offsetX, offsetZ, Volatile.Read(ref owner._winter) == 1, owner._tuning);
+            owner._ground.SampleFlora(tile, samples, offsetX, offsetZ, Volatile.Read(ref owner._winter) == 1, owner._tuning, owner._grass);
             int found = 0;
             foreach (uint ground in samples.Grounds ?? []) found |= 1 << (int)ground;
             Interlocked.Or(ref owner._found, found);
