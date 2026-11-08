@@ -38,6 +38,30 @@ public sealed class ActorSpritePresentationTests
     }
 
     [Fact]
+    public void A_classic_light_flat_takes_the_light_and_shines_through_its_own_texture_at_the_lamps_level()
+    {
+        List<string> releases = []; var graphics = new AppearanceFake(releases);
+        DaggerfallSiteDecoration Flat(string id, string path, (int, int) source)
+        {
+            NormalizedBillboardSprite sprite = new(path, Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new(.5f, 0f), Vector2.One);
+            return new(id, new(0, 0, 0), true, sprite, sprite, source, source);
+        }
+        DaggerfallSiteProfile profile = MediaInputs(decorations: [Flat("torch", "flat/torch.png", (210, 1)), Flat("barrel", "flat/barrel.png", (205, 0))]);
+        ContentFake content = MediaContent(releases);
+        content.Add("flat/torch.png", Hash);
+        content.Add("flat/barrel.png", Hash);
+        using var presentation = new DaggerfallSiteAppearance(content, graphics, profile);
+
+        SpriteFromAtlasRequest torch = graphics.SpriteRequests.Single(request => request.Material.EmissionMap != default);
+        Assert.Equal(SpriteLightingMode.Synthetic, torch.Material.Lighting);
+        Assert.Equal(Vector3.One, torch.Material.EmissionColor);
+        Assert.Contains(graphics.SpriteRequests, request => request.Material == DaggerfallSiteAppearance.LitSprite);
+
+        presentation.UpdateLampGlow(1.5f);
+        Assert.Equal(1.5f, Assert.Single(graphics.EmissionUpdates).Intensity);
+    }
+
+    [Fact]
     public void Window_glass_lights_only_at_its_level_and_follows_the_season_without_changing_the_texture()
     {
         List<string> releases = []; var graphics = new AppearanceFake(releases); var source = MediaInputs();

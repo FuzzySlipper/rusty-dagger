@@ -289,6 +289,8 @@ internal sealed record DaggerfallTuning(
                     siteLighting.GetProperty("windowColor")[2].GetSingle()),
                 WindowLevel = siteLighting.GetProperty("windowLevel").GetSingle(),
                 LampLevel = siteLighting.GetProperty("lampLevel").GetSingle(),
+                CreatureGlow = siteLighting.GetProperty("creatureGlow").GetSingle(),
+                SpellGlow = siteLighting.GetProperty("spellGlow").GetSingle(),
                 Bloom = siteLighting.GetProperty("bloom").GetSingle(),
             },
             new DaggerfallClimbingTuning(
@@ -692,6 +694,10 @@ internal sealed record DaggerfallSiteLightingTuning(
     internal float WindowLevel { get; init; } = .8f;
     /// <summary>How brightly a refreshed lamp's flame or glass shines over its painted colour, added to the light the lamp takes.</summary>
     internal float LampLevel { get; init; } = 1f;
+    /// <summary>How brightly a glowing creature (a fire or frost daedra, a fire atronach) shines over its painted colour, added to the light it takes.</summary>
+    internal float CreatureGlow { get; init; } = 1f;
+    /// <summary>How brightly a fire, shock or magic effect shines over its painted colour; above 1 it blooms.</summary>
+    internal float SpellGlow { get; init; } = 1f;
     /// <summary>How much of the light above 1 spreads as a glow; 0 for none.</summary>
     internal float Bloom { get; init; } = .25f;
     internal static DaggerfallSiteLightingTuning Classic { get; } = new(
@@ -713,8 +719,9 @@ internal sealed record DaggerfallSiteLightingTuning(
         if (!float.IsFinite(WindowColor.X + WindowColor.Y + WindowColor.Z + WindowLevel)
             || WindowColor.X < 0 || WindowColor.Y < 0 || WindowColor.Z < 0 || WindowLevel < 0)
             throw new ArgumentOutOfRangeException(nameof(WindowColor), "Window glass's colour and level are finite and not negative.");
-        if (!float.IsFinite(LampLevel) || LampLevel < 0)
-            throw new ArgumentOutOfRangeException(nameof(LampLevel), "A lamp's level is finite and not negative.");
+        foreach (float level in new[] { LampLevel, CreatureGlow, SpellGlow })
+            if (!float.IsFinite(level) || level < 0)
+                throw new ArgumentOutOfRangeException(nameof(LampLevel), "A lamp's, creature's or spell's glow is finite and not negative.");
         if (!float.IsFinite(MobileGlowRange) || MobileGlowRange <= 0 || !float.IsFinite(MobileGlowIntensity) || MobileGlowIntensity < 0)
             throw new ArgumentOutOfRangeException(nameof(DaggerfallSiteLightingTuning), "Mobile glow requires a positive finite range and nonnegative finite intensity.");
         if (!float.IsFinite(SpellLightRange) || SpellLightRange <= 0 || !float.IsFinite(SpellLightIntensity) || SpellLightIntensity < 0)

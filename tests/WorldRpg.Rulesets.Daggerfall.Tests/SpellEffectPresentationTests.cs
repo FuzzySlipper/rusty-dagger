@@ -79,6 +79,8 @@ public sealed class SpellEffectPresentationTests
         SpriteFromAtlasRequest missile = graphics.SpriteRequests[^1];
         Assert.Equal(BillboardMode.Spherical, missile.Billboard);
         Assert.Equal(SpriteBlendMode.Additive, missile.Material.Blend);
+        Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.SpellGlow, missile.Material.EmissionIntensity);
+        Assert.NotEqual(default, missile.Material.EmissionMap);
         // The classic frame fills half the refreshed one, so the refreshed one draws twice the classic size about the same centre.
         Assert.Equal(new Vector2(.8F, .8F), missile.Size);
         Assert.Equal(new Vector2(.5F, .5F), missile.Pivot);
@@ -110,6 +112,7 @@ public sealed class SpellEffectPresentationTests
         SpriteFromAtlasRequest missile = graphics.SpriteRequests[^1];
         Assert.Equal(BillboardMode.Cylindrical, missile.Billboard);
         Assert.Equal(new Vector2(.4F, .4F), missile.Size);
+        Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.SpellGlow, missile.Material.EmissionIntensity);
         Assert.Empty(particles.Created);
         presentation.PlaySpellImpact(7, 0, new Vector3(1, 1, 4));
         Assert.False(Assert.Single(EffectsOf(presentation), effect => effect.Position == new WorldPoint(1, 1, 4)).Refreshed);

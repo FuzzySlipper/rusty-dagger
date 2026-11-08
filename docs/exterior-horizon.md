@@ -132,12 +132,22 @@ off, and that is what `bloom` spreads.
   level (`windowColor`, `windowLevel`). Refreshed walls keep the classic's window layout,
   so the classic's mask serves both art sets. Glass outshines the night rather than
   lighting the street: windows carry no lights.
-- **Lamps.** A refreshed flat that gives light takes the light around it like any flat, and
-  its flame or glass shines through sprite emission. `promote.py` cuts the emission map from
-  the flat's own crunched atlas, in the same layout, so no second painting exists. Outdoors
-  the level (`lampLevel`) follows the city lamps' hours; under a roof it never drops. Classic
-  lamps stay unlit, showing whole at their own brightness as the donor's do. Emission lights
-  nothing else: the placed point lights do that.
+- **Lamps.** A flat that gives light takes the light around it like any flat, and shines
+  over it through sprite emission. Which classic flats give light follows the donor's
+  emissive list: the fireplace, lamps, lanterns, torches, candles, braziers, the glowing
+  statue, the brewing potion, the Mantellan Crux's fire and the magic decorations, and the
+  magic candle of the Light spell. A refreshed flat shines through an emission map
+  `promote.py` cuts from its own crunched atlas, in the same layout, so only its flame or
+  glass glows; a classic one, or a refreshed one with no map, through its own texture, as
+  the donor reuses a lamp's colours. Outdoors the level (`lampLevel`) follows the city
+  lamps' hours; under a roof it never drops. Emission lights nothing else: the placed point
+  lights do that.
+- **Glowing creatures and spells.** A creature with a glow colour (the fire and frost
+  daedra, the fire atronach) takes the light like any enemy and shines over it through its
+  own texture at `creatureGlow`, as do its remains; its point light still lights the room.
+  Fire, shock and magic effects, missiles and impacts, shine over their colours at
+  `spellGlow`, above 1 so they bloom. Ghosts' and wraiths' eyes need a mask cut from the
+  classic palette, which no art carries yet.
 - **First person.** The viewmodel layer doesn't take the scene's lights, so the view takes a
   tint from the light the eye stands in (`DaggerfallViewLight`): the sky plus any lamp, glowing
   mobile, spell or magic candle in reach, by the renderer's own falloff. `viewFull` is the light

@@ -72,7 +72,12 @@ public sealed class EnemySetupSessionTests
     {
         using var f = new SanguineRoseSessionTests.Fixture();
         long id = f.Session.SpawnActor("frost-daedra", new(new(3, 0, -4), 0));
-        Assert.Equal(SpriteShadowPolicy.None, f.Appearance.SpriteRequests[^2].Material.Shadow);
+        SpriteMaterialDescriptor live = f.Appearance.SpriteRequests[^2].Material, remains = f.Appearance.SpriteRequests[^1].Material;
+        Assert.Equal(SpriteShadowPolicy.None, live.Shadow);
+        Assert.Equal(SpriteLightingMode.Synthetic, live.Lighting);
+        Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.CreatureGlow, live.EmissionIntensity);
+        Assert.NotEqual(default, live.EmissionMap);
+        Assert.Equal(live.EmissionIntensity, remains.EmissionIntensity);
         f.Update();
         var glow = f.Appearance.LightRequests.Last(light => light.Descriptor.Color == TestPayload.Definitions.Mobiles.Mobiles[25].GlowColor);
         Assert.Equal(4f, glow.Descriptor.Range);

@@ -26,6 +26,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private readonly IRandomService? random;
     private readonly DaggerfallPresentationAudioTuning audioTuning;
     private readonly DaggerfallFlatsTuning flats;
+    private readonly DaggerfallSiteLightingTuning lighting;
     private readonly DaggerfallSiteProfile inputs;
     private readonly Dictionary<string, AudioClip> audioClips = new(StringComparer.Ordinal);
     private readonly HashSet<AudioSignalHandle> oneShotSignals = [];
@@ -35,7 +36,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private Func<DaggerfallRacialKind?> playerBeastForm = () => null;
     internal void UsePlayerBeastForm(Func<DaggerfallRacialKind?> form) => playerBeastForm = form;
     private double? playerBeastVoiceSeconds;
-    /// <summary>The archive of the flats that are light sources.</summary>
+    /// <summary>The archive of the light flats, which holds the magic candle.</summary>
     private const int LightFlatArchive = 210;
     /// <summary>
     /// A sprite that takes the light around it, so it falls with the day and warms by a lamp. Its edges are hard, so it
@@ -43,10 +44,13 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// the sky is none.
     /// </summary>
     internal static readonly SpriteMaterialDescriptor LitSprite = new(SpriteLightingMode.Synthetic, default, default, 1f, 0f, SpriteAlphaMode.Mask, .5f, SpriteShadowPolicy.None);
-    /// <summary>A sprite that shows at its own brightness, as a light source does.</summary>
-    private static readonly SpriteMaterialDescriptor UnlitSprite = new(SpriteLightingMode.Unlit, default, default, 1f, 0f, SpriteAlphaMode.Blend, .5f, SpriteShadowPolicy.None);
+
+    /// <summary><paramref name="material"/> shining at <paramref name="level"/> over the light it takes, where and in what colour <paramref name="map"/> says.</summary>
+    private static SpriteMaterialDescriptor Glowing(SpriteMaterialDescriptor material, RenderResource map, float level) =>
+        material with { EmissionColor = Vector3.One, EmissionIntensity = level, EmissionMap = new RenderResourceReference(map) };
     private readonly NormalizedBillboardSprite? candleSprite;
     private SpriteAtlas? candleAtlas;
+    private SpriteMaterialDescriptor candleMaterial;
     private Appearance? candleAppearance;
     private Vector3? candlePosition;
     private ulong candleVisualId;
@@ -63,11 +67,16 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         if (candleAppearance is not null) return;
         var sprite = candleSprite ?? throw new InvalidOperationException("Normal light requires the published magic candle billboard 210/3.");
         candleVisualId = NextVisualEntityId();
+        // The candle takes the light around it, and its flame shines over that at a lamp's level.
         if (candleAtlas is null)
-            (candleAtlas, candleAppearance) = CreateSprite(content, new NormalizedActorSprite(sprite.TexturePath,
+        {
+            RenderResource texture;
+            (candleAtlas, texture) = OpenActorAtlas(content, new NormalizedActorSprite(sprite.TexturePath,
                 sprite.TextureSha256, sprite.AtlasWidth, sprite.AtlasHeight, sprite.Frames, sprite.InitialFrameId, sprite.Pivot, sprite.Size));
-        else candleAppearance = appearance.CreateSpriteFromAtlas(new(candleAtlas, sprite.InitialFrameId, sprite.Pivot,
-            sprite.Size, flats.Decorations, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f)));
+            candleMaterial = Glowing(LitSprite, texture, lighting.LampLevel);
+        }
+        candleAppearance = appearance.CreateSpriteFromAtlas(new(candleAtlas, sprite.InitialFrameId, sprite.Pivot,
+            sprite.Size, flats.Decorations, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f), candleMaterial));
     }
 
     private Func<float> enemyAudibleRange = () => 16F;
@@ -206,7 +215,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// The session's classic presentation (weapon viewmodels, held-item visuals, spell effects), which the
     /// start site publishes for the whole session; null uses this site's own, as a lone-site composition does.
     /// </param>
-    internal DaggerfallSiteAppearance(IContentService content, IGraphicsService appearance, DaggerfallSiteProfile inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallDoorRuntime? doors = null, DaggerfallDungeonMotionProjection? dungeonMotion = null, NormalizedClassicPresentation? sessionPresentation = null, DaggerfallCityGates? cityGates = null, DaggerfallDefinitions? definitions = null, DaggerfallFlatsTuning? flats = null)
+    internal DaggerfallSiteAppearance(IContentService content, IGraphicsService appearance, DaggerfallSiteProfile inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallDoorRuntime? doors = null, DaggerfallDungeonMotionProjection? dungeonMotion = null, NormalizedClassicPresentation? sessionPresentation = null, DaggerfallCityGates? cityGates = null, DaggerfallDefinitions? definitions = null, DaggerfallFlatsTuning? flats = null, DaggerfallSiteLightingTuning? lighting = null)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(appearance);
@@ -224,6 +233,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         this.random = random;
         this.audioTuning = (audioTuning ?? DaggerfallTuning.Defaults.PresentationAudio).Validate();
         this.flats = (flats ?? DaggerfallTuning.Defaults.Flats).Validate();
+        this.lighting = (lighting ?? DaggerfallTuning.Defaults.SiteLighting).Validate();
         hitCues = inputs.Audio.Count == 0 ? [] : DaggerfallSiteContent.OrderedHitCues(inputs.Audio);
         classicPresentation = sessionPresentation ?? inputs.ClassicPresentation;
         classicEffects = classicPresentation.Effects.ToDictionary(effect => effect.Name, StringComparer.Ordinal);
@@ -1074,7 +1084,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         SpriteAtlas? corpseAtlas = null;
         if (sprite.Corpse is { } authoredCorpse)
         {
-            (corpseAtlas, corpse) = CreateSprite(content, authoredCorpse, material: LitSprite);
+            // A glowing creature's remains glow as it did.
+            (corpseAtlas, corpse) = CreateSprite(content, authoredCorpse, material: LitSprite, glows: mobile?.GlowColor is not null);
         }
         ActorVisual visual = new(entityId, sprite, atlas, live, corpseAtlas, corpse) { LocationOrdinal = NextLocationVisualOrdinal() };
         AttachCorpseMesh(visual);
@@ -1090,7 +1101,29 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         }
     }
 
-    private (SpriteAtlas Atlas, Appearance Appearance) CreateSprite(IContentService content, NormalizedActorSprite sprite, DaggerfallMobileDefinition? mobile = null, SpriteMaterialDescriptor? material = null)
+    /// <summary>
+    /// An actor's sprite. A glowing creature (one with a glow colour: the fire and frost daedra, the fire atronach) takes
+    /// the light around it like any other and shines over it through emission at <see cref="DaggerfallSiteLightingTuning.CreatureGlow"/>,
+    /// its own texture as the map, as the donor reuses its colours for its glow; so does whatever <paramref name="glows"/> marks.
+    /// </summary>
+    private (SpriteAtlas Atlas, Appearance Appearance) CreateSprite(IContentService content, NormalizedActorSprite sprite, DaggerfallMobileDefinition? mobile = null, SpriteMaterialDescriptor? material = null, bool glows = false)
+    {
+        (SpriteAtlas atlas, RenderResource texture) = OpenActorAtlas(content, sprite);
+        var request = new SpriteFromAtlasRequest(atlas, sprite.InitialFrameId, sprite.Pivot, sprite.Size,
+            flats.Actors, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F));
+        if (material is { } chosen) request = request with { Material = chosen };
+        if (mobile is not null)
+            request = request with { Material = new SpriteMaterialDescriptor(SpriteLightingMode.Synthetic,
+                default, default, 1f, 0f, SpriteAlphaMode.Mask, .5f,
+                mobile.GlowColor is not null ? SpriteShadowPolicy.None
+                    : mobile.NoShadow ? SpriteShadowPolicy.Receive : SpriteShadowPolicy.CastAndReceive) };
+        if (glows || mobile?.GlowColor is not null) request = request with { Material = Glowing(request.Material, texture, lighting.CreatureGlow) };
+        Appearance value = appearance.CreateSpriteFromAtlas(request);
+        return (atlas, value);
+    }
+
+    /// <summary>An actor sprite's texture and its atlas, both owned until the site is released.</summary>
+    private (SpriteAtlas Atlas, RenderResource Texture) OpenActorAtlas(IContentService content, NormalizedActorSprite sprite)
     {
         RenderResourceInfo texture = appearance.OpenTexture(content, sprite.TexturePath, sprite.TextureSha256);
         ownedResources.Add(texture.Handle);
@@ -1098,17 +1131,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             sprite.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height, frame.DisplaySize)).ToArray());
         SpriteAtlas atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
         atlases.Add(atlas);
-        var request = new SpriteFromAtlasRequest(atlas, sprite.InitialFrameId, sprite.Pivot, sprite.Size,
-            flats.Actors, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F));
-        if (material is { } chosen) request = request with { Material = chosen };
-        if (mobile is not null)
-            request = request with { Material = new SpriteMaterialDescriptor(
-                mobile.GlowColor is null ? SpriteLightingMode.Synthetic : SpriteLightingMode.Unlit,
-                default, default, 1f, 0f, mobile.GlowColor is null ? SpriteAlphaMode.Mask : SpriteAlphaMode.Blend, .5f,
-                mobile.GlowColor is not null ? SpriteShadowPolicy.None
-                    : mobile.NoShadow ? SpriteShadowPolicy.Receive : SpriteShadowPolicy.CastAndReceive) };
-        Appearance value = appearance.CreateSpriteFromAtlas(request);
-        return (atlas, value);
+        return (atlas, texture.Handle);
     }
 
     /// <summary>

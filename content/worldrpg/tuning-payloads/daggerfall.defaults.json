@@ -650,7 +650,9 @@
     "viewFloor": 0.2,
     "windowColor": [1, 0.47, 0.04],
     "windowLevel": 0.8,
-    "lampLevel": 1
+    "lampLevel": 1,
+    "creatureGlow": 1,
+    "spellGlow": 1.5
   },
   "weather": {
     "falling": [0, 0, 0, 0, 0.7, 1, 0.8],

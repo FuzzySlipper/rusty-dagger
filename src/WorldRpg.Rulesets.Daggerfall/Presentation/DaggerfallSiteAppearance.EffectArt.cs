@@ -8,9 +8,10 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>
 /// World effects drawn in refreshed art, and the spells in flight. A spell flies as its element's missile and lands
-/// as its impact, both classic animated sprites. With refreshed art each effect draws its refreshed atlas at the
-/// classic world size and anchor, the bright elements (fire, shock, magic) and the sparkle added to the scene rather
-/// than laid over it, and a flying spell trails glowing particles that burst where it lands. A human enemy whose corpse
+/// as its impact, both classic animated sprites. The bright elements (fire, shock, magic) and the sparkle shine over
+/// their own colours through emission at <see cref="DaggerfallSiteLightingTuning.SpellGlow"/>, so above 1 they bloom,
+/// in either art. With refreshed art each effect draws its refreshed atlas at the classic world size and anchor, the
+/// bright ones added to the scene rather than laid over it, and a flying spell trails glowing particles that burst where it lands. A human enemy whose corpse
 /// is the sprite every human class shares lies as the refreshed bone pile mesh instead, which is no one in particular,
 /// and a bone pile placed in a dungeon draws as the same mesh. Classic art draws the classic sprites alone.
 /// </summary>
@@ -158,9 +159,10 @@ internal sealed partial class DaggerfallSiteAppearance
                 DaggerfallArtRect classic = art.Classic;
                 Vector2 size = effect.DisplaySize * scale / new Vector2((float)classic.Width, (float)classic.Height);
                 Vector2 pivot = new((float)(classic.X + effect.Pivot.X * classic.Width), (float)(1 - classic.Y - classic.Height + effect.Pivot.Y * classic.Height));
+                SpriteMaterialDescriptor material = new(SpriteLightingMode.Unlit, default, default, 1f, 0f,
+                    SpriteAlphaMode.Blend, .5f, SpriteShadowPolicy.None, Additive(name) ? SpriteBlendMode.Additive : SpriteBlendMode.Alpha, .15f);
                 request = new SpriteFromAtlasRequest(atlas, initialFrame, pivot, size, BillboardMode.Spherical, SpriteSizeMode.World, 0,
-                    SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F), new SpriteMaterialDescriptor(SpriteLightingMode.Unlit, default, default, 1f, 0f,
-                        SpriteAlphaMode.Blend, .5f, SpriteShadowPolicy.None, Additive(name) ? SpriteBlendMode.Additive : SpriteBlendMode.Alpha, .15f));
+                    SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F), Additive(name) ? Glowing(material, texture, lighting.SpellGlow) : material);
             }
             else
             {
@@ -170,6 +172,7 @@ internal sealed partial class DaggerfallSiteAppearance
                 atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
                 request = new SpriteFromAtlasRequest(atlas, initialFrame, effect.Pivot, effect.DisplaySize * scale, BillboardMode.Cylindrical, SpriteSizeMode.World, 0,
                     SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F));
+                if (Additive(name)) request = request with { Material = Glowing(request.Material, texture.Handle, lighting.SpellGlow) };
             }
             visual = appearance.CreateSpriteFromAtlas(request);
             SpritePlaybackFrame[] playbackFrames = SpriteAtlasAdapter.ToPlaybackFrames(effect.Sequence.Select(index => effect.Frames.Single(frame => frame.Id == index).Id).ToArray(), effect.FramesPerSecond);
