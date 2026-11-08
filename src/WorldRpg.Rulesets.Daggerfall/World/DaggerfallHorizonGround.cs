@@ -1,5 +1,6 @@
 using Rusty.Engine;
 using Rusty.Engine.Heightfields;
+using Rusty.Engine.VegetationTiles;
 using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall.World;
@@ -174,22 +175,77 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
             samples.SetHeight(i, j, (float)ground[((j + 1) * heightSide) + i + 1]);
     }
 
-    private double[] WalkedHeights(HeightfieldTileRequest tile, double offsetX, double offsetZ)
+    private double[] WalkedHeights(HeightfieldTileRequest tile, double offsetX, double offsetZ) =>
+        WalkedHeights(tile.OriginX + offsetX, tile.OriginZ + offsetZ, tile.CellSize, tile.Side);
+
+    /// <summary>The walked surface over a tile of <paramref name="side"/> vertices a side from map point (x, z), with a ring more about them.</summary>
+    private double[] WalkedHeights(double originX, double originZ, double cellSize, int side)
     {
-        int heightSide = tile.HeightSide, side = tile.Side;
+        int heightSide = side + 2;
         double[] ground = new double[heightSide * heightSide];
         Dictionary<(int X, int Y), DaggerfallTerrainWindow> windows = [];
         Dictionary<(long X, long Z), double> lattice = [], depths = [];
-        double finest = Math.Max(tile.CellSize, Spacing) * 2;
+        double finest = Math.Max(cellSize, Spacing) * 2;
         for (int j = -1; j <= side; j++)
         for (int i = -1; i <= side; i++)
         {
-            double x = tile.SampleX(i) + offsetX, z = tile.SampleZ(j) + offsetZ, height = Walked(x, z, finest, windows, lattice, depths);
+            double x = originX + (i * cellSize), z = originZ + (j * cellSize), height = Walked(x, z, finest, windows, lattice, depths);
             ground[((j + 1) * heightSide) + i + 1] = height;
             if (height < OceanMetres) _seaPixels.TryAdd(MapPixel(x, z), 0);
         }
 
         return ground;
+    }
+
+    /// <summary>
+    /// Flora's ground, in near ground's frame: the walked surface's heights; each vertex's class, its climate's nature archive
+    /// counted from the first; and its cover, the share of the donor's chance its ground's look keeps (<see cref="FloraCover"/>).
+    /// </summary>
+    internal void SampleFlora(VegetationTileRequest tile, VegetationTileSamples samples, double offsetX, double offsetZ, bool winter,
+        DaggerfallFloraTuning flora)
+    {
+        GroundMaterials materials = Materials;
+        int heightSide = tile.HeightSide, side = tile.Side;
+        double[] ground = WalkedHeights(tile.OriginX + offsetX, tile.OriginZ + offsetZ, tile.CellSize, side);
+        for (int j = -1; j <= side; j++)
+        for (int i = -1; i <= side; i++)
+            samples.SetHeight(i, j, (float)ground[((j + 1) * heightSide) + i + 1]);
+        DaggerfallExteriorSeason season = winter ? DaggerfallExteriorSeason.Winter : DaggerfallExteriorSeason.Summer;
+        for (int j = 0; j < side; j++)
+        for (int i = 0; i < side; i++)
+        {
+            double x = tile.SampleX(i) + offsetX, z = tile.SampleZ(j) + offsetZ;
+            (int mapX, int mapY) = MapPixel(x, z);
+            int climate = Climate(mapX, mapY);
+            samples.SetGround(i, j, (uint)(DaggerfallExteriorEnvironment.NatureTextureArchive(climate, season) - DaggerfallExteriorEnvironment.FirstNatureArchive));
+            samples.SetCover(i, j, FloraCover(x, z, ground[((j + 1) * heightSide) + i + 1], Slope(ground, heightSide, i, j, tile.CellSize),
+                climate, winter, materials, flora));
+        }
+    }
+
+    /// <summary>
+    /// How much of the donor's chance a point of open ground keeps: by its look, grass, dirt and rock at their chances and
+    /// snow at none; by its map pixel's height and its climate, as the donor thins them; and none on a beach or bank, or
+    /// in a location's clearing.
+    /// </summary>
+    private float FloraCover(double x, double z, double height, float slope, int climate, bool winter, GroundMaterials materials, DaggerfallFloraTuning flora)
+    {
+        if (height <= OceanMetres + BeachMetres || OnBank(x, z) || InClearing(x, z)) return 0;
+        (int vertexX, int vertexZ) = ((int)Math.Round(x / Spacing), (int)Math.Round(z / Spacing));
+        float noise = DaggerfallTerrainSurfaceBuilder.DonorTerrainWeight(vertexX, 64_000 - vertexZ);
+        System.Numerics.Vector4 look = DaggerfallGroundBlend.Weights(_groundTuning, noise, slope, (float)height, Archive(x, z, winter, materials).NoiseStone);
+        (int mapX, int mapY) = MapPixel(x, z);
+        float elevation = Math.Clamp(_terrain.Heightmap[(Math.Clamp(mapY, 0, _terrain.Height - 1) * _terrain.Width) + Math.Clamp(mapX, 0, _terrain.Width - 1)] / 128F, .4F, 1F);
+        float chance = (look.X * flora.GrassChance) + (look.Y * flora.DirtChance) + (look.Z * flora.StoneChance);
+        return Math.Clamp(chance * elevation * (DaggerfallExteriorEnvironment.IsDesertClimate(climate) ? flora.DesertShare : 1), 0, 1);
+    }
+
+    /// <summary>Whether a point lies in a location's clearing: its flattened rectangle and the donor's clearance about it.</summary>
+    private bool InClearing(double x, double z)
+    {
+        (int mapX, int mapY, int vx, int vy) = Vertex(x, z);
+        return _locations.TryGetValue(new(mapX, mapY), out DaggerfallSiteExterior? location)
+            && DaggerfallExteriorEnvironment.InNatureClearing(location, vx, vy);
     }
 
     private static float Slope(double[] ground, int heightSide, int i, int j, double cell)
@@ -280,6 +336,13 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
 
     /// <summary>Whether near ground has found seabed on a map pixel, which is where the sea stands.</summary>
     internal bool HoldsSea(int mapX, int mapY) => _seaPixels.ContainsKey((mapX, mapY));
+
+    /// <summary>The nature archive at a point of the map.</summary>
+    internal int NatureArchive(double x, double z, bool winter)
+    {
+        (int mapX, int mapY) = MapPixel(x, z);
+        return DaggerfallExteriorEnvironment.NatureTextureArchive(Climate(mapX, mapY), winter ? DaggerfallExteriorSeason.Winter : DaggerfallExteriorSeason.Summer);
+    }
 
     /// <summary>The ground archive at a point.</summary>
     internal int GroundArchive(double x, double z, bool winter)

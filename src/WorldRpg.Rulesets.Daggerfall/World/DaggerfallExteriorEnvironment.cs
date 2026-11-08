@@ -370,8 +370,25 @@ internal sealed class DaggerfallExteriorEnvironment
 
     internal static bool GroundSupportsWinter(int climateValue) => !IsDesertClimate(climateValue);
 
-    /// <summary>The donor's nature archives, 500 to 511: the climates' trees, plants and rocks and their winter sets.</summary>
-    internal static bool IsNatureArchive(int archive) => archive is >= 500 and <= 511;
+    /// <summary>The first of the donor's nature archives, 500 to 511: the climates' trees, plants and rocks and their winter sets.</summary>
+    internal const int FirstNatureArchive = 500;
+    internal const int NatureArchiveCount = 12;
+
+    internal static bool IsNatureArchive(int archive) => archive is >= FirstNatureArchive and < FirstNatureArchive + NatureArchiveCount;
+
+    /// <summary>
+    /// Whether a tile of a location's map pixel is kept clear of nature. TerrainHelper.SetLocationTiles publishes an
+    /// inclusive source footprint and the donor stores its expanded Rect with an exclusive max edge. The extra nature
+    /// clearance is applied only for positive location origins, matching DefaultTerrainNature exactly.
+    /// </summary>
+    internal static bool InNatureClearing(DaggerfallSiteExterior location, int tileX, int tileY)
+    {
+        DaggerfallTerrainLocationFlattening rect = DaggerfallLocationTerrainFrame.Flattening(location);
+        int clearance = (int)NatureClearance;
+        return rect.MinX > 0 && rect.MinY > 0
+            && tileX >= rect.MinX - clearance && tileX < rect.MaxX + clearance
+            && tileY >= rect.MinY - clearance && tileY < rect.MaxY + clearance;
+    }
 
     internal static bool NatureSupportsWinter(int climateValue) => climateValue is 223 or 226 or 230 or 231 or 232;
 
@@ -538,15 +555,6 @@ internal sealed class DaggerfallExteriorEnvironment
         float chanceGrass = BaseChanceOnGrass * elevation * climateScale;
         float chanceStone = BaseChanceOnStone * elevation * climateScale;
 
-        // TerrainHelper.SetLocationTiles publishes an inclusive source footprint and the donor
-        // stores its expanded Rect with an exclusive max edge. The extra nature clearance is
-        // applied only for positive location origins, matching DefaultTerrainNature exactly.
-        DaggerfallTerrainLocationFlattening? rect = location is null ? null : DaggerfallLocationTerrainFrame.Flattening(location);
-        bool hasLocationRect = rect is not null && rect.MinX > 0 && rect.MinY > 0;
-        int locationMinX = hasLocationRect ? rect!.MinX - (int)NatureClearance : 0;
-        int locationMaxX = hasLocationRect ? rect!.MaxX + (int)NatureClearance : 0;
-        int locationMinY = hasLocationRect ? rect!.MinY - (int)NatureClearance : 0;
-        int locationMaxY = hasLocationRect ? rect!.MaxY + (int)NatureClearance : 0;
         for (int tileY = 0; tileY < TerrainTileDimension; tileY++)
         {
             for (int tileX = 0; tileX < TerrainTileDimension; tileX++)
@@ -554,9 +562,7 @@ internal sealed class DaggerfallExteriorEnvironment
                 float slope = Slope(surface, tileX, tileY);
                 if (slope > MaximumNatureSlope) continue;
 
-                if (hasLocationRect && tileX >= locationMinX && tileX < locationMaxX
-                    && tileY >= locationMinY && tileY < locationMaxY)
-                    continue;
+                if (location is not null && InNatureClearing(location, tileX, tileY)) continue;
                 if (surface.OnBank(tileX, tileY)) continue;
 
                 int terrainKind = terrain[(tileY * TerrainTileDimension) + tileX].TextureRecord;

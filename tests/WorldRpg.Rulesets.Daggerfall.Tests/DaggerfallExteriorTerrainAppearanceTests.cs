@@ -77,11 +77,11 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
     }
 
     /// <summary>
-    /// Nature draws its refreshed flats while refreshed art is drawn: the art's box holds the classic frame, so the batch
-    /// is larger by the share that frame takes and its pivot moves into the box, and choosing classic art redraws the classic batches.
+    /// Classic art draws nature in the donor's places, one batch per cell and record. Refreshed art leaves it to the flora
+    /// field, which draws each record's art at the classic size, and choosing classic art again redraws the batches.
     /// </summary>
     [Fact]
-    public void Nature_redraws_in_refreshed_flats_at_the_classic_size_and_back()
+    public void Refreshed_nature_leaves_the_cells_for_the_flora_field_and_classic_art_draws_them_again()
     {
         DaggerfallExteriorCellId cell = new(1, 0);
         DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(cell);
@@ -133,20 +133,24 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
             Assert.True(request.Material.WindWholeTexels);
         });
 
+        // Refreshed nature grows in the flora field instead: the cells keep their placements and draw no batches, and the
+        // field draws each record's refreshed art at the classic size, its pivot moved into the art's box.
         refreshed = true;
         appearance.AppendFacts([]);
-        Assert.Equal(batches, appearance.ActiveNatureBatchCount);
-        Assert.Equal(2 * batches, graphics.BatchRequests.Count);
-        Assert.All(graphics.BatchRequests.Skip(batches), request =>
-        {
-            Assert.Equal(new Vector2(6F, 12F), request.Size);
-            Assert.Equal(new Vector2(.5F, .25F), request.Pivot);
-        });
+        Assert.Equal(0, appearance.ActiveNatureBatchCount);
+        Assert.Equal(batches, graphics.BatchRequests.Count);
+        DaggerfallFloraLook look = appearance.FloraLook(504, 1)!;
+        Assert.Equal("refreshed/flats/504-1.png", look.Image.Path);
+        Assert.Equal(new Vector2(6F, 12F), look.Size);
+        Assert.Equal(new Vector2(.5F, .25F), look.Pivot);
+        Assert.Equal((Vector2.Zero, Vector2.One), (look.UvMin, look.UvMax));
+        Assert.Null(appearance.FloraLook(504, 40));
 
         refreshed = false;
         appearance.AppendFacts([]);
-        Assert.Equal(3 * batches, graphics.BatchRequests.Count);
-        Assert.All(graphics.BatchRequests.Skip(2 * batches), request => Assert.Equal(new Vector2(3F, 6F), request.Size));
+        Assert.Equal(batches, appearance.ActiveNatureBatchCount);
+        Assert.Equal(2 * batches, graphics.BatchRequests.Count);
+        Assert.All(graphics.BatchRequests.Skip(batches), request => Assert.Equal(new Vector2(3F, 6F), request.Size));
     }
 
     /// <summary>

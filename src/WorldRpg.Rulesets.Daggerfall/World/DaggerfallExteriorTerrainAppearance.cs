@@ -99,7 +99,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         if (_refreshedDrawn != _drawRefreshed())
         {
             _refreshedDrawn = !_refreshedDrawn;
-            if (_art is { Flats.Count: > 0 }) RedrawNature();
+            RedrawNature();
         }
         HashSet<ulong> ids = [];
         foreach (AppearanceFact fact in baseFacts)
@@ -294,6 +294,8 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     private NatureCell CreateNatureCell(DaggerfallExteriorCellId cell, IReadOnlyList<DaggerfallExteriorNaturePlacement> placements)
     {
         List<NatureBatch> batches = [];
+        // Refreshed nature grows in the flora field instead (DaggerfallFloraField); the donor's placement is classic art's.
+        if (_refreshedDrawn) return new(placements, _profile, []);
         try
         {
             foreach (IGrouping<(int Archive, int Record), DaggerfallExteriorNaturePlacement> group in placements
@@ -329,6 +331,28 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         }
         return new(placements, _profile, [.. batches]);
     }
+
+    /// <summary>
+    /// What a nature record draws as flora: its refreshed art where the set has it and its classic sprite otherwise, the
+    /// initial frame's place in its image, and the size and pivot it stands at; null where the profile publishes no sprite.
+    /// </summary>
+    internal DaggerfallFloraLook? FloraLook(int archive, int record)
+    {
+        if (_profile is null || !_profile.BillboardSprites.TryGetValue((archive, record), out NormalizedBillboardSprite? sprite)) return null;
+        int frame = sprite.Frames.Select((value, index) => (value, index)).First(pair => pair.value.Id == sprite.InitialFrameId).index;
+        if (_art?.Flats.GetValueOrDefault((archive, record)) is not { } art)
+        {
+            NormalizedAtlasFrame classic = sprite.Frames[frame];
+            return new(new(sprite.TexturePath, sprite.TextureSha256), Uv(classic.X, classic.Y, sprite.AtlasWidth, sprite.AtlasHeight),
+                Uv(classic.X + classic.Width, classic.Y + classic.Height, sprite.AtlasWidth, sprite.AtlasHeight), sprite.Size, NatureFoot);
+        }
+
+        DaggerfallArtRect rect = art.Frames[frame];
+        (Vector2 size, Vector2 pivot) = art.Placed(sprite.Size, NatureFoot);
+        return new(art.File, Uv(rect.X, rect.Y, art.Width, art.Height), Uv(rect.X + rect.Width, rect.Y + rect.Height, art.Width, art.Height), size, pivot);
+    }
+
+    private static Vector2 Uv(double x, double y, int width, int height) => new((float)(x / width), (float)(y / height));
 
     /// <summary>A nature placement is a point on the ground, so the sprite hangs from its foot, not the published centre.</summary>
     private static readonly Vector2 NatureFoot = new(.5F, 0F);
@@ -402,3 +426,6 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     private sealed record NatureBatch(ulong ObjectId, NatureSpriteKey Key, Appearance Appearance, int Instances);
     private sealed record NatureCell(IReadOnlyList<DaggerfallExteriorNaturePlacement> Source, DaggerfallSiteProfile? Profile, NatureBatch[] Batches);
 }
+
+/// <summary>One nature record as the flora field draws it: an image, the frame's corners in it (0 to 1, top-down), and its world size and pivot.</summary>
+internal sealed record DaggerfallFloraLook(DaggerfallArtFile Image, Vector2 UvMin, Vector2 UvMax, Vector2 Size, Vector2 Pivot);

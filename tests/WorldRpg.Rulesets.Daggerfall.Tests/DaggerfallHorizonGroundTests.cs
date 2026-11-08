@@ -1,6 +1,7 @@
 using System.Reflection;
 using Rusty.Engine;
 using Rusty.Engine.Heightfields;
+using Rusty.Engine.VegetationTiles;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
@@ -277,6 +278,42 @@ public sealed class DaggerfallHorizonGroundTests
     }
 
     /// <summary>Samples for a tile: the Engine makes them, and a fixture has no Engine to ask.</summary>
+    /// <summary>
+    /// Flora grows on the surface near ground draws, on its climate's nature archive (the winter set in winter), and the
+    /// donor's clearing about a location keeps it bare.
+    /// </summary>
+    [Fact]
+    public void Flora_stands_on_near_ground_by_its_climates_nature_and_keeps_out_of_a_locations_clearing()
+    {
+        DaggerfallTerrainSet terrain = Terrain(8, 8);
+        DaggerfallSiteExterior location = new(3, 3, 1, 1, 0, 0, false, 0, 32, 96, 32, 96);
+        DaggerfallHorizonGround ground = new(terrain, (_, _) => 231, DaggerfallHorizonTuning.Default, DaggerfallGroundTuning.Default,
+            new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> { [new(3, 3)] = location }) { Materials = Materials };
+        const double cell = DaggerfallTerrainSurfaceBuilder.SampleSpacing;
+        // Tiles 56 to 72 of the location's map pixel, inside its flattened rectangle; and a map pixel with no location.
+        (double X, double Z) clearing = ((3 * Size) + (56 * cell), (3 * Size) - (72 * cell)), open = (5 * Size, 5 * Size);
+
+        HeightfieldTileSamples near = Samples(new(16, 0, 0, 0, 0, clearing.X, clearing.Z, cell));
+        ground.SampleNear(near.Tile, near, 0, 0);
+        VegetationTileSamples cleared = Flora(new(16, 0, 0, 0, clearing.X, clearing.Z, cell));
+        ground.SampleFlora(cleared.Tile, cleared, 0, 0, false, DaggerfallFloraTuning.Default);
+        Assert.Equal(near.Heights, cleared.Heights);
+        Assert.All(cleared.Cover!, cover => Assert.Equal(0, cover));
+        // Woodlands (231) grows archive 504, and its winter set 505.
+        Assert.All(cleared.Grounds!, value => Assert.Equal(4u, value));
+
+        VegetationTileSamples summer = Flora(new(16, 0, 0, 0, open.X, open.Z, cell));
+        ground.SampleFlora(summer.Tile, summer, 0, 0, false, DaggerfallFloraTuning.Default);
+        Assert.Contains(summer.Cover!, cover => cover > 0);
+        Assert.All(summer.Cover!, cover => Assert.InRange(cover, 0, DaggerfallFloraTuning.Default.GrassChance));
+        VegetationTileSamples winter = Flora(new(16, 0, 0, 0, open.X, open.Z, cell));
+        ground.SampleFlora(winter.Tile, winter, 0, 0, true, DaggerfallFloraTuning.Default);
+        Assert.All(winter.Grounds!, value => Assert.Equal(5u, value));
+    }
+
+    private static VegetationTileSamples Flora(VegetationTileRequest tile) =>
+        (VegetationTileSamples)Activator.CreateInstance(typeof(VegetationTileSamples), BindingFlags.NonPublic | BindingFlags.Instance, null, [tile], null)!;
+
     private static HeightfieldTileSamples Samples(HeightfieldTileRequest tile) =>
         (HeightfieldTileSamples)Activator.CreateInstance(typeof(HeightfieldTileSamples), BindingFlags.NonPublic | BindingFlags.Instance, null, [tile], null)!;
 

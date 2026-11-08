@@ -2132,6 +2132,9 @@ internal sealed class DaggerfallSiteLifecycle
     /// <summary>A ground archive's layers.</summary>
     internal DaggerfallGroundLayers GroundLayers(int archive) => (_exteriorTerrainAppearance ??= NewTerrainAppearance()).GroundLayers(archive);
 
+    /// <summary>What a nature archive's record draws as flora.</summary>
+    internal DaggerfallFloraLook? FloraLook(int archive, int record) => (_exteriorTerrainAppearance ??= NewTerrainAppearance()).FloraLook(archive, record);
+
     /// <summary>Layers exterior ground by these settings.</summary>
     internal void UseGroundBlend(DaggerfallGroundBlendSettings settings)
     {

@@ -2,8 +2,9 @@
 
 Exterior ground is one function drawn by two Engine heightfields. Near ground stands in
 the world from the player's feet to the edge of the walked seven-by-seven window; far
-ground stands in the backdrop past it, so the map itself reaches the skyline. Nature
-stays with the walked window's cells. Neither heightfield collides: a heightfield collider
+ground stands in the backdrop past it, so the map itself reaches the skyline. Refreshed
+nature grows over near ground as an Engine vegetation field; classic art keeps the donor's
+nature in the walked window's cells. Neither heightfield collides: a heightfield collider
 reads the same function, and it is what the player and anyone in the wilderness stand on.
 The far plane clips the whole world, so outdoors the camera draws out to `drawnMetres`,
 past near ground's corners; under a roof it keeps `camera.farPlane`.
@@ -194,6 +195,21 @@ the layers where the art set has them, and the classic's where it doesn't.
   record is lush ground, so it wears the mountains'.
 - **Nature** grows from soil, so it thins by the share of the ground that is soil:
   there is a treeline at the snow, and bare rock stays bare.
+- **Refreshed nature** is `DaggerfallFloraField`, a vegetation field in near ground's frame
+  sampled at the walked spacing (`DaggerfallHorizonGround.SampleFlora`). Each record of a
+  climate's nature archive is a sprite layer growing on that archive's ground class alone,
+  every record as often as the others. A vertex's cover is the donor's chance by the
+  ground's look (`grassChance`, `dirtChance` and `stoneChance` over the blend's grass, dirt
+  and rock, none on snow), thinned by its map pixel's height and in deserts
+  (`desertShare`), and none on a beach or bank or in a location's clearing. So dirt
+  patches thin nature where they show, not where the classic's tiles were. `density`
+  multiplies the count. A record is drawn out to `reachPerMetre` times its height, at most
+  `reach`, and shrinks away over its last `fade`, so the edge never pops. Winter swaps every
+  climate for its winter set and samples the ground again. Past near ground's reach the
+  field would have to stand in the backdrop with far ground, which vegetation fields can't
+  do yet.
+- **Classic nature** stays the donor's: one record chosen at random on a tile, by the
+  classic's tile kinds, in the walked window's cells.
 - **Swamps** weigh lush ground in place of snow, below the snow.
 - **Towns** paint from their tiles. Every ground record is a corner pattern of six kinds:
   water, dirt, grass, stone, paving and ruts. The terrain lookup fixes the frame: a record's

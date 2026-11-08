@@ -80,6 +80,11 @@ internal class EngineContextFake : DispatchProxy
     internal IReadOnlyList<StarsRequest> Stars => ((CameraServiceFake)(object)camera).Stars;
     internal IReadOnlyList<MoonRequest> Moons => ((CameraServiceFake)(object)camera).Moons;
     private readonly IHeightfieldService heightfield = ServiceProxy<IHeightfieldService, HeightfieldServiceFake>.Create();
+    private readonly IVegetationService vegetation = ServiceProxy<IVegetationService, VegetationServiceFake>.Create();
+    /// <summary>Whether refreshed flora's field has been made and draws, as the last call left it.</summary>
+    internal bool FloraVisible => ((VegetationServiceFake)(object)vegetation).Visible;
+    /// <summary>The flora layers set, in order.</summary>
+    internal IReadOnlyList<VegetationLayerRequest> FloraLayers => ((VegetationServiceFake)(object)vegetation).Layers;
     private IAuthoredContentService authored = ServiceProxy<IAuthoredContentService, AuthoredContentFake>.Create();
     /// <summary>Whether the far ground draws, as the last call left it.</summary>
     /// <summary>Serves the real Engine's authored content, for a fixture whose graphics are real and must read its catalogs.</summary>
@@ -136,6 +141,7 @@ internal class EngineContextFake : DispatchProxy
         "get_Persistence" => persistence,
         "get_WorldOrigin" => worldOrigin,
         "get_Heightfield" => heightfield,
+        "get_Vegetation" => vegetation,
         "get_AuthoredContent" => authored,
         _ => throw new NotSupportedException(method?.Name),
     };
@@ -165,6 +171,32 @@ internal class EngineContextFake : DispatchProxy
                 return new Heightfield(new HeightfieldHandle(request.Layer == RenderLayer.Scene ? Near : Far), () => { });
             }
             if (method?.Name == nameof(IHeightfieldService.Read)) return new HeightfieldReadout(true, 0, 0, 0, 0, 0, true, true, 0, 0, 0, 0, 0, 0);
+            return method!.ReturnType.IsValueType && method.ReturnType != typeof(void) ? Activator.CreateInstance(method.ReturnType) : null;
+        }
+    }
+
+    /// <summary>A vegetation field that asks for no tiles unless told to: it records what is made, set and shown.</summary>
+    private class VegetationServiceFake : DispatchProxy
+    {
+        internal bool Visible { get; private set; }
+        internal List<VegetationLayerRequest> Layers { get; } = [];
+
+        protected override object? Invoke(MethodInfo? method, object?[]? arguments)
+        {
+            switch (method?.Name)
+            {
+                case nameof(IVegetationService.Create):
+                    Visible = true;
+                    return new VegetationField(new VegetationFieldHandle(1), () => Visible = false);
+                case nameof(IVegetationService.SetVisible):
+                    Visible = ((VegetationVisibilityRequest)arguments![0]!).Visible;
+                    break;
+                case nameof(IVegetationService.SetLayer):
+                    Layers.Add((VegetationLayerRequest)arguments![0]!);
+                    break;
+                case nameof(IVegetationService.ReadRequests):
+                    return ReadOnlyMemory<VegetationTileRequest>.Empty;
+            }
             return method!.ReturnType.IsValueType && method.ReturnType != typeof(void) ? Activator.CreateInstance(method.ReturnType) : null;
         }
     }

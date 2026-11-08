@@ -39,6 +39,7 @@ internal sealed class DaggerfallHorizon : IDisposable
     private readonly Appearance _sheetLook;
     private readonly List<(ulong Id, Vector3 At)> _sheets = [];
     private readonly DaggerfallRiverWater? _rivers;
+    private readonly DaggerfallFloraField _flora;
     private readonly DaggerfallWaterTuning _waterTuning;
     private readonly Dictionary<int, RenderResource> _waterArt = [];
     private int _waterArchive = -1;
@@ -56,8 +57,10 @@ internal sealed class DaggerfallHorizon : IDisposable
     private bool _nearSeen;
     private bool _disposed;
 
-    internal DaggerfallHorizon(IEngineContext engine, DaggerfallHorizonGround ground, DaggerfallHorizonTuning tuning, DaggerfallWaterTuning water, float repeatMetres, DaggerfallTerrainRivers? rivers)
+    internal DaggerfallHorizon(IEngineContext engine, DaggerfallHorizonGround ground, DaggerfallHorizonTuning tuning, DaggerfallWaterTuning water, float repeatMetres, DaggerfallTerrainRivers? rivers,
+        DaggerfallFloraField flora)
     {
+        _flora = flora ?? throw new ArgumentNullException(nameof(flora));
         ArgumentNullException.ThrowIfNull(water);
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _ground = ground ?? throw new ArgumentNullException(nameof(ground));
@@ -79,10 +82,11 @@ internal sealed class DaggerfallHorizon : IDisposable
     /// <param name="seen">Whether the weather lets the far ground show. Thick weather closes within a kilometre or so, and
     /// ground that the fog has wholly taken would still stand out as a flat shape of the fog's colour against the sky.</param>
     /// <param name="sky">The sky's light as a share of clear noon's, which the sea takes in its own colours, near and far alike.</param>
-    /// <param name="far">Whether far ground stands at all: classic art shows the painted sky's horizon instead.</param>
+    /// <param name="far">Whether far ground and refreshed flora stand at all: classic art shows the painted sky's horizon, and its nature in the donor's places.</param>
     /// <param name="layers">Opens a ground archive's layers.</param>
+    /// <param name="flora">What a nature archive's record draws as flora.</param>
     internal void Show(SpatialSession session, DaggerfallExteriorWorldOrigin origin, Vector3 local, bool winter, Vector3 sky, bool seen, bool far,
-        Func<int, DaggerfallGroundLayers> layers)
+        Func<int, DaggerfallGroundLayers> layers, Func<int, int, DaggerfallFloraLook?> flora)
     {
         sky = Vector3.Clamp(sky, Vector3.Zero, Vector3.One);
         if (Vector3.Abs(sky - _sky) is { } moved && Math.Max(moved.X, Math.Max(moved.Y, moved.Z)) >= TintStep)
@@ -97,6 +101,9 @@ internal sealed class DaggerfallHorizon : IDisposable
         double x = engineLocal.X + (origin.MapPixelX * CellSize), z = engineLocal.Z + (origin.MapPixelY * CellSize);
         Follow(x, z, winter, far);
         ShowNear(session, origin, x, z);
+        // Flora stands in near ground's frame, on the same walked surface.
+        if (far) _flora.Show(session, (origin.MapPixelX, origin.MapPixelY), engineLocal, winter, flora);
+        else _flora.Hide();
         ShowSea(origin, x, z, winter);
         _rivers?.Follow(origin, x, z);
         if (far) ShowFar(session, origin, seen);
@@ -207,6 +214,7 @@ internal sealed class DaggerfallHorizon : IDisposable
     {
         HideFar();
         DropNear();
+        _flora.Drop();
         _streamer?.Dispose(); _streamer = null;
         _heightfield?.Dispose(); _heightfield = null;
         _bound = null;
@@ -270,6 +278,7 @@ internal sealed class DaggerfallHorizon : IDisposable
     internal void Hide()
     {
         _sheets.Clear();
+        _flora.Hide();
         _rivers?.Hide();
         HideFar();
         if (_near is not null && _nearSeen)
@@ -352,13 +361,16 @@ internal sealed class DaggerfallHorizon : IDisposable
         string state = _link is null ? "hidden" : "shown";
         string tiles = _heightfield is null ? "not built" : Describe(_engine.Heightfield.Read(_heightfield));
         return string.Create(CultureInfo.InvariantCulture,
-            $"{state}: lift {frame.Lift:F2} about ({frame.CentreX:F0}, {frame.CentreZ:F0}), haze {_fogDensity:F6}/m; {tiles}");
+            $"{state}: lift {frame.Lift:F2} about ({frame.CentreX:F0}, {frame.CentreZ:F0}), haze {_fogDensity:F6}/m; {tiles}; flora: {_flora.Readout()}");
     }
 
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
+        // Flora goes before it would be hidden: the Engine applies a field's removal ahead of the call's other changes,
+        // so hiding a field and removing it in one call updates a node already gone.
+        _flora.Dispose();
         Hide();
         DropNear();
         _streamer?.Dispose();

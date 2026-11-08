@@ -667,7 +667,8 @@ internal sealed partial class DaggerfallSession
             DaggerfallHorizonGround ground = new(definitions.Terrain,
                 (x, y) => definitions.Grids.ClimateAtWorldPixel(x, y).Value, tuning.Horizon, tuning.Ground, _sites.Locations);
             _sites.UseGround(ground, GroundWalkers);
-            _horizon = new DaggerfallHorizon(engine, ground, tuning.Horizon, tuning.Water, tuning.Ground.RepeatMetres, definitions.Terrain.Rivers);
+            _horizon = new DaggerfallHorizon(engine, ground, tuning.Horizon, tuning.Water, tuning.Ground.RepeatMetres, definitions.Terrain.Rivers,
+                new DaggerfallFloraField(engine, ground, tuning.Flora, tuning.Flats));
             partiallyConstructed.Add(_horizon);
             _sites.DrawSeaWith(_horizon.AppendFacts, _horizon.CompleteSnapshot, _horizon.ReleaseSea);
             effects.Completed += outcome => _facts.Append(new MagicEffectFact(outcome));

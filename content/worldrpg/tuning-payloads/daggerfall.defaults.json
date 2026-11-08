@@ -932,6 +932,17 @@
     "floraWindBend": 0.05,
     "floraWindWholeTexels": true
   },
+  "flora": {
+    "density": 1,
+    "grassChance": 0.9,
+    "dirtChance": 0.2,
+    "stoneChance": 0.05,
+    "desertShare": 0.25,
+    "reachPerMetre": 400,
+    "reach": 3200,
+    "fade": 600,
+    "slopeLimitDegrees": 50
+  },
   "water": {
     "shallow": [0.85, 0.95, 0.95],
     "deep": [0.5, 0.6, 0.7],
