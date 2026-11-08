@@ -155,5 +155,37 @@
    }
   ],
   "cut_out": "BiRefNet alone for the garments (the dark cloth sits too close to the slate ground for a key); BiRefNet joined with a ground key for the body, which brings back the staff BiRefNet drops."
+ },
+ "idle": {
+  "why": "A standing NPC's idle: shifting in place, moving the staff, small head adjustments, on a longer loop than the head-turn demo.",
+  "video": {
+   "tool": "asset-pipeline tools/item-art-study/h3_anim.py graph, Pika H3 Flex FL2VA (pika_h3_flex_fl2va_comfy_bf16.safetensors at 1.0), sampler lcm with manual sigmas 1.0, 0.972973, 0.923077, 0.8, 0.571429, 0.333333, 0.0",
+   "host": "Patch's RTX 5090 ComfyUI, http://192.168.1.20:8188",
+   "first_and_last_frame": "the rig's own render in its open stance (4° per leg), 512x896 on its ground, so the clip loops and its coordinates are the rig's",
+   "size": [
+    512,
+    896
+   ],
+   "frames": 192,
+   "fps": 24,
+   "prompt": "A fixed camera shot of a painted fantasy game character on a plain flat dark slate grey background. The blonde witch in a green dress stands in place, idle and at ease, holding her tall twisted wooden staff planted on the ground beside her. Over a long, calm moment she shifts her weight gently from one foot to the other without stepping, adjusts her grip on the staff, lifts it slightly and sets it back down a little to the side, and leans on it. Her head makes only small adjustments: a slight tilt, a small glance aside and back, blinking. She breathes slowly. No big gestures and no head turns. Her hair and dress move gently with her. By the end she settles back into exactly the pose she started in. The camera does not move, her feet stay on the same spot, and her whole figure and staff stay in frame. No cuts, zoom, morphing or added objects.",
+   "seeds_tried": [
+    179201,
+    179202,
+    179203
+   ],
+   "chosen": 179203,
+   "why_chosen": "all three loop within 2 px; 179203 keeps both feet planted (ankles move 3-4 px against 14-23 px in the others, which half-step) and moves the staff most"
+  },
+  "poses": {
+   "reader": "RTMW wholebody (rtmlib, performance mode), one person per frame, x2 to painting px",
+   "cycle": "the 191 frames before the last (the last is the first again), retimed to 8 s so 8 fps samples it evenly",
+   "loop_gap": "the two reads of the one first/last picture differ (a pixel on an eye is degrees of head tilt); the gap is spread back linearly over the cycle",
+   "start_frame": 115,
+   "why_start": "the retarget plants each support span on the floor apart and does not blend a change of support across the wrap, so the cycle starts inside one span",
+   "clean": "rig-pose clean --loop --hold off --rest 11 --legs 7: the stillness hold does not wrap, and held spans at the two ends of the cycle settled on head tilts 5 degrees apart"
+  },
+  "rig_idle_cycle": "4 s, so the rig's carried idle (breathing, hair, blinks) runs exactly twice in the 8 s loop",
+  "wind": "a gust rising from calm and dying back by 90% of the loop, on the frames of each render rate"
  }
 }

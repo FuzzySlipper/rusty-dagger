@@ -77,9 +77,9 @@ alone.
 - **Generated garments:** each goes into the full See-through run as an author layer
   (`author:<label>`: its PNG, depth image and `layers.json` entry on the run's canvas).
 - **Draw order, back to front:**
-  1. back hair, a back skirt, held objects, neck;
+  1. back hair, a back skirt, held objects;
   2. shorts, then the legs and feet, then a front panel;
-  3. the bodice, then the arms;
+  3. the bodice, then the neck, then the arms;
   4. the face, then ears, nose, mouth;
   5. eye whites, irises, lashes;
   6. front hair, then brows.
@@ -117,3 +117,26 @@ alone.
   source. Their head parts become alternate sets on the head chain, bound to the frames of the turn,
   and the in-between drawing holds one 8 fps frame each way. Garment layers leave the head as it was,
   so head key frames and their runs carry over to a rig rebuilt with new clothing.
+
+## Idle video
+
+A standing NPC's idle is small movement on a long loop: shifting weight in place, moving a held
+object, small head adjustments and blinks, with no big gestures or head turns. A head turn needs key
+drawings and suits a one-off gesture, not an idle.
+
+- **Video:** Pika H3 Flex FL2VA on Patch's 5090, through asset-pipeline's `h3_anim` graph. The first
+  and last frame are the rig's own render in its stance, on the generation ground. That closes the
+  loop and puts the clip in the rig's coordinates. Clips run 17k+5 frames at 24 fps; 192 frames
+  gives an 8 s loop. Each figure's prompt, seeds and choice go in its spec under `idle`. Pick the
+  seed whose feet stay planted.
+- **Poses:** RTMW whole-body joints on each frame. The cycle is the frames before the last, which
+  repeats the first, retimed to whole seconds so 8 fps samples it evenly.
+- **Closing the loop:**
+  - The two reads of the one first and last picture differ, and a pixel on an eye is degrees of
+    head tilt, so the gap is spread back over the cycle.
+  - The retarget plants each support span on the floor apart and doesn't blend a change of
+    support across the wrap, so the cycle starts inside one span.
+  - `rig-pose clean` runs with its stillness hold off: the hold doesn't wrap, so held spans at the
+    two ends can settle on different poses.
+  - The rig's own idle, carried into the clip for breathing, hair and blinks, gets a cycle that
+    divides the loop. The wind gust dies back before the end.
