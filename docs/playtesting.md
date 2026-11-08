@@ -24,6 +24,10 @@ the debug callbacks resolve the replacement session on every call.
 To start a fresh game quickly, open character creation and press **Quick start**:
 it keeps the draft's identity and career, completes the background without
 asking, and begins the game.
+The developer games on the title screen skip both: **Developer: Charing town
+start** begins in Charing's streets, and **Developer: wilderness start** at noon
+in open woodland outside the Hawkston Cemetery, for looking at nature and
+terrain. Begin starts either at once, with no character creation or cinematics.
 Only stop browser sessions and hosts the tester owns.
 
 ## Agent procedure

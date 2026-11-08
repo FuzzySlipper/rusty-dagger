@@ -1,0 +1,16 @@
+{
+  "kind": "worldrpg.content-pack",
+  "id": "daggerfall.wild-start",
+  "ruleset": "daggerfall",
+  "role": "daggerfall.new-game-start",
+  "dependencies": [
+    {
+      "id": "daggerfall.base"
+    },
+    {
+      "id": "daggerfall.the-hawkston-cemetery-exterior"
+    }
+  ],
+  "description": "Developer start for nature and terrain checks: a new game begins at noon outside the Hawkston Cemetery, a lone dungeon in the woodland of the Daggerfall region, with no opening quests. Begin starts play at once, with a quick-started character and no opening cinematics.",
+  "payload": "worldrpg/payloads/daggerfall.wild-start.json"
+}

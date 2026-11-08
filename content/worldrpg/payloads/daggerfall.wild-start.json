@@ -1,0 +1,8 @@
+{
+  "ruleset": "daggerfall",
+  "startSite": "daggerfall.the-hawkston-cemetery-exterior",
+  "gold": 5000,
+  "quests": [],
+  "startHour": 12,
+  "quickEntry": true
+}

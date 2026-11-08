@@ -32,7 +32,8 @@ public sealed class BundleChoiceSessionTests
         Assert.Equal("daggerfall.classic", engine.PublishedNested("bundles", "current"));
         Assert.Equal("Classic Daggerfall", Option(engine, 0));
         Assert.Equal("Developer: Charing town start", Option(engine, 1));
-        Assert.Equal("Second game", Option(engine, 2));
+        Assert.Equal("Developer: wilderness start", Option(engine, 2));
+        Assert.Equal("Second game", Option(engine, 3));
 
         product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"bundle-select","key":"test.second"}""")]));
         FinishLoading(product, 1);

@@ -136,4 +136,36 @@ public sealed class TownStartBundleTests
             npc => npc.Kind == DaggerfallNpcKind.Static && npc.Profile == game.Sites.ActiveProfile && npc.Services.Contains("shop"));
         Assert.Equal(DaggerfallServiceDenial.None, game.State.Services.ProviderAvailable(new(merchant.DurableId, merchant.Site, "shop")));
     }
+
+    /// <summary>
+    /// The developer wilderness start begins the same quick-started game at noon outside a lone dungeon in the
+    /// Daggerfall region's woodland, so nature and terrain can be looked at without character creation or a journey.
+    /// </summary>
+    [Fact]
+    public void Begin_alone_starts_a_wilderness_game_at_noon_outside_the_hawkston_cemetery()
+    {
+        string root = TestData.RepositoryRoot;
+        ProductContent full = FullContent(root);
+        DaggerfallSiteProfile exterior = ReadProfile(root, full, TestPayload.Definitions, "daggerfall.the-hawkston-cemetery-exterior.json");
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, exterior);
+        foreach (DaggerfallSiteProfile near in new AssembledWorld().NearbyExteriors(exterior.Site!.Value)) AssembledWorldRun.Admit(content, near);
+        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        spatial.KeepPosition = true;
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
+        ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
+        CapturingDaggerfallRuleset ruleset = new(videosEnabled: true, variants: DaggerfallVariants.All);
+        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, full, input), ruleset, new GameBundleId("daggerfall.wild-start"));
+        product.Start();
+
+        product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"begin"}""")]));
+        FinishLoading(product, 1);
+
+        Assert.Equal(ProductMode.Playing, product.Mode);
+        DaggerfallSession game = ruleset.RequireSession();
+        Assert.Equal(exterior.ProfileKey, game.Sites.ActiveProfile);
+        Assert.Empty(game.State.Quests.All);
+        Assert.Equal(12, DaggerfallSavePayload.Read(game.CaptureSave()).Calendar.Hour);
+    }
 }
