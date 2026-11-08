@@ -49,6 +49,10 @@ INSET = 3              # pixels inside the mask's edge before a hole counts as h
 RIM = 4                # pixels beside removed ground that get a soft edge, as the cut-out's
 
 
+class NoStudy(Exception):
+    """A final with no generation image to clean it against, which keeps its cut-out."""
+
+
 def generation(area, key, final):
     """The study image a final was cut from: of those made for its figure, the closest over its opaque pixels. A frame
     after the first has its own study folder, ending -fN."""
@@ -56,7 +60,7 @@ def generation(area, key, final):
     folder = AREAS[area]["studies"].format(archive=archive, record=record, frame=f"-f{frame}" if frame else "")
     paths = glob.glob(str(AUTHORING / f"gen-raw/studies/{folder}/bp-broad-half.png"))
     if not paths:
-        raise SystemExit(f"{key} has no study image.")
+        raise NoStudy(key)
     solid = final[..., 3] > 0.99
     images = [np.array(Image.open(path).convert("RGB"), np.float32) / 255 for path in paths]
     return min(images, key=lambda image: np.abs(image - final[..., :3])[solid].mean())
@@ -114,14 +118,21 @@ def cleaned(final, painted, mask, fill=True, ground_match=0.05):
 
 
 def clean(area, key):
+    """Cleans one final; one with no study image (such as the hanging lanterns, texture 200 records 7 to 9) is left as
+    it is, and said so."""
     finals = AUTHORING / "gen-raw" / area
     kept = finals / "pre-matte" / f"{key}.png"
+    final = np.array(Image.open(kept if kept.exists() else finals / f"{key}.png").convert("RGBA"), np.float32) / 255
+    try:
+        study = generation(area, key, final)
+    except NoStudy:
+        print(key, "kept as it is: it has no study image to clean against", flush=True)
+        return
     if not kept.exists():
         kept.parent.mkdir(exist_ok=True)
         shutil.copyfile(finals / f"{key}.png", kept)
-    final = np.array(Image.open(kept).convert("RGBA"), np.float32) / 255
     alpha = final[..., 3:]
-    painted = final[..., :3] * alpha + generation(area, key, final) * (1 - alpha)
+    painted = final[..., :3] * alpha + study * (1 - alpha)
     masked = kept.parent / f"{key}-mask.png"
     if not masked.exists():
         ask_mask(Image.fromarray((painted * 255 + 0.5).astype(np.uint8))).save(masked)
