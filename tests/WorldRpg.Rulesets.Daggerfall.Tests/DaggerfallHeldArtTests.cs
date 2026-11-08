@@ -228,12 +228,12 @@ public sealed class DaggerfallHeldArtTests
     }
 
     [Fact]
-    public void The_viewmodel_style_is_classic_by_default_and_read_by_name()
+    public void The_viewmodel_style_is_held_by_default_and_read_by_name()
     {
         string root = TestData.RepositoryRoot;
         string defaults = Path.Combine(root, "content/worldrpg/tuning-payloads/daggerfall.defaults.json");
-        Assert.Equal(DaggerfallViewmodelStyle.Classic, DaggerfallTuning.Read(TestContentFiles.ReadCopy(defaults)).Viewmodel.Style);
-        foreach (var (name, style) in new[] { ("held", DaggerfallViewmodelStyle.Held), ("heldRetro", DaggerfallViewmodelStyle.HeldRetro) })
+        Assert.Equal(DaggerfallViewmodelStyle.Held, DaggerfallTuning.Read(TestContentFiles.ReadCopy(defaults)).Viewmodel.Style);
+        foreach (var (name, style) in new[] { ("classic", DaggerfallViewmodelStyle.Classic), ("heldRetro", DaggerfallViewmodelStyle.HeldRetro) })
             Assert.Equal(style, DaggerfallTuning.Read(Mutated(defaults, name)).Viewmodel.Style);
         InvalidDataException refusal = Assert.Throws<InvalidDataException>(() => DaggerfallTuning.Read(Mutated(defaults, "sprite")));
         Assert.Contains("viewmodel.style 'sprite'", refusal.Message, StringComparison.Ordinal);

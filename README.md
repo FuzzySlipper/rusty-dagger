@@ -153,8 +153,10 @@ importer, rerun one command (its staging paths are the defaults) or `import --on
 STEP`, then `pack`.
 
 An optional third container, `local/first-person.rpak`, holds 3D first-person arms
-and the melee clips they play, built from Asset Store art kept out of git; the tuning's
-`viewmodel.style` (`classic`, `held` or `heldRetro`) chooses it over the sprites.
+and the melee clips they play, built from Asset Store art kept out of git. The tuning's
+`viewmodel.style` chooses how the weapon and hands are drawn: `held` (the default) and
+`heldRetro` draw this art, and `classic` the weapon sprites, which a 3D style also draws,
+with a warning, when the container is missing.
 `scripts/fp-arms/build.sh` builds it ([scripts/fp-arms](scripts/fp-arms/README.md)).
 
 Ordinary edit-run development is CoreCLR through the pinned runtime:

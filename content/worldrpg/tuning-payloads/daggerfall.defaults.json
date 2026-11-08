@@ -543,7 +543,7 @@
     "alternatePlaylists": false
   },
   "viewmodel": {
-    "style": "classic"
+    "style": "held"
   },
   "presentationAudio": {
     "volume": 1.0,
