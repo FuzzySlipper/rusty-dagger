@@ -145,3 +145,33 @@ drawings and suits a one-off gesture, not an idle.
     two ends can settle on different poses.
   - The rig's own idle, carried into the clip for breathing, hair and blinks, gets a cycle that
     divides the loop. The wind gust dies back before the end.
+
+## Walking townspeople
+
+A wanderer walks in every direction the camera can see it from, so it has one rig per view: front,
+side and back, with the other side mirrored. One rig whose parts swap to a turned drawing holds only
+a small turn, because bones, draw order and foreshortening differ from view to view. A wanderer is
+repainted in the stationary people's style rather than converted from its classic sprite.
+
+1. **Turnaround:** the front still made as for any person, and the side and back made from it with
+   the same Qwen setup as a rig source, stating which hip a one-sided item such as a pouch is on.
+2. **Walk clips:** Pika H3 Flex FL2VA, one clip per view, with that view's still as first and last
+   frame on the generation ground at half the rig painting's size. The prompt asks for a walk in
+   place at a calm pace in that view, with a fixed camera. 107 frames give about three cycles.
+   H3 draws perspective, so a foot coming toward the camera shortens and the track narrows under
+   the body.
+3. **Rig sources:** each view's rig is cut from a frame of its own clip, doubled, in place, so the
+   clip's poses land on the rig unchanged. The frame should have both feet down with the soles
+   hidden, and every limb in sight: a profile's far arm swung clear of the back, since See-through
+   paints a hidden arm badly. A sole or a turned-out foot in the source travels with the rigid
+   foot through the whole walk. From behind, See-through invents a face and gives each bare arm
+   as a hand layer, so the back's head is cut from the painting whole, as in profile, and its arms
+   come from the hand layers. The head box is set around the hair.
+4. **Cycle:** RTMW on every frame. The period comes from the ankles. The cycle is cut where its
+   two ends agree best and turned to start where the left foot pushes off, the same event in
+   every view, so a view change keeps the stride. In profile RTMW swaps the legs on the odd frame,
+   which continuity undoes, and loses the hips and shoulders for stretches, so their midpoints
+   keep only the cycle's two lowest harmonics. Every view is retimed to one cycle length that 8 fps
+   divides.
+5. **Retarget:** `rig-pose clean --loop --depth walk --hold off`, then retarget with the feet
+   planted. Front and back let the shin shorten to 0.55, and the front orders the legs by depth.
