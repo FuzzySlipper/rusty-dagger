@@ -3,17 +3,19 @@
 
 A tree mesh stands in for a refreshed flora sprite near the player. The meshes are rusty-craftsurvive's scripted trees
 (its scripts/generate-flora.py: low-poly trunks and branches in tiling bark, leaf cards in an atlas of four, their
-alpha the share each vertex flutters), copied as they are. Their textures are repainted in the sprite's own colours:
+alpha the share each vertex flutters), copied with the leaf cards below the sprite's crown left out, so the trunk shows
+under the crown as the sprite's does. Their textures are repainted in the sprite's own colours:
 each texel takes the colour of the sprite's texel at the same rank of brightness, leaves from the sprite's crown and bark
-from its trunk, so the tree wears the painted sprite's palette and its spread of light and dark; and each leaf's edge
-is darkened a step, as the sprites outline theirs.
+from its trunk (leaving out its darkest, the outline), so the tree wears the painted sprite's palette and its spread of
+light and dark; leaves lean toward the darks, which lit cards lose, and each leaf's edge is darkened a step, as the
+sprites outline theirs.
 
 The game draws a mesh at the sprite's drawn height (DaggerfallTreeMesh), so this records that height as a share of the
 sprite's frame, with where its foot stands.
 
     trees.py
 """
-import hashlib, json, shutil
+import hashlib, json
 from pathlib import Path
 
 import numpy as np
@@ -30,8 +32,17 @@ CRAFTSURVIVE = REPOSITORY.parent / "rusty-craftsurvive/content/game"
 # leaves and its bark. Every tree wears the oak's bark, whose vertical furrows are what the sprites paint; the pine's
 # plates read as brickwork at a sprite's scale, and the fir's is nearly one pale tone.
 TREES = {(506, 13): ("fir-p1", "fir", "oak"), (506, 30): ("pine-p1", "pine", "oak"), (506, 15): ("cork-oak-p1", "cork", "oak"),
-         (506, 16): ("oak-p1", "oak", "oak")}
+         (506, 16): ("beech-p3", "beech", "oak")}
 SOLID = 128
+# How far the leaves' colours lean toward the sprite's darks: a rank is raised to this power, so the painted crown's deep
+# shadow, which lit cards would otherwise lose, comes back.
+LEAF_DARKEN = 1.35
+# The share of the trunk's darkest texels left out of its bark's colours: they are the sprite's outline, not its bark.
+BARK_OUTLINE = .15
+# A leaf card is a quad drawn both ways: four vertices and twelve indices.
+CARD_INDICES = 12
+# How far from its axis, in the mesh's metres, a trunk's bark reaches at its widest (its flared foot).
+TRUNK_REACH = .9
 # How much darker a leaf's edge is drawn than its body.
 EDGE = .6
 
@@ -71,22 +82,41 @@ def palette(rgba, m):
     half = max(1, int(m["trunk"] * .3))
     trunk = rgba[m["crown"] + int((m["foot"] - m["crown"]) * .3):m["foot"], m["centre"] - half:m["centre"] + half + 1]
     trunk = trunk[(trunk[..., 3] > SOLID) & (trunk[..., 1] <= trunk[..., 0])][:, :3]
-    return crown[np.argsort(light(crown))], trunk[np.argsort(light(trunk))]
+    trunk = trunk[np.argsort(light(trunk))]
+    return crown[np.argsort(light(crown))], trunk[int(len(trunk) * BARK_OUTLINE):]
 
 
-def repaint(source, colours, outline):
+def repaint(source, colours, outline, darken=1.0):
     """Each drawn texel takes the colour at its own rank of brightness among the sorted colours; leaves' edges a step darker."""
     rgba = np.asarray(Image.open(source).convert("RGBA"), np.float64)
     drawn = rgba[..., 3] > 0
     values = light(rgba[..., :3][drawn])
     # Equal texels share a rank, so a flat tone stays one colour.
-    ranks = (stats.rankdata(values, method="average") - 1) / max(1, len(values) - 1)
+    ranks = ((stats.rankdata(values, method="average") - 1) / max(1, len(values) - 1)) ** darken
     out = rgba.copy()
     out[..., :3][drawn] = colours[np.round(ranks * (len(colours) - 1)).astype(int)]
     if outline:
         edge = drawn & ~ndimage.binary_erosion(drawn)
         out[..., :3][edge] *= EDGE
     return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8), "RGBA")
+
+
+def trim(mesh, below):
+    """Leaves out the leaf cards whose middle stands below a height, and the branches' bark there (any triangle beyond
+    TRUNK_REACH of the trunk's axis), so the bare trunk shows under the crown as the sprite's does."""
+    for part in mesh["parts"]:
+        x, y, z = part["positions"][0::3], part["positions"][1::3], part["positions"][2::3]
+        size = CARD_INDICES if part["role"] == "leaves" else 3
+        kept = []
+        for start in range(0, len(part["indices"]), size):
+            shape = part["indices"][start:start + size]
+            corners = set(shape)
+            middle_y = sum(y[i] for i in corners) / len(corners)
+            reach = max(np.hypot(x[i], z[i]) for i in corners)
+            if middle_y >= below or (part["role"] == "bark" and reach <= TRUNK_REACH):
+                kept += shape
+        part["indices"] = kept
+    return mesh
 
 
 def publish(name, path):
@@ -107,9 +137,11 @@ def main():
         m = measures(rgba)
         crown, trunk = palette(rgba, m)
         mesh = json.loads((CRAFTSURVIVE / f"models/trees/{model}.prop-mesh.json").read_text())
-        shutil.copyfile(CRAFTSURVIVE / f"models/trees/{model}.prop-mesh.json", folder / f"{model}.prop-mesh.json")
+        # The sprite's crown begins this far up its drawn height; the mesh's leaves start no lower, a little short of it.
+        base = (m["foot"] - m["crown"]) / m["height"] * mesh["height"] * .85
+        (folder / f"{model}.prop-mesh.json").write_text(json.dumps(trim(mesh, base), separators=(",", ":")))
         name = f"tree-{archive:03d}-{record:02d}"
-        repaint(CRAFTSURVIVE / f"textures/trees/{leaves}-leaves.png", crown, True).save(folder / f"{name}-leaves.png")
+        repaint(CRAFTSURVIVE / f"textures/trees/{leaves}-leaves.png", crown, True, LEAF_DARKEN).save(folder / f"{name}-leaves.png")
         repaint(CRAFTSURVIVE / f"textures/trees/{bark}-bark.png", trunk, False).save(folder / f"{name}-bark.png")
         h = rgba.shape[0]
         trees[f"{archive}-{record}"] = {

@@ -90921,81 +90921,81 @@
    "506-13": {
     "mesh": {
      "path": "worldrpg/media/refreshed/trees/fir-p1.prop-mesh.json",
-     "byteLength": 259339,
-     "sha256": "dcc68ee0712299070fe71f03b187920432bfd1672878b443add7d5d027a79068",
+     "byteLength": 255884,
+     "sha256": "79421e7cd043f3f62e4b54c324aea2082d93367b89992f122c521956c85ed7bb",
      "height": 16.0
     },
     "height": 1.0,
     "foot": 0.0,
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-506-13-leaves.png",
-     "byteLength": 20288,
-     "sha256": "28e5d05b71e16a9e1ef9f4b4e3347acdd89913cf1dc8ae9076b86863472f9aac"
+     "byteLength": 20664,
+     "sha256": "c4b843aa5eaeca1cdd6013a8407b32c2cf49ecd1074c599681ba7a56aede992f"
     },
     "bark": {
      "path": "worldrpg/media/refreshed/trees/tree-506-13-bark.png",
-     "byteLength": 652,
-     "sha256": "46ed4ac45c9ee69226b5d43e37a89337b6d6fcf211565acdd8cc4a3eb6676b1e"
+     "byteLength": 655,
+     "sha256": "561caa532670681c377da975200f0f0ef78cf621793f17f3647dcf6375fd4c10"
     }
    },
    "506-30": {
     "mesh": {
      "path": "worldrpg/media/refreshed/trees/pine-p1.prop-mesh.json",
-     "byteLength": 183281,
-     "sha256": "73c25be69842c65d55f501e06949d7077f6dc7c791dc52d8de3292a0fadb9f55",
+     "byteLength": 183158,
+     "sha256": "fff54c31c2bc63296a7225a8ff201686e043432b1a9e024a250ade8b473bfcad",
      "height": 12.0
     },
     "height": 1.0,
     "foot": 0.0,
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-506-30-leaves.png",
-     "byteLength": 19901,
-     "sha256": "be17b69938f2b34971d2ca4b331e3922931e6d8724252917bd90d5f448400859"
+     "byteLength": 19735,
+     "sha256": "2b7633d8cbe3c6133a3b0a8151ce6f7a52bba87b8798a0828e2a5678a0968952"
     },
     "bark": {
      "path": "worldrpg/media/refreshed/trees/tree-506-30-bark.png",
-     "byteLength": 651,
-     "sha256": "4749bfc3fe1fe496c57e40f3d15e8af58b94b472b4be468f576a785d7712a066"
+     "byteLength": 655,
+     "sha256": "6fb6f9a75b51e35bf7e279fe6fa7461cd0baf8ad76030bceb00f3d23baec3114"
     }
    },
    "506-15": {
     "mesh": {
      "path": "worldrpg/media/refreshed/trees/cork-oak-p1.prop-mesh.json",
-     "byteLength": 264850,
-     "sha256": "e6b4afcaf25a152203ec0ed4192ec05abf4b1087ccd937cc17fbdf5a4a914a97",
+     "byteLength": 261751,
+     "sha256": "06b809df8cc7ae3d9e0ebcdfcec73c0a9fcc7adda86e0c5d70ff8b4e7db3e53c",
      "height": 8.0
     },
     "height": 1.0,
     "foot": 0.0,
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-506-15-leaves.png",
-     "byteLength": 15194,
-     "sha256": "3262e6f4300b3e6792d9b2d28642367c70fe9619f38653359b1b75f4734da4d1"
+     "byteLength": 14005,
+     "sha256": "722f091095b01bf52539a704dd59dd8684955bc2adcd5b6aaa491bd80b03610b"
     },
     "bark": {
      "path": "worldrpg/media/refreshed/trees/tree-506-15-bark.png",
-     "byteLength": 643,
-     "sha256": "f33e106bd418a112d93b141fff157c75afc461180d6c5110d98651a47ac8b144"
+     "byteLength": 646,
+     "sha256": "38319fa5434d436b15edc8d9a1a8a814537899281f80e590bd7960363aa0e350"
     }
    },
    "506-16": {
     "mesh": {
-     "path": "worldrpg/media/refreshed/trees/oak-p1.prop-mesh.json",
-     "byteLength": 126850,
-     "sha256": "a98436c8fdfd4573e145c4a8074d116122d1bb5ca057e3d0338218001555aee8",
-     "height": 9.0
+     "path": "worldrpg/media/refreshed/trees/beech-p3.prop-mesh.json",
+     "byteLength": 272900,
+     "sha256": "9a7dcc852a09a13129ecfb2a547f3d6b6c921b5c77a85bee303f98613c60ad16",
+     "height": 13.0
     },
     "height": 0.993,
     "foot": 0.0,
     "leaves": {
      "path": "worldrpg/media/refreshed/trees/tree-506-16-leaves.png",
-     "byteLength": 15259,
-     "sha256": "b49d0858a01328fa01e3f6c38f1b4a1326e76daf7693d11234bdb07e775de648"
+     "byteLength": 11807,
+     "sha256": "84e3e0c9e16bf52ef2823ad975078880ba648a2d75691725c7e19e77d504d94e"
     },
     "bark": {
      "path": "worldrpg/media/refreshed/trees/tree-506-16-bark.png",
-     "byteLength": 654,
-     "sha256": "3c6dd3ba3dfc93a5ac5d9cbf6d4b3be0e668b869f0adb64c05c47000caf4ca86"
+     "byteLength": 474,
+     "sha256": "455f4b563b8944bcaf325fc16a3063ca20c5df12dfba6b4fa3c30de928379ec3"
     }
    }
   }

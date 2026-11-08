@@ -42,6 +42,19 @@
    "reset": [
     "world.trees mesh"
    ]
+  },
+  {
+   "name": "woods far",
+   "pitch": 0,
+   "yaw": -90,
+   "settle": 25,
+   "compare": {
+    "sprite": "world.trees sprite",
+    "mesh": "world.trees mesh"
+   },
+   "reset": [
+    "world.trees mesh"
+   ]
   }
  ]
 }

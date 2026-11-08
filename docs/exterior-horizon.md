@@ -260,12 +260,14 @@ the layers where the art set has them, and the classic's where it doesn't.
   only the triangles where some of it remains. `world.groundcover` draws only the kinds it names
   (grass, relief, tufts) for a run.
 - **Tree meshes** can stand in for refreshed tree sprites that the art set's `trees` names
-  (`DaggerfallTreeMesh`). They are rusty-craftsurvive's scripted trees, copied as they are:
-  low-poly trunks and branches in tiling bark, and leaf cards whose vertex alpha is how much
-  each flutters. `authoring/tools/trees/trees.py` copies them and repaints their textures in
+  (`DaggerfallTreeMesh`). They are rusty-craftsurvive's scripted trees: low-poly trunks and
+  branches in tiling bark, and leaf cards whose vertex alpha is how much each flutters,
+  copied with the cards and branches below the sprite's crown left out so its bare trunk
+  shows. `authoring/tools/trees/trees.py` copies them and repaints their textures in
   the sprite's own colours: each texel takes the colour of the sprite's texel at the same
-  rank of brightness, leaves from its crown and bark from its trunk, with each leaf's edge a
-  step darker as the sprites outline theirs. A mesh is drawn at its sprite's drawn height.
+  rank of brightness, leaves from its crown and bark from its trunk (without the outline's
+  darkest), leaves leaning toward the darks that lit cards lose, each leaf's edge a step
+  darker as the sprites outline theirs. A mesh is drawn at its sprite's drawn height.
   Bark bends with the wind as the sprites do; leaves flutter too. Past
   `treeImpostorHeights` times its height (where it stands about as tall on screen as the
   card's 64 texels) the renderer draws a card it bakes of the mesh, and a mesh casts shade
