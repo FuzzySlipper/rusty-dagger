@@ -213,17 +213,22 @@ internal sealed class DaggerfallFloraField : IDisposable
         {
             RenderResource bark = _engine.Graphics.OpenTexture(_engine.Content, tree.Bark.Path, tree.Bark.Sha256, TextureFilter.Nearest, TextureWrap.Repeat).Handle;
             owned.Add(bark);
-            RenderResource leaves = _engine.Graphics.OpenTexture(_engine.Content, tree.Leaves.Path, tree.Leaves.Sha256, TextureFilter.NearestMipmapped).Handle;
-            owned.Add(leaves);
             Material barkMaterial = _engine.Graphics.CreateMaterial(new MaterialRequest(new Color(1, 1, 1, 1), new RenderResourceReference(bark), .95f,
                 new Color(1, 1, 1, 1), Vector3.Zero, 0, false) with { WindBend = _flats.FloraWindBend });
             owned.Add(barkMaterial);
-            Material leafMaterial = _engine.Graphics.CreateMaterial(new MaterialRequest(new Color(1, 1, 1, 1), new RenderResourceReference(leaves), .9f,
-                new Color(1, 1, 1, 1), Vector3.Zero, 0, false) with
+            // A bare tree has no leaves.
+            Material? leafMaterial = null;
+            if (tree.Leaves is { } leafArt)
             {
-                AlphaMode = MaterialAlphaMode.Mask, AlphaCutoff = .5f, WindBend = _flats.FloraWindBend, WindFlutter = LeafFlutter,
-            });
-            owned.Add(leafMaterial);
+                RenderResource leaves = _engine.Graphics.OpenTexture(_engine.Content, leafArt.Path, leafArt.Sha256, TextureFilter.NearestMipmapped).Handle;
+                owned.Add(leaves);
+                leafMaterial = _engine.Graphics.CreateMaterial(new MaterialRequest(new Color(1, 1, 1, 1), new RenderResourceReference(leaves), .9f,
+                    new Color(1, 1, 1, 1), Vector3.Zero, 0, false) with
+                {
+                    AlphaMode = MaterialAlphaMode.Mask, AlphaCutoff = .5f, WindBend = _flats.FloraWindBend, WindFlutter = LeafFlutter,
+                });
+                owned.Add(leafMaterial);
+            }
             MeshResource mesh = _engine.Graphics.CreateMeshResource(DaggerfallTreeMesh.Read(_engine.Content, tree, look.Size.Y, barkMaterial, leafMaterial));
             owned.Add(mesh);
             Appearance appearance = _engine.Graphics.CreateMeshAppearance(mesh);

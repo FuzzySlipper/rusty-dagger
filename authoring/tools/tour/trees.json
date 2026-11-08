@@ -55,6 +55,97 @@
    "reset": [
     "world.trees mesh"
    ]
+  },
+  {
+   "name": "mountains",
+   "scout": "dirt",
+   "km": 10,
+   "pitch": 2,
+   "settle": 25,
+   "compare": {
+    "sprite": "world.trees sprite",
+    "mesh": "world.trees mesh"
+   },
+   "reset": [
+    "world.trees mesh"
+   ],
+   "travel": "Orsinium"
+  },
+  {
+   "name": "desert",
+   "scout": "sand",
+   "km": 10,
+   "pitch": 2,
+   "settle": 25,
+   "compare": {
+    "sprite": "world.trees sprite",
+    "mesh": "world.trees mesh"
+   },
+   "reset": [
+    "world.trees mesh"
+   ],
+   "travel": "0/5"
+  },
+  {
+   "name": "swamp",
+   "scout": "lush",
+   "km": 100,
+   "pitch": 2,
+   "settle": 25,
+   "compare": {
+    "sprite": "world.trees sprite",
+    "mesh": "world.trees mesh"
+   },
+   "reset": [
+    "world.trees mesh"
+   ]
+  },
+  {
+   "name": "winter woods",
+   "scout": "snow",
+   "km": 10,
+   "pitch": 2,
+   "settle": 25,
+   "compare": {
+    "sprite": "world.trees sprite",
+    "mesh": "world.trees mesh"
+   },
+   "reset": [
+    "world.trees mesh"
+   ],
+   "travel": "17/0",
+   "season": "Winter"
+  },
+  {
+   "name": "wayrest woods",
+   "scout": "grass",
+   "km": 10,
+   "pitch": 2,
+   "settle": 25,
+   "compare": {
+    "sprite": "world.trees sprite",
+    "mesh": "world.trees mesh"
+   },
+   "reset": [
+    "world.trees mesh"
+   ],
+   "travel": "Wayrest",
+   "season": "Summer"
+  },
+  {
+   "name": "sentinel coast",
+   "scout": "grass",
+   "km": 30,
+   "pitch": 2,
+   "settle": 25,
+   "compare": {
+    "sprite": "world.trees sprite",
+    "mesh": "world.trees mesh"
+   },
+   "reset": [
+    "world.trees mesh"
+   ],
+   "travel": "Sentinel"
   }
  ]
 }

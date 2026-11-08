@@ -72,9 +72,9 @@ internal sealed record DaggerfallGroundCoverArt(DaggerfallArtFile Shell, int She
 /// <summary>
 /// A refreshed tree mesh standing in for a flora sprite: a prop mesh (bark and leaf parts, its vertex alpha the share each
 /// vertex flutters) and its own height in metres; the sprite's drawn height and where its foot stands, as shares of its
-/// frame height, which the mesh is drawn to; and its bark and leaves.
+/// frame height, which the mesh is drawn to; and its bark and leaves, which a bare tree has none of.
 /// </summary>
-internal sealed record DaggerfallTreeArt(DaggerfallArtFile Mesh, float MeshHeight, float Height, float Foot, DaggerfallArtFile Bark, DaggerfallArtFile Leaves);
+internal sealed record DaggerfallTreeArt(DaggerfallArtFile Mesh, float MeshHeight, float Height, float Foot, DaggerfallArtFile Bark, DaggerfallArtFile? Leaves);
 
 /// <summary>
 /// A ground layer's relief: its own texture, whose alpha is each texel's height as a share of the shell stack; the tallest
@@ -330,7 +330,8 @@ internal sealed class DaggerfallArtReplacements
                         throw new InvalidOperationException($"Content pack '{packId}' states tree '{tree.Name}' without an archive and record.");
                     trees.Add((int.Parse(key[0], System.Globalization.CultureInfo.InvariantCulture), int.Parse(key[1], System.Globalization.CultureInfo.InvariantCulture)),
                         new(File(mesh, $"Tree {tree.Name}'s mesh"), mesh.GetProperty("height").GetSingle(), t.GetProperty("height").GetSingle(),
-                            t.GetProperty("foot").GetSingle(), File(t.GetProperty("bark"), $"Tree {tree.Name}'s bark"), File(t.GetProperty("leaves"), $"Tree {tree.Name}'s leaves")));
+                            t.GetProperty("foot").GetSingle(), File(t.GetProperty("bark"), $"Tree {tree.Name}'s bark"),
+                            t.TryGetProperty("leaves", out JsonElement treeLeaves) ? File(treeLeaves, $"Tree {tree.Name}'s leaves") : null));
                 }
             if (section.TryGetProperty("groundCover", out JsonElement cover))
             {

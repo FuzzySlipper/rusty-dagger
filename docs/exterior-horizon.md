@@ -259,15 +259,21 @@ the layers where the art set has them, and the classic's where it doesn't.
   shadow takes the even cut. A stack draws only the layers its tallest texel reaches and
   only the triangles where some of it remains. `world.groundcover` draws only the kinds it names
   (grass, relief, tufts) for a run.
-- **Tree meshes** can stand in for refreshed tree sprites that the art set's `trees` names
-  (`DaggerfallTreeMesh`). They are rusty-craftsurvive's scripted trees: low-poly trunks and
+- **Tree meshes** stand in for the big tree sprites of every climate that the art set's
+  `trees` names (`DaggerfallTreeMesh`): conifers as a fir or pine, layered flat-topped
+  trees as a cork oak, round crowns as a beech or chestnut, palms as a palm, slender bare
+  trees as a dead tree, a winter set's trees as its summer ones'. Trees whose shapes are
+  their own (vine-wrapped and bulb-trunked swamp plants, cacti, massive gnarled bare trees)
+  stay sprites, with the bushes, rocks and small plants. They are rusty-craftsurvive's scripted trees: low-poly trunks and
   branches in tiling bark, and leaf cards whose vertex alpha is how much each flutters,
   copied with the cards and branches below the sprite's crown left out so its bare trunk
   shows, and each bark triangle turned to face along its normals (the source winds its
   tubes inward). `authoring/tools/trees/trees.py` copies them and repaints their textures in
   the sprite's own colours: each texel takes the colour of the sprite's texel at the same
   rank of brightness, leaves from its crown and bark from its trunk (both without the
-  outline's darkest), leaves leaning toward the darks that lit cards lose, each leaf's edge a step
+  outline's darkest). A leaf is one flat tone, so leaves take the crown's leading hue (green,
+  or an autumn tree's orange) and its shadows, other hues at most a tenth of them, and no
+  snow, which is left to the weather; leaves leaning toward the darks that lit cards lose, each leaf's edge a step
   darker as the sprites outline theirs. A mesh is drawn at its sprite's drawn height.
   Bark bends with the wind as the sprites do; leaves flutter too. Past
   `treeImpostorHeights` times its height (where it stands about as tall on screen as the

@@ -14,8 +14,8 @@ internal static class DaggerfallTreeMesh
 {
     /// <param name="spriteHeight">The sprite's world height, of which the art's height and foot are shares.</param>
     /// <param name="bark">The bark's material, drawn at slot 0.</param>
-    /// <param name="leaves">The leaves' material, drawn at slot 1.</param>
-    internal static MeshResourceCreateRequest Read(IContentService content, DaggerfallTreeArt art, float spriteHeight, Material bark, Material leaves)
+    /// <param name="leaves">The leaves' material, none for a bare tree.</param>
+    internal static MeshResourceCreateRequest Read(IContentService content, DaggerfallTreeArt art, float spriteHeight, Material bark, Material? leaves)
     {
         using ContentReference reference = content.ResolveReference(new ContentResolveRequest(art.Mesh.Path, art.Mesh.Sha256));
         using JsonDocument document = JsonDocument.Parse(content.ReadBytes(new ContentReadBytesRequest(reference, 0, uint.MaxValue)));
@@ -33,7 +33,7 @@ internal static class DaggerfallTreeMesh
             Material material = role switch
             {
                 "bark" => bark,
-                "leaves" => leaves,
+                "leaves" => leaves ?? throw new InvalidDataException($"Tree mesh {art.Mesh.Path} has leaves, but its art names no leaf texture."),
                 _ => throw new InvalidDataException($"Tree mesh {art.Mesh.Path} has a part of role '{role}', which is neither bark nor leaves."),
             };
             uint first = (uint)positions.Count, start = (uint)indices.Count;

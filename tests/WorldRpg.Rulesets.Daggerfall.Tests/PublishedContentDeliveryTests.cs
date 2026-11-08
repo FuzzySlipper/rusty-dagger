@@ -946,7 +946,10 @@ public sealed class PublishedContentDeliveryTests
             .. people.DistinctBy(person => person.GetProperty("path").GetString()),
             .. new[] { "shell", "shader", "tuft" }.Select(file => section.GetProperty("groundCover").GetProperty(file)),
             .. section.GetProperty("groundCover").GetProperty("relief").EnumerateObject().Select(relief => relief.Value),
-            .. section.GetProperty("trees").EnumerateObject().SelectMany(tree => new[] { tree.Value.GetProperty("bark"), tree.Value.GetProperty("leaves"), tree.Value.GetProperty("mesh") })];
+            .. section.GetProperty("trees").EnumerateObject().SelectMany(tree => new[] { "bark", "leaves", "mesh" }
+                .Where(file => tree.Value.TryGetProperty(file, out _)).Select(file => tree.Value.GetProperty(file)))
+                // Trees trimmed alike share a mesh.
+                .DistinctBy(file => file.GetProperty("path").GetString())];
         foreach (JsonElement file in files)
         {
             byte[] bytes = content.ReadBytes(file.GetProperty("path").GetString()!).ToArray();
