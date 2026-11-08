@@ -671,6 +671,8 @@ internal sealed partial class DaggerfallSession
                 new DaggerfallFloraField(engine, ground, tuning.Flora, tuning.Flats, tuning.Flora.ArchiveDensity(definitions.Grids.Climate.Values)));
             partiallyConstructed.Add(_horizon);
             _sites.DrawSeaWith(_horizon.AppendFacts, _horizon.CompleteSnapshot, _horizon.ReleaseSea);
+            if (composition.ArtReplacements?.GroundCover is { } cover)
+                _horizon.UseGroundCover(cover, tuning.GroundCover, DaggerfallGroundCover.TuftGrounds(definitions.Grids.Climate.Values));
             effects.Completed += outcome => _facts.Append(new MagicEffectFact(outcome));
             crime.IncidentRecorded += AdmitLegalIncident;
             _vitality.PoisonDamageApplied += result=>AppendEffectDamage(new(result));

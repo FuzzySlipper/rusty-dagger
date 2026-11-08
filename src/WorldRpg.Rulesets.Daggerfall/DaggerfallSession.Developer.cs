@@ -208,6 +208,15 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
         return DebugCommandResult.Success(_horizon.Readout());
     }
 
+    public DebugCommandResult GroundCover(string kinds)
+    {
+        if (_horizon.GroundCover is not { } cover) return Refused("Ground cover draws outdoors in refreshed art.");
+        if (kinds is not ("shells" or "tufts" or "both" or "none")) return Refused("Ground cover is shells, tufts, both or none.");
+        cover.Shells = kinds is "shells" or "both";
+        cover.Tufts = kinds is "tufts" or "both";
+        return DebugCommandResult.Success($"Ground cover: {kinds}.");
+    }
+
     public DebugCommandResult Find(string service)
     {
         if (_site.ActiveSite is not { } site) return Refused("The player is at no place with people.");

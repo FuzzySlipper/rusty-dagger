@@ -323,6 +323,31 @@ public sealed class DaggerfallHorizonGroundTests
         Assert.Throws<InvalidOperationException>(() => (tuning with { ClimateDensity = new Dictionary<string, float> { ["Atlantis"] = 2 } }).ArchiveDensity(climates));
     }
 
+    /// <summary>Grass covers open ground by its look, and a location's clearing and a beach stay bare.</summary>
+    [Fact]
+    public void Grass_covers_open_ground_and_keeps_out_of_a_clearing_and_off_a_beach()
+    {
+        DaggerfallSiteExterior location = new(3, 3, 1, 1, 0, 0, false, 0, 32, 96, 32, 96);
+        DaggerfallHorizonGround ground = new(Terrain(8, 8), (_, _) => 231, DaggerfallHorizonTuning.Default, DaggerfallGroundTuning.Default,
+            new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> { [new(3, 3)] = location }) { Materials = Materials };
+        const double cell = DaggerfallTerrainSurfaceBuilder.SampleSpacing;
+        double sea = DaggerfallTerrainSurfaceBuilder.OceanElevation * DaggerfallTerrainSurfaceBuilder.TerrainScale;
+
+        Assert.Contains(Enumerable.Range(0, 64), i => ground.GrassCover((5 * Size) + (i * cell), 5 * Size, 200, 0, false) > 0);
+        Assert.Equal(0, ground.GrassCover((3 * Size) + (64 * cell), (3 * Size) - (64 * cell), 200, 0, false));
+        Assert.Equal(0, ground.GrassCover(5 * Size, 5 * Size, sea + 1, 0, false));
+    }
+
+    /// <summary>Tufts grow on each land climate's nature, in its ground's grass; the open sea lends its nature none.</summary>
+    [Fact]
+    public void Tufts_wear_each_land_climates_ground_and_the_sea_lends_none()
+    {
+        DaggerfallClimateValueDefinition[] climates = [new(223, "Ocean", DaggerfallClimateDisposition.Named),
+            new(231, "Woodlands", DaggerfallClimateDisposition.Named), new(226, "Mountain", DaggerfallClimateDisposition.Named)];
+
+        Assert.Equal(new Dictionary<int, int> { [504] = 302, [510] = 102 }, DaggerfallGroundCover.TuftGrounds(climates));
+    }
+
     private static VegetationTileSamples Flora(VegetationTileRequest tile) =>
         (VegetationTileSamples)Activator.CreateInstance(typeof(VegetationTileSamples), BindingFlags.NonPublic | BindingFlags.Instance, null, [tile], null)!;
 

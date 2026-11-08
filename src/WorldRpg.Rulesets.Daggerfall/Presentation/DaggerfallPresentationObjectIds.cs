@@ -75,6 +75,9 @@ internal static class DaggerfallPresentationObjectIds
         return GameplayEnd | ((ulong)(uint)cellX << CellBits) | (uint)cellY;
     }
 
+    /// <summary>The ground cover's shells about the player, past every identity the sea and rivers take.</summary>
+    internal const ulong GroundCover = GameplayEnd | (1UL << 41);
+
     /// <summary>A map pixel's river water, in the half of the sea's band no map pixel reaches.</summary>
     internal static ulong River(int x, int y)
     {

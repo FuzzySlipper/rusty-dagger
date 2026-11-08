@@ -90614,6 +90614,66 @@
      "height": 0.812
     }
    }
-  ]
+  ],
+  "groundCover": {
+   "shell": {
+    "path": "worldrpg/media/refreshed/groundcover/shell.png",
+    "byteLength": 34704,
+    "sha256": "167bcff73a1a46f866e5ea25c03006b34e88f2395c0341f1aa53721f2878f367",
+    "width": 96,
+    "height": 96,
+    "texelsPerMetre": 24
+   },
+   "tuft": {
+    "path": "worldrpg/media/refreshed/groundcover/tuft.png",
+    "byteLength": 930,
+    "sha256": "9999d7fa63b2ee0fe7e0f63437f1331517d1beff1a83e0446f56511cde486e8d",
+    "width": 32,
+    "height": 32
+   },
+   "shader": {
+    "path": "worldrpg/media/refreshed/groundcover/shells.wgsl",
+    "byteLength": 1291,
+    "sha256": "7ca182dc90d02b9b4b49717eac4e23a7f0a0755e80ef7a688dfea4b37254e28f"
+   },
+   "grass": {
+    "102": {
+     "shells": [
+      0.1017,
+      0.1241,
+      0.0675
+     ],
+     "tufts": [
+      0.091,
+      0.111,
+      0.0604
+     ]
+    },
+    "302": {
+     "shells": [
+      0.081,
+      0.1668,
+      0.0558
+     ],
+     "tufts": [
+      0.0725,
+      0.1492,
+      0.0499
+     ]
+    },
+    "402": {
+     "shells": [
+      0.1296,
+      0.1027,
+      0.0473
+     ],
+     "tufts": [
+      0.116,
+      0.0919,
+      0.0423
+     ]
+    }
+   }
+  }
  }
 }

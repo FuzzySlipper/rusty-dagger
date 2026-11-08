@@ -956,6 +956,21 @@
     "fade": 600,
     "slopeLimitDegrees": 50
   },
+  "groundCover": {
+    "shellLayers": 8,
+    "shellGap": 0.04,
+    "shellLift": 0.02,
+    "shellReach": 44,
+    "shellFade": 20,
+    "shellSway": 0.12,
+    "tuftDensity": 2,
+    "tuftReach": 70,
+    "tuftFade": 25,
+    "tuftWidth": 0.5,
+    "tuftHeight": 0.45,
+    "tuftScaleMin": 0.7,
+    "tuftScaleMax": 1.4
+  },
   "water": {
     "shallow": [0.85, 0.95, 0.95],
     "deep": [0.5, 0.6, 0.7],

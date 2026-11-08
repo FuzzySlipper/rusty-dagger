@@ -224,6 +224,21 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     }
 
     /// <summary>
+    /// The walked surface on a lattice of <paramref name="side"/> vertices a side from map point (x, z), with a ring more
+    /// about them, row by row from the ring's corner: what near ground draws at those vertices.
+    /// </summary>
+    internal double[] WalkedGrid(double originX, double originZ, double cellSize, int side) => WalkedHeights(originX, originZ, cellSize, side);
+
+    /// <summary>How much of open ground is grass by its look, none on a beach or bank, under snow or in a location's clearing.</summary>
+    internal float GrassCover(double x, double z, double height, float slope, bool winter)
+    {
+        if (height <= OceanMetres + BeachMetres || OnBank(x, z) || InClearing(x, z)) return 0;
+        (int vertexX, int vertexZ) = ((int)Math.Round(x / Spacing), (int)Math.Round(z / Spacing));
+        float noise = DaggerfallTerrainSurfaceBuilder.DonorTerrainWeight(vertexX, 64_000 - vertexZ);
+        return DaggerfallGroundBlend.Weights(_groundTuning, noise, slope, (float)height, Archive(x, z, winter, Materials).NoiseStone).X;
+    }
+
+    /// <summary>
     /// How much of the donor's chance a point of open ground keeps: by its look, grass, dirt and rock at their chances and
     /// snow at none; by its map pixel's height and its climate, as the donor thins them; and none on a beach or bank, or
     /// in a location's clearing.

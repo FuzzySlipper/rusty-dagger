@@ -783,6 +783,24 @@ public sealed class PublishedContentDeliveryTests
         return declared.Groups["value"].Value;
     }
 
+    /// <summary>
+    /// The refreshed ground cover ships its shells' texture, their shader and a tuft at the bytes it states, and grass
+    /// colours for the temperate, mountain and swamp summers alone: the deserts' sand and the winters' snow grow none.
+    /// </summary>
+    [Fact]
+    public void Refreshed_ground_cover_ships_its_files_and_grass_for_the_green_summers_alone()
+    {
+        ProductContent content = AdmittedContent();
+        const string payloadPath = "worldrpg/payloads/daggerfall.art-replacements.json";
+        DaggerfallGroundCoverArt cover = DaggerfallArtReplacements.Read(content.ReadBytes(payloadPath), "daggerfall.art-replacements").GroundCover!;
+
+        Assert.All(new[] { cover.Shell, cover.Shader, cover.Tuft }, file =>
+            Assert.Equal(file.Sha256, DaggerfallContentHash.Parse(Convert.ToHexStringLower(SHA256.HashData(content.ReadBytes(file.Path).Span)), file.Path)));
+        Assert.True(cover.ShellTexels > 0 && cover.ShellTexelsPerMetre > 0);
+        Assert.Equal([102, 302, 402], cover.Grass.Keys.Order());
+        Assert.All(cover.Grass.Values, grass => Assert.True(grass.Shells.Y > grass.Shells.Z && grass.Tufts.Y > grass.Tufts.Z, "Grass is greener than it is blue."));
+    }
+
     [Fact]
     public void Refreshed_art_states_the_bytes_it_ships_and_stands_in_only_for_published_classic_media()
     {
@@ -911,7 +929,8 @@ public sealed class PublishedContentDeliveryTests
             .. section.GetProperty("effects").EnumerateArray(), section.GetProperty("effectGlow"),
             .. section.GetProperty("meshes").EnumerateArray().DistinctBy(mesh => mesh.GetProperty("path").GetString()), .. surfaces,
             .. flats, .. flats.Where(flat => flat.TryGetProperty("emission", out _)).Select(flat => flat.GetProperty("emission")),
-            .. people.DistinctBy(person => person.GetProperty("path").GetString())];
+            .. people.DistinctBy(person => person.GetProperty("path").GetString()),
+            .. new[] { "shell", "shader", "tuft" }.Select(file => section.GetProperty("groundCover").GetProperty(file))];
         foreach (JsonElement file in files)
         {
             byte[] bytes = content.ReadBytes(file.GetProperty("path").GetString()!).ToArray();

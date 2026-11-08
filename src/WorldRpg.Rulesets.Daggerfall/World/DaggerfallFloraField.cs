@@ -35,6 +35,8 @@ internal sealed class DaggerfallFloraField : IDisposable
     private Func<int, int, DaggerfallFloraLook?>? _looks;
     private readonly Dictionary<uint, Grown> _layers = [];
     private readonly HashSet<int> _grown = [];
+    /// <summary>Layers of another kind growing on a climate's ground, set again whenever the field is made.</summary>
+    private readonly Dictionary<uint, VegetationLayerRequest> _extras = [];
     private VegetationField? _field;
     private VegetationStreamer? _streamer;
     private (int MapX, int MapY) _frame;
@@ -73,6 +75,7 @@ internal sealed class DaggerfallFloraField : IDisposable
                 VegetationFocus.At(local.X, local.Y, local.Z)));
             _streamer = new VegetationStreamer(_engine, _field, new Sampler(this, offsetX, offsetZ));
             _seen = true;
+            foreach (VegetationLayerRequest extra in _extras.Values) _engine.Vegetation.SetLayer(extra with { Field = _field });
         }
 
         if (!_seen)
@@ -189,6 +192,36 @@ internal sealed class DaggerfallFloraField : IDisposable
         string archives = string.Join(",", _grown.Order().Select(index => DaggerfallExteriorEnvironment.FirstNatureArchive + index));
         return string.Create(System.Globalization.CultureInfo.InvariantCulture,
             $"{(read.Visible ? "shown" : "hidden")}, archives [{archives}] in {_layers.Count} layers, {read.Tiles} tiles ({read.PendingTiles} waiting), {read.Instances} copies in {read.Patches} patches, {read.OverBudget} over budget");
+    }
+
+    /// <summary>
+    /// Grows another kind on a nature archive's ground, by the same cover, each copy tinted between two colours; the caller
+    /// keeps its look while it grows.
+    /// </summary>
+    internal void GrowOn(int natureArchive, uint layer, Appearance look, float density, float reach, float fade, float scaleMin, float scaleMax,
+        Vector3 tintLow, Vector3 tintHigh)
+    {
+        VegetationLayerRequest request = new VegetationLayerRequest(_field!, layer, look, default, density, reach) with
+        {
+            Grounds = VegetationLayerRequest.Ground((uint)(natureArchive - DaggerfallExteriorEnvironment.FirstNatureArchive)),
+            TintLow = tintLow,
+            TintHigh = tintHigh,
+            SlopeLimitDegrees = _tuning.SlopeLimitDegrees,
+            Fade = fade,
+            Seed = layer,
+            ScaleMin = scaleMin,
+            ScaleMax = scaleMax,
+            MaximumInstances = (uint)Math.Min(uint.MaxValue, Math.Ceiling(MathF.PI * reach * reach * density * Headroom)),
+            CastsShadows = false,
+        };
+        _extras[layer] = request;
+        if (_field is not null) _engine.Vegetation.SetLayer(request);
+    }
+
+    /// <summary>Stops growing a kind <see cref="GrowOn"/> set.</summary>
+    internal void StopGrowing(uint layer)
+    {
+        if (_extras.Remove(layer) && _field is not null) _engine.Vegetation.RemoveLayer(new(_field, layer));
     }
 
     /// <summary>A record's layer: its archive and record, so no two climates share one.</summary>

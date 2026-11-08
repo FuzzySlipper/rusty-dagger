@@ -61,6 +61,14 @@ internal sealed record DaggerfallArtMesh(DaggerfallArtFile File, double Footprin
 internal sealed record DaggerfallArtSurface(DaggerfallArtFile File, int Width, int Height);
 
 /// <summary>
+/// The refreshed ground cover: a tileable shell texture whose alpha is each texel's blade height, this many texels square and
+/// drawn this many to the metre, the shader that sways the shells, and a grass tuft, both images greyscale; and each ground archive's grass, the
+/// linear tints that colour the shells and the tufts there. An archive the set names no grass for grows no cover.
+/// </summary>
+internal sealed record DaggerfallGroundCoverArt(DaggerfallArtFile Shell, int ShellTexels, float ShellTexelsPerMetre, DaggerfallArtFile Shader, DaggerfallArtFile Tuft,
+    IReadOnlyDictionary<int, (Vector3 Shells, Vector3 Tufts)> Grass);
+
+/// <summary>
 /// A refreshed world billboard standing in for one classic texture record: a PNG atlas of its frames in classic order, each
 /// the same box, and where the classic frame sits in that box (fractions of the frame, top-down). A flat that gives light
 /// names its emission map, an atlas of the same layout holding only what glows.
@@ -123,6 +131,9 @@ internal sealed class DaggerfallArtReplacements
     /// </summary>
     internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtMesh> Meshes { get; }
 
+    /// <summary>The refreshed grass that covers open ground near the player, when the set has it.</summary>
+    internal DaggerfallGroundCoverArt? GroundCover { get; private init; }
+
     /// <summary>The refreshed surface textures, by the classic texture archive and record each replaces.</summary>
     internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtSurface> Surfaces { get; }
 
@@ -178,6 +189,7 @@ internal sealed class DaggerfallArtReplacements
         Dictionary<string, DaggerfallDyeTint> tints = new(StringComparer.Ordinal);
         Dictionary<string, DaggerfallEffectArt> effects = new(StringComparer.Ordinal);
         DaggerfallArtFile? glow = null;
+        DaggerfallGroundCoverArt? groundCover = null;
         Dictionary<(int Archive, int Record), DaggerfallArtMesh> meshes = [];
         Dictionary<(int Archive, int Record), DaggerfallArtSurface> surfaces = [];
         Dictionary<(int Archive, int Record), DaggerfallArtFlat> flats = [], people = [];
@@ -289,13 +301,29 @@ internal sealed class DaggerfallArtReplacements
                             DaggerfallContentHash.Parse(flat.GetProperty("sha256").GetString()!, $"The refreshed flat for {replaces.Item1}/{replaces.Item2}")), width, height, frames, classic, emission)))
                         throw new InvalidOperationException($"Content pack '{packId}' names two flats for {replaces.Item1}/{replaces.Item2}.");
                 }
+            if (section.TryGetProperty("groundCover", out JsonElement cover))
+            {
+                JsonElement shell = cover.GetProperty("shell"), tuft = cover.GetProperty("tuft");
+                float texels = shell.GetProperty("texelsPerMetre").GetSingle();
+                int side = shell.GetProperty("width").GetInt32();
+                if (side <= 0 || side != shell.GetProperty("height").GetInt32())
+                    throw new InvalidOperationException($"Content pack '{packId}' states a ground cover shell texture that is not square.");
+                if (!float.IsFinite(texels) || texels <= 0)
+                    throw new InvalidOperationException($"Content pack '{packId}' draws its ground cover's shells at {texels} texels to the metre.");
+                Dictionary<int, (Vector3, Vector3)> grass = [];
+                foreach (JsonProperty archive in cover.GetProperty("grass").EnumerateObject())
+                    grass.Add(int.Parse(archive.Name, System.Globalization.CultureInfo.InvariantCulture),
+                        (Tint(archive.Value.GetProperty("shells")), Tint(archive.Value.GetProperty("tufts"))));
+                groundCover = new(File(shell, "The ground cover's shell texture"), side, texels, File(cover.GetProperty("shader"), "The ground cover's shader"),
+                    File(tuft, "The ground cover's tuft"), grass);
+            }
         }
         catch (Exception exception) when (exception is JsonException or KeyNotFoundException or FormatException)
         {
             throw new InvalidOperationException($"Content pack '{packId}' carries an unreadable artReplacements section: {exception.Message}", exception);
         }
 
-        return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, flats, people);
+        return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, flats, people) { GroundCover = groundCover };
 
         DaggerfallArtWorldImage? World(JsonElement owner, string mediaId)
         {
@@ -307,6 +335,17 @@ internal sealed class DaggerfallArtReplacements
                 throw new InvalidOperationException($"Content pack '{packId}' states an empty world image for '{mediaId}'.");
             return new(new(world.GetProperty("path").GetString()!, DaggerfallContentHash.Parse(world.GetProperty("sha256").GetString()!, $"The world image of '{mediaId}'")),
                 width, height, classic);
+        }
+
+        static DaggerfallArtFile File(JsonElement file, string publisher) =>
+            new(file.GetProperty("path").GetString()!, DaggerfallContentHash.Parse(file.GetProperty("sha256").GetString()!, publisher));
+
+        Vector3 Tint(JsonElement tint)
+        {
+            Vector3 value = new(tint[0].GetSingle(), tint[1].GetSingle(), tint[2].GetSingle());
+            if (!float.IsFinite(value.X + value.Y + value.Z) || value.X < 0 || value.Y < 0 || value.Z < 0)
+                throw new InvalidOperationException($"Content pack '{packId}' tints its ground cover by {value}.");
+            return value;
         }
 
         static DaggerfallArtRect Rect(JsonElement rect) => new(rect.GetProperty("x").GetDouble(), rect.GetProperty("y").GetDouble(),

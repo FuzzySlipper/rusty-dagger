@@ -368,6 +368,9 @@ internal sealed class DaggerfallExteriorEnvironment
 
     internal static bool IsDesertClimate(int climateValue) => climateValue is 224 or 225 or 229;
 
+    /// <summary>The open sea's climate, which only its shores' land wears.</summary>
+    internal static bool IsOceanClimate(int climateValue) => climateValue == 223;
+
     internal static bool GroundSupportsWinter(int climateValue) => !IsDesertClimate(climateValue);
 
     /// <summary>The first of the donor's nature archives, 500 to 511: the climates' trees, plants and rocks and their winter sets.</summary>

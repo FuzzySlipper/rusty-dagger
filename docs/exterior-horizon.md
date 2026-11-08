@@ -220,6 +220,20 @@ the layers where the art set has them, and the classic's where it doesn't.
   climate for its winter set and samples the ground again. Past near ground's reach the
   field would have to stand in the backdrop with far ground, which vegetation fields can't
   do yet.
+- **Ground cover** is refreshed grass near the player (`DaggerfallGroundCover`), two ways at
+  once. Shells are a stack of `shellLayers` layers `shellGap` apart over near ground, out to
+  `shellReach`, on near ground's own finest vertices and diagonals so they never part from
+  it. Each layer is cut out where the shell texture's blade height (its alpha) falls below
+  its own, so pixel blades rise out of the ground, darker toward their roots. The grass's
+  share of the ground's look thins them, beaches, banks and clearings stay bare, and the
+  blades shorten away over the last `shellFade`. Their shader slides the higher layers with
+  the wind by whole texels (`shellSway` at the top). Tufts are three crossed quads of pixel
+  grass, a flora layer per climate (`tuftDensity` to `tuftReach`), their tips fluttering.
+  Both wear the climate's grass: the art set's `groundCover` names each ground archive's
+  grass colour, measured from its refreshed grass surface by
+  `authoring/tools/groundcover/groundcover.py`, which also makes the textures. The deserts'
+  sand and every winter set have none, so they grow no cover. `world.groundcover` shows one
+  kind or the other for a run.
 - **Classic nature** stays the donor's: one record chosen at random on a tile, by the
   classic's tile kinds, in the walked window's cells.
 - **Swamps** weigh lush ground in place of snow, below the snow.

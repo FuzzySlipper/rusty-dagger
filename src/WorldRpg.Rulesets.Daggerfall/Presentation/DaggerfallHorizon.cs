@@ -40,6 +40,8 @@ internal sealed class DaggerfallHorizon : IDisposable
     private readonly List<(ulong Id, Vector3 At)> _sheets = [];
     private readonly DaggerfallRiverWater? _rivers;
     private readonly DaggerfallFloraField _flora;
+    private DaggerfallGroundCover? _cover;
+    private Func<DaggerfallGroundCover>? _growCover;
     private readonly DaggerfallWaterTuning _waterTuning;
     private readonly Dictionary<int, RenderResource> _waterArt = [];
     private int _waterArchive = -1;
@@ -102,8 +104,16 @@ internal sealed class DaggerfallHorizon : IDisposable
         Follow(x, z, winter, far);
         ShowNear(session, origin, x, z);
         // Flora stands in near ground's frame, on the same walked surface.
-        if (far) _flora.Show(session, (origin.MapPixelX, origin.MapPixelY), engineLocal, winter, flora);
-        else _flora.Hide();
+        if (far)
+        {
+            _flora.Show(session, (origin.MapPixelX, origin.MapPixelY), engineLocal, winter, flora);
+            if (_growCover is not null) (_cover ??= _growCover()).Show(origin, x, z, winter);
+        }
+        else
+        {
+            _flora.Hide();
+            _cover?.Hide();
+        }
         ShowSea(origin, x, z, winter);
         _rivers?.Follow(origin, x, z);
         if (far) ShowFar(session, origin, seen);
@@ -254,11 +264,23 @@ internal sealed class DaggerfallHorizon : IDisposable
     {
         foreach ((ulong id, Vector3 at) in _sheets)
             facts.Add(new AppearanceFact(id, false, 0, new Transform(at, Quaternion.Identity, Vector3.One), _sheetLook, true, RenderLayer.Scene));
+        _cover?.AppendFacts(facts);
         _rivers?.AppendFacts(facts);
     }
 
     /// <summary>A snapshot was accepted: river water that left it is let go.</summary>
-    internal void CompleteSnapshot() => _rivers?.CompleteSnapshot();
+    internal void CompleteSnapshot()
+    {
+        _rivers?.CompleteSnapshot();
+        _cover?.CompleteSnapshot();
+    }
+
+    /// <summary>The ground cover, once grown outdoors in refreshed art.</summary>
+    internal DaggerfallGroundCover? GroundCover => _cover;
+
+    /// <summary>Grows the art set's grass over near ground, made the first time refreshed ground stands outdoors.</summary>
+    internal void UseGroundCover(DaggerfallGroundCoverArt art, DaggerfallGroundCoverTuning tuning, IReadOnlyDictionary<int, int> tuftGrounds) =>
+        _growCover = () => new DaggerfallGroundCover(_engine, _ground, _flora, art, tuning, tuftGrounds);
 
     /// <summary>
     /// One map pixel of flat water at the sea's surface. Land stands through it, so the shore is wherever ground meets the
@@ -279,6 +301,7 @@ internal sealed class DaggerfallHorizon : IDisposable
     {
         _sheets.Clear();
         _flora.Hide();
+        _cover?.Hide();
         _rivers?.Hide();
         HideFar();
         if (_near is not null && _nearSeen)
@@ -383,6 +406,8 @@ internal sealed class DaggerfallHorizon : IDisposable
     /// <summary>Lets go of the sea, once a snapshot without it has been accepted and before the water art it wears is released.</summary>
     internal void ReleaseSea()
     {
+        _cover?.Dispose();
+        _cover = null;
         _rivers?.Release();
         _sheetLook.Dispose();
         _sheet.Dispose();

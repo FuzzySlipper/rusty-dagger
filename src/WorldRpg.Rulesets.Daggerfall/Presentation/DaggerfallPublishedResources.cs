@@ -20,6 +20,13 @@ internal static class DaggerfallPublishedResources
         return graphics.OpenResourceFromContent(new RenderResourceContentRequest(reference, filter, wrap));
     }
 
+    /// <summary>Opens a published product shader.</summary>
+    internal static RenderResource OpenShader(this IGraphicsService graphics, IContentService content, string path, ContentSha256 sha256)
+    {
+        using ContentReference reference = Resolve(content, path, sha256);
+        return graphics.OpenResourceFromContent(new RenderResourceContentRequest(reference, TextureFilter.Linear, TextureWrap.Clamp, TextureColorSpace.Srgb, "")).Handle;
+    }
+
     /// <summary>Creates a static mesh appearance from a published <c>.rstatmsh</c>.</summary>
     internal static Appearance CreateStaticMesh(this IGraphicsService graphics, IContentService content, string path, ContentSha256 sha256, Color tint)
     {
