@@ -282,6 +282,54 @@ public sealed class SessionCollisionResidencyTests
     }
 
     [Fact]
+    public void A_location_the_window_brings_in_on_the_road_is_prepared_off_the_update_and_its_floor_waits_for_it()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteRecord[] exteriorRecords = [.. definitions.Locations.Records.Where(record => record.Exterior is not null)];
+        DaggerfallSiteRecord activeRecord = exteriorRecords.First(record => exteriorRecords.Any(candidate =>
+            candidate.Id != record.Id
+            && (candidate.MapPixelX != record.MapPixelX || candidate.MapPixelY != record.MapPixelY)
+            && Math.Abs(candidate.MapPixelX - record.MapPixelX) <= DaggerfallExteriorCellResidency.StreamingRadius
+            && Math.Abs(candidate.MapPixelY - record.MapPixelY) <= DaggerfallExteriorCellResidency.StreamingRadius));
+        DaggerfallSiteRecord residentRecord = exteriorRecords.First(record =>
+            record.Id != activeRecord.Id
+            && (record.MapPixelX != activeRecord.MapPixelX || record.MapPixelY != activeRecord.MapPixelY)
+            && Math.Abs(record.MapPixelX - activeRecord.MapPixelX) <= DaggerfallExteriorCellResidency.StreamingRadius
+            && Math.Abs(record.MapPixelY - activeRecord.MapPixelY) <= DaggerfallExteriorCellResidency.StreamingRadius);
+        DaggerfallSiteProfile template = ReadInputs(root);
+        DaggerfallSiteProfile source = EmptyExteriorAt(template, activeRecord.Id);
+        DaggerfallSiteProfile resident = EmptyExteriorAt(template, residentRecord.Id);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, source);
+        PopulateContent(content, resident);
+        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context,
+            new(definitions, source, DaggerfallTuning.Defaults) { Profiles = new([source, resident]) });
+        spatial.HoldDeferredCollision = true;
+        int requests = spatial.ContentResidencyRequests.Count;
+        int waited = spatial.SynchronousWaitsOnDeferred;
+
+        // The first admitted update moves the window with the player and brings the neighbour in.
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+        Assert.Contains(resident.ProfileKey, session.Sites.ResidentExteriorProfiles);
+        SpatialContentArtifactResidencyRequest placed = Assert.Single(spatial.ContentResidencyRequests.Skip(requests));
+        Assert.True(placed.Deferred);
+        Assert.Equal(waited, spatial.SynchronousWaitsOnDeferred);
+        // The world runs on; only what the location places waits for its floor.
+        Assert.True(session.Sites.CollisionPending);
+        session.Update(new ProductUpdate(OuterUpdate(2), []));
+        Assert.True(session.Sites.CollisionPending);
+
+        spatial.HoldDeferredCollision = false;
+        session.Update(new ProductUpdate(OuterUpdate(3), []));
+        Assert.False(session.Sites.CollisionPending);
+        Assert.Equal(waited, spatial.SynchronousWaitsOnDeferred);
+    }
+
+    [Fact]
     public void Resident_actor_delta_is_profile_framed_and_active_capture_excludes_resident_identities()
     {
         string root = TestData.RepositoryRoot;
@@ -363,22 +411,21 @@ public sealed class SessionCollisionResidencyTests
         Assert.Equal(restoredExpectedPose.X, restoredResident!.Position.X, 3);
         Assert.Equal(restoredExpectedPose.Y, restoredResident.Position.Y, 3);
         Assert.Equal(restoredExpectedPose.Z, restoredResident.Position.Z, 3);
-
-        // Exteriors stream by the id that names their location.
-        static DaggerfallSiteProfile EmptyExteriorAt(DaggerfallSiteProfile template, DaggerfallSiteId site) =>
-            EmptyProfileAt(template, site, DaggerfallWorldProfileKind.Exterior, DaggerfallWorldProfileIds.Exterior(site).LogicalId);
-
-
-        static DaggerfallSiteProfile EmptyProfileAt(DaggerfallSiteProfile template, DaggerfallSiteId site,
-            DaggerfallWorldProfileKind kind, string logicalId) => new(
-                new ProjectFacts(new WorldPoint(1F, 1F, 1F), new Dictionary<long, AuthoredActor>()),
-                template.Geometry, template.WorldAppearance, template.InitialLook,
-                template.Materials, new Dictionary<long, NormalizedActorSprite>(), template.MobileSprites,
-                template.Audio, template.ClassicPresentation, site, [], kind, logicalId, [],
-                template.Anchors.Values.ToArray(), template.Lights, template.GroundContainerSprites, null, [], [], null,
-                template.QuestMarkers, template.BillboardSprites, [],
-                template.WaterVolumes, template.TerrainTextures, []);
     }
+
+    // Exteriors stream by the id that names their location.
+    private static DaggerfallSiteProfile EmptyExteriorAt(DaggerfallSiteProfile template, DaggerfallSiteId site) =>
+        EmptyProfileAt(template, site, DaggerfallWorldProfileKind.Exterior, DaggerfallWorldProfileIds.Exterior(site).LogicalId);
+
+    private static DaggerfallSiteProfile EmptyProfileAt(DaggerfallSiteProfile template, DaggerfallSiteId site,
+        DaggerfallWorldProfileKind kind, string logicalId) => new(
+            new ProjectFacts(new WorldPoint(1F, 1F, 1F), new Dictionary<long, AuthoredActor>()),
+            template.Geometry, template.WorldAppearance, template.InitialLook,
+            template.Materials, new Dictionary<long, NormalizedActorSprite>(), template.MobileSprites,
+            template.Audio, template.ClassicPresentation, site, [], kind, logicalId, [],
+            template.Anchors.Values.ToArray(), template.Lights, template.GroundContainerSprites, null, [], [], null,
+            template.QuestMarkers, template.BillboardSprites, [],
+            template.WaterVolumes, template.TerrainTextures, []);
 
     private static DaggerfallDungeonActionModelDefinition[] CollisionModels(DaggerfallSiteProfile site) =>
         [.. site.DungeonActionModels.Where(model => model.CollisionTriangles.Length != 0)];

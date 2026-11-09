@@ -304,9 +304,9 @@ internal sealed class DaggerfallSiteLifecycle
     /// resolve from (the per-block publication's bundle, for an assembled location) open for the call.
     /// </summary>
     /// <remarks>
-    /// Inside a staged site change, a town's placements and removals are held instead, and handed to the Engine as one
-    /// deferred batch once the change's own synchronous calls are done (<see cref="ReleaseHeldPlacements"/>): composing
-    /// a town's navigation takes hundreds of milliseconds. A dungeon's or an interior's placement is small and is made
+    /// Inside a staged site change, or while the window moves on the road, a town's placements and removals are held
+    /// instead, and handed to the Engine as one deferred batch once the change's own synchronous calls are done
+    /// (<see cref="ReleaseHeldPlacements"/>): composing a town's navigation takes hundreds of milliseconds. A dungeon's or an interior's placement is small and is made
     /// at once, after anything held, so the Engine receives them in the product's order.
     /// </remarks>
     private void ApplyLocationResidency(DaggerfallSiteProfile? placed, DaggerfallExteriorWorldOrigin? exteriorOrigin,
@@ -710,9 +710,11 @@ internal sealed class DaggerfallSiteLifecycle
     /// time; true when there is nothing to wait for. Until then the world must not run: nothing holds the player or
     /// anyone else up. Each call reads the batches handed over; once they are refused, or a handover threw, it hands
     /// the placements and the window over again off the update, and once they are live, stands the arrival on them.
+    /// Locations handed over on the road are followed here too, and hold nothing until the Engine refuses them.
     /// </summary>
     internal bool RecoverArrivalGround()
     {
+        SettleRoadsideCollision();
         if (!_awaitingGround)
         {
             // Ground that a character fell through while it was missing would install around them, which the Engine
@@ -1353,6 +1355,32 @@ internal sealed class DaggerfallSiteLifecycle
         return AdmitExteriorWindow(center, origin);
     }
 
+    /// <summary>
+    /// Moves the window with a player going about the exterior. The locations it brings in or lets go are handed to the
+    /// Engine as one deferred batch, as a staged change's are: composing a location's collision and navigation would
+    /// otherwise take the update the window moved in. A location enters the window cells away from the player, long
+    /// before anyone can reach it, and whoever it places waits for its floor (<see cref="SettleRoadsideCollision"/>).
+    /// A recall or an arrival, which can land beside a location, moves the window with <see cref="UpdateExteriorResidency()"/>.
+    /// </summary>
+    internal void FollowPlayerOnTheRoad()
+    {
+        if (_deferringCollision)
+        {
+            _ = UpdateExteriorResidency();
+            return;
+        }
+        _deferringCollision = true;
+        try
+        {
+            _ = UpdateExteriorResidency();
+        }
+        finally
+        {
+            _deferringCollision = false;
+            ReleaseHeldPlacements();
+        }
+    }
+
     /// <summary>Admits the active exterior window with an explicit saved or rebased local origin.</summary>
     internal DaggerfallExteriorCellResidencyUpdate UpdateExteriorResidency(
         DaggerfallExteriorWorldOrigin origin)
@@ -1397,6 +1425,24 @@ internal sealed class DaggerfallSiteLifecycle
         }
         ReconcileResidentExteriorLocations(residency);
         _locationCell = center;
+    }
+
+    /// <summary>
+    /// Follows the locations the window handed over on the road. Once they are live, whoever they placed is settled on
+    /// them; a refused batch holds the world, as a refused arrival does, until it is handed over again and live.
+    /// </summary>
+    private void SettleRoadsideCollision()
+    {
+        if (_deferredCollision is not { Awaiting: true } deferred) return;
+        switch (deferred.Poll().State)
+        {
+            case DaggerfallDeferredCollisionState.Live when !CollisionPending:
+                _host.GroundArrivedActors();
+                break;
+            case DaggerfallDeferredCollisionState.Refused:
+                _awaitingGround = true;
+                break;
+        }
     }
 
     /// <summary>
