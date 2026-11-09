@@ -1,0 +1,19 @@
+{
+ "name": "world",
+ "reset": ["world.groundcover all", "world.trees mesh", "world.farforest on", "world.flora 1"],
+ "variants": {
+  "whole world": [],
+  "no ground cover": ["world.groundcover none"],
+  "sprite trees": ["world.trees sprite"],
+  "no far forest": ["world.farforest off"],
+  "no flora": ["world.flora 0"]
+ },
+ "scenes": [
+  {"name": "dense forest", "travel": "17/0", "scout": "grass", "km": 5},
+  {"name": "forest in rain", "scout": "grass", "km": 5, "weather": "Rain"},
+  {"name": "big town at night", "travel": "Daggerfall", "hour": 22},
+  {"name": "big town at noon", "travel": "Daggerfall"},
+  {"name": "over a range", "travel": "Orsinium", "scout": "dirt", "km": 10},
+  {"name": "winter forest", "travel": "17/0", "season": "Winter", "scout": "snow", "km": 10}
+ ]
+}

@@ -193,6 +193,14 @@ that restarted after a rebuild is back at the title, and the tour begins again.
 included, and `trees.json` compares tree meshes with their sprites. A scene's comparison may
 name any developer command. `--only NAME ...` runs some scenes of a tour.
 
+`authoring/tools/tour/cost.py cost.json` measures what the world costs in the same kind of
+scenes: dense forest, a big town at noon and at night, rain, winter and the view over a
+range. In each scene it reads the renderer's per-pass GPU time (`engine.renderer`) and the
+updates' own cost, first for the whole world and then with ground cover, tree meshes, the
+far forest or flora turned off, and writes `cost.json` and a `cost.md` table. It drives any
+host with live debug by `--origin`, so it measures den-win11's window too, or a playtest
+session by `--session`; give the view 1920x1080 first.
+
 ## Developer tools
 
 The **`** key in play, or the game menu's **Developer tools**, opens the Engine's
