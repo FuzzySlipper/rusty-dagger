@@ -189,7 +189,15 @@ public sealed class ArchitectureLawTests
             ("service locator", @"\b(IServiceProvider|ServiceProvider|GetRequiredService\s*\(|GetService\s*\()"),
             ("generic command dispatch", @"\b(ICommandBus|CommandBus|CommandDispatcher|DispatchCommand\s*\(|GenericCommand)"),
             ("runtime C# compilation", @"\b(CSharpCompilation|CodeDom|Microsoft\.CodeAnalysis|Roslyn)"),
-            ("parallel update loop", @"\b(new\s+Thread\s*\(|Task\.Run\s*\(|PeriodicTimer\s*\(|System\.Threading\.Timer|System\.Timers\.Timer|while\s*\(\s*true\s*\))"),
+            ("parallel update loop", @"\b(new\s+Thread\s*\(|PeriodicTimer\s*\(|System\.Threading\.Timer|System\.Timers\.Timer|while\s*\(\s*true\s*\))"),
+        ];
+        // Pure computation may run on the thread pool from inputs nothing changes, its results taken back on the update
+        // (the Engine's call-affinity contract). Only the owners named here do, each for one stated computation.
+        (string Label, string Pattern) threadPool = ("thread pool work", @"\bTask\.Run\s*\(");
+        string[] threadPoolOwners =
+        [
+            // Exterior cells' ground, built ahead of the window from terrain and location definitions.
+            Path.Combine("World", "DaggerfallExteriorCellGrounds.cs"),
         ];
         (string Label, string Pattern)[] safeCodeBoundaryEscapes =
         [
@@ -204,6 +212,8 @@ public sealed class ArchitectureLawTests
                 string source = ExecutableText(File.ReadAllText(file));
                 AssertNoForbiddenPatterns(file, source, projectAndSourceForbidden);
                 AssertNoForbiddenPatterns(file, source, safeCodeBoundaryEscapes);
+                if (!threadPoolOwners.Any(owner => file.EndsWith(Path.DirectorySeparatorChar + owner, StringComparison.Ordinal)))
+                    AssertNoForbiddenPatterns(file, source, [threadPool]);
             }
 
             string projectFile = ProjectFile(project);
