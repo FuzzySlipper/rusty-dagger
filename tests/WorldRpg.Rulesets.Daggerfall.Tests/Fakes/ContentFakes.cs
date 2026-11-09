@@ -87,7 +87,7 @@ internal sealed class ContentFake : IContentService
     public ReadOnlyMemory<ContentReferenceInfo> ReadReferenceInfo(ContentReference reference)
     {
         KeyValuePair<string, ContentSha256> item = references[reference.Handle.Value];
-        ulong length = bodies.TryGetValue(item.Key, out byte[]? body) ? (ulong)body.Length : 1;
+        ulong length = Bytes(item.Key) is { } body ? (ulong)body.Length : 1;
         return new[] { new ContentReferenceInfo(item.Key, item.Value, length) };
     }
 
@@ -98,12 +98,24 @@ internal sealed class ContentFake : IContentService
         // that answered a larger request would hide a reader that asked for a whole artifact.
         if (request.MaxBytes > 1024 * 1024) throw new InvalidOperationException($"Admitted content reads are bounded to one mebibyte, not {request.MaxBytes}.");
         reads[path] = reads.GetValueOrDefault(path) + 1;
-        if (!bodies.TryGetValue(path, out byte[]? body)) return ReadOnlyMemory<byte>.Empty;
+        if (Bytes(path) is not { } body) return ReadOnlyMemory<byte>.Empty;
         if (request.Offset > (ulong)body.Length) throw new InvalidOperationException($"Read of '{path}' starts past its admitted bytes.");
         int available = checked((int)Math.Min(request.MaxBytes, (ulong)body.Length - request.Offset));
         return body.AsMemory(checked((int)request.Offset), available);
     }
     internal int ResolveCalls { get; private set; }
+
+    /// <summary>
+    /// An admitted file's bytes. Refreshed media is admitted by digest alone, so a read of one (a tree's mesh) is
+    /// answered from the checkout's committed file, which that digest names.
+    /// </summary>
+    private byte[]? Bytes(string path)
+    {
+        if (bodies.TryGetValue(path, out byte[]? body)) return body;
+        if (!path.StartsWith("worldrpg/media/refreshed/", StringComparison.Ordinal)) return null;
+        string file = Path.Combine(TestData.RepositoryRoot, "content", path);
+        return File.Exists(file) ? bodies[path] = File.ReadAllBytes(file) : null;
+    }
 }
 /// <summary>Bundles and installed containers for full-product tests; bodies stay outside the eager snapshot.</summary>
 /// <remarks>

@@ -18,7 +18,7 @@ internal static class DaggerfallTreeMesh
     internal static MeshResourceCreateRequest Read(IContentService content, DaggerfallTreeArt art, float spriteHeight, Material bark, Material? leaves)
     {
         using ContentReference reference = content.ResolveReference(new ContentResolveRequest(art.Mesh.Path, art.Mesh.Sha256));
-        using JsonDocument document = JsonDocument.Parse(content.ReadBytes(new ContentReadBytesRequest(reference, 0, uint.MaxValue)));
+        using JsonDocument document = JsonDocument.Parse(ReadAll(content, reference));
         float scale = art.Height * spriteHeight / art.MeshHeight;
         Vector3 lift = new(0, art.Foot * spriteHeight, 0);
         List<Vector3> positions = [], normals = [];
@@ -54,6 +54,23 @@ internal static class DaggerfallTreeMesh
 
         return new MeshResourceCreateRequest(positions.ToArray(), normals.ToArray(), uvs.ToArray(), colours.ToArray(), indices.ToArray(),
             groups.ToArray(), bindings.ToArray(), ReadOnlyMemory<Vector4>.Empty);
+    }
+
+    /// <summary>The Engine serves an admitted read a mebibyte at a time, so a mesh larger than that is read in parts.</summary>
+    private const uint ReadBytes = 1024 * 1024;
+
+    private static byte[] ReadAll(IContentService content, ContentReference reference)
+    {
+        ulong length = content.ReadReferenceInfo(reference).Span[0].ByteLength;
+        byte[] bytes = new byte[checked((int)length)];
+        for (int at = 0; at < bytes.Length;)
+        {
+            ReadOnlyMemory<byte> part = content.ReadBytes(new ContentReadBytesRequest(reference, (ulong)at, ReadBytes));
+            if (part.IsEmpty) throw new InvalidDataException($"A tree mesh ended at {at} of its {length} bytes.");
+            part.CopyTo(bytes.AsMemory(at));
+            at += part.Length;
+        }
+        return bytes;
     }
 
     private static float[] Floats(JsonElement part, string name) => [.. part.GetProperty(name).EnumerateArray().Select(value => value.GetSingle())];
