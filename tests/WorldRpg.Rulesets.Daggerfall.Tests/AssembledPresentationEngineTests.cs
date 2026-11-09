@@ -694,7 +694,9 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             output.WriteLine($"{laid} ground tiles of {exterior.Blocks.Count} blocks lie under their blocks.");
             Assert.True(laid > 64 * 128, $"Only {laid} ground tiles were laid under Daggerfall's blocks.");
 
-            // Standing still in the city at night (no civilians walk): each update costs the same.
+            // Standing still in the city at night (no civilians walk): each update costs the same. River water streams
+            // in two map pixels an update (DaggerfallRiverWater), so the 5x5 pixels about the player are built first.
+            Steps(host, run, 13);
             int created = run.Graphics.CreatedResources;
             List<(double Milliseconds, long Managed)> buckets = [];
             for (int bucket = 0; bucket < 8; bucket++)
