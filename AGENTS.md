@@ -103,8 +103,10 @@ inventory, equipment and effects facades). Check the packaged contract when you
 use one.
 
 - One Engine-admitted update. The `Rusty.Engine.Application` phases are
-  optional. No second loop, clock, timer, thread, scheduler, ECS or renderer;
-  product game time advances inside admitted updates.
+  optional. No second loop, clock, timer, scheduler, ECS or renderer; product
+  game time advances inside admitted updates. Pure computation may run on the
+  thread pool from inputs nothing changes, with no Engine calls, its results
+  taken back on the update (the Engine's call-affinity contract).
 - Safe C# only: no `unsafe`, pointers, `Native*`, `GCHandle`, raw statuses,
   handwritten native declarations or downstream Rust.
 - If a needed behavior isn't in the safe API, confirm no wrapper exposes it,

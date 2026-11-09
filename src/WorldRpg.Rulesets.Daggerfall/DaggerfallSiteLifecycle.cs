@@ -98,11 +98,10 @@ internal sealed class DaggerfallSiteLifecycle
     private (DaggerfallArtReplacements Art, Func<bool> Refreshed)? _groundArt;
     private DaggerfallGroundBlendSettings _groundBlend;
     private DaggerfallExteriorEnvironment? _exteriorEnvironment;
-    private Func<DaggerfallExteriorCellId, DaggerfallTerrainSurface>? _exteriorSurfaceFactory;
+    private DaggerfallExteriorCellGrounds? _exteriorGrounds;
     private Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior>? _exteriorLocations;
     private Dictionary<DaggerfallSiteId, DaggerfallExteriorCellId>? _exteriorCellsBySite;
     private Dictionary<DaggerfallExteriorCellId, DaggerfallSiteId>? _exteriorSitesByCell;
-    private readonly Dictionary<DaggerfallExteriorCellId, DaggerfallTerrainSurface> _exteriorSurfaceCache = [];
     private readonly Dictionary<DaggerfallExteriorCellId, float> _exteriorLocationHeights = [];
     private readonly HashSet<ulong> _exteriorWaterTriggers = [];
     private readonly Dictionary<DaggerfallWorldProfileKey, ResidentExteriorLocation> _residentExteriorLocations = [];
@@ -766,7 +765,7 @@ internal sealed class DaggerfallSiteLifecycle
         height = 0F;
         if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior
             || _exteriorResidency is not { IsInitialized: true } residency
-            || _exteriorSurfaceFactory is not { } surfaces) return false;
+            || _exteriorGrounds is not { } grounds) return false;
         DaggerfallExteriorWorldOrigin origin = ActiveOrigin(residency);
         DaggerfallExteriorWorldBounds bounds = new(_definitions.Terrain.Width, _definitions.Terrain.Height);
         DaggerfallExteriorCellId cell = DaggerfallExteriorSessionOrigin.CellForLocalPosition(local, origin, bounds);
@@ -774,7 +773,7 @@ internal sealed class DaggerfallSiteLifecycle
         Vector3 corner = origin.LocalTranslation(cell);
         float x = Math.Clamp((local.X - corner.X) / DaggerfallExteriorCellResidency.CellSize, 0F, 1F);
         float z = Math.Clamp((corner.Z - local.Z) / DaggerfallExteriorCellResidency.CellSize, 0F, 1F);
-        height = corner.Y + DaggerfallTerrainSurfaceBuilder.SampleWorldHeight(surfaces(cell), x, z);
+        height = corner.Y + DaggerfallTerrainSurfaceBuilder.SampleWorldHeight(grounds.Ground(cell).Surface, x, z);
         return true;
     }
 
@@ -1500,8 +1499,8 @@ internal sealed class DaggerfallSiteLifecycle
         return height;
     }
 
-    /// <summary>Whether a cell's surface is built and held. The window keeps only its own cells'.</summary>
-    internal bool HoldsExteriorSurface(DaggerfallExteriorCellId cell) => _exteriorSurfaceCache.ContainsKey(cell);
+    /// <summary>Whether a cell's ground is built or building. The window keeps its own cells' and those bordering it.</summary>
+    internal bool HoldsExteriorSurface(DaggerfallExteriorCellId cell) => _exteriorGrounds?.Holds(cell) == true;
 
     /// <summary>The cells the walked window holds.</summary>
     internal IReadOnlyCollection<DaggerfallExteriorCellId> ResidentExteriorCells => _exteriorResidency?.ResidentCells ?? [];
@@ -1510,9 +1509,8 @@ internal sealed class DaggerfallSiteLifecycle
     {
         if (!TryExteriorProfileCell(profile, out DaggerfallExteriorCellId cell))
             throw new InvalidOperationException($"Exterior profile '{profile.ProfileKey.LogicalId}' has no normalized map-pixel identity.");
-        if (_exteriorSurfaceFactory is null)
-            _ = EnsureExteriorResidency();
-        return _exteriorSurfaceFactory!(cell);
+        _ = EnsureExteriorResidency();
+        return _exteriorGrounds!.Ground(cell).Surface;
     }
 
     private HashSet<long> ProfileActorIds(DaggerfallSiteProfile profile, DaggerfallSiteRuntimeDelta? delta = null)
@@ -2011,7 +2009,7 @@ internal sealed class DaggerfallSiteLifecycle
         DropGroundCollider();
         ReleaseExteriorWaterTriggers();
         _exteriorTerrainAppearance?.Clear();
-        _exteriorSurfaceCache.Clear();
+        _exteriorGrounds?.Clear();
         return update;
     }
 
@@ -2093,7 +2091,8 @@ internal sealed class DaggerfallSiteLifecycle
         _exteriorTerrainAppearance?.Dispose();
         _exteriorTerrainAppearance = null;
         _exteriorEnvironment = null;
-        _exteriorSurfaceCache.Clear();
+        _exteriorGrounds?.Dispose();
+        _exteriorGrounds = null;
     }
 
     /// <summary>The terrain tiles the resident environment draws over one cell, empty for a cell outside the window.</summary>
@@ -2104,17 +2103,7 @@ internal sealed class DaggerfallSiteLifecycle
     {
         ObjectDisposedException.ThrowIf(_retired, this);
         if (_exteriorResidency is not null) return _exteriorResidency;
-        Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> exteriors = ExteriorLocations();
-        Func<DaggerfallExteriorCellId, DaggerfallTerrainSurface> surfaceFactory = cell =>
-        {
-            if (_exteriorSurfaceCache.TryGetValue(cell, out DaggerfallTerrainSurface? cached)) return cached;
-            DaggerfallTerrainSurface surface = DaggerfallTerrainSurfaceBuilder.Build(_definitions.Terrain, cell.X, cell.Y);
-            if (exteriors.TryGetValue(cell, out DaggerfallSiteExterior? exterior))
-                surface = DaggerfallTerrainSurfaceBuilder.ApplyLocationFlattening(surface, DaggerfallLocationTerrainFrame.Flattening(exterior));
-            _exteriorSurfaceCache.Add(cell, surface);
-            return surface;
-        };
-        _exteriorSurfaceFactory = surfaceFactory;
+        _exteriorGrounds = new(_definitions.Terrain, ExteriorLocations(), _tuning.Ground);
         return _exteriorResidency = new DaggerfallExteriorCellResidency(
             new DaggerfallExteriorWorldBounds(_definitions.Terrain.Width, _definitions.Terrain.Height));
     }
@@ -2160,18 +2149,18 @@ internal sealed class DaggerfallSiteLifecycle
     private void ReconcileExteriorTerrainAppearance(DaggerfallExteriorCellResidency residency)
     {
         if (!residency.IsInitialized) return;
-        Func<DaggerfallExteriorCellId, DaggerfallTerrainSurface> surfaceFactory = _exteriorSurfaceFactory
-            ?? throw new InvalidOperationException("Exterior terrain surface factory was not initialized.");
-        Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> exteriors = ExteriorLocations();
-        DaggerfallExteriorEnvironment environment = _exteriorEnvironment ??= new(_random, ground: _tuning.Ground);
-        environment.Reconcile(residency.ResidentCells, ActiveOrigin(residency), surfaceFactory, exteriors, _definitions.Grids);
+        DaggerfallExteriorCellGrounds grounds = _exteriorGrounds
+            ?? throw new InvalidOperationException("Exterior cell grounds were not initialized.");
+        // The window's missing cells build side by side, and its bordering cells after them, ready for the next crossing.
+        grounds.Hold(residency.ResidentCells.Concat(residency.Bordering()));
+        DaggerfallExteriorEnvironment environment = _exteriorEnvironment ??= new(_random);
+        environment.Reconcile(residency.ResidentCells, ActiveOrigin(residency), grounds.Ground, ExteriorLocations(), _definitions.Grids);
         DaggerfallExteriorTerrainAppearance appearance =
             _exteriorTerrainAppearance ??= NewTerrainAppearance();
         appearance.ConfigureProfile(Projection.Inputs);
         Projection.Appearance.SetSnapshotSupplement(AppendExteriorFacts, CompleteExteriorSnapshot);
         appearance.Reconcile(residency.ResidentCells, ActiveOrigin(residency), environment);
         ReconcileExteriorWaterTriggers(environment.CharacterWaterVolumes(ActiveOrigin(residency)));
-        TrimExteriorSurfaceCache(residency.ResidentCells);
     }
 
     private Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> ExteriorLocations()
@@ -2201,14 +2190,6 @@ internal sealed class DaggerfallSiteLifecycle
     /// <summary>The location whose exterior occupies each map pixel; a pixel holds at most one.</summary>
     private Dictionary<DaggerfallExteriorCellId, DaggerfallSiteId> ExteriorSitesByCell() =>
         _exteriorSitesByCell ??= ExteriorCellsBySite().ToDictionary(pair => pair.Value, pair => pair.Key);
-
-    private void TrimExteriorSurfaceCache(IReadOnlyCollection<DaggerfallExteriorCellId> residentCells)
-    {
-        HashSet<DaggerfallExteriorCellId> retained = residentCells.ToHashSet();
-        foreach (DaggerfallExteriorCellId cell in _exteriorSurfaceCache.Keys
-            .Where(cell => !retained.Contains(cell)).ToArray())
-            _exteriorSurfaceCache.Remove(cell);
-    }
 
     private void ReconcileExteriorWaterTriggers(IReadOnlyList<CharacterWaterVolume> desired)
     {
@@ -2286,7 +2267,7 @@ internal sealed class DaggerfallSiteLifecycle
         Projection.Appearance.SetExteriorSeason(ForProfile(Projection.Inputs));
         foreach (var resident in _residentExteriorLocations.Values)
             resident.Projection.Appearance.SetExteriorSeason(ForProfile(resident.Profile));
-        _exteriorEnvironment ??= new(_random, season, _tuning.Ground);
+        _exteriorEnvironment ??= new(_random, season);
         bool weatherChanged = _exteriorEnvironment.UpdateRain(_definitions.Grids.Climate.Values, raining ?? (_ => false));
         if (_exteriorEnvironment.Season == season && !weatherChanged) return;
         // SetSeason invalidates the retained source facts before the next appearance admission.

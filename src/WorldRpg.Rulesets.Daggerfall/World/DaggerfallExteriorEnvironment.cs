@@ -95,6 +95,23 @@ internal readonly record struct DaggerfallExteriorTerrainTile(int TextureRecord,
 }
 
 /// <summary>
+/// One cell's ground: its surface, and the terrain tiles, water and nature sites read from it. It is built from
+/// definitions alone, so it can be built off the update (<see cref="DaggerfallExteriorCellGrounds"/>).
+/// </summary>
+internal sealed record DaggerfallExteriorCellGround(
+    DaggerfallTerrainSurface Surface,
+    IReadOnlyList<DaggerfallExteriorTerrainTile> Terrain,
+    IReadOnlyList<DaggerfallExteriorWaterVolume> Water,
+    IReadOnlyList<DaggerfallExteriorNatureSite> NatureSites);
+
+/// <summary>
+/// A tile of a cell where nature may grow, in tile order, with what its ground says about it. Whether nature grows
+/// there is drawn on the update, from the Engine's random streams.
+/// </summary>
+internal readonly record struct DaggerfallExteriorNatureSite(
+    byte TileX, byte TileY, byte TerrainKind, bool AboveBeach, float Soil, float Slope, float Height);
+
+/// <summary>
 /// Reconciles source terrain facts into a resident, queryable environment projection. This is a
 /// product data owner: no Engine handles or alternate update loop are introduced here.
 /// </summary>
@@ -119,18 +136,16 @@ internal sealed class DaggerfallExteriorEnvironment
     private readonly HashSet<int> _rainingClimates = [];
     private bool _initialized;
     private readonly IRandomService _random;
-    private readonly DaggerfallGroundTuning _ground;
 
     // Nature decoration draws from one Engine stream per cell, seeded by the cell's terrain key, so a
     // cell's placements are the same on every admission without consuming gameplay draws.
     private const string NatureScope = "daggerfall.exterior.nature.v1";
     private const uint NatureChanceResolution = 1_000_000;
 
-    internal DaggerfallExteriorEnvironment(IRandomService random, DaggerfallExteriorSeason season = DaggerfallExteriorSeason.Summer, DaggerfallGroundTuning? ground = null)
+    internal DaggerfallExteriorEnvironment(IRandomService random, DaggerfallExteriorSeason season = DaggerfallExteriorSeason.Summer)
     {
         _random = random ?? throw new ArgumentNullException(nameof(random));
         _season = season;
-        _ground = ground ?? DaggerfallGroundTuning.Default;
     }
 
     internal DaggerfallExteriorSeason Season => _season;
@@ -202,12 +217,12 @@ internal sealed class DaggerfallExteriorEnvironment
     internal void Reconcile(
         IEnumerable<DaggerfallExteriorCellId> residentCells,
         DaggerfallExteriorWorldOrigin origin,
-        Func<DaggerfallExteriorCellId, DaggerfallTerrainSurface> surfaceFactory,
+        Func<DaggerfallExteriorCellId, DaggerfallExteriorCellGround> grounds,
         IReadOnlyDictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> locations,
         DaggerfallWorldGridsSet grids)
     {
         ArgumentNullException.ThrowIfNull(residentCells);
-        ArgumentNullException.ThrowIfNull(surfaceFactory);
+        ArgumentNullException.ThrowIfNull(grounds);
         ArgumentNullException.ThrowIfNull(locations);
         ArgumentNullException.ThrowIfNull(grids);
 
@@ -234,16 +249,11 @@ internal sealed class DaggerfallExteriorEnvironment
                 staged.Add(cell, retained);
                 continue;
             }
-            DaggerfallTerrainSurface surface = surfaceFactory(cell)
-                ?? throw new InvalidOperationException($"Exterior cell ({cell.X},{cell.Y}) produced no terrain surface for environment admission.");
-            _rivers ??= surface.Rivers;
-            IReadOnlyList<DaggerfallExteriorTerrainTile> terrain = BuildTerrainTiles(cell, surface, location);
-            staged.Add(cell, new(
-                cell,
-                variant,
-                [.. BuildWater(cell, terrain), .. BuildRiverWater(cell, surface)],
-                terrain,
-                BuildNature(cell, surface, variant, location, terrain)));
+            DaggerfallExteriorCellGround ground = grounds(cell)
+                ?? throw new InvalidOperationException($"Exterior cell ({cell.X},{cell.Y}) produced no ground for environment admission.");
+            _rivers ??= ground.Surface.Rivers;
+            // Nature draws from the Engine's random streams, so it alone is placed here, on the update.
+            staged.Add(cell, new(cell, variant, ground.Water, ground.Terrain, BuildNature(cell, ground, variant)));
         }
 
         _cells.Clear();
@@ -254,6 +264,17 @@ internal sealed class DaggerfallExteriorEnvironment
             _riverBoxes.Add(water.StableId);
         _origin = origin;
         _initialized = true;
+    }
+
+    /// <summary>A cell's terrain tiles, water and nature sites, read from its surface and the location standing on it.</summary>
+    internal static DaggerfallExteriorCellGround Ground(
+        DaggerfallExteriorCellId cell, DaggerfallTerrainSurface surface, DaggerfallSiteExterior? location, DaggerfallGroundTuning tuning)
+    {
+        ArgumentNullException.ThrowIfNull(surface);
+        ArgumentNullException.ThrowIfNull(tuning);
+        IReadOnlyList<DaggerfallExteriorTerrainTile> terrain = BuildTerrainTiles(cell, surface, location);
+        return new(surface, terrain, [.. BuildWater(cell, terrain), .. BuildRiverWater(cell, surface)],
+            NatureSites(surface, location, terrain, tuning));
     }
 
     /// <summary>A river box's depth under its surface: past any channel's bed, which the ground stops at anyway.</summary>
@@ -556,69 +577,82 @@ internal sealed class DaggerfallExteriorEnvironment
         return result;
     }
 
-    private IReadOnlyList<DaggerfallExteriorNaturePlacement> BuildNature(
-        DaggerfallExteriorCellId cell,
+    /// <summary>
+    /// The tiles nature may grow on: gentle enough, clear of a location's clearing and the river banks, on dirt, grass or
+    /// stone. Nature grows from soil, so it thins toward a treeline and off bare rock as the ground under it turns.
+    /// </summary>
+    private static DaggerfallExteriorNatureSite[] NatureSites(
         DaggerfallTerrainSurface surface,
-        DaggerfallExteriorTerrainVariant variant,
         DaggerfallSiteExterior? location,
-        IReadOnlyList<DaggerfallExteriorTerrainTile> terrain)
+        IReadOnlyList<DaggerfallExteriorTerrainTile> terrain,
+        DaggerfallGroundTuning tuning)
     {
-        List<DaggerfallExteriorNaturePlacement> nature = [];
-        using Rng random = _random.CreateScoped(new ScopedRngCreateRequest(unchecked((ulong)(uint)MakeTerrainKey(cell.X, cell.Y)), NatureScope));
-        float elevation = Math.Clamp(surface.SourceWorldHeight / 128F, .4F, 1F);
-        float climateScale = variant.IsDesert ? .25F : 1F;
-        float chanceDirt = BaseChanceOnDirt * elevation * climateScale;
-        float chanceGrass = BaseChanceOnGrass * elevation * climateScale;
-        float chanceStone = BaseChanceOnStone * elevation * climateScale;
-
+        List<DaggerfallExteriorNatureSite> sites = [];
         for (int tileY = 0; tileY < TerrainTileDimension; tileY++)
         {
             for (int tileX = 0; tileX < TerrainTileDimension; tileX++)
             {
                 float slope = Slope(surface, tileX, tileY);
                 if (slope > MaximumNatureSlope) continue;
-
                 if (location is not null && InNatureClearing(location, tileX, tileY)) continue;
                 if (surface.OnBank(tileX, tileY)) continue;
-
                 int terrainKind = terrain[(tileY * TerrainTileDimension) + tileX].TextureRecord;
-                float chance = terrainKind switch
-                {
-                    1 => chanceDirt,
-                    2 => chanceGrass,
-                    3 => chanceStone,
-                    _ => 0F,
-                };
-                if (chance <= 0F) continue;
-                // Nature grows from soil, so it thins toward a treeline and off bare rock, as the ground under it turns.
-                if (NextUnit(random) > chance * Soil(surface, tileX, tileY, slope)) continue;
+                if (terrainKind is not (1 or 2 or 3)) continue;
 
                 int heightIndex = (TerrainSampleCoordinate(tileY) * DaggerfallTerrainSurfaceBuilder.SampleDimension)
                     + TerrainSampleCoordinate(tileX);
                 float sourceHeight = surface.NormalizedHeights[heightIndex] * DaggerfallTerrainSurfaceBuilder.MaxTerrainHeight;
-                if (sourceHeight < BeachElevation) continue;
                 float height = Height(surface, tileX, tileY);
-                int record = 1 + checked((int)_random.NextBoundedU32(new ScopedRngBoundedRequest(random, 31)).Value);
-                float y = height - (slope / SlopeSinkRatio);
-                nature.Add(new(
-                    cell,
-                    tileX,
-                    tileY,
-                    record,
-                    new(tileX * DaggerfallTerrainSurfaceBuilder.SampleSpacing, y, -tileY * DaggerfallTerrainSurfaceBuilder.SampleSpacing),
-                    slope)
-                {
-                    SpriteArchive = variant.NatureTextureArchive,
-                });
+                sites.Add(new((byte)tileX, (byte)tileY, (byte)terrainKind, sourceHeight >= BeachElevation,
+                    Soil(tuning, slope, height), slope, height));
             }
+        }
+        return [.. sites];
+    }
+
+    private IReadOnlyList<DaggerfallExteriorNaturePlacement> BuildNature(
+        DaggerfallExteriorCellId cell,
+        DaggerfallExteriorCellGround ground,
+        DaggerfallExteriorTerrainVariant variant)
+    {
+        List<DaggerfallExteriorNaturePlacement> nature = [];
+        using Rng random = _random.CreateScoped(new ScopedRngCreateRequest(unchecked((ulong)(uint)MakeTerrainKey(cell.X, cell.Y)), NatureScope));
+        float elevation = Math.Clamp(ground.Surface.SourceWorldHeight / 128F, .4F, 1F);
+        float climateScale = variant.IsDesert ? .25F : 1F;
+        float chanceDirt = BaseChanceOnDirt * elevation * climateScale;
+        float chanceGrass = BaseChanceOnGrass * elevation * climateScale;
+        float chanceStone = BaseChanceOnStone * elevation * climateScale;
+
+        foreach (DaggerfallExteriorNatureSite site in ground.NatureSites)
+        {
+            float chance = site.TerrainKind switch
+            {
+                1 => chanceDirt,
+                2 => chanceGrass,
+                _ => chanceStone,
+            };
+            if (NextUnit(random) > chance * site.Soil) continue;
+            if (!site.AboveBeach) continue;
+            int record = 1 + checked((int)_random.NextBoundedU32(new ScopedRngBoundedRequest(random, 31)).Value);
+            float y = site.Height - (site.Slope / SlopeSinkRatio);
+            nature.Add(new(
+                cell,
+                site.TileX,
+                site.TileY,
+                record,
+                new(site.TileX * DaggerfallTerrainSurfaceBuilder.SampleSpacing, y, -site.TileY * DaggerfallTerrainSurfaceBuilder.SampleSpacing),
+                site.Slope)
+            {
+                SpriteArchive = variant.NatureTextureArchive,
+            });
         }
         return nature;
     }
 
     /// <summary>How much of the ground at a tile is soil, from 1 down to 0 under snow or on bare rock.</summary>
-    private float Soil(DaggerfallTerrainSurface surface, int tileX, int tileY, float slopeDegrees)
+    private static float Soil(DaggerfallGroundTuning tuning, float slopeDegrees, float height)
     {
-        Vector4 layers = DaggerfallGroundBlend.Weights(_ground, SoilNoise, MathF.Tan(slopeDegrees * MathF.PI / 180F), Height(surface, tileX, tileY));
+        Vector4 layers = DaggerfallGroundBlend.Weights(tuning, SoilNoise, MathF.Tan(slopeDegrees * MathF.PI / 180F), height);
         return layers.X + layers.Y;
     }
 

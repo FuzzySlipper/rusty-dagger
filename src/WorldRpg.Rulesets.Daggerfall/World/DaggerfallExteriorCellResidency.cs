@@ -149,6 +149,22 @@ internal sealed class DaggerfallExteriorCellResidency
         .ThenBy(cell => cell.X)
         .ToArray();
 
+    /// <summary>The cells one past the window's edge, within the world: those the next crossing brings in.</summary>
+    internal IEnumerable<DaggerfallExteriorCellId> Bordering()
+    {
+        if (!_initialized) yield break;
+        const int reach = StreamingRadius + 1;
+        for (int y = _center.Y - reach; y <= _center.Y + reach; y++)
+        {
+            for (int x = _center.X - reach; x <= _center.X + reach; x++)
+            {
+                DaggerfallExteriorCellId cell = new(x, y);
+                if (Math.Max(Math.Abs(x - _center.X), Math.Abs(y - _center.Y)) == reach && _bounds.Contains(cell))
+                    yield return cell;
+            }
+        }
+    }
+
     /// <summary>Updates the window while keeping the current map-pixel origin.</summary>
     internal DaggerfallExteriorCellResidencyUpdate Update(DaggerfallExteriorCellId center)
     {

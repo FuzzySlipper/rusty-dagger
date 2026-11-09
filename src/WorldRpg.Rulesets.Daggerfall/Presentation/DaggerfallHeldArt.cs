@@ -111,30 +111,40 @@ internal sealed class DaggerfallHeldArt
     }
 
     /// <summary>The material slot of a model's <c>metal</c> material, which an item's metal tints; null when it has none.</summary>
-    internal uint? MetalSlot(string model)
-    {
-        byte[] glb = Container.ReadBytes(model).ToArray();
-        using JsonDocument gltf = JsonDocument.Parse(glb.AsMemory(20, BinaryPrimitives.ReadInt32LittleEndian(glb.AsSpan(12))));
-        if (!gltf.RootElement.TryGetProperty("materials", out JsonElement materials)) return null;
-        uint slot = 0;
-        foreach (JsonElement material in materials.EnumerateArray())
-        {
-            if (material.TryGetProperty("name", out JsonElement name) && name.ValueEquals("metal")) return slot;
-            slot++;
-        }
-        return null;
-    }
+    internal uint? MetalSlot(string model) => Materials(model).Metal;
 
     /// <summary>What a model's material slots are tinted before any light: white, and its <c>metal</c> slot in <paramref name="metal"/>.</summary>
     internal Color[] SlotTints(string model, DaggerfallDyeTint? metal)
     {
+        (int count, uint? metalSlot) = Materials(model);
+        Color[] tints = new Color[count];
+        Array.Fill(tints, new Color(1, 1, 1, 1));
+        if (metal is not null && metalSlot is uint slot) tints[slot] = MetalColor(metal);
+        return tints;
+    }
+
+    // Each model's material count and metal slot, read from its glTF the first time it is drawn: a model is read whole
+    // to find them, which a rider's reins or a swapped weapon would otherwise repeat in the update that draws it.
+    private readonly Dictionary<string, (int Count, uint? Metal)> _materials = [];
+
+    private (int Count, uint? Metal) Materials(string model)
+    {
+        if (_materials.TryGetValue(model, out var known)) return known;
         byte[] glb = Container.ReadBytes(model).ToArray();
         using JsonDocument gltf = JsonDocument.Parse(glb.AsMemory(20, BinaryPrimitives.ReadInt32LittleEndian(glb.AsSpan(12))));
-        if (!gltf.RootElement.TryGetProperty("materials", out JsonElement materials)) return [];
-        Color[] tints = new Color[materials.GetArrayLength()];
-        Array.Fill(tints, new Color(1, 1, 1, 1));
-        if (metal is not null && MetalSlot(model) is uint slot) tints[slot] = MetalColor(metal);
-        return tints;
+        (int Count, uint? Metal) read = (0, null);
+        if (gltf.RootElement.TryGetProperty("materials", out JsonElement materials))
+        {
+            uint slot = 0;
+            foreach (JsonElement material in materials.EnumerateArray())
+            {
+                if (read.Metal is null && material.TryGetProperty("name", out JsonElement name) && name.ValueEquals("metal")) read.Metal = slot;
+                slot++;
+            }
+            read.Count = (int)slot;
+        }
+        _materials.Add(model, read);
+        return read;
     }
 
     /// <summary>

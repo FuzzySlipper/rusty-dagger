@@ -759,6 +759,24 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
     }
 
     [Fact]
+    public void The_cells_bordering_the_window_are_built_before_a_crossing_needs_them()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior.json");
+        List<string> releases = [];
+        ContentFake content = new(releases); PopulateContent(content, exterior);
+        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
+        DaggerfallExteriorCellId center = session.Sites.CaptureExteriorResidency()!.Value.Center;
+
+        Assert.True(session.Sites.HoldsExteriorSurface(new(center.X + 4, center.Y)));
+        Assert.True(session.Sites.HoldsExteriorSurface(new(center.X - 4, center.Y + 4)));
+        Assert.False(session.Sites.HoldsExteriorSurface(new(center.X + 5, center.Y)));
+    }
+
+    [Fact]
     public void A_site_past_the_window_keeps_its_height_without_rebuilding_its_cell()
     {
         string root = TestData.RepositoryRoot;

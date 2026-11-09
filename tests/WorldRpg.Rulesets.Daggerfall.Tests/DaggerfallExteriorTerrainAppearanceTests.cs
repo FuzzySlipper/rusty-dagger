@@ -28,7 +28,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         };
         DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
 
-        environment.Reconcile([cell], origin, _ => surface, new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> { [cell] = location },
+        environment.ReconcileSurfaces([cell], origin, _ => surface, new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> { [cell] = location },
             new DaggerfallWorldGridsSet(new DaggerfallClimateGridDefinition(3, 1, [0, 0, 231], [new(231, "Woodlands", DaggerfallClimateDisposition.Named)]), new(3, 1, [64, 64, 64], [])));
 
         Assert.Equal(grows, environment.NatureFor(cell).Count > 0);
@@ -71,7 +71,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
             SourceWorldHeight = 128,
         };
         DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
-        environment.Reconcile([cell], origin, _ => surface, new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior>(),
+        environment.ReconcileSurfaces([cell], origin, _ => surface, new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior>(),
             new DaggerfallWorldGridsSet(new DaggerfallClimateGridDefinition(3, 1, [0, 0, (byte)climate], [new(climate, "Ground", DaggerfallClimateDisposition.Named)]), new(3, 1, [64, 64, 64], [])));
         return (appearance, surface, environment, drawn => refreshed = drawn);
     }
@@ -118,7 +118,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
             GroundTiles = DaggerfallGroundTileGrid.FromBytes(Enumerable.Repeat((byte)2, 128 * 128).ToArray(), "test"),
         };
         DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
-        environment.Reconcile([cell], origin, _ => surface, new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> { [cell] = location },
+        environment.ReconcileSurfaces([cell], origin, _ => surface, new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> { [cell] = location },
             new DaggerfallWorldGridsSet(new DaggerfallClimateGridDefinition(3, 1, [0, 0, 231], [new(231, "Woodlands", DaggerfallClimateDisposition.Named)]), new(3, 1, [64, 64, 64], [])));
         appearance.Reconcile([cell], origin, environment);
         int batches = appearance.ActiveNatureBatchCount;
@@ -191,7 +191,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
             GroundTiles = DaggerfallGroundTileGrid.FromBytes(Enumerable.Repeat((byte)2, 128 * 128).ToArray(), "test"),
         };
         DaggerfallExteriorEnvironment environment = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
-        void Reconcile() => environment.Reconcile([cell], origin, _ => surface,
+        void Reconcile() => environment.ReconcileSurfaces([cell], origin, _ => surface,
             new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> { [cell] = location }, grids);
         Reconcile();
         appearance.Reconcile([cell], origin, environment);

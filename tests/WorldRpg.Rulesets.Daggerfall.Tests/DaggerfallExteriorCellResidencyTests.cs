@@ -26,6 +26,24 @@ public sealed class DaggerfallExteriorCellResidencyTests
     }
 
     [Fact]
+    public void The_cells_bordering_the_window_ring_it_one_past_its_edge_within_the_world()
+    {
+        DaggerfallExteriorCellResidency residency = Create();
+        Assert.Empty(residency.Bordering());
+
+        residency.Update(new(10, 10));
+        DaggerfallExteriorCellId[] bordering = [.. residency.Bordering()];
+        Assert.Equal(32, bordering.Length);
+        Assert.All(bordering, cell => Assert.Equal(4, Math.Max(Math.Abs(cell.X - 10), Math.Abs(cell.Y - 10))));
+        Assert.DoesNotContain(bordering, residency.ResidentCells.Contains);
+
+        DaggerfallExteriorCellResidency edge = Create();
+        edge.Update(new(0, 0));
+        // Only the row and column past the window's inner edges, and their corner, lie inside the world.
+        Assert.Equal(9, edge.Bordering().Count());
+    }
+
+    [Fact]
     public void A_pose_past_the_map_belongs_to_the_nearest_edge_pixel()
     {
         DaggerfallExteriorWorldBounds bounds = DaggerfallExteriorWorldBounds.Daggerfall;
