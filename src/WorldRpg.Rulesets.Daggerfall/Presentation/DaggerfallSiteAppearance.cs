@@ -188,7 +188,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private readonly List<IDisposable> priorRetired = [];
     private readonly List<IDisposable> nextRetired = [];
     private bool completesUpdates;
-    // Each static mesh the profile draws, with its pose in the profile frame and its index in the profile geometry.
+    // Each static mesh the profile draws, with its pose in the profile frame and its index in the profile geometry, and
+    // the appearance it shows: placements of one model share it.
     private readonly List<(Appearance Appearance, Transform Pose, int Index)> world = [];
     // A resident neighbour's appearance never publishes: the active site's snapshot draws its location.
     private bool drawnByActiveSnapshot;
@@ -904,11 +905,21 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             AttachRefreshedSurface(surface);
             surfaceMaterials.Add(surface);
         }
+        // Every placement of a model with the same bindings shows one appearance, so the renderer draws a town's repeated
+        // houses, walls and props as instances of one mesh rather than a draw of their own each.
+        Dictionary<(string Path, ContentSha256 Sha256, string Bindings), Appearance> models = [];
         for (int index = 0; index < inputs.Geometry.Meshes.Count; index++)
         {
             DaggerfallSiteMesh mesh = inputs.Geometry.Meshes[index];
+            var model = (mesh.Path, mesh.Sha256, mesh.Materials is null ? "" : string.Join(',', mesh.Materials));
+            if (models.TryGetValue(model, out Appearance? shown))
+            {
+                world.Add((shown, mesh.Pose, index));
+                continue;
+            }
             Appearance created = appearance.CreateStaticMesh(content, mesh.Path, mesh.Sha256, worldAppearance.Tint);
             world.Add((created, mesh.Pose, index));
+            models.Add(model, created);
             // A published closure's combined mesh is drawn with every material at its own slot; an assembled
             // block model binds each of its slots to the profile slot its (climate-swapped) texture has.
             MeshMaterialBinding[] bindings = mesh.Materials is null
@@ -995,7 +1006,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     {
         List<IDisposable> retired = [];
         retired.AddRange(TakeDecorationResources());
-        retired.AddRange(world.Select(part => part.Appearance).Reverse());
+        // A model placed several times shows one appearance, released once.
+        retired.AddRange(world.Select(part => part.Appearance).Distinct().Reverse());
         world.Clear();
         retired.AddRange(doorVisuals.Values.Reverse());
         doorVisuals.Clear();

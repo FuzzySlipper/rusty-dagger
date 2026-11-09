@@ -248,6 +248,49 @@ public sealed class SiteAppearanceLifecycleTests
         Assert.Equal(2, releases.Count(release => release == "appearance"));
     }
 
+    /// <summary>
+    /// Placements of one block model with the same slot bindings show one appearance, so the renderer draws them as
+    /// instances of one mesh; a placement bound differently has its own, and each appearance is released once.
+    /// </summary>
+    [Fact]
+    public void Placements_of_one_model_alike_share_its_appearance()
+    {
+        List<string> releases = [];
+        ContentFake content = new("geometry/mesh-1.rstatmsh", Hash, releases);
+        content.Add("texture/wall.png", Hash);
+        content.Add("texture/floor.png", Hash);
+        AppearanceFake appearance = new(releases);
+        Transform Pose(float x) => new(new Vector3(x, 0F, 0F), Quaternion.Identity, Vector3.One);
+        DaggerfallSiteGeometry geometry = new(1, [new DaggerfallSiteSpatialPart("block/0/0", "blocks/a.rspatial", Hash)],
+            [
+                new DaggerfallSiteMesh("geometry/mesh-1.rstatmsh", Hash, Pose(0F), [new(0, 7)]),
+                new DaggerfallSiteMesh("geometry/mesh-1.rstatmsh", Hash, Pose(10F), [new(0, 7)]),
+                new DaggerfallSiteMesh("geometry/mesh-1.rstatmsh", Hash, Pose(20F), [new(0, 9)]),
+            ]);
+        DaggerfallSiteProfile inputs = new(
+            new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
+            geometry,
+            new AuthoredWorldAppearance(new Color(1, 1, 1, 1), new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), true, RenderLayer.Scene),
+            new PlayerInitialLook(0, 0),
+            [new NormalizedMaterial(7, "texture/wall.png", Hash), new NormalizedMaterial(9, "texture/floor.png", Hash)],
+            new Dictionary<long, NormalizedActorSprite>());
+
+        using ActorsState actors = EmptyActors();
+        using (DaggerfallSiteAppearance presentation = new(content, appearance, inputs))
+        {
+            Assert.Equal(2, appearance.StaticMeshPaths.Count);
+            presentation.Publish(actors);
+            AppearanceFact[] snapshot = appearance.Snapshots.Last();
+            AppearanceFact Placed(int index) => Assert.Single(snapshot, fact =>
+                fact.ObjectId == DaggerfallPresentationObjectIds.WorldMesh(DaggerfallPresentationObjectIds.ActiveLocationSlot, index));
+            Assert.Same(Placed(0).Appearance, Placed(1).Appearance);
+            Assert.NotSame(Placed(0).Appearance, Placed(2).Appearance);
+            Assert.Equal(new Vector3(10F, 0F, 0F), Placed(1).Transform.Translation);
+        }
+
+        Assert.Equal(2, releases.Count(release => release == "appearance"));
+    }
+
     [Fact]
     public void Appearance_uses_normalized_material_slots_and_atlases_then_releases_dependents_in_order()
     {
