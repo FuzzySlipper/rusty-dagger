@@ -54,12 +54,16 @@ are framed or whole pictures, fitted afterwards by `tools/items/pictures.py`; th
 cut-out. A screen the batch painted without its lettering is fitted from the picture before back-projection
 (`--image original`), which would draw the lettering back in, and the title from its source edit (`--source`).
 
+The screens are painted without lettering, so the page sets the game's name over the title and the death and
+creation screens lose their baked-in words. The title is its painting alone: a source edit in
+`gen-raw/source-edits/ui-screens` crops `screen.title` to columns 82–235, leaving out the stone surround, and copies
+the other screens whole; the batch runs with `SOURCE=` at it.
+
 The pulp-portrait style's call for "strands of hair and beard" puts stubble on women and children: their redo specs
 (`ui-r1-*`, `ui-r3-faces`) drop it and state a smooth chin, jaw and upper lip, and the empty red hood (`ui-r2-hood`)
-also drops the call for modelled features. The screens are painted without lettering: the title from its painting alone (a source edit in
-`gen-raw/source-edits/ui-screens` crops the stone surround and the logo goes), so the page sets the game's name over
-it, and the death and creation screens lose their baked-in words.
+also drops the call for modelled features.
 
 `promote.py --area ui` writes the accepted screens at their own size and the portraits at 256 pixels, and
 `promote.py --area paper-doll` the backgrounds with the doll rect of the frame they fill. The HUD names the image each
-screen draws (`screens`), so a refreshed screen fills the window and classic art stays selectable.
+screen draws (`screens`), so a refreshed screen fills the window, the upright title over a dimmed copy of itself,
+and classic art stays selectable.
