@@ -274,7 +274,14 @@ repainted in the stationary people's style rather than converted from its classi
    springs so they settle. Each link's turn against its parent, less the same turn without springs,
    is read off the last cycle, smoothed and keyed into the walk on the chain's control bone. The
    back's hips move too little to swing its skirt as the front's does, so its recorded swing is
-   scaled by 3. The rig ships without its springs, so every player shows the same closed loop. Hair
+   scaled by 3. A front or back skirt's three chains follow its flare rather than the proposer's,
+   which roots them a hand's width apart at the middle of the waist and leaves the outer thirds to
+   sway as one block. Each chain sits at a sixth, a half and five sixths of the skirt's width on
+   each row of See-through's bottomwear layer, down to just above the hem's point. The outer chains
+   also swing as the clip's own skirt edges do, read on a row 85 % of the way down. Only the swing
+   about each edge's mean is kept, since the clip's skirt hangs narrower than the painted one. The
+   middle chain takes the mean of the two edges, and the springs add their lag on top. The rig
+   ships without its springs, so every player shows the same closed loop. Hair
    and bangs cut with a profile's or the back's head can't swing. The figure walks on the spot, so a
    stop or a turn has no response.
    **Tuning:** each view also gets a tuning build in the Workbench set (the `<view>-tune` member).
