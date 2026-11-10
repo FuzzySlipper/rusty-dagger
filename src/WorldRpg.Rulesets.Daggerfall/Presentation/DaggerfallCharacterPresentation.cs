@@ -291,11 +291,11 @@ internal sealed class DaggerfallCharacterPresentation
             Affiliations(),
             _character is { History.Count: > 0 } character ? new CharacterHistoryPresentation([.. character.History]) : null,
             // The sheet names the career as the player chose it, a custom class by its own name.
-            _character is null ? CharacterIdentityPresentation.From(_definitions, _playerDefinition)
+            Drawn(_character is null ? CharacterIdentityPresentation.From(_definitions, _playerDefinition)
                 : CharacterIdentityPresentation.From(_definitions, _character.Identity, _character.RacialOverrides?.Current) is { } identity
-                    ? identity with { CareerLabel = _character.Career.Name } : null,
+                    ? identity with { CareerLabel = _character.Career.Name } : null),
             _character is null ? [] : [.. _character.GrantedSkills],
-            _character?.ReadCreation(),
+            Drawn(_character?.ReadCreation()),
             _levelUps?.Read(),
             LegalStandings(),
             PaperDoll());
@@ -314,6 +314,18 @@ internal sealed class DaggerfallCharacterPresentation
         })];
         return DaggerfallPaperDollPolicy.Compose(_definitions, _character.Identity, _character.RacialOverrides?.Current, worn, _art?.Invoke());
     }
+
+    /// <summary>The sheet's portrait and form in the art set drawn, as the paper doll draws its own layers.</summary>
+    private CharacterIdentityPresentation? Drawn(CharacterIdentityPresentation? identity) =>
+        identity?.SelectedMedia is { } media && _art?.Invoke() is { } art
+            ? identity with { SelectedMedia = [.. media.Select(layer => layer with { MediaId = art.Drawn(layer.MediaId) })] }
+            : identity;
+
+    /// <summary>Creation's face choices in the art set drawn, so the preview is the face the doll will wear.</summary>
+    private DaggerfallCharacterCreationPresentation? Drawn(DaggerfallCharacterCreationPresentation? creation) =>
+        creation is not null && _art?.Invoke() is { } art
+            ? creation with { Faces = [.. creation.Faces.Select(face => face with { MediaId = art.Drawn(face.MediaId) })] }
+            : creation;
 
     /// <summary>Draws the paper doll in the art set this returns: the refreshed set, or null for classic art.</summary>
     internal void UseArt(Func<DaggerfallArtReplacements?> art)

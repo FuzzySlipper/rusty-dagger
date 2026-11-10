@@ -193,7 +193,7 @@ export interface PaperDoll {
   readonly unplaced: readonly string[];
 }
 
-import { heldRevision, image, type ArtTint } from './art.js';
+import { heldRevision, image, smoothIfRefreshed, type ArtTint } from './art.js';
 import { createCycler, type Cycler, type CyclerOption } from './cycler.js';
 import { letterPickerButton } from './letter-picker.js';
 import { invalidate, redraw } from './redraw.js';
@@ -242,7 +242,7 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
       portrait.replaceChildren(...(value.identity?.selectedMedia ?? []).filter(media =>
         media.layer.startsWith('head') || (value.identity?.racialOverride?.beastForm || value.identity?.racialOverride?.vampireClan) && media.layer === 'background').flatMap(media => {
           const source = image(media.mediaId); if (source === null) return [];
-          const img = document.createElement('img'); img.src = source; img.dataset.mediaId = media.mediaId;
+          const img = document.createElement('img'); img.src = source; img.dataset.mediaId = media.mediaId; smoothIfRefreshed(img, media.mediaId);
           img.alt = `${value.identity?.racialOverride?.beastForm ? value.identity.racialOverride.name : value.name} ${media.layer.startsWith('head') ? 'portrait' : 'form'}`;
           return [img];
         }));
@@ -771,6 +771,7 @@ function buildCreation(root: HTMLElement, value: CharacterCreation, send?: (acti
     const chosen = value.faces.find(item => String(item.index) === index);
     const source = chosen ? image(chosen.mediaId) : null;
     facePreview.hidden = source === null; if (source !== null) facePreview.src = source;
+    smoothIfRefreshed(facePreview, chosen?.mediaId ?? null);
     facePreview.alt = chosen ? `Face ${chosen.index + 1}` : '';
   };
   const face = createCycler('Face', value.faces.map(item => ({ id: String(item.index), label: `Face ${item.index + 1}` })), String(value.current.faceIndex),

@@ -1,4 +1,4 @@
-import { heldRevision, image } from './art.js';
+import { heldRevision, image, smoothIfRefreshed } from './art.js';
 import type { QuestMessageProjection, QuestPresentation, UiAction } from './projection.js';
 
 export const questMessageNodes = new WeakMap<HTMLElement, Map<string, { signature: string; node: HTMLElement }>>();
@@ -38,7 +38,7 @@ export function renderQuestMessages(root: HTMLElement, value: QuestPresentation 
       const portrait = document.createElement('img'); portrait.alt = face.name;
       portrait.dataset.questInstance = face.instance; portrait.dataset.questResource = face.symbol;
       const source = image(face.mediaId);
-      if (source) portrait.src = source;
+      if (source) { portrait.src = source; smoothIfRefreshed(portrait, face.mediaId); }
       else portrait.dataset.artMissing = face.mediaId;
       escorts.append(portrait);
     }

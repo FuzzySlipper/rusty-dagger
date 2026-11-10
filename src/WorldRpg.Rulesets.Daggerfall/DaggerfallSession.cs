@@ -644,6 +644,11 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         PublishPresentation();
     }
 
+    /// <summary>An escort's portrait in the art set drawn: a generic escort wears a race's head, which has refreshed art.</summary>
+    private DaggerfallQuestPresentation DrawnEscorts(DaggerfallQuestPresentation quests) => DrawnArt is { } art
+        ? quests with { EscortFaces = [.. quests.EscortFaces.Select(face => face with { MediaId = art.Drawn(face.MediaId) })] }
+        : quests;
+
     internal void Update(ProductUpdateState update)
     {
         _enemyBehavior.BeginAdmittedUpdate();
@@ -902,7 +907,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             Activation: ActivationView,
             Breath: State.Swimming.ReadBreath(State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).ValueInt,
                 State.Effects.GrantsWaterBreathing(DaggerfallActorIdentity.PlayerEntityId)),
-            Quests: State.Quests.ReadPresentation(QuestTextContext, _time.Calendar),
+            Quests: DrawnEscorts(State.Quests.ReadPresentation(QuestTextContext, _time.Calendar)),
             Notebook: _notebook.Read(),
             Transport: DaggerfallTransportProjection.Read(State.Transport, State.Inventory.Read(), TransportAccess(),
                 ownsShip: State.Property.OwnsShip, wagon: State.Wagon, itemLabel: (key, definition, quantity) => _inventoryUi.DescribeItem(key, definition, quantity,

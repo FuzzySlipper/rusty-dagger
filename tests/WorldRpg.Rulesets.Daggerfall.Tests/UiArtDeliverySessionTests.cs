@@ -457,6 +457,12 @@ public sealed class UiArtDeliverySessionTests
         string delivered = Assert.IsType<string>(Assert.IsType<object?[]>(demanded["images"]).Cast<Dictionary<string, object?>>().Single(image => Equals(image["id"], bodyId))["image"]);
         Assert.StartsWith("data:image/webp;base64,", delivered, StringComparison.Ordinal);
         Assert.Equal(false, Assert.IsType<Dictionary<string, object?>>(hud["controls"])["classicArt"]);
+        // The character sheet's portrait is the face the doll wears, refreshed and delivered with the doll's layers.
+        string SheetHead(Dictionary<string, object?> snapshot) => Assert.IsType<string>(Assert.IsType<object?[]>(Assert.IsType<Dictionary<string, object?>>(
+                Assert.IsType<Dictionary<string, object?>>(snapshot["character"])["identity"])["selectedMedia"]).Cast<Dictionary<string, object?>>()
+            .Single(media => Assert.IsType<string>(media["layer"]).StartsWith("head", StringComparison.Ordinal))["mediaId"]);
+        Assert.Equal(Layers(hud).Single(layer => Equals(layer["kind"], "head"))["mediaId"], SheetHead(hud));
+        Assert.Contains(SheetHead(hud), Assert.IsType<object?[]>(demanded["images"]).Cast<Dictionary<string, object?>>().Select(image => image["id"]));
         // Item icons whose source has refreshed art draw it, delivered up front and marked to draw smoothed; the spell
         // icons name each atlas cell's refreshed image.
         string[] Icons(Dictionary<string, object?> snapshot) => [.. Assert.IsType<object?[]>(Assert.IsType<Dictionary<string, object?>>(snapshot["inventory"])["items"])
@@ -518,6 +524,7 @@ public sealed class UiArtDeliverySessionTests
         Dictionary<string, object?> classic = Assert.IsType<Dictionary<string, object?>>(engine.Published());
         Assert.Equal(true, Assert.IsType<Dictionary<string, object?>>(classic["controls"])["classicArt"]);
         Assert.All(Layers(classic), layer => Assert.Equal((false, false), (Assert.IsType<string>(layer["mediaId"]).StartsWith("refreshed.", StringComparison.Ordinal), layer["smooth"])));
+        Assert.Equal(SheetHead(hud)["refreshed.".Length..], SheetHead(classic));
         Assert.Contains(refreshedIcon["refreshed.".Length..], Icons(classic));
         Assert.DoesNotContain(Icons(classic), icon => icon.StartsWith("refreshed.", StringComparison.Ordinal));
         // The DOM redraws the pack only when its revision moves, so the art choice moves it.

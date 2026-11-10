@@ -316,6 +316,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             // is read when first drawn and travels as its own small block, again only when it grew or the
             // DOM asked for it by the revision it lacks.
             if (character?.PaperDoll is { } doll) uiArt.Demand(doll.MediaIds);
+            // The portraits a screen names: the sheet's, creation's faces and escorts', each refreshed where it has art.
+            uiArt.Demand([.. character?.Identity?.SelectedMedia?.Select(media => media.MediaId) ?? [],
+                .. character?.Creation?.Faces.Select(face => face.MediaId) ?? [], .. quests?.EscortFaces.Select(face => face.MediaId) ?? []]);
             // So are the item icons: a worn item's is its paper-doll image, another template's its own.
             uiArt.Demand(IconArt([.. inventory?.Items ?? [], .. loot?.Items ?? []],
                 activation?.Dialogue?.Merchant is { } merchant ? [.. merchant.Stock, .. merchant.PlayerItems] : []));
