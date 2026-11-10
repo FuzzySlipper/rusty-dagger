@@ -2,36 +2,35 @@
  * The two-pane transfer layout (transfer.ts): a container beside the player's pack. Loot, corpses
  * and property storage draw it; the skin draws its panels, slots and buttons.
  */
-.dagger-menu.has-loot { width: min(76rem, calc(100vw - 2.5rem)); }
 .dagger-loot { display: grid; gap: .625rem; padding: .75rem; }
-.dagger-loot h2 { color: #f5df9d; font: 700 1rem Georgia, serif; margin: 0; }
+.dagger-loot h2 { color: #f5df9d; font: 700 1rem var(--font-body); margin: 0; }
 .dagger-loot-status { color: #dfc987; font-size: .85rem; margin: 0; min-height: 1.25em; }
 
 .dagger-transfer { display: grid; gap: .5rem; }
 .dagger-transfer[hidden] { display: none; }
 .dagger-transfer-header { align-items: center; display: flex; gap: 1rem; justify-content: flex-end; min-height: 2.25rem; }
-.dagger-transfer-load { color: #dfc987; font: .75rem ui-monospace, monospace; }
+.dagger-transfer-load { color: #dfc987; font: .75rem var(--font-label); }
 .dagger-transfer-load.is-over { color: #ff9a7a; }
-.dagger-transfer-take-all { font: .85rem Georgia, serif; padding: .4rem 1rem; }
+.dagger-transfer-take-all { font: .85rem var(--font-body); padding: .4rem 1rem; }
 .dagger-transfer-take-all[hidden] { display: none; }
 .dagger-transfer-panes { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .dagger-transfer-pane { display: grid; gap: .375rem; grid-template-rows: auto minmax(0, 1fr); padding: .625rem; }
-.dagger-transfer-pane h3 { color: #e4c676; font: 700 .75rem ui-monospace, monospace; letter-spacing: .09em; margin: 0; text-transform: uppercase; }
+.dagger-transfer-pane h3 { color: #e4c676; font: 700 .75rem var(--font-label); letter-spacing: .09em; margin: 0; text-transform: uppercase; }
 .dagger-transfer-list { align-content: start; display: grid; gap: .25rem; list-style: none; margin: 0; max-height: min(55vh, 34rem); overflow-y: auto; padding: 0 .25rem 0 0; }
 .dagger-transfer-row { align-items: center; border-bottom: 1px solid rgb(197 164 94 / .25); display: grid; gap: .25rem .625rem; grid-template-columns: 3.25rem minmax(0, 1fr) auto auto; padding: .3rem .125rem; }
 /* In a dialogue the transfer layout sits on parchment: dark ink, no dark panes. */
-.dagger-dialogue .dagger-transfer-row strong, .dagger-dialogue .dagger-transfer-pane h3 { color: inherit; }
-.dagger-dialogue .dagger-transfer-row p { color: #5a3f1e; }
-.dagger-dialogue .dagger-transfer-total { color: #6b4a24; }
+.dagger-dialogue[data-skin="parchment"] .dagger-transfer-row strong, .dagger-dialogue[data-skin="parchment"] .dagger-transfer-pane h3 { color: inherit; }
+.dagger-dialogue[data-skin="parchment"] .dagger-transfer-row p { color: #5a3f1e; }
+.dagger-dialogue[data-skin="parchment"] .dagger-transfer-total { color: #6b4a24; }
 .dagger-transfer-icon { align-items: center; display: flex; height: 3.25rem; justify-content: center; padding: .25rem; width: 3.25rem; }
 .dagger-transfer-icon img { height: 80%; image-rendering: pixelated; object-fit: contain; width: 80%; }
-.dagger-transfer-row strong { color: #f5df9d; display: block; font: .85rem Georgia, serif; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dagger-transfer-row p { color: #c3b48b; font: .72rem ui-monospace, monospace; margin: .15rem 0 0; }
-.dagger-transfer-row .dagger-transfer-refusal { color: #f0b48c; font: italic .75rem Georgia, serif; }
+.dagger-transfer-row strong { color: #f5df9d; display: block; font: .85rem var(--font-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dagger-transfer-row p { color: #c3b48b; font: .72rem var(--font-label); margin: .15rem 0 0; }
+.dagger-transfer-row .dagger-transfer-refusal { color: #f0b48c; font: italic .75rem var(--font-body); }
 .dagger-transfer-amount { align-items: center; display: flex; gap: .5rem; }
-.dagger-transfer-total { color: #f3d77e; font: .78rem ui-monospace, monospace; min-width: 4.5rem; text-align: right; }
+.dagger-transfer-total { color: #f3d77e; font: .78rem var(--font-label); min-width: 4.5rem; text-align: right; }
 .dagger-transfer-commands { display: flex; flex-wrap: wrap; gap: .375rem; justify-content: flex-end; }
-.dagger-transfer-commands > button { font: .8rem Georgia, serif; min-width: 4.5rem; padding: .375rem .75rem; }
+.dagger-transfer-commands > button { font: .8rem var(--font-body); min-width: 4.5rem; padding: .375rem .75rem; }
 /* A crime is set apart from a purchase: its own colour and a gap before it. */
 .dagger-transfer-commands > button.is-danger { color: #ff9a7a; margin-left: .75rem; }
 .dagger-transfer-empty { color: #a99a74; font-style: italic; padding: .75rem .25rem; }

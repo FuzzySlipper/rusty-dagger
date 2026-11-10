@@ -1252,6 +1252,7 @@
   "inventory": {
     "revision": "832:1:558:0::classic",
     "message": "Drag items between the grid and compatible equipment slots.",
+    "gridCapacity": 80,
     "encumbrance": {
       "currentClassicUnits": 7025,
       "maximumClassicUnits": 25200,

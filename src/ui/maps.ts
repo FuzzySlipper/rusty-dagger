@@ -139,7 +139,7 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
     if (label.note) group.classList.add('is-note');
     const mark = svgElement('g', { 'data-mark': 'true' });
     const dot = svgElement('circle', { r: '3.2', fill: label.selected ? '#ffe077' : label.note ? '#8fd0ff' : '#d5e2e7' });
-    const text = svgElement('text', { x: '6', y: '4', class: 'dagger-map-name', 'font-family': 'system-ui, sans-serif', 'font-size': '11', 'font-weight': '600',
+    const text = svgElement('text', { x: '6', y: '4', class: 'dagger-map-name', 'font-family': "'Alegreya SC', 'Alegreya', serif", 'font-size': '11', 'font-weight': '600',
       fill: '#f6ead0', stroke: '#10171c', 'stroke-width': '3', 'paint-order': 'stroke', 'pointer-events': 'none' });
     text.textContent = label.name;
     mark.append(dot, text); group.append(mark);

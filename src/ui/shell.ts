@@ -56,7 +56,7 @@ const SHELL_MARKUP = `
     </section>
     <div class="dagger-entry" role="dialog" aria-label="Title" hidden><img class="dagger-entry-screen" alt="Rusty Dagger"><button class="dagger-entry-begin" type="button">Begin</button></div>
     <button class="dagger-menu-toggle" type="button" data-action="menu" aria-haspopup="dialog">Menu · Esc</button>
-    <dialog class="dagger-menu dagger-frame" aria-labelledby="dagger-menu-title">
+    <dialog class="dagger-menu dagger-frame" data-size="narrow" aria-labelledby="dagger-menu-title">
       <h1 id="dagger-menu-title" class="dagger-frame-title" tabindex="-1">Game menu</h1>
       <div class="dagger-menu-home">
         <button data-action="resume" autofocus>Return to game</button>

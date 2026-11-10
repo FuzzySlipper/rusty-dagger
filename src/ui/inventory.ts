@@ -9,6 +9,8 @@ import { inventoryTransferRow, mountTransfer } from './transfer.js';
 
 export interface InventoryProjection {
   readonly revision: string;
+  /** How many places the pack grid has; the rules lay items out in them. */
+  readonly gridCapacity?: number;
   readonly items: readonly InventoryItem[];
   readonly slots: readonly EquipmentSlot[];
   readonly message: string;
@@ -188,7 +190,6 @@ export type InventoryAction = {
 
 type MoveSource = { readonly key: string; readonly revision: string };
 
-const GRID_SLOT_COUNT = 50;
 /** Slot groups the doll's two columns hold; every other group lays out in the accessories row. */
 const LEFT_GROUPS = new Set(['armour']);
 const RIGHT_GROUPS = new Set(['clothing', 'weapons']);
@@ -340,15 +341,21 @@ export function mountInventory(
   shell.append(heading, body, status, tip);
   root.append(shell);
 
-  const gridButtons = Array.from({ length: GRID_SLOT_COUNT }, (_, index) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'dagger-inventory-grid-slot dagger-slot';
-    button.dataset.inventoryGrid = String(index);
-    button.setAttribute('aria-label', `Pack slot ${index + 1}, empty`);
-    grid.append(button);
-    return button;
-  });
+  // The grid has as many places as the rules lay items out in; they arrive with the first projection.
+  const gridButtons: HTMLButtonElement[] = [];
+  const sizeGrid = (capacity: number): void => {
+    while (gridButtons.length < capacity) {
+      const index = gridButtons.length;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'dagger-inventory-grid-slot dagger-slot';
+      button.dataset.inventoryGrid = String(index);
+      button.setAttribute('aria-label', `Pack slot ${index + 1}, empty`);
+      grid.append(button);
+      gridButtons.push(button);
+    }
+    while (gridButtons.length > capacity) gridButtons.pop()!.remove();
+  };
   const equipmentButtons = new Map<string, HTMLButtonElement>();
   let slotLayout = '';
 
@@ -408,7 +415,8 @@ export function mountInventory(
     bankControls.render(value.bank ?? null);
     renderStorage();
     const byKey = new Map(value.items.map(item => [item.key, item]));
-    const byGrid = new Map(value.items.flatMap(item => item.gridSlot === null || item.gridSlot < 0 || item.gridSlot >= GRID_SLOT_COUNT
+    sizeGrid(value.gridCapacity ?? 0);
+    const byGrid = new Map(value.items.flatMap(item => item.gridSlot === null || item.gridSlot < 0 || item.gridSlot >= gridButtons.length
       ? [] : [[item.gridSlot, item] as const]));
 
     gridButtons.forEach((button, index) => renderPlace(button, byGrid.get(index), `Pack slot ${index + 1}`));
@@ -570,7 +578,7 @@ export function mountInventory(
   };
   const freeGrid = (): number | null => {
     const used = new Set(current?.items.map(item => item.gridSlot) ?? []);
-    for (let index = 0; index < GRID_SLOT_COUNT; index += 1) if (!used.has(index)) return index;
+    for (let index = 0; index < gridButtons.length; index += 1) if (!used.has(index)) return index;
     return null;
   };
 

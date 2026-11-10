@@ -189,6 +189,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     if (previous === 'loot') closeLoot();
     activePanel = null;
     menu.classList.remove('has-inventory', 'has-character', 'has-spells', 'has-map', 'has-transport', 'has-rest', 'has-journal', 'has-loot', 'has-debug');
+    menu.dataset.size = 'narrow';
     home.hidden = false;
     panel.hidden = true;
     menuTitle.textContent = 'Game menu';
@@ -267,6 +268,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     shell.querySelector<HTMLButtonElement>('[data-action="loot-exit"]')!.hidden = action !== 'loot';
     for (const name of ['inventory', 'character', 'spells', 'map', 'transport', 'rest', 'journal', 'loot'] as const)
       menu.classList.toggle(`has-${name}`, action === name);
+    menu.dataset.size = WIDE_PANELS.has(action) ? 'wide' : 'narrow';
     menuTitle.textContent = PANEL_TITLES[action] ?? (saveSlotMode === 'save' ? 'Save game' : 'Load game');
     if (restorePanelFocus(action)) return;
     // An item screen opens on its content: the first thing to take, or the first item in the pack.
@@ -565,6 +567,9 @@ const HOTKEY_ACTIONS: Readonly<Record<string, string>> = {
   inventory: 'inventory', character: 'character', spell: 'spells', rest: 'rest', map: 'map', transport: 'transport',
   logbook: 'journal', notebook: 'notebook', 'travel-map': 'transport', 'use-magic-item': 'magic-items',
 };
+/** The panels drawn at the wide size; the rest, and the home list, are narrow (`skin.css`, panel sizes). */
+const WIDE_PANELS: ReadonlySet<Panel> = new Set(['inventory', 'character', 'spells', 'map', 'transport', 'journal', 'loot', 'settings', 'help', 'diagnostics']);
+
 /** Menu actions that show another panel than their own name. */
 const HOTKEY_PANELS: Readonly<Record<string, string>> = { notebook: 'journal', book: 'journal' };
 

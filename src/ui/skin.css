@@ -23,6 +23,13 @@
   --brass-bright: #f4d983;
   --ground: #151712;
   --plate: #312817;
+  /* Panel sizes. Every game-UI surface is one of three: full screen (title, creation, death), wide (the item and
+     reference screens: inventory, character, spells, journal, map, travel, settings, help, loot, trade and the
+     makers) at the full height of the window, or narrow (the menu's list, conversation, rest, saves, confirmations
+     and text on a page) as tall as its content. */
+  --panel-wide: min(86rem, calc(100vw - 2rem));
+  --panel-narrow: min(44rem, calc(100vw - 2rem));
+  --panel-height: calc(100vh - 2rem);
 }
 
 /* Form controls take the page's font instead of the browser's fixed-pixel default, so the interface
@@ -40,6 +47,8 @@
      which the window's Servo does not draw. */
   box-shadow: 0 .75rem 2.75rem rgb(0 0 0 / .7), 0 0 0 100vmax var(--dagger-scrim, transparent);
 }
+/* A page inside a modal (the journal's, help's) is not a modal of its own: it would dim the frame it sits in. */
+.dagger-frame .dagger-frame { --dagger-scrim: transparent; box-shadow: 0 .25rem 1rem rgb(0 0 0 / .45); }
 
 /* Parchment: a reading surface. The frame art carries its page, so it fills; text takes dark ink. */
 .dagger-frame[data-skin="parchment"] {
@@ -66,7 +75,9 @@
   border-image: var(--skin-stone-title) var(--skin-stone-title-slice) fill / var(--skin-stone-title-width) stretch;
   background: rgb(48 39 24 / .93);
   color: #fff3cf;
+  font-family: var(--font-title);
   font-size: 1.1rem;
+  font-weight: 700;
   letter-spacing: .06em;
   line-height: 1.3;
   text-align: center;
@@ -254,3 +265,21 @@
 [data-inventory-equipment^="ring"] { --equip: var(--skin-icon-equip-ring); }
 [data-inventory-equipment^="mark"] { --equip: var(--skin-icon-equip-mark); }
 [data-inventory-equipment^="crystal"] { --equip: var(--skin-icon-equip-crystal); }
+
+/* Select: a brass-edged plate with a drawn chevron, so a choice the window pops up still looks like the kit. */
+.dagger-hud select, dialog select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: .375rem 2rem .375rem .75rem;
+  border: 1px solid var(--brass);
+  border-radius: 0;
+  background:
+    linear-gradient(45deg, transparent 50%, var(--brass-bright) 50%) no-repeat calc(100% - 1.1rem) 55% / .375rem .375rem,
+    linear-gradient(-45deg, transparent 50%, var(--brass-bright) 50%) no-repeat calc(100% - .725rem) 55% / .375rem .375rem,
+    var(--plate);
+  color: var(--ink);
+  font: inherit;
+  cursor: var(--dagger-cursor-pointer);
+}
+.dagger-hud select:is(:hover, :focus), .keyed-navigation .dagger-hud select:focus { border-color: var(--brass-bright); outline: 1px solid var(--brass-bright); }
+.dagger-hud select option { background: var(--plate); color: var(--ink); }

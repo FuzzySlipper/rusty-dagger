@@ -928,7 +928,9 @@ function stepper(group: string, id: string, label: string, allocated: number, to
   const element = document.createElement('div'); element.className = 'dagger-creation-stepper'; element.dataset.id = id;
   const name = document.createElement('span'); name.className = 'dagger-creation-stepper-label'; name.textContent = label;
   const count = document.createElement('output'); count.setAttribute('aria-label', `${group} ${id}`);
-  count.textContent = allocated === 0 ? '·' : `+${allocated}`;
+  // The points this draft added to the row, beside the total it makes.
+  count.textContent = `+${allocated}`;
+  count.classList.toggle('is-zero', allocated === 0);
   const sum = document.createElement('strong'); sum.className = 'dagger-creation-stepper-total'; sum.textContent = String(total);
   const less = stepButton('−', `Remove a point from ${label}`, () => change(-1));
   const more = stepButton('+', `Add a point to ${label}`, () => change(1));

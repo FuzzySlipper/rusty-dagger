@@ -12,7 +12,7 @@
   --doll-pixel: .1875rem;
   --doll-width: calc(110 * var(--doll-pixel));
   color: #f4e6bd;
-  font: .875rem Georgia, serif;
+  font: .875rem var(--font-body);
   padding: .5rem .75rem;
 }
 .dagger-inventory-title { max-width: 32rem; }
@@ -41,22 +41,23 @@
 /* The pack. */
 .dagger-inventory-pack-section { display: grid; gap: .625rem; min-width: 0; }
 .dagger-inventory-pack-header { display: flex; flex-wrap: wrap; gap: .5rem; }
-.dagger-inventory-tabs { display: flex; flex-wrap: wrap; gap: .25rem; }
-.dagger-inventory-tabs [role="tab"] { font: .8rem Georgia, serif; padding: .375rem .75rem; }
+.dagger-inventory-tabs { display: flex; flex: 1 1 100%; gap: .25rem; min-width: 0; }
+/* One row of tabs sharing the pack's width, so the grid starts at the same height whatever the tab names. */
+.dagger-inventory-tabs [role="tab"] { flex: 1 1 auto; font: .75rem var(--font-body); min-width: 0; overflow: hidden; padding: .375rem .5rem; text-overflow: ellipsis; white-space: nowrap; }
 .dagger-inventory-grid { display: grid; gap: .375rem; grid-template-columns: repeat(10, minmax(0, var(--pack-cell))); }
 .dagger-inventory-overflow { border-top: 1px solid rgb(197 164 94 / .35); display: flex; flex-wrap: wrap; gap: .375rem; margin-top: .5rem; padding-top: .5rem; }
-.dagger-inventory-overflow::before { color: #c3b48b; content: "Overflow"; flex-basis: 100%; font: .7rem ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
+.dagger-inventory-overflow::before { color: #c3b48b; content: "Overflow"; flex-basis: 100%; font: .7rem var(--font-label); letter-spacing: .08em; text-transform: uppercase; }
 .dagger-inventory-overflow > button { height: var(--pack-cell); width: var(--pack-cell); }
 .dagger-inventory-pack-footer { align-items: center; display: flex; gap: .75rem; }
-.dagger-inventory-hints { color: #c3b48b; flex: 1; font: .72rem ui-monospace, monospace; margin: 0; }
+.dagger-inventory-hints { color: #c3b48b; flex: 1; font: .72rem var(--font-label); margin: 0; }
 .dagger-inventory-hints [data-device="controller"], .controller-navigation .dagger-inventory-hints [data-device="keyboard"] { display: none; }
 .controller-navigation .dagger-inventory-hints [data-device="controller"] { display: inline; }
-.dagger-inventory-sort { font: .8rem Georgia, serif; padding: .375rem .875rem; }
+.dagger-inventory-sort { font: .8rem var(--font-body); padding: .375rem .875rem; }
 
 /* The purse: gold and load. */
 .dagger-inventory-purse { align-items: center; display: flex; gap: 1rem; margin-left: auto; }
-.dagger-inventory-gold { color: #f3d77e; font: 700 .85rem ui-monospace, monospace; }
-.dagger-inventory-load { align-items: center; color: #dfc987; display: flex; font: .75rem ui-monospace, monospace; gap: .5rem; }
+.dagger-inventory-gold { color: #f3d77e; font: 700 .85rem var(--font-label); }
+.dagger-inventory-load { align-items: center; color: #dfc987; display: flex; font: .75rem var(--font-label); gap: .5rem; }
 .dagger-inventory-load-meter { background: rgb(10 9 7 / .8); border: 1px solid #7d6c45; display: inline-block; height: .5rem; position: relative; width: 7rem; }
 .dagger-inventory-load-meter > span { background: linear-gradient(#c9a64a, #8d6c2a); display: block; height: 100%; }
 .dagger-inventory-load.is-over { color: #ff9a7a; }
@@ -79,8 +80,8 @@
 .dagger-inventory-actions-bar[hidden] { display: none; }
 .dagger-inventory-actions-bar img { height: 2.25rem; image-rendering: pixelated; object-fit: contain; width: 2.25rem; }
 .dagger-inventory-actions-bar strong { color: #f5df9d; margin-right: auto; max-width: 16rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dagger-inventory-actions-bar button { font: .8rem Georgia, serif; padding: .375rem .75rem; }
-.dagger-inventory-actions-note { color: #f0b48c; flex-basis: 100%; font: .75rem Georgia, serif; margin: 0; }
+.dagger-inventory-actions-bar button { font: .8rem var(--font-body); padding: .375rem .75rem; }
+.dagger-inventory-actions-note { color: #f0b48c; flex-basis: 100%; font: .75rem var(--font-body); margin: 0; }
 
 /* Slots and the items in them. */
 .dagger-inventory-grid-slot, .dagger-inventory-equipment-slot {
@@ -94,18 +95,18 @@
 .dagger-inventory-grid .dagger-inventory-grid-slot { aspect-ratio: 1; height: auto; width: auto; }
 .dagger-inventory-equipment-slot { height: var(--equip-slot); width: var(--equip-slot); }
 .dagger-inventory-accessories .dagger-inventory-equipment-slot { height: var(--accessory-slot); width: var(--accessory-slot); }
-.dagger-inventory-grid-slot img, .dagger-inventory-equipment-slot img { height: 80%; image-rendering: pixelated; object-fit: contain; pointer-events: none; width: 80%; }
+.dagger-inventory-grid-slot img, .dagger-inventory-equipment-slot img { height: 90%; image-rendering: pixelated; object-fit: contain; pointer-events: none; width: 90%; }
 .dagger-inventory [data-inventory-draggable="true"] { cursor: grab; touch-action: none; }
 .dagger-inventory.is-dragging, .dagger-inventory.is-dragging * { cursor: grabbing; }
 .dagger-inventory .is-filtered-out { filter: grayscale(1); opacity: .3; }
 .dagger-inventory .is-broken img { filter: sepia(1) hue-rotate(-30deg) saturate(3) brightness(.8); }
-.dagger-inventory .is-unidentified::before { color: #c8b8ff; content: "?"; font: 700 .7rem ui-monospace, monospace; left: .3rem; position: absolute; text-shadow: 1px 1px #000; top: .2rem; }
+.dagger-inventory .is-unidentified::before { color: #c8b8ff; content: "?"; font: 700 .7rem var(--font-label); left: .3rem; position: absolute; text-shadow: 1px 1px #000; top: .2rem; }
 /* While an item is held or dragged, each slot shows whether it takes it; the one under the pointer stands out. */
 .dagger-inventory.is-holding .is-drop-invalid { opacity: .45; }
 .dagger-inventory .is-drop-target.is-drop-invalid { opacity: 1; }
 .dagger-inventory .is-selected { outline: 2px solid #f7db80; outline-offset: -3px; }
-.dagger-inventory-fallback-label { font: 700 .55rem ui-monospace, monospace; hyphens: auto; line-height: 1.1; max-width: 100%; overflow-wrap: anywhere; text-align: center; text-shadow: 1px 1px #000; }
-.dagger-inventory-quantity { background: rgb(13 12 8 / .82); bottom: .25rem; color: #fff1c0; font: 700 .7rem ui-monospace, monospace; line-height: 1; padding: 2px .25rem; position: absolute; right: .25rem; text-shadow: 1px 1px #000; }
+.dagger-inventory-fallback-label { font: 700 .55rem var(--font-label); hyphens: auto; line-height: 1.1; max-width: 100%; overflow-wrap: anywhere; text-align: center; text-shadow: 1px 1px #000; }
+.dagger-inventory-quantity { background: rgb(13 12 8 / .82); bottom: .25rem; color: #fff1c0; font: 700 .7rem var(--font-label); line-height: 1; padding: 2px .25rem; position: absolute; right: .25rem; text-shadow: 1px 1px #000; }
 .dagger-inventory-condition-bar { background: rgb(10 9 7 / .85); display: block; height: .25rem; overflow: hidden; }
 .dagger-inventory-condition-bar > span { background: linear-gradient(#d9c06a, #9a7a2c); display: block; height: 100%; }
 .dagger-slot > .dagger-inventory-condition-bar { bottom: .3rem; left: .4rem; position: absolute; right: 1.6rem; }
@@ -119,7 +120,7 @@
   box-shadow: 0 .25rem .75rem rgb(0 0 0 / .5);
   color: var(--ink-dark, #2a1d0e);
   display: grid;
-  font: .8rem Georgia, serif;
+  font: .8rem var(--font-body);
   gap: .3rem;
   max-width: 20rem;
   padding: .5rem .7rem;
@@ -149,18 +150,18 @@
 /* The bank tab: one row per operation the ruleset publishes, each with its own bounded amount. */
 .dagger-bank { display: grid; gap: .5rem; padding: .75rem; }
 .dagger-bank[hidden] { display: none; }
-.dagger-bank h3 { color: #e4c676; font: 700 .75rem ui-monospace, monospace; letter-spacing: .09em; margin: 0; text-transform: uppercase; }
+.dagger-bank h3 { color: #e4c676; font: 700 .75rem var(--font-label); letter-spacing: .09em; margin: 0; text-transform: uppercase; }
 .dagger-bank p { margin: 0; }
-.dagger-bank-active { color: #f3df9c; font: 700 .85rem ui-monospace, monospace; }
+.dagger-bank-active { color: #f3df9c; font: 700 .85rem var(--font-label); }
 .dagger-bank-operations { display: grid; gap: .25rem; }
 .dagger-bank-operation { align-items: center; border-bottom: 1px solid rgb(197 164 94 / .25); display: grid; gap: .25rem .75rem; grid-template-columns: minmax(12rem, 1fr) auto auto auto; padding: .3rem 0; }
 .dagger-bank-operation-label { color: #f4e6bd; }
-.dagger-bank-operation select { background: #302817; border: 1px solid #a88b4f; color: #f4e6bd; font: .8rem ui-monospace, monospace; padding: .3rem; }
-.dagger-bank-operation > button { font: .8rem Georgia, serif; min-width: 5.5rem; padding: .375rem .75rem; }
+.dagger-bank-operation select { background: #302817; border: 1px solid #a88b4f; color: #f4e6bd; font: .8rem var(--font-label); padding: .3rem; }
+.dagger-bank-operation > button { font: .8rem var(--font-body); min-width: 5.5rem; padding: .375rem .75rem; }
 .dagger-bank-operation :disabled { cursor: default; opacity: .5; }
-.dagger-bank-refusal { color: #f0b48c; font: italic .75rem Georgia, serif; grid-column: 1 / -1; }
+.dagger-bank-refusal { color: #f0b48c; font: italic .75rem var(--font-body); grid-column: 1 / -1; }
 .dagger-bank-balances { background: rgb(12 13 10 / .74); border: 1px solid #7d6c45; display: grid; gap: 2px .5rem; grid-template-columns: repeat(3, minmax(0, 1fr)); list-style: none; margin: 0; max-height: 8rem; overflow-y: auto; padding: .375rem; }
-.dagger-bank-balances li { color: #c3b48b; font: .7rem ui-monospace, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dagger-bank-balances li { color: #c3b48b; font: .7rem var(--font-label); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dagger-bank-balances li.is-current { color: #fff0a7; font-weight: 700; }
 .dagger-inventory-storage[hidden] { display: none; }
 

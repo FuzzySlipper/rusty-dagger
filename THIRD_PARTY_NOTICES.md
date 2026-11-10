@@ -12,8 +12,8 @@ converted from it. The operator supplies their own copy of the game's `ARENA2` d
 ## What a release redistributes
 
 A release (`rusty build --release`) carries the product, the Engine host with its own third-party
-licences in `share/third-party/`, the .NET runtime (MIT, its licence and notices in `dotnet/`), and the
-import tool with the tracked files it reads, among them the Daggerfall Unity files in
+licences in `share/third-party/`, the .NET runtime (MIT, its licence and notices in `dotnet/`), the game
+UI's typefaces with their licences (below), and the import tool with the tracked files it reads, among them the Daggerfall Unity files in
 `tools/Daggerfall.Import.Tool/data/daggerfall-unity/` with their licence below. It carries nothing derived
 from *The Elder Scrolls II: Daggerfall*: the player's import writes `daggerfall-data.rpak` and `music.rpak`
 on their own machine.
@@ -23,6 +23,16 @@ on their own machine.
 The score is packed from an operator-supplied folder of recordings named by the classic song
 identifiers (`<track>.<ext>`, such as the donor installation's song folder `local/Sound`) into
 `local/music.rpak`. It is not part of this repository and is not redistributed.
+
+## Typefaces
+
+The game UI draws its text in typefaces it ships, subset to the Latin characters it uses and converted to WOFF2,
+in `src/ui/fonts/`. Both are licensed under the [SIL Open Font License 1.1](https://openfontlicense.org), whose
+text sits beside them:
+
+- **Alegreya** and **Alegreya SC**, Copyright 2011 The Alegreya Project Authors
+  (https://github.com/huertatipografica/Alegreya): `Alegreya-OFL.txt`.
+- **Cinzel**, Copyright 2020 The Cinzel Project Authors (https://github.com/NDISCOVER/Cinzel): `Cinzel-OFL.txt`.
 
 ## Daggerfall Unity
 

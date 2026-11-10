@@ -94,6 +94,9 @@ export function mountDialogue(shell: HTMLElement, send: Send, ask: (question: Co
   const showPage = (next: string, focus: boolean, from?: string): void => {
     page = next;
     window_.dataset.page = next;
+    // Talk is read on parchment; trade and the other services are worked in the stone chrome, as the item screens are.
+    if (next === 'talk' || next === CHOOSER) window_.dataset.skin = 'parchment';
+    else delete window_.dataset.skin;
     for (const element of pages) element.hidden = element.dataset.page !== next;
     const chooser = services.length > 1;
     tabs.hidden = !chooser || next === CHOOSER;

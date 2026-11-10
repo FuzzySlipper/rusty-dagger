@@ -119,7 +119,10 @@
     <Copy SourceFiles="$(RustyEngineProductUiTypes)" DestinationFiles="$(_EngineUiTypesCopy)" Condition="'$(_EngineUiTypesHash)' != '$(_EngineUiTypesCopyHash)'" />
     <ItemGroup>
       <ProductUiStylesheet Include="$(MSBuildThisFileDirectory)../ui/*.css" />
+      <ProductUiFont Include="$(MSBuildThisFileDirectory)../ui/fonts/*" />
     </ItemGroup>
     <Copy SourceFiles="@(ProductUiStylesheet)" DestinationFolder="$(RustyEngineProductUiRoot)" SkipUnchangedFiles="true" />
+    <!-- The game's typefaces and their licences, beside the stylesheets that name them. -->
+    <Copy SourceFiles="@(ProductUiFont)" DestinationFolder="$(RustyEngineProductUiRoot)/fonts" SkipUnchangedFiles="true" />
   </Target>
 </Project>

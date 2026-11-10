@@ -349,7 +349,7 @@ test('accessible wagon projection sends revision guarded put and take selections
   const f = fixture();
   try {
     f.publish({
-      inventory: {
+      inventory: { gridCapacity: 80,
         revision: '21:2:0', message: 'Inventory ready.', equipmentChange: null,
         items: [{ key: 'stack:pack.gold', definition: 'gold-piece', label: 'Gold piece', quantity: '4', weight: 0, value: 1, details: 'Coins', icon: null, condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [] }],
         slots: [],
@@ -375,7 +375,7 @@ test('accessible wagon projection sends revision guarded put and take selections
 test('an item tooltip states each fact once: information text gives way to the row\'s fields and its notes', () => {
   const f = fixture();
   try {
-    f.publish({ inventory: {
+    f.publish({ inventory: { gridCapacity: 80,
       revision: '1', message: '', equipmentChange: null, slots: [],
       items: [{ key: 'unique:8', definition: 'book', label: 'The Real Barenziah', quantity: '1', weight: 1, weightKilograms: 0.25, value: 50,
         details: 'The Real Barenziah by Anonymous\nWorth: 50 gold\nWeight: 0.25 kilograms', detailsStateFacts: true, notes: ['By Anonymous'], icon: null,
@@ -429,7 +429,7 @@ test('a tooltip shown for a focused control goes when the screen holding the con
 test('an item tooltip shows published labels and values without internal template identities', () => {
   const f = fixture();
   try {
-    f.publish({ inventory: {
+    f.publish({ inventory: { gridCapacity: 80,
       revision: '1', message: '', equipmentChange: null, slots: [],
       items: [{ key: 'unique:7', definition: 'template-116-steel', label: 'Steel Broadsword', quantity: '1', weight: 12, weightKilograms: 3, value: 25,
         details: 'A steel blade.', icon: null, condition: { current: 30, maximum: 60, percentage: 50, broken: false }, identified: false,
@@ -453,12 +453,12 @@ test('an item tooltip shows published labels and values without internal templat
     assert.doesNotMatch(tip.textContent, /template-|unique:7/);
     assert.equal(f.root.querySelector('.dagger-inventory-details'), null, 'There is no details panel; the tooltip is the item view.');
     // A new projection redraws a shown tooltip from the new row, and hides it when the item has gone.
-    f.publish({ inventory: { revision: '2', message: '', equipmentChange: null, slots: [],
+    f.publish({ inventory: { gridCapacity: 80, revision: '2', message: '', equipmentChange: null, slots: [],
       items: [{ key: 'unique:7', definition: 'template-116-steel', label: 'Steel Broadsword', quantity: '1', weight: 12, weightKilograms: 3, value: 40,
         details: 'A steel blade.', icon: null, condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [] }] } });
     assert.equal(tip.hidden, false);
     assert.match(tip.textContent, /Value40 gold/);
-    f.publish({ inventory: { revision: '3', message: '', equipmentChange: null, slots: [], items: [] } });
+    f.publish({ inventory: { gridCapacity: 80, revision: '3', message: '', equipmentChange: null, slots: [], items: [] } });
     assert.equal(tip.hidden, true);
   } finally { f.dispose(); }
 });
@@ -466,7 +466,7 @@ test('an item tooltip shows published labels and values without internal templat
 test('inventory renders the ruleset-owned completed equip cue without claiming a readiness gate', () => {
   const f = fixture();
   try {
-    f.publish({ inventory: {
+    f.publish({ inventory: { gridCapacity: 80,
       revision: '4:1', message: 'Inventory updated.', items: [], slots: [],
       equipmentChange: { cue: 'equip', rightHandDelayMilliseconds: 5700, leftHandDelayMilliseconds: 4500 },
     } });
@@ -533,7 +533,7 @@ test('the action bar offers what the ruleset allows for the item it opened on, a
   try {
     const row = (key, overrides) => ({ key, definition: key, label: key, quantity: '1', weight: 1, value: 1, details: '', icon: null,
       condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [], ...overrides });
-    f.publish({ inventory: {
+    f.publish({ inventory: { gridCapacity: 80,
       revision: '5:1', message: '', equipmentChange: null,
       slots: [{ id: 'right-hand', label: 'Right hand', itemKey: null }, { id: 'head', label: 'Head', itemKey: null }],
       items: [
@@ -580,7 +580,7 @@ test('inventory items drag with the pointer under capture, never a native drag s
   try {
     const row = (key, overrides) => ({ key, definition: key, label: key, quantity: '1', weight: 1, value: 1, details: '', icon: null,
       condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [], ...overrides });
-    f.publish({ inventory: {
+    f.publish({ inventory: { gridCapacity: 80,
       revision: '6:1', message: '', equipmentChange: null,
       slots: [{ id: 'right-hand', label: 'Right hand', itemKey: null }, { id: 'head', label: 'Head', itemKey: null }],
       items: [row('unique:1', { gridSlot: 0, compatibleSlots: ['right-hand'], label: 'Steel sword' })],
@@ -653,7 +653,7 @@ test('without a pointer an item is picked up and placed: Move holds it, accept o
   try {
     const row = (key, overrides) => ({ key, definition: key, label: key, quantity: '1', weight: 1, value: 1, details: '', icon: null,
       condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [], ...overrides });
-    f.publish({ inventory: {
+    f.publish({ inventory: { gridCapacity: 80,
       revision: '7:1', message: '', equipmentChange: null,
       slots: [{ id: 'right-hand', label: 'Right hand', itemKey: null }, { id: 'head', label: 'Head', itemKey: null }],
       items: [row('unique:1', { gridSlot: 0, compatibleSlots: ['right-hand'] })],
@@ -709,7 +709,7 @@ test('a double-click, a right-click and the controller X open the same action ba
   try {
     const row = (key, overrides) => ({ key, definition: key, label: key, quantity: '1', weight: 1, value: 1, details: '', icon: null,
       condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [], ...overrides });
-    f.publish({ inventory: {
+    f.publish({ inventory: { gridCapacity: 80,
       revision: '8:1', message: '', equipmentChange: null,
       slots: [{ id: 'right-hand', label: 'Right hand', itemKey: 'unique:2', group: 'weapons' }, { id: 'left-hand', label: 'Left hand', itemKey: null, group: 'weapons' }],
       items: [
@@ -765,7 +765,7 @@ test('equipment lays out by published group around the doll, the pack filters by
       condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [], ...overrides });
     art.adopt({ revision: 'doll', images: [{ id: 'character.background.breton', image: 'data:image/png;base64,AA==' }] });
     f.publish({
-      inventory: {
+      inventory: { gridCapacity: 80,
         revision: '10:1', message: '', equipmentChange: null,
         categories: [{ id: 'weapons-armor', label: 'Weapons & armour' }, { id: 'ingredients', label: 'Ingredients' }],
         slots: [
@@ -822,7 +822,7 @@ test('the paper doll draws the ruleset\'s placed layers in order, clips the cens
       layer('body', 'body.clothed', 22, 33, 69, 145, { clipTop: 40, clipBottom: 145 }),
       layer('head', 'head', 46, 9, 20, 27),
     ];
-    f.publish({ uiArtRevision: 'r1', uiArt: { revision: 'r1', images: [{ id: 'bg', image: png }, { id: 'head', image: png }] }, uiArtDemandedRevision: 'r1.0', inventory: { revision: '1', message: '', slots: [], items: [], categories: [] }, character: character(bare) });
+    f.publish({ uiArtRevision: 'r1', uiArt: { revision: 'r1', images: [{ id: 'bg', image: png }, { id: 'head', image: png }] }, uiArtDemandedRevision: 'r1.0', inventory: { gridCapacity: 80, revision: '1', message: '', slots: [], items: [], categories: [] }, character: character(bare) });
     const box = () => f.root.querySelector('.dagger-inventory-doll');
     const background = box().querySelector('.dagger-inventory-doll-background img');
     assert.equal(background.style.left, 'calc(-8 * var(--doll-pixel))', 'The background crop is the projection\'s, not a CSS fit.');
@@ -838,7 +838,7 @@ test('the paper doll draws the ruleset\'s placed layers in order, clips the cens
     // the worn art arrives as a demanded block on top of the held art.
     const helm = layer('item', 'paper-doll.251.27', 30, 4, 49, 37, { mask: 'paper-doll.251.27.mask', slot: 'head' });
     const sword = layer('item', 'paper-doll.234.12.iron', 33, 88, 47, 43, { slot: 'left-hand' });
-    f.publish({ uiArtRevision: 'r1', uiArtDemandedRevision: 'r1.5', inventory: { revision: '2', message: '', slots: [], items: [], categories: [] },
+    f.publish({ uiArtRevision: 'r1', uiArtDemandedRevision: 'r1.5', inventory: { gridCapacity: 80, revision: '2', message: '', slots: [], items: [], categories: [] },
       uiArtDemanded: { revision: 'r1.5', images: ['body.nude', 'body.clothed', helm.mediaId, helm.mask, sword.mediaId].map(id => ({ id, image: png })) },
       character: character([...bare, helm, sword]) });
     assert.deepEqual(drawn(), ['body.nude', 'body.clothed@0-40', 'body.clothed@40-145', 'head', 'paper-doll.251.27', 'paper-doll.234.12.iron']);
@@ -857,7 +857,7 @@ test('the paper doll draws the ruleset\'s placed layers in order, clips the cens
     const refreshedShirt = layer('item', 'refreshed.paper-doll.241.50', 25, 40, 60, 50,
       { smooth: true, slot: 'chest-clothes', tint: { color: '#6aaaff', brightness: 1.276, mask: 'refreshed.paper-doll.241.50.dye' } });
     const refreshedHelm = layer('item', 'refreshed.paper-doll.251.27', 28.5, 1.5, 54, 41, { mask: 'paper-doll.251.27.mask', maskRect: { x: 30, y: 4, width: 49, height: 37 }, smooth: true, slot: 'head' });
-    f.publish({ uiArtRevision: 'r1', uiArtDemandedRevision: 'r1.7', inventory: { revision: '3', message: '', slots: [], items: [], categories: [] },
+    f.publish({ uiArtRevision: 'r1', uiArtDemandedRevision: 'r1.7', inventory: { gridCapacity: 80, revision: '3', message: '', slots: [], items: [], categories: [] },
       uiArtDemanded: { revision: 'r1.7', images: [...['body.nude', 'body.clothed', helm.mediaId, helm.mask, sword.mediaId].map(id => ({ id, image: png })),
         ...[refreshedBody.mediaId, refreshedHelm.mediaId, refreshedShirt.mediaId, refreshedShirt.tint.mask].map(id => ({ id, image: webp }))] },
       character: character([bare[0], refreshedBody, bare[3], refreshedShirt, refreshedHelm]) });
@@ -879,7 +879,7 @@ test('the paper doll draws the ruleset\'s placed layers in order, clips the cens
     assert.equal(refreshedMask.getPropertyValue('mask-size'), 'calc(49 * var(--doll-pixel)) calc(37 * var(--doll-pixel)), 100% 100%');
 
     // A transformed lycanthrope's doll is its background alone.
-    f.publish({ uiArtRevision: 'r1', uiArtDemandedRevision: 'r1.7', inventory: { revision: '4', message: '', slots: [], items: [], categories: [] }, character: character([]) });
+    f.publish({ uiArtRevision: 'r1', uiArtDemandedRevision: 'r1.7', inventory: { gridCapacity: 80, revision: '4', message: '', slots: [], items: [], categories: [] }, character: character([]) });
     assert.deepEqual(drawn(), []);
   } finally { art.adopt({ revision: '', images: [] }); f.dispose(); }
 });
@@ -927,7 +927,7 @@ test('the bank is its own tab, and each operation keeps to the amounts and eligi
   const f = fixture();
   try {
     const action = (name, label, overrides) => ({ action: name, label, available: true, takesAmount: true, minimum: 1, maximum: 500, refusal: null, ...overrides });
-    f.publish({ inventory: {
+    f.publish({ inventory: { gridCapacity: 80,
       revision: '11:1', message: '', equipmentChange: null, slots: [], items: [], categories: [],
       bank: { currentRegion: 17, currentRegionName: 'Daggerfall', currentBalance: '500', maximumNewLoan: '1000', loan: null,
         accounts: [{ region: 17, regionName: 'Daggerfall', gold: '500' }, { region: 20, regionName: 'Glenpoint', gold: '0' }],
@@ -968,7 +968,7 @@ test('the bank is its own tab, and each operation keeps to the amounts and eligi
     row('currency-deposit-letters').querySelector('[data-bank-action]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'currency-deposit-letters' });
     // Leaving the bank takes its tab away and shows the pack again.
-    f.publish({ inventory: { revision: '11:2', message: '', equipmentChange: null, slots: [], items: [], categories: [], bank: null } });
+    f.publish({ inventory: { gridCapacity: 80, revision: '11:2', message: '', equipmentChange: null, slots: [], items: [], categories: [], bank: null } });
     assert.equal(f.root.querySelector('[data-inventory-tab="bank"]'), null);
     assert.equal(f.root.querySelector('.dagger-inventory-pack').hidden, false);
   } finally { f.dispose(); }
@@ -1560,7 +1560,7 @@ test('actions opened on a worn item from the Bank or Storage tab bring the pack 
     const sword = { key: 'unique:2', definition: 'sword', label: 'Sword', quantity: '1', weight: 1, value: 1, details: '', icon: null, condition: null,
       identified: true, gridSlot: null, equippedSlots: ['right-hand'], compatibleSlots: ['right-hand'] };
     const storage = { key: 'house/1', revision: '3', items: [], storeRefusals: [] };
-    f.publish({ inventory: { revision: '12:1', message: '', equipmentChange: null, categories: [], items: [sword],
+    f.publish({ inventory: { gridCapacity: 80, revision: '12:1', message: '', equipmentChange: null, categories: [], items: [sword],
       slots: [{ id: 'right-hand', label: 'Right hand', itemKey: 'unique:2', group: 'weapons' }],
       bank: { currentRegion: 17, currentRegionName: 'Daggerfall', currentBalance: '0', maximumNewLoan: '0', loan: null, accounts: [], actions: [] } },
       property: { bankAvailable: true, offers: [], storage } });
@@ -1591,7 +1591,7 @@ test('an inventory action bar closes with its panel, so navigation belongs to wh
   try {
     const row = (key, overrides) => ({ key, definition: key, label: key, quantity: '1', weight: 1, value: 1, details: '', icon: null,
       condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [], ...overrides });
-    f.publish({ inventory: { revision: '9:1', message: '', equipmentChange: null, slots: [], items: [row('stack:potion', { canUse: true })] } });
+    f.publish({ inventory: { gridCapacity: 80, revision: '9:1', message: '', equipmentChange: null, slots: [], items: [row('stack:potion', { canUse: true })] } });
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
     f.root.querySelector('.dagger-menu-home [data-action="inventory"]').click();
     const bar = f.root.querySelector('.dagger-inventory-actions-bar');
@@ -1732,6 +1732,23 @@ test('the notebook key and an opened book open the journal on their own page, an
     assert.equal(f.actions.filter(action => action.action === 'notebook-page').length, 1);
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'PageDown', bubbles: true, cancelable: true }));
     assert.deepEqual(f.actions.at(-1), { action: 'notebook-page', revision: '5', page: 1 });
+  } finally { f.dispose(); }
+});
+
+test('every menu panel is drawn at one of the standard sizes: wide for the item and reference screens, narrow for the rest', () => {
+  const f = fixture();
+  try {
+    const menu = f.root.querySelector('.dagger-menu');
+    assert.equal(menu.dataset.size, 'narrow');
+    f.root.querySelector('[data-action="inventory"]').click();
+    assert.equal(menu.dataset.size, 'wide');
+    f.root.querySelector('.dagger-menu-panel > [data-action="back"]').click();
+    assert.equal(menu.dataset.size, 'narrow', 'The home list is narrow.');
+    f.root.querySelector('.dagger-menu-home [data-action="rest"]').click();
+    assert.equal(menu.dataset.size, 'narrow');
+    f.root.querySelector('.dagger-menu-panel > [data-action="back"]').click();
+    f.root.querySelector('[data-action="help"]').click();
+    assert.equal(menu.dataset.size, 'wide');
   } finally { f.dispose(); }
 });
 
@@ -2103,7 +2120,7 @@ test('loot sits beside the pack: Take moves a chosen part of a stack or a whole 
     const row = (key, overrides) => ({ key, definition: key, label: key, quantity: '1', weight: 1, value: 1, details: '', icon: null,
       condition: null, identified: true, gridSlot: null, equippedSlots: [], compatibleSlots: [], ...overrides });
     f.publish({ mode: 'modal',
-      inventory: { revision: '1', message: '', equipmentChange: null, slots: [], items: [row('stack:gold', { label: 'Gold', quantity: '25', stackable: true, gridSlot: 0 })],
+      inventory: { gridCapacity: 80, revision: '1', message: '', equipmentChange: null, slots: [], items: [row('stack:gold', { label: 'Gold', quantity: '25', stackable: true, gridSlot: 0 })],
         encumbrance: { currentClassicUnits: 4000, maximumClassicUnits: 20000, canMove: true, currentKilograms: 10, maximumKilograms: 50 } },
       loot: { container: '2000:1', revision: '3', title: 'Rat — loot', message: 'Choose an item to take, or take everything.',
         items: [row('stack:5', { label: 'Arrows', quantity: '12', stackable: true, weightKilograms: 1.2, value: 12 }), row('unique:9', { label: 'Dagger' })] } });
@@ -2825,7 +2842,7 @@ test('wagon put is refused for the definitions the ruleset names', () => {
   const f = fixture();
   try {
     f.publish({
-      inventory: {
+      inventory: { gridCapacity: 80,
         revision: '3:1:0', message: 'Inventory ready.', equipmentChange: null,
         items: [{ key: 'unique:9', definition: 'cart-deed', label: 'Cart', quantity: '1', weight: 0, value: 1, details: '', icon: null, condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [] }],
         slots: [],
@@ -3593,7 +3610,7 @@ test('property offers stay in the inventory panel, and its storage is a Storage 
   try {
     const row = (key, overrides) => ({ key, definition: key, label: key, quantity: '1', weight: 0, value: 1, details: '', icon: null,
       condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [], ...overrides });
-    f.publish({ inventory: { revision: 'ui-revision', message: '', equipmentChange: null, slots: [],
+    f.publish({ inventory: { gridCapacity: 80, revision: 'ui-revision', message: '', equipmentChange: null, slots: [],
         items: [row('stack:coins', { label: 'Gold', quantity: '4', stackable: true }), row('unique:3', { label: 'Sword', equippedSlots: ['right-hand'], gridSlot: null })] },
       property: { bankAvailable: true, offers: [{ key: 'ship/small', name: 'Small ship', price: '100000', salePrice: '85000',
         owned: false, canBuy: true, canSell: false, canEnter: false, enterable: false }], storage: { key: 'house/17/4/A.RMB/0/0/1', revision: '12',
@@ -3758,6 +3775,7 @@ test('a person screen: the chooser lists the published services, each page draws
     choices[1].click();
     assert.deepEqual(shown(), ['trade']);
     assert.equal(window_.dataset.page, 'trade');
+    assert.equal(window_.dataset.skin, undefined, 'Trade is worked in the stone chrome.');
     assert.ok(page('trade').querySelector('.dagger-transfer [data-transfer-item="stack:shop.arrows"]'), 'Trade draws the shared transfer layout.');
     assert.ok(page('trade').contains(document.activeElement), 'The trade page opens on its content.');
     assert.notEqual(document.activeElement, close);
@@ -3771,6 +3789,7 @@ test('a person screen: the chooser lists the published services, each page draws
     assert.equal(document.activeElement, page('training').querySelector('[data-training-skill="medical"]'));
     f.pad('button-5');
     assert.deepEqual(shown(), ['talk']);
+    assert.equal(window_.dataset.skin, 'parchment', 'Talk is read on parchment.');
     assert.equal(document.activeElement, page('talk').querySelector('[data-topic="news"]'), 'Talk opens on its first topic, not the tone choice.');
     f.pad('button-4');
     assert.deepEqual(shown(), ['training']);
@@ -3865,7 +3884,7 @@ test('enchanted items shimmer in the pack and the shop, stealable stock glints, 
     const publish = glints => f.publish({ uiArtRevision: 'g1', uiArt: { revision: 'g1', images: [{ id: 'item.sword', image: png },
         { id: 'effect.glint.magic', image: png }, { id: 'effect.glint.coins', image: png },
         { id: 'refreshed.effect.glint.magic', image: webp, smooth: true }, { id: 'refreshed.effect.glint.coins', image: webp, smooth: true }] },
-      inventory: { revision: '1', message: '', equipmentChange: null, slots: [], items: [item('unique:1', true), item('unique:2', false)], glints },
+      inventory: { gridCapacity: 80, revision: '1', message: '', equipmentChange: null, slots: [], items: [item('unique:1', true), item('unique:2', false)], glints },
       activation: { mode: 'talk', dialogue: { ...offering(['trade', 'Buy']), revision: 'merchant-1', targetLabel: 'Smith', greeting: 'Welcome.',
         tone: 'normal', question: null, reply: null, topics: [], diagnostics: [], merchant } } });
     publish(classic);
@@ -4570,7 +4589,7 @@ test('magic-item shortcut lists only eligible carried items and uses the current
   try {
     const row = (key, canUseMagic, overrides) => ({ key, definition: key, label: key, quantity: '1', weight: 1, value: 1, details: '', icon: null,
       condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [], canUseMagic, ...overrides });
-    const state = { panelRequest: { panel: 'magic-items', revision: '1' }, inventory: {
+    const state = { panelRequest: { panel: 'magic-items', revision: '1' }, inventory: { gridCapacity: 80,
       revision: '6:1', message: '', equipmentChange: null, slots: [], items: [row('potion', true),
         row('ring', true, { label: 'Ring of Warding', details: 'Ring of Warding\nCast when used: Shield\nCondition: Used', condition: { current: 18, maximum: 40, percentage: 45, broken: false } }),
         row('book', false)] } };

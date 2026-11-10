@@ -70,7 +70,8 @@ internal sealed class DaggerfallEquipmentMoves(
     DaggerfallItemInstances? itemInstances = null,
     Func<bool>? beastForm = null)
 {
-    internal const int GridCapacity = 50;
+    /// <summary>How many places the pack grid has; an item past them waits in the overflow row.</summary>
+    internal const int GridCapacity = 80;
     private readonly InventoryGridLayout _layout = new(GridCapacity);
 
     internal static string LayoutKey(ulong entity) =>

@@ -755,6 +755,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("id", builder.String(slot.Id)), ("label", builder.String(slot.Label)),
             ("itemKey", slot.ItemKey is null ? builder.Null() : builder.String(slot.ItemKey)), ("group", builder.String(slot.Group)))).ToArray();
         return builder.Object(("revision", builder.String(value.Revision)), ("message", builder.String(value.Message)),
+            ("gridCapacity", builder.Number(DaggerfallEquipmentMoves.GridCapacity)),
             ("encumbrance", value.Encumbrance is { } encumbrance ? builder.Object(
                 ("currentClassicUnits", builder.Number(encumbrance.CurrentClassicUnits)), ("maximumClassicUnits", builder.Number(encumbrance.MaximumClassicUnits)),
                 ("canMove", builder.Boolean(encumbrance.CanMove)),
