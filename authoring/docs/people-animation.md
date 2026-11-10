@@ -14,6 +14,10 @@ The route is a parts rig played at runtime:
 Fix a part that goes wrong by changing what is generated or how it's rigged, not by repainting the
 part.
 
+The parts of this route that carry to other projects, with the reasons behind them, are in
+asset-pipeline's `docs/parts-rig-characters.md`. This page keeps what is Daggerfall's and every
+number used for its figures.
+
 ## Rig sources
 
 A rig source is the figure repainted in a stance that parts can be cut from. It keeps the figure's
