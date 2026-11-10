@@ -846,5 +846,41 @@
  "creatures--were01i0--were01i0-record-000-frame-000": {
   "status": "accepted",
   "note": "Converted on 2026-11-01 (paper-doll-c1-heads), trimmed to the classic silhouette (heads.py --creature); the character sheet's beast-form portrait, which draws classic heads until #10503; Patch accepted it on 2026-11-01."
+ },
+ "backgrounds--scbg00i0--scbg00i0-record-000-frame-000": {
+  "status": "accepted",
+  "note": "Race background redrawn in the set style, the same scene, colours and stone frame (#10711). Reviewed 2026-11-10 against the source sheet, for Patch to see behind the doll in game."
+ },
+ "backgrounds--scbg01i0--scbg01i0-record-000-frame-000": {
+  "status": "accepted",
+  "note": "Race background redrawn in the set style, the same scene, colours and stone frame (#10711). Reviewed 2026-11-10 against the source sheet, for Patch to see behind the doll in game."
+ },
+ "backgrounds--scbg02i0--scbg02i0-record-000-frame-000": {
+  "status": "accepted",
+  "note": "Race background redrawn in the set style, the same scene, colours and stone frame (#10711). Reviewed 2026-11-10 against the source sheet, for Patch to see behind the doll in game."
+ },
+ "backgrounds--scbg03i0--scbg03i0-record-000-frame-000": {
+  "status": "accepted",
+  "note": "Race background redrawn in the set style, the same scene, colours and stone frame (#10711). Reviewed 2026-11-10 against the source sheet, for Patch to see behind the doll in game."
+ },
+ "backgrounds--scbg04i0--scbg04i0-record-000-frame-000": {
+  "status": "accepted",
+  "note": "Race background redrawn in the set style, the same scene, colours and stone frame (#10711). Reviewed 2026-11-10 against the source sheet, for Patch to see behind the doll in game."
+ },
+ "backgrounds--scbg05i0--scbg05i0-record-000-frame-000": {
+  "status": "accepted",
+  "note": "Race background redrawn in the set style, the same scene, colours and stone frame (#10711). Reviewed 2026-11-10 against the source sheet, for Patch to see behind the doll in game."
+ },
+ "backgrounds--scbg06i0--scbg06i0-record-000-frame-000": {
+  "status": "accepted",
+  "note": "Race background redrawn in the set style, the same scene, colours and stone frame (#10711). Reviewed 2026-11-10 against the source sheet, for Patch to see behind the doll in game."
+ },
+ "backgrounds--scbg07i0--scbg07i0-record-000-frame-000": {
+  "status": "accepted",
+  "note": "Race background redrawn in the set style, the same scene, colours and stone frame (#10711). Reviewed 2026-11-10 against the source sheet, for Patch to see behind the doll in game."
+ },
+ "backgrounds--scbg08i0--scbg08i0-record-000-frame-000": {
+  "status": "accepted",
+  "note": "Race background redrawn in the set style, the same scene, colours and stone frame (#10711). Reviewed 2026-11-10 against the source sheet, for Patch to see behind the doll in game."
  }
 }

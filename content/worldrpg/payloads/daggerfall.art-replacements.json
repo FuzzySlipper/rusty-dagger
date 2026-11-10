@@ -2897,6 +2897,141 @@
     }
    },
    {
+    "replaces": "character.scbg.scbg00i0.0",
+    "mediaId": "refreshed.character.scbg.scbg00i0.0",
+    "path": "worldrpg/media/refreshed/paper-doll/backgrounds--scbg00i0--scbg00i0-record-000-frame-000.webp",
+    "byteLength": 46474,
+    "sha256": "28d272ac91413fa665b0da546d6892b9bd98a21ac8f51e3c6f2773993ba99a45",
+    "width": 379,
+    "height": 600,
+    "doll": {
+     "x": -8.0,
+     "y": -7.0,
+     "width": 125.0,
+     "height": 197.8892
+    }
+   },
+   {
+    "replaces": "character.scbg.scbg01i0.0",
+    "mediaId": "refreshed.character.scbg.scbg01i0.0",
+    "path": "worldrpg/media/refreshed/paper-doll/backgrounds--scbg01i0--scbg01i0-record-000-frame-000.webp",
+    "byteLength": 54212,
+    "sha256": "63f3900d0ee385c10a8a5958999d1419716ff8b7b423132f7d548135ad4eaf82",
+    "width": 378,
+    "height": 599,
+    "doll": {
+     "x": -8.0,
+     "y": -7.0,
+     "width": 125.0,
+     "height": 198.082
+    }
+   },
+   {
+    "replaces": "character.scbg.scbg02i0.0",
+    "mediaId": "refreshed.character.scbg.scbg02i0.0",
+    "path": "worldrpg/media/refreshed/paper-doll/backgrounds--scbg02i0--scbg02i0-record-000-frame-000.webp",
+    "byteLength": 46010,
+    "sha256": "2429b681787436015830ddf6a67c23b9b9c15ed507f1ad86f127097b9879fda0",
+    "width": 378,
+    "height": 599,
+    "doll": {
+     "x": -8.0,
+     "y": -7.0,
+     "width": 125.0,
+     "height": 198.082
+    }
+   },
+   {
+    "replaces": "character.scbg.scbg03i0.0",
+    "mediaId": "refreshed.character.scbg.scbg03i0.0",
+    "path": "worldrpg/media/refreshed/paper-doll/backgrounds--scbg03i0--scbg03i0-record-000-frame-000.webp",
+    "byteLength": 40500,
+    "sha256": "b1e23280a25846e22048fbd37c92c3cf6d22b8743593815f151216d9194f537c",
+    "width": 378,
+    "height": 598,
+    "doll": {
+     "x": -8.0,
+     "y": -7.0,
+     "width": 125.0,
+     "height": 197.7513
+    }
+   },
+   {
+    "replaces": "character.scbg.scbg04i0.0",
+    "mediaId": "refreshed.character.scbg.scbg04i0.0",
+    "path": "worldrpg/media/refreshed/paper-doll/backgrounds--scbg04i0--scbg04i0-record-000-frame-000.webp",
+    "byteLength": 57402,
+    "sha256": "26ce3ee49cc85d8f6f3cf69960ed2253cb24ef0566c180a0a47db903fe87b314",
+    "width": 378,
+    "height": 599,
+    "doll": {
+     "x": -8.0,
+     "y": -7.0,
+     "width": 125.0,
+     "height": 198.082
+    }
+   },
+   {
+    "replaces": "character.scbg.scbg05i0.0",
+    "mediaId": "refreshed.character.scbg.scbg05i0.0",
+    "path": "worldrpg/media/refreshed/paper-doll/backgrounds--scbg05i0--scbg05i0-record-000-frame-000.webp",
+    "byteLength": 59868,
+    "sha256": "db50492afb8232ef35fa478ef5b3fb5d22ac872fe9584f931625edb431c054d1",
+    "width": 378,
+    "height": 598,
+    "doll": {
+     "x": -8.0,
+     "y": -7.0,
+     "width": 125.0,
+     "height": 197.7513
+    }
+   },
+   {
+    "replaces": "character.scbg.scbg06i0.0",
+    "mediaId": "refreshed.character.scbg.scbg06i0.0",
+    "path": "worldrpg/media/refreshed/paper-doll/backgrounds--scbg06i0--scbg06i0-record-000-frame-000.webp",
+    "byteLength": 65774,
+    "sha256": "c438b11ea6df58c9aec0a84f57bef4f5e6fc8978fbc487a944804298c16952f2",
+    "width": 380,
+    "height": 602,
+    "doll": {
+     "x": -8.0,
+     "y": -7.0,
+     "width": 125.0,
+     "height": 198.0263
+    }
+   },
+   {
+    "replaces": "character.scbg.scbg07i0.0",
+    "mediaId": "refreshed.character.scbg.scbg07i0.0",
+    "path": "worldrpg/media/refreshed/paper-doll/backgrounds--scbg07i0--scbg07i0-record-000-frame-000.webp",
+    "byteLength": 50116,
+    "sha256": "da147fbcc17ea69944684eec2319a5ee919089b219b9dae96fad2890f77d7b29",
+    "width": 377,
+    "height": 597,
+    "doll": {
+     "x": -8.0,
+     "y": -7.0,
+     "width": 125.0,
+     "height": 197.9443
+    }
+   },
+   {
+    "replaces": "character.scbg.scbg08i0.0",
+    "mediaId": "refreshed.character.scbg.scbg08i0.0",
+    "path": "worldrpg/media/refreshed/paper-doll/backgrounds--scbg08i0--scbg08i0-record-000-frame-000.webp",
+    "byteLength": 39654,
+    "sha256": "cf45f7945c74396dfec43c0d3494dcc648dbe8575c543945db4460db2651e7ba",
+    "width": 377,
+    "height": 597,
+    "doll": {
+     "x": -8.0,
+     "y": -7.0,
+     "width": 125.0,
+     "height": 197.9443
+    }
+   },
+   {
     "replaces": "character.vamp.vamp00i0.0",
     "mediaId": "refreshed.character.vamp.vamp00i0.0",
     "path": "worldrpg/media/refreshed/paper-doll/creatures--vamp00i0--vamp00i0-record-000-frame-000.webp",

@@ -22,7 +22,7 @@ from PIL import Image
 from art_key import art_key
 from doll_preview import AUTHORING, doll_layer
 
-BACKGROUND = (48, 52, 59)  # the generation background, #30343b
+EDGE = 8                   # border pixels whose median is the background the model actually painted
 UNLIKE = 24                # summed channel difference over which a pixel is not background
 COVER = 0.5                # share of the fullest row's or column's unlike pixels a row or column needs to be in the picture
 
@@ -30,7 +30,10 @@ COVER = 0.5                # share of the fullest row's or column's unlike pixel
 def picture(image):
     """The image cropped to the picture: the span of rows and columns about as unlike the background as the fullest."""
     rgb = np.asarray(image.convert("RGB"), np.int32)
-    unlike = np.abs(rgb - BACKGROUND).sum(-1) > UNLIKE
+    # The spec asks for #30343b around the picture, but the model may paint it a shade off; a few units over the
+    # threshold would make every row and column part of the picture.
+    border = np.concatenate([rgb[:EDGE].reshape(-1, 3), rgb[-EDGE:].reshape(-1, 3), rgb[:, :EDGE].reshape(-1, 3), rgb[:, -EDGE:].reshape(-1, 3)])
+    unlike = np.abs(rgb - np.median(border, 0)).sum(-1) > UNLIKE
     rows, columns = (np.flatnonzero(share > COVER * share.max()) for share in (unlike.mean(1), unlike.mean(0)))
     return image.crop((columns[0], rows[0], columns[-1] + 1, rows[-1] + 1))
 
