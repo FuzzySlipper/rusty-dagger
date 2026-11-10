@@ -343,7 +343,6 @@ export function mountDialogue(shell: HTMLElement, send: Send, ask: (question: Co
  * items with Sell, Repair and Identify, and repairs waiting to be collected beneath.
  */
 function mountShop(root: HTMLElement, send: Send, ask: (question: ConfirmQuestion) => void): { update(value: MerchantProjection | null): void } {
-  const heading = document.createElement('h3');
   const purse = document.createElement('p');
   purse.className = 'dagger-shop-purse';
   const result = document.createElement('p');
@@ -394,7 +393,7 @@ function mountShop(root: HTMLElement, send: Send, ask: (question: ConfirmQuestio
     command(side, key, command, amount) { waiting = null; trade(side, key, command, amount); },
     amount(side, key, amount) { quoteFor(side, key, amount); },
   });
-  root.prepend(heading, purse);
+  root.prepend(purse);
   root.append(result, repairs);
   repairs.addEventListener('click', event => {
     const control = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-repair]');
@@ -420,7 +419,6 @@ function mountShop(root: HTMLElement, send: Send, ask: (question: ConfirmQuestio
       current = value;
       root.hidden = value === null;
       if (value === null) { transfer.update(null); return; }
-      heading.textContent = `${value.provider} · shop quality ${value.quality}`;
       purse.textContent = `You carry ${value.gold} gold.`;
       result.textContent = value.result;
       transfer.update({

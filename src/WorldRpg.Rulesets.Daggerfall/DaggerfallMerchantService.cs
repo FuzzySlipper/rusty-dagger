@@ -641,6 +641,8 @@ internal sealed class DaggerfallMerchantService
         {
             DaggerfallItemInstanceMetadata metadata = _instances.RequireStack(owner, stack.Id);
             DaggerfallItemDefinition definition = _definitions.RequireItem(new DaggerfallItemId(stack.Definition.Value));
+            // The player's gold is the purse the trade is paid from, stated as the gold carried, never an item on offer.
+            if (!buying && DaggerfallEncumbrancePolicy.IsGold(definition)) continue;
             ulong price = Price(binding, buying ? DaggerfallTradeSide.BuyFromMerchant : DaggerfallTradeSide.SellToMerchant,
                 // The projection field is UnitPrice. The caller supplies its selected quantity to
                 // Quote during the action, so a stack row must price one item here rather than

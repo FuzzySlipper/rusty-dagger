@@ -73,7 +73,9 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
   const heading = document.createElement('h2');
   const controls = document.createElement('div'); controls.className = 'dagger-map-controls';
   const status = document.createElement('p'); status.className = 'dagger-map-status'; status.setAttribute('role', 'status');
-  const levelLabel = document.createElement('label'); levelLabel.textContent = 'Height slice (metres) ';
+  // The height shown is kept as a field Level up and Level down step and the status names in words ("2 m above you");
+  // a height in the dungeon's own metres means nothing to the player, so the field itself is not shown.
+  const levelLabel = document.createElement('label'); levelLabel.textContent = 'Height shown '; levelLabel.hidden = true;
   const level = document.createElement('input'); level.type = 'number'; level.step = '0.5'; level.className = 'dagger-map-level';
   const allLabel = document.createElement('label'); allLabel.textContent = 'All levels ';
   const all = document.createElement('input'); all.type = 'checkbox'; all.checked = true; allLabel.append(all); levelLabel.append(level);
@@ -374,7 +376,7 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
       }
       if (value === null) setPanning(false);
       noteForm.hidden = value?.canAddNote !== true;
-      levelLabel.hidden = value?.kind === 'city' || !value; allLabel.hidden = value?.kind === 'city' || !value;
+      allLabel.hidden = value?.kind === 'city' || !value;
       const signature = value ? JSON.stringify([value.id, value.kind, value.areas, value.labels, value.region, value.location, value.legend]) : '';
       if (value && drawn === signature) applyView();
       else draw();

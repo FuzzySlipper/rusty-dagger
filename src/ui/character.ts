@@ -113,7 +113,7 @@ export interface CharacterBackgroundQuestion { readonly number: number; readonly
 export interface CharacterBackgroundAttribute { readonly id: string; readonly label: string; readonly rolled: number; readonly allocated: number; readonly value: number; readonly maximum: number; readonly canAllocate: boolean; }
 export interface CharacterBackgroundSkill { readonly id: string; readonly label: string; readonly tier: string; readonly rolled: number; readonly allocated: number; readonly biographyBonus: number; readonly value: number; readonly canAllocate: boolean; }
 export interface CharacterStartingGrant { readonly itemId: string; readonly label: string; readonly templateIndex: number; readonly quantity: number; readonly sourceEffect: string; }
-export interface CharacterBackground { readonly biographyClassIndex: number; readonly biography: readonly string[]; readonly questions: readonly CharacterBackgroundQuestion[]; readonly attributes: readonly CharacterBackgroundAttribute[]; readonly attributeBonusPool: number; readonly remainingAttributePoints: number; readonly skills: readonly CharacterBackgroundSkill[]; readonly primarySkillPoints: number; readonly majorSkillPoints: number; readonly minorSkillPoints: number; readonly startingGrants: readonly CharacterStartingGrant[]; readonly unsupportedEffects: readonly string[]; }
+export interface CharacterBackground { readonly biographyClassIndex: number; readonly biography: readonly string[]; readonly questions: readonly CharacterBackgroundQuestion[]; readonly attributes: readonly CharacterBackgroundAttribute[]; readonly attributeBonusPool: number; readonly remainingAttributePoints: number; readonly skills: readonly CharacterBackgroundSkill[]; readonly primarySkillPoints: number; readonly majorSkillPoints: number; readonly minorSkillPoints: number; readonly startingGrants: readonly CharacterStartingGrant[]; }
 export interface CharacterSkillChoice { readonly id: string; readonly label: string; }
 export interface CharacterCustomTrait { readonly id: string; readonly target: string | null; }
 export interface CharacterCustomClass {
@@ -210,21 +210,6 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
   const shell = document.createElement('section');
   shell.className = 'dagger-character';
   shell.dataset.testid = 'character-sheet';
-  const chrome = document.createElement('img');
-  chrome.className = 'dagger-character-chrome';
-  chrome.alt = '';
-  chrome.setAttribute('aria-hidden', 'true');
-  // The sheet's chrome is published art, so a session that has it sets it and one that does not
-  // leaves the element empty until the snapshot that carries it arrives.
-  const chromeArt = image('window.character-sheet.chrome');
-  if (chromeArt !== null) chrome.src = chromeArt;
-  const heading = document.createElement('header');
-  heading.className = 'dagger-character-title dagger-frame-title';
-  const eyebrow = document.createElement('p');
-  eyebrow.textContent = 'Live player profile';
-  const title = document.createElement('h2');
-  title.textContent = 'Character sheet';
-  heading.append(eyebrow, title);
   const overview = document.createElement('section');
   overview.className = 'dagger-character-overview';
   overview.setAttribute('aria-label', 'Player progression');
@@ -243,7 +228,7 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
   const columns = document.createElement('div');
   columns.className = 'dagger-character-columns';
   columns.append(resources.element, attributes.element, skills.element, resistances.element, affiliations.element, legal.element, history.element, career.element, equipment.element, levelUp.element, creation.element);
-  shell.append(chrome, heading, portrait, overview, columns);
+  shell.append(portrait, overview, columns);
   root.append(shell);
   let disposed = false;
   let held: CharacterProjection | null = null;
@@ -254,8 +239,6 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
     update(value): void {
       if (disposed) return;
       held = value;
-      const published = image('window.character-sheet.chrome');
-      if (published !== null && chrome.src !== published) chrome.src = published;
       portrait.replaceChildren(...(value.identity?.selectedMedia ?? []).filter(media =>
         media.layer.startsWith('head') || (value.identity?.racialOverride?.beastForm || value.identity?.racialOverride?.vampireClan) && media.layer === 'background').flatMap(media => {
           const source = image(media.mediaId); if (source === null) return [];
@@ -271,8 +254,7 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
           overviewRow('Level progress', `${format(value.progression.skillProgress)} / ${format(value.progression.nextLevelSkillProgress)} skill total${value.progression.pendingLevelUp === true ? ' · Level up ready' : ''}`),
         ]),
         ...(value.identity ? [overviewRow('Race', value.identity.raceLabel), overviewRow('Career', value.identity.careerLabel || value.identity.career),
-          ...(value.identity.racialOverride ? [overviewRow('Form', `${value.identity.racialOverride.name} · ${value.identity.racialOverride.vampireClan ?? (value.identity.racialOverride.beastForm ? 'Beast form' : 'Human form')}`)] : []),
-          overviewRow('Face', `${value.identity.gender} ${format(value.identity.faceIndex + 1)}`)] : []),
+          ...(value.identity.racialOverride ? [overviewRow('Form', `${value.identity.racialOverride.name} · ${value.identity.racialOverride.vampireClan ?? (value.identity.racialOverride.beastForm ? 'Beast form' : 'Human form')}`)] : [])] : []),
       );
       renderRows(resources.rows, value.resources.map(resource => ({
         label: resource.label,
@@ -683,8 +665,7 @@ function isBackground(value: unknown): value is CharacterBackground {
     && 'questions' in value && Array.isArray(value.questions) && value.questions.every(question => typeof question === 'object' && question !== null && 'number' in question && isNumber(question.number) && 'text' in question && typeof question.text === 'string' && 'selectedLetter' in question && (question.selectedLetter === null || typeof question.selectedLetter === 'string') && 'answers' in question && Array.isArray(question.answers))
     && 'attributes' in value && Array.isArray(value.attributes) && value.attributes.every(allocation)
     && 'skills' in value && Array.isArray(value.skills) && value.skills.every(skill => allocation(skill) && typeof skill === 'object' && skill !== null && 'label' in skill && typeof skill.label === 'string')
-    && 'startingGrants' in value && Array.isArray(value.startingGrants)
-    && 'unsupportedEffects' in value && Array.isArray(value.unsupportedEffects) && value.unsupportedEffects.every(effect => typeof effect === 'string');
+    && 'startingGrants' in value && Array.isArray(value.startingGrants);
 }
 }
 
@@ -902,7 +883,6 @@ function backgroundEditor(value: CharacterBackground | null, live: () => void): 
   questionGrid.append(...questions.map(question => question.element));
   const story: HTMLElement[] = [questionGrid, biography];
   if (value.startingGrants.length !== 0) { const grants = document.createElement('p'); grants.dataset.testid = 'character-starting-grants'; grants.textContent = `Starting grants: ${value.startingGrants.map(grant => `${grant.quantity} × ${grant.label}`).join(', ')}.`; story.push(grants); }
-  if (value.unsupportedEffects.length !== 0) { const unsupported = document.createElement('p'); unsupported.dataset.testid = 'character-background-unsupported-effects'; unsupported.textContent = `Recorded effects: ${value.unsupportedEffects.join(' ')}`; story.push(unsupported); }
 
   // The allocations are the ruleset's draft as published. A step asks for that draft with one point
   // moved and keeps nothing itself: a step the ruleset refuses (two pressed before it answered) leaves

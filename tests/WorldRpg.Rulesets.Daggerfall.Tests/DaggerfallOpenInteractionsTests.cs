@@ -21,11 +21,11 @@ public sealed class DaggerfallOpenInteractionsTests
         Assert.Null(open.ModeRequest(ProductMode.Playing, playerDefeated: false));
         dialogue = true;
         Assert.Equal(ProductMode.Modal, open.ModeRequest(ProductMode.Playing, playerDefeated: false));
-        Assert.Equal("Interaction open.", open.ModeMessage(ProductMode.Modal));
+        Assert.Equal(string.Empty, open.ModeMessage(ProductMode.Modal));
         dialogue = false;
         dungeonText = true;
         Assert.Null(open.ModeRequest(ProductMode.Modal, playerDefeated: false));
-        Assert.Equal("Dungeon text open.", open.ModeMessage(ProductMode.Modal));
+        Assert.Equal(string.Empty, open.ModeMessage(ProductMode.Modal));
         dungeonText = false;
         Assert.Equal(ProductMode.Playing, open.ModeRequest(ProductMode.Modal, playerDefeated: false));
         // The product's own modes have no screen to follow; death outranks everything.
@@ -42,7 +42,7 @@ public sealed class DaggerfallOpenInteractionsTests
 
         open.SetMenuOpen(true);
         Assert.Equal(ProductMode.Modal, open.ModeRequest(ProductMode.Playing, playerDefeated: false));
-        Assert.Equal("Menu open.", open.ModeMessage(ProductMode.Modal));
+        Assert.Equal(string.Empty, open.ModeMessage(ProductMode.Modal));
         // Opening the menu is the DOM acting on the pad's request, which the held world could not age away.
         Assert.Null(open.LatestPanelRequest);
 

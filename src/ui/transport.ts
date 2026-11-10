@@ -125,7 +125,7 @@ export function mountTransport(root: HTMLElement, claim: (action: TransportActio
       }
     });
     const wagonView = view.wagon;
-    wagonStatus.textContent = `${wagonView.message} ${formatClassicUnits(wagonView.usedClassicUnits)} / ${formatClassicUnits(wagonView.capacityClassicUnits)} classic weight units.`;
+    wagonStatus.textContent = `${wagonView.message} ${formatKilograms(wagonView.usedKilograms)} / ${formatKilograms(wagonView.capacityKilograms)} kg.`;
     const currentRevision = revision();
     const packItems = wagonView.accessible ? currentInventory?.items ?? [] : [];
     redraw(wagonContents, JSON.stringify([wagonView.accessible, wagonView.items, Boolean(currentRevision)]), () => {
@@ -209,8 +209,8 @@ export function isWagonProjection(value: unknown): value is WagonProjection {
   return typeof candidate.exists === 'boolean'
     && typeof candidate.accessible === 'boolean'
     && (candidate.id === null || typeof candidate.id === 'number')
-    && typeof candidate.usedClassicUnits === 'number' && Number.isFinite(candidate.usedClassicUnits)
-    && typeof candidate.capacityClassicUnits === 'number' && Number.isFinite(candidate.capacityClassicUnits)
+    && typeof candidate.usedKilograms === 'number' && Number.isFinite(candidate.usedKilograms)
+    && typeof candidate.capacityKilograms === 'number' && Number.isFinite(candidate.capacityKilograms)
     && (candidate.storeRevision === null || typeof candidate.storeRevision === 'string' || typeof candidate.storeRevision === 'number')
     && typeof candidate.message === 'string'
     && Array.isArray(candidate.items) && candidate.items.every(isTransportItemProjection)
@@ -227,7 +227,7 @@ export function isTransportItemProjection(value: unknown): value is TransportIte
 }
 
 
-export function formatClassicUnits(value: number): string {
-  return Number.isFinite(value) ? Math.max(0, value).toLocaleString() : 'unknown';
+export function formatKilograms(value: number): string {
+  return Number.isFinite(value) ? Math.max(0, value).toLocaleString(undefined, { maximumFractionDigits: 2 }) : 'unknown';
 }
 

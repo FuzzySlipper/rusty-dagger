@@ -9,11 +9,6 @@
   position: relative;
 }
 
-.dagger-character > :not(.dagger-character-chrome) { position: relative; z-index: 1; }
-.dagger-character-chrome { height: 100%; image-rendering: pixelated; inset: 0; object-fit: cover; opacity: .17; pointer-events: none; position: absolute; width: 100%; z-index: 0; }
-.dagger-character-title { margin: 0 0 .75rem; padding: .5625rem .8125rem; text-align: center; text-shadow: 1px 1px 0 #000; }
-.dagger-character-title p { color: #e4c676; font: 700 .64rem ui-monospace, monospace; letter-spacing: .1em; margin: 0 0 .1875rem; text-transform: uppercase; }
-.dagger-character-title h2 { color: #f8e7b4; font: 500 1.18rem Georgia, serif; letter-spacing: .06em; margin: 0; text-transform: uppercase; }
 .dagger-character-overview { background: #7d6c45; display: grid; gap: 1px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .dagger-character-overview div { background: rgb(20 21 16 / .9); display: grid; gap: .1875rem; min-width: 0; padding: .5rem; }
 /* The gap draws the lines in the overview's colour, so the last fact fills what is left of its row. */

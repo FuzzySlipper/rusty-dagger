@@ -109,13 +109,13 @@ internal sealed class DaggerfallOpenInteractions(
         return holds == (current == ProductMode.Modal) ? null : holds ? ProductMode.Modal : ProductMode.Playing;
     }
 
-    /// <summary>What the outcome line says while a mode other than ordinary play holds the world.</summary>
+    /// <summary>
+    /// What the outcome line says while a mode other than ordinary play holds the world. A screen that is up says what it
+    /// is itself, so only a container, whose line names what it holds, adds one.
+    /// </summary>
     internal string ModeMessage(ProductMode mode) => mode switch
     {
-        ProductMode.Modal => IsOpen(DaggerfallInteractionScreen.DungeonText) ? "Dungeon text open."
-            : IsOpen(DaggerfallInteractionScreen.LootContainer) ? lootMessage()
-            : IsOpen(DaggerfallInteractionScreen.Menu) ? "Menu open."
-            : "Interaction open.",
+        ProductMode.Modal => IsOpen(DaggerfallInteractionScreen.LootContainer) && !IsOpen(DaggerfallInteractionScreen.DungeonText) ? lootMessage() : string.Empty,
         ProductMode.Dead => "You have died.",
         ProductMode.Paused => "Paused.",
         // The entry screen says its own thing; a status line would compete with the screen that is up.

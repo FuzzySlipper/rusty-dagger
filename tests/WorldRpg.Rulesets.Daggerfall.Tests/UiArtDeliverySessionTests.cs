@@ -61,8 +61,8 @@ public sealed class UiArtDeliverySessionTests
         string[] portraits = [.. heads, .. factionFaces, .. childFaces, .. racialForms, .. backgrounds];
         string[] kit = AuthoredKit(root);
         Assert.Contains("ui.stone.window.v2", kit);
-        // The nine screens and atlases, and the item lists' magic and coin glints, are delivered up front with the rest.
-        Assert.Equal(9 + 2 + kit.Length + inputs.ClassicPresentation.InventoryIcons.Count + portraits.Length + DaggerfallTravelMap.MediaIds.Count, images.Count);
+        // The eight screens and atlases, and the item lists' magic and coin glints, are delivered up front with the rest.
+        Assert.Equal(8 + 2 + kit.Length + inputs.ClassicPresentation.InventoryIcons.Count + portraits.Length + DaggerfallTravelMap.MediaIds.Count, images.Count);
         Assert.All(images.Values, image => Assert.StartsWith("data:image/png;base64,", Assert.IsType<string>(image), StringComparison.Ordinal));
 
         // The bytes are the published artifacts, read from admitted content by their content name.
@@ -90,7 +90,6 @@ public sealed class UiArtDeliverySessionTests
         string[] expected =
         [
             "screen.death",
-            "window.character-sheet.chrome",
             // The supplied screens a mode is shown with, each published in the palette its own file
             // carries.
             "screen.character-generation",
@@ -199,7 +198,7 @@ public sealed class UiArtDeliverySessionTests
         // The check sees the identities the DOM is known to draw by name, so a pattern that stopped
         // matching them cannot pass on an empty set.
         Assert.Contains("screen.prison", named);
-        Assert.Contains("window.character-sheet.chrome", named);
+        Assert.Contains("screen.death", named);
         Assert.Contains("ui.stone.slot.v2", named);
 
         // No media file is named by the DOM: images are data the projection carries, never a path the
@@ -351,9 +350,7 @@ public sealed class UiArtDeliverySessionTests
         // whole artifact, not the first slice.
         byte[] large = new byte[(1024 * 1024) + 7];
         for (int index = 0; index < large.Length; index++) large[index] = (byte)(index % 251);
-        byte[] chrome = [1, 2, 3, 4];
         const string Screen = "worldrpg/media/ui/screen-death.png";
-        const string Chrome = "worldrpg/media/ui/window-character-sheet-chrome.png";
         byte[] skin = [9, 8, 7];
         byte[] titlebar = [6, 5, 4];
         byte[] slot = [3, 2, 1];
@@ -361,7 +358,6 @@ public sealed class UiArtDeliverySessionTests
         const string Titlebar = "worldrpg/media/ui/authored/ui-stone-title-v2.png";
         const string Slot = "worldrpg/media/ui/authored/ui-stone-slot-v2.png";
         content.Add(Screen, large);
-        content.Add(Chrome, chrome);
         content.Add(Skin, skin);
         content.Add(Titlebar, titlebar);
         content.Add(Slot, slot);
@@ -382,7 +378,6 @@ public sealed class UiArtDeliverySessionTests
             ["generator"] = "fixture",
             ["artifacts"] = new JsonArray(
                 Entry("screen.death", Screen, large),
-                Entry("window.character-sheet.chrome", Chrome, chrome),
                 Entry("ui.stone.texture.v2", Skin, skin),
                 // The import recorded a different original: the product's own tracked file is what is delivered.
                 Entry("ui.stone.title.v2", Titlebar, [.. titlebar, 0]),
@@ -409,8 +404,8 @@ public sealed class UiArtDeliverySessionTests
         Assert.Null(art.Images.Single(image => image.Id == "ui.stone.title.v2").Display);
         Assert.Equal($"data:image/png;base64,{Convert.ToBase64String(titlebar)}", art.Images.Single(image => image.Id == "ui.stone.title.v2").Image);
         // A derived artifact whose bytes disagree with the inventory the import wrote beside it is still refused.
-        content.Add(Chrome, [.. chrome, 5]);
-        Assert.Contains("where the inventory states 4",
+        content.Add(Screen, [.. large, 5]);
+        Assert.Contains($"where the inventory states {large.Length}",
             Assert.Throws<InvalidOperationException>(() => DaggerfallUiArt.Read(TestSessions.DataOf(content), [])).Message, StringComparison.Ordinal);
 
         static JsonObject Entry(string mediaId, string path, byte[] bytes, JsonObject? display = null) => new()

@@ -16,7 +16,7 @@ Three dispositions:
 | Family | Sources | Disposition | Drawn by |
 | --- | --- | --- | --- |
 | Menus and service screens (main, guild, bank, shop, talk, rest, inventory, item, book, scroll) | `MAIN00I0`, `MAIN03–05I0`, `INVE00I0`, `INVE08–14I0`, `BOOK00I0`, `REST00–02I0`, `SHOP00I0`, `GILD00–01I0`, `BANK00I0` | Authored kit; the classic chrome is published and not drawn | `menu.ts`, `dialogue.ts`, `transfer.ts`, `inventory.ts`, `journal.ts`, `lodging.ts` |
-| Character sheet chrome | `INFO00I0` | Classic, a 17% watermark under the kit frame | `character.ts` |
+| Character sheet chrome | `INFO00I0` | None (published, not drawn): the sheet is the kit frame | — |
 | Title | `TITL00I0` | Classic | `entry.ts` (`screens.ts`) |
 | Character creation backdrops | `CHGN00I0`, `PICK02I0` | Classic, behind the DOM creation form | `entry.ts` |
 | Start menu | `PICK03I0` | None (published, unbound) | — |

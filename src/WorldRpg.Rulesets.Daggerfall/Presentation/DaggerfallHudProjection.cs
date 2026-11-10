@@ -447,8 +447,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("exists", builder.Boolean(transport.Wagon.Exists)),
             ("accessible", builder.Boolean(transport.Wagon.Accessible)),
             ("id", transport.Wagon.Id is long wagonId ? builder.Number(wagonId) : builder.Null()),
-            ("usedClassicUnits", builder.Number(transport.Wagon.UsedClassicUnits)),
-            ("capacityClassicUnits", builder.Number(transport.Wagon.CapacityClassicUnits)),
+            ("usedKilograms", builder.Number(transport.Wagon.UsedClassicUnits / (double)DaggerfallEncumbrance.ClassicUnitsPerKilogram)),
+            ("capacityKilograms", builder.Number(transport.Wagon.CapacityClassicUnits / (double)DaggerfallEncumbrance.ClassicUnitsPerKilogram)),
             ("storeRevision", transport.Wagon.StoreRevision is ulong revision
                 ? builder.String(revision.ToString(CultureInfo.InvariantCulture)) : builder.Null()),
                 ("message", builder.String(transport.Wagon.Message)),
@@ -594,8 +594,6 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
 
     private static uint Merchant(UiValueBuilder builder, DaggerfallMerchantView merchant) => builder.Object(
         ("revision", builder.String(merchant.Revision)),
-        ("provider", builder.String(merchant.Provider)),
-        ("quality", builder.Number(merchant.Quality)),
         ("gold", builder.String(merchant.PlayerGold.ToString(CultureInfo.InvariantCulture))),
         ("buyAvailable", builder.Boolean(merchant.CanBuy)),
         ("shopliftAvailable", builder.Boolean(merchant.CanShoplift)),
@@ -787,7 +785,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("key", builder.String(item.Key)), ("definition", builder.String(item.Definition)),
         ("label", builder.String(item.Label)), ("quantity", builder.String(item.Quantity)),
         ("weight", builder.Number(item.Weight)), ("weightKilograms", builder.Number(item.WeightKilograms)), ("value", builder.Number(item.Value)),
-        ("details", builder.String(item.Details)), ("icon", item.Icon is null ? builder.Null() : builder.String(item.Icon)), ("iconTint", Tint(builder, item.IconTint)),
+        ("details", builder.String(item.Details)), ("detailsStateFacts", builder.Boolean(item.DetailsStateFacts)),
+        ("notes", builder.Array(item.Notes.Select(builder.String).ToArray())), ("icon", item.Icon is null ? builder.Null() : builder.String(item.Icon)), ("iconTint", Tint(builder, item.IconTint)),
         ("condition", item.Condition is { } condition ? builder.Object(("current", builder.Number(condition.Current)),
             ("maximum", builder.Number(condition.Maximum)), ("percentage", builder.Number(condition.Percentage)),
             ("broken", builder.Boolean(condition.Broken)), ("low", builder.Boolean(condition.Low))) : builder.Null()),
@@ -987,8 +986,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("rolled", builder.Number(attribute.Rolled)), ("allocated", builder.Number(attribute.Allocated)), ("value", builder.Number(attribute.Value)), ("maximum", builder.Number(attribute.Maximum)), ("canAllocate", builder.Boolean(attribute.CanAllocate)))).ToArray())),
         ("skills", builder.Array(background.Skills.Select(skill => builder.Object(("id", builder.String(skill.Id)), ("label", builder.String(skill.Label)), ("tier", builder.String(skill.Tier)),
             ("rolled", builder.Number(skill.Rolled)), ("allocated", builder.Number(skill.Allocated)), ("biographyBonus", builder.Number(skill.BiographyBonus)), ("value", builder.Number(skill.Value)), ("canAllocate", builder.Boolean(skill.CanAllocate)))).ToArray())),
-        ("startingGrants", builder.Array(background.StartingGrants.Select(grant => builder.Object(("itemId", builder.String(grant.ItemId)), ("label", builder.String(grant.Label)), ("templateIndex", builder.Number(grant.TemplateIndex)), ("quantity", builder.Number((long)grant.Quantity)), ("sourceEffect", builder.String(grant.SourceEffect)))).ToArray())),
-        ("unsupportedEffects", builder.Array(background.UnsupportedEffects.Select(builder.String).ToArray())));
+        ("startingGrants", builder.Array(background.StartingGrants.Select(grant => builder.Object(("itemId", builder.String(grant.ItemId)), ("label", builder.String(grant.Label)), ("templateIndex", builder.Number(grant.TemplateIndex)), ("quantity", builder.Number((long)grant.Quantity)), ("sourceEffect", builder.String(grant.SourceEffect)))).ToArray())));
 
     private static uint Choices(UiValueBuilder builder, IEnumerable<DaggerfallCharacterChoice> choices) => builder.Array(choices.Select(choice => builder.Object(
         ("id", builder.String(choice.Id)), ("label", builder.String(choice.Label)), ("available", builder.Boolean(choice.Available)),

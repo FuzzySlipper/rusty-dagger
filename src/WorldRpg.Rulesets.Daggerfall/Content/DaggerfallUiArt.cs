@@ -36,7 +36,6 @@ internal sealed class DaggerfallUiArt
         "screen.prison",
         "screen.start-menu",
         "screen.title",
-        "window.character-sheet.chrome",
         // The spell icon atlas the spellbook and spellmaker draw every spell's icon from, and the targeting and
         // element tiles they show beside a spell.
         "spell.icons",

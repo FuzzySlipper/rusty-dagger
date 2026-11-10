@@ -841,8 +841,8 @@
       "exists": false,
       "accessible": false,
       "id": null,
-      "usedClassicUnits": 0,
-      "capacityClassicUnits": 300000,
+      "usedKilograms": 0,
+      "capacityKilograms": 750,
       "storeRevision": null,
       "message": "The wagon is unavailable here.",
       "items": [],
@@ -1275,6 +1275,8 @@
         "weightKilograms": 0,
         "value": 1,
         "details": "Gold Piece\nCondition: New\nWorth: 25 gold\nWeight: 0 kilograms",
+        "detailsStateFacts": true,
+        "notes": [],
         "icon": "inventory.icon.gold-piece",
         "iconTint": null,
         "condition": {
@@ -1308,6 +1310,8 @@
         "weightKilograms": 4.5,
         "value": 15,
         "details": "Iron Longsword \n1 - 15 points of damage\nCondition: New\nWeight: 4.50 kilograms",
+        "detailsStateFacts": true,
+        "notes": [],
         "icon": "paper-doll.234.12.iron",
         "iconTint": null,
         "condition": {
@@ -1352,6 +1356,8 @@
         "weightKilograms": 0.5,
         "value": 1,
         "details": "Iron Dagger \n0 - 5 points of damage\nCondition: New\nWeight: 0.50 kilograms",
+        "detailsStateFacts": true,
+        "notes": [],
         "icon": "paper-doll.234.5.iron",
         "iconTint": null,
         "condition": {
@@ -1405,6 +1411,8 @@
         "weightKilograms": 12.5,
         "value": 100,
         "details": "Iron Cuirass \n\u002B7 to armor rating\nCondition: New\nWeight: 12.50 kilograms",
+        "detailsStateFacts": true,
+        "notes": [],
         "icon": "paper-doll.251.3",
         "iconTint": null,
         "condition": {

@@ -93,6 +93,10 @@ export interface InventoryItem {
   readonly weightKilograms?: number;
   readonly value: number;
   readonly details: string;
+  /** The details are the item's information text, whose name, figures, condition, worth and weight are this row's fields too. */
+  readonly detailsStateFacts?: boolean;
+  /** What the information text says that no field does (a book's author, a gem's soul), shown in its place. */
+  readonly notes?: readonly string[];
   readonly icon: string | null;
   /** The dye or metal a refreshed icon is drawn in, or null. */
   readonly iconTint?: ArtTint | null;
@@ -921,7 +925,10 @@ function itemTooltip(item: InventoryItem, slotLabel: (id: string) => string): HT
   name.textContent = item.label;
   parts.push(name);
   if (!item.identified) parts.push(line('dagger-inventory-tip-warning', 'Unidentified'));
-  if (item.details) parts.push(line('dagger-inventory-tip-details', item.details));
+  // Information text states the name, figures, condition, worth and weight the tooltip draws from the row's fields,
+  // so only what it says beyond them is shown.
+  const details = item.detailsStateFacts === true ? (item.notes ?? []).join('\n') : item.details;
+  if (details) parts.push(line('dagger-inventory-tip-details', details));
   const facts = document.createElement('dl');
   const fact = (term: string, value: string): void => {
     const dt = document.createElement('dt'); dt.textContent = term;

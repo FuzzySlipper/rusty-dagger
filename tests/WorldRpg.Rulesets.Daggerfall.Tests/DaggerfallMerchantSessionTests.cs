@@ -40,6 +40,22 @@ public sealed class DaggerfallMerchantSessionTests
         Assert.Equal(3UL, session.State.Merchants.Read(context).Stock.Single(item => item.Key == row.Key).Quantity);
     }
 
+    [Fact]
+    public void The_players_gold_is_the_purse_and_never_a_row_offered_for_sale()
+    {
+        using var fixture = new ConditionSessionFixture(random: RandomMaximum.Create());
+        DaggerfallSession session = fixture.Session;
+        session.AdvanceElapsedTime(6 * 60 * 60);
+        DaggerfallMerchantProviderContext context = Context(OpenProvider(session, faction: 0, service: "shop", "shop"), buildingType: 13);
+        AddGold(session, 950);
+        AddArrows(session, 10);
+
+        DaggerfallMerchantView view = session.State.Merchants.Read(context);
+        Assert.True(view.PlayerGold >= 950UL);
+        Assert.DoesNotContain(view.PlayerItems, item => item.Key == "stack:merchant.test.gold");
+        Assert.Contains(view.PlayerItems, item => item.Key == "stack:merchant.test.arrows");
+    }
+
     [Theory]
     [InlineData("Mace")]
     [InlineData("Club")]

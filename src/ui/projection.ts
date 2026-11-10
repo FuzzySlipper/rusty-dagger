@@ -272,8 +272,6 @@ export interface MerchantItemProjection {
 
 export interface MerchantProjection {
   readonly revision: string;
-  readonly provider: string;
-  readonly quality: number;
   readonly gold: string | number;
   readonly buyAvailable: boolean;
   readonly shopliftAvailable?: boolean;
@@ -352,8 +350,8 @@ export interface WagonProjection {
   readonly exists: boolean;
   readonly accessible: boolean;
   readonly id: number | null;
-  readonly usedClassicUnits: number;
-  readonly capacityClassicUnits: number;
+  readonly usedKilograms: number;
+  readonly capacityKilograms: number;
   readonly storeRevision: string | number | null;
   readonly message: string;
   readonly items: readonly TransportItemProjection[];

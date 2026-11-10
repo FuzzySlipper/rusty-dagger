@@ -51,6 +51,9 @@
 }
 .dagger-frame[data-skin="parchment"] :is(h1, h2, h3, h4, strong, dt) { color: #2a170a; }
 .dagger-frame[data-skin="parchment"] :is(p, li, dd, span, label, small) { color: inherit; }
+/* Key hints on a page are inked like its text, their keys pressed into it rather than lit on stone. */
+.dagger-frame[data-skin="parchment"] .dagger-input-hints { color: #5b4322; }
+.dagger-frame[data-skin="parchment"] .dagger-input-hints kbd { border-color: #7a5a2c; background: rgb(122 90 44 / .14); color: #2a170a; }
 
 /* Title plate: brass, its pointed ends kept, the middle stretched to the title. */
 .dagger-frame-title {

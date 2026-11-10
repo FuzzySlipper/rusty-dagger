@@ -20,6 +20,16 @@ internal sealed record InventoryItemPresentation(string Key, string Definition, 
     /// <summary>Whether the item is enchanted, so it shimmers with the magic glint wherever it is shown.</summary>
     internal bool Enchanted { get; init; }
 
+    /// <summary>
+    /// Whether <see cref="InventoryItemPresentation.Details"/> is the donor's item information text. Its name, fighting
+    /// figure, condition, worth and weight are this row's own fields too, so a screen that shows the fields shows
+    /// <see cref="Notes"/> in place of the text.
+    /// </summary>
+    internal bool DetailsStateFacts { get; init; }
+
+    /// <summary>What the information text says that no field of the row does: a book's author, the soul a gem holds.</summary>
+    internal string[] Notes { get; init; } = [];
+
     /// <summary>The weight in kilograms; <see cref="Weight"/> is in the template's quarter-kilogram units.</summary>
     internal double WeightKilograms => Weight * (double)DaggerfallEncumbrancePolicy.TemplateWeightToClassicUnits / DaggerfallEncumbrance.ClassicUnitsPerKilogram;
 }
@@ -594,6 +604,8 @@ internal sealed class DaggerfallInventoryPresentation
         DaggerfallItemInstanceMetadata? metadata = Metadata(key, owner ?? itemOwner);
         ItemDisplay display = Display(definition, metadata);
         string details = display.Details;
+        bool detailsStateFacts = false;
+        string[] notes = [];
         if (metadata is not null && itemCondition is not null && metadata.Enchantment is null
             && metadata.MadeEnchantment is null && metadata.Conjuration is null
             && definition.Template?.Groups.Contains("Paintings") != true && definition.Template?.Index != 278)
@@ -610,6 +622,13 @@ internal sealed class DaggerfallInventoryPresentation
                 definition, metadata, DaggerfallItemNames.BaseName(definitions, definition), quantity, CurrentValue(definition, metadata)) };
             details = definitions.TextPresentation.Resolve(new(DaggerfallTextKind.Resource,
                 record.ToString(CultureInfo.InvariantCulture)), context).Text.Trim();
+            detailsStateFacts = true;
+            notes = record switch
+            {
+                1009 when context.Item.BookAuthor is { Length: > 0 } author => [$"By {author}"],
+                1004 when context.Item.HeldSoul is { Length: > 0 } soul => [$"Holding: {soul}"],
+                _ => [],
+            };
         }
         // Eligibility belongs to the carried rows only: a loot or container row is taken before it is used.
         bool carried = owner is null;
@@ -627,7 +646,7 @@ internal sealed class DaggerfallInventoryPresentation
             CanUseMagic: carried && metadata is not null && (metadata.HasEnchantment || metadata.PotionRecipeKey is not null)
                 && itemUse?.CanUse(itemId, metadata) == true,
             Category: Category(definition, metadata), Stackable: key.StartsWith("stack:", StringComparison.Ordinal), DropRefusal: dropRefusal,
-            Stats: Stats(definition, metadata)) { IconTint = iconTint, Enchanted = metadata?.HasEnchantment == true };
+            Stats: Stats(definition, metadata)) { IconTint = iconTint, Enchanted = metadata?.HasEnchantment == true, DetailsStateFacts = detailsStateFacts, Notes = notes };
     }
 
     /// <summary>The durable meaning of one equipped item, or null before item meaning is composed.</summary>

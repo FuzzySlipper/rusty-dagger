@@ -432,7 +432,7 @@ own whole-pixel rule through `fitPixelArt`. The browser's default
 fixed-pixel font for form controls is replaced by a rem size, so inputs,
 selects and buttons scale too.
 
-**Classic art** (title, death, character-sheet chrome, faces, item icons) is
+**Classic art** (title, death, faces, item icons) is
 derived from the operator's Arena2 files, never committed, and delivered in
 the HUD projection's `uiArt` by `DaggerfallUiArt`. `src/ui/art.ts` adopts it,
 and `fitPixelArt` draws a classic screen at the largest whole number of device

@@ -293,7 +293,7 @@ test('transport projection exposes land selection and admitted ship boarding', (
         { id: 'cart', mode: 'cart', available: false, selected: false, label: 'Cart', message: 'No cart.', travelModifier: 192 },
         { id: 'ship', mode: 'ship', available: true, selected: false, label: 'Ship', message: 'Board.', travelModifier: 256 },
       ],
-      wagon: { exists: false, accessible: false, id: null, usedClassicUnits: 0, capacityClassicUnits: 300000, storeRevision: null, message: 'Unavailable.', items: [], refusedDefinitions: [] },
+      wagon: { exists: false, accessible: false, id: null, usedKilograms: 0, capacityKilograms: 750, storeRevision: null, message: 'Unavailable.', items: [], refusedDefinitions: [] },
     } });
     f.root.querySelector('[data-action="transport"]').click();
     const horse = f.root.querySelector('[data-transport-mode="horse"]');
@@ -357,7 +357,7 @@ test('accessible wagon projection sends revision guarded put and take selections
         mode: 'cart', onShip: false, canRun: true, summary: 'Overland journeys take the ordinary time on foot. You can run.', travelModifier: 192, oceanMinutesPerMapPixel: 255,
         options: [{ id: 'cart', mode: 'cart', available: true, selected: true, label: 'Cart', message: 'Cart.', travelModifier: 192 }],
         wagon: {
-          exists: true, accessible: true, id: 7, usedClassicUnits: 12, capacityClassicUnits: 300000, storeRevision: '8', message: 'Available.',
+          exists: true, accessible: true, id: 7, usedKilograms: 0.03, capacityKilograms: 750, storeRevision: '8', message: 'Available.',
           items: [{ key: 'stack:daggerfall.wagon.7.gold', definition: 'gold-piece', label: 'Gold piece', quantity: '2' }],
           refusedDefinitions: [],
         },
@@ -368,6 +368,25 @@ test('accessible wagon projection sends revision guarded put and take selections
     assert.deepEqual(f.actions.at(-1), { action: 'wagon-put', revision: '21:2:0', item: 'stack:pack.gold', amount: 4 });
     f.root.querySelector('[data-action="wagon-take"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'wagon-take', revision: '21:2:0', item: 'stack:daggerfall.wagon.7.gold', amount: 2 });
+  } finally { f.dispose(); }
+});
+
+test('an item tooltip states each fact once: information text gives way to the row\'s fields and its notes', () => {
+  const f = fixture();
+  try {
+    f.publish({ inventory: {
+      revision: '1', message: '', equipmentChange: null, slots: [],
+      items: [{ key: 'unique:8', definition: 'book', label: 'The Real Barenziah', quantity: '1', weight: 1, weightKilograms: 0.25, value: 50,
+        details: 'The Real Barenziah by Anonymous\nWorth: 50 gold\nWeight: 0.25 kilograms', detailsStateFacts: true, notes: ['By Anonymous'], icon: null,
+        condition: { current: 75, maximum: 75, percentage: 100, broken: false }, identified: true,
+        gridSlot: 0, equippedSlots: [], compatibleSlots: [] }],
+    } });
+    f.root.querySelector('[data-inventory-item="unique:8"]').dispatchEvent(new window.Event('focusin', { bubbles: true }));
+    const tip = f.root.querySelector('.dagger-inventory-tip');
+    assert.equal(tip.querySelector('.dagger-inventory-tip-details').textContent, 'By Anonymous');
+    assert.equal(tip.textContent.match(/Barenziah/g).length, 1, 'The name heads the tooltip once.');
+    assert.equal(tip.textContent.match(/50 gold/g).length, 1, 'Worth is stated once.');
+    assert.equal(tip.textContent.match(/0\.25/g).length, 1, 'Weight is stated once.');
   } finally { f.dispose(); }
 });
 
@@ -1500,7 +1519,7 @@ test('transport controls keep focus through an unchanged snapshot, and a focus f
         { id: 'foot', mode: 'foot', available: true, selected: true, label: 'Foot', message: 'Walk.', travelModifier: 256 },
         { id: 'horse', mode: 'horse', available: true, selected: false, label: 'Horse', message: 'Ride.', travelModifier: 128 },
       ],
-      wagon: { exists: false, accessible: false, id: null, usedClassicUnits: 0, capacityClassicUnits: 300000, storeRevision: null, message: 'Unavailable.', items: [], refusedDefinitions: [] } };
+      wagon: { exists: false, accessible: false, id: null, usedKilograms: 0, capacityKilograms: 750, storeRevision: null, message: 'Unavailable.', items: [], refusedDefinitions: [] } };
     f.publish({ transport });
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
     f.root.querySelector('.dagger-menu-home [data-action="transport"]').click();
@@ -1905,7 +1924,7 @@ test('title character choices are projected and committed through semantic actio
       genders: [{ id: 'male', label: 'Male' }, { id: 'female', label: 'Female' }], blocked, quickStartBlocked: null,
       background: { biographyClassIndex: 0, biography: ['A readable biography.'], attributeBonusPool: 2, remainingAttributePoints: 0, primarySkillPoints: 0, majorSkillPoints: 0, minorSkillPoints: 0,
         questions: [], attributes: [{ id: 'strength', label: 'Strength', rolled: 50, allocated: 2, value: 52, maximum: 100, canAllocate: false }],
-        skills: [], startingGrants: [], unsupportedEffects: [] },
+        skills: [], startingGrants: [] },
     } } });
     f.publish(creation('', ['Enter a name.']));
     // Every choice is labelled, and the ruleset's reasons hold the commit until the draft is complete.
@@ -1980,13 +1999,13 @@ test('title creation renders normalized questions and sends each allocation for 
           questions: [{ number: 1, text: 'Where did you study?', selectedLetter: 'a', answers: [{ letter: 'a', text: 'At home.' }, { letter: 'b', text: 'At court.' }] }],
           attributes: [{ id: 'strength', label: 'Strength', rolled: 50, allocated: strength, value: 50 + strength, maximum: 100, canAllocate }],
           skills: [{ id: 'medical', label: 'Medical', tier: 'primary', rolled: 28, allocated: 1, biographyBonus: 0, value: 29, canAllocate: true }],
-          startingGrants: [{ itemId: 'template-113-iron', label: 'Longsword', templateIndex: 113, quantity: 1, sourceEffect: 'IT 3 0 0' }], unsupportedEffects: ['The source retains this fatigue background effect without a gameplay consequence.'] },
+          startingGrants: [{ itemId: 'template-113-iron', label: 'Longsword', templateIndex: 113, quantity: 1, sourceEffect: 'IT 3 0 0' }] },
       },
     } });
     f.publish(draft(2, 4, true));
     assert.match(f.root.querySelector('[data-testid="character-biography"]').textContent, /readable biography/);
     assert.equal(f.root.querySelector('[data-testid="character-starting-grants"]').textContent, 'Starting grants: 1 × Longsword.');
-    assert.match(f.root.querySelector('[data-testid="character-background-unsupported-effects"]').textContent, /fatigue background effect/);
+    assert.equal(f.root.querySelector('[data-testid="character-background-unsupported-effects"]'), null, 'Effects the game does not model are not told to the player.');
     const add = label => f.root.querySelector(`[aria-label="Add a point to ${label}"]`);
     // What is left and whether a point can go to a row are the ruleset's.
     assert.equal(f.root.querySelector('[data-testid="character-allocation-pools"]').textContent, '4 bonus points left');
@@ -2775,7 +2794,7 @@ test('wagon put is refused for the definitions the ruleset names', () => {
         mode: 'cart', onShip: false, canRun: true, summary: 'Overland journeys take the ordinary time on foot. You can run.', travelModifier: 192, oceanMinutesPerMapPixel: 255,
         options: [{ id: 'cart', mode: 'cart', available: true, selected: true, label: 'Cart', message: 'Cart.', travelModifier: 192 }],
         wagon: {
-          exists: true, accessible: true, id: 7, usedClassicUnits: 0, capacityClassicUnits: 300000, storeRevision: '8', message: 'Available.',
+          exists: true, accessible: true, id: 7, usedKilograms: 0, capacityKilograms: 750, storeRevision: '8', message: 'Available.',
           items: [], refusedDefinitions: ['cart-deed'],
         },
       },
