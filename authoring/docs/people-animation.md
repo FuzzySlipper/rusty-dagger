@@ -67,7 +67,10 @@ setup, each piece fitted to one body:
    a key; BiRefNet joined with a ground key for the body, which brings back a staff.
 
 The painting the rig is assembled against is the stack of all three, and See-through runs on the body
-alone.
+alone. A generated garment keeps its own art throughout: assembly would colour it from the worn
+picture, where the arm lies over it at a slightly different place than in the body. What hangs on
+it, such as a belt pouch, is cut from the worn picture as a part of its own on the hip, over the
+garment and under the near arm.
 
 ## Parts
 
@@ -114,6 +117,9 @@ alone.
   are recoloured from the front hair's own colours, matched by brightness and a shade darker, since
   hair behind the head is in shadow. Only back hair that no other part covers and that is clearly
   hair-coloured keeps its pixels: the cut-out leaves the white backing in the gaps beside the jaw.
+  In profile, where the head is cut whole from the painting, the full run's back hair is drawn
+  behind everything as well: See-through paints it on behind the near arm, so a swinging sleeve
+  bares hair rather than a gap. There it is recoloured darker still (0.6), in shadow behind her.
 - **Hidden skin:** See-through bleeds cloth colour into skin it paints in. In bare-skin limb parts,
   a pixel greener than it is red is refilled from the skin around it, after assembly.
 - **Held staff:** a bone from its planted foot to the grip, aimed by a one-bone IK at a grip bone on
@@ -217,6 +223,13 @@ repainted in the stationary people's style rather than converted from its classi
    divides.
 5. **Retarget:** `rig-pose clean --loop --depth walk --hold off`, then retarget with the feet
    planted. Front and back let the shin shorten to 0.55, and the front orders the legs by depth.
+   **Arms:** the retarget turns each segment to its picture angle only. From the front and behind,
+   an arm swinging toward and away from the camera shows as shortening, and what the retarget makes
+   of it is the arms swinging out and in. There the sideways turn keeps 30 % of its swing about its
+   own mean, and each arm segment shortens along itself as `clean --depth` measured it, its picture
+   length over its longest in the cycle. In profile the forearm trails the shoulder: it turns by 0.6
+   of how far the upper arm moved over the last 0.1 s, the other way, never bending back past
+   straight further than the clip does.
 6. **Placement:** each clip draws the figure at its own height and offset. After the retarget, the
    rig's root moves so the walk's planted foot stands on y = 0 and the rig source's neck on x = 0, so
    a change of view, mirrored or not, keeps the feet and head in place.
