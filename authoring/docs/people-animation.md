@@ -219,6 +219,13 @@ repainted in the stationary people's style rather than converted from its classi
    on the back. The whole head keeps only the pixels where See-through's frontmost layer belongs to
    the head, so a sleeve cap or the bodice inside the box stays with its own part. Under the head,
    those parts take See-through's own paint rather than the painting's, which there shows the hair.
+   A belt rides the hips. The bodice is weighted along a chest segment and a hip segment, and both
+   run down the body's middle, so a vertex at the belt's end sits about as far from either and takes
+   half of each. The walk turns the chest against the hips, so the belt would shear apart at the
+   buckle. The belt is found in See-through's bodice layer, the band near its bottom in the belt's
+   dark, cool colour. The hip segment is laid along the belt's middle from end to end, the chest
+   segment ends a belt's height above it, and the falloff exponent is 4. The belt is then at least
+   94 % hip in every view, and the waist above it blends.
 4. **Cycle:** RTMW on every frame. The period comes from the ankles: the shortest whose
    correlation is within 0.03 of the best, since two cycles correlate as well as one. The cycle is cut where its
    two ends agree best and turned to start where the left foot pushes off, the same event in
