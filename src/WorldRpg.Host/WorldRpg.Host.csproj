@@ -80,6 +80,7 @@
     <RustyEngineProductInputIntent Include="use-magic-item" Value="digital" />
     <RustyEngineProductInputIntent Include="recast" Value="digital" />
     <RustyEngineProductInputIntent Include="abort-spell" Value="digital" />
+    <RustyEngineProductInputIntent Include="radial" Value="digital" />
     <RustyEngineProductInputIntent Include="attack" Value="digital" />
     <!-- A mapping fires on its one edge, so what reads how long a button stays down maps its press and its release. -->
     <RustyEngineProductInputMapping Include="attack.primary" Intent="attack" Trigger="pointer-button:primary:pressed" />

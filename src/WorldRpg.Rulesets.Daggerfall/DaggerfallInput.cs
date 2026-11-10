@@ -23,7 +23,8 @@ internal static class DaggerfallInput
         KeyboardControl.KeyD,
         new DirectionalMovementBindings("move.forward"u8.ToArray(), "move.backward"u8.ToArray(), "move.left"u8.ToArray(), "move.right"u8.ToArray()));
     internal static readonly string[] Shortcuts = ["spell", "rest", "transport", "activation.steal", "activation.grab",
-        "activation.info", "activation.talk", "quick-save", "quick-load", "logbook", "notebook", "travel-map", "use-magic-item", "recast", "abort-spell"];
+        "activation.info", "activation.talk", "quick-save", "quick-load", "logbook", "notebook", "travel-map", "use-magic-item", "recast", "abort-spell",
+        "radial"];
     internal static InputActionId Shortcut(string id) => new("daggerfall." + id);
     internal static readonly IReadOnlyList<InputActionBinding> Bindings = [
         .. Shortcuts.Select(id => new InputActionBinding(Shortcut(id), System.Text.Encoding.UTF8.GetBytes(id))),
@@ -55,7 +56,7 @@ internal static class DaggerfallInput
     /// <summary>
     /// The pad's action buttons in the layout the browser shell delivers: the bottom face attacks, the
     /// right face reaches for what the player is facing, the left face readies the weapon, the top
-    /// face opens the character sheet, the left shoulder guards, the right shoulder kicks, select opens
+    /// face opens the command radial, the left shoulder guards, the right shoulder kicks, select opens
     /// the pack, and start opens the menu. They are
     /// product bindings rather than engine mappings because the Engine publishes positions and this is
     /// the layer that knows what an action means.
@@ -64,7 +65,7 @@ internal static class DaggerfallInput
         new(ControllerButton.Button0, Attack),
         new(ControllerButton.Button1, Interact),
         new(ControllerButton.Button2, ToggleWeapon),
-        new(ControllerButton.Button3, Character),
+        new(ControllerButton.Button3, Shortcut("radial")),
         new(ControllerButton.Button4, Block),
         new(ControllerButton.Button5, Kick),
         new(ControllerButton.Button8, Inventory),

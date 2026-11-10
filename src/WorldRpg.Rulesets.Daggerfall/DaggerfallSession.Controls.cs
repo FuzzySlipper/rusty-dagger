@@ -123,6 +123,7 @@ internal sealed partial class DaggerfallSession
             case "notebook": RequestPanel(DaggerfallPanel.Notebook); break;
             case "travel-map": ChangeTravelMap(new("travel-map", Open: true)); RequestPanel(DaggerfallPanel.Travel); break;
             case "use-magic-item": RequestPanel("magic-items"); break;
+            case "radial": RequestPanel(DaggerfallPanel.Radial); break;
             case "abort-spell": ChangeSpell(new("spell-unready")); break;
             case "recast":
                 _attackClock.PressCast();

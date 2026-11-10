@@ -21,7 +21,6 @@ export function mountShell(root: HTMLElement): { shell: HTMLElement; dispose(): 
 }
 
 const SHELL_MARKUP = `
-    <div class="dagger-title"><span class="dagger-site"></span><strong>Exploring</strong><span class="dagger-calendar" aria-live="off"></span></div>
     <div class="dagger-compass" aria-hidden="true"><div class="dagger-compass-strip"></div><div class="dagger-compass-contacts"></div></div>
     <p class="dagger-view" aria-live="off"></p>
     <div class="dagger-reticle" aria-hidden="true"></div>
@@ -29,11 +28,6 @@ const SHELL_MARKUP = `
     <section class="dagger-vitals" aria-label="Vitals"></section>
     <ol class="dagger-outcome" role="status" aria-label="Recent messages"><li>Awaiting projection…</li></ol>
     <div class="dagger-breath" hidden><span class="dagger-breath-label">Breath</span><span class="dagger-bar"><span></span></span><strong></strong></div>
-    <section class="dagger-loadout" aria-label="Ready">
-      <p class="dagger-ready-spell" hidden><span class="dagger-ready-spell-icon"></span><span class="dagger-ready-spell-name"></span></p>
-      <p class="dagger-weapon" hidden><span class="dagger-weapon-state"></span><strong class="dagger-weapon-name"></strong></p>
-      <span class="dagger-activation-indicator" aria-live="polite"></span>
-    </section>
     <section class="dagger-quests" aria-live="polite"></section>
     <section class="dagger-detectors" aria-label="Detected nearby"></section><section class="dagger-status"></section><section class="dagger-effects" aria-label="Active effects" hidden><h2>Active effects</h2><ul></ul></section><button class="dagger-cinematic-skip" type="button" hidden>Skip</button>
     <div class="dagger-death" role="alertdialog" aria-labelledby="dagger-death-title" hidden>
@@ -55,7 +49,18 @@ const SHELL_MARKUP = `
       <button class="dagger-dungeon-text-close" type="button">Continue</button>
     </section>
     <div class="dagger-entry" role="dialog" aria-label="Title" hidden><img class="dagger-entry-screen" alt="Rusty Dagger"><button class="dagger-entry-begin" type="button">Begin</button></div>
-    <button class="dagger-menu-toggle" type="button" data-action="menu" aria-haspopup="dialog">Menu · Esc</button>
+    <dialog class="dagger-radial" aria-label="Commands">
+      <div class="dagger-radial-ring" role="menu" aria-label="Commands"></div>
+      <div class="dagger-radial-centre">
+        <p class="dagger-radial-label" aria-live="polite"></p>
+        <div class="dagger-title"><span class="dagger-site"></span><strong>Exploring</strong><span class="dagger-calendar" aria-live="off"></span></div>
+        <section class="dagger-loadout" aria-label="Ready">
+          <p class="dagger-ready-spell" hidden><span class="dagger-ready-spell-icon"></span><span class="dagger-ready-spell-name"></span></p>
+          <p class="dagger-weapon" hidden><span class="dagger-weapon-state"></span><strong class="dagger-weapon-name"></strong></p>
+          <span class="dagger-activation-indicator" aria-live="polite"></span>
+        </section>
+      </div>
+    </dialog>
     <dialog class="dagger-menu dagger-frame" data-size="narrow" aria-labelledby="dagger-menu-title">
       <h1 id="dagger-menu-title" class="dagger-frame-title" tabindex="-1">Game menu</h1>
       <div class="dagger-menu-home">

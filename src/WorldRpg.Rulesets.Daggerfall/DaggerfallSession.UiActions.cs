@@ -168,6 +168,7 @@ internal sealed partial class DaggerfallSession
                 if (!opensInteraction && !_interactions.HoldsWorldOpen) _attackClock.PressCast(); break;
             case DaggerfallUiActionKind.Attack: if (!opensInteraction) firstStep.Request(DaggerfallInput.Attack); break;
             case DaggerfallUiActionKind.Loot: firstStep.Request(DaggerfallInput.Interact); break;
+            case DaggerfallUiActionKind.WeaponToggle: ToggleWeapon(); break;
             case DaggerfallUiActionKind.DialogueTone:
             case DaggerfallUiActionKind.DialogueTopic:
             case DaggerfallUiActionKind.DialogueClose: _ = ApplyDialogueAction(action); break;

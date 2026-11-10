@@ -93,7 +93,7 @@
       },
       {
         "button": 3,
-        "action": "daggerfall.character"
+        "action": "daggerfall.radial"
       },
       {
         "button": 4,

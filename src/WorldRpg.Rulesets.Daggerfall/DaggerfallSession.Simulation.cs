@@ -278,13 +278,19 @@ internal sealed partial class DaggerfallSession
     /// <summary>Acts waiting for this admitted update's enemy impacts; never carried past the update.</summary>
     private DaggerfallPlayerActs? _deferredPlayerActs;
 
+    /// <summary>Readies or sheathes the weapon: its key on a step, or the radial's command, which a held world never steps.</summary>
+    private void ToggleWeapon()
+    {
+        // The reins take the hands while riding: mounted combat is its own task.
+        if (State.Transport.IsOnFoot || State.Transport.OnShip) State.WeaponDrawn = !State.WeaponDrawn;
+    }
+
     private void ApplyPlayerActs(DaggerfallPlayerActs acts)
     {
         foreach (string shortcut in acts.Shortcuts) ApplyShortcut(shortcut);
         // A menu/mode shortcut consumes this slice's attack and activation, just like a UI request.
         if (acts.Shortcuts.Length != 0) acts = acts with { Attack = false, Kick = false, Interact = false };
-        // The reins take the hands while riding: mounted combat is its own task.
-        if (acts.ToggleWeapon && (State.Transport.IsOnFoot || State.Transport.OnShip)) State.WeaponDrawn = !State.WeaponDrawn;
+        if (acts.ToggleWeapon) ToggleWeapon();
         _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);
         LookReceipt currentLook = _input.ResolveCurrentLook(State.PlayerControl);
         // Interaction owns this slice once requested. Direct semantic input can carry both intents

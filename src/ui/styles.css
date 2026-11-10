@@ -618,3 +618,22 @@ body, dialog { font-family: var(--font-body); }
 /* The menu's commands: icons sized to the button they head. */
 .dagger-menu-home [data-icon]::before { width: 1.75rem; height: 1.75rem; }
 .dagger-creation-stepper output.is-zero { opacity: .45; }
+
+/* The command radial: a stone disc of commands round the place, mode, time and what the player holds ready. The
+   commands sit on a ring (radial.ts places each at its bearing, --x and --y); the focused one is lit and named in
+   the centre. */
+.dagger-radial { --ring: 15rem; --command: 5rem; width: calc(var(--ring) * 2 + var(--command) + 3rem); height: calc(var(--ring) * 2 + var(--command) + 3rem);
+  padding: 0; border: 0; background: transparent; overflow: visible; }
+.dagger-radial-ring { position: absolute; inset: 0; border-radius: 50%; border: .25rem solid var(--brass);
+  background: var(--ground) var(--skin-stone-texture, none) center / var(--skin-stone-texture-size, auto) repeat;
+  box-shadow: inset 0 0 2.5rem rgb(0 0 0 / .85), 0 .75rem 2.75rem rgb(0 0 0 / .7), 0 0 0 100vmax rgb(0 0 0 / .45); }
+.dagger-radial-command { position: absolute; left: 50%; top: 50%; width: var(--command); height: var(--command); margin: calc(var(--command) / -2);
+  transform: translate(calc(var(--x) * var(--ring)), calc(var(--y) * var(--ring))); padding: 0; font-size: 0; }
+.dagger-hud .dagger-radial-command[data-icon]::before { width: 60%; height: 60%; margin: 0; }
+.dagger-radial-command.is-current { box-shadow: 0 0 0 .1875rem var(--brass-bright), 0 0 1rem rgb(244 217 131 / .5); }
+.dagger-radial-command:is(:focus, :hover) { transform: translate(calc(var(--x) * var(--ring)), calc(var(--y) * var(--ring))) scale(1.18); }
+.dagger-radial-centre { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 1; width: 19rem; height: 19rem; border-radius: 50%; display: grid; gap: .5rem; justify-items: center; align-content: center;
+  padding: 2rem; text-align: center; pointer-events: none; background: rgb(10 11 9 / .88); border: .125rem solid rgb(212 181 107 / .7); box-shadow: inset 0 0 1.5rem #000; }
+.dagger-radial-label { margin: 0; min-height: 1.6rem; color: var(--brass-bright); font: 700 1.25rem var(--font-title); letter-spacing: .04em; text-shadow: 0 .125rem .5rem #000; }
+.dagger-radial .dagger-input-hints { position: absolute; left: 50%; top: 100%; margin: .75rem 0 0; transform: translateX(-50%); white-space: nowrap; padding: .2rem .6rem; background: rgb(2 4 4 / .78); }
+.dagger-radial .dagger-title, .dagger-radial .dagger-loadout { position: static; display: grid; gap: .25rem; justify-items: center; text-align: center; margin: 0; padding: 0; background: none; }

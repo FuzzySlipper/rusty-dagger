@@ -447,9 +447,7 @@
         ],
         "fixed": false,
         "fixedReason": null,
-        "buttons": [
-          3
-        ],
+        "buttons": [],
         "buttonFixedReason": null
       },
       {
@@ -465,6 +463,20 @@
           9
         ],
         "buttonFixedReason": "The menu keeps its own controller button."
+      },
+      {
+        "id": "radial",
+        "category": "interface",
+        "label": "Command radial",
+        "keys": [
+          "KeyX"
+        ],
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [
+          3
+        ],
+        "buttonFixedReason": null
       },
       {
         "id": "spell",

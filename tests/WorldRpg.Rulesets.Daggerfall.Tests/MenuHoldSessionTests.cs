@@ -42,4 +42,21 @@ public sealed class MenuHoldSessionTests
         session.ApplyProductMode(ProductMode.Playing);
         Assert.Equal("Quest choice recorded.", session.Presentation.LastOutcome);
     }
+
+    [Fact]
+    public void The_radial_readies_and_sheathes_the_weapon_as_it_closes_on_a_held_world()
+    {
+        using var session = FreshSession();
+        bool before = session.State.WeaponDrawn;
+        for (ulong update = 1; update <= 4; update += 2)
+        {
+            // The radial holds the world as the menu does; the update that closes it admits no world step.
+            session.Update(new ProductUpdate(OuterUpdate(update), [Ui("""{"action":"menu","open":true}""")]));
+            session.ApplyProductMode(ProductMode.Modal);
+            session.Update(new ProductUpdate(OuterUpdate(update + 1) with { AdmittedStepCount = 0 },
+                [Ui("""{"action":"menu","open":false}"""), Ui("""{"action":"weapon-toggle"}""")]));
+            session.ApplyProductMode(ProductMode.Playing);
+            Assert.Equal(update == 1 ? !before : before, session.State.WeaponDrawn);
+        }
+    }
 }

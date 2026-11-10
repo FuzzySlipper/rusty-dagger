@@ -124,6 +124,8 @@ function fixture() {
       observe?.({ context: 'interface', fact: { kind: 'controller-button', button, edge: 'released' } });
     },
     stick(axis, value) { observe?.({ context: 'interface', fact: { kind: 'controller-axis', axis, value } }); },
+    /** Escape: in play it opens the game menu, and from the menu it closes it. */
+    pressEscape() { document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape', bubbles: true, cancelable: true })); },
     publish(value = {}) {
       receive({ contract: 'dagger.ui.snapshot.v1', value: {
         resources: [], lastOutcome: '', messages: [], mode: 'playing',
@@ -155,7 +157,7 @@ test('death projection renders semantic choices, selected save slots, and suppre
     } });
     const root = f.root.querySelector('.dagger-death');
     assert.equal(root.hidden, false);
-    assert.equal(f.root.querySelector('.dagger-menu-toggle').hidden, true);
+    assert.equal(f.root.querySelector('.dagger-radial').open, false);
     // The ruleset's message is the screen's one heading; it is not repeated beneath itself.
     assert.equal(f.root.querySelector('#dagger-death-title').textContent, 'You have died.');
     assert.equal([...root.querySelectorAll('*')].filter(node => node.children.length === 0 && node.textContent === 'You have died.').length, 1);
@@ -542,7 +544,7 @@ test('quick save and quick load send the product actions over the Host quick-sav
   const f = fixture();
   try {
     f.publish({});
-    f.root.querySelector('.dagger-menu-toggle').click();
+    f.pressEscape();
     f.root.querySelector('[data-action="quick-save"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'save-game' });
     // Quick load discards progress, so it asks first; No loads nothing.
@@ -2448,13 +2450,15 @@ test('custom class editor sends typed skills traits and exposes eligibility reas
   } finally { f.dispose(); }
 });
 
-test('the visible mode follows the product across play, modal, pause, and death', () => {
+test('the radial\'s readout names how play runs, whether the radial holds the world or not', () => {
   const f = fixture();
   try {
-    for (const [mode, expected] of [['playing', 'Exploring'], ['modal', 'Interaction'], ['paused', 'Paused'], ['dead', 'Defeated']]) {
+    for (const mode of ['playing', 'modal']) {
       f.publish({ mode });
-      assert.equal(f.root.querySelector('.dagger-title strong').textContent, expected);
+      assert.equal(f.root.querySelector('.dagger-radial .dagger-title strong').textContent, 'Exploring');
     }
+    f.publish({ mode: 'playing', timeControl: { enabled: true, held: false } });
+    assert.equal(f.root.querySelector('.dagger-radial .dagger-title strong').textContent, 'Action-driven time');
   } finally { f.dispose(); }
 });
 
@@ -2477,7 +2481,7 @@ test('save slots list each game with its details, name new saves, and confirm ov
     const click = action => f.root.querySelector(`[data-action="${action}"]`).click();
     f.publish({ saveSlots: { entries: [{ key: 'slot-1', label: 'Before the dungeon', savedAtUtc: '2026-09-22T00:00:00.0000000Z', ruleset: 'daggerfall',
       character: 'Aubk-i', level: 3, location: 'Daggerfall', worldTime: 'Morndas the 4th of Hearthfire, 3E405, 14:10', playSeconds: 4500 }], diagnostic: null } });
-    f.root.querySelector('.dagger-menu-toggle').click();
+    f.pressEscape();
     assert.equal(menu.open, true);
     click('save-game');
     assert.deepEqual(f.actions.at(-1), { action: 'save-slots' });
@@ -2708,11 +2712,11 @@ test('cinematic and menu retain interface input until the last cursor surface cl
     assert.deepEqual(f.modes, ['interface']);
     f.publish({ cinematic: null });
     assert.equal(f.modes.at(-1), 'gameplay');
-    f.root.querySelector('.dagger-menu-toggle').click();
+    f.pressEscape();
     assert.equal(f.modes.at(-1), 'interface');
     f.publish();
     assert.equal(f.modes.at(-1), 'interface');
-    f.root.querySelector('.dagger-menu-toggle').click();
+    f.pressEscape();
     assert.equal(f.modes.at(-1), 'gameplay');
   } finally { f.dispose(); }
 });
@@ -2723,11 +2727,11 @@ test('closing a menu that held the world re-takes gameplay focus once the world 
     f.publish();
     assert.deepEqual(f.focuses, []);
     // The menu opens and the product holds the world in a modal while it is open.
-    f.root.querySelector('.dagger-menu-toggle').click();
+    f.pressEscape();
     f.publish({ mode: 'modal' });
     assert.equal(f.modes.at(-1), 'interface');
     // Closing it still waits on the product: the projection says modal until the world resumes.
-    f.root.querySelector('.dagger-menu-toggle').click();
+    f.pressEscape();
     assert.equal(f.modes.at(-1), 'interface');
     assert.deepEqual(f.focuses, []);
     f.publish({ mode: 'playing' });
@@ -2740,9 +2744,9 @@ test('closing a menu that held the world re-takes gameplay focus once the world 
     // A close while another surface still needs the cursor stays in interface mode and asks for no focus.
     const popup = { instance: 'quest:2', entryId: 'opening:1', message: 1, delivery: 'popup', heading: 'Welcome',
       text: 'You awaken.', signoff: null, diagnostics: [] };
-    f.root.querySelector('.dagger-menu-toggle').click();
+    f.pressEscape();
     f.publish({ mode: 'modal', quests: { deliveries: [popup], journal: { active: [], finished: [] }, pending: null } });
-    f.root.querySelector('.dagger-menu-toggle').click();
+    f.pressEscape();
     f.publish({ mode: 'playing', quests: { deliveries: [popup], journal: { active: [], finished: [] }, pending: null } });
     assert.equal(f.modes.at(-1), 'interface');
     assert.deepEqual(f.focuses, ['gameplay']);
@@ -2811,7 +2815,7 @@ test('quest letters and popups are read on parchment and an offer is answered as
   } finally { f.dispose(); }
 });
 
-test('a panel hotkey closes its own panel back to play, and switches to another panel, while the menu holds the keyboard', () => {
+test('a panel hotkey closes its own panel back to play as it comes up, and switches to another panel, while the menu holds the keyboard', () => {
   const f = fixture();
   try {
     const controls = { diagnostic: '', bindings: [
@@ -2826,6 +2830,9 @@ test('a panel hotkey closes its own panel back to play, and switches to another 
     key('KeyC');
     assert.equal(f.root.querySelector('.dagger-character-root').hidden, false);
     key('KeyC');
+    // It closes as the key comes up, so play never receives the release of a press it did not see.
+    assert.equal(menu.open, true);
+    document.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyC', bubbles: true, cancelable: true }));
     assert.equal(menu.open, false);
     // Closing returns to play and asks for gameplay focus, which re-takes pointer lock.
     assert.ok(f.focuses.length > 0);
@@ -2837,13 +2844,73 @@ test('a panel hotkey closes its own panel back to play, and switches to another 
   } finally { f.dispose(); }
 });
 
-test('the title offers no game menu button', () => {
+test('the command radial opens on its request, sends each command\'s own action, and closes by its key, the pad\'s Y or Escape', () => {
   const f = fixture();
   try {
-    f.publish({ mode: 'title' });
-    assert.equal(f.root.querySelector('.dagger-menu-toggle').hidden, true);
-    f.publish({ mode: 'playing' });
-    assert.equal(f.root.querySelector('.dagger-menu-toggle').hidden, false);
+    const activation = { mode: 'talk', label: 'Talk', message: '', applied: true, dialogue: null,
+      modes: [{ id: 'grab', label: 'Grab' }, { id: 'info', label: 'Information' }, { id: 'talk', label: 'Talk' }, { id: 'steal', label: 'Steal / Lockpick' }] };
+    const controls = { diagnostic: '', bindings: [{ id: 'radial', category: 'interface', label: 'Command radial', keys: ['KeyX'], fixed: false, buttons: [3] }] };
+    const base = { mode: 'playing', activation, controls, weapon: { drawn: false, name: 'Steel Dagger', state: 'Sheathed' } };
+    let revision = 0;
+    const open = () => f.publish({ ...base, panelRequest: { panel: 'radial', revision: String(++revision) } });
+    const radial = f.root.querySelector('.dagger-radial');
+    const command = id => radial.querySelector(`[data-command="${id}"]`);
+    open();
+    assert.equal(radial.open, true);
+    assert.deepEqual(f.actions.at(-1), { action: 'menu', open: true }, 'The radial holds the world as the menu does.');
+    assert.deepEqual([...radial.querySelectorAll('[data-command]')].map(button => button.dataset.command),
+      ['weapon', 'mode-grab', 'mode-info', 'mode-talk', 'mode-steal', 'spells', 'inventory', 'character', 'journal', 'map', 'transport', 'rest', 'menu']);
+    assert.equal(command('weapon').getAttribute('aria-label'), 'Ready weapon');
+    assert.equal(command('mode-steal').getAttribute('aria-label'), 'Steal / Lockpick', 'The ruleset names the modes.');
+    assert.equal(command('mode-talk').classList.contains('is-current'), true);
+    command('weapon').click();
+    assert.equal(radial.open, false);
+    assert.deepEqual(f.actions.slice(-2), [{ action: 'menu', open: false }, { action: 'weapon-toggle' }]);
+    open();
+    command('mode-grab').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'activation-mode', mode: 'grab' });
+    open();
+    command('inventory').click();
+    assert.equal(f.root.querySelector('.dagger-menu').open, true, 'A panel command opens the menu on its panel.');
+    assert.equal(f.root.querySelector('.dagger-inventory-root').hidden, false);
+    f.pressEscape();
+    // Its key, the pad's Y and Escape close it, each as Back.
+    open();
+    const keyX = type => new KeyboardEvent(type, { code: 'KeyX', key: 'x', bubbles: true, cancelable: true });
+    // Play can open the radial before the page receives the press that opened it: that press, arriving at once, is
+    // taken and leaves the radial open.
+    document.dispatchEvent(keyX('keydown'));
+    document.dispatchEvent(keyX('keyup'));
+    assert.equal(radial.open, true, 'The press that opened the radial does not close it.');
+    const now = performance.now;
+    performance.now = () => now.call(performance) + 1000;
+    const down = keyX('keydown');
+    try { document.dispatchEvent(down); } finally { performance.now = now; }
+    assert.equal(down.defaultPrevented, true);
+    assert.equal(radial.open, true, 'The radial closes as its key comes up, so play never receives a release without its press.');
+    const up = keyX('keyup');
+    const focusesBefore = f.focuses.length;
+    document.dispatchEvent(up);
+    assert.equal(up.defaultPrevented, true);
+    assert.equal(radial.open, false);
+    assert.ok(f.focuses.length > focusesBefore, 'Closing back to play takes gameplay focus at once, as the menu does.');
+    open();
+    f.pad('button-3');
+    assert.equal(radial.open, false);
+    open();
+    f.pressEscape();
+    assert.equal(radial.open, false);
+    assert.equal(f.root.querySelector('.dagger-menu').open, false, 'Escape closes the radial without opening the menu.');
+  } finally { f.dispose(); }
+});
+
+test('the HUD has no corner readouts or menu button: the radial holds them, and the title opens no radial', () => {
+  const f = fixture();
+  try {
+    for (const selector of ['.dagger-title', '.dagger-loadout']) assert.ok(f.root.querySelector('.dagger-radial-centre').contains(f.root.querySelector(selector)), selector);
+    assert.equal(f.root.querySelector('.dagger-menu-toggle'), null);
+    f.publish({ mode: 'title', panelRequest: { panel: 'radial', revision: '1' } });
+    assert.equal(f.root.querySelector('.dagger-radial').open, false);
   } finally { f.dispose(); }
 });
 
@@ -2921,7 +2988,7 @@ test('a load from the menu closes the menu once the loaded session is playing, a
     const click = action => f.root.querySelector(`[data-action="${action}"]`).click();
     const saveSlots = { entries: [{ key: 'slot-1', label: 'Before the dungeon', savedAtUtc: '2026-09-22T00:00:00.0000000Z', ruleset: 'daggerfall' }], diagnostic: null };
     f.publish({ mode: 'playing', saveSlots });
-    f.root.querySelector('.dagger-menu-toggle').click();
+    f.pressEscape();
     f.publish({ mode: 'modal', saveSlots });
     click('load-game');
     f.root.querySelector('[data-save-slot="slot-1"]').click();
@@ -2944,7 +3011,7 @@ test('an open menu stays open while the product plays when no load was asked for
   try {
     const menu = f.root.querySelector('.dagger-menu');
     f.publish({ mode: 'playing' });
-    f.root.querySelector('.dagger-menu-toggle').click();
+    f.pressEscape();
     f.publish({ mode: 'playing' });
     assert.equal(menu.open, true);
   } finally { f.dispose(); }
@@ -2954,10 +3021,9 @@ test('the game menu tells the product when it opens and closes, because an open 
   const f = fixture();
   try {
     f.publish({ mode: 'playing' });
-    const toggle = f.root.querySelector('.dagger-menu-toggle');
-    toggle.click();
+    f.pressEscape();
     assert.deepEqual(f.actions.at(-1), { action: 'menu', open: true });
-    toggle.click();
+    f.pressEscape();
     assert.deepEqual(f.actions.at(-1), { action: 'menu', open: false });
   } finally { f.dispose(); }
 });
@@ -4350,7 +4416,7 @@ for (const path of ['Escape', 'toggle', 'panel request']) test(`menu open via ${
   try {
     f.publish();
     if (path === 'Escape') document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
-    else if (path === 'toggle') f.root.querySelector('.dagger-menu-toggle').click();
+    else if (path === 'toggle') f.pressEscape();
     else f.publish({ panelRequest: { panel: 'transport', revision: '5' } });
     assert.equal(f.root.querySelector('.dagger-menu').open, true);
     assert.deepEqual(f.actions.filter(action => action.action === 'menu'), [{ action: 'menu', open: true }]);
@@ -4467,7 +4533,7 @@ test('vitals are bars of the published amounts, and the loadout shows the readie
     assert.equal(weapon.querySelector('.dagger-weapon-state').textContent, 'Sheathed');
     assert.equal(f.root.querySelector('.dagger-ready-spell').hidden, true);
     // None of it shows outside play.
-    f.publish({ mode: 'modal', weapon: { drawn: true, name: 'Steel Longsword', state: 'Drawn' } });
+    f.publish({ mode: 'title', weapon: { drawn: true, name: 'Steel Longsword', state: 'Drawn' } });
     assert.equal(weapon.hidden, true);
   } finally { f.dispose(); }
 });
@@ -4819,9 +4885,7 @@ test('action-driven time toggle reflects the product preference and held status'
     assert.deepEqual(f.actions.at(-1), { action: 'action-driven-time', enabled: true });
     f.publish({ timeControl: { enabled: true, held: true } });
     assert.equal(toggle.getAttribute('aria-pressed'), 'true');
-    assert.match(f.root.textContent, /Action-driven · Paused/);
-    f.publish({ timeControl: { enabled: true, held: false } });
-    assert.match(f.root.textContent, /Action-driven · Acting/);
+    assert.match(f.root.textContent, /Action-driven time/);
     toggle.click();
     assert.deepEqual(f.actions.at(-1), { action: 'action-driven-time', enabled: false });
   } finally { f.dispose(); }

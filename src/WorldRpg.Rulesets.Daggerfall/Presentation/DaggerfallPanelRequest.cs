@@ -14,6 +14,8 @@ internal sealed record DaggerfallPanelRequest(string Panel, ulong Revision);
 internal static class DaggerfallPanel
 {
     internal const string Map = "map";
+    /// <summary>The command radial: the quick commands of play around the place, mode and time.</summary>
+    internal const string Radial = "radial";
     internal const string Inventory = "inventory";
     internal const string Character = "character";
     internal const string Travel = "transport";

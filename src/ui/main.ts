@@ -19,6 +19,7 @@ import { mountScale } from './scale.js';
 import { applySkin } from './skin.js';
 import { isHud, isSaveSlots, type SaveSlotProjection } from './projection.js';
 import { renderQuestMessages } from './quests.js';
+import { mountRadial } from './radial.js';
 import { mountShell } from './shell.js';
 import { isSpellbookProjection } from './spells.js';
 import { mountTooltips } from './tooltip.js';
@@ -30,6 +31,8 @@ export { isSummoningProjection, renderSummoning } from './crafting.js';
 const ART_REQUEST_INTERVAL = 120;
 /** Controller shortcuts the open menu adds to the shared navigation: Start, Select, Y and X. */
 const MENU_SHORTCUTS = Object.freeze({ menu: 'button-9', inventory: 'button-8', character: 'button-3', contextMenu: 'button-2' });
+/** The pad's Y, which opens the command radial in play and closes it again. */
+const RADIAL_BUTTON = 'button-3';
 
 /**
  * Mounts the product UI and routes each published snapshot to the surface that draws it. Every
@@ -69,9 +72,13 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       void developer.toggle();
       return;
     }
+    if (radial.key(event)) { event.preventDefault(); event.stopImmediatePropagation(); return; }
     menu.captureKey(event);
   };
+  // Keys coming up: the radial's key closes it or, after a hold, accepts the command it points at; a menu hotkey closes the menu.
+  const onKeyUp = (event: KeyboardEvent): void => { if (radial.key(event)) event.preventDefault(); else menu.releaseKey(event); };
   document.addEventListener('keydown', onKeyDown, true);
+  document.addEventListener('keyup', onKeyUp, true);
   // Escape with no surface open is Escape in play: it opens the menu, except where there is none.
   const navigation = mountNavigation(shell, context, {
     onPlayEscape: () => { if (!dead && !entry.isTitle()) menu.open(); },
@@ -80,6 +87,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       // While the product loads, no pad press reaches a surface under the screen (the menu's shortcuts included).
       if (loading.open()) return true;
       if (hud.cinematicPlaying()) { hud.skipCinematic(); return true; }
+      // The radial's own button closes it again.
+      if (radial.isOpen() && button === RADIAL_BUTTON) { radial.close(); return true; }
       return menu.captureButton(button);
     },
     editText: field => picker.edit(field),
@@ -107,13 +116,15 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const developer = mountDeveloperTools(root, context, { onChange: () => sync(true) });
   const menu = mountMenu(shell, { send, ask, sync, isDead: () => dead, register: surface => navigation.register(surface), uiScale: scale.current,
     openDeveloper: () => { if (!developer.isOpen()) void developer.toggle(); } });
+  const radial = mountRadial(shell, { send, runMenuAction: action => menu.runAction(action), sync });
+  let radialRevision: string | null = null;
   const entry = mountEntry(shell, send, menu.creation, () => { if (menu.dialog.open) menu.dialog.close(); });
   const dialogue = mountDialogue(shell, send, ask);
 
   // A pointer lock the world held, lost in play, is the player asking for the menu: the browser and
   // the desktop shell spend Escape on releasing the lock, so this is what Escape does in play.
   const interaction = mountInteraction(context, { onLockLostInPlay: () => { if (!menu.dialog.open && !dead && !entry.isTitle()) menu.open(); } });
-  interaction.needsCursor(() => loading.open() || menu.dialog.open || dialogue.window.open || dialogue.summoningOffer.open || developer.isOpen());
+  interaction.needsCursor(() => loading.open() || menu.dialog.open || radial.isOpen() || dialogue.window.open || dialogue.summoningOffer.open || developer.isOpen());
   // The surfaces that take the cursor, topmost first. Escape and Back go to the topmost: from any menu
   // panel Escape closes the whole menu while Back steps out one panel. A question the product needs
   // answered (a summoning offer, a court, a quest prompt, the death and title screens) has no back, so
@@ -122,6 +133,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     // The loading screen sits above everything and has no back: the product closes it when the work is done.
     navigation.register({ name: 'loading', root: loading.dialog, layer: 110, isOpen: loading.open, initialFocus: loading.initialFocus }),
     navigation.register({ name: 'confirm', root: confirmPrompt.dialog, layer: 100, isOpen: confirmPrompt.open, back: confirmPrompt.cancel }),
+    navigation.register({ name: 'radial', root: radial.root, layer: 95, isOpen: radial.isOpen, back: radial.close }),
     navigation.register({ name: 'menu', root: menu.dialog, layer: 90, isOpen: () => menu.dialog.open,
       back: menu.back, panel: menu.stepPanel, page: menu.page, pageHint: menu.pageHint }),
     navigation.register({ name: 'summoning-offer', root: dialogue.summoningOffer, layer: 80, isOpen: () => dialogue.summoningOffer.open }),
@@ -212,6 +224,13 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     death.update(dead, value.death, saveSlots);
     entry.update(value);
     hud.update(value);
+    radial.update(value);
+    // The radial's key or the pad's Y reach the product in play, which asks for the radial as it asks for a panel.
+    const request = value.panelRequest ?? null;
+    if (request?.panel === 'radial' && request.revision !== radialRevision) {
+      radialRevision = request.revision;
+      if (!dead && !entry.isTitle() && !menu.dialog.open) radial.open();
+    }
     useGlints(isGlints(value.inventory?.glints) ? value.inventory.glints : null);
     renderQuestMessages(quests, value.quests, send);
     dialogue.update(value, dead, spellbook);
@@ -237,8 +256,10 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     unsubscribe();
     hud.dispose();
     menu.dispose();
+    radial.dispose();
     developer.dispose();
     document.removeEventListener('keydown', onKeyDown, true);
+    document.removeEventListener('keyup', onKeyUp, true);
     disposeShell();
   } };
 }

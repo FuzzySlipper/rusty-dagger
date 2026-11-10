@@ -44,6 +44,7 @@ public sealed class DaggerfallControlSettings
         new("inventory", ["KeyI"], "interface"),
         new("character", ["KeyC"], "interface"),
         new("menu", [ReservedKey], "interface"),
+        new("radial", ["KeyX"], "interface"),
         new("spell", ["KeyP"], "magic"),
         new("rest", ["KeyR"], "rest"),
         new("map", ["KeyM"], "maps"),
@@ -67,7 +68,7 @@ public sealed class DaggerfallControlSettings
     {
         ["move.forward"] = "Move forward", ["move.backward"] = "Move backward", ["move.left"] = "Strafe left", ["move.right"] = "Strafe right",
         ["run"] = "Run", ["crouch"] = "Crouch", ["jump"] = "Jump", ["attack"] = "Attack", ["block"] = "Guard", ["kick"] = "Kick", ["interact"] = "Activate",
-        ["toggle-weapon"] = "Ready or sheathe weapon", ["inventory"] = "Inventory", ["character"] = "Character sheet", ["menu"] = "Game menu",
+        ["toggle-weapon"] = "Ready or sheathe weapon", ["inventory"] = "Inventory", ["character"] = "Character sheet", ["menu"] = "Game menu", ["radial"] = "Command radial",
         ["spell"] = "Spellbook", ["rest"] = "Rest", ["map"] = "Map", ["transport"] = "Travel and transport",
         ["activation.steal"] = "Steal mode", ["activation.grab"] = "Grab mode", ["activation.info"] = "Information mode", ["activation.talk"] = "Talk mode",
         ["quick-save"] = "Quick save", ["quick-load"] = "Quick load", ["logbook"] = "Logbook", ["notebook"] = "Notebook",

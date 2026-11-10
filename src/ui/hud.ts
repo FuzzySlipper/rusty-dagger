@@ -117,9 +117,8 @@ export function mountHud(shell: HTMLElement, send: Send): Hud {
     cinematicPlaying: () => cinematicPlaying,
     skipCinematic: () => { if (cinematicPlaying) skip(); },
     update(value) {
-      title.textContent = value.mode === 'paused' ? 'Paused' : value.mode === 'dead' ? 'Defeated'
-        : value.mode === 'title' ? 'Title' : value.mode === 'modal' ? 'Interaction' : 'Exploring';
-      if (value.mode === 'playing' && value.timeControl?.enabled) title.textContent = `Action-driven · ${value.timeControl.held ? 'Paused' : 'Acting'}`;
+      // The readout sits in the command radial, which holds the world while open: it names how play runs.
+      title.textContent = value.timeControl?.enabled ? 'Action-driven time' : 'Exploring';
       siteName.textContent = value.site?.name ?? '';
       const date = value.calendar ?? null;
       calendar.textContent = date === null ? '' : `${date.date} · ${date.time}`;
@@ -164,22 +163,23 @@ export function mountHud(shell: HTMLElement, send: Send): Hud {
         breath.classList.toggle('low', value.breath.low);
       }
 
-      // What the player holds ready: the readied spell, the weapon drawn or sheathed, the activation mode.
+      // What the player holds ready, shown in the radial: the readied spell, the weapon drawn or sheathed, the mode.
       const playing = value.mode === 'playing';
+      const inWorld = playing || value.mode === 'modal';
       const spells = value.spells ?? null;
       const ready = spells?.ready ? spells.available.find(spell => spell.key === spells.ready) ?? null : null;
-      readySpell.hidden = ready === null || !playing;
+      readySpell.hidden = ready === null || !inWorld;
       redraw(readySpell, JSON.stringify([ready, spells?.icons ?? null]), () => {
         const icon = readySpell.querySelector('.dagger-ready-spell-icon')!;
         icon.replaceChildren(...(ready && typeof ready.icon === 'number' ? [spellIcon(spells?.icons, ready.icon)] : []));
         readySpell.querySelector('.dagger-ready-spell-name')!.textContent = ready?.name ?? '';
       });
-      weapon.hidden = !value.weapon || !playing;
+      weapon.hidden = !value.weapon || !inWorld;
       weapon.classList.toggle('is-sheathed', value.weapon?.drawn === false);
       weapon.querySelector('.dagger-weapon-state')!.textContent = value.weapon?.state ?? '';
       weapon.querySelector('.dagger-weapon-name')!.textContent = value.weapon?.name ?? '';
       activationIndicator.textContent = value.activation ? value.activation.label ?? value.activation.mode : '';
-      activationIndicator.hidden = !playing || !value.activation;
+      activationIndicator.hidden = !inWorld || !value.activation;
 
       // The prompt names what use does to the aimed target and the control that does it on the device in use.
       const aimed = playing ? value.prompt ?? null : null;

@@ -103,7 +103,7 @@ public sealed class ControlsInputSessionTests
             [ControllerButton.Button0, ControllerButton.Button1, ControllerButton.Button2, ControllerButton.Button3, ControllerButton.Button4, ControllerButton.Button5, ControllerButton.Button8, ControllerButton.Button9],
             loaded.Actions.Select(binding => binding.Button));
         Assert.Equal(
-            ["daggerfall.attack", "daggerfall.interact", "daggerfall.toggle-weapon", "daggerfall.character", "daggerfall.block", "daggerfall.kick", "daggerfall.inventory", "daggerfall.menu"],
+            ["daggerfall.attack", "daggerfall.interact", "daggerfall.toggle-weapon", "daggerfall.radial", "daggerfall.block", "daggerfall.kick", "daggerfall.inventory", "daggerfall.menu"],
             loaded.Actions.Select(binding => binding.Action.Value));
     }
 
@@ -122,6 +122,7 @@ public sealed class ControlsInputSessionTests
             DaggerfallInput.Inventory.Value,
             DaggerfallInput.Character.Value,
             DaggerfallInput.Menu.Value,
+            DaggerfallInput.Shortcut("radial").Value,
         ];
         foreach (string payload in new[] { "daggerfall.defaults.json" })
         {
@@ -226,7 +227,7 @@ public sealed class ControlsInputSessionTests
             Assert.Equal("inventory", engine.PublishedNested("panelRequest", "panel"));
             Assert.Equal("1", engine.PublishedNested("panelRequest", "revision"));
             Press(ControllerButton.Button3, 2);
-            Assert.Equal("character", engine.PublishedNested("panelRequest", "panel"));
+            Assert.Equal("radial", engine.PublishedNested("panelRequest", "panel"));
             Assert.Equal("2", engine.PublishedNested("panelRequest", "revision"));
             Press(ControllerButton.Button9, 3);
             Assert.Equal("menu", engine.PublishedNested("panelRequest", "panel"));
@@ -265,9 +266,13 @@ public sealed class ControlsInputSessionTests
         // The panel names are the DOM's own menu actions, so a request opens the panel that the menu's
         // button of the same name opens. There is no DOM harness in this repository, so the agreement
         // is pinned where the DOM spells it: as the data-action of a button in the DOM's own source.
-        Assert.Equal(["inventory", "character", "menu", "inventory", "spells"], requested);
+        Assert.Equal(["inventory", "radial", "menu", "inventory", "spells"], requested);
         string dom = TestContentFiles.ReadText(Path.Combine(root, "src/ui/shell.ts"));
-        Assert.All(requested, panel => Assert.Contains($"data-action=\"{panel}\"", dom, StringComparison.Ordinal));
+        Assert.All(requested.Where(panel => panel is not ("radial" or "menu")), panel => Assert.Contains($"data-action=\"{panel}\"", dom, StringComparison.Ordinal));
+        // The menu itself is the action its toggle (Escape, and the radial's command) runs.
+        Assert.Contains("action === 'menu'", TestContentFiles.ReadText(Path.Combine(root, "src/ui/menu.ts")), StringComparison.Ordinal);
+        // The radial is a surface of its own rather than a menu panel, which the DOM opens on its own request.
+        Assert.Contains("request?.panel === 'radial'", TestContentFiles.ReadText(Path.Combine(root, "src/ui/main.ts")), StringComparison.Ordinal);
     }
 
     [Fact]

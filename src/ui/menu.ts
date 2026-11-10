@@ -53,6 +53,8 @@ export interface GameMenu {
   pageHint(): string | null;
   /** Key capture for rebinding, which runs before navigation takes Escape and the arrows. */
   captureKey(event: KeyboardEvent): void;
+  /** A key coming up: the panel hotkey that closes the menu closes it here. */
+  releaseKey(event: KeyboardEvent): void;
   /** A panel's hotkey or pad shortcut: show it, or close the menu when it is already shown. */
   togglePanel(action: string): void;
   /** A controller press the controls screen takes while it captures a button. */
@@ -87,7 +89,6 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
   // Unresolved text symbols are developer diagnostics: they are listed in the composition
   // diagnostics panel, never in the conversation, quest message or summoning text the player reads.
   const textDiagnostics = shell.querySelector<HTMLElement>('.dagger-text-diagnostics')!;
-  const menuToggle = shell.querySelector<HTMLButtonElement>('.dagger-menu-toggle')!;
   const activationMode = shell.querySelector<HTMLSelectElement>('.dagger-activation-mode')!;
   activationMode.addEventListener('change', () => send({ action: 'activation-mode', mode: activationMode.value }));
 
@@ -162,6 +163,8 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
   let inventorySuppressed = false;
   let lastPanelRevision: string | null = null;
   let activePanel: Panel | null = null;
+  // The panel hotkey pressed to close the menu, which closes it as the key comes up.
+  let closingKey: string | null = null;
   let lastMap: unknown = null;
 
   // Each panel remembers the control that last held focus, so reopening it (from home or by the
@@ -382,10 +385,8 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     runAction(action);
   };
   const onCancel = (event: Event): void => event.preventDefault();
-  const onToggle = (): void => runAction('menu');
   menu.addEventListener('cancel', onCancel);
   menu.addEventListener('click', onClick);
-  menuToggle.addEventListener('click', onToggle);
 
   return {
     dialog: menu,
@@ -425,7 +426,16 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       if (!binding) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      togglePanel(binding.panel);
+      // A hotkey that closes the menu does so as it comes up: the page takes the whole press, so play never
+      // receives a release without its press, which would cost the key's next press.
+      if (activePanel === (HOTKEY_PANELS[binding.panel] ?? binding.panel)) closingKey = event.code;
+      else togglePanel(binding.panel);
+    },
+    releaseKey(event) {
+      if (event.code !== closingKey) return;
+      closingKey = null;
+      event.preventDefault();
+      if (menu.open) closeMenu();
     },
     togglePanel,
     captureButton(button) { return activePanel === 'settings' && controlsView.captureButton(button); },
@@ -477,8 +487,6 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       // The open menu holds the world, so the product reports modal until a requested load replaces the
       // session; a failed load leaves the old session, still modal, and the menu shows why.
       if (loadRequested && menu.open && value.mode === 'playing') closeMenu();
-      // The title and character creation have no game menu, so they offer no button for one.
-      menuToggle.hidden = dead || value.mode === 'title';
       actionDrivenTime = value.timeControl?.enabled ?? false;
       const timeToggle = menu.querySelector<HTMLButtonElement>('[data-action="action-driven-time"]')!;
       timeToggle.setAttribute('aria-pressed', String(actionDrivenTime));
@@ -555,7 +563,6 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       lootView.dispose();
       menu.removeEventListener('cancel', onCancel);
       menu.removeEventListener('click', onClick);
-      menuToggle.removeEventListener('click', onToggle);
       saveSlotsList.replaceChildren();
       if (menu.open) menu.close();
     },

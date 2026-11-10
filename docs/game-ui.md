@@ -131,7 +131,7 @@ Controller buttons follow the standard layout the Engine normalizes: A
 and the left stick (`axis-0`, `axis-1`) move, LB and RB (`button-4`, `5`)
 step panels, LT and RT (`button-6`, `7`) turn pages. With the menu open, Start (`button-9`) steps out as Back does,
 Select (`button-8`) opens the inventory, Y (`button-3`) the character, and X
-(`button-2`) the actions of the focused item.
+(`button-2`) the actions of the focused item. In play, Y opens the command radial (below), and closes it again.
 
 ## Drag and drop
 
@@ -352,13 +352,24 @@ update to acknowledge in, so it runs the same phases at once.
   beside it and in a readout, draws the quoted route, and keeps focus on the map
   as it redraws. A journey asks through the drawn confirm.
 - **HUD** (`hud.ts`): bars for vitals and breath; a compass strip with the
-  ruleset's heading and the Detect spells' contacts as marks; the readied spell,
-  the weapon drawn or sheathed and the activation mode; and a prompt naming what
+  ruleset's heading and the Detect spells' contacts as marks; and a prompt naming what
   use would do to the aimed target, worded by that target's owner, with the use
-  binding of the device in use. Recent messages (the ruleset's outcome lines) sit in a feed at the bottom
-  centre, between the vitals and the loadout, at a fixed height of about five lines: the newest shows and older ones
+  binding of the device in use. It has no corner readouts or menu button: the place, the time and what the player
+  holds ready are in the command radial, and Escape opens the menu. Recent messages (the ruleset's outcome lines) sit
+  in a feed at the bottom centre, beside the vitals, at a fixed height of about five lines: the newest shows and older ones
   slide off its top, and a message taller than the feed starts at its first line and scrolls through at a reading
   pace. Opening a screen leaves the feed as it was. It takes no focus in play.
+- **Command radial** (`radial.ts`): play's quick commands on a stone ring, opened by its control (X by default,
+  the pad's Y), which the ruleset publishes as a `radial` panel request. It holds the world as the menu does. The
+  ring holds: ready or sheathe the weapon (`weapon-toggle`); the activation modes, named by the ruleset, the current
+  one marked; spells, inventory, character, journal, map, travel and rest, each opening the menu on its panel; and
+  the game menu. Its centre shows the place, how play runs, the date and time, the readied spell and the weapon. Pointing
+  anywhere along a command's bearing selects it, and a click, Enter or A accepts it; the arrows, the stick and the
+  D-pad move round the ring. Its key or Y pressed again, Escape or B close it, and releasing its key after a hold
+  accepts the command pointed at. Its key closes it as the key comes up, as a panel hotkey closes the menu over its
+  own panel, so play never receives a release without its press; a press the page receives as the radial opens is
+  the one that opened it. Each command sends what another control already sends, so the radial decides
+  nothing; later commands join its list.
 - **Settings** (`controls.ts`, `video.ts`): the controls, look, interface scale
   and sound, which the ruleset persists, then the Engine's video options panel
   (`@rusty-engine/video-options`). The Engine owns that catalogue, applies a
