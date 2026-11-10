@@ -18,6 +18,10 @@ internal sealed partial class DaggerfallSession : IDeveloperPeopleSession
     /// <summary>The rig pages are painted far finer than a classic person's pixels, so they are sampled smooth.</summary>
     private const TextureFilter PeopleRigFilter = TextureFilter.Linear;
 
+    /// <summary>The figure takes the light around it as a person's sprite does, and casts her shape into the sun's shadow.</summary>
+    private static readonly SpriteMaterialDescriptor PeopleRigMaterial =
+        DaggerfallSiteAppearance.LitSprite with { Shadow = SpriteShadowPolicy.CastAndReceive };
+
     private PartsRigCrowd? _peopleRigs;
 
     public DebugCommandResult RigPeople(string set)
@@ -30,7 +34,7 @@ internal sealed partial class DaggerfallSession : IDeveloperPeopleSession
         if (_composition.ArtReplacements?.PeopleRig is not { } rig) return Refused("The art set carries no people rig.");
         if (!rig.Directions.ContainsKey(set))
             return Refused($"People rig {rig.Name} has no view set '{set}'; it has {string.Join(", ", rig.Directions.Keys.Order(StringComparer.Ordinal))}, or off.");
-        PartsRigFigure figure = rig.Figure(set, PeopleRigFilter, DaggerfallSiteAppearance.LitSprite);
+        PartsRigFigure figure = rig.Figure(set, PeopleRigFilter, PeopleRigMaterial);
         (_peopleRigs ??= new(() => _engine.PartsRigs)).Use(figure);
         int walking = State.Actors.All.Count(actor => actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian && actor.Wander.State != WanderState.Unloaded);
         return DebugCommandResult.Success($"Walking people draw as {rig.Name} seen from {figure.Views.Count} directions; {walking} walk here now.");

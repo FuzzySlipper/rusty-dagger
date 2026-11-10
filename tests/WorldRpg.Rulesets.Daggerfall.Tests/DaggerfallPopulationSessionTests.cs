@@ -391,6 +391,8 @@ public sealed class DaggerfallPopulationSessionTests
             // Four views: the front, the side mirrored for a camera at her left (+x), the back, and the side at her right.
             Assert.Equal([(0F, false), (90F, true), (180F, false), (-90F, false)],
                 request.Views.ToArray().Select(view => (MathF.Round(float.RadiansToDegrees(view.Heading), 3), view.Mirror)));
+            // She takes the light as a person's sprite does and casts her shape into the sun's shadow.
+            Assert.Equal(DaggerfallSiteAppearance.LitSprite with { Shadow = SpriteShadowPolicy.CastAndReceive }, request.Material);
             // She is as tall as her own sprite, and faces where she heads.
             Assert.Equal(sprite.Size.Y / art.PeopleRig!.Height, request.Scale, 5);
             Assert.True(Vector3.Distance(Vector3.Transform(Vector3.UnitZ, fact.Transform.Rotation), ActorHeading.Forward(civilian.HeadingYawRadians)) < 1e-4F);
