@@ -5,9 +5,10 @@ namespace WorldRpg.Rulesets.Daggerfall.World;
 /// <summary>
 /// Builds exterior cells' ground on the thread pool ahead of the window that needs it, so crossing into a new map pixel
 /// does not build a row of cells in one update. A build reads only terrain and location definitions and ground tuning,
-/// which nothing changes, and calls no Engine service: the pure product computation the Engine's call-affinity contract lets a
-/// product run on its own workers. Results are taken only on the update, and the update waits only for a cell that
-/// is not finished when it is admitted (a travel's first window, or a crossing faster than the build).
+/// which nothing changes, with the location's ground already read on the update, and calls no Engine service: the pure
+/// product computation the Engine's call-affinity contract lets a product run on its own workers. Results are taken
+/// only on the update, and the update waits only for a cell that is not finished when it is admitted (a travel's first
+/// window, or a crossing faster than the build).
 /// </summary>
 internal sealed class DaggerfallExteriorCellGrounds(
     DaggerfallTerrainSet terrain,
@@ -61,8 +62,10 @@ internal sealed class DaggerfallExteriorCellGrounds(
 
     private Task<DaggerfallExteriorCellGround> Start(DaggerfallExteriorCellId cell)
     {
-        // The location is read here, on the update, so the build is handed its inputs.
-        locations.TryGetValue(cell, out DaggerfallSiteExterior? location);
+        // The location and its ground are read here, on the update, so the build is handed its inputs: its ground is
+        // read from the data container, which no worker may do.
+        if (locations.TryGetValue(cell, out DaggerfallSiteExterior? location))
+            location = location with { GroundTiles = location.GroundTiles };
         return Task.Run(() => Build(terrain, cell, location, tuning), _stopping.Token);
     }
 

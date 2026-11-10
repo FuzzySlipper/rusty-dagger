@@ -106,6 +106,8 @@ internal sealed class DaggerfallHorizon : IDisposable
         _bound ??= Bind(layers);
         Vector3 engineLocal = local - origin.Compensation;
         double x = engineLocal.X + (origin.MapPixelX * CellSize), z = engineLocal.Z + (origin.MapPixelY * CellSize);
+        // Before any focus moves, so the workers find every location's ground they paint from already read.
+        _ground.ReadGroundsAbout(x, z);
         Follow(x, z, winter, far);
         ShowNear(session, origin, x, z);
         // Flora stands in near ground's frame, on the same walked surface.

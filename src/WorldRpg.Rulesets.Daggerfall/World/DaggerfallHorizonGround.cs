@@ -14,8 +14,9 @@ namespace WorldRpg.Rulesets.Daggerfall.World;
 /// distance: the map's ranges stand a degree or two over the skyline at true height, where the classic's painted
 /// ones stood near thirty. The floor is fixed on the map, so a player climbing changes nothing out on the horizon: a
 /// lift measured from the player would move every tile at once, and tiles sampled either side of the change tear the
-/// ranges until they are all sampled again. It reads only the terrain and climate, which nothing changes, and the
-/// latest <see cref="Frame"/>, and calls no Engine service.
+/// ranges until they are all sampled again. It reads only the terrain and climate, which nothing changes, the
+/// latest <see cref="Frame"/>, and the locations' ground the update has read (<see cref="ReadGroundsAbout"/>), and
+/// calls no Engine service.
 /// </summary>
 internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
 {
@@ -70,6 +71,9 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     private Frame _frame;
     private GroundMaterials? _materials;
     private readonly IReadOnlyDictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> _locations;
+    /// <summary>The locations' authored ground read so far, which the update replaces whole and the workers only read.</summary>
+    private Dictionary<DaggerfallExteriorCellId, DaggerfallGroundTileGrid> _grounds = [];
+    private (int X, int Y)? _groundsAbout;
     private readonly System.Collections.Concurrent.ConcurrentDictionary<(int X, int Y), float> _cellMeans = new();
     private readonly System.Collections.Concurrent.ConcurrentDictionary<(int X, int Y), byte> _seaPixels = new();
 
@@ -108,6 +112,32 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     /// </summary>
     internal static HeightfieldRing[] NearRings { get; } =
         [new(FinestNearCellMetres, DaggerfallExteriorGroundCollider.ReachMetres), new(Spacing, 1_228.8), new(Spacing * 4, NearReachMetres)];
+
+    /// <summary>
+    /// Reads the authored ground of every location within near ground's reach of map point (x, z), and a map pixel more.
+    /// A location's ground is read from the data container, which is Engine content work only the update may do, while
+    /// near ground, flora and ground cover paint from it on the workers about the focus the update gives them: the update
+    /// calls this before it moves a focus. A ground once read is kept, since it is a few kilobytes and a worker may still
+    /// be sampling a tile it asked for before the focus moved.
+    /// </summary>
+    internal void ReadGroundsAbout(double x, double z)
+    {
+        (int mapX, int mapY) = MapPixel(x, z);
+        if (_groundsAbout == (mapX, mapY)) return;
+        _groundsAbout = (mapX, mapY);
+        Dictionary<DaggerfallExteriorCellId, DaggerfallGroundTileGrid> held = Volatile.Read(ref _grounds);
+        Dictionary<DaggerfallExteriorCellId, DaggerfallGroundTileGrid>? read = null;
+        int reach = (int)Math.Ceiling(NearReachMetres / DaggerfallTerrainSurfaceBuilder.HorizontalSize) + 1;
+        for (int cellY = mapY - reach; cellY <= mapY + reach; cellY++)
+        for (int cellX = mapX - reach; cellX <= mapX + reach; cellX++)
+        {
+            DaggerfallExteriorCellId cell = new(cellX, cellY);
+            if (held.ContainsKey(cell) || !_locations.TryGetValue(cell, out DaggerfallSiteExterior? location)) continue;
+            (read ??= new(held))[cell] = location.GroundTiles;
+        }
+
+        if (read is not null) Volatile.Write(ref _grounds, read);
+    }
 
     /// <summary>The ground values the far ground shares with the walked ground.</summary>
     internal DaggerfallGroundTuning GroundTuning => _groundTuning;
@@ -548,7 +578,11 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     private float[]? Authored(double x, double z)
     {
         (int mapX, int mapY, int _, int _) = Vertex(x, z);
-        if (!_locations.TryGetValue(new(mapX, mapY), out DaggerfallSiteExterior? location)) return null;
+        DaggerfallExteriorCellId cell = new(mapX, mapY);
+        if (!_locations.ContainsKey(cell)) return null;
+        // Reading the ground here would read the data container on a worker, which corrupts the Engine's heap.
+        if (!Volatile.Read(ref _grounds).TryGetValue(cell, out DaggerfallGroundTileGrid? tiles))
+            throw new InvalidOperationException($"Ground at map pixel ({mapX}, {mapY}) is painted before the update read its location's ground (ReadGroundsAbout).");
         double fx = (x / Spacing) - ((long)mapX * TileDimension), fy = ((long)mapY * TileDimension) - (z / Spacing);
         int tx0 = (int)Math.Floor(fx + 1e-6), ty0 = (int)Math.Floor(fy + 1e-6);
         float u = (float)Math.Max(fx - tx0, 0), v = (float)Math.Max(fy - ty0, 0);
@@ -558,8 +592,8 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         {
             if (tx is < 0 or >= TileDimension || ty is < 0 or >= TileDimension) continue;
             int index = (ty * TileDimension) + tx;
-            if (!location.GroundTiles.Contains(index)) continue;
-            byte tile = location.GroundTiles.At(index);
+            if (!tiles.Contains(index)) continue;
+            byte tile = tiles.At(index);
             float tu = tx == tx0 ? u : 1, tv = ty == ty0 ? v : 1;
             kinds ??= new float[6];
             // A paving edge's art runs a diagonal through the tile: one corner, but half its area.

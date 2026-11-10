@@ -197,6 +197,7 @@ public sealed class DaggerfallHorizonGroundTests
         const double x = 3 * Size, z = (3 * Size) - (step * 16);
         HeightfieldTileSamples far = Samples(new(16, 0, 0, 0, 0, x, z, step));
         HeightfieldTileSamples near = Samples(new(16, 0, 0, 0, 0, x, z, step));
+        ground.ReadGroundsAbout(x, z);
         ground.Sample(far.Tile, far);
         ground.SampleNear(near.Tile, near, 0, 0);
 
@@ -205,6 +206,37 @@ public sealed class DaggerfallHorizonGroundTests
             DaggerfallTerrainSurfaceBuilder.Build(terrain, 3, 3), DaggerfallLocationTerrainFrame.Flattening(location));
         Assert.NotEqual(ground.Height(x + (step * 8), z + (step * 8)), far.Heights[(9 * far.Tile.HeightSide) + 9], 1);
         Assert.Equal(flattened.Vertices[64 + (64 * 129)].Y, far.Heights[(9 * far.Tile.HeightSide) + 9], 1);
+    }
+
+    /// <summary>
+    /// A location's ground is read from the data container, which only the update may do: near ground paints from the
+    /// ground the update read about the focus, and refuses a location whose ground it has not, rather than read it on a
+    /// worker.
+    /// </summary>
+    [Fact]
+    public void Near_ground_paints_only_from_a_locations_ground_the_update_read()
+    {
+        DaggerfallTerrainSet terrain = Terrain(8, 8);
+        byte[] grass = new byte[DaggerfallGroundTileGrid.CellCount];
+        Array.Fill(grass, DaggerfallGroundTileGrid.GeneratedTerrainBitfield);
+        for (int index = 0; index < grass.Length; index++)
+            if (index % DaggerfallGroundTileGrid.Dimension is >= 32 and < 96 && index / DaggerfallGroundTileGrid.Dimension is >= 32 and < 96) grass[index] = 2;
+        DaggerfallSiteExterior town = new(1, 1, 1, 1, 0, 0, false, 0, 32, 96, 32, 96) { GroundTiles = DaggerfallGroundTileGrid.FromBytes(grass, "town") };
+        DaggerfallSiteExterior far = new(7, 7, 1, 1, 0, 0, false, 0, 32, 96, 32, 96) { GroundTiles = DaggerfallGroundTileGrid.FromBytes(grass, "far") };
+        DaggerfallHorizonGround ground = new(terrain, (_, _) => 231, DaggerfallHorizonTuning.Default, DaggerfallGroundTuning.Default,
+            new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> { [new(1, 1)] = town, [new(7, 7)] = far }) { Materials = Materials };
+        const double cell = DaggerfallTerrainSurfaceBuilder.SampleSpacing;
+        (double X, double Z) square = ((1 * Size) + (64.5 * cell), (1 * Size) - (64.5 * cell)), beyond = ((7 * Size) + (64.5 * cell), (7 * Size) - (64.5 * cell));
+
+        Assert.Contains("ReadGroundsAbout", Assert.Throws<InvalidOperationException>(() => ground.PaintNear(square.X, square.Z, 200, 0, false, Materials)).Message);
+
+        ground.ReadGroundsAbout(square.X, square.Z);
+        // The town's grass tiles paint as its town ground, whose weights are all grass.
+        DaggerfallHorizonGround.Paint paint = ground.PaintNear(square.X, square.Z, 200, 0, false, Materials);
+        Assert.Contains(paint.Material, Materials.Archives.Values.Select(archive => archive.Town));
+        Assert.Equal(new System.Numerics.Vector4(1, 0, 0, 0), paint.Weights);
+        // Six map pixels off is past near ground's reach, so the update has not read that location's ground.
+        Assert.Throws<InvalidOperationException>(() => ground.PaintNear(beyond.X, beyond.Z, 200, 0, false, Materials));
     }
 
     [Fact]
@@ -220,6 +252,7 @@ public sealed class DaggerfallHorizonGroundTests
         HeightfieldTileSamples near = Samples(new(16, 0, 0, 0, 0, x, z, cell));
         HeightfieldTileSamples collision = Samples(new(16, 0, 0, 0, 0, x, z, cell));
 
+        drawn.ReadGroundsAbout(x, z);
         drawn.SampleNear(near.Tile, near, 0, 0);
         collided.SampleHeights(collision.Tile, collision, 0, 0);
 
@@ -295,6 +328,7 @@ public sealed class DaggerfallHorizonGroundTests
         (double X, double Z) clearing = ((3 * Size) + (56 * cell), (3 * Size) - (72 * cell)), open = (5 * Size, 5 * Size);
 
         HeightfieldTileSamples near = Samples(new(16, 0, 0, 0, 0, clearing.X, clearing.Z, cell));
+        ground.ReadGroundsAbout(clearing.X, clearing.Z);
         ground.SampleNear(near.Tile, near, 0, 0);
         VegetationTileSamples cleared = Flora(new(16, 0, 0, 0, clearing.X, clearing.Z, cell));
         ground.SampleFlora(cleared.Tile, cleared, false, DaggerfallFloraTuning.Default);
