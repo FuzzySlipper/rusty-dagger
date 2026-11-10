@@ -103,6 +103,12 @@ alone.
     the wind the render is given: a gust that rises from calm and dies back before the loop's end,
     so the skirt is at rest on both ends and the loop closes. A render at 8 fps takes the gust on
     its own frames, since wind steps can't fall between them.
+- **Outline:** BiRefNet's soft edge keeps the generation ground's colour, and See-through runs on the
+  figure laid on white, so the assembled parts carry a grey and light fringe at the figure's outline.
+  After assembly, wherever the cut-out's alpha is partial, a part takes the cut-out's own colour with
+  the ground unmixed, and no more than its alpha. Each part reads the cut-out its art came from: the
+  painting's, the body's for a split view's See-through layers, a generated garment's own. Clear
+  pixels then take the nearest solid colour, so filtering at draw time blends no black into the edge.
 - **Hidden back hair:** See-through paints back hair it could not see as a washed-out grey mass,
   which shows in the gaps beside the jaw and when the head tilts. After assembly, back-hair pixels
   are recoloured from the front hair's own colours, matched by brightness and a shade darker, since
@@ -166,7 +172,9 @@ repainted in the stationary people's style rather than converted from its classi
    paints a hidden arm badly. A sole or a turned-out foot in the source travels with the rigid
    foot through the whole walk. From behind, See-through invents a face and gives each bare arm
    as a hand layer, so the back's head is cut from the painting whole, as in profile, and its arms
-   come from the hand layers. The head box is set around the hair.
+   come from the hand layers. The head box is set around the hair. The whole head keeps only the pixels
+   where See-through's frontmost layer belongs to the head, so a sleeve cap inside the box stays with
+   the arm instead of turning with the head.
 4. **Cycle:** RTMW on every frame. The period comes from the ankles. The cycle is cut where its
    two ends agree best and turned to start where the left foot pushes off, the same event in
    every view, so a view change keeps the stride. In profile RTMW swaps the legs on the odd frame,
@@ -175,3 +183,6 @@ repainted in the stationary people's style rather than converted from its classi
    divides.
 5. **Retarget:** `rig-pose clean --loop --depth walk --hold off`, then retarget with the feet
    planted. Front and back let the shin shorten to 0.55, and the front orders the legs by depth.
+6. **Placement:** each clip draws the figure at its own height and offset. After the retarget, the
+   rig's root moves so the walk's planted foot stands on y = 0 and the rig source's neck on x = 0, so
+   a change of view, mirrored or not, keeps the feet and head in place.
