@@ -71,7 +71,7 @@ internal sealed partial class DaggerfallSiteAppearance
             if (surfaceArt.Surface(path) is not { } refreshed) return surface.Classic[season];
             if (!opened.TryGetValue(refreshed.File.Path, out RenderResource? resource))
             {
-                resource = appearance.OpenTexture(content, refreshed.File.Path, refreshed.File.Sha256, TextureFilter.Nearest, TextureWrap.Repeat).Handle;
+                resource = appearance.OpenTexture(content, refreshed.File.Path, refreshed.File.Sha256, TextureFilter.Nearest, TextureWrap.Repeat, admittingOffUpdate).Handle;
                 locationResources.Add(resource);
                 opened.Add(refreshed.File.Path, resource);
             }

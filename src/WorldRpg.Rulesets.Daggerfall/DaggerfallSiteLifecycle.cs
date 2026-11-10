@@ -120,6 +120,8 @@ internal sealed class DaggerfallSiteLifecycle
     // A staged site change holds its location placements to hand them over deferred, and stands the arriving player
     // only once they and the ground under the arrival are live.
     private bool _deferringCollision;
+    // The window is moving with the player on the road: the locations it brings in prepare their presentation off the update too.
+    private bool _onTheRoad;
     private bool _arrivalStandPending;
     // Collision a site change handed off that play must not run without: the Engine refused it, or the change failed
     // with it still being prepared. The world is held until it is live and the arrival stood on it.
@@ -1360,6 +1362,7 @@ internal sealed class DaggerfallSiteLifecycle
     /// Engine as one deferred batch, as a staged change's are: composing a location's collision and navigation would
     /// otherwise take the update the window moved in. A location enters the window cells away from the player, long
     /// before anyone can reach it, and whoever it places waits for its floor (<see cref="SettleRoadsideCollision"/>).
+    /// Its meshes and textures are prepared on the renderer's workers too, and it is drawn once they are in.
     /// A recall or an arrival, which can land beside a location, moves the window with <see cref="UpdateExteriorResidency()"/>.
     /// </summary>
     internal void FollowPlayerOnTheRoad()
@@ -1370,12 +1373,14 @@ internal sealed class DaggerfallSiteLifecycle
             return;
         }
         _deferringCollision = true;
+        _onTheRoad = true;
         try
         {
             _ = UpdateExteriorResidency();
         }
         finally
         {
+            _onTheRoad = false;
             _deferringCollision = false;
             ReleaseHeldPlacements();
         }
@@ -1654,7 +1659,7 @@ internal sealed class DaggerfallSiteLifecycle
             Vector3 translation = ExteriorProfileTranslation(profile, origin);
             projection = DaggerfallSiteProjection.Create(_engine, _state.Actors.Entities, _random, _tuning, _time.Calendar,
                 profile, AudioFor(profile), _spatial, _host.ConfigureSiteAppearance, delta?.Doors, delta?.Motion, deferMotionCollisionAdmission: true,
-                sessionPresentation: _sessionPresentation, definitions: _definitions, carriesSky: false);
+                sessionPresentation: _sessionPresentation, definitions: _definitions, carriesSky: false, prepareLocationOffUpdate: _onTheRoad);
             projection.Appearance.DrawThroughActiveSnapshot();
             // The profile's authored geometry and actors use its own source frame. Rebase every
             // projection owner before admitting collision so doors, motion, portals, appearance
@@ -1853,7 +1858,7 @@ internal sealed class DaggerfallSiteLifecycle
         if (_locationLoaded) return;
         DaggerfallSiteProfile profile = Projection.Inputs;
         AdmitLocationArtifact(profile);
-        Projection.Resume();
+        Projection.Resume(offUpdate: _onTheRoad);
         _deltas.TryGetValue(ActiveProfile, out DaggerfallSiteRuntimeDelta? delta);
         _roster.MaterializeSite(profile, delta, restoreAuthoredAppearance: true);
         RebaseActors(ProfileActorIds(profile, delta), ExteriorProfileTranslation(profile));

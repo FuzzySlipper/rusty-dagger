@@ -68,7 +68,8 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         IEnumerable<DaggerfallDoorSave>? restoredDoors = null,
         DaggerfallDungeonMotionSnapshot? restoredMotion = null,
         bool deferMotionCollisionAdmission = false,
-        NormalizedClassicPresentation? sessionPresentation = null, DaggerfallDefinitions? definitions = null, bool carriesSky = true)
+        NormalizedClassicPresentation? sessionPresentation = null, DaggerfallDefinitions? definitions = null, bool carriesSky = true,
+        bool prepareLocationOffUpdate = false)
     {
         ArgumentNullException.ThrowIfNull(engine);
         ArgumentNullException.ThrowIfNull(actors);
@@ -91,7 +92,8 @@ internal sealed class DaggerfallSiteProjection : IDisposable
                 DaggerfallCityGateDefinition.OpenAt(calendar));
             if (!deferMotionCollisionAdmission) gates.ActivateCollisionResidency();
             appearance = new(engine.Content, engine.Graphics, inputs, engine.Audio,
-                tuning.PresentationAudio, random, audioBundle, doors, motion, sessionPresentation, gates, definitions, tuning.Flats, tuning.SiteLighting);
+                tuning.PresentationAudio, random, audioBundle, doors, motion, sessionPresentation, gates, definitions, tuning.Flats, tuning.SiteLighting,
+                prepareLocationOffUpdate);
             configureAppearance(appearance);
             lighting = new(engine.Graphics, engine.CameraView, inputs, tuning.SiteLighting, calendar, carriesSky);
             portals = new(actors, inputs.ProfileKey, inputs.Portals);
@@ -197,15 +199,18 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         _suspended = true;
     }
 
-    /// <summary>Re-admits the location's geometry, actors' supporting action models and portal resources.</summary>
-    internal void Resume()
+    /// <summary>
+    /// Re-admits the location's geometry, actors' supporting action models and portal resources; <paramref name="offUpdate"/>
+    /// prepares its meshes and textures on the renderer's workers.
+    /// </summary>
+    internal void Resume(bool offUpdate = false)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(DaggerfallSiteProjection));
         if (!_suspended) return;
         Doors.Resume();
         Motion.Resume();
         CityGates.Resume();
-        Appearance.ResumeLocationResources(Doors, Motion);
+        Appearance.ResumeLocationResources(Doors, Motion, offUpdate);
         Portals.Resume();
         Lighting.Resume();
         ActivateWaterTriggers(tick: 0);

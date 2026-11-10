@@ -12,12 +12,15 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// </remarks>
 internal static class DaggerfallPublishedResources
 {
-    /// <summary>Opens a published texture with the given sampling, as sRGB colour.</summary>
+    /// <summary>
+    /// Opens a published texture with the given sampling, as sRGB colour; <paramref name="deferred"/> decodes and uploads it
+    /// on the renderer's workers, and what samples it draws once it is taken in.
+    /// </summary>
     internal static RenderResourceInfo OpenTexture(this IGraphicsService graphics, IContentService content, string path, ContentSha256 sha256,
-        TextureFilter filter = TextureFilter.Nearest, TextureWrap wrap = TextureWrap.Clamp)
+        TextureFilter filter = TextureFilter.Nearest, TextureWrap wrap = TextureWrap.Clamp, bool deferred = false)
     {
         using ContentReference reference = Resolve(content, path, sha256);
-        return graphics.OpenResourceFromContent(new RenderResourceContentRequest(reference, filter, wrap));
+        return graphics.OpenResourceFromContent(new RenderResourceContentRequest(reference, filter, wrap, TextureColorSpace.Srgb, "", deferred));
     }
 
     /// <summary>Opens a published product shader.</summary>
@@ -27,11 +30,15 @@ internal static class DaggerfallPublishedResources
         return graphics.OpenResourceFromContent(new RenderResourceContentRequest(reference, TextureFilter.Linear, TextureWrap.Clamp, TextureColorSpace.Srgb, "")).Handle;
     }
 
-    /// <summary>Creates a static mesh appearance from a published <c>.rstatmsh</c>.</summary>
-    internal static Appearance CreateStaticMesh(this IGraphicsService graphics, IContentService content, string path, ContentSha256 sha256, Color tint)
+    /// <summary>
+    /// Creates a static mesh appearance from a published <c>.rstatmsh</c>; <paramref name="deferred"/> reads and uploads it on
+    /// the renderer's workers, and it draws once it is taken in.
+    /// </summary>
+    internal static Appearance CreateStaticMesh(this IGraphicsService graphics, IContentService content, string path, ContentSha256 sha256, Color tint,
+        bool deferred = false)
     {
         using ContentReference reference = Resolve(content, path, sha256);
-        return graphics.CreateStaticMeshFromContentReference(new StaticMeshContentReferenceRequest(reference, tint));
+        return graphics.CreateStaticMeshFromContentReference(new StaticMeshContentReferenceRequest(reference, tint, deferred));
     }
 
     /// <summary>Opens a published audio clip.</summary>

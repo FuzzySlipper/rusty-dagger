@@ -732,6 +732,7 @@ public sealed class SpriteWorkbenchProductTests
             OpenResourceRequests.Add(request);
             return new(new RenderResource(new RenderResourceHandle((ulong)OpenResourceRequests.Count), static () => { }), RenderResourceKind.Texture, 1);
         }
+        public ResourcePreparationReadout ReadResourcePreparation() => default;
         public RenderResourceInfo OpenResourceFromContent(RenderResourceContentRequest request)
         {
             OpenResourceContentRequests.Add(request);

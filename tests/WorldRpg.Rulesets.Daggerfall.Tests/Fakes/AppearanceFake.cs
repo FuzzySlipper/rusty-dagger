@@ -15,6 +15,8 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     internal List<TerrainLayerMaterialRequest> TerrainLayerMaterialRequests { get; } = [];
     /// <summary>The content path each created static mesh's reference names, in order; null for a reference no content fake issued.</summary>
     internal List<string?> StaticMeshPaths { get; } = [];
+    /// <summary>The meshes opened to be prepared on the renderer's workers.</summary>
+    internal List<string?> DeferredStaticMeshPaths { get; } = [];
     internal Dictionary<string, Appearance> StaticMeshByPath { get; } = new(StringComparer.Ordinal);
     internal List<MeshMaterialBinding> StaticMeshBindings { get; } = [];
     internal List<StaticMeshMaterialFactorsRequest> StaticMeshFactorUpdates { get; } = [];
@@ -67,6 +69,8 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
         return new(OwnResource(checked((ulong)OpenResourceContentRequests.Count)), default, 0);
     }
     internal List<RenderResourceContentRequest> OpenResourceContentRequests { get; } = [];
+    /// <summary>Nothing is ever being prepared: a fake renderer takes deferred resources in at once.</summary>
+    public ResourcePreparationReadout ReadResourcePreparation() => default;
     /// <summary>The content path each opened resource's reference names, in order; null for a reference no content fake issued.</summary>
     internal List<string?> OpenedResourcePaths { get; } = [];
 
@@ -110,6 +114,7 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     {
         string? path = TestContentReferences.PathOf(request.Content);
         StaticMeshPaths.Add(path);
+        if (request.Deferred) DeferredStaticMeshPaths.Add(path);
         Appearance value = CreateAppearance();
         if (path is not null) StaticMeshByPath[path] = value;
         return value;

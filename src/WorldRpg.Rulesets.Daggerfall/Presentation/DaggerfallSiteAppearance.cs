@@ -191,6 +191,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     // Each static mesh the profile draws, with its pose in the profile frame and its index in the profile geometry, and
     // the appearance it shows: placements of one model share it.
     private readonly List<(Appearance Appearance, Transform Pose, int Index)> world = [];
+    // While the location's geometry is admitted for one arriving on the road: its meshes and textures prepare off the update.
+    private bool admittingOffUpdate;
     // A resident neighbour's appearance never publishes: the active site's snapshot draws its location.
     private bool drawnByActiveSnapshot;
     private Appearance? arrowAppearance;
@@ -216,7 +218,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// The session's classic presentation (weapon viewmodels, held-item visuals, spell effects), which the
     /// start site publishes for the whole session; null uses this site's own, as a lone-site composition does.
     /// </param>
-    internal DaggerfallSiteAppearance(IContentService content, IGraphicsService appearance, DaggerfallSiteProfile inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallDoorRuntime? doors = null, DaggerfallDungeonMotionProjection? dungeonMotion = null, NormalizedClassicPresentation? sessionPresentation = null, DaggerfallCityGates? cityGates = null, DaggerfallDefinitions? definitions = null, DaggerfallFlatsTuning? flats = null, DaggerfallSiteLightingTuning? lighting = null)
+    internal DaggerfallSiteAppearance(IContentService content, IGraphicsService appearance, DaggerfallSiteProfile inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallDoorRuntime? doors = null, DaggerfallDungeonMotionProjection? dungeonMotion = null, NormalizedClassicPresentation? sessionPresentation = null, DaggerfallCityGates? cityGates = null, DaggerfallDefinitions? definitions = null, DaggerfallFlatsTuning? flats = null, DaggerfallSiteLightingTuning? lighting = null, bool prepareLocationOffUpdate = false)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(appearance);
@@ -241,7 +243,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         worldAppearance = inputs.WorldAppearance;
         try
         {
-            AdmitLocationResources();
+            AdmitLocationResources(prepareLocationOffUpdate);
             DaggerfallMissileVisual? arrow = classicPresentation.WorldVisuals.SingleOrDefault(visual =>
                 visual.MediaId == "visual.missile.arrow");
             if (arrow is not null)
@@ -347,8 +349,11 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         locationSuspended = true;
     }
 
-    /// <summary>Recreates the retained location geometry after its content placement is admitted.</summary>
-    internal void ResumeLocationResources(DaggerfallDoorRuntime doors, DaggerfallDungeonMotionProjection motion)
+    /// <summary>
+    /// Recreates the retained location geometry after its content placement is admitted; <paramref name="offUpdate"/>
+    /// prepares its meshes and textures on the renderer's workers, as for a location arriving on the road.
+    /// </summary>
+    internal void ResumeLocationResources(DaggerfallDoorRuntime doors, DaggerfallDungeonMotionProjection motion, bool offUpdate)
     {
         if (disposed) throw new ObjectDisposedException(nameof(DaggerfallSiteAppearance));
         ArgumentNullException.ThrowIfNull(doors);
@@ -358,7 +363,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         dungeonMotion = motion;
         try
         {
-            AdmitLocationResources();
+            AdmitLocationResources(offUpdate);
             locationSuspended = false;
         }
         catch
@@ -865,7 +870,20 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
 
-    private void AdmitLocationResources()
+    /// <summary>
+    /// Opens the location's geometry. <paramref name="offUpdate"/> prepares its meshes and the textures its materials sample
+    /// on the renderer's workers: the renderer draws none of the location until all of them are taken in, so it appears
+    /// whole an update or two later. Its flats' sprites open at once, since a sprite whose texture is still being prepared
+    /// draws without it.
+    /// </summary>
+    private void AdmitLocationResources(bool offUpdate)
+    {
+        admittingOffUpdate = offUpdate;
+        try { AdmitLocationGeometry(); }
+        finally { admittingOffUpdate = false; }
+    }
+
+    private void AdmitLocationGeometry()
     {
         // Newly created materials start in their summer variant, including after a location reload.
         materialSeason = DaggerfallExteriorSeason.Summer;
@@ -874,7 +892,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             throw new ArgumentException("Door visuals require the selected door runtime.", nameof(doors));
         foreach (NormalizedMaterial material in inputs.Materials)
         {
-            RenderResourceInfo texture = appearance.OpenTexture(content, material.TexturePath, material.TextureSha256, TextureFilter.Nearest, TextureWrap.Repeat);
+            RenderResourceInfo texture = appearance.OpenTexture(content, material.TexturePath, material.TextureSha256, TextureFilter.Nearest, TextureWrap.Repeat, admittingOffUpdate);
             locationResources.Add(texture.Handle);
             Dictionary<string, RenderResource> masks = new(StringComparer.Ordinal);
             RenderResource? Glass(ContentArtifact? mask)
@@ -882,7 +900,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 if (mask is null) return null;
                 if (!masks.TryGetValue(mask.Path, out RenderResource? resource))
                 {
-                    resource = appearance.OpenTexture(content, mask.Path, mask.Sha256, TextureFilter.Nearest, TextureWrap.Repeat).Handle;
+                    resource = appearance.OpenTexture(content, mask.Path, mask.Sha256, TextureFilter.Nearest, TextureWrap.Repeat, admittingOffUpdate).Handle;
                     locationResources.Add(resource);
                     masks.Add(mask.Path, resource);
                 }
@@ -896,7 +914,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             RenderResource Variant(ContentArtifact? variant)
             {
                 if (variant is null) return texture.Handle;
-                var resource = appearance.OpenTexture(content, variant.Path, variant.Sha256, TextureFilter.Nearest, TextureWrap.Repeat);
+                var resource = appearance.OpenTexture(content, variant.Path, variant.Sha256, TextureFilter.Nearest, TextureWrap.Repeat, admittingOffUpdate);
                 locationResources.Add(resource.Handle);
                 return resource.Handle;
             }
@@ -917,7 +935,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 world.Add((shown, mesh.Pose, index));
                 continue;
             }
-            Appearance created = appearance.CreateStaticMesh(content, mesh.Path, mesh.Sha256, worldAppearance.Tint);
+            Appearance created = appearance.CreateStaticMesh(content, mesh.Path, mesh.Sha256, worldAppearance.Tint, admittingOffUpdate);
             world.Add((created, mesh.Pose, index));
             models.Add(model, created);
             // A published closure's combined mesh is drawn with every material at its own slot; an assembled
@@ -937,7 +955,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             if (door.Visual is null && inputs.ProfileKind == DaggerfallWorldProfileKind.Exterior) continue;
             DaggerfallDoorVisual visual = door.Visual
                 ?? throw new InvalidOperationException($"Selected RDB door '{door.Id}' has no normalized visual.");
-            Appearance created = appearance.CreateStaticMesh(content, visual.Path, visual.Sha256, worldAppearance.Tint);
+            Appearance created = appearance.CreateStaticMesh(content, visual.Path, visual.Sha256, worldAppearance.Tint, admittingOffUpdate);
             appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(created, visual.Materials
                 .Select(binding => materialsBySlot.TryGetValue(binding.WorldMaterialSlot, out Material? material)
                     ? new MeshMaterialBinding(binding.MeshSlot, material)
@@ -953,7 +971,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         if (dungeonMotion is null) return;
         foreach ((DaggerfallDungeonActionModelDefinition model, _) in dungeonMotion.Visuals)
         {
-            Appearance created = appearance.CreateStaticMesh(content, model.Visual.Path, model.Visual.Sha256, worldAppearance.Tint);
+            Appearance created = appearance.CreateStaticMesh(content, model.Visual.Path, model.Visual.Sha256, worldAppearance.Tint, admittingOffUpdate);
             try
             {
                 appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(created, model.Visual.Materials
@@ -978,7 +996,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// <summary>A static mesh appearance drawing a visual with the location's materials at its slots.</summary>
     private Appearance StaticVisual(DaggerfallDoorVisual visual, string owner)
     {
-        Appearance created = appearance.CreateStaticMesh(content, visual.Path, visual.Sha256, worldAppearance.Tint);
+        Appearance created = appearance.CreateStaticMesh(content, visual.Path, visual.Sha256, worldAppearance.Tint, admittingOffUpdate);
         try
         {
             appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(created, visual.Materials

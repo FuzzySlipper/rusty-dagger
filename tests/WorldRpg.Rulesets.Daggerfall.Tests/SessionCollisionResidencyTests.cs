@@ -282,7 +282,7 @@ public sealed class SessionCollisionResidencyTests
     }
 
     [Fact]
-    public void A_location_the_window_brings_in_on_the_road_is_prepared_off_the_update_and_its_floor_waits_for_it()
+    public void A_location_the_window_brings_in_on_the_road_is_prepared_and_drawn_off_the_update_and_its_floor_waits_for_it()
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
@@ -305,12 +305,16 @@ public sealed class SessionCollisionResidencyTests
         PopulateContent(content, source);
         PopulateContent(content, resident);
         SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
-        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context,
             new(definitions, source, DaggerfallTuning.Defaults) { Profiles = new([source, resident]) });
         spatial.HoldDeferredCollision = true;
         int requests = spatial.ContentResidencyRequests.Count;
         int waited = spatial.SynchronousWaitsOnDeferred;
+        // The site the session starts at draws at once.
+        Assert.NotEmpty(appearance.StaticMeshPaths);
+        Assert.Empty(appearance.DeferredStaticMeshPaths);
 
         // The first admitted update moves the window with the player and brings the neighbour in.
         session.Update(new ProductUpdate(OuterUpdate(1), []));
@@ -318,6 +322,11 @@ public sealed class SessionCollisionResidencyTests
         SpatialContentArtifactResidencyRequest placed = Assert.Single(spatial.ContentResidencyRequests.Skip(requests));
         Assert.True(placed.Deferred);
         Assert.Equal(waited, spatial.SynchronousWaitsOnDeferred);
+        // Its meshes, and the textures its materials sample, are prepared on the renderer's workers.
+        string[] geometry = [.. resident.Geometry.Meshes.Select(mesh => mesh.Path)];
+        Assert.NotEmpty(geometry);
+        Assert.All(geometry, path => Assert.Contains(appearance.DeferredStaticMeshPaths, deferred => deferred?.EndsWith(path, StringComparison.Ordinal) == true));
+        Assert.Contains(appearance.OpenResourceContentRequests, request => request.Deferred);
         // The world runs on; only what the location places waits for its floor.
         Assert.True(session.Sites.CollisionPending);
         session.Update(new ProductUpdate(OuterUpdate(2), []));
