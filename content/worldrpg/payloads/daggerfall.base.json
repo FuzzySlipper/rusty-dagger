@@ -4484,7 +4484,6 @@
   "newGame": {
     "startSite": "daggerfall.privateers-hold",
     "quests": [
-      "_TUTOR__.txt",
       "_BRISIEN.txt"
     ],
     "gold": 100,
@@ -4871,6 +4870,59 @@
         "scope": "region",
         "variableKeys": [11],
         "requiredValue": true
+      }
+    ]
+  },
+  "help": {
+    "pages": [
+      {
+        "title": "Getting around",
+        "paragraphs": [
+          "Walk with {move.forward}, {move.left}, {move.backward} and {move.right}, and look about with the mouse or the right stick. Hold {run} to run, press {jump} to jump and {crouch} to crouch.",
+          "Running, fighting and guarding spend stamina, the green bar. It refills on its own once you have been still for a moment."
+        ]
+      },
+      {
+        "title": "Fighting",
+        "paragraphs": [
+          "Ready or sheathe your weapon with {toggle-weapon}. Press {attack} for a quick blow that chains into the next, or hold it to charge a heavy one. Hold {block} to guard and press {kick} to kick.",
+          "Equip armour and a weapon you are skilled with. A weapon your training does not cover rarely finds its mark, and a stronger metal hits harder.",
+          "Every attack also adds fatigue. Only rest and magic take fatigue away, and a tired fighter has less stamina to spend."
+        ]
+      },
+      {
+        "title": "Using the world",
+        "paragraphs": [
+          "Aim at something and press {interact} to use it: open a door, take an item, search a body or speak to someone.",
+          "What use does depends on the activation mode: steal {activation.steal}, grab {activation.grab}, look at {activation.info} or talk {activation.talk}. The mode in force is shown at the bottom right of the screen."
+        ]
+      },
+      {
+        "title": "Your character",
+        "paragraphs": [
+          "Open your inventory with {inventory} to equip, use and drop what you carry, and your character sheet with {character} to see your attributes and skills.",
+          "Skills rise as you use them. When enough of your career's skills have risen, you gain a level.",
+          "Open your spellbook with {spell}. Cast the readied spell with {recast}, or abort it with {abort-spell}. Use an enchanted item with {use-magic-item}."
+        ]
+      },
+      {
+        "title": "Resting",
+        "paragraphs": [
+          "Rest with {rest} to recover health, magicka and fatigue. Enemies close by will not let you rest, and indoors you need a room at an inn or the leave of a guild you belong to."
+        ]
+      },
+      {
+        "title": "Finding your way",
+        "paragraphs": [
+          "The map {map} shows the place you are in. Your logbook {logbook} keeps the quests you have taken, and the notebook {notebook} your own notes.",
+          "The travel map {travel-map} shows the Iliac Bay. Travel and transport {transport} takes you to any place you have heard of, by foot, horse, cart or ship, at the cost of the days on the road."
+        ]
+      },
+      {
+        "title": "Saving",
+        "paragraphs": [
+          "Quick save with {quick-save} and quick load with {quick-load}. The game menu, opened with {menu}, saves and loads named games and holds the settings, where every control can be changed."
+        ]
       }
     ]
   },

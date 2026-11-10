@@ -166,14 +166,14 @@ public sealed class CommittedBundleCompositionTests
     [Fact]
     public void A_bundle_that_admits_no_source_for_a_new_game_quest_is_refused_by_name()
     {
-        // The tutorial and the introduction are published by the late story corpus; a bundle without it
-        // would otherwise start a game that silently lacks them.
+        // The introduction is published by the late story corpus; a bundle without it
+        // would otherwise start a game that silently lacks it.
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => CreateWithBundle(bundle =>
         {
             JsonArray packs = bundle["contentPacks"]!.AsArray();
             packs.Remove(packs.Single(pack => pack!["id"]!.GetValue<string>() == "daggerfall.quests.story-late"));
         }));
-        Assert.Contains("admits no quest source for the new-game quests '_TUTOR__.txt', '_BRISIEN.txt'", error.Message, StringComparison.Ordinal);
+        Assert.Contains("admits no quest source for the new-game quests '_BRISIEN.txt'", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]

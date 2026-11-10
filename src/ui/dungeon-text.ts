@@ -1,6 +1,7 @@
 import type { Send } from './host.js';
 import { letterPickerButton } from './letter-picker.js';
 import type { DaggerHud } from './projection.js';
+import { reflow } from './reflow.js';
 
 /** Text the dungeon shows the player (an inscription, a riddle), with an answer box when it asks one. */
 export interface DungeonText {
@@ -42,7 +43,7 @@ export function mountDungeonText(shell: HTMLElement, send: Send): DungeonText {
       current = text;
       root.hidden = text === null || value.mode === 'dead';
       if (text === null) return;
-      body.textContent = text.text;
+      body.textContent = reflow(text.text);
       form.hidden = !text.requiresAnswer;
       closeButton.textContent = text.requiresAnswer ? 'Cancel' : 'Continue';
     },

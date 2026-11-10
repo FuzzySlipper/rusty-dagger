@@ -7,6 +7,7 @@ import { redraw } from './redraw.js';
 import { renderSpellSales, spellAction } from './spells.js';
 import { createStepper } from './stepper.js';
 import { formatNumber, mountTransfer, type TransferRow, type TransferSideName } from './transfer.js';
+import { reflow } from './reflow.js';
 
 /**
  * A person screen: the services a person offers, each on its own page. The ruleset publishes the
@@ -178,7 +179,7 @@ export function mountDialogue(shell: HTMLElement, send: Send, ask: (question: Co
         }
         const answer = document.createElement('p');
         answer.className = 'dagger-dialogue-reply';
-        answer.textContent = exchange.reply;
+        answer.textContent = reflow(exchange.reply);
         entry.append(answer);
         return entry;
       }));

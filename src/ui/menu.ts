@@ -4,6 +4,7 @@ import type { ConfirmQuestion } from './confirm.js';
 import { mountControls } from './controls.js';
 import { button, type Send } from './host.js';
 import { mountInventory } from './inventory.js';
+import { isHelpPages, mountHelp } from './help.js';
 import { mountJournal } from './journal.js';
 import { mountLodging, isLodgingProjection } from './lodging.js';
 import { mountLoot, type LootProjection } from './loot.js';
@@ -19,7 +20,7 @@ import { isTransportProjection, mountTransport } from './transport.js';
 import { mountTravel, isTravelProjection } from './travel.js';
 import { mountVideoSettings } from './video.js';
 
-type Panel = 'spells' | 'magic-items' | 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'save-slots' | 'settings';
+type Panel = 'spells' | 'magic-items' | 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'save-slots' | 'settings' | 'help';
 
 /** The panels the shoulder buttons step through, in the home list's order. */
 const STEPPED_PANELS = ['inventory', 'character', 'spells', 'magic-items', 'map', 'transport', 'rest', 'journal'] as const;
@@ -133,6 +134,8 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
   const characterView = mountCharacter(characterRoot, send);
   const notebookRoot = shell.querySelector<HTMLElement>('.dagger-notebook-root')!;
   const journalView = mountJournal(notebookRoot, send, ask);
+  const helpRoot = shell.querySelector<HTMLElement>('.dagger-help-root')!;
+  const helpView = mountHelp(helpRoot);
   const spellsRoot = shell.querySelector<HTMLElement>('.dagger-spells-root')!;
   const lootRoot = shell.querySelector<HTMLElement>('.dagger-loot-root')!;
   const lootView = mountLoot(lootRoot, send);
@@ -255,6 +258,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     transportRoot.hidden = action !== 'transport';
     restRoot.hidden = action !== 'rest';
     notebookRoot.hidden = action !== 'journal';
+    helpRoot.hidden = action !== 'help';
     lootRoot.hidden = action !== 'loot';
     saveSlotsRoot.hidden = action !== 'save-slots';
     controlsRoot.hidden = action !== 'settings';
@@ -275,7 +279,9 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       : action === 'rest' ? restRoot.querySelector<HTMLButtonElement>('[data-rest-mode]:not(:disabled)')
       // The journal opens on the first entry of the page it shows, or on that page's tab when it is empty.
       : action === 'journal' ? notebookRoot.querySelector<HTMLElement>('[role="tabpanel"]:not([hidden]) li[tabindex]')
-        ?? notebookRoot.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]') : null;
+        ?? notebookRoot.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
+      // Help opens on the page it last showed.
+      : action === 'help' ? helpRoot.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]') : null;
     if (content !== null) { content.focus(); return; }
     if (action === 'character') {
       menuTitle.focus({ preventScroll: true });
@@ -330,7 +336,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     else if (action === 'load-game') showSaveSlots('load');
     // The notebook key and an opened book ask for the journal on their own page.
     else if (action === 'notebook' || action === 'book') { showPanel('journal'); journalView.select(action === 'book' ? 'book' : 'notes'); }
-    else if (action === 'magic-items' || action === 'spells' || action === 'settings' || action === 'diagnostics' || action === 'inventory' || action === 'character' || action === 'map' || action === 'transport' || action === 'rest' || action === 'journal') showPanel(action);
+    else if (action === 'magic-items' || action === 'spells' || action === 'settings' || action === 'diagnostics' || action === 'inventory' || action === 'character' || action === 'map' || action === 'transport' || action === 'rest' || action === 'journal' || action === 'help') showPanel(action);
     else if (action === 'debug') { closeMenu(); host.openDeveloper(); }
   };
   const onClick = (event: MouseEvent): void => {
@@ -398,11 +404,12 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     },
     page(direction) {
       if (activePanel === 'journal') journalView.page(direction);
+      else if (activePanel === 'help') helpView.page(direction);
       else if (activePanel === 'map') mapView.zoom(direction);
       else if (activePanel === 'transport') travelView.page(direction);
     },
     pageHint() {
-      return activePanel === 'journal' ? journalView.pageHint() : activePanel === 'map' && isMapProjection(lastMap) ? 'Zoom'
+      return activePanel === 'journal' ? journalView.pageHint() : activePanel === 'help' ? helpView.pageHint() : activePanel === 'map' && isMapProjection(lastMap) ? 'Zoom'
         : activePanel === 'transport' ? travelView.pageHint() : null;
     },
     captureKey(event) {
@@ -509,6 +516,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
         if (magic.length === 0) { const empty = document.createElement('p'); empty.textContent = 'No usable magic items or potions.'; magicItemsRoot.replaceChildren(empty); }
         else magicItemsRoot.replaceChildren(list);
       });
+      helpView.update(isHelpPages(value.help) ? value.help : [], value.controls ?? null, value.inputDevice ?? 'keyboard');
       if (value.controls) {
         controlsView.update(value.controls, host.uiScale());
         videoView.update(value.controls.groundCover);
@@ -563,6 +571,6 @@ const HOTKEY_PANELS: Readonly<Record<string, string>> = { notebook: 'journal', b
 const PANEL_TITLES: Partial<Record<Panel, string>> = {
   'magic-items': 'Use magic item', spells: 'Known spells', settings: 'Settings', diagnostics: 'Composition diagnostics',
   inventory: 'Inventory & equipment', character: 'Character', map: 'Map', transport: 'Travel & transport', rest: 'Rest & loiter',
-  journal: 'Journal & notes', loot: 'Loot',
+  journal: 'Journal & notes', loot: 'Loot', help: 'Help',
 };
 

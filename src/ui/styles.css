@@ -579,3 +579,13 @@
   image-rendering: var(--glint-coins-rendering, pixelated);
 }
 .dagger-hud .has-glint > img { position: relative; z-index: 1; }
+
+/* Help: the pages as a column of tabs beside the page shown, read on parchment. */
+.dagger-help { display: grid; grid-template-columns: 14rem minmax(0, 1fr); gap: 1rem; align-items: start; }
+.dagger-help-tabs { display: grid; gap: .375rem; }
+.dagger-help-tabs [role="tab"] { text-align: left; }
+.dagger-help-page { min-height: 24rem; padding: 1.5rem 2rem; }
+.dagger-help-page h3 { margin: 0 0 .75rem; font-size: 1.25rem; }
+.dagger-help-page p { margin: 0 0 .75rem; line-height: 1.55; max-width: 44rem; }
+.dagger-help-page kbd { padding: 0 .35rem; border: 1px solid #7a5a2c; border-radius: 2px; background: rgb(122 90 44 / .14); color: #2a170a; font: 700 .85em ui-monospace, monospace; }
+.dagger-help-page kbd.is-unbound { font-style: italic; font-weight: 400; }

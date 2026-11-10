@@ -10,6 +10,7 @@ import type { MapProjection } from './maps.js';
 import type { NotebookProjection } from './notebook.js';
 import type { PropertyProjection } from './property.js';
 import type { TravelProjection } from './travel.js';
+import type { HelpPage } from './help.js';
 
 /** The HUD snapshot the ruleset publishes and the semantic actions the UI sends back. */
 
@@ -85,6 +86,8 @@ export interface DaggerHud {
   readonly prompt?: { readonly action: string; readonly target: string } | null;
   /** The device the player last pressed on, whose bindings the HUD names. */
   readonly inputDevice?: 'keyboard' | 'controller';
+  /** The game's help pages, each paragraph its words and the controls it names. */
+  readonly help?: readonly HelpPage[];
   readonly transport?: TransportProjection | null;
   readonly property?: PropertyProjection | null;
   readonly travel?: TravelProjection | null;

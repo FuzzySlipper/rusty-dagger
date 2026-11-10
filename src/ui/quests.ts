@@ -1,5 +1,6 @@
 import { heldRevision, image, smoothIfRefreshed } from './art.js';
 import type { QuestMessageProjection, QuestPresentation, UiAction } from './projection.js';
+import { reflow } from './reflow.js';
 
 export const questMessageNodes = new WeakMap<HTMLElement, Map<string, { signature: string; node: HTMLElement }>>();
 
@@ -19,7 +20,7 @@ export function renderQuestMessages(root: HTMLElement, value: QuestPresentation 
     const offer = value.offer;
     const article = document.createElement('article'); article.className = 'dagger-quest-message dagger-frame'; article.dataset.skin = 'parchment';
     const title = document.createElement('strong'); title.textContent = 'Quest offer';
-    const text = document.createElement('p'); text.textContent = offer.text; article.append(title, text);
+    const text = document.createElement('p'); text.textContent = reflow(offer.text); article.append(title, text);
     // An offer is a question answered as the confirmation answers one: accept, or decline.
     const answers = document.createElement('div'); answers.className = 'dagger-confirm-choices';
     for (const [label, confirm] of [['Accept', true], ['Decline', false]] as const) {
@@ -52,7 +53,7 @@ export function renderQuestMessages(root: HTMLElement, value: QuestPresentation 
     const title = document.createElement('strong');
     title.textContent = heading;
     const text = document.createElement('p');
-    text.textContent = message.text;
+    text.textContent = reflow(message.text);
     article.append(title, text);
     if (message.signoff) {
       const signoff = document.createElement('p');
@@ -85,7 +86,7 @@ export function renderQuestMessages(root: HTMLElement, value: QuestPresentation 
     const prompt = document.createElement('article');
     prompt.className = 'dagger-quest-message dagger-quest-prompt dagger-frame'; prompt.dataset.skin = 'parchment';
     const text = document.createElement('p');
-    text.textContent = message.text;
+    text.textContent = reflow(message.text);
     prompt.append(text);
     for (const option of message.options) {
       const button = document.createElement('button');

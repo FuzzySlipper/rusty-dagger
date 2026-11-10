@@ -2,6 +2,7 @@ import type { ConfirmQuestion } from './confirm.js';
 import { mountNotebook, type NotebookAction, type NotebookProjection } from './notebook.js';
 import { DIRECTION_EVENT, type Direction } from './navigation.js';
 import { redraw } from './redraw.js';
+import { reflow } from './reflow.js';
 
 export interface QuestJournalEntryProjection {
   readonly entryId: string | null;
@@ -122,7 +123,7 @@ export function mountJournal(root: HTMLElement, claim: (action: NotebookAction) 
       const item = document.createElement('li');
       if (entry.entryId) item.dataset.entryId = entry.entryId;
       item.tabIndex = 0;
-      item.textContent = entry.text;
+      item.textContent = reflow(entry.text);
       list.append(item);
     }
     return list;

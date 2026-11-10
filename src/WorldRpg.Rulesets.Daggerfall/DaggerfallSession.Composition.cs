@@ -720,6 +720,7 @@ internal sealed partial class DaggerfallSession
                 // The controls screen shows each action's controller buttons against the authored pad layout.
                 PadActions = tuning.ControllerInput?.Actions ?? [],
                 RefreshedArt = composition.ArtReplacements is not null,
+                Help = definitions.Help,
             };
             partiallyConstructed.Add(_hud);
             if (restore is not null)

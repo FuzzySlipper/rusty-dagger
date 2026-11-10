@@ -42,11 +42,35 @@ public sealed class DaggerfallBasePayloadSplitTests
         using JsonDocument imported = JsonDocument.Parse(TestContentFiles.ReadCopy(Path.Combine(payloads, "daggerfall.imported.json")));
 
         Assert.Equal(
-            ["ruleset", "enemyRanged", "vocabulary", "armorValuesByMaterial", "actors", "authoredItemTemplates", "items", "equipmentSlots", "actions", "lootTables", "hudResources", "donorErrata", "encounters", "assembledSites", "newGame", "enemySpells", "dialogueWorldRules", "questJournalTitles"],
+            ["ruleset", "enemyRanged", "vocabulary", "armorValuesByMaterial", "actors", "authoredItemTemplates", "items", "equipmentSlots", "actions", "lootTables", "hudResources", "donorErrata", "encounters", "assembledSites", "newGame", "enemySpells", "dialogueWorldRules", "help", "questJournalTitles"],
             authored.RootElement.EnumerateObject().Select(section => section.Name));
         Assert.Empty(imported.RootElement.EnumerateObject().Select(section => section.Name)
             .Intersect(authored.RootElement.EnumerateObject().Select(section => section.Name)));
         // Importer records nothing at runtime reads stay outside the runtime content root.
         Assert.DoesNotContain(imported.RootElement.EnumerateObject(), section => section.Name is "geometry" or "questOriginalSources" or "blocks");
+    }
+
+    [Fact]
+    public void Help_paragraphs_name_controls_by_their_action_and_an_action_no_control_has_is_refused()
+    {
+        using JsonDocument root = JsonDocument.Parse("""
+            { "help": { "pages": [ { "title": "Moving", "paragraphs": ["Hold {run} to run, and {jump} to jump.", "Press {fly} to fly."] } ] } }
+            """);
+        DaggerfallContentDiagnostics diagnostics = new();
+
+        DaggerfallHelpPage page = Assert.Single(DaggerfallBaseContent.ReadHelp(root.RootElement, diagnostics));
+
+        Assert.Equal("Moving", page.Title);
+        Assert.Equal([new("Hold ", null), new(null, "run"), new(" to run, and ", null), new(null, "jump"), new(" to jump.", null)], page.Paragraphs[0]);
+        Assert.Contains("names the control 'fly', which no action has",
+            Assert.Throws<DaggerfallContentException>(diagnostics.ThrowIfAny).Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_authored_help_names_only_controls_the_player_can_bind()
+    {
+        Assert.NotEmpty(TestPayload.Definitions.Help);
+        Assert.All(TestPayload.Definitions.Help.SelectMany(page => page.Paragraphs).SelectMany(paragraph => paragraph),
+            segment => Assert.True(segment.Action is null || DaggerfallControlSettings.Catalog.Any(action => action.Id == segment.Action)));
     }
 }

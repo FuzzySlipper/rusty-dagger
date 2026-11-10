@@ -79,6 +79,7 @@ const SHELL_MARKUP = `
           <button data-action="quick-load" data-icon="load">Quick load</button>
         </section>
         <section class="dagger-menu-group" aria-label="Settings">
+          <button data-action="help" data-icon="notebook">Help</button>
           <button data-action="settings" data-icon="settings">Settings &amp; controls</button>
           <button data-action="action-driven-time" aria-pressed="false">Action-driven time: Off</button>
           <p>Action-driven time pauses while you are idle or looking around. Movement and actions advance the world; swings and jumps finish before it pauses.</p>
@@ -116,6 +117,7 @@ const SHELL_MARKUP = `
         </div>
       </section>
       <div class="dagger-notebook-root" hidden></div>
+      <div class="dagger-help-root" hidden></div>
       <div class="dagger-loot-root" hidden></div>
       <section class="dagger-save-slots" hidden aria-label="Save slots">
         <p class="dagger-save-slots-diagnostic" role="status"></p>

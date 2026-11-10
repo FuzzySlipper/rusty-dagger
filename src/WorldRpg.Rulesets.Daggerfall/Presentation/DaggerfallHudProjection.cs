@@ -86,6 +86,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
     /// <summary>Whether the bundle carries a refreshed art set, so the player can choose classic art over it.</summary>
     internal bool RefreshedArt { get; init; }
 
+    /// <summary>The game's help pages, whose controls the DOM names by the bindings of the device in use.</summary>
+    internal IReadOnlyList<DaggerfallHelpPage> Help { get; init; } = [];
+
     internal void Publish(DaggerfallHudFrame frame)
     {
         ArgumentNullException.ThrowIfNull(frame);
@@ -269,6 +272,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("applied", builder.Boolean(activation.Applied)),
             ("dialogue", activation.Dialogue is null ? builder.Null() : Dialogue(builder, activation.Dialogue))))];
         if (quests is not null) fields = [.. fields, ("quests", Quests(builder, quests))];
+        fields = [.. fields, ("help", builder.Array(Help.Select(page => builder.Object(("title", builder.String(page.Title)),
+            ("paragraphs", builder.Array(page.Paragraphs.Select(paragraph => builder.Array(paragraph.Select(segment => segment.Action is { } action
+                ? builder.Object(("action", builder.String(action))) : builder.Object(("text", builder.String(segment.Text!)))).ToArray())).ToArray())))).ToArray()))];
         if (notebook is not null) fields = [.. fields, ("notebook", Notebook(builder, notebook))];
         if (frame.CreateItem is { } createItem) fields = [.. fields, ("createItem", builder.Object(("revision", builder.String(createItem.Revision)),
             ("options", builder.Array(createItem.Options.Select(option => builder.Object(("id", builder.String(option.Id)), ("label", builder.String(option.Label)))).ToArray()))))];

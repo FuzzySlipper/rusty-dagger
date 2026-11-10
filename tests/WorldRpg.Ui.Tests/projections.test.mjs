@@ -58,6 +58,7 @@ export async function mountVideoOptions(host, options) {
 const { mountProductUi } = await import(pathToFileURL(join(output, 'main.js')));
 const art = await import(pathToFileURL(join(output, 'art.js')));
 const skin = await import(pathToFileURL(join(output, 'skin.js')));
+const { reflow } = await import(pathToFileURL(join(output, 'reflow.js')));
 const uiScale = await import(pathToFileURL(join(output, 'scale.js')));
 const { developer } = await import(pathToFileURL(join(output, 'debug-stub.js')));
 const { video } = await import(pathToFileURL(join(output, 'video-stub.js')));
@@ -1731,6 +1732,45 @@ test('the notebook key and an opened book open the journal on their own page, an
     assert.equal(f.actions.filter(action => action.action === 'notebook-page').length, 1);
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'PageDown', bubbles: true, cancelable: true }));
     assert.deepEqual(f.actions.at(-1), { action: 'notebook-page', revision: '5', page: 1 });
+  } finally { f.dispose(); }
+});
+
+test('classic text reflows into its page, keeping the paragraphs its short lines end', () => {
+  const journal = ['Sundas the 1st of Midyear, 3E405:', 'I am on a mission from the emperor to investigate', 'the shade of King Lysandus. His spirit has been',
+    'haunting the city of Daggerfall. The emperor', 'himself has charged me with the duty of laying', 'his ghost to rest.',
+    'There is also the minor matter of a letter', 'he sent to the Queen of Daggerfall.'].join('\n');
+  assert.equal(reflow(journal), ['Sundas the 1st of Midyear, 3E405:',
+    'I am on a mission from the emperor to investigate the shade of King Lysandus. His spirit has been haunting the city of Daggerfall. The emperor himself has charged me with the duty of laying his ghost to rest.',
+    'There is also the minor matter of a letter he sent to the Queen of Daggerfall.'].join('\n\n'));
+  // Centred lines lose the spaces that centred them, a blank line divides paragraphs, and a short heading stands alone.
+  assert.equal(reflow('          Page 1\n   \n   The very first thing you want to do is to check\n   your controls.'),
+    'Page 1\n\nThe very first thing you want to do is to check your controls.');
+  assert.equal(reflow('Every line of one\nsentence joins.'), 'Every line of one sentence joins.');
+});
+
+test('help pages name the controls the player has bound, on the device in use, and turn with the pages', () => {
+  const f = fixture();
+  try {
+    const help = [
+      { title: 'Getting around', paragraphs: [[{ text: 'Hold ' }, { action: 'run' }, { text: ' to run.' }]] },
+      { title: 'Saving', paragraphs: [[{ text: 'Quick save with ' }, { action: 'quick-save' }, { text: '.' }]] },
+    ];
+    const controls = { diagnostic: '', bindings: [
+      { id: 'run', category: 'movement', label: 'Run', keys: ['ShiftLeft'], fixed: false, buttons: [10] },
+      { id: 'quick-save', category: 'saves', label: 'Quick save', keys: ['F5'], fixed: false, buttons: [] }] };
+    f.publish({ help, controls });
+    f.root.querySelector('[data-action="help"]').click();
+    const page = () => f.root.querySelector('.dagger-help-page');
+    assert.equal(f.root.querySelector('.dagger-help-root').hidden, false);
+    assert.equal(page().querySelector('h3').textContent, 'Getting around');
+    assert.equal(page().querySelector('p').textContent, 'Hold Left Shift to run.', 'The key the player bound, not a default.');
+    f.publish({ help, controls, inputDevice: 'controller' });
+    assert.equal(page().querySelector('p').textContent, 'Hold Left stick press to run.');
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'PageDown', bubbles: true, cancelable: true }));
+    assert.equal(page().querySelector('h3').textContent, 'Saving');
+    // An action with no button on this device is named by what it does.
+    assert.equal(page().querySelector('kbd').textContent, 'Quick save');
+    assert.equal(page().querySelector('kbd').classList.contains('is-unbound'), true);
   } finally { f.dispose(); }
 });
 
