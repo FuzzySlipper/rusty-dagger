@@ -231,6 +231,19 @@ repainted in the stationary people's style rather than converted from its classi
    picture length over its longest in the cycle. In profile the forearm trails the shoulder: it turns
    by 0.6 of how far the upper arm moved over the last 0.1 s, the other way, never bending back past
    straight further than the clip does.
+   **Secondary motion:** the body and what hangs on it carry the walk with the arms, and it is
+   derived offline and kept as keys, so nothing simulates at runtime and every player shows the
+   same closed loop. From the front and behind, the hips sway 5 units toward the standing foot and
+   roll 2.5° down on the swinging leg's side. The chest turns back 1.6 times that roll against the
+   hips, and the neck turns 0.5 of it, leaving the head nearly level. The thighs turn back by the roll
+   and the sway, so a planted foot stays where the clip put it. A profile shows neither. Then rig-c's
+   own physics swings the hanging chains that view draws: the front's back hair, bangs and skirt
+   panels, the back's skirt panels, and the profile's hem and the pouch, which hangs from its belt on
+   a bone of its own. The walk plays four times so the springs settle. Each link's turn against its
+   parent, less the same turn without physics, is read off the last cycle, smoothed and keyed into
+   the walk on the chain's control bone. The physics is then dropped. Hair and bangs cut with a
+   profile's or the back's head can't swing. The figure walks on the spot, so a stop or a turn has
+   no response.
 6. **Placement:** each clip draws the figure at its own height and offset. After the retarget, the
    rig's root moves so the walk's planted foot stands on y = 0 and the rig source's neck on x = 0, so
    a change of view, mirrored or not, keeps the feet and head in place.
