@@ -139,20 +139,27 @@ nothing is baked into one clip. The figure's layer stack (`parts-rig-layers/1`) 
 
 - **Body,** track 0: the clip the game chooses (idle, walk, a gesture). It may key anything, draw
   order included.
-- **Eyes,** track 2: the `eyes` clip, looping under every body clip on its own clock. It owns the eye,
-  iris and brow bones, and body clips leave them unkeyed; the rig's own idle blink is taken out.
-- **Eyes override,** track 3: a body clip's companion `<clip>.eyes`, played with it when the rig has
-  one. A higher track replaces only what its clip keys, so a companion that moves only the irises
-  keeps the blinks.
+- **Attention,** track 2: the `attention` clip, looping under every body clip on its own clock. It
+  owns the eye, iris and brow bones and the `head` bone, and body clips leave them unkeyed; the
+  rig's own idle blink is taken out. Body clips move the head through `neck` and `head_ctl`, which
+  `head` hangs below, so the head's own motion rides on theirs.
+- **Attention override,** track 3: a body clip's companion `<clip>.attention`, played with it when
+  the rig has one. A higher track replaces only what its clip keys, so a companion that moves only
+  the irises keeps the blinks and the head's drift.
 
 Track 1 is left for breathing added over a walk. A layer's clip keys bone transforms only.
 
-The `eyes` clip is about 10 s: blinks at uneven gaps of 2 to 4 s, sometimes doubled, each shaped as
-rig-c's idle blink (the eyes squashed to 0.12 and back, the brows dipping), and between them glances
-of about a seventh of the eye's width, held a second or more. Its length divides none of the body
-clips', so the two never repeat in step. Its times come from the figure, not the view, so every
-view blinks together and a change of view never cuts a blink. A view without eyes holds the root
-still instead, since every view of a figure must hold every clip it plays.
+The `attention` clip is about 10 s:
+- **Blinks** at uneven gaps of 2 to 4 s, sometimes doubled, each shaped as rig-c's idle blink (the
+  eyes squashed to 0.12 and back, the brows dipping).
+- **Glances** of the irises, about a seventh of the eye's width, held a second or more.
+- **Head:** a degree or two of drift on slow waves whose periods divide the loop, and a lean toward
+  each glance of up to 1.6°, starting 0.12 s after the eyes and eased in over 0.4 s.
+
+Its length divides none of the body clips', so the two never repeat in step. Its times come from
+the figure, not the view, so every view blinks, glances and turns together and a change of view
+never cuts one. A view lacking a part simply does not draw that part's motion: from behind only the
+head moves.
 
 ## Idle video
 
