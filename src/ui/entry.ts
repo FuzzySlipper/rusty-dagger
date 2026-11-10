@@ -1,4 +1,4 @@
-import { fitPixelArt, image, showScreen } from './art.js';
+import { cssUrl, fitPixelArt, image, showScreen } from './art.js';
 import { button, type Send } from './host.js';
 import { isBundles, isSaveSlots, type BundleProjection, type DaggerHud, type SaveSlotEntry, type Unavailable } from './projection.js';
 import { createCycler, type Cycler } from './cycler.js';
@@ -158,8 +158,13 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
     if (creating) bundleStep = null;
     const primary = screenForMode(mode ?? TITLE_MODE)!;
     showScreen(screen, primary);
+    const refreshedTitle = primary === screenForMode(TITLE_MODE) && screen.dataset.refreshed !== undefined;
+    // The refreshed title is an upright painting: a dimmed copy of it fills the window beside it.
+    const backdrop = refreshedTitle && screen.src ? cssUrl(screen.src) : null;
+    if (backdrop) { root.style.setProperty('--dagger-entry-backdrop', backdrop); root.dataset.backdrop = ''; }
+    else { root.style.removeProperty('--dagger-entry-backdrop'); delete root.dataset.backdrop; }
     name.textContent = gameName;
-    name.hidden = primary !== screenForMode(TITLE_MODE) || screen.dataset.refreshed === undefined || gameName === '';
+    name.hidden = !refreshedTitle || gameName === '';
     const shown = mode === 'character-pick' ? pickScreens.filter(id => id !== primary) : [];
     redraw(parts, JSON.stringify([shown, shown.map(id => image(id) !== null)]), () => parts.replaceChildren(...shown.flatMap(id => {
       const source = image(id); if (source === null) return [];

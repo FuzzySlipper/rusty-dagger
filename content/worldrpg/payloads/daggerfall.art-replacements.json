@@ -497,6 +497,591 @@
     }
    },
    {
+    "replaces": "character.child-face.0",
+    "mediaId": "refreshed.character.child-face.0",
+    "path": "worldrpg/media/refreshed/ui/child-faces--kids00i0--kids00i0-record-000-frame-000.webp",
+    "byteLength": 15868,
+    "sha256": "5ec479fe7c6193e000f96fba33ea7a0512f0b6271e5f36ab45301c6798b666e8",
+    "width": 248,
+    "height": 256
+   },
+   {
+    "replaces": "character.child-face.1",
+    "mediaId": "refreshed.character.child-face.1",
+    "path": "worldrpg/media/refreshed/ui/child-faces--kids00i0--kids00i0-record-001-frame-000.webp",
+    "byteLength": 23696,
+    "sha256": "58712b8454091d27f648fc408f17d76d148761446cff95e78ef5bdc530aa1284",
+    "width": 228,
+    "height": 256
+   },
+   {
+    "replaces": "character.child-face.2",
+    "mediaId": "refreshed.character.child-face.2",
+    "path": "worldrpg/media/refreshed/ui/child-faces--kids00i0--kids00i0-record-002-frame-000.webp",
+    "byteLength": 18124,
+    "sha256": "c165b43c1d27bfbd22227721f4d9a982a004b1385f82e5884e9cbe1e658533d5",
+    "width": 245,
+    "height": 256
+   },
+   {
+    "replaces": "character.child-face.3",
+    "mediaId": "refreshed.character.child-face.3",
+    "path": "worldrpg/media/refreshed/ui/child-faces--kids00i0--kids00i0-record-003-frame-000.webp",
+    "byteLength": 22580,
+    "sha256": "7e4fec85dda6f6a0860f8bf2d1c1ca466da32239a5f27cba49261b473c3372db",
+    "width": 226,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.00",
+    "mediaId": "refreshed.character.faction-face.00",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-000-frame-000.webp",
+    "byteLength": 23080,
+    "sha256": "7f4ae925089e5e06734f74224136dab9229f92ec936b0e65cd9eb57593ac0abe",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.01",
+    "mediaId": "refreshed.character.faction-face.01",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-001-frame-000.webp",
+    "byteLength": 22922,
+    "sha256": "b2885171e1256305112d49ce585a590cfa71efc80a7c8669badb023002b7c2bc",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.02",
+    "mediaId": "refreshed.character.faction-face.02",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-002-frame-000.webp",
+    "byteLength": 21922,
+    "sha256": "c1e7ad0b801f5d7f1ec5301750cff229bcd3b891b92bd6a861605589f8a132ae",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.03",
+    "mediaId": "refreshed.character.faction-face.03",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-003-frame-000.webp",
+    "byteLength": 21190,
+    "sha256": "a001d2b54ccbe2f91afb5fe2369882383914073a155b03c70bbf083a23d9a36f",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.04",
+    "mediaId": "refreshed.character.faction-face.04",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-004-frame-000.webp",
+    "byteLength": 21062,
+    "sha256": "299bae96adced9c17a6e5cf6c535a8b9479e05deabc73497d67e54573fe08faa",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.05",
+    "mediaId": "refreshed.character.faction-face.05",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-005-frame-000.webp",
+    "byteLength": 17558,
+    "sha256": "a202d923cf5eaad564ac7a751c3d6baa379403209c4838b7ea3243e79d2d6248",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.06",
+    "mediaId": "refreshed.character.faction-face.06",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-006-frame-000.webp",
+    "byteLength": 20152,
+    "sha256": "b4b612596b39f466e1e1907d6d9b3c74dcff3c221b0f35924fb0dbc8d7617943",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.07",
+    "mediaId": "refreshed.character.faction-face.07",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-007-frame-000.webp",
+    "byteLength": 16102,
+    "sha256": "f9b4c1224a51bbf5388bd5cb51c69d02646426dc2a31397152eb172e79e5586f",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.08",
+    "mediaId": "refreshed.character.faction-face.08",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-008-frame-000.webp",
+    "byteLength": 27854,
+    "sha256": "fbcadda97259c0d6af0c0b354a43589e07c4365ab4e718dd4f7ae86654a55bb1",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.09",
+    "mediaId": "refreshed.character.faction-face.09",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-009-frame-000.webp",
+    "byteLength": 16618,
+    "sha256": "8a475d1393377e768041f18920e98e43d6fe9d4562255a6ea5f738bdc530d45c",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.10",
+    "mediaId": "refreshed.character.faction-face.10",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-010-frame-000.webp",
+    "byteLength": 20872,
+    "sha256": "9e295577e47383de4fe7a95f7b753447158c4870c0494959842d111db9a3be69",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.11",
+    "mediaId": "refreshed.character.faction-face.11",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-011-frame-000.webp",
+    "byteLength": 7704,
+    "sha256": "19830e7c8576b71acb466834724c27f67c5a97d6461d4b43a43dd15a971238e5",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.12",
+    "mediaId": "refreshed.character.faction-face.12",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-012-frame-000.webp",
+    "byteLength": 17694,
+    "sha256": "5adb42282f26cc5b43820d18281517af0f30f970984d296d8b3029a28d14adb9",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.13",
+    "mediaId": "refreshed.character.faction-face.13",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-013-frame-000.webp",
+    "byteLength": 22314,
+    "sha256": "dae0137ce6c01fed4eaf4aa633d7afb17f971bb058670e4660a4ef1e868e0887",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.14",
+    "mediaId": "refreshed.character.faction-face.14",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-014-frame-000.webp",
+    "byteLength": 23548,
+    "sha256": "d14591f1871f7a6b0ad57b8ace8271df3d4943376803e16cc2dcfc908f3d585d",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.15",
+    "mediaId": "refreshed.character.faction-face.15",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-015-frame-000.webp",
+    "byteLength": 19912,
+    "sha256": "f4da2de194795d4de60ff11b9ccb86cff74072677a550c2c17ad35163d736178",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.16",
+    "mediaId": "refreshed.character.faction-face.16",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-016-frame-000.webp",
+    "byteLength": 20810,
+    "sha256": "b350e1a4df13c07913b87055c903a21b2714c1c1185e68123a84ad22a3a512b1",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.17",
+    "mediaId": "refreshed.character.faction-face.17",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-017-frame-000.webp",
+    "byteLength": 20568,
+    "sha256": "348099ac02d7e16da56a78dcac0d4df0591628d9001118ddb1df01475402560f",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.18",
+    "mediaId": "refreshed.character.faction-face.18",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-018-frame-000.webp",
+    "byteLength": 20990,
+    "sha256": "fd36aca4ef33feef6b48240ff0564ee6504966f4e69583231724b28f6502dc05",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.19",
+    "mediaId": "refreshed.character.faction-face.19",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-019-frame-000.webp",
+    "byteLength": 16178,
+    "sha256": "fecb05b0d9865ffcfb8e73206cd70fcd32bcdceb187c7c562146653137f667e8",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.20",
+    "mediaId": "refreshed.character.faction-face.20",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-020-frame-000.webp",
+    "byteLength": 19044,
+    "sha256": "16aa68409856745b733b54ec32f5592322fb6841695f167c732dba67d335a4d3",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.21",
+    "mediaId": "refreshed.character.faction-face.21",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-021-frame-000.webp",
+    "byteLength": 21814,
+    "sha256": "0ec37c34d44f386d9a3dc92580819aafb95a2b61ccf901c912d25cb19b35714a",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.22",
+    "mediaId": "refreshed.character.faction-face.22",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-022-frame-000.webp",
+    "byteLength": 22836,
+    "sha256": "d4a6ef3a6759b8a8ef3e03455a80afb06bb4c7aa25c2acdc17eacde21de72501",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.23",
+    "mediaId": "refreshed.character.faction-face.23",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-023-frame-000.webp",
+    "byteLength": 20426,
+    "sha256": "8d2aafc971e1fb80048b4488e20b27f686f55fc45f949a6ebc3974c39c281e78",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.24",
+    "mediaId": "refreshed.character.faction-face.24",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-024-frame-000.webp",
+    "byteLength": 22640,
+    "sha256": "807979b2db7a963772314f8784fc21f63a81fc66afb935ad08c2aca4b6f95691",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.25",
+    "mediaId": "refreshed.character.faction-face.25",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-025-frame-000.webp",
+    "byteLength": 17948,
+    "sha256": "1e6853e821fb917eaa3c9727d229c247ca3c41cea6fd9c9f5a2480e6bd14f989",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.26",
+    "mediaId": "refreshed.character.faction-face.26",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-026-frame-000.webp",
+    "byteLength": 17502,
+    "sha256": "4cc2a9d307f54fc8d054cd17fdb8a53b70e47fde923e4ab3b6bbd468f20cf476",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.27",
+    "mediaId": "refreshed.character.faction-face.27",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-027-frame-000.webp",
+    "byteLength": 19856,
+    "sha256": "e2bc0002713bff9fff29e54478786937a7b08e582a433f0ddc073b541220780d",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.28",
+    "mediaId": "refreshed.character.faction-face.28",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-028-frame-000.webp",
+    "byteLength": 17222,
+    "sha256": "230b07522bef1ff9fb68516a42125e8af0db8b0acd4133b8640904600929143d",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.29",
+    "mediaId": "refreshed.character.faction-face.29",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-029-frame-000.webp",
+    "byteLength": 17846,
+    "sha256": "f686f2335571f5c6255fa7ae595aa3db9671120d640b19c36819e929be315308",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.30",
+    "mediaId": "refreshed.character.faction-face.30",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-030-frame-000.webp",
+    "byteLength": 21222,
+    "sha256": "5c01bb39c1ae256be13a1b4f15cf0741c79cbaef419a17a2c112f1891318d2e0",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.31",
+    "mediaId": "refreshed.character.faction-face.31",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-031-frame-000.webp",
+    "byteLength": 18264,
+    "sha256": "cf0793748b1460d253842fd2d94d0c21e7620023ede8ccc1c1ae62c51f1cf1a3",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.32",
+    "mediaId": "refreshed.character.faction-face.32",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-032-frame-000.webp",
+    "byteLength": 15660,
+    "sha256": "d6634e22cb0dac380f35913df96ee947a2e901164bfe4259ad6ab4afbe6773bb",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.33",
+    "mediaId": "refreshed.character.faction-face.33",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-033-frame-000.webp",
+    "byteLength": 15874,
+    "sha256": "bcdc29bd34e0d68a19ee2bac47f25e6ef4b040f1fd28c512163b5c2360b1e795",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.34",
+    "mediaId": "refreshed.character.faction-face.34",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-034-frame-000.webp",
+    "byteLength": 18682,
+    "sha256": "9c56ea6c65c05cff05ef8b6e101e3d01e0b6fecdbe7366adfec9d4508becd911",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.35",
+    "mediaId": "refreshed.character.faction-face.35",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-035-frame-000.webp",
+    "byteLength": 16958,
+    "sha256": "82015151b4f836345cbd4332863831643b12100364d1a71b6936ed2d9821dd3d",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.36",
+    "mediaId": "refreshed.character.faction-face.36",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-036-frame-000.webp",
+    "byteLength": 19966,
+    "sha256": "505b1986c58a39aba6081604f68fb6322348010e3c625f22777b6b137a335a4a",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.37",
+    "mediaId": "refreshed.character.faction-face.37",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-037-frame-000.webp",
+    "byteLength": 18818,
+    "sha256": "7a75a4a974c2dcc02c0969033a5a2720eced2248574897e82f04f88ef9ffb700",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.38",
+    "mediaId": "refreshed.character.faction-face.38",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-038-frame-000.webp",
+    "byteLength": 21914,
+    "sha256": "11df50e21d21e918374c00f4e5577162c3d77f808841cc5b64c5a6f4d8b0f0d5",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.39",
+    "mediaId": "refreshed.character.faction-face.39",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-039-frame-000.webp",
+    "byteLength": 22212,
+    "sha256": "c1b2044aef2b8c425ee9854d3d03c3b3e40e214fe9960cb705e3a00dfcee4bbb",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.40",
+    "mediaId": "refreshed.character.faction-face.40",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-040-frame-000.webp",
+    "byteLength": 18884,
+    "sha256": "24b8bcb75050f5204b6ff2baecc7cc6757ac47ba3f9cda8bd0d34080400de2fc",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.41",
+    "mediaId": "refreshed.character.faction-face.41",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-041-frame-000.webp",
+    "byteLength": 15980,
+    "sha256": "ed8b0f87fd81819585c5be72aafd6ca91af4dd3d12d9ef8aac0fe497923921d6",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.42",
+    "mediaId": "refreshed.character.faction-face.42",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-042-frame-000.webp",
+    "byteLength": 25620,
+    "sha256": "2adf2165a8a68dbd9b1890bd96cebfdecb3aaa3403d602f1aeef3eda08f21283",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.43",
+    "mediaId": "refreshed.character.faction-face.43",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-043-frame-000.webp",
+    "byteLength": 18760,
+    "sha256": "8c9f8a17ec26486a75590199b5d75b86dd5f70fd6c841849bfb9f1c9a0d05d1e",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.44",
+    "mediaId": "refreshed.character.faction-face.44",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-044-frame-000.webp",
+    "byteLength": 16198,
+    "sha256": "2ce9a5d17e0dd58bc67684d3715552b1d5545b7c9842b0596edad90842571538",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.45",
+    "mediaId": "refreshed.character.faction-face.45",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-045-frame-000.webp",
+    "byteLength": 17162,
+    "sha256": "729ad217a6b413958b528cbedb4297589452a618be601607f529a93509d81582",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.46",
+    "mediaId": "refreshed.character.faction-face.46",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-046-frame-000.webp",
+    "byteLength": 18216,
+    "sha256": "e06fb3c0945fdad61ce8910fb547a72300a9858221325bea57cc2e2059d2d2b4",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.47",
+    "mediaId": "refreshed.character.faction-face.47",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-047-frame-000.webp",
+    "byteLength": 18558,
+    "sha256": "87f2ccfeb1243275840a528b1d16eb86b3aecf49199edb70ac891aae09f8809d",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.48",
+    "mediaId": "refreshed.character.faction-face.48",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-048-frame-000.webp",
+    "byteLength": 18366,
+    "sha256": "606be6e43b4d2ea7fc830dc742fed99e6ffb05e3eec95afa8ff378a7703d4407",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.49",
+    "mediaId": "refreshed.character.faction-face.49",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-049-frame-000.webp",
+    "byteLength": 21384,
+    "sha256": "a341ce41715496e84e44a20243cba5f99af9486d04fd80e5a4363014634d3383",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.50",
+    "mediaId": "refreshed.character.faction-face.50",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-050-frame-000.webp",
+    "byteLength": 20198,
+    "sha256": "64ab61c66af1abffed9a54ec41475f0aabf373e53c1d417e01ab81184f46f0d2",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.51",
+    "mediaId": "refreshed.character.faction-face.51",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-051-frame-000.webp",
+    "byteLength": 22194,
+    "sha256": "c57a55365a5d5958f99f84749f8bfd4ade8273f30749f3b0fb48cfe4d692bac1",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.52",
+    "mediaId": "refreshed.character.faction-face.52",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-052-frame-000.webp",
+    "byteLength": 21572,
+    "sha256": "3107f078f7c978adad658c48836028203c3ceb9c409ea4771e3a4de952a1d75a",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.53",
+    "mediaId": "refreshed.character.faction-face.53",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-053-frame-000.webp",
+    "byteLength": 18116,
+    "sha256": "7a96cc2afb0b299a3806c440ac9c0b270ddcbcfc6b3e2ef8fd3ae15e5cb1c2ae",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.54",
+    "mediaId": "refreshed.character.faction-face.54",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-054-frame-000.webp",
+    "byteLength": 19686,
+    "sha256": "f2d1937d7fff706f3c8bf38e4ca18d0f429c4e51eeade00c0af2eea0f64d06a2",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.55",
+    "mediaId": "refreshed.character.faction-face.55",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-055-frame-000.webp",
+    "byteLength": 18756,
+    "sha256": "bb917bb30f0f2f25a68b59bffbf22911236f8b2dcb8b56f189c24bf35f8a0d64",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.56",
+    "mediaId": "refreshed.character.faction-face.56",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-056-frame-000.webp",
+    "byteLength": 20434,
+    "sha256": "913ffd54fe9b72056ce80c40c4b9c1fad8524c4324459c8cbff6541c11b0577a",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.57",
+    "mediaId": "refreshed.character.faction-face.57",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-057-frame-000.webp",
+    "byteLength": 16264,
+    "sha256": "e3bb0e04690445800475f0cd5a1c98289049d910944a0e0fd7f5f35e2359e287",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.58",
+    "mediaId": "refreshed.character.faction-face.58",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-058-frame-000.webp",
+    "byteLength": 18616,
+    "sha256": "0aaa77ff2dbefa4f936693a7d04bd715511283d47c95d977195daa16643ec4a1",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.59",
+    "mediaId": "refreshed.character.faction-face.59",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-059-frame-000.webp",
+    "byteLength": 22690,
+    "sha256": "82251c8b7e64dccdd8665a4123571b2d0e3e3113f40d4daca9191666dff58c07",
+    "width": 256,
+    "height": 256
+   },
+   {
+    "replaces": "character.faction-face.60",
+    "mediaId": "refreshed.character.faction-face.60",
+    "path": "worldrpg/media/refreshed/ui/faction-faces--tfac00i0--tfac00i0-record-060-frame-000.webp",
+    "byteLength": 18976,
+    "sha256": "c6f5406137407e6a167b8db09b3a79d00e4f918470d32807fbc8ccee0492a603",
+    "width": 256,
+    "height": 256
+   },
+   {
     "replaces": "character.head.female.00.0",
     "mediaId": "refreshed.character.head.female.00.0",
     "path": "worldrpg/media/refreshed/paper-doll/faces--face10i0--face10i0-record-000-frame-000.webp",
@@ -46963,6 +47548,51 @@
       "height": 55
      }
     }
+   },
+   {
+    "replaces": "screen.character-generation",
+    "mediaId": "refreshed.screen.character-generation",
+    "path": "worldrpg/media/refreshed/ui/screens--character-generation--character-generation-record-000-frame-000.webp",
+    "byteLength": 165360,
+    "sha256": "3bc5c2df9ee44aea9e7561b7249d4c4756d54e8f1109883e7c71dbada570c521",
+    "width": 1325,
+    "height": 828
+   },
+   {
+    "replaces": "screen.death",
+    "mediaId": "refreshed.screen.death",
+    "path": "worldrpg/media/refreshed/ui/screens--death--death-record-000-frame-000.webp",
+    "byteLength": 291462,
+    "sha256": "5069d461b476d5cb6c7b935f907099f9e60052ad24c9457cbad0bf872bf2a430",
+    "width": 1435,
+    "height": 897
+   },
+   {
+    "replaces": "screen.pick.02",
+    "mediaId": "refreshed.screen.pick.02",
+    "path": "worldrpg/media/refreshed/ui/screens--pick-02--pick-02-record-000-frame-000.webp",
+    "byteLength": 217076,
+    "sha256": "59b09efb80e5b3646cddfa9a200139e581ad556329ccd114d03414b720e9dc14",
+    "width": 1363,
+    "height": 852
+   },
+   {
+    "replaces": "screen.prison",
+    "mediaId": "refreshed.screen.prison",
+    "path": "worldrpg/media/refreshed/ui/screens--prison--prison-record-000-frame-000.webp",
+    "byteLength": 175184,
+    "sha256": "e8eede5cb1e9834697fefb10360f59e0b036d5318a9b1f37e8bc23eba8df53f7",
+    "width": 1325,
+    "height": 828
+   },
+   {
+    "replaces": "screen.title",
+    "mediaId": "refreshed.screen.title",
+    "path": "worldrpg/media/refreshed/ui/screens--title--title-record-000-frame-000.webp",
+    "byteLength": 257414,
+    "sha256": "92a102e99655c69f07c82c5afb4e9e4474ffb6558fa0edb338d8d38484bbdc35",
+    "width": 1073,
+    "height": 1393
    },
    {
     "replaces": "spell.element.0",

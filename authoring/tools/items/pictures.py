@@ -10,6 +10,7 @@ paper-doll picture also gets a sidecar stating the classic rect, so doll_preview
 exactly where the classic picture was.
 
     pictures.py BP_DIR SPEC.json [--area paper-doll]   # e.g. gen-raw/studies/paper-doll-c1-beasts-bp-DATE specs/paper-doll/paper-doll-c1-beasts.json
+    pictures.py BP_DIR SPEC.json --area ui --source gen-raw/source-edits/ui-screens --image original --only title death
 
 Finals go to gen-raw/AREA under their art keys.
 """
@@ -43,11 +44,18 @@ def main():
     ap.add_argument("bp", type=Path)
     ap.add_argument("spec", type=Path)
     ap.add_argument("--area", default="paper-doll")
+    ap.add_argument("--source", type=Path, help="the source root the batch ran from (its SOURCE), when not df-raw/AREA")
+    ap.add_argument("--image", choices=("bp-broad-half", "original"), default="bp-broad-half",
+                    help="original takes the picture before back-projection, which would bring back lettering the batch painted out")
+    ap.add_argument("--only", nargs="+", help="item ids to fit; the rest are left as they are")
     a = ap.parse_args()
     finals = AUTHORING / "gen-raw" / a.area
+    sources = a.source or AUTHORING / "df-raw" / a.area
     for item in json.load(open(a.spec))["items"]:
-        source = Image.open(AUTHORING / "df-raw" / a.area / item["directory"] / item["image"])
-        found = picture(Image.open(a.bp / "images" / item["id"] / "bp-broad-half.png"))
+        if a.only and item["id"] not in a.only:
+            continue
+        source = Image.open(sources / item["directory"] / item["image"])
+        found = picture(Image.open(a.bp / "images" / item["id"] / f"{a.image}.png"))
         size = (round(found.height * source.width / source.height), found.height)
         key = art_key(a.area, item["directory"], item["image"])
         found.convert("RGB").resize(size, Image.Resampling.LANCZOS).convert("RGBA").save(finals / f"{key}.png")

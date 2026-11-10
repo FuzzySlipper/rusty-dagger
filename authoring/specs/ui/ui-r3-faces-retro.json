@@ -1,0 +1,112 @@
+{
+  "seed": 27451,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Highly detailed lurid pulp-fantasy character portrait in the manner of 1970s and 80s paperback cover art (Frank Frazetta, Boris Vallejo): glossy airbrushed oil rendering, strongly modelled features with defined brows, eyes, nose, lips and cheekbones, fine skin detail and sheen, individual strands of hair, warm rim light against deep shadow, sharp specular highlights, rich saturated colour. Crisp, confident, finely detailed forms rather than flat broad shapes; keep the original local colours. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded fantasy RPG character portraits in a restrained palette, the same family as the game's other portraits. Keep the source's expression, head angle, skin tone, hair and features. No text, lettering, second figure or border beyond the thin gold frame.",
+  "presentation": "One whole square framed portrait, centred on a perfectly flat solid dark slate grey background, RGB 48,52,59, outside the frame. The picture fills about three quarters of the canvas. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Escort portraits redo R3 / Qwen then retro",
+  "routes": [
+    {
+      "id": "qwen-retro",
+      "label": "Qwen then retro / 0.35",
+      "group": "faces",
+      "model": "krea2-turbo",
+      "host": "den-nimo",
+      "url": "http://192.168.1.23:8188",
+      "unet": "krea2_turbo_fp8_scaled.safetensors",
+      "conditioning": "init",
+      "denoise": 0.35,
+      "loras": [
+        "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+      ],
+      "prompt_prefix": "dark_fantasy_illustration,\n\n",
+      "upstream_route": "qwen-base",
+      "upstream_style": "painted"
+    }
+  ],
+  "task": "Task: Redraw a very small classic fantasy RPG portrait as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+  "items": [
+    {
+      "id": "tfac-32",
+      "directory": "faction-faces/tfac00i0",
+      "image": "tfac00i0-record-032-frame-000-source.png",
+      "name": "escort portrait 32 (64x64)",
+      "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a young person with a pale blond bowl haircut, in a brown tunic, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input. A completely smooth chin, jaw and upper lip: no beard, no stubble, no moustache, no facial hair at all.",
+      "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+      "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+    },
+    {
+      "id": "tfac-33",
+      "directory": "faction-faces/tfac00i0",
+      "image": "tfac00i0-record-033-frame-000-source.png",
+      "name": "escort portrait 33 (64x64)",
+      "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a woman with long black hair and a thin gold circlet, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input. A clearly feminine face with a soft jaw and chin. A completely smooth chin, jaw and upper lip: no beard, no stubble, no moustache, no facial hair at all.",
+      "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+      "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+    },
+    {
+      "id": "tfac-37",
+      "directory": "faction-faces/tfac00i0",
+      "image": "tfac00i0-record-037-frame-000-source.png",
+      "name": "escort portrait 37 (64x64)",
+      "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a woman in a hood trimmed with gold, glancing to the left, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input. A clearly feminine face with a soft jaw and chin. A completely smooth chin, jaw and upper lip: no beard, no stubble, no moustache, no facial hair at all.",
+      "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+      "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+    },
+    {
+      "id": "tfac-41",
+      "directory": "faction-faces/tfac00i0",
+      "image": "tfac00i0-record-041-frame-000-source.png",
+      "name": "escort portrait 41 (64x64)",
+      "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a pale woman with long black hair and a gold clasp at her throat, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input. A clearly feminine face with a soft jaw and chin. A completely smooth chin, jaw and upper lip: no beard, no stubble, no moustache, no facial hair at all.",
+      "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+      "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+    },
+    {
+      "id": "tfac-44",
+      "directory": "faction-faces/tfac00i0",
+      "image": "tfac00i0-record-044-frame-000-source.png",
+      "name": "escort portrait 44 (64x64)",
+      "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a woman with long fair hair and a plain calm face, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input. A clearly feminine face with a soft jaw and chin. A completely smooth chin, jaw and upper lip: no beard, no stubble, no moustache, no facial hair at all.",
+      "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+      "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+    },
+    {
+      "id": "tfac-53",
+      "directory": "faction-faces/tfac00i0",
+      "image": "tfac00i0-record-053-frame-000-source.png",
+      "name": "escort portrait 53 (64x64)",
+      "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: an old queen with long grey hair and a gold crown set with a green jewel, in a purple gown, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input. A clearly feminine face with a soft jaw and chin. A completely smooth chin, jaw and upper lip: no beard, no stubble, no moustache, no facial hair at all.",
+      "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+      "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+    },
+    {
+      "id": "tfac-60",
+      "directory": "faction-faces/tfac00i0",
+      "image": "tfac00i0-record-060-frame-000-source.png",
+      "name": "escort portrait 60 (64x64)",
+      "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: an elf woman with fair hair and pointed ears, in three-quarter view to the left, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input. A clearly feminine face with a soft jaw and chin. A completely smooth chin, jaw and upper lip: no beard, no stubble, no moustache, no facial hair at all.",
+      "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+      "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+    }
+  ]
+}

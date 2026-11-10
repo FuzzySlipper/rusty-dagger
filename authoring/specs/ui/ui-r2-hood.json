@@ -1,0 +1,50 @@
+{
+  "seed": 27441,
+  "size": 1024,
+  "occupancy": 0.74,
+  "background": "#30343b",
+  "styles": {
+    "painted": {
+      "label": "Painted adventure",
+      "prompt": "Highly detailed lurid pulp-fantasy character portrait in the manner of 1970s and 80s paperback cover art (Frank Frazetta, Boris Vallejo): glossy airbrushed oil rendering, individual strands of hair, warm rim light against deep shadow, sharp specular highlights, rich saturated colour. Crisp, confident, finely detailed forms rather than flat broad shapes; keep the original local colours. Smoothly drawn high resolution shapes, no square pixel clusters."
+    },
+    "inked": {
+      "label": "Inked dark fantasy / UI kin",
+      "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+    },
+    "gouache": {
+      "label": "Warm storybook gouache",
+      "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+    },
+    "etched": {
+      "label": "Tinted engraving",
+      "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+    }
+  },
+  "collection_rules": "Make this belong to one coherent set of grounded fantasy RPG character portraits in a restrained palette, the same family as the game's other portraits. Keep the source's expression, head angle, skin tone, hair and features. No text, lettering, second figure or border beyond the thin gold frame.",
+  "presentation": "One whole square framed portrait, centred on a perfectly flat solid dark slate grey background, RGB 48,52,59, outside the frame. The picture fills about three quarters of the canvas. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+  "title": "Escort portraits redo R2: the empty hood",
+  "routes": [
+    {
+      "id": "qwen-base",
+      "label": "Qwen / painted baseline",
+      "group": "faces",
+      "model": "qwen-edit",
+      "host": "den-nimo",
+      "url": "http://192.168.1.23:8188",
+      "conditioning": "reference"
+    }
+  ],
+  "task": "Task: Redraw a very small classic fantasy RPG portrait as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+  "items": [
+    {
+      "id": "tfac-05",
+      "directory": "faction-faces/tfac00i0",
+      "image": "tfac00i0-record-005-frame-000-source.png",
+      "name": "escort portrait 5 (64x64)",
+      "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a deep red hood whose opening is filled with solid pitch black, an empty void with no face at all: no skin, no nose, no mouth, no chin and no beard, only two small glowing pale blue eyes floating in the blackness, a gold clasp at the throat, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the black void, the hood and the clasp exactly as in the input.",
+      "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+      "invention": "Resolve believable red cloth folds, the glow of the eyes and gold-frame detail; the void inside the hood stays flat black."
+    }
+  ]
+}
