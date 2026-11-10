@@ -257,15 +257,24 @@ repainted in the stationary people's style rather than converted from its classi
    front and behind, the hips sway 5 units toward the standing foot and
    roll 2.5° down on the swinging leg's side. The chest turns back 1.6 times that roll against the
    hips, and the neck turns 0.5 of it, leaving the head nearly level. The thighs turn back by the roll
-   and the sway, so a planted foot stays where the clip put it. A profile shows neither. Then rig-c's
-   own physics swings the hanging chains that view draws: the front's back hair, bangs and skirt
-   panels, the back's skirt panels, and the profile's hem and the pouch, which hangs from its belt on
-   a bone of its own. The walk plays four times so the springs settle. Each link's turn against its
-   parent, less the same turn without physics, is read off the last cycle, smoothed and keyed into
-   the walk on the chain's control bone. The back's hips move too little to swing its skirt as the
-   front's does, so its derived swing is scaled by 3. The physics is then dropped. Hair and bangs cut with a
-   profile's or the back's head can't swing. The figure walks on the spot, so a stop or a turn has
-   no response.
+   and the sway, so a planted foot stays where the clip put it. A profile shows neither.
+   **Springs:** the hanging chains each view draws carry springs: the front's back hair, bangs and
+   skirt panels, the back's skirt panels, and the profile's hem and the pouch, which hangs from its
+   belt on a bone of its own. There is one recipe per kind of part (strength, damping, inertia,
+   mass and mix), shared by every figure with that part. Each view's rig config declares the springs
+   as rig-c physics constraints, one per chain link. The walk plays four times on the rig with its
+   springs so they settle. Each link's turn against its parent, less the same turn without springs,
+   is read off the last cycle, smoothed and keyed into the walk on the chain's control bone. The
+   back's hips move too little to swing its skirt as the front's does, so its recorded swing is
+   scaled by 3. The rig ships without its springs, so every player shows the same closed loop. Hair
+   and bangs cut with a profile's or the back's head can't swing. The figure walks on the spot, so a
+   stop or a turn has no response.
+   **Tuning:** each view also gets a tuning build in the Workbench set (the `<view>-tune` member).
+   It is the producer's rig as its config makes it, with the springs live, playing the walk before
+   its swing is recorded. Its `review.json` names that config and parts as the producer handoff.
+   Open Rig Review on that member and use Animate's Environment (wind, gusts, gravity, a jolt) and
+   Physics tuning panels. Apply rebuilds through the producer and checks the result. Tuned values
+   come back from the submitted review and go into the recipe, or into an override for one spring.
    **Walking shoes:** a front or back rig is cut from the still, where she stands with her feet
    turned out. Walking, a foot seen from in front or behind points along the walk, so it shows
    toe-on or heel-on and narrow. The loop's mid-stride frame holds that shoe. It is cut there and
