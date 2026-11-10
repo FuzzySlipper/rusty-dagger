@@ -193,9 +193,33 @@ drawings and suits a one-off gesture, not an idle.
 ## Walking townspeople
 
 A wanderer walks in every direction the camera can see it from, so it has one rig per view: front,
-side and back, with the other side mirrored. One rig whose parts swap to a turned drawing holds only
-a small turn, because bones, draw order and foreshortening differ from view to view. A wanderer is
-repainted in the stationary people's style rather than converted from its classic sprite.
+side and back, with the other side mirrored. Eight directions add a front and a rear three-quarter,
+each also mirrored. One rig whose parts swap to a turned drawing holds only a small turn, because
+bones, draw order and foreshortening differ from view to view. The 2.5D turn (a depth per part,
+the parts sliding against each other) holds about 15 to 20°. At 45° the far side of the face and
+body has to be drawn, so a three-quarter is a rig of its own. A wanderer is repainted in the
+stationary people's style rather than converted from its classic sprite.
+
+**Three-quarters:**
+- **Stills:** P-H3-Image (asset-pipeline `docs/pruna-ph3-image.md`) edits a cardinal key into the
+  turned view in seconds, keeping the pose, scale, frame and ground.
+  - The rear three-quarter takes the back and profile keys as references.
+  - The front three-quarter takes the front key alone, since given the profile beside it, it copies
+    the profile. It settles at a 30–40° turn however far it is asked to turn, so the seed that
+    turns furthest is kept.
+- **Clips:** H3 walks a three-quarter at about half the cardinals' cadence, a stride every 48–52
+  frames. Each cycle is retimed to the shared length like any other. A rear three-quarter drifts
+  toward profile as it walks, so its cycle is read where the angle still holds.
+- **Cycle:** a three-quarter's legs really cross in the picture, so the cycle is read without the
+  profile's leg-swap repair.
+- **Legs:** See-through may give a three-quarter no legwear, only the shoes. The legs are then drawn
+  as slim stockings along the body's keypoints, with the shoes over them, into the run's legwear
+  layer. The proposer finds legs by that role, and the skirt hides all but the shoes.
+- **Branches:** the front three-quarter is built as the front and the rear three-quarter as the back.
+  - Sway and roll: 0.7 of the cardinals', the share of a sideways motion seen at 45°.
+  - Arms: they trail as in profile, since their swing still reads mostly as a turn.
+  - The rear three-quarter takes the front's bob and the back's calmer feet. It keeps its standing
+    shoes, which already point along the walk.
 
 1. **Turnaround:** the front still made as for any person, and the side and back made from it with
    the same Qwen setup as a rig source, stating which hip a one-sided item such as a pouch is on.
