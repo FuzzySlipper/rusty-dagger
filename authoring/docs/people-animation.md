@@ -266,6 +266,12 @@ repainted in the stationary people's style rather than converted from its classi
    roll 2.5° down on the swinging leg's side. The chest turns back 1.6 times that roll against the
    hips, and the neck turns 0.5 of it, leaving the head nearly level. The thighs turn back by the roll
    and the sway, so a planted foot stays where the clip put it. A profile shows neither.
+   **Smoothing:** the body's tracks keep their cycle's six lowest harmonics: hip position and
+   roll, chest, neck, legs and feet. The retarget can hold a leg for a few frames while the clip's
+   moves on, then snap it 30° in one key, and the hips it places through that leg zigzag with it.
+   A change of support also takes the hips' new x at once, and the sway flips sides with the
+   stance. Smoothing spreads each snap over a few frames before the springs act, halving the hips'
+   worst jerk in every view. The standing feet slide no more than before, within about 1.5 units.
    **Springs:** the hanging chains each view draws carry springs: the front's back hair, bangs and
    skirt panels, the back's skirt panels, and the profile's hem and the pouch, which hangs from its
    belt on a bone of its own. There is one recipe per kind of part (strength, damping, inertia,
