@@ -961,9 +961,9 @@ internal sealed partial class DaggerfallSession
         private readonly Func<DaggerfallRdbDoorId, DaggerfallActivationOutcome?> _activateMagic;
         private readonly Func<DaggerfallRdbDoorId, DaggerfallActivationMode?, DaggerfallActivationOutcome?> _enterExteriorBuilding;
 
-        public IEnumerable<DaggerfallActivationTarget> DoorTargets()
+        public IEnumerable<DaggerfallActivationTarget> DoorTargets(DaggerfallActivationReach? reach = null)
         {
-            foreach (DaggerfallDoorView door in _doors.All)
+            foreach (DaggerfallDoorView door in reach is { } within ? _doors.Near(within.From, within.Distance) : _doors.All)
             {
                 yield return new(
                     DaggerfallActivationTargetKind.Door,

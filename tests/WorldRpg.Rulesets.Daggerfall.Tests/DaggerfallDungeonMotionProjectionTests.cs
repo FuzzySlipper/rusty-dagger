@@ -18,13 +18,34 @@ public sealed class DaggerfallDungeonMotionProjectionTests
         CharacterObstacle duplicate = new(42, transform, new(-1, -1, -1), new(1, 1, 1), false, Vector3.Zero, Vector3.Zero);
         CharacterObstacle other = new(99, transform, new(-2, -1, -1), new(2, 1, 1), true, Vector3.Zero, Vector3.Zero);
         CharacterMeshInstance mesh = new(0xD900_0000_0000_0001UL, 42, Vector3.Zero, Vector3.Zero);
-        CharacterStepEnvironment combined = DaggerfallSiteProjection.CombineCharacterEnvironments(
+        CharacterStepEnvironment combined = DaggerfallSiteProjection.CombineCharacterEnvironments([
             new CharacterStepEnvironment(default, new[] { duplicate, other }),
-            new CharacterStepEnvironment(default, ReadOnlyMemory<CharacterObstacle>.Empty, new[] { mesh }));
+            new CharacterStepEnvironment(default, ReadOnlyMemory<CharacterObstacle>.Empty, new[] { mesh })]);
 
         CharacterObstacle retained = Assert.Single(combined.Obstacles.ToArray());
         Assert.Equal(99UL, retained.Entity);
         Assert.Equal(mesh, Assert.Single(combined.MeshInstances.ToArray()));
+    }
+
+    [Fact]
+    public void Combining_site_environments_drops_an_obstacle_any_of_them_brings_as_a_mesh_and_orders_their_water()
+    {
+        Transform transform = new(Vector3.Zero, Quaternion.Identity, Vector3.One);
+        CharacterObstacle first = new(7, transform, -Vector3.One, Vector3.One, true, Vector3.Zero, Vector3.Zero);
+        CharacterObstacle meshed = new(42, transform, -Vector3.One, Vector3.One, true, Vector3.Zero, Vector3.Zero);
+        CharacterObstacle last = new(99, transform, -Vector3.One, Vector3.One, true, Vector3.Zero, Vector3.Zero);
+        CharacterMeshInstance mesh = new(0xD900_0000_0000_0002UL, 42, Vector3.Zero, Vector3.Zero);
+        CharacterWaterVolume river = new(5, new Vector3(0, -2, 0), new Vector3(10, 0, 10));
+        CharacterWaterVolume pond = new(3, new Vector3(20, -1, 0), new Vector3(25, 0, 5));
+
+        CharacterStepEnvironment combined = DaggerfallSiteProjection.CombineCharacterEnvironments([
+            new CharacterStepEnvironment(default, new[] { first, meshed }, ReadOnlyMemory<CharacterMeshInstance>.Empty, new[] { river }),
+            new CharacterStepEnvironment(default, new[] { last }),
+            new CharacterStepEnvironment(default, ReadOnlyMemory<CharacterObstacle>.Empty, new[] { mesh }, new[] { pond })]);
+
+        Assert.Equal([7UL, 99UL], combined.Obstacles.ToArray().Select(obstacle => obstacle.Entity));
+        Assert.Equal(mesh, Assert.Single(combined.MeshInstances.ToArray()));
+        Assert.Equal([3UL, 5UL], combined.WaterVolumes.ToArray().Select(volume => volume.Trigger));
     }
 
     [Fact]

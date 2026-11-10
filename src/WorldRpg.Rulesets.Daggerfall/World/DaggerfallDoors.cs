@@ -177,6 +177,9 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
     private static readonly ConditionalWeakTable<EntityStore, object> RegisteredStores = [];
     private bool _disposed;
     private bool _suspended;
+    // The doors as character obstacles, read once from their entities and kept until a door's pose or collider is next applied.
+    private CharacterObstacle[]? _obstacles;
+    private Door[]? _ordered;
 
     internal event Action<DaggerfallRdbDoorDefinition, DaggerfallDoorOperationKind>? SoundRequested;
 
@@ -219,11 +222,21 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         catch { Dispose(); throw; }
     }
 
-    internal IEnumerable<DaggerfallDoorView> All => _suspended
+    internal IEnumerable<DaggerfallDoorView> All => _suspended ? [] : Ordered.Select(View);
+
+    /// <summary>The doors standing within <paramref name="distance"/> of a point across the ground, in the order of <see cref="All"/>.</summary>
+    internal IEnumerable<DaggerfallDoorView> Near(WorldPoint point, double distance) => _suspended
         ? []
-        : _doors.Values.OrderBy(door => door.Definition.Id.SourceKey, StringComparer.Ordinal)
-            .ThenBy(door => door.Definition.Id.BlockX).ThenBy(door => door.Definition.Id.BlockZ)
-            .ThenBy(door => door.Definition.Id.ModelIndex).Select(View);
+        : Ordered.Where(door => point.HorizontalDistanceTo(WorldPoint.From(door.Definition.Position)) <= distance).Select(View);
+
+    /// <summary>Whether a resident door is swinging open or shut.</summary>
+    internal bool AnyMoving => !_suspended && _doors.Values.Any(door => door.Motion is DaggerfallDoorMotion.Opening or DaggerfallDoorMotion.Closing);
+
+    // The doors in source order, sorted once: every publish and prompt walks them, and only adding a door changes them.
+    private Door[] Ordered => _ordered ??= [.. _doors.Values
+        .OrderBy(door => door.Definition.Id.SourceKey, StringComparer.Ordinal)
+        .ThenBy(door => door.Definition.Id.BlockX).ThenBy(door => door.Definition.Id.BlockZ)
+        .ThenBy(door => door.Definition.Id.ModelIndex)];
 
     /// <summary>
     /// Releases the Engine entities for this location while retaining every authored door identity
@@ -565,13 +578,13 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
     {
         ThrowIfDisposed();
         if (_suspended) return CharacterStepEnvironment.Empty;
-        CharacterObstacle[] obstacles = _doors.Values.OrderBy(door => door.Entity.Value).Select(door =>
+        _obstacles ??= [.. _doors.Values.OrderBy(door => door.Entity.Value).Select(door =>
         {
             Transform pose = _store.Get(door.Entity, EngineComponentTypes.Transform);
             SpatialCollider collider = _store.Get(door.Entity, EngineComponentTypes.SpatialCollider);
             return new CharacterObstacle(door.Entity.Value, pose, collider.Min, collider.Max, collider.Enabled, Vector3.Zero, Vector3.Zero);
-        }).ToArray();
-        return new CharacterStepEnvironment(default, obstacles);
+        })];
+        return new CharacterStepEnvironment(default, _obstacles);
     }
 
     internal DaggerfallDoorSave[] Capture() => _doors.Values
@@ -587,6 +600,8 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
             foreach (Door door in _doors.Values)
                 _entities.Destroy(ReferenceFor(door.Definition.Id));
         _doors.Clear();
+        _ordered = null;
+        _obstacles = null;
     }
 
     private void Add(DaggerfallRdbDoorDefinition definition, DaggerfallDoorSave? saved)
@@ -603,11 +618,14 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         try
         {
             _doors.Add(definition.Id, door);
+            _ordered = null;
             Apply(door);
         }
         catch
         {
             _doors.Remove(definition.Id);
+            _ordered = null;
+            _obstacles = null;
             _entities.Destroy(identity);
             throw;
         }
@@ -662,6 +680,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         SpatialCollider collider = new(min, max, uint.MaxValue, uint.MaxValue, collisionEnabled, false, !collisionEnabled);
         _store.Set(door.Entity, EngineComponentTypes.Transform, pose);
         _store.Set(door.Entity, EngineComponentTypes.SpatialCollider, collider);
+        _obstacles = null;
     }
 
     private static Transform Pose(Door door)

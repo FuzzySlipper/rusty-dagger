@@ -37,6 +37,12 @@ internal readonly record struct DaggerfallActivationTarget(
         Label ?? Kind.ToString(), ReachDistance, SurfaceNormal, SightHeight);
 }
 
+/// <summary>
+/// Where use reaches from, and how far across the ground. A target that only reports its position (a door) cannot be
+/// selected beyond it, so an owner with many targets costly to describe (a city's doors) may leave those out.
+/// </summary>
+internal readonly record struct DaggerfallActivationReach(WorldPoint From, double Distance);
+
 /// <summary>Stable mode and target selected from one Engine perception query.</summary>
 internal sealed record DaggerfallActivationSelection(DaggerfallActivationMode Mode, DaggerfallActivationTarget Target);
 
@@ -47,7 +53,8 @@ internal sealed record DaggerfallActivationOutcome(bool Applied, string Message)
 // A domain can contribute only the target type it owns and receives only its own activation call.
 internal interface IDaggerfallDoorActivationOwner
 {
-    IEnumerable<DaggerfallActivationTarget> DoorTargets();
+    /// <summary>The resident doors as targets; with <paramref name="reach"/>, only those it could select.</summary>
+    IEnumerable<DaggerfallActivationTarget> DoorTargets(DaggerfallActivationReach? reach = null);
     DaggerfallActivationOutcome ActivateDoor(DaggerfallActivationSelection selection);
     /// <summary>
     /// What activating this door would do now, from its own state (open or shut, locked, a building's
@@ -103,10 +110,11 @@ internal sealed class DaggerfallActivationContributions(
     private readonly IDaggerfallNpcActivationOwner? _npc = npc;
     private readonly IDaggerfallItemActivationOwner? _item = item;
 
-    internal IEnumerable<DaggerfallActivationTarget> Targets(DaggerfallActivationMode mode = DaggerfallActivationMode.Grab)
+    /// <summary>Every owner's targets; with <paramref name="reach"/>, an owner may leave out targets it could not select.</summary>
+    internal IEnumerable<DaggerfallActivationTarget> Targets(DaggerfallActivationMode mode = DaggerfallActivationMode.Grab, DaggerfallActivationReach? reach = null)
     {
         foreach (DaggerfallActivationTarget target in _corpse.CorpseTargets()) yield return RequireKind(target, DaggerfallActivationTargetKind.Corpse);
-        if (_door is not null) foreach (DaggerfallActivationTarget target in _door.DoorTargets()) yield return RequireKind(target, DaggerfallActivationTargetKind.Door);
+        if (_door is not null) foreach (DaggerfallActivationTarget target in _door.DoorTargets(reach)) yield return RequireKind(target, DaggerfallActivationTargetKind.Door);
         if (_portal is not null) foreach (DaggerfallActivationTarget target in _portal.PortalTargets()) yield return RequireKind(target, DaggerfallActivationTargetKind.Portal);
         if (_container is not null) foreach (DaggerfallActivationTarget target in _container.ContainerTargets()) yield return RequireKind(target, DaggerfallActivationTargetKind.Container);
         if (_npc is not null) foreach (DaggerfallActivationTarget target in _npc.NpcTargets(mode)) yield return RequireKind(target, DaggerfallActivationTargetKind.Npc);
@@ -160,9 +168,10 @@ internal sealed class DaggerfallActivationModule(InteractionTargetingService tar
     /// </summary>
     internal DaggerfallActivationTarget? FocusedTarget(EntityId player, PlayerControlState control, LookReceipt look)
     {
-        if (control.Position is not WorldPoint) return null;
-        if (CreateInspection(player, control, look).Preview(0).Selected is not { } selected) return null;
-        foreach (DaggerfallActivationTarget target in _contributions.Targets(Mode))
+        if (control.Position is not WorldPoint position) return null;
+        DaggerfallActivationTarget[] targets = [.. _contributions.Targets(Mode, new(position, _reach.MaximumDistance))];
+        if (CreateInspection(player, control, look, targets).Preview(0).Selected is not { } selected) return null;
+        foreach (DaggerfallActivationTarget target in targets)
             if (target.QueryIdentity == selected.Id) return target;
         return null;
     }
@@ -171,9 +180,11 @@ internal sealed class DaggerfallActivationModule(InteractionTargetingService tar
     internal string? PromptAction(DaggerfallActivationTarget target) => _contributions.PromptAction(new(Mode, target));
 
     internal WorldInteraction CreateInspection(EntityId player, PlayerControlState control, LookReceipt look) =>
+        CreateInspection(player, control, look, _contributions.Targets(Mode));
+
+    private WorldInteraction CreateInspection(EntityId player, PlayerControlState control, LookReceipt look, IEnumerable<DaggerfallActivationTarget> targets) =>
         _targeting.CreateInspection(player, control.Position ?? throw new InvalidOperationException("Interaction inspection requires a player position."), look.Forward,
-            _reach.MaximumDistance, _reach.MinimumFacingCosine,
-            _contributions.Targets(Mode).Select(target => target.ToKitCandidate()));
+            _reach.MaximumDistance, _reach.MinimumFacingCosine, targets.Select(target => target.ToKitCandidate()));
 
     internal bool ChangeMode(DaggerfallActivationMode mode)
     {

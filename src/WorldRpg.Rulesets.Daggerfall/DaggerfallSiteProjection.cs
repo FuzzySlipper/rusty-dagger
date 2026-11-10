@@ -249,24 +249,52 @@ internal sealed class DaggerfallSiteProjection : IDisposable
                 ? volume
                 : new CharacterWaterVolume(volume.Trigger, volume.Minimum + _worldOffset, volume.Maximum + _worldOffset))
             .ToArray();
-        return CombineCharacterEnvironments(doors, motionModels, water);
+        return CombineCharacterEnvironments([doors, motionModels], water);
     }
 
+    /// <summary>
+    /// Joins environments into one proposal's, in the order given: their mesh instances, their obstacles less any whose entity
+    /// also enters as a triangle mesh instance, and the water given (or theirs), validated in trigger order. The first's
+    /// support is kept. A city's doors are thousands of obstacles, so they are copied once, without a query.
+    /// </summary>
     internal static CharacterStepEnvironment CombineCharacterEnvironments(
-        CharacterStepEnvironment doors,
-        CharacterStepEnvironment motionModels,
+        IReadOnlyList<CharacterStepEnvironment> environments,
         IReadOnlyList<CharacterWaterVolume>? waterVolumes = null)
     {
-        CharacterMeshInstance[] meshInstances = [.. doors.MeshInstances.ToArray(), .. motionModels.MeshInstances.ToArray()];
-        HashSet<ulong> meshEntities = meshInstances.Select(mesh => mesh.Entity).ToHashSet();
-        CharacterObstacle[] obstacles = [.. doors.Obstacles.ToArray(), .. motionModels.Obstacles.ToArray()];
-        if (meshEntities.Count != 0)
-            obstacles = obstacles.Where(obstacle => !meshEntities.Contains(obstacle.Entity)).ToArray();
-        CharacterWaterVolume[] water = (waterVolumes ?? [.. doors.WaterVolumes.ToArray(), .. motionModels.WaterVolumes.ToArray()])
+        int meshCount = 0;
+        int obstacleCount = 0;
+        foreach (CharacterStepEnvironment environment in environments)
+        {
+            meshCount += environment.MeshInstances.Length;
+            obstacleCount += environment.Obstacles.Length;
+        }
+        CharacterMeshInstance[] meshInstances = new CharacterMeshInstance[meshCount];
+        int meshAt = 0;
+        foreach (CharacterStepEnvironment environment in environments)
+        {
+            environment.MeshInstances.Span.CopyTo(meshInstances.AsSpan(meshAt));
+            meshAt += environment.MeshInstances.Length;
+        }
+        HashSet<ulong> meshEntities = [.. meshInstances.Select(mesh => mesh.Entity)];
+        CharacterObstacle[] obstacles = new CharacterObstacle[obstacleCount];
+        int obstacleAt = 0;
+        foreach (CharacterStepEnvironment environment in environments)
+        {
+            if (meshEntities.Count == 0)
+            {
+                environment.Obstacles.Span.CopyTo(obstacles.AsSpan(obstacleAt));
+                obstacleAt += environment.Obstacles.Length;
+                continue;
+            }
+            foreach (CharacterObstacle obstacle in environment.Obstacles.Span)
+                if (!meshEntities.Contains(obstacle.Entity)) obstacles[obstacleAt++] = obstacle;
+        }
+        CharacterWaterVolume[] water = (waterVolumes ?? [.. environments.SelectMany(environment => environment.WaterVolumes.ToArray())])
             .Select(volume => volume.Validate())
             .OrderBy(volume => volume.Trigger)
             .ToArray();
-        return new CharacterStepEnvironment(doors.Support, obstacles, meshInstances, water);
+        return new CharacterStepEnvironment(environments.Count == 0 ? default : environments[0].Support,
+            obstacles.AsMemory(0, obstacleAt), meshInstances, water);
     }
 
     /// <summary>The active snapshot must drop a resident's sprites before their owning appearance is disposed.</summary>

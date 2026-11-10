@@ -225,10 +225,10 @@ internal sealed class DaggerfallSiteLifecycle
     internal CharacterStepEnvironment CharacterEnvironment(CharacterMotion motion)
     {
         CharacterStepEnvironment projection = Projection.CharacterEnvironment(motion);
-        foreach (ResidentExteriorLocation resident in _residentExteriorLocations.Values
-            .OrderBy(value => value.Profile.ProfileKey.LogicalId, StringComparer.Ordinal))
-            projection = DaggerfallSiteProjection.CombineCharacterEnvironments(
-                projection, resident.Projection.CharacterEnvironment(motion));
+        if (_residentExteriorLocations.Count != 0)
+            projection = DaggerfallSiteProjection.CombineCharacterEnvironments([projection, .. _residentExteriorLocations.Values
+                .OrderBy(value => value.Profile.ProfileKey.LogicalId, StringComparer.Ordinal)
+                .Select(resident => resident.Projection.CharacterEnvironment(motion))]);
         if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior
             || Projection.Inputs.ProfileKey != ActiveProfile
             || _exteriorResidency is not { IsInitialized: true } residency

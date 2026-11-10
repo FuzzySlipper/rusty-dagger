@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Reflection;
 using Rusty.Engine;
 using Rusty.Engine.Entities;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
@@ -304,6 +305,43 @@ public sealed class DaggerfallDoorRuntimeTests
         using EntityDirectory restoredStore = new();
         using DaggerfallDoorRuntime restored = new(restoredStore, Random(1), [Door(startingLock: 4)], "test", [saved]);
         Assert.Equal(30, restored.FailedLockpickingSkill(id));
+    }
+
+    [Fact]
+    public void A_door_s_obstacle_follows_it_opening_closing_and_rebasing()
+    {
+        using EntityDirectory store = new();
+        DaggerfallRdbDoorDefinition other = Door() with { Id = new DaggerfallRdbDoorId("S0000007.RDB", 1, 1, 4), Position = new Vector3(9, 0, -4) };
+        using DaggerfallDoorRuntime doors = new(store, Random(1), [Door(), other], "obstacles");
+        DaggerfallRdbDoorId id = Door().Id;
+        CharacterObstacle Obstacle(DaggerfallRdbDoorId door) =>
+            Assert.Single(doors.CharacterEnvironment().Obstacles.ToArray(), obstacle => obstacle.Entity == doors.Read(door).Entity.Value);
+
+        Assert.All(doors.CharacterEnvironment().Obstacles.ToArray(), obstacle => Assert.True(obstacle.CollisionEnabled));
+        doors.Open(id, DaggerfallDoorOperationSource.Player);
+        Assert.False(Obstacle(id).CollisionEnabled);
+        Assert.True(Obstacle(other.Id).CollisionEnabled);
+        doors.Advance(.5);
+        Assert.Equal(doors.Read(id).Pose.Rotation, Obstacle(id).Transform.Rotation);
+        doors.Advance(2);
+        doors.Close(id, DaggerfallDoorOperationSource.Player);
+        doors.Advance(2);
+        Assert.True(Obstacle(id).CollisionEnabled);
+        doors.Rebase(new Vector3(10, 0, 0));
+        Assert.Equal(Door().Position + new Vector3(10, 0, 0), Obstacle(id).Transform.Translation);
+    }
+
+    [Fact]
+    public void Near_keeps_the_doors_within_reach_across_the_ground_in_source_order()
+    {
+        using EntityDirectory store = new();
+        DaggerfallRdbDoorDefinition far = Door() with { Id = new DaggerfallRdbDoorId("S0000007.RDB", 1, 1, 4), Position = new Vector3(40, 0, -4) };
+        DaggerfallRdbDoorDefinition above = Door() with { Id = new DaggerfallRdbDoorId("S0000007.RDB", 1, 1, 2), Position = new Vector3(2, 30, -3) };
+        using DaggerfallDoorRuntime doors = new(store, Random(1), [far, Door(), above], "near");
+
+        Assert.Equal([above.Id, Door().Id, far.Id], doors.All.Select(door => door.Id));
+        Assert.Equal([above.Id, Door().Id], doors.Near(new WorldPoint(2, 0, -4), 2).Select(door => door.Id));
+        Assert.Empty(doors.Near(new WorldPoint(20, 0, -4), 2));
     }
 
     private static DaggerfallRdbDoorDefinition Door(int startingLock = 0) => new(
