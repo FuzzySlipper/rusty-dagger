@@ -204,9 +204,11 @@ repainted in the stationary people's style rather than converted from its classi
    paints a hidden arm badly. A sole or a turned-out foot in the source travels with the rigid
    foot through the whole walk. From behind, See-through invents a face and gives each bare arm
    as a hand layer, so the back's head is cut from the painting whole, as in profile, and its arms
-   come from the hand layers. The head box is set around the hair. The whole head keeps only the pixels
-   where See-through's frontmost layer belongs to the head, so a sleeve cap inside the box stays with
-   the arm instead of turning with the head.
+   come from the hand layers. The head box is set around the hair, and the whole head is cut down to
+   the end of the hair See-through drew, so long hair turns with the head instead of staying painted
+   on the back. The whole head keeps only the pixels where See-through's frontmost layer belongs to
+   the head, so a sleeve cap or the bodice inside the box stays with its own part. Under the head,
+   those parts take See-through's own paint rather than the painting's, which there shows the hair.
 4. **Cycle:** RTMW on every frame. The period comes from the ankles. The cycle is cut where its
    two ends agree best and turned to start where the left foot pushes off, the same event in
    every view, so a view change keeps the stride. In profile RTMW swaps the legs on the odd frame,
