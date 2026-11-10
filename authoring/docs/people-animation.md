@@ -204,6 +204,31 @@ the parts sliding against each other) holds about 15 to 20°. At 45° the far si
 body has to be drawn, so a three-quarter is a rig of its own. A wanderer is repainted in the
 stationary people's style rather than converted from its classic sprite.
 
+**Shared route:** one set of scripts serves every figure. Each figure's root holds a `figure.json`:
+- its id;
+- the description and pronoun its clip and still prompts use;
+- the clip each view's cycle is read from, and that view's retarget flags;
+- the profile's foot-roll frame.
+
+The scripts find that file from the folder they run in, so a figure's own folders hold only its data, and a fix proven on one figure
+reaches the rest. Figures 453, 391, 385 and 384 run on it; 453 rebuilt on it unchanged.
+
+Faults the route now handles itself, found on the three men, who wear tunics with their legs showing:
+- **A belt in no layer:** See-through can put a waistband in no layer, which leaves a hole between the top and the skirt. The build
+  patches the painting's own pixels over it, on the hip, and builds again.
+- **Specks:** a rigid part keeps only its pieces of at least 5 % of its largest. A cut can catch a sliver of the other shoe in a
+  foot, and rigid, it travels with the limb.
+- **Hidden back hair:**
+  - It is recoloured from the front hair once that has 150 px.
+  - With no front hair, as in profile and from behind, its colour comes from the head cut whole from the painting.
+  - Hair that is short leaves the full run no back hair, and none is drawn.
+- **Tall boots:** See-through gives them as footwear up to the knee, which leaves the ankles on no legwear. They are merged into the
+  legwear so each leg runs from hip to sole.
+- **Empty layers:** a part whose See-through layer is empty is left out of the plan.
+- **Bob:** a view whose own bob is under half the front's takes only the share it lacks.
+- **Profiles:** a tunic's hem gets springs. A rig without foot bones gets no heel-to-toe roll.
+- **Walking shoes** replace the whole shin drawing, so they suit legs hidden under a skirt only.
+
 **Three-quarters:**
 - **Stills:** P-H3-Image (asset-pipeline `docs/pruna-ph3-image.md`) edits a cardinal key into the
   turned view in seconds, keeping the pose, scale, frame and ground.
