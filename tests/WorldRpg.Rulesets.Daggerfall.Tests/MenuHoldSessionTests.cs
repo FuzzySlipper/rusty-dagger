@@ -31,4 +31,15 @@ public sealed class MenuHoldSessionTests
         session.Update(new ProductUpdate(OuterUpdate(122) with { FixedDeltaSeconds = 1 }, []));
         Assert.NotEqual(before, DaggerfallSavePayload.Read(session.CaptureSave()).Calendar);
     }
+
+    [Fact]
+    public void Opening_and_closing_the_menu_keeps_the_recent_messages_and_adds_none_of_its_own()
+    {
+        using var session = FreshSession();
+        session.Presentation.SetOutcome("Quest choice recorded.");
+        session.ApplyProductMode(ProductMode.Modal);
+        Assert.Equal("Quest choice recorded.", session.Presentation.LastOutcome);
+        session.ApplyProductMode(ProductMode.Playing);
+        Assert.Equal("Quest choice recorded.", session.Presentation.LastOutcome);
+    }
 }

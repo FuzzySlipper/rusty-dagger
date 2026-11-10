@@ -355,7 +355,10 @@ update to acknowledge in, so it runs the same phases at once.
   ruleset's heading and the Detect spells' contacts as marks; the readied spell,
   the weapon drawn or sheathed and the activation mode; and a prompt naming what
   use would do to the aimed target, worded by that target's owner, with the use
-  binding of the device in use. It takes no focus in play.
+  binding of the device in use. Recent messages (the ruleset's outcome lines) sit in a feed at the bottom
+  centre, between the vitals and the loadout, at a fixed height of about five lines: the newest shows and older ones
+  slide off its top, and a message taller than the feed starts at its first line and scrolls through at a reading
+  pace. Opening a screen leaves the feed as it was. It takes no focus in play.
 - **Settings** (`controls.ts`, `video.ts`): the controls, look, interface scale
   and sound, which the ruleset persists, then the Engine's video options panel
   (`@rusty-engine/video-options`). The Engine owns that catalogue, applies a

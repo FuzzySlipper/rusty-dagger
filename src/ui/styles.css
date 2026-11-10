@@ -506,10 +506,16 @@ body, dialog { font-family: var(--font-body); }
 .dagger-vital[data-vital="stamina"] { --bar: #3f8f3a; }
 .dagger-vital[data-vital="fatigue"] { --bar: #b5762a; }
 .dagger-vital[data-vital="magicka"] { --bar: #3a6cc8; }
-.dagger-outcome { position: absolute; left: 1.5rem; bottom: 7.75rem; margin: 0; padding: 0; list-style: none; display: grid; gap: .25rem;
-  max-width: min(43.75rem, calc(100vw - 3rem)); color: #f6ddb0; }
+/* The message feed: bottom centre, between the vitals and the loadout, at a fixed height that holds about five lines.
+   hud.ts keeps its newest line in view; older lines slide off its top. */
+.dagger-outcome { position: absolute; left: 50%; bottom: 1.25rem; transform: translateX(-50%); width: min(44rem, calc(100vw - 38rem));
+  max-height: 7.75rem; overflow: hidden; margin: 0; padding: .375rem .875rem; list-style: none; color: #f6ddb0;
+  font-size: 1rem; line-height: 1.5rem; text-align: center;
+  background: radial-gradient(ellipse at center, rgb(6 6 4 / .6), rgb(6 6 4 / .35) 70%, transparent); border-radius: .5rem; }
+.dagger-outcome:empty { display: none; }
 .dagger-outcome li { text-shadow: 0 1px .1875rem #000; }
-.dagger-breath { position: absolute; left: 50%; bottom: 5.5rem; transform: translateX(-50%); display: grid; grid-template-columns: auto 10rem auto; gap: .5rem; align-items: center; color: #b9e5f7; font-size: .8rem; }
+.dagger-outcome li + li { margin-top: .125rem; }
+.dagger-breath { position: absolute; left: 50%; bottom: 9.75rem; transform: translateX(-50%); display: grid; grid-template-columns: auto 10rem auto; gap: .5rem; align-items: center; color: #b9e5f7; font-size: .8rem; }
 .dagger-breath .dagger-bar { --bar: #66b8e3; }
 .dagger-breath.low { color: #ff8d77; }
 .dagger-breath.low .dagger-bar { --bar: #ff8d77; }

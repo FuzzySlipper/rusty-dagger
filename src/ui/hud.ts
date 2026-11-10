@@ -14,6 +14,10 @@ import { spellIcon } from './spell-icon.js';
  * Every word comes from the projection (mode names, the compass heading, prompts, detector distances
  * and directions); the HUD only places marks by the angles and amounts it is given.
  */
+/** How long a message taller than the feed rests on its first line, and how long each further line takes to come up. */
+const MESSAGE_HOLD_MS = 1200;
+const MESSAGE_LINE_MS = 900;
+
 export interface Hud {
   cinematicPlaying(): boolean;
   /** Skip the playing cinematic, as a controller's press does while the UI holds the pad. */
@@ -53,6 +57,25 @@ export function mountHud(shell: HTMLElement, send: Send): Hud {
   const vitals = shell.querySelector<HTMLElement>('.dagger-vitals')!;
   const outcome = shell.querySelector<HTMLOListElement>('.dagger-outcome')!;
   const breath = shell.querySelector<HTMLElement>('.dagger-breath')!;
+  // The message feed keeps a fixed height: the newest lines show and older ones slide off its top. A message taller
+  // than the feed starts at its first line and scrolls through at a reading pace, so none runs off the screen.
+  let reading = 0;
+  const stopReading = (): void => { if (reading !== 0) cancelAnimationFrame(reading); reading = 0; };
+  const revealNewest = (): void => {
+    stopReading();
+    const newest = outcome.lastElementChild as HTMLElement | null;
+    const room = outcome.clientHeight;
+    if (newest === null || newest.offsetHeight <= room) { outcome.scrollTop = outcome.scrollHeight; return; }
+    const from = newest.offsetTop, to = outcome.scrollHeight - room;
+    const line = parseFloat(window.getComputedStyle(outcome).lineHeight) || 24;
+    const start = performance.now() + MESSAGE_HOLD_MS, duration = (to - from) / line * MESSAGE_LINE_MS;
+    outcome.scrollTop = from;
+    const step = (now: number): void => {
+      outcome.scrollTop = from + (to - from) * Math.max(0, Math.min(1, (now - start) / duration));
+      if (now < start + duration) reading = requestAnimationFrame(step);
+    };
+    reading = requestAnimationFrame(step);
+  };
   const readySpell = shell.querySelector<HTMLElement>('.dagger-ready-spell')!;
   const weapon = shell.querySelector<HTMLElement>('.dagger-weapon')!;
   const activationIndicator = shell.querySelector<HTMLElement>('.dagger-activation-indicator')!;
@@ -126,9 +149,9 @@ export function mountHud(shell: HTMLElement, send: Send): Hud {
         row.append(label, bar, amount);
         return row;
       })));
-      redraw(outcome, JSON.stringify(value.messages), () => outcome.replaceChildren(...value.messages.map(message => {
+      if (redraw(outcome, JSON.stringify(value.messages), () => outcome.replaceChildren(...value.messages.map(message => {
         const line = document.createElement('li'); line.textContent = message; return line;
-      })));
+      })))) revealNewest();
       breath.hidden = !value.breath;
       if (value.breath) {
         const bar = breath.querySelector<HTMLElement>('.dagger-bar')!;
@@ -240,6 +263,7 @@ export function mountHud(shell: HTMLElement, send: Send): Hud {
       status.hidden = (value.slots ?? []).length === 0;
     },
     dispose() {
+      stopReading();
       document.removeEventListener('keydown', skipOnPress, true);
       document.removeEventListener('pointerdown', skipOnPress, true);
     },

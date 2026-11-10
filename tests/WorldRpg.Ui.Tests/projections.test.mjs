@@ -268,6 +268,39 @@ test('the death screen stacks above quest messages and the legal screen', async 
   assert.ok(death > layer('.dagger-legal:not([hidden])'), 'the legal screen covers the death screen');
 });
 
+test('the message feed keeps its newest line in view and reads a message taller than itself through from its first line', () => {
+  const f = fixture();
+  const frames = [];
+  globalThis.requestAnimationFrame = callback => { frames.push(callback); return frames.length; };
+  globalThis.cancelAnimationFrame = () => {};
+  try {
+    const feed = f.root.querySelector('.dagger-outcome');
+    // JSDOM lays nothing out, so the feed's box and its lines' places are stated here.
+    const box = (element, values) => { for (const [key, value] of Object.entries(values)) Object.defineProperty(element, key, { configurable: true, value }); };
+    box(feed, { clientHeight: 120, scrollHeight: 150 });
+    f.publish({ messages: ['Door unlocked.', 'Your skill improved.'] });
+    assert.deepEqual([...feed.children].map(line => line.textContent), ['Door unlocked.', 'Your skill improved.']);
+    assert.equal(feed.scrollTop, 150, 'A newest line that fits shows at once, older lines sliding off the top.');
+    assert.equal(frames.length, 0);
+    // A long message: the feed starts at its first line, holds there, then scrolls to its last line.
+    box(feed, { clientHeight: 120, scrollHeight: 420 });
+    const original = HTMLElement.prototype;
+    Object.defineProperty(original, 'offsetHeight', { configurable: true, get() { return this.textContent.length > 100 ? 360 : 24; } });
+    Object.defineProperty(original, 'offsetTop', { configurable: true, get() { return this.textContent.length > 100 ? 60 : 0; } });
+    f.publish({ messages: ['Short.', 'A long message. '.repeat(10)] });
+    assert.equal(feed.scrollTop, 60, 'It starts at the long message\'s first line.');
+    const start = performance.now();
+    frames.at(-1)(start + 600);
+    assert.equal(feed.scrollTop, 60, 'It holds there a moment before it moves.');
+    frames.at(-1)(start + 100000);
+    assert.equal(feed.scrollTop, 300, 'It ends with the message\'s last line in view.');
+    delete original.offsetHeight; delete original.offsetTop;
+  } finally {
+    f.dispose();
+    delete globalThis.requestAnimationFrame; delete globalThis.cancelAnimationFrame;
+  }
+});
+
 test('status rows preserve owner-published order and disappear when removed', () => {
   const f = fixture();
   try {

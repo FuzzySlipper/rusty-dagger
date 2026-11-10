@@ -45,7 +45,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     private PlayerInputSystem _input;
     private ProductMode _mode = ProductMode.Playing;
     // The line the last mode change set for its mode, so returning to play can tell it from a result.
-    private string _modeLine = string.Empty;
+    private string? _modeLine = string.Empty;
     private readonly SpatialMovementSystem _spatial;
     /// <summary>Harm and spell delivery's physical contact over the admitted scene and canonical actor bodies.</summary>
     private readonly ActorContact _contact;
@@ -636,10 +636,14 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         // A death from exhaustion keeps the donor's collapse text rather than the generic death line.
         // Returning to play clears the line a mode set for itself, but not a result reported while that
         // mode was up: a journey or rest that ends by closing the menu keeps its line for the player.
-        if (mode != ProductMode.Playing || Presentation.LastOutcome == _modeLine)
-            Presentation.SetOutcome(mode == ProductMode.Dead && _exhaustionDeathLine is { } exhausted
-                ? exhausted : _interactions.ModeMessage(_mode));
-        _modeLine = Presentation.LastOutcome;
+        // A screen that says what it is itself adds no line, and leaves the recent messages where they are.
+        string line = mode == ProductMode.Dead && _exhaustionDeathLine is { } exhausted ? exhausted : _interactions.ModeMessage(_mode);
+        if (line.Length == 0 && mode == ProductMode.Modal) _modeLine = null;
+        else
+        {
+            if (mode != ProductMode.Playing || Presentation.LastOutcome == _modeLine) Presentation.SetOutcome(line);
+            _modeLine = Presentation.LastOutcome;
+        }
         if (mode is ProductMode.Playing or ProductMode.Title) _exhaustionDeathLine = null;
         PublishPresentation();
     }
@@ -929,6 +933,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             Prompt = ReadInteractionPrompt(),
             InputDevice = _lastInputDevice,
             Loading = _loading,
+            Screens = DaggerfallUiArt.Screens.ToDictionary(screen => screen, screen => DrawnArt?.Drawn(screen) ?? screen, StringComparer.Ordinal),
         });
         _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);
         Vector3 facing = ActorHeading.Forward(State.PlayerControl.YawRadians);
