@@ -715,6 +715,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         try { _sites.RetireExteriorAppearance(); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
+        // The test figure's appearances and rigs are released once no site appearance draws them.
+        try { _peopleRigs?.Dispose(); }
+        catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         // The score's loop and the clips it opened belong to this session, so they are retired before
         // the Engine context that produced them is asked for anything else.
         DisposeMusic(ref failure);

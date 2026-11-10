@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Text.Json;
 using Rusty.Engine;
+using WorldRpg.Kit.Presentation;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
@@ -44,6 +45,28 @@ internal sealed record DaggerfallArtRect(double X, double Y, double Width, doubl
 /// </summary>
 internal sealed record DaggerfallEffectArt(string Replaces, string Path, ContentSha256 Sha256, long ByteLength, int Width, int Height,
     IReadOnlyList<DaggerfallArtRect> Frames, DaggerfallArtRect Classic);
+
+/// <summary>
+/// The walking test figure the developer command draws every walking person as: one compiled parts rig per view
+/// (<see cref="DaggerfallPeopleRigView"/>, by view name), its standing height in rig units, the clips every view
+/// holds, its walk and idle among them, its layer stack, and its view sets by name (<c>4</c>, <c>8</c>): which view
+/// a camera sees from each direction around it.
+/// </summary>
+internal sealed record DaggerfallPeopleRig(string Name, float Height, string Walk, string Idle, float CrossfadeSeconds, IReadOnlySet<string> Clips,
+    PartsRigLayerStack Layers, IReadOnlyDictionary<string, DaggerfallPeopleRigView> Views,
+    IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleRigDirection>> Directions)
+{
+    /// <summary>The figure seen from view set <paramref name="set"/>, its pages sampled by <paramref name="filter"/> and lit as <paramref name="material"/>.</summary>
+    internal PartsRigFigure Figure(string set, TextureFilter filter, SpriteMaterialDescriptor material) => new($"{Name} {set}",
+        [.. Directions[set].Select(direction => PartsRigFigureView.AtCamera(Views[direction.View].Model.Path, direction.Angle, direction.Mirror))],
+        Height, Walk, Idle, Clips, Layers, CrossfadeSeconds, filter, material);
+}
+
+/// <summary>One view's compiled rig: its model document and the pages beside it.</summary>
+internal sealed record DaggerfallPeopleRigView(DaggerfallArtFile Model, IReadOnlyList<DaggerfallArtFile> Pages);
+
+/// <summary>A direction of a view set: the view a camera <paramref name="Angle"/> degrees around the figure sees (0 in front, 90 at its left), mirrored or not.</summary>
+internal sealed record DaggerfallPeopleRigDirection(string Label, float Angle, string View, bool Mirror);
 
 /// <summary>A published file of the refreshed set: its path and digest.</summary>
 internal sealed record DaggerfallArtFile(string Path, ContentSha256 Sha256);
@@ -167,6 +190,9 @@ internal sealed class DaggerfallArtReplacements
     /// <summary>The refreshed standing people, by the classic billboard record each stands in for.</summary>
     internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtFlat> People { get; }
 
+    /// <summary>The walking test figure, when the set has one.</summary>
+    internal DaggerfallPeopleRig? PeopleRig { get; private init; }
+
     /// <summary>
     /// The refreshed surface for a classic texture record the importer published at <paramref name="texturePath"/>
     /// (<c>…/texture-ARCHIVE-RECORD.png</c>), if the set has one.
@@ -216,6 +242,7 @@ internal sealed class DaggerfallArtReplacements
         DaggerfallGroundCoverArt? groundCover = null;
         Dictionary<(int, int), DaggerfallTreeArt> trees = [];
         DaggerfallArtFile? treeSnow = null;
+        DaggerfallPeopleRig? peopleRig = null;
         Dictionary<(int Archive, int Record), DaggerfallArtMesh> meshes = [];
         Dictionary<(int Archive, int Record), DaggerfallArtSurface> surfaces = [];
         Dictionary<(int Archive, int Record), DaggerfallArtFlat> flats = [], people = [];
@@ -327,6 +354,7 @@ internal sealed class DaggerfallArtReplacements
                             DaggerfallContentHash.Parse(flat.GetProperty("sha256").GetString()!, $"The refreshed flat for {replaces.Item1}/{replaces.Item2}")), width, height, frames, classic, emission)))
                         throw new InvalidOperationException($"Content pack '{packId}' names two flats for {replaces.Item1}/{replaces.Item2}.");
                 }
+            if (section.TryGetProperty("peopleRig", out JsonElement rig)) peopleRig = PeopleRig(rig);
             if (section.TryGetProperty("treeSnow", out JsonElement snowShader)) treeSnow = File(snowShader, "The trees' snow shader");
             if (section.TryGetProperty("trees", out JsonElement treeArt))
                 foreach (JsonProperty tree in treeArt.EnumerateObject())
@@ -375,7 +403,28 @@ internal sealed class DaggerfallArtReplacements
             throw new InvalidOperationException($"Content pack '{packId}' carries an unreadable artReplacements section: {exception.Message}", exception);
         }
 
-        return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, flats, people) { GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow };
+        return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, flats, people)
+        { GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, PeopleRig = peopleRig };
+
+        DaggerfallPeopleRig PeopleRig(JsonElement rig)
+        {
+            string name = rig.GetProperty("figure").GetString()!;
+            float height = rig.GetProperty("height").GetSingle(), crossfade = rig.GetProperty("crossfade").GetSingle();
+            string walk = rig.GetProperty("walk").GetString()!, idle = rig.GetProperty("idle").GetString()!;
+            HashSet<string> clips = [.. rig.GetProperty("clips").EnumerateArray().Select(clip => clip.GetString()!)];
+            Dictionary<string, DaggerfallPeopleRigView> views = rig.GetProperty("views").EnumerateObject().ToDictionary(view => view.Name,
+                view => new DaggerfallPeopleRigView(File(view.Value.GetProperty("model"), $"People rig {name}'s {view.Name} model"),
+                    [.. view.Value.GetProperty("pages").EnumerateArray().Select(page => File(page, $"People rig {name}'s {view.Name} pages"))]), StringComparer.Ordinal);
+            Dictionary<string, IReadOnlyList<DaggerfallPeopleRigDirection>> directions = rig.GetProperty("directions").EnumerateObject().ToDictionary(set => set.Name,
+                set => (IReadOnlyList<DaggerfallPeopleRigDirection>)[.. set.Value.EnumerateArray().Select(direction => new DaggerfallPeopleRigDirection(
+                    direction.GetProperty("label").GetString()!, direction.GetProperty("angle").GetSingle(), direction.GetProperty("view").GetString()!,
+                    direction.TryGetProperty("mirror", out JsonElement mirror) && mirror.GetBoolean()))], StringComparer.Ordinal);
+            if (!float.IsFinite(height) || height <= 0 || !float.IsFinite(crossfade) || crossfade < 0 || !clips.Contains(walk) || !clips.Contains(idle))
+                throw new InvalidOperationException($"Content pack '{packId}' states people rig '{name}' without a height, a crossfade, or its walk and idle among its clips.");
+            if (directions.Count == 0 || directions.Values.Any(set => set.Count == 0 || set.Any(direction => !views.ContainsKey(direction.View) || !float.IsFinite(direction.Angle))))
+                throw new InvalidOperationException($"Content pack '{packId}' states a view set of people rig '{name}' that is empty or names a view it lacks.");
+            return new(name, height, walk, idle, crossfade, clips, PartsRigLayerStack.Read(rig.GetProperty("layers")), views, directions);
+        }
 
         DaggerfallArtWorldImage? World(JsonElement owner, string mediaId)
         {

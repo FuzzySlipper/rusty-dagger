@@ -1,12 +1,15 @@
 using System.Numerics;
+using System.Text.Json;
 using Daggerfall.Import.Normalized;
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
@@ -358,6 +361,62 @@ public sealed class DaggerfallPopulationSessionTests
             population: population);
     }
 
+    [Fact]
+    public void People_rig_draws_every_walking_civilian_as_the_test_figure_facing_its_way_and_off_draws_its_own_art_again()
+    {
+        // The art set's people rig alone: the rest of the refreshed set has no bearing on the switch.
+        using JsonDocument payload = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.art-replacements.json")));
+        DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(System.Text.Encoding.UTF8.GetBytes(
+            """{"artReplacements": {"images": [], "peopleRig": """ + payload.RootElement.GetProperty("artReplacements").GetProperty("peopleRig").GetRawText() + "}}"),
+            "daggerfall.art-replacements");
+        using ResidentPopulationFixture fixture = ResidentPopulationFixture.Create(art);
+        DaggerfallSession session = fixture.Session;
+        session.AdvanceElapsedTime(8 * 60 * 60);
+        session.Update(new ProductUpdate(OuterUpdate(2), []));
+        PartsRigsRecorder rigs = fixture.Engine.PartsRigs;
+        ActorState[] civilians = [.. session.State.Actors.All.Where(actor => actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian)];
+        Assert.NotEmpty(civilians);
+
+        Assert.False(session.RigPeople("6").Succeeded);
+        Assert.True(session.RigPeople("4").Succeeded);
+        Assert.Equal(["front", "side", "back"], rigs.Loaded.Select(path => Path.GetFileName(Path.GetDirectoryName(path))));
+        session.Update(new ProductUpdate(OuterUpdate(3), []));
+
+        AppearanceFact[] snapshot = fixture.Appearance.Snapshots[^1];
+        NormalizedBillboardSprite sprite = fixture.Source.BillboardSprites.Values.First(value => value.TexturePath == "sprite/population.png");
+        foreach (ActorState civilian in civilians)
+        {
+            AppearanceFact fact = Assert.Single(snapshot, fact => fact.ObjectId == DaggerfallPresentationObjectIds.Gameplay(civilian.DurableId, "Actor"));
+            PartsRigAppearanceRequest request = Assert.Single(rigs.Appearances, pair => pair.Appearance == fact.Appearance).Request;
+            // Four views: the front, the side mirrored for a camera at her left (+x), the back, and the side at her right.
+            Assert.Equal([(0F, false), (90F, true), (180F, false), (-90F, false)],
+                request.Views.ToArray().Select(view => (MathF.Round(float.RadiansToDegrees(view.Heading), 3), view.Mirror)));
+            // She is as tall as her own sprite, and faces where she heads.
+            Assert.Equal(sprite.Size.Y / art.PeopleRig!.Height, request.Scale, 5);
+            Assert.True(Vector3.Distance(Vector3.Transform(Vector3.UnitZ, fact.Transform.Rotation), ActorHeading.Forward(civilian.HeadingYawRadians)) < 1e-4F);
+            // She walks while she moves to a waypoint and idles otherwise, with the attention layer over both.
+            PartsRigPlayRequest body = Assert.Single(rigs.Plays, play => play.ObjectId == fact.ObjectId && play.Track == 0);
+            Assert.Equal(PartsRigCrowd.Walks(civilian.Wander.State) ? "walk" : "idle", body.Clip);
+            Assert.Contains(rigs.Plays, play => play.ObjectId == fact.ObjectId && play.Track == 2 && play.Clip == "attention" && play.Looping);
+        }
+
+        // The eight-direction set adds the three-quarter views, each with its mirrored twin.
+        Assert.True(session.RigPeople("8").Succeeded);
+        session.Update(new ProductUpdate(OuterUpdate(4), []));
+        AppearanceFact eight = fixture.Appearance.Snapshots[^1].First(fact => fact.ObjectId == DaggerfallPresentationObjectIds.Gameplay(civilians[0].DurableId, "Actor"));
+        Assert.Equal([0F, 45F, 90F, 135F, 180F, -135F, -90F, -45F], Assert.Single(rigs.Appearances, pair => pair.Appearance == eight.Appearance).Request.Views.ToArray()
+            .Select(view => MathF.Round(float.RadiansToDegrees(view.Heading), 3)));
+
+        // Off draws her own sprite again, and the figure's appearances and rigs are released once no snapshot draws them.
+        Assert.True(session.RigPeople("off").Succeeded);
+        session.Update(new ProductUpdate(OuterUpdate(5), []));
+        session.Update(new ProductUpdate(OuterUpdate(6), []));
+        AppearanceFact own = fixture.Appearance.Snapshots[^1].First(fact => fact.ObjectId == DaggerfallPresentationObjectIds.Gameplay(civilians[0].DurableId, "Actor"));
+        Assert.DoesNotContain(rigs.Appearances, pair => pair.Appearance == own.Appearance);
+        Assert.Equal(rigs.Appearances.Count, rigs.ReleasedAppearances.Count);
+        Assert.Equal(5, rigs.ReleasedRigs);
+    }
+
     private static int PopulationTextureOpens(AppearanceFake appearance) =>
         appearance.OpenedResourcePaths.Count(path => path == "sprite/population.png");
 
@@ -365,8 +424,9 @@ public sealed class DaggerfallPopulationSessionTests
     {
         private ResidentPopulationFixture(DaggerfallSession session, DaggerfallSessionComposition composition,
             DaggerfallSiteProfile source, DaggerfallSiteProfile resident, DaggerfallSiteProfile interior,
-            AppearanceFake appearance)
+            AppearanceFake appearance, EngineContextFake engine)
         {
+            Engine = engine;
             Session = session;
             Composition = composition;
             Source = source;
@@ -381,8 +441,9 @@ public sealed class DaggerfallPopulationSessionTests
         internal DaggerfallSiteProfile Resident { get; }
         internal DaggerfallSiteProfile Interior { get; }
         internal AppearanceFake Appearance { get; }
+        internal EngineContextFake Engine { get; }
 
-        internal static ResidentPopulationFixture Create()
+        internal static ResidentPopulationFixture Create(DaggerfallArtReplacements? art = null)
         {
             string root = TestData.RepositoryRoot;
             DaggerfallDefinitions definitions = TestPayload.Definitions;
@@ -410,6 +471,7 @@ public sealed class DaggerfallPopulationSessionTests
             DaggerfallSessionComposition composition = new(definitions, source, DaggerfallTuning.Defaults)
             {
                 Profiles = profiles,
+                ArtReplacements = art,
             };
             List<string> releases = [];
             ContentFake content = new(releases);
@@ -424,7 +486,7 @@ public sealed class DaggerfallPopulationSessionTests
             // ordinary first update reconcile the real neighboring exterior closure so these
             // tests exercise retained source actors through the same runtime path as the host.
             session.Update(new ProductUpdate(OuterUpdate(1), []));
-            return new(session, composition, source, resident, interior, appearance);
+            return new(session, composition, source, resident, interior, appearance, engine);
         }
 
         internal (EngineContextFake Engine, AppearanceFake Appearance) CreateEngine()

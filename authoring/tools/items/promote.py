@@ -64,6 +64,13 @@ a classic pixel on the whole of ART_PAL, whose small accents a smaller palette l
 atlas of whichever has an accepted final, since only one of them was painted. A record without one stays classic. The game
 draws each at the classic sprite's size, standing on the atlas's own base.
 
+The `people-rig` area exports the walking test figure (`peopleRig`) from a Workbench directional rig publication
+(PEOPLE_RIG, or $PEOPLE_RIG): each view's compiled model and the pages beside it go to people-rigs/FIGURE/VIEW/ as
+shipped (ground line at y = 0, springs recorded into the walk, walking shoes keyed by the walk), and the entry states
+every file's bytes and hash, the view sets of its four- and eight-direction artifact sets (`directionalRig`), the
+clips every view holds, its layer stack (`layers.json`, parts-rig-layers/1) and its standing height in rig units
+(PEOPLE_RIG_HEIGHT), by which the game draws it at the height of the person it stands in for.
+
 Icons are written at their area's ICON pixels on the longer side and carry no doll rect.
 
 A held weapon's layer leaves a gap where the doll's hand holds it; its whole image (whole.py, in gen-raw/worn/whole/)
@@ -97,7 +104,13 @@ CONTENT = REPOSITORY / "content"
 MEDIA = "worldrpg/media/refreshed"
 PAYLOAD = CONTENT / "worldrpg/payloads/daggerfall.art-replacements.json"
 QUALITY = 90
-AREAS = ("paper-doll", "worn", "items", "spells", "effects", "surfaces", "terrain", "flats", "people")
+AREAS = ("paper-doll", "worn", "items", "spells", "effects", "surfaces", "terrain", "flats", "people", "people-rig")
+PEOPLE_RIG = Path(os.environ.get("PEOPLE_RIG", "/home/agent/dev/asset-pipeline/live-evidence/publications/w453-walk-20261109"))
+PEOPLE_RIG_FIGURE = "w453"
+# The figure's height in rig units, ground to crown: the front view's walk at 24 fps (rigc render, one pixel a unit)
+# draws her crown 778 units above the sole of her planted foot at its highest.
+PEOPLE_RIG_HEIGHT = 778
+PEOPLE_RIG_SETS = {"4": "w453-walk.artifact-set.json", "8": "w453-walk8.artifact-set.json"}
 SURFACE = re.compile(r"texture-(\d{3})-(\d+)")
 ICON = {"items": 256, "spells": 128}   # pixels on an icon's longer side: an item slot, a spell glyph of about 3rem
 CLASSIC_MANIFEST = REPOSITORY / "local/import/staging/worldrpg/imports/shared/media/classic/manifest.json"
@@ -523,6 +536,41 @@ def people():
     return entries
 
 
+def people_rig():
+    """Copies the publication's views into the pack and states them, their view sets, clips and layer stack."""
+    def copied(source, target):
+        data = source.read_bytes()
+        (CONTENT / target).parent.mkdir(parents=True, exist_ok=True)
+        (CONTENT / target).write_bytes(data)
+        return {"path": target, "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+
+    sets = {name: json.loads((PEOPLE_RIG / manifest).read_text()) for name, manifest in PEOPLE_RIG_SETS.items()}
+    members = {artifact["id"]: artifact["path"] for publication in sets.values() for artifact in publication["artifacts"]}
+    views, clips = {}, None
+    for view in sorted({direction["rig"] for publication in sets.values() for direction in publication["directionalRig"]["directions"]}):
+        source = PEOPLE_RIG.parent / members[view]
+        model = json.loads(source.read_text())
+        if model["spec"] != "rigc-compiled/3":
+            raise SystemExit(f"{source} is {model['spec']}, not rigc-compiled/3.")
+        held = sorted(animation["name"] for animation in model["animations"])
+        if clips is not None and held != clips:
+            raise SystemExit(f"{view} holds clips {held}, the other views {clips}: every view plays the same clips.")
+        clips = held
+        target = f"{MEDIA}/people-rigs/{PEOPLE_RIG_FIGURE}/{view}"
+        views[view] = {"model": copied(source, f"{target}/{source.name}"),
+                       "pages": [copied(source.parent / page["name"], f"{target}/{page['name']}") for page in model["pages"]]}
+    layers = json.loads((PEOPLE_RIG / "layers.json").read_text())
+    if layers["spec"] != "parts-rig-layers/1":
+        raise SystemExit(f"{PEOPLE_RIG / 'layers.json'} is {layers['spec']}, not parts-rig-layers/1.")
+    print(f"people-rig: {len(views)} views, clips {', '.join(clips)}", flush=True)
+    return {"figure": PEOPLE_RIG_FIGURE, "height": PEOPLE_RIG_HEIGHT, "walk": "walk", "idle": "idle", "crossfade": .2,
+            "clips": clips, "layers": {"spec": layers["spec"], "layers": layers["layers"]}, "views": views,
+            "directions": {name: [{"label": direction["label"], "angle": direction["previewAngleDegrees"], "view": direction["rig"],
+                                   **({"mirror": True} if direction.get("mirror") else {})}
+                                  for direction in publication["directionalRig"]["directions"]]
+                           for name, publication in sets.items()}}
+
+
 def icon_entry(replaces, image, name, world=None):
     """An icon's entry; with its classic size, also its world PNG."""
     entry = {"replaces": replaces, "mediaId": f"refreshed.{replaces}", **webp(image, f"{MEDIA}/{name}.webp"),
@@ -568,6 +616,10 @@ def main():
         if area == "people":
             shutil.rmtree(CONTENT / MEDIA / "people", ignore_errors=True)
             payload["artReplacements"]["people"] = people()
+            continue
+        if area == "people-rig":
+            shutil.rmtree(CONTENT / MEDIA / "people-rigs", ignore_errors=True)
+            payload["artReplacements"]["peopleRig"] = people_rig()
             continue
         if area in ("surfaces", "terrain"):
             directory = CONTENT / MEDIA / area

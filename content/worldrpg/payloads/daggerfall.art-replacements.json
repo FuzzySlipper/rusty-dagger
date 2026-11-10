@@ -92351,6 +92351,695 @@
    "path": "worldrpg/media/refreshed/trees/snow.wgsl",
    "byteLength": 2392,
    "sha256": "b7e22fbffa68d71d8fdb21d7aae9e58bd1bb33174081c2b1de029f21661941f1"
+  },
+  "peopleRig": {
+   "figure": "w453",
+   "height": 778,
+   "walk": "walk",
+   "idle": "idle",
+   "crossfade": 0.2,
+   "clips": [
+    "attention",
+    "idle",
+    "walk"
+   ],
+   "layers": {
+    "spec": "parts-rig-layers/1",
+    "layers": [
+     {
+      "name": "body",
+      "track": 0,
+      "body": true
+     },
+     {
+      "name": "attention",
+      "track": 2,
+      "clip": "attention",
+      "loop": true,
+      "bones": [
+       "eye_r",
+       "eye_l",
+       "iris_r",
+       "iris_l",
+       "brow_r",
+       "brow_l",
+       "head"
+      ]
+     },
+     {
+      "name": "attention override",
+      "track": 3,
+      "companion": "{clip}.attention"
+     }
+    ]
+   },
+   "views": {
+    "back": {
+     "model": {
+      "path": "worldrpg/media/refreshed/people-rigs/w453/back/skeleton.model.json",
+      "byteLength": 636784,
+      "sha256": "f2476b330a277f67674360c1804564f5332c53418bbcfbf849fcdc88764385e2"
+     },
+     "pages": [
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back/hair_back.png",
+       "byteLength": 21608,
+       "sha256": "957c73ed73a371c8d2695d93c735fe301983a5d33f59868222c4bb79a265b9ca"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back/shin_r.png",
+       "byteLength": 11002,
+       "sha256": "05e20e081e9d631c96e8165701b3b992a441f8b9c46f86d9e0850be68767ffcd"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back/shin_r_walk.png",
+       "byteLength": 4104,
+       "sha256": "51c344e5b5415d11b01ae0e030e98a39509fb227fef534c29472a8a2f07cfc78"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back/thigh_r.png",
+       "byteLength": 671,
+       "sha256": "45dab270fb1a4036c901c6ea96804cddef8aac99c3ec5426717117d8ebfaf20b"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back/shin_l.png",
+       "byteLength": 10411,
+       "sha256": "cec45601ec7fcebe043bd60ee0479fdc46bcfc7cbed2f7e6fff9bf517ad2370f"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back/shin_l_walk.png",
+       "byteLength": 4107,
+       "sha256": "5633c3b11189987fc707c0d937ff16d73780b6a6cdce601a8b5b0c9efdc29fa6"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back/thigh_l.png",
+       "byteLength": 655,
+       "sha256": "93f53cd4f07e3975551f3717bd32a28944b0107412225ec92930618f19c94a59"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back/hand_r.png",
+       "byteLength": 7547,
+       "sha256": "1293f85459ae805cf08cb065e522bcad5c482e851836851786f270d1703ddfe8"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back/forearm_r.png",
+       "byteLength": 14698,
+       "sha256": "3a6ae922f462cc29183d421b8143914400659051048430a3b14c0b2b954a1a9f"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back/upperarm_r.png",
+       "byteLength": 26642,
+       "sha256": "6355d2f0206dd52f1d8d69ec54c169dc3f4c4ab0fb24f1f8b1afa5b32af1ae48"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back/hand_l.png",
+       "byteLength": 7277,
+       "sha256": "52c50a4e3c6dc5a08df7b0f3e3fbd5dec2b6fd11bdb7786d6f29dd3748641577"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back/forearm_l.png",
+       "byteLength": 14676,
+       "sha256": "4a439f98ddf83d3d0e4b29971a535f6cd647c46b5ae2468d4479c481ee93bb40"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back/upperarm_l.png",
+       "byteLength": 26687,
+       "sha256": "6f42f530fb73e243d0c8cd4e3f51e9e50b331de8905f21dab3a88ca0da5ed430"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back/bottomwear.png",
+       "byteLength": 263182,
+       "sha256": "42a23e725b10194b8271fa5234fbd2db0616be23997e1a1ebdfa27fd589c35a8"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back/neck.png",
+       "byteLength": 3846,
+       "sha256": "13be92200b6206811f3a03c11f7d05a8c618d724eff4444a9292f63641c548ce"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back/topwear.png",
+       "byteLength": 64339,
+       "sha256": "3cc9e5ac97746a0a1d27c03c2c74b83ee64f1d441c656124c6a6d6e68db8a82b"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back/head_whole.png",
+       "byteLength": 79831,
+       "sha256": "bc40c6938b2adafd70666e7640004d3546722b383babbb86c39fb2d62eb99950"
+      }
+     ]
+    },
+    "back34": {
+     "model": {
+      "path": "worldrpg/media/refreshed/people-rigs/w453/back34/skeleton.model.json",
+      "byteLength": 622616,
+      "sha256": "4c56907794d1549cda716729d15af3a641d47a5c6e034f5aa3333c3f527b968f"
+     },
+     "pages": [
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back34/hair_back.png",
+       "byteLength": 21152,
+       "sha256": "87758f0a966658700f4b0ff197247f95c0a8dfb15557bff38aadf557fb1d97af"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back34/shin_r.png",
+       "byteLength": 13172,
+       "sha256": "81075627b3706b118dd447eec06ea6f932eb8aac99e3afa405cc440f262de873"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back34/thigh_r.png",
+       "byteLength": 1314,
+       "sha256": "30f9789ff57b22ee32000db6916faa17aee8ebe24db5d8135e93e229b49b286f"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back34/shin_l.png",
+       "byteLength": 24043,
+       "sha256": "3130ca16f690f921e801f7abc16bfefdf071665c4884f649cbb44fc63cffa037"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back34/thigh_l.png",
+       "byteLength": 519,
+       "sha256": "6a27f638895b44304fec62b0d2e38c1c9b3f4fdb0f05add745c903e916879afc"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back34/hand_r.png",
+       "byteLength": 10074,
+       "sha256": "5dd49545686ab14819c95c9da95b21a4831b804ad00868ff0e64ea1bd12a9d34"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back34/forearm_r.png",
+       "byteLength": 16959,
+       "sha256": "d120c7be5f01d617eef83ee435ba8f4dd7b9e780df2a3a17ba5b1d6f806c7198"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back34/upperarm_r.png",
+       "byteLength": 6020,
+       "sha256": "6ff064bdfb4a019ce2621ef85bba77a0087fa609ef479eb2e3f1f3c5d54d2b1f"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back34/forearm_l.png",
+       "byteLength": 16521,
+       "sha256": "76ae3d2d79c27d8b57ede534f7d794093a1399e71dcfd890c22259ddfea38de4"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back34/upperarm_l.png",
+       "byteLength": 4390,
+       "sha256": "864dd207b857fb4b87a3ad22ce8ba0d420da97da6ff1d71aaaa69f7a5ade32cd"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back34/bottomwear.png",
+       "byteLength": 255599,
+       "sha256": "6602c27e5f82ad25d8549ccdf5a756a0b9f02bef1946e1e86f8730688ff64d43"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back34/neck.png",
+       "byteLength": 3064,
+       "sha256": "cdb03a7816d587553825366720ae622fcdd3f560fdb0fe3cd76e2fc70069ae09"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back34/topwear.png",
+       "byteLength": 64676,
+       "sha256": "22a535bf25d7349e52ebb6c6fe21b2b0e05081ce0046f14daa698031f00e8a1c"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/back34/head_whole.png",
+       "byteLength": 76320,
+       "sha256": "2b5f790bb25e24f2ddbeacd9fcc489f8373b0620ab4d3e7d846668e9a2e25f19"
+      }
+     ]
+    },
+    "front": {
+     "model": {
+      "path": "worldrpg/media/refreshed/people-rigs/w453/front/skeleton.model.json",
+      "byteLength": 781094,
+      "sha256": "441873402de8d5402ee15a2951398a8d935bd68533ff361818354943f5966f01"
+     },
+     "pages": [
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/hair_back.png",
+       "byteLength": 65193,
+       "sha256": "90fbbae6ef9d714917670954940f8c1eb1cfcf29d5d537bdae35a2e08fbab289"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/shin_r.png",
+       "byteLength": 11130,
+       "sha256": "f1abe2df8a36466e84a30de4a5d5799311ac3e9566ac9ec5fcebdfaa9a651aeb"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/shin_r_walk.png",
+       "byteLength": 6424,
+       "sha256": "1ae84ee6c99b00d879d9a61b505ea8f3f43a82fe925de82bd9b3479e716bcf11"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/thigh_r.png",
+       "byteLength": 910,
+       "sha256": "9c23809600f75c199b9d3b8fe5d04a2f33ea0aa5bca766e71fc12c84da953ceb"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/shin_l.png",
+       "byteLength": 10757,
+       "sha256": "232694a72d06219ceb0f97b71790d3e143b125ac0e674a1d54f37c642c293f8c"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/shin_l_walk.png",
+       "byteLength": 6389,
+       "sha256": "3d5ee1527b858c3494bcb21d248eb4d96fee9fc87935ac8b38c2f15c649b2dc4"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/thigh_l.png",
+       "byteLength": 868,
+       "sha256": "39c2f3fd04dd0ed934ed590330676405a0f0cfe0ef3fa996cf6dc3493dc8203e"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/bottomwear.png",
+       "byteLength": 257249,
+       "sha256": "f2061f40c98c761a1b3f1200c8b5500cb8c372ae82f6a4f70e006c9defd23bb5"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/neck.png",
+       "byteLength": 8101,
+       "sha256": "6a8e9e4c58f99559513b5b16bfc80c1f66784221574c2842cbfde8fa9c25207f"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/topwear.png",
+       "byteLength": 70514,
+       "sha256": "3ffc347f1fd183e8a3858a29c8aa86379fdfbb85ed49a15fb623d3e9664c4f7a"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/brow_r.png",
+       "byteLength": 573,
+       "sha256": "301f62feb2dc7a865db849ab3ed793a53a6e060db4c792da71ac3deb3b08dd45"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/brow_l.png",
+       "byteLength": 492,
+       "sha256": "cf78405fba4b3e0a2c0ed81dc338700131598d8c23e41d5218e08923a79f73be"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/hand_l.png",
+       "byteLength": 8055,
+       "sha256": "5dbc88520df4a1c7460fd7cbe9a5cdc3efb3a2519fa8a5aafa95a8f98ba03956"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/forearm_l.png",
+       "byteLength": 16936,
+       "sha256": "ff0c425d93380305dab79283ce4c1c4d3543624b230a1ae7f6c08ca6e631630d"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/upperarm_l.png",
+       "byteLength": 22966,
+       "sha256": "5861c3e44a6683e1f053ea18e8ac95227544915e13ec0aa24eacf7abbe01195a"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/hand_r.png",
+       "byteLength": 8702,
+       "sha256": "bf2eb22527dcbffdc599caad1f0cd162f8d619b96a076e715be5712d8805dd37"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/forearm_r.png",
+       "byteLength": 16308,
+       "sha256": "920f836cc95fd79bdefee061519deb9383f3c2d8bd976a60462bcc16eb1382bd"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/upperarm_r.png",
+       "byteLength": 25763,
+       "sha256": "e4a226caf57b84bfea67ab46d0ef8487c57debdcd6a7f885808c8e91906cddca"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/face.png",
+       "byteLength": 13095,
+       "sha256": "ac45d8eb73a391c5a46d5f865d75fd8c69f2a188f6c48e3c719bf9a8a6e0a1f4"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/ear_r.png",
+       "byteLength": 469,
+       "sha256": "e6811c7094ae64ba18633119696f78349347fb486ed876db85a02cc6c82bd8fb"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/ear_l.png",
+       "byteLength": 583,
+       "sha256": "01123c2faa5ef21ec56978a47fef490ea9ca7029a2dbf9107b51a6640c17cf7c"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/nose.png",
+       "byteLength": 1768,
+       "sha256": "25383bd67f7cc1ed38ade4e8346f0c1e0d45b0317068a070feb6ab8aa30d7384"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/mouth.png",
+       "byteLength": 1173,
+       "sha256": "c00f0d3d6bfa02f4782c6e630a438023aae8ad15cbfb8b8158c37185b167ec78"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/eyewhite_r.png",
+       "byteLength": 614,
+       "sha256": "a64c6572a110f1202549ab083285e98807427f92608cb3b0261160c147ee7e3e"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/eyewhite_l.png",
+       "byteLength": 629,
+       "sha256": "57f79f9e1dbbeab7107d70fdaa4cb9840630db3e4dd0dd18f5c65a7794fd4894"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/iris_r.png",
+       "byteLength": 479,
+       "sha256": "40ee2bcf77cdf6107811828adba818f3e7408e53275b550d35178fe733a6e7c2"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/iris_l.png",
+       "byteLength": 538,
+       "sha256": "98eb25c26800ea7d73ee913a4e348dd9c745bf1af200c4dd9631692a3e280af9"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/lash_r.png",
+       "byteLength": 905,
+       "sha256": "a10d4a93dc0993c988fc441b3a115fac224fa15dcd4447d0fe90c1778c5929b0"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/lash_l.png",
+       "byteLength": 775,
+       "sha256": "d71981a47a3a864ad1457129157d2c2f4fe294b09320e8244fbf18bb94b9b544"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front/hair_front.png",
+       "byteLength": 16821,
+       "sha256": "2970239928e421394a85b53bd3310bb4343c0255f1dc2dc3947c0a6bd9d3e0ca"
+      }
+     ]
+    },
+    "front34": {
+     "model": {
+      "path": "worldrpg/media/refreshed/people-rigs/w453/front34/skeleton.model.json",
+      "byteLength": 870665,
+      "sha256": "244a4418d76aadfcd84747a185f41afbdeebfa7d5a3756ad9b877210b515f7fa"
+     },
+     "pages": [
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/hair_back.png",
+       "byteLength": 53020,
+       "sha256": "e75070d80c51298b84474290bbb1a1871d531a02c85f0f44a7d8ca3401425e65"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/shin_r.png",
+       "byteLength": 11464,
+       "sha256": "dca642dc0f06ec06da3519aa2e21ac15c34cc5e46d5e2ca284100e07a3be6871"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/shin_r_walk.png",
+       "byteLength": 5470,
+       "sha256": "9919bec4204dd29f52a8eb372a3d50f66ef299bd2a46dac6b4b3ee5db5316092"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/thigh_r.png",
+       "byteLength": 806,
+       "sha256": "1babf630eb82f8743d5b12609f4da68f8980ebcc3e1bbba3594c8fdda6530584"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/shin_l.png",
+       "byteLength": 12733,
+       "sha256": "53cf76358f0710b2b66ba68dda145853c5b58e974ed6f76ad5386d068ba36c59"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/shin_l_walk.png",
+       "byteLength": 5548,
+       "sha256": "ddeaf62531c2a8e254a7788fe5bd6d408db25d2f544ee3efddbd0b635a4e826d"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/thigh_l.png",
+       "byteLength": 536,
+       "sha256": "0e5c262d5e1e8de76446a33b164d2233965e8d86dddbb286d05a969e68fb37d3"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/bottomwear.png",
+       "byteLength": 244436,
+       "sha256": "088f7f5f439be6b1d3f14069141cc04952ed56b1b368a554fcc062ba5ee02be2"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/neck.png",
+       "byteLength": 5905,
+       "sha256": "6cacc173db819c037468e9c17b3d09ca8a87dbc01a3b38ef1b7749027aeaf9aa"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/topwear.png",
+       "byteLength": 64941,
+       "sha256": "a584dd5e2f5adedcd30549c61ab9e0a4c4fd88fb91e4b178803c6db171f256e7"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/brow_r.png",
+       "byteLength": 813,
+       "sha256": "75fa5895dc440aaeda79b46780684b159ee940fb0802d2ceb141086d2f742497"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/brow_l.png",
+       "byteLength": 541,
+       "sha256": "60ddc6df351a40fd716ab1740e3acdb628fb9b11f0e50b7c1e1971e7bf615b90"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/hand_l.png",
+       "byteLength": 7075,
+       "sha256": "acad527184cb725b087c24df1054b95c2884f6ed3ea2214accedaa6e04bcf264"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/forearm_l.png",
+       "byteLength": 15542,
+       "sha256": "f6aca44b6e209749cd3dd34cb53b5095f8fe1bab7fe0e779c003dd4f1304210b"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/upperarm_l.png",
+       "byteLength": 19466,
+       "sha256": "16f2673823a32c73d0ee5b52667a55ec2438055f24c5b65ddc1369ab9828f4a9"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/hand_r.png",
+       "byteLength": 10907,
+       "sha256": "422e7047145419085f2f6b1410a10381d852effe992cb65a9d42d15074ece471"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/forearm_r.png",
+       "byteLength": 15419,
+       "sha256": "6d41d5f94ead9ed26ba646f07a62aa6abc12cfbda3cd04889cf38a4c6eb1ee16"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/upperarm_r.png",
+       "byteLength": 24786,
+       "sha256": "e92b8a0880bf3b7b0f102ea6025126d4421dbd177f06eac7a6bbb53c49a3720c"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/face.png",
+       "byteLength": 13167,
+       "sha256": "70eb18f449acbb07834c8b79e0df7a7fe40632ef46affd83b9bee6280ea47e4d"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/nose.png",
+       "byteLength": 1909,
+       "sha256": "9dfa65b3fba078733f75a6e9968ff67e4524246580d3a5034101d6a900e0027e"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/mouth.png",
+       "byteLength": 1088,
+       "sha256": "d5abcb2f50f212f123d15da16038f3179caf54dbde5891f8ff8bb6bb4e2adced"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/eyewhite_r.png",
+       "byteLength": 663,
+       "sha256": "832fa02bc071d054262254cb67166f1fd6f8bc74cccfd451fc9ccbf4b8b1e103"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/eyewhite_l.png",
+       "byteLength": 436,
+       "sha256": "82e86a43b8bf6bdf05391a06a8fa20351723f363e7a709fbcf9b170fd5cd3b7e"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/iris_r.png",
+       "byteLength": 352,
+       "sha256": "c01f239e9401aab8260b5256efbd87e11a8dc542350a2c0f8fe5974c453b22a8"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/iris_l.png",
+       "byteLength": 240,
+       "sha256": "c27076daf1e282f0b8e661c939b1a8c323e0ff49ab958361821bc28a9ccaefef"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/lash_r.png",
+       "byteLength": 662,
+       "sha256": "298fa5e725ab7abded4d83284ddbf776486490d08be85672b053e71eadd0a5fe"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/lash_l.png",
+       "byteLength": 546,
+       "sha256": "98075a73c64032dd247ae8b4ba875025ccd0359ccd9f1fabbe2f5671098b22e1"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/front34/hair_front.png",
+       "byteLength": 35152,
+       "sha256": "1bbdf958e6a2d0cfe535f980f4f44647a615ae9f6abc990a6c1cb708c7a30341"
+      }
+     ]
+    },
+    "side": {
+     "model": {
+      "path": "worldrpg/media/refreshed/people-rigs/w453/side/skeleton.model.json",
+      "byteLength": 749870,
+      "sha256": "55c6903d147c69fb83e0d5e7d54160474ccde6fcec6e9026a839096bb2470026"
+     },
+     "pages": [
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/side/hair_back.png",
+       "byteLength": 12800,
+       "sha256": "467210ed4272093be1c8796b2ac27e9d4377c30427cf873135e11ac8f0b7a92f"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/side/foot_r.png",
+       "byteLength": 15927,
+       "sha256": "4d298e100a924d03b9ec10ac3b4f74dcb9358ac2510b6b414874451fca97996c"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/side/shin_r.png",
+       "byteLength": 4987,
+       "sha256": "230519f1765bc3722b71b587ef63b2067a5f1b23bce052421c3980dd861a1d46"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/side/thigh_r.png",
+       "byteLength": 12976,
+       "sha256": "6c324b8085299e163556622d6992e1872c529ffb90dee9c83b3c51dcad015749"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/side/foot_l.png",
+       "byteLength": 15944,
+       "sha256": "9180e7cc38b0d45350c3d6b01952769eec4e88922e3e5b738f53c8d0c94a72fc"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/side/shin_l.png",
+       "byteLength": 4316,
+       "sha256": "0102509f08d74de16778033841effc313952aabc83e84aeda1e456fe89ec188c"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/side/thigh_l.png",
+       "byteLength": 14272,
+       "sha256": "368fae66a49cb0fa40a203c03988d2fb228815d88aaadcf55a80c23036fc64ee"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/side/bottomwear.png",
+       "byteLength": 32798,
+       "sha256": "bbd90c95c942ab1a228198e775ac54d6a533922f17b75f92398ed926a4e42a5c"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/side/skirt.png",
+       "byteLength": 259280,
+       "sha256": "1a7be92e9498c6bda6b165fb9195129bd08d9d24af9d055c93c06ba27d512320"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/side/neck.png",
+       "byteLength": 6958,
+       "sha256": "c504ea6d13d805e0c1bc471f21279e3798d2a4ae8008cc61c20394f4d6739087"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/side/pouch.png",
+       "byteLength": 6045,
+       "sha256": "344eca49f298ad72ddd58e8bab34bed35ebf10b7d462189b321b8bef5959c0a2"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/side/topwear.png",
+       "byteLength": 43529,
+       "sha256": "658d60d88d50aa606d18da2c7c7e162242c0a74982ef7c519970d929eb525e39"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/side/hand_r.png",
+       "byteLength": 10010,
+       "sha256": "9a43344adfaf91eb008eb72a878ca254cca1587a338c83d8e9e60491d82a5b2b"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/side/forearm_r.png",
+       "byteLength": 16134,
+       "sha256": "0f75c9e14311ed0c0d7c0a1df0ad471c57aef82d56817d1e84c883b3dcfc1ffd"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/side/upperarm_r.png",
+       "byteLength": 29609,
+       "sha256": "5e06ac68954f782e0d49ec7b92db52ad9d4bf07cae427565ed287cf9fd0a7c5b"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/side/head_whole.png",
+       "byteLength": 65898,
+       "sha256": "7601584117e92dba540b38e2abc7c11f9b00a57a9cc39ce43a460acd63c155d3"
+      },
+      {
+       "path": "worldrpg/media/refreshed/people-rigs/w453/side/eye_r.png",
+       "byteLength": 568,
+       "sha256": "cc888c8e05a3eaa9cd1f288bd26f5fc88de1447cd5013b77b32baf5b2cb7ba56"
+      }
+     ]
+    }
+   },
+   "directions": {
+    "4": [
+     {
+      "label": "front",
+      "angle": 0,
+      "view": "front"
+     },
+     {
+      "label": "left",
+      "angle": 90,
+      "view": "side",
+      "mirror": true
+     },
+     {
+      "label": "back",
+      "angle": 180,
+      "view": "back"
+     },
+     {
+      "label": "right",
+      "angle": 270,
+      "view": "side"
+     }
+    ],
+    "8": [
+     {
+      "label": "front",
+      "angle": 0,
+      "view": "front"
+     },
+     {
+      "label": "front-left",
+      "angle": 45,
+      "view": "front34",
+      "mirror": true
+     },
+     {
+      "label": "left",
+      "angle": 90,
+      "view": "side",
+      "mirror": true
+     },
+     {
+      "label": "back-left",
+      "angle": 135,
+      "view": "back34",
+      "mirror": true
+     },
+     {
+      "label": "back",
+      "angle": 180,
+      "view": "back"
+     },
+     {
+      "label": "back-right",
+      "angle": 225,
+      "view": "back34"
+     },
+     {
+      "label": "right",
+      "angle": 270,
+      "view": "side"
+     },
+     {
+      "label": "front-right",
+      "angle": 315,
+      "view": "front34"
+     }
+    ]
+   }
   }
  }
 }

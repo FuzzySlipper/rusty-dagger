@@ -815,6 +815,38 @@ public sealed class PublishedContentDeliveryTests
         }
     }
 
+    /// <summary>
+    /// The walking test figure ships one rigc-compiled/3 model per view with exactly the pages it names beside it, every
+    /// view holding the clips the set states; its four-direction set is the front, back and the profile both ways, and its
+    /// eight-direction set adds each three-quarter view with its mirrored twin.
+    /// </summary>
+    [Fact]
+    public void The_people_rig_ships_each_view_with_its_pages_and_clips_and_states_four_and_eight_direction_sets()
+    {
+        ProductContent content = AdmittedContent();
+        DaggerfallPeopleRig rig = DaggerfallArtReplacements.Read(content.ReadBytes("worldrpg/payloads/daggerfall.art-replacements.json"),
+            "daggerfall.art-replacements").PeopleRig!;
+        Assert.Equal(["back", "back34", "front", "front34", "side"], rig.Views.Keys.Order(StringComparer.Ordinal));
+        foreach ((string name, DaggerfallPeopleRigView view) in rig.Views)
+        {
+            using JsonDocument model = JsonDocument.Parse(content.ReadBytes(view.Model.Path).ToArray());
+            Assert.Equal("rigc-compiled/3", model.RootElement.GetProperty("spec").GetString());
+            Assert.Equal(rig.Clips.Order(StringComparer.Ordinal), model.RootElement.GetProperty("animations").EnumerateArray()
+                .Select(clip => clip.GetProperty("name").GetString()!).Order(StringComparer.Ordinal));
+            Assert.Equal(view.Pages.Select(page => page.Path).Order(StringComparer.Ordinal), model.RootElement.GetProperty("pages").EnumerateArray()
+                .Select(page => $"{Path.GetDirectoryName(view.Model.Path)}/{page.GetProperty("name").GetString()}").Order(StringComparer.Ordinal));
+        }
+        Assert.Equal("walk", rig.Walk);
+        Assert.Equal("idle", rig.Idle);
+        Assert.Contains("attention", rig.Clips);
+        Assert.Equal(["front", "side", "back", "side"], rig.Directions["4"].Select(direction => direction.View));
+        Assert.Equal([0F, 90F, 180F, 270F], rig.Directions["4"].Select(direction => direction.Angle));
+        Assert.Equal([false, true, false, false], rig.Directions["4"].Select(direction => direction.Mirror));
+        Assert.Equal(["front", "front34", "side", "back34", "back", "back34", "side", "front34"], rig.Directions["8"].Select(direction => direction.View));
+        Assert.Equal([0F, 45F, 90F, 135F, 180F, 225F, 270F, 315F], rig.Directions["8"].Select(direction => direction.Angle));
+        Assert.Equal([false, true, true, true, false, false, false, false], rig.Directions["8"].Select(direction => direction.Mirror));
+    }
+
     [Fact]
     public void Refreshed_art_states_the_bytes_it_ships_and_stands_in_only_for_published_classic_media()
     {
@@ -950,7 +982,9 @@ public sealed class PublishedContentDeliveryTests
                 .Where(file => tree.Value.TryGetProperty(file, out _)).Select(file => tree.Value.GetProperty(file)))
                 // Trees trimmed alike share a mesh.
                 .DistinctBy(file => file.GetProperty("path").GetString()),
-            section.GetProperty("treeSnow")];
+            section.GetProperty("treeSnow"),
+            .. section.GetProperty("peopleRig").GetProperty("views").EnumerateObject()
+                .SelectMany(view => view.Value.GetProperty("pages").EnumerateArray().Prepend(view.Value.GetProperty("model")))];
         foreach (JsonElement file in files)
         {
             byte[] bytes = content.ReadBytes(file.GetProperty("path").GetString()!).ToArray();

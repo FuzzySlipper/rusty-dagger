@@ -89,6 +89,8 @@ internal class EngineContextFake : DispatchProxy
     /// <summary>Whether the far ground draws, as the last call left it.</summary>
     /// <summary>Serves the real Engine's authored content, for a fixture whose graphics are real and must read its catalogs.</summary>
     internal void UseAuthoredContent(IAuthoredContentService service) => authored = service;
+    /// <summary>The parts rigs the product loads, shows and plays.</summary>
+    internal PartsRigsRecorder PartsRigs { get; } = PartsRigsRecorder.Create();
 
     internal bool HeightfieldVisible => ((HeightfieldServiceFake)(object)heightfield).Visible;
     internal bool NearGroundVisible => ((HeightfieldServiceFake)(object)heightfield).NearVisible;
@@ -143,6 +145,7 @@ internal class EngineContextFake : DispatchProxy
         "get_Heightfield" => heightfield,
         "get_Vegetation" => vegetation,
         "get_AuthoredContent" => authored,
+        "get_PartsRigs" => PartsRigs.Service,
         _ => throw new NotSupportedException(method?.Name),
     };
 

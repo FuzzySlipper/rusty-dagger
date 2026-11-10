@@ -147,6 +147,7 @@ earned. Like the movement commands they wait while a screen or question is open.
 | `player.ride MOUNT` | Puts the player on `horse` or `cart`, giving them it if they have none, or back on `foot`. Riding needs the outdoors. |
 | `player.ride.state` | Reports the mount under the player: its speed, its heading and how far the view looks past it. |
 | `player.morph FORM` | Changes the player into `werewolf` or `wereboar`, cursing them with it if they have no curse, through the ordinary change; `""` changes them back. |
+| `people.rig SET` | Draws every walking townsperson as the art set's parts-rig test figure (`peopleRig`) seen from `4` or `8` directions, facing where she heads, walking while she moves to a waypoint and idling otherwise; `off` draws their own art again. |
 
 For example, to reach the Temple of Kynareth's trainer from anywhere:
 `world.enter Charing "Temple of Kynareth"`, then `world.find training`, then
