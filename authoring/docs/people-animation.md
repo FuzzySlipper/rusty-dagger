@@ -203,7 +203,11 @@ repainted in the stationary people's style rather than converted from its classi
    frame on the generation ground at half the rig painting's size. The prompt asks for a walk in
    place at a calm pace in that view, with a fixed camera. 107 frames give about three cycles.
    H3 draws perspective, so a foot coming toward the camera shortens and the track narrows under
-   the body.
+   the body. A clip opened and closed on the still starts and ends standing, so the walk is then
+   generated again as a loop. Its first and last frame is a mid-stride frame of that clip, with
+   one foot down under the body. The prompt has her mid-stride from the first frame to the last,
+   never stopping or standing with both feet side by side. The idle and the walk are separate
+   clips, and a change between them snaps rather than blends.
 3. **Rig sources:** each view's rig is cut from a frame of its own clip, doubled, in place, so the
    clip's poses land on the rig unchanged. The frame should have both feet down with the soles
    hidden, and every limb in sight: a profile's far arm swung clear of the back, since See-through
@@ -215,7 +219,8 @@ repainted in the stationary people's style rather than converted from its classi
    on the back. The whole head keeps only the pixels where See-through's frontmost layer belongs to
    the head, so a sleeve cap or the bodice inside the box stays with its own part. Under the head,
    those parts take See-through's own paint rather than the painting's, which there shows the hair.
-4. **Cycle:** RTMW on every frame. The period comes from the ankles. The cycle is cut where its
+4. **Cycle:** RTMW on every frame. The period comes from the ankles: the shortest whose
+   correlation is within 0.03 of the best, since two cycles correlate as well as one. The cycle is cut where its
    two ends agree best and turned to start where the left foot pushes off, the same event in
    every view, so a view change keeps the stride. In profile RTMW swaps the legs on the odd frame,
    which continuity undoes, and loses the hips and shoulders for stretches, so their midpoints
@@ -254,6 +259,13 @@ repainted in the stationary people's style rather than converted from its classi
    front's does, so its derived swing is scaled by 3. The physics is then dropped. Hair and bangs cut with a
    profile's or the back's head can't swing. The figure walks on the spot, so a stop or a turn has
    no response.
+   **Walking shoes:** a front or back rig is cut from the still, where she stands with her feet
+   turned out. Walking, a foot seen from in front or behind points along the walk, so it shows
+   toe-on or heel-on and narrow. The loop's mid-stride frame holds that shoe. It is cut there and
+   added to each shin slot as a second drawing: its sole as low as the standing shoe's, under the
+   shin's tip, upright at the setup pose and mirrored for the other foot. Its top runs on under the
+   hem. The walk keys the walking shoes on its first key and every other body clip keys the
+   standing ones. A profile's rig is already cut from a walking frame.
 6. **Placement:** each clip draws the figure at its own height and offset. After the retarget, the
    rig's root moves so the walk's planted foot stands on y = 0 and the rig source's neck on x = 0, so
    a change of view, mirrored or not, keeps the feet and head in place.
