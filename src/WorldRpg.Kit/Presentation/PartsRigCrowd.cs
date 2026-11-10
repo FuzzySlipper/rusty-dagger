@@ -82,8 +82,9 @@ public sealed class PartsRigCrowd(Func<IPartsRigsService> engine) : IDisposable
         {
             if (walker is not null) stopped.Add(walker);
             PartsRigView[] views = [.. figure.Views.Select(view => new PartsRigView(Rig(view, figure.Filter), view.Heading, view.Mirror))];
-            walker = new(figure, heightMetres, Engine.CreateAppearance(new PartsRigAppearanceRequest(views, heightMetres / figure.Height,
-                SpriteSizeMode.World, BillboardMode.Cylindrical, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F), figure.Material, 0F)));
+            // World-sized, upright and turning to the eye, as the figure's material lights and casts it.
+            walker = new(figure, heightMetres, Engine.CreateAppearance(
+                new PartsRigAppearanceRequest(views, heightMetres / figure.Height) with { Material = figure.Material }));
             shown[id] = walker;
         }
         walker.Wanted = walking ? figure.Walk : figure.Idle;
