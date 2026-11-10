@@ -2,11 +2,13 @@
 /* The game's own typefaces, shipped with it (src/ui/fonts, SIL Open Font License) so the window draws the same
    letters on any machine: Alegreya to read, its small capitals for labels and keys, and Cinzel's Roman capitals
    for title plates. Figures that line up in columns ask for tabular numerals where they are drawn. */
-@font-face { font-family: 'Alegreya'; src: url('fonts/alegreya.woff2') format('woff2'); font-weight: 400 900; font-style: normal; }
-@font-face { font-family: 'Alegreya'; src: url('fonts/alegreya-italic.woff2') format('woff2'); font-weight: 400 900; font-style: italic; }
-@font-face { font-family: 'Alegreya SC'; src: url('fonts/alegreya-sc-medium.woff2') format('woff2'); font-weight: 400 600; font-style: normal; }
-@font-face { font-family: 'Alegreya SC'; src: url('fonts/alegreya-sc-bold.woff2') format('woff2'); font-weight: 700 900; font-style: normal; }
-@font-face { font-family: 'Cinzel'; src: url('fonts/cinzel.woff2') format('woff2'); font-weight: 400 900; font-style: normal; }
+/* Each weight is its own static file: the window's Servo draws a variable font only at its default weight. */
+@font-face { font-family: 'Alegreya'; src: url('fonts/alegreya-regular.woff2') format('woff2'); font-weight: 400; font-style: normal; }
+@font-face { font-family: 'Alegreya'; src: url('fonts/alegreya-bold.woff2') format('woff2'); font-weight: 700; font-style: normal; }
+@font-face { font-family: 'Alegreya'; src: url('fonts/alegreya-italic.woff2') format('woff2'); font-weight: 400; font-style: italic; }
+@font-face { font-family: 'Alegreya SC'; src: url('fonts/alegreya-sc-medium.woff2') format('woff2'); font-weight: 500; font-style: normal; }
+@font-face { font-family: 'Alegreya SC'; src: url('fonts/alegreya-sc-bold.woff2') format('woff2'); font-weight: 700; font-style: normal; }
+@font-face { font-family: 'Cinzel'; src: url('fonts/cinzel-bold.woff2') format('woff2'); font-weight: 700; font-style: normal; }
 :root { --font-body: 'Alegreya', serif; --font-label: 'Alegreya SC', 'Alegreya', serif; --font-title: 'Cinzel', 'Alegreya SC', serif; }
 /* The page the Engine serves sets its own body font; the game's text is the game's. */
 body, dialog { font-family: var(--font-body); }
@@ -595,8 +597,9 @@ body, dialog { font-family: var(--font-body); }
 .dagger-help-tabs [role="tab"] { text-align: left; }
 .dagger-help-page { min-height: 24rem; padding: 1.5rem 2rem; }
 .dagger-help-page h3 { margin: 0 0 .75rem; font-size: 1.25rem; }
-.dagger-help-page p { margin: 0 0 .75rem; line-height: 1.55; max-width: 44rem; }
-.dagger-help-page kbd { padding: 0 .35rem; border: 1px solid #7a5a2c; border-radius: 2px; background: rgb(122 90 44 / .14); color: #2a170a; font: 700 .85em var(--font-label); }
+.dagger-help { grid-template-columns: 14rem minmax(0, 52rem); }
+.dagger-help-page p { margin: 0 0 .75rem; line-height: 1.55; }
+.dagger-help-page kbd { display: inline-block; white-space: nowrap; padding: 0 .35rem; border: 1px solid #7a5a2c; border-radius: 2px; background: rgb(122 90 44 / .14); color: #2a170a; font: 700 .85em var(--font-label); }
 .dagger-help-page kbd.is-unbound { font-style: italic; font-weight: 400; }
 
 /* The menu's commands: icons sized to the button they head. */

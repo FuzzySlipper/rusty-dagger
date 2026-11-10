@@ -186,9 +186,9 @@ follow its shape.
   is drawn at its own `maskRect`, the classic image's place. Refreshed clothing,
   and refreshed armour or a weapon in a metal other than steel, carries a
   `tint`: a canvas brightens the image and multiplies it by the dye's or
-  metal's colour where the tint's mask is opaque, once per image and tint. The pack fills the right: category tabs, a reserved
-  row for the action bar, then a grid of large slots, with gold and load
-  beneath.
+  metal's colour where the tint's mask is opaque, once per image and tint. The pack fills the right: one row of category tabs, a reserved
+  row for the action bar, then a grid of large slots, as many as the ruleset
+  lays items out in (`gridCapacity`), with gold and load beneath.
 - **Tabs and sort.** The ruleset publishes the tabs (`categories`) and each
   row's `category`. A tab dims the items outside it, and every item keeps its
   place. Sort pack sends `inventory-sort`, and the ruleset lays the pack out
@@ -268,6 +268,9 @@ them as the donor's service window does. Each service has its own page:
   makers** each have a page. A summoner's page quotes the summoning, and an offer
   opens as its own dialog above it.
 
+Talk and the chooser are read on parchment; trade and the other service pages are worked in the stone
+chrome, as the item screens are.
+
 Back or Escape steps from a page to the chooser, on the service just left. From
 the chooser, or from a talk-only person's Talk, it ends the conversation. LB and RB
 step between the pages, and the tab row over a page does the same for the
@@ -333,6 +336,11 @@ update to acknowledge in, so it runs the same phases at once.
 
 ## The other screens
 
+- **Help** (`help.ts`): the game's help pages, authored in the base payload's `help` section, as a
+  column of tabs beside the page read on parchment; the triggers or Page Up and Down turn them. A
+  paragraph names a control by its action (`{inventory}`), and the page draws the key or button the
+  player has bound to it on the device in use. The tutorial is this page, not a quest a new game asks
+  about.
 - **Journal** (`journal.ts`): Quests, Finished, Notes and Book are tabs over
   their panels. Each quest entry takes focus, and up and down scroll an entry
   taller than its page. The notebook key and an opened book open the journal on
@@ -394,6 +402,10 @@ update to acknowledge in, so it runs the same phases at once.
 - **Redraws keep focus.** A snapshot arrives every update. A surface rebuilds
   its controls through `redraw` (`src/ui/redraw.ts`), which skips content that
   did not change and, after a real rebuild, focuses the same control again.
+- **Classic text reflows** (`src/ui/reflow.ts`). The donor broke its text into lines by hand at the
+  width of its windows. Quest messages and offers, journal entries, dungeon text and dialogue replies
+  join the lines of each paragraph and let the page wrap them; a paragraph ends at a blank line, at a
+  line that ends a sentence well short of the longest, or after a short heading.
 - **Text entry** uses `<input>` and `<textarea>`. For a pad, the letter
   picker (`src/ui/letter-picker.ts`) edits any text field: a modal grid of
   letters with Delete, Done and Cancel that writes back into the field as typing
@@ -437,7 +449,7 @@ derived from the operator's Arena2 files, never committed, and delivered in
 the HUD projection's `uiArt` by `DaggerfallUiArt`. `src/ui/art.ts` adopts it,
 and `fitPixelArt` draws a classic screen at the largest whole number of device
 pixels per source pixel, unfiltered. Refreshed art that stands in for it (paper-doll layers,
-item and spell icons) comes in the same block marked `smooth`, and
+the faces the sheet, creation and escorts show, item and spell icons) comes in the same block marked `smooth`, and
 `smoothIfRefreshed` draws such an image filtered rather than with the square
 pixels the classic styles ask for. Every item's icon is its template's inventory
 image (the paper-doll image for equipment, the donor's world or player image
@@ -478,6 +490,23 @@ is drawn from them:
 - Cursors become `--dagger-cursor`, `--dagger-cursor-pointer` and
   `--dagger-cursor-grab`, drawn at half size with the scaled hotspot.
 
+**Panel sizes.** Every surface is one of three sizes, stated once as custom properties in `skin.css`:
+
+- **Full screen:** title, character creation and death.
+- **Wide** (`--panel-wide` by `--panel-height`, the window's height): the item and reference screens,
+  that is inventory, character, spells, journal, map, travel, settings, help and loot, and a person's
+  trade and maker pages.
+- **Narrow** (`--panel-narrow`, as tall as its content): the menu's list, conversation, rest, saves,
+  confirmations, the loading screen and text on a page.
+
+The menu sets `data-size` on its frame for the panel it shows. A frame inside another (a journal or
+help page) is not a modal and does not dim what holds it.
+
+**Typefaces.** The UI ships its own fonts in `src/ui/fonts/` (SIL Open Font License, credited in
+`THIRD_PARTY_NOTICES.md`), so the window draws the same letters on any machine. `--font-body` is
+Alegreya for reading, `--font-label` its small capitals for labels, keys and figures, and
+`--font-title` Cinzel for title plates. Developer diagnostics keep a monospaced face.
+
 Screens lay out; they do not set frame, button or slot art of their own. The
 vocabulary:
 
@@ -493,6 +522,7 @@ vocabulary:
 | `.dagger-slot` | Stone slot. Focus, selection and a drop target are lit; `is-drop-invalid` is red |
 | `[data-icon]` | A kit icon before the label: menu actions, activation modes, inventory tabs |
 | `[data-inventory-equipment]` | An empty equipment slot shows its silhouette |
+| `select` | Brass-edged plate; the window draws its arrow |
 | Scrollbars | Slate groove and brass handle |
 
 Focus always also keeps a brass outline, so keyboard and controller focus is

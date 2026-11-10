@@ -26,7 +26,7 @@ identifiers (`<track>.<ext>`, such as the donor installation's song folder `loca
 
 ## Typefaces
 
-The game UI draws its text in typefaces it ships, subset to the Latin characters it uses and converted to WOFF2,
+The game UI draws its text in typefaces it ships, cut to the weights and Latin characters it uses and converted to WOFF2,
 in `src/ui/fonts/`. Both are licensed under the [SIL Open Font License 1.1](https://openfontlicense.org), whose
 text sits beside them:
 

@@ -266,17 +266,13 @@
 [data-inventory-equipment^="mark"] { --equip: var(--skin-icon-equip-mark); }
 [data-inventory-equipment^="crystal"] { --equip: var(--skin-icon-equip-crystal); }
 
-/* Select: a brass-edged plate with a drawn chevron, so a choice the window pops up still looks like the kit. */
+/* Select: a brass-edged plate, so a choice the window pops up still looks like the kit. The window draws its own
+   arrow on it, so none is painted here. */
 .dagger-hud select, dialog select {
-  appearance: none;
-  -webkit-appearance: none;
-  padding: .375rem 2rem .375rem .75rem;
+  padding: .375rem .75rem;
   border: 1px solid var(--brass);
   border-radius: 0;
-  background:
-    linear-gradient(45deg, transparent 50%, var(--brass-bright) 50%) no-repeat calc(100% - 1.1rem) 55% / .375rem .375rem,
-    linear-gradient(-45deg, transparent 50%, var(--brass-bright) 50%) no-repeat calc(100% - .725rem) 55% / .375rem .375rem,
-    var(--plate);
+  background: var(--plate);
   color: var(--ink);
   font: inherit;
   cursor: var(--dagger-cursor-pointer);
