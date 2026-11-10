@@ -119,7 +119,10 @@ alone.
 - **Held staff:** a bone from its planted foot to the grip, aimed by a one-bone IK at a grip bone on
   the forearm, so it pivots on the ground and stays in the hand. Riding the forearm alone swings a
   long staff wildly; riding the hip leaves the hand behind.
-- **Eyes:** iris bones for gaze.
+- **Eyes:** each iris on a bone of its own under its eye, for gaze. A profile's head is cut whole from
+  the painting, so its near eye is cut again as a part of its own on an eye bone, from See-through's
+  eye layers, and the head under it is painted with the skin around it. Squashed, the eye then
+  shows a closed lid.
 - **Stance:** the video's pose sequence is an input like any other. Where its legs close further
   than the rig source's stance, each knee and ankle is turned outward about its hip by a few
   degrees, which keeps leg lengths; the witch takes 4°.
@@ -128,6 +131,28 @@ alone.
   source. Their head parts become alternate sets on the head chain, bound to the frames of the turn,
   and the in-between drawing holds one 8 fps frame each way. Garment layers leave the head as it was,
   so head key frames and their runs carry over to a rig rebuilt with new clothing.
+
+## Layers
+
+A figure's clips play together at runtime on layered tracks, as the Engine's parts rigs play them;
+nothing is baked into one clip. The figure's layer stack (`parts-rig-layers/1`) says how:
+
+- **Body,** track 0: the clip the game chooses (idle, walk, a gesture). It may key anything, draw
+  order included.
+- **Eyes,** track 2: the `eyes` clip, looping under every body clip on its own clock. It owns the eye,
+  iris and brow bones, and body clips leave them unkeyed; the rig's own idle blink is taken out.
+- **Eyes override,** track 3: a body clip's companion `<clip>.eyes`, played with it when the rig has
+  one. A higher track replaces only what its clip keys, so a companion that moves only the irises
+  keeps the blinks.
+
+Track 1 is left for breathing added over a walk. A layer's clip keys bone transforms only.
+
+The `eyes` clip is about 10 s: blinks at uneven gaps of 2 to 4 s, sometimes doubled, each shaped as
+rig-c's idle blink (the eyes squashed to 0.12 and back, the brows dipping), and between them glances
+of about a seventh of the eye's width, held a second or more. Its length divides none of the body
+clips', so the two never repeat in step. Its times come from the figure, not the view, so every
+view blinks together and a change of view never cuts a blink. A view without eyes holds the root
+still instead, since every view of a figure must hold every clip it plays.
 
 ## Idle video
 
