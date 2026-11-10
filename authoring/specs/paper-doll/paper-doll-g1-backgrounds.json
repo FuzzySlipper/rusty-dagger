@@ -1,0 +1,122 @@
+{
+ "seed": 27411,
+ "size": 1024,
+ "occupancy": 0.74,
+ "background": "#30343b",
+ "styles": {
+  "painted": {
+   "label": "Painted adventure",
+   "prompt": "Highly detailed lurid pulp-fantasy character portrait in the manner of 1970s and 80s paperback cover art (Frank Frazetta, Boris Vallejo): glossy airbrushed oil rendering, strongly modelled features with defined brows, eyes, nose, lips and cheekbones, fine skin detail and sheen, individual strands of hair and beard, warm rim light against deep shadow, sharp specular highlights, rich saturated colour. Crisp, confident, finely detailed forms rather than flat broad shapes; keep the original local colours. Smoothly drawn high resolution shapes, no square pixel clusters."
+  },
+  "inked": {
+   "label": "Inked dark fantasy / UI kin",
+   "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+  },
+  "gouache": {
+   "label": "Warm storybook gouache",
+   "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+  },
+  "etched": {
+   "label": "Tinted engraving",
+   "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+  }
+ },
+ "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn dark-fantasy RPG paintings. Keep the source's composition, colours and frame. No text, lettering or border beyond the source's own frame.",
+ "presentation": "One whole framed picture, centred on a perfectly flat solid dark slate grey background, RGB 48,52,59, outside the frame. The picture fills about three quarters of the canvas height. Preserve the source composition. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+ "title": "Paper doll race backgrounds G1",
+ "routes": [
+  {
+   "id": "qwen-base",
+   "label": "Qwen / painted baseline",
+   "group": "faces",
+   "model": "qwen-edit",
+   "host": "den-m5",
+   "url": "http://192.168.1.24:8188",
+   "conditioning": "reference"
+  }
+ ],
+ "task": "Task: Redraw a very small classic fantasy RPG character-screen landscape painting as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+ "items": [
+  {
+   "id": "scbg00i0",
+   "directory": "backgrounds/scbg00i0",
+   "image": "scbg00i0-record-000-frame-000-source.png",
+   "name": "Breton paper-doll background (125x198)",
+   "content": "One tall framed landscape painting with no figure in it, aspect about 0.63:1, exactly as composed in the input: a green summer forest of broad-leaved trees under a clear blue sky, a dark tree trunk at the right edge, a brown dirt clearing and a small tree stump in the foreground, all inside a narrow bevelled grey stone frame that runs around the whole picture. The lower part is open ground where a standing figure will later be drawn in front of it. Keep the landscape's composition, horizon and colours exactly as in the input. No figure, animal, text or lettering.",
+   "uncertainty": "This is the backdrop the character screen draws behind the player's figure, a small classic painting of the player's homeland; its detail is only a few pixels across, so landforms and plants are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable foliage, rock, sky, cloud and stone-frame detail; keep it calm and slightly dark so a figure stands out in front."
+  },
+  {
+   "id": "scbg01i0",
+   "directory": "backgrounds/scbg01i0",
+   "image": "scbg01i0-record-000-frame-000-source.png",
+   "name": "Redguard paper-doll background (125x198)",
+   "content": "One tall framed landscape painting with no figure in it, aspect about 0.63:1, exactly as composed in the input: a towering red-brown sandstone outcrop under a dusky orange sky, a bank of olive desert shrubs and round cacti with small yellow flowers at its foot, and dry brown ground, all inside a narrow bevelled grey stone frame that runs around the whole picture. The lower part is open ground where a standing figure will later be drawn in front of it. Keep the landscape's composition, horizon and colours exactly as in the input. No figure, animal, text or lettering.",
+   "uncertainty": "This is the backdrop the character screen draws behind the player's figure, a small classic painting of the player's homeland; its detail is only a few pixels across, so landforms and plants are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable foliage, rock, sky, cloud and stone-frame detail; keep it calm and slightly dark so a figure stands out in front."
+  },
+  {
+   "id": "scbg02i0",
+   "directory": "backgrounds/scbg02i0",
+   "image": "scbg02i0-record-000-frame-000-source.png",
+   "name": "Nord paper-doll background (125x198)",
+   "content": "One tall framed landscape painting with no figure in it, aspect about 0.63:1, exactly as composed in the input: a jagged snow-dusted mountain lit pink by low sun under a dark slate sky, dark pine trees along its foot, a grey snowy track and dark ground, all inside a narrow bevelled grey stone frame that runs around the whole picture. The lower part is open ground where a standing figure will later be drawn in front of it. Keep the landscape's composition, horizon and colours exactly as in the input. No figure, animal, text or lettering.",
+   "uncertainty": "This is the backdrop the character screen draws behind the player's figure, a small classic painting of the player's homeland; its detail is only a few pixels across, so landforms and plants are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable foliage, rock, sky, cloud and stone-frame detail; keep it calm and slightly dark so a figure stands out in front."
+  },
+  {
+   "id": "scbg03i0",
+   "directory": "backgrounds/scbg03i0",
+   "image": "scbg03i0-record-000-frame-000-source.png",
+   "name": "Dark Elf paper-doll background (125x198)",
+   "content": "One tall framed landscape painting with no figure in it, aspect about 0.63:1, exactly as composed in the input: red volcanic ridges glowing orange in low light under a teal sky streaked with cloud, and dark ash ground, all inside a narrow bevelled grey stone frame that runs around the whole picture. The lower part is open ground where a standing figure will later be drawn in front of it. Keep the landscape's composition, horizon and colours exactly as in the input. No figure, animal, text or lettering.",
+   "uncertainty": "This is the backdrop the character screen draws behind the player's figure, a small classic painting of the player's homeland; its detail is only a few pixels across, so landforms and plants are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable foliage, rock, sky, cloud and stone-frame detail; keep it calm and slightly dark so a figure stands out in front."
+  },
+  {
+   "id": "scbg04i0",
+   "directory": "backgrounds/scbg04i0",
+   "image": "scbg04i0-record-000-frame-000-source.png",
+   "name": "High Elf paper-doll background (125x198)",
+   "content": "One tall framed landscape painting with no figure in it, aspect about 0.63:1, exactly as composed in the input: a sunny formal garden walk between low stone walls and a stone manor at the right, trimmed green hedges, paths of pink flower petals and a pale blue sky with white clouds, all inside a narrow bevelled grey stone frame that runs around the whole picture. The lower part is open ground where a standing figure will later be drawn in front of it. Keep the landscape's composition, horizon and colours exactly as in the input. No figure, animal, text or lettering.",
+   "uncertainty": "This is the backdrop the character screen draws behind the player's figure, a small classic painting of the player's homeland; its detail is only a few pixels across, so landforms and plants are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable foliage, rock, sky, cloud and stone-frame detail; keep it calm and slightly dark so a figure stands out in front."
+  },
+  {
+   "id": "scbg05i0",
+   "directory": "backgrounds/scbg05i0",
+   "image": "scbg05i0-record-000-frame-000-source.png",
+   "name": "Wood Elf paper-doll background (125x198)",
+   "content": "One tall framed landscape painting with no figure in it, aspect about 0.63:1, exactly as composed in the input: a deep autumn forest of tall straight trunks with yellow-green leaves, a teal glimpse of sky, and orange ferns and bracken over the ground, all inside a narrow bevelled grey stone frame that runs around the whole picture. The lower part is open ground where a standing figure will later be drawn in front of it. Keep the landscape's composition, horizon and colours exactly as in the input. No figure, animal, text or lettering.",
+   "uncertainty": "This is the backdrop the character screen draws behind the player's figure, a small classic painting of the player's homeland; its detail is only a few pixels across, so landforms and plants are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable foliage, rock, sky, cloud and stone-frame detail; keep it calm and slightly dark so a figure stands out in front."
+  },
+  {
+   "id": "scbg06i0",
+   "directory": "backgrounds/scbg06i0",
+   "image": "scbg06i0-record-000-frame-000-source.png",
+   "name": "Khajiit paper-doll background (125x198)",
+   "content": "One tall framed landscape painting with no figure in it, aspect about 0.63:1, exactly as composed in the input: a dense warm jungle of tall thin trees and hanging green-gold foliage over tall dry grass and dark ground, all inside a narrow bevelled grey stone frame that runs around the whole picture. The lower part is open ground where a standing figure will later be drawn in front of it. Keep the landscape's composition, horizon and colours exactly as in the input. No figure, animal, text or lettering.",
+   "uncertainty": "This is the backdrop the character screen draws behind the player's figure, a small classic painting of the player's homeland; its detail is only a few pixels across, so landforms and plants are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable foliage, rock, sky, cloud and stone-frame detail; keep it calm and slightly dark so a figure stands out in front."
+  },
+  {
+   "id": "scbg07i0",
+   "directory": "backgrounds/scbg07i0",
+   "image": "scbg07i0-record-000-frame-000-source.png",
+   "name": "Argonian paper-doll background (125x198)",
+   "content": "One tall framed landscape painting with no figure in it, aspect about 0.63:1, exactly as composed in the input: a mossy green swamp ruin: a crumbling stone wall hung with green growth on the left, a pale stone stair climbing up on the right, and dark ground, all inside a narrow bevelled grey stone frame that runs around the whole picture. The lower part is open ground where a standing figure will later be drawn in front of it. Keep the landscape's composition, horizon and colours exactly as in the input. No figure, animal, text or lettering.",
+   "uncertainty": "This is the backdrop the character screen draws behind the player's figure, a small classic painting of the player's homeland; its detail is only a few pixels across, so landforms and plants are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable foliage, rock, sky, cloud and stone-frame detail; keep it calm and slightly dark so a figure stands out in front."
+  },
+  {
+   "id": "scbg08i0",
+   "directory": "backgrounds/scbg08i0",
+   "image": "scbg08i0-record-000-frame-000-source.png",
+   "name": "vampire or other racial form paper-doll background (125x198)",
+   "content": "One tall framed landscape painting with no figure in it, aspect about 0.63:1, exactly as composed in the input: a misty night graveyard: a carved headstone and a tall stone column with a lantern hook, bare black trees, grey drifting fog and dark grass, all inside a narrow bevelled grey stone frame that runs around the whole picture. The lower part is open ground where a standing figure will later be drawn in front of it. Keep the landscape's composition, horizon and colours exactly as in the input. No figure, animal, text or lettering.",
+   "uncertainty": "This is the backdrop the character screen draws behind the player's figure, a small classic painting of the player's homeland; its detail is only a few pixels across, so landforms and plants are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable foliage, rock, sky, cloud and stone-frame detail; keep it calm and slightly dark so a figure stands out in front."
+  }
+ ]
+}

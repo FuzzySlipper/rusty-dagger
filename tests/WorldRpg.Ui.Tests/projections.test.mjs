@@ -1768,6 +1768,26 @@ test('the notebook key and an opened book open the journal on their own page, an
   } finally { f.dispose(); }
 });
 
+test('a full screen draws the image the HUD names for it: a refreshed painting fills its place, the title under the game\'s name', () => {
+  const f = fixture();
+  try {
+    const png = 'data:image/png;base64,AA==', webp = 'data:image/webp;base64,AQ==';
+    const art = { revision: 's1', images: [{ id: 'screen.title', image: png }, { id: 'refreshed.screen.title', image: webp, smooth: true }] };
+    const screen = () => f.root.querySelector('.dagger-entry-screen');
+    const name = () => f.root.querySelector('.dagger-entry-name');
+    f.publish({ mode: 'title', uiArt: art, uiArtRevision: art.revision, gameName: 'Daggerfall', screens: { 'screen.title': 'refreshed.screen.title' } });
+    assert.equal(screen().src, webp);
+    assert.equal(screen().dataset.refreshed, '', 'A refreshed screen is laid out as a painting, not fitted as pixel art.');
+    assert.equal(name().hidden, false);
+    assert.equal(name().textContent, 'Daggerfall');
+    // Classic art: the classic title, whose logo is its own, and no name over it.
+    f.publish({ mode: 'title', uiArt: art, uiArtRevision: art.revision, gameName: 'Daggerfall', screens: { 'screen.title': 'screen.title' } });
+    assert.equal(screen().src, png);
+    assert.equal(screen().dataset.refreshed, undefined);
+    assert.equal(name().hidden, true);
+  } finally { f.dispose(); }
+});
+
 test('every menu panel is drawn at one of the standard sizes: wide for the item and reference screens, narrow for the rest', () => {
   const f = fixture();
   try {

@@ -64,15 +64,19 @@
 .dagger-frame[data-skin="parchment"] .dagger-input-hints { color: #5b4322; }
 .dagger-frame[data-skin="parchment"] .dagger-input-hints kbd { border-color: #7a5a2c; background: rgb(122 90 44 / .14); color: #2a170a; }
 
-/* Title plate: brass, its pointed ends kept, the middle stretched to the title. */
+/* Title plate: brass, drawn at its own height with its pointed end caps kept and its plain middle repeated across
+   the title's width, never stretched. */
 .dagger-frame-title {
-  display: block;
-  min-height: 1.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--skin-stone-title-height, auto);
+  min-height: var(--skin-stone-title-height, 1.8rem);
   margin: 0 auto .75rem;
-  padding: .25rem 1rem;
+  padding: 0 1rem;
   border: 1px solid var(--brass);
   border-width: var(--skin-stone-title-width, 1px);
-  border-image: var(--skin-stone-title) var(--skin-stone-title-slice) fill / var(--skin-stone-title-width) stretch;
+  border-image: var(--skin-stone-title) var(--skin-stone-title-slice) fill / var(--skin-stone-title-width) round stretch;
   background: rgb(48 39 24 / .93);
   color: #fff3cf;
   font-family: var(--font-title);

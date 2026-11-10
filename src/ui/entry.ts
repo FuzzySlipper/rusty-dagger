@@ -1,4 +1,4 @@
-import { fitPixelArt, image } from './art.js';
+import { fitPixelArt, image, showScreen } from './art.js';
 import { button, type Send } from './host.js';
 import { isBundles, isSaveSlots, type BundleProjection, type DaggerHud, type SaveSlotEntry, type Unavailable } from './projection.js';
 import { createCycler, type Cycler } from './cycler.js';
@@ -32,6 +32,9 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
   const creationHome = creation.parentElement!;
   const begin = shell.querySelector<HTMLButtonElement>('.dagger-entry-begin')!;
   begin.addEventListener('click', () => send({ action: BEGIN_ACTION }));
+  // A refreshed title painting carries no lettering, so the page sets the game's name over it.
+  const name = document.createElement('h1'); name.className = 'dagger-entry-name'; name.hidden = true; root.append(name);
+  let gameName = '';
   const outcome = document.createElement('p'); outcome.className = 'dagger-entry-outcome'; outcome.setAttribute('role', 'status'); root.append(outcome);
   const parts = document.createElement('div'); parts.className = 'dagger-entry-parts'; root.append(parts);
   const create = button('Create character');
@@ -154,8 +157,9 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
     }
     if (creating) bundleStep = null;
     const primary = screenForMode(mode ?? TITLE_MODE)!;
-    const art = image(primary);
-    if (art !== null) screen.src = art;
+    showScreen(screen, primary);
+    name.textContent = gameName;
+    name.hidden = primary !== screenForMode(TITLE_MODE) || screen.dataset.refreshed === undefined || gameName === '';
     const shown = mode === 'character-pick' ? pickScreens.filter(id => id !== primary) : [];
     redraw(parts, JSON.stringify([shown, shown.map(id => image(id) !== null)]), () => parts.replaceChildren(...shown.flatMap(id => {
       const source = image(id); if (source === null) return [];
@@ -170,6 +174,7 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
     root,
     isTitle: () => title,
     update(value) {
+      gameName = value.gameName ?? '';
       const wasTitle = title;
       title = value.mode === TITLE_MODE;
       // The title asks for the saved games each time it appears, so Continue names the newest.

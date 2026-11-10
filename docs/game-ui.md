@@ -517,7 +517,7 @@ vocabulary:
 | --- | --- |
 | `.dagger-frame` | Stone window (9-slice, no fill) over the tiled stone ground: the menu, confirmations, spell choices, the court, death and character creation |
 | `.dagger-frame[data-skin="parchment"]` | Parchment reading surface with its page filled and dark ink: dialogue, dungeon text, quest messages, the journal page and the book reader. Controls on it stay stone |
-| `.dagger-frame-title` | Brass title plate |
+| `.dagger-frame-title` | Brass title plate, drawn at its own height: its end caps whole and its plain middle repeated across the title, never stretched |
 | `.dagger-panel` | Recessed stone inset inside a frame, such as the equipment panel, the bank and character sections |
 | `.dagger-divider` | Brass rule |
 | Game-UI `button` | Stone button. Hover and focus are lit, pressed sinks, disabled is dimmed. Slots, tabs and map markers are excluded |

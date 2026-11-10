@@ -52,6 +52,11 @@ internal sealed record DaggerfallHudFrame(
     internal string InputDevice { get; init; } = "keyboard";
     /// <summary>The host's loading screen, whose state the snapshot carries; null when the host shows none.</summary>
     internal LoadingScreen? Loading { get; init; }
+    /// <summary>
+    /// The image each full screen (<see cref="DaggerfallUiArt.Screens"/>) is drawn with in the art set drawn: its refreshed
+    /// painting, or the classic screen itself.
+    /// </summary>
+    internal IReadOnlyDictionary<string, string> Screens { get; init; } = new Dictionary<string, string>();
 }
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
@@ -310,7 +315,11 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         {
             // The revision is cheap and always present, so the DOM can tell whether the copy it holds
             // is the one this session shows.
-            fields = [.. fields, ("uiArtRevision", builder.String(uiArt.Revision)), ("pickScreens", builder.Array(uiArt.PickScreens.Select(builder.String).ToArray()))];
+            fields = [.. fields, ("uiArtRevision", builder.String(uiArt.Revision)), ("pickScreens", builder.Array(uiArt.PickScreens.Select(builder.String).ToArray())),
+                ("screens", builder.Object(frame.Screens.OrderBy(screen => screen.Key, StringComparer.Ordinal)
+                    .Select(screen => (screen.Key, builder.String(screen.Value))).ToArray())),
+                // The game's name, which the page sets over a title painting that carries no lettering of its own.
+                ("gameName", builder.String(DaggerfallHudText.GameName))];
             if (_artPending)
             {
                 fields = [.. fields, ("uiArt", Art(builder, uiArt))];
@@ -322,6 +331,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             // is read when first drawn and travels as its own small block, again only when it grew or the
             // DOM asked for it by the revision it lacks.
             if (character?.PaperDoll is { } doll) uiArt.Demand(doll.MediaIds);
+            uiArt.Demand(frame.Screens.Values);
             // The portraits a screen names: the sheet's, creation's faces and escorts', each refreshed where it has art.
             uiArt.Demand([.. character?.Identity?.SelectedMedia?.Select(media => media.MediaId) ?? [],
                 .. character?.Creation?.Faces.Select(face => face.MediaId) ?? [], .. quests?.EscortFaces.Select(face => face.MediaId) ?? []]);

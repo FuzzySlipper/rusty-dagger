@@ -1,4 +1,4 @@
-import { cssUrl, image } from './art.js';
+import { cssUrl, drawnScreen, image, isRefreshed } from './art.js';
 import { button, type Send } from './host.js';
 import type { DaggerHud } from './projection.js';
 import { redraw } from './redraw.js';
@@ -43,8 +43,10 @@ export function mountChoices(shell: HTMLElement, before: HTMLElement, send: Send
     legal.hidden = caseView === null;
     if (caseView === null) { redraw(legal, '', () => legal.replaceChildren()); return; }
     legal.dataset.phase = caseView.phase;
-    const prisonArt = caseView.phase === 'prison' ? image('screen.prison') : null;
+    const prison = drawnScreen('screen.prison');
+    const prisonArt = caseView.phase === 'prison' ? image(prison) : null;
     legal.style.backgroundImage = prisonArt === null ? '' : cssUrl(prisonArt);
+    if (isRefreshed(prison)) legal.dataset.refreshed = ''; else delete legal.dataset.refreshed;
     redraw(legal, JSON.stringify(caseView), () => {
       const card = document.createElement('div'); card.className = 'dagger-legal-card dagger-frame';
       const charges = document.createElement('p'); charges.textContent = `Charges: ${caseView.charges.join(', ')}`;

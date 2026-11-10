@@ -74,8 +74,10 @@ SOURCES = {
                                   "the inside is empty, thin border, centred with margin"),
     "stone-panel": ("1024x1024", f"game UI asset: a single recessed square inset panel, straight-on front view, a thin bevelled "
                                  f"{STONE} rim with small brass corner studs, flat plain dark slate interior, centred and filling most of the frame"),
-    "stone-title": ("1536x512", "game UI asset: a single wide blank title bar plate, straight-on front view, polished brass plate with "
-                                "rivets and pointed ends set in weathered grey stone, flat blank centre, centred and filling most of the frame"),
+    "stone-title": ("1536x512", "game UI asset: a single very wide blank title bar plate, straight-on front view, a long plain horizontal "
+                                "band of brushed polished brass with a thin dark bevel along its top and bottom edges, the same plain brass "
+                                "all along its length, ornate pointed brass end caps set with weathered grey stone at the left and right ends "
+                                "only, no rivets or ornaments along the band, flat blank centre, centred and filling most of the frame"),
     "stone-divider": ("1536x512", "game UI asset: a single thin horizontal divider bar, straight-on front view, a slim polished brass rod "
                                   "with a small ornate stone boss at its centre, very thin, centred and spanning the frame"),
     "stone-button": ("1536x512", f"game UI asset: a single blank wide rectangular fantasy RPG menu button, straight-on front view, "
@@ -137,7 +139,10 @@ def asset(aid, source, size, kind="single", index=None, display=None, states=Non
 
 asset("ui.stone.window.v2", "stone-window", (256, 256), display={"slice": [36, 36, 36, 36], "scale": 0.5})
 asset("ui.stone.panel.v2", "stone-panel", (256, 256), display={"slice": [36, 36, 36, 36], "scale": 0.5})
-asset("ui.stone.title.v2", "stone-title", (256, 86), display={"slice": [0, 48, 0, 48], "scale": 0.5})
+# The title plate spans a whole panel at its own height: its end caps, scaled to the plate's height, and between them a
+# stretch of its plain band made seamless, which the skin repeats (border-image round) rather than stretches. Its
+# slice is set from the caps' width when it is processed.
+asset("ui.stone.title.v2", "stone-title", (256, 86), kind="plate", display={"slice": [0, 0, 0, 0], "scale": 0.5})
 asset("ui.stone.divider.v2", "stone-divider", (256, 32), display={"slice": [0, 20, 0, 20], "scale": 0.5})
 asset("ui.stone.button.v2", "stone-button", (256, 86), display={"slice": [18, 22, 18, 22], "scale": 0.5},
       states={"focus": "focus", "pressed": "pressed", "disabled": "disabled"})
@@ -293,6 +298,45 @@ def tile(img, size):
     return Image.fromarray(np.dstack([out, np.full(size[::-1], 255.0)]).clip(0, 255).astype(np.uint8), "RGBA")
 
 
+def plate(img, size):
+    """A plate from a wide keyed generation: its end caps (out to the last column at each end that stands taller than
+    the band between them, and a margin for their bevel) scaled to the plate's height, and between them a centred stretch of the band made
+    seamless across (blended with a copy shifted by half its width, weighted 1 at its ends, where the copy wraps
+    continuously). Returns the plate and its cap widths, the 9-slice insets that keep the caps whole."""
+    img = img.crop(bbox(img))
+    s = size[1] / img.height
+    cover = (np.asarray(img)[..., 3] >= ALPHA_T).sum(axis=0)
+    band = np.median(cover)
+    tall = np.flatnonzero(cover > band * 1.04)
+    half = len(cover) // 2
+    margin = round(img.height * 0.08)
+    left_end = tall[tall < half].max() + margin
+    right_start = tall[tall >= half].min() - margin
+    caps = (max(1, round(left_end * s)), max(1, round((img.width - right_start) * s)))
+    middle = size[0] - caps[0] - caps[1]
+    taken = round(middle / s)
+    centre = (left_end + right_start) // 2
+    parts = [premul_resize(img.crop((0, 0, left_end, img.height)), (caps[0], size[1])),
+             premul_resize(img.crop((centre - taken // 2, 0, centre - taken // 2 + taken, img.height)), (middle, size[1])),
+             premul_resize(img.crop((right_start, 0, img.width, img.height)), (caps[1], size[1]))]
+    out = Image.new("RGBA", size, (0, 0, 0, 0))
+    out.alpha_composite(parts[0], (0, 0)); out.alpha_composite(parts[1], (caps[0], 0)); out.alpha_composite(parts[2], (caps[0] + middle, 0))
+    arr = np.asarray(out).astype(np.float32)
+    strip = arr[:, caps[0]:caps[0] + middle].copy()
+    # A repeated band would repeat its light: take out its shading along the band (a wide wrapped blur across each
+    # row, replaced by that row's mean), keeping the bevel's shading from top to bottom.
+    rgb = strip[..., :3]
+    wrapped = np.concatenate([rgb, rgb, rgb], axis=1)
+    k = max(3, middle // 3)
+    kernel = np.ones(k) / k
+    blur = np.apply_along_axis(lambda row: np.convolve(row, kernel, mode="same"), 1, wrapped)[:, middle:2 * middle]
+    strip[..., :3] = rgb - blur + rgb.mean(axis=1, keepdims=True)
+    t = np.abs(np.arange(middle) / (middle - 1) * 2 - 1)
+    w = (t * t * (3 - 2 * t)).reshape(1, middle, 1)
+    arr[:, caps[0]:caps[0] + middle] = strip * (1 - w) + np.roll(strip, middle // 2, axis=1) * w
+    return Image.fromarray(arr.clip(0, 255).astype(np.uint8), "RGBA"), caps
+
+
 def state(img, kind):
     arr = np.asarray(img).astype(np.float32)
     rgb, al = arr[..., :3], arr[..., 3]
@@ -360,11 +404,15 @@ def file_name(aid):
     return aid.replace(".", "-") + ".png"
 
 
-def process(picks):
+def process(picks, only=None):
+    """Processes every asset, or only those of the sources named, keeping the record of the rest."""
     os.makedirs(ORIGINALS, exist_ok=True)
     keyed_cache = {}
-    record = {}
+    recorded = os.path.join(RAW, "processed.json")
+    record = json.load(open(recorded)) if only and os.path.exists(recorded) else {}
     for spec in A:
+        if only and spec["source"] not in only:
+            continue
         source, seed = spec["source"], picks.get(spec["source"], 1)
         raw = os.path.join(RAW, source, f"{source}-{seed}.png")
         if spec["kind"] == "tile":
@@ -377,6 +425,9 @@ def process(picks):
                 cells = sheet_cells(keyed, spec["sheet"])
                 square = spec["sheet"] == 6
                 base = fit(cells[spec["index"] - 1], spec["size"], square=square)
+            elif spec["kind"] == "plate":
+                base, caps = plate(keyed, spec["size"])
+                spec["display"] = spec["display"] | {"slice": [0, caps[1], 0, caps[0]]}
             else:
                 cursor = spec["id"].startswith("ui.cursor")
                 base = fit(keyed, spec["size"], square=cursor, top_left=cursor and spec["display"]["hotspot"][0] < 8)
@@ -389,7 +440,7 @@ def process(picks):
             out.save(os.path.join(ORIGINALS, file_name(aid)), optimize=True)
             record[aid] = dict(source=source, seed=seed, size=spec["size"], state=suffix[1:] or None, display=spec["display"])
             print(aid, out.size, flush=True)
-    with open(os.path.join(RAW, "processed.json"), "w") as f:
+    with open(recorded, "w") as f:
         json.dump(record, f, indent=1)
 
 
@@ -436,12 +487,13 @@ def main():
     g.add_argument("--seeds", default="1")
     p = sub.add_parser("process")
     p.add_argument("--pick", action="append", default=[], help="SOURCE=SEED (default seed 1)")
+    p.add_argument("--only", action="append", help="process only this source's assets, keeping the others' records")
     sub.add_parser("manifest")
     a = ap.parse_args()
     if a.cmd == "generate":
         generate(a.sources or list(SOURCES), a.host, a.seeds)
     elif a.cmd == "process":
-        process({k: int(v) for k, v in (p.split("=") for p in a.pick)})
+        process({k: int(v) for k, v in (p.split("=") for p in a.pick)}, a.only)
     else:
         manifest()
 

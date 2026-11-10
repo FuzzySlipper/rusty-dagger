@@ -15,6 +15,9 @@ internal sealed record DaggerfallInteractionPromptView(string Action, string Tar
 /// </summary>
 internal static class DaggerfallHudText
 {
+    /// <summary>The game's name as the title screen sets it.</summary>
+    internal const string GameName = "Daggerfall";
+
     /// <summary>The activation modes in the order the menu offers them, with their player names.</summary>
     internal static readonly IReadOnlyList<(string Id, string Label)> ActivationModes =
         [("grab", "Grab"), ("info", "Information"), ("talk", "Talk"), ("steal", "Steal / Lockpick"), ("bash", "Bash")];

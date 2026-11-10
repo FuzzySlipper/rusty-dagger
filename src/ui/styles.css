@@ -65,9 +65,15 @@ body, dialog { font-family: var(--font-body); }
 
 /* The entry screen the title mode owns, laid out the way the death screen is: the published artifact
    fills the frame and this stylesheet carries layout only. */
-.dagger-entry { position: absolute; inset: 0; display: grid; place-items: center; background: #05060a; pointer-events: auto; }
+.dagger-entry { position: absolute; inset: 0; display: grid; place-items: center; background: #05060a var(--skin-stone-texture, none) 0 0 / var(--skin-stone-texture-size, auto) repeat; pointer-events: auto; }
 .dagger-entry[hidden] { display: none; }
 .dagger-entry-screen { max-width: 100%; max-height: 100%; image-rendering: pixelated; }
+/* A refreshed screen is a painting, not pixel art: it fills the window, and the title painting stands its full
+   height on the stone ground with the game's name set over it. */
+.dagger-entry-screen[data-refreshed], .dagger-death-screen[data-refreshed] { width: 100%; height: 100%; max-width: none; max-height: none; object-fit: cover; image-rendering: auto; }
+.dagger-entry-screen[data-refreshed][data-screen="screen.title"] { width: auto; object-fit: contain; box-shadow: 0 0 3rem rgb(0 0 0 / .8); }
+.dagger-entry-name { position: absolute; top: 4%; left: 50%; transform: translateX(-50%); margin: 0; color: #f4d983; font: 700 5rem var(--font-title); letter-spacing: .08em; text-shadow: 0 .25rem 1rem #000, 0 0 .25rem #000; pointer-events: none; }
+.dagger-entry-name[hidden] { display: none; }
 .dagger-entry-actions { position: absolute; bottom: 2%; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: .625rem; }
 .dagger-entry-buttons { display: flex; gap: .75rem; }
 .dagger-entry-begin, .dagger-entry-create, .dagger-entry-continue, .dagger-entry-load { padding: .5rem 1.375rem; font: inherit; }
@@ -329,7 +335,8 @@ body, dialog { font-family: var(--font-body); }
 .dagger-legal:not([hidden]) { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; background: rgba(5, 8, 10, .9); pointer-events: auto; }
 .dagger-legal-card { width: var(--panel-narrow); padding: 2rem; }
 .dagger-legal-card button { margin: .5rem .5rem 0 0; padding: .7rem 1rem; font: inherit; }
-.dagger-legal[data-phase="prison"] { background: repeating-linear-gradient(90deg, #060809 0 .75rem, #272b2d .75rem 1.375rem, #080b0d 1.375rem 5.625rem); }
+.dagger-legal[data-phase="prison"] { background: repeating-linear-gradient(90deg, #060809 0 .75rem, #272b2d .75rem 1.375rem, #080b0d 1.375rem 5.625rem); background-position: center; background-size: cover; background-repeat: no-repeat; image-rendering: pixelated; }
+.dagger-legal[data-phase="prison"][data-refreshed] { image-rendering: auto; }
 
 /* Travel map: published map art with ruleset-placed regions and destinations drawn over it. */
 .dagger-travel-map { display: grid; gap: .375rem; margin-bottom: .5rem; }

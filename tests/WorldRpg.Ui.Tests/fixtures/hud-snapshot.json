@@ -2935,6 +2935,14 @@
   "pickScreens": [
     "screen.pick.02"
   ],
+  "screens": {
+    "screen.character-generation": "screen.character-generation",
+    "screen.death": "screen.death",
+    "screen.pick.02": "screen.pick.02",
+    "screen.prison": "screen.prison",
+    "screen.title": "screen.title"
+  },
+  "gameName": "Daggerfall",
   "uiArtDemandedRevision": "session-art-revision.6",
   "uiArtDemanded": {
     "revision": "session-art-revision.6",

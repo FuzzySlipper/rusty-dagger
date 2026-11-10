@@ -62,6 +62,10 @@ export interface DaggerHud {
   readonly inventory?: InventoryProjection;
   readonly character?: CharacterProjection;
   readonly pickScreens?: readonly string[];
+  /** The image each full screen is drawn with in the art set drawn, by the classic screen's id. */
+  readonly screens?: Readonly<Record<string, string>>;
+  /** The game's name, set over a title painting that carries no lettering. */
+  readonly gameName?: string;
   readonly loot?: LootProjection | null;
   readonly uiArtRevision?: string;
   readonly uiArt?: UiArt | null;

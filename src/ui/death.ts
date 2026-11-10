@@ -1,4 +1,4 @@
-import { fitPixelArt, image } from './art.js';
+import { fitPixelArt, showScreen } from './art.js';
 import type { Send } from './host.js';
 import { isDeathProjection, type DeathProjection, type SaveSlotProjection } from './projection.js';
 import { redraw } from './redraw.js';
@@ -71,8 +71,7 @@ export function mountDeath(shell: HTMLElement, send: Send): Death {
     })));
     slotList.closest('section')!.hidden = slots.entries.length === 0;
     load.disabled = locked || chosenSlot === null;
-    const art = image(death?.screen || screenForMode('dead')!);
-    if (art !== null) screen.src = art;
+    showScreen(screen, death?.screen || screenForMode('dead')!);
   };
 
   return {

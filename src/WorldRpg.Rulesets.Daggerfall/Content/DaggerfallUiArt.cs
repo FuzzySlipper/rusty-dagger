@@ -42,6 +42,9 @@ internal sealed class DaggerfallUiArt
         "spell.selectors",
     ];
 
+    /// <summary>The full screens a mode or a phase draws whole, each of which refreshed art may paint anew.</summary>
+    internal static readonly string[] Screens = ["screen.character-generation", "screen.death", "screen.pick.02", "screen.prison", "screen.title"];
+
     /// <summary>
     /// Where the publication puts the authored UI kit. Every artifact under it is delivered: the kit is the
     /// skin every screen draws, and the inventory states which images it has, so no list is kept here.

@@ -112,6 +112,20 @@ export function image(id: string | null): string | null {
   return id === null ? null : images.get(id) ?? null;
 }
 
+/// The image each full screen is drawn with in the art set drawn, as the HUD names it: a refreshed painting, or the
+/// classic screen itself (also when the HUD has named none).
+let screens: Readonly<Record<string, string>> = {};
+export function adoptScreens(value: unknown): void {
+  if (typeof value === 'object' && value !== null && Object.values(value).every(id => typeof id === 'string')) screens = value as Record<string, string>;
+}
+export function drawnScreen(id: string): string {
+  return screens[id] ?? id;
+}
+/// Whether an image is refreshed art, drawn smoothed and at the size of the place it fills.
+export function isRefreshed(id: string | null): boolean {
+  return id !== null && smoothed.has(id);
+}
+
 /// Draws an image smoothed when it is refreshed art, overriding the square pixels the classic art's styles ask for.
 export function smoothIfRefreshed(element: HTMLElement, id: string | null): void {
   element.style.imageRendering = id !== null && smoothed.has(id) ? 'auto' : '';
@@ -226,8 +240,10 @@ export function cssUrl(source: string): string {
  * each newly loaded source.
  */
 export function fitPixelArt(art: HTMLImageElement, box: HTMLElement): void {
-  art.style.imageRendering = 'pixelated';
   const fit = (): void => {
+    // A refreshed painting is not pixel art: it fills its box as the stylesheet lays it out.
+    if (art.dataset.refreshed !== undefined) { art.style.imageRendering = ''; art.style.width = ''; art.style.height = ''; return; }
+    art.style.imageRendering = 'pixelated';
     const width = art.naturalWidth, height = art.naturalHeight;
     if (width === 0 || height === 0 || box.clientWidth === 0 || box.clientHeight === 0) return;
     const ratio = window.devicePixelRatio || 1;
@@ -239,4 +255,14 @@ export function fitPixelArt(art: HTMLImageElement, box: HTMLElement): void {
   art.addEventListener('load', fit);
   new ResizeObserver(fit).observe(box);
   fit();
+}
+
+/// Shows a full screen in the art set drawn: the image the HUD names for it, marked when it is a refreshed painting.
+export function showScreen(art: HTMLImageElement, id: string): void {
+  const drawn = drawnScreen(id);
+  const source = image(drawn);
+  art.dataset.screen = id;
+  if (isRefreshed(drawn)) art.dataset.refreshed = ''; else delete art.dataset.refreshed;
+  // A refreshed and a classic screen are different images, so the switch loads one and fitPixelArt lays it out again.
+  if (source !== null && art.src !== source) art.src = source;
 }

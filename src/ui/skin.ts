@@ -8,8 +8,9 @@ import { display, image, reportMissingArt, type UiArtDisplay } from './art.js';
  *
  * A kit image `ui.<family>.<name>[.<state>].v2` becomes `--skin-<family>-<name>[-<state>]` (its
  * `url()`), with `-slice` (its 9-slice insets in image pixels, for `border-image-slice`), `-width`
- * (those insets in rem at its display scale, for `border-image-width` and the border) and `-size`
- * (its whole size in rem, for backgrounds, icons and textures).
+ * (those insets in rem at its display scale, for `border-image-width` and the border), `-size`
+ * (its whole size in rem, for backgrounds, icons and textures) and `-height` (its height in rem, for a primitive
+ * drawn at its own height, such as the title plate).
  */
 
 /** The images the primitives draw; a missing one is reported and its primitive keeps the plain look. */
@@ -79,7 +80,10 @@ export function applySkin(target: HTMLElement = document.documentElement, ids: I
     const drawn = display(id);
     const scale = drawn?.scale ?? 0.5;
     const size = pngSize(source);
-    if (size !== null) next.set(`${property}-size`, `${rem(size.width * scale)} ${rem(size.height * scale)}`);
+    if (size !== null) {
+      next.set(`${property}-size`, `${rem(size.width * scale)} ${rem(size.height * scale)}`);
+      next.set(`${property}-height`, rem(size.height * scale));
+    }
     if (drawn?.slice) {
       next.set(`${property}-slice`, drawn.slice.join(' '));
       next.set(`${property}-width`, drawn.slice.map(inset => rem(inset * scale)).join(' '));

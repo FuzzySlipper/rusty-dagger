@@ -1,0 +1,328 @@
+{
+ "seed": 27421,
+ "size": 1024,
+ "occupancy": 0.74,
+ "background": "#30343b",
+ "styles": {
+  "painted": {
+   "label": "Painted adventure",
+   "prompt": "Highly detailed lurid pulp-fantasy character portrait in the manner of 1970s and 80s paperback cover art (Frank Frazetta, Boris Vallejo): glossy airbrushed oil rendering, strongly modelled features with defined brows, eyes, nose, lips and cheekbones, fine skin detail and sheen, individual strands of hair and beard, warm rim light against deep shadow, sharp specular highlights, rich saturated colour. Crisp, confident, finely detailed forms rather than flat broad shapes; keep the original local colours. Smoothly drawn high resolution shapes, no square pixel clusters."
+  },
+  "inked": {
+   "label": "Inked dark fantasy / UI kin",
+   "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+  },
+  "gouache": {
+   "label": "Warm storybook gouache",
+   "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+  },
+  "etched": {
+   "label": "Tinted engraving",
+   "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+  }
+ },
+ "collection_rules": "Make this belong to one coherent set of grounded fantasy RPG character portraits in a restrained palette, the same family as the game's other portraits. Keep the source's expression, head angle, skin tone, hair and features. No text, lettering, second figure or border beyond the thin gold frame.",
+ "presentation": "One whole square framed portrait, centred on a perfectly flat solid dark slate grey background, RGB 48,52,59, outside the frame. The picture fills about three quarters of the canvas. Broad soft light from the upper left, restrained highlights and readable shadow planes. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+ "title": "Escort portraits F1-A / Qwen then retro",
+ "routes": [
+  {
+   "id": "qwen-retro",
+   "label": "Qwen then retro / 0.35",
+   "group": "faces",
+   "model": "krea2-turbo",
+   "host": "den-nimo",
+   "url": "http://192.168.1.23:8188",
+   "unet": "krea2_turbo_fp8_scaled.safetensors",
+   "conditioning": "init",
+   "denoise": 0.35,
+   "loras": [
+    "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+   ],
+   "prompt_prefix": "dark_fantasy_illustration,\n\n",
+   "upstream_route": "qwen-base",
+   "upstream_style": "painted"
+  }
+ ],
+ "task": "Task: Redraw a very small classic fantasy RPG portrait as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+ "items": [
+  {
+   "id": "tfac-00",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-000-frame-000-source.png",
+   "name": "escort portrait 0 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: an elderly woman with long wavy grey hair and a deeply lined face, faint violet markings across her cheek and brow, looking down to the left, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-01",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-001-frame-000-source.png",
+   "name": "escort portrait 1 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a man with short black hair, dark stubble beard and a fur-trimmed collar, against a dull purple ground, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-02",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-002-frame-000-source.png",
+   "name": "escort portrait 2 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a cackling old crone with long straggly pale hair, a wrinkled face and a wide gap-toothed grin, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-03",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-003-frame-000-source.png",
+   "name": "escort portrait 3 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: the head of a green dragon in profile facing right, with horns, a long snout and a gold eye, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-04",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-004-frame-000-source.png",
+   "name": "escort portrait 4 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: an old man with a grey beard and moustache and receding wavy grey hair, against a grey ground, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-05",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-005-frame-000-source.png",
+   "name": "escort portrait 5 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a hooded figure in a deep red hood whose face is a black void with two glowing pale blue eyes, a gold clasp at the throat, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-06",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-006-frame-000-source.png",
+   "name": "escort portrait 6 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a young man with wavy brown hair and a stern look, in a dark blue collar, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-07",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-007-frame-000-source.png",
+   "name": "escort portrait 7 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a woman with long wavy auburn hair and a small jewel on her forehead, smiling faintly, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-08",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-008-frame-000-source.png",
+   "name": "escort portrait 8 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a monstrous cyclops face with a single red eye, grey-brown warty hide and long fangs, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-09",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-009-frame-000-source.png",
+   "name": "escort portrait 9 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a woman with long flowing black hair and an orange beaded necklace, her head tilted, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-10",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-010-frame-000-source.png",
+   "name": "escort portrait 10 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a woman with long black hair wearing an ornate gold filigree mask over her eyes and gold jewellery, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-11",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-011-frame-000-source.png",
+   "name": "escort portrait 11 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a figure in a deep dark green hood, the face lost in shadow except for narrowed yellow eyes, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-12",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-012-frame-000-source.png",
+   "name": "escort portrait 12 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a dark-skinned man with long black hair and a serious look, in a pale shirt, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-13",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-013-frame-000-source.png",
+   "name": "escort portrait 13 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a green-skinned orc with heavy brows, small tusks and a gold hoop earring, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-14",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-014-frame-000-source.png",
+   "name": "escort portrait 14 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a man with red-brown hair and a full thick beard, against a dull purple ground, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-15",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-015-frame-000-source.png",
+   "name": "escort portrait 15 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a young man with tousled black hair and a cream fur collar, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-16",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-016-frame-000-source.png",
+   "name": "escort portrait 16 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: an old man with swept-back white hair, heavy brows and a stern look, in a purple robe with a gold clasp, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-17",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-017-frame-000-source.png",
+   "name": "escort portrait 17 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a woman with wavy auburn hair, a circlet of blue gems and a dark green garment set with gems, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-18",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-018-frame-000-source.png",
+   "name": "escort portrait 18 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a man with short brown hair and a stern look in a high ruffled collar, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-19",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-019-frame-000-source.png",
+   "name": "escort portrait 19 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a woman with long black hair, a thin gold circlet and a gold necklace, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-20",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-020-frame-000-source.png",
+   "name": "escort portrait 20 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a woman with curly auburn hair, an orange-gold headband and a gold beaded neckline, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-21",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-021-frame-000-source.png",
+   "name": "escort portrait 21 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a man with curly brown hair, a moustache and goatee and pale blue eyes, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-22",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-022-frame-000-source.png",
+   "name": "escort portrait 22 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: an old wizard with a long white beard and an open mouth, in a purple pointed hat with a gold band, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-23",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-023-frame-000-source.png",
+   "name": "escort portrait 23 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a stern man in a brown hood, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-24",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-024-frame-000-source.png",
+   "name": "escort portrait 24 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a man with long straight brown hair and a fur collar, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-25",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-025-frame-000-source.png",
+   "name": "escort portrait 25 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a woman in a bright red hood or scarf glancing to the left, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-26",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-026-frame-000-source.png",
+   "name": "escort portrait 26 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a woman with straight dark brown hair and a fringe, a black choker with a pearl, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-27",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-027-frame-000-source.png",
+   "name": "escort portrait 27 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: an old man with a balding head and wisps of pale hair, in a blue shirt, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-28",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-028-frame-000-source.png",
+   "name": "escort portrait 28 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a bald man in three-quarter view to the left, in a grey-green tunic, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-29",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-029-frame-000-source.png",
+   "name": "escort portrait 29 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a fat bald man with a round jowly face and a gold collar, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  },
+  {
+   "id": "tfac-30",
+   "directory": "faction-faces/tfac00i0",
+   "image": "tfac00i0-record-030-frame-000-source.png",
+   "name": "escort portrait 30 (64x64)",
+   "content": "One square framed head-and-shoulders portrait, aspect 1:1, exactly as composed in the input: a man with brown hair and a cream collar, against the input's plain dark painted background, inside a thin gold frame running around the whole square. Keep the face, expression, head angle, skin colour, hair, headgear and jewellery exactly as in the input.",
+   "uncertainty": "A classic 64-pixel portrait of a named person the player escorts or meets; features are a few pixels each, so they are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable skin, hair, eyes, fabric and gold-frame detail."
+  }
+ ]
+}

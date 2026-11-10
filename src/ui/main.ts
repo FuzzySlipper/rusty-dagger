@@ -1,5 +1,5 @@
 import type { RustyApplicationUiContext } from '@rusty-engine/product-ui';
-import { adopt, adoptDemanded, heldDemandedRevision, heldRevision } from './art.js';
+import { adopt, adoptDemanded, adoptScreens, heldDemandedRevision, heldRevision } from './art.js';
 import { mountChoices } from './choices.js';
 import { mountConfirm } from './confirm.js';
 import { mountDeath } from './death.js';
@@ -158,6 +158,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     const value = projection.value;
     const wasLoading = loading.open();
     loading.update(value.loading ?? null);
+    adoptScreens(value.screens);
     const adopted = value.uiArt ? adopt(value.uiArt) : '';
     if (adopted.length > 0 && adopted !== artRevision) {
       artRevision = adopted;

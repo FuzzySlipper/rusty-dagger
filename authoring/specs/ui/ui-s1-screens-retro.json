@@ -1,0 +1,94 @@
+{
+ "seed": 27441,
+ "size": 1536,
+ "occupancy": 0.98,
+ "background": "#30343b",
+ "styles": {
+  "painted": {
+   "label": "Painted adventure",
+   "prompt": "Highly detailed lurid pulp-fantasy character portrait in the manner of 1970s and 80s paperback cover art (Frank Frazetta, Boris Vallejo): glossy airbrushed oil rendering, strongly modelled features with defined brows, eyes, nose, lips and cheekbones, fine skin detail and sheen, individual strands of hair and beard, warm rim light against deep shadow, sharp specular highlights, rich saturated colour. Crisp, confident, finely detailed forms rather than flat broad shapes; keep the original local colours. Smoothly drawn high resolution shapes, no square pixel clusters."
+  },
+  "inked": {
+   "label": "Inked dark fantasy / UI kin",
+   "prompt": "Inked dark-fantasy illustration with a tight palette: economical dark-brown contour and broken interior ink accents, flat-to-painted natural local colour, rough-edged gouache highlights and controlled hatching in the deepest shadow. The tone should sit beside weathered-stone and brass game UI without turning the object into stone or adding fittings. Strong silhouette, readable middle tones, antique craft rather than polished digital fantasy."
+  },
+  "gouache": {
+   "label": "Warm storybook gouache",
+   "prompt": "Old illustrated fantasy bestiary and adventure-book gouache, gentle warm/cool colour interplay within the object's original colours, opaque layered brush shapes, softly worn paint and delicate dry-brush edges. A tactile quietly charming handmade object with simple modelling and a few fine descriptive accents. No black comic outline, no paper background, no ornamental manuscript border and no invented decoration."
+  },
+  "etched": {
+   "label": "Tinted engraving",
+   "prompt": "A restrained antique fantasy equipment engraving with fine broken umber contour, short directional crosshatching that wraps the existing volumes, and opaque muted natural-colour washes. Preserve the object's tan or gold local colour rather than turning the image sepia or monochrome. Readable large shapes before line texture; use very little hatching in lit areas, no surrounding page, border or typography."
+  }
+ },
+ "collection_rules": "Make this belong to one coherent set of grounded, slightly timeworn dark-fantasy RPG paintings. Keep the source's composition, colours and mood. No text, lettering, signature, frame or border.",
+ "presentation": "One whole picture, centred on a perfectly flat solid dark slate grey background, RGB 48,52,59, outside the picture's edges. The picture fills nearly the whole canvas width. Preserve the source composition. Draw actual new fine forms with clean deliberate edges rather than smoothing or retaining square source pixels.",
+ "title": "Full screens S1 / Qwen then retro",
+ "routes": [
+  {
+   "id": "qwen-retro",
+   "label": "Qwen then retro / 0.35",
+   "group": "faces",
+   "model": "krea2-turbo",
+   "host": "den-m5",
+   "url": "http://192.168.1.24:8188",
+   "unet": "krea2_turbo_fp8_scaled.safetensors",
+   "conditioning": "init",
+   "denoise": 0.35,
+   "loras": [
+    "civitai_retro_dark_fantasy_krea2.safetensors:0.8"
+   ],
+   "prompt_prefix": "dark_fantasy_illustration,\n\n",
+   "upstream_route": "qwen-base",
+   "upstream_style": "painted"
+  }
+ ],
+ "task": "Task: Repaint a small classic fantasy RPG full-screen picture as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.",
+ "items": [
+  {
+   "id": "title",
+   "directory": "screens/title",
+   "image": "title-record-000-frame-000-source.png",
+   "name": "title screen",
+   "content": "One tall painting, aspect about 0.78:1, exactly as composed in the input: a cloaked hero with a raised curved dagger riding a rearing black armoured horse in the lower left, a huge spectral demon face with one great eye and clawed hands looming out of blue mist above, a fair-haired elf woman in a pale blue hood raising her hand at the lower right, and a castle on a crag in the moonlit blue distance. Paint the whole scene with no lettering: where the input has the gold DAGGERFALL title at the top, continue the misty night sky; where it has the parchment banner at the bottom, continue the hero's cloak, the horse and the rocky ground.",
+   "uncertainty": "A classic 320x200 full-screen painting; small details are a few pixels across and are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable architecture, light, foliage, fabric and figure detail at full-screen resolution; keep the mood and colours of the input."
+  },
+  {
+   "id": "character-generation",
+   "directory": "screens/character-generation",
+   "image": "character-generation-record-000-frame-000-source.png",
+   "name": "character-generation screen",
+   "content": "One wide painting, aspect 1.6:1, exactly as composed in the input: a small stone cottage with warmly lit square windows and a lantern by its door at night, in a dark blue forest of gnarled bare trees, with dark mountains and a starry night sky behind. No text.",
+   "uncertainty": "A classic 320x200 full-screen painting; small details are a few pixels across and are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable architecture, light, foliage, fabric and figure detail at full-screen resolution; keep the mood and colours of the input."
+  },
+  {
+   "id": "pick-02",
+   "directory": "screens/pick-02",
+   "image": "pick-02-record-000-frame-000-source.png",
+   "name": "pick-02 screen",
+   "content": "One wide painting, aspect 1.6:1, exactly as composed in the input: a large blank parchment scroll unrolled across a dark wooden desk, a lit candle in a brass holder at the top right, a clear glass orb at the lower right and another at the lower left, a red wax seal at the right edge. The scroll is blank except for three faint decorative ink flourishes down its centre where the input has them. No words or letters anywhere.",
+   "uncertainty": "A classic 320x200 full-screen painting; small details are a few pixels across and are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable architecture, light, foliage, fabric and figure detail at full-screen resolution; keep the mood and colours of the input."
+  },
+  {
+   "id": "prison",
+   "directory": "screens/prison",
+   "image": "prison-record-000-frame-000-source.png",
+   "name": "prison screen",
+   "content": "One wide painting, aspect 1.6:1, exactly as composed in the input: a dark dungeon cell of large stone blocks, a tall arched barred window glowing white in the back wall with a carved skull keystone, a burning wall torch on each side, a dark flagstone floor with old bones in it, and a blank unrolled parchment scroll lying across the foreground. No words or letters anywhere.",
+   "uncertainty": "A classic 320x200 full-screen painting; small details are a few pixels across and are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable architecture, light, foliage, fabric and figure detail at full-screen resolution; keep the mood and colours of the input."
+  },
+  {
+   "id": "death",
+   "directory": "screens/death",
+   "image": "death-record-000-frame-000-source.png",
+   "name": "death screen",
+   "content": "One wide painting, aspect 1.6:1, exactly as composed in the input: a cold green-lit stone crypt hall, a skeleton in the foreground at the left raising a bony hand in welcome, more skeletons holding green candles along the walls, a roaring fire in a great arched stone hearth at the centre, a lit iron lantern on a pillar at the far left, and a wet reflecting floor. Where the input shows the white quotation at the top, continue the stone wall. No words or letters anywhere.",
+   "uncertainty": "A classic 320x200 full-screen painting; small details are a few pixels across and are reconstructed as the simplest reading of the input.",
+   "invention": "Resolve believable architecture, light, foliage, fabric and figure detail at full-screen resolution; keep the mood and colours of the input."
+  }
+ ]
+}

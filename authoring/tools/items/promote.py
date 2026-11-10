@@ -9,7 +9,8 @@ when the refreshed art set is chosen (classic stays selectable). For each final 
     another item keeps is `paper-doll.NAME.R` (the template's refreshedArt), a body `bodies--bodyGNi{0,1}--...` is
     `character.body-{unclothed,clothed}.{gender}.0N.0`, a head `faces--faceGNi0--...-record-RRR-...` is
     `character.head.{gender}.0N.R`, and a vampire head, beast head or beast doll `creatures--NAMEi0--...-record-RRR-...`
-    is `character.FAMILY.NAMEi0.R`, FAMILY being the name's first four letters (vamp, were, wolf, boar);
+    is `character.FAMILY.NAMEi0.R`, FAMILY being the name's first four letters (vamp, were, wolf, boar), and a race
+    background `backgrounds--scbgNNi0--...` is `character.scbg.scbgNNi0.0`;
   - takes its doll-space rect from its sidecar, as doll_preview.py draws it, crops transparent margins and moves
     the rect to match;
   - writes it as WebP (lossy colour at QUALITY, lossless alpha) to content/worldrpg/media/refreshed/AREA/;
@@ -34,6 +35,12 @@ Two areas promote icons rather than their own finals, each standing in for a cla
   - `spells`: each accepted spell icon `icons--icon-NNN--icon` as `spell.icon.N`, cell N of the classic
     `spell.icons` atlas, and each accepted targeting and element tile as `spell.target.N` and `spell.element.N`, tile N
     of the classic `spell.selectors` atlas.
+
+The `ui` area promotes the screens and escort portraits the game draws whole (authoring/docs/ui-and-2d.md): a screen
+`screens--NAME--...` stands in for `screen.NAME` (the title, character creation's `screen.character-generation` and
+`screen.pick.02`, prison and death) at its own size, and a faction or child escort portrait
+`faction-faces--tfac00i0--...-record-NNN-...` or `child-faces--kids00i0--...-record-NNN-...` for
+`character.faction-face.NN` or `character.child-face.N`, scaled to PORTRAIT pixels on its longer side.
 
 The `effects` area promotes the effects the game animates: blood and the magic sparkle (TEXTURE.380, from the
 `effects` finals), each spell element's missile and impact (TEXTURE.375-379, from the `spells` finals), and the
@@ -104,7 +111,7 @@ CONTENT = REPOSITORY / "content"
 MEDIA = "worldrpg/media/refreshed"
 PAYLOAD = CONTENT / "worldrpg/payloads/daggerfall.art-replacements.json"
 QUALITY = 90
-AREAS = ("paper-doll", "worn", "items", "spells", "effects", "surfaces", "terrain", "flats", "people", "people-rig")
+AREAS = ("paper-doll", "worn", "items", "spells", "effects", "surfaces", "terrain", "flats", "people", "people-rig", "ui")
 PEOPLE_RIG = Path(os.environ.get("PEOPLE_RIG", "/home/agent/dev/asset-pipeline/live-evidence/publications/w453-walk-20261109"))
 PEOPLE_RIG_FIGURE = "w453"
 # The figure's height in rig units, ground to crown: the front view's walk at 24 fps (rigc render, one pixel a unit)
@@ -113,6 +120,11 @@ PEOPLE_RIG_HEIGHT = 778
 PEOPLE_RIG_SETS = {"4": "w453-walk.artifact-set.json", "8": "w453-walk8.artifact-set.json"}
 SURFACE = re.compile(r"texture-(\d{3})-(\d+)")
 ICON = {"items": 256, "spells": 128}   # pixels on an icon's longer side: an item slot, a spell glyph of about 3rem
+PORTRAIT = 256                         # pixels on an escort portrait's longer side
+UI_SCREEN = re.compile(r"screens--([a-z0-9-]+)--.*")
+UI_SCREENS = {"title": "screen.title", "character-generation": "screen.character-generation", "pick-02": "screen.pick.02",
+              "prison": "screen.prison", "death": "screen.death"}
+UI_FACE = re.compile(r"(faction-faces--tfac00i0|child-faces--kids00i0)--.*-record-(\d+)-frame-000")
 CLASSIC_MANIFEST = REPOSITORY / "local/import/staging/worldrpg/imports/shared/media/classic/manifest.json"
 IMPORTED = REPOSITORY / "local/import/staging/worldrpg/payloads/daggerfall.imported.json"
 ITEM_IMAGE = re.compile(r"item\.(\d+)\.(\d+)")
@@ -164,6 +176,7 @@ NAMED_ARCHIVE = {"mace": 234}
 BODY = re.compile(r"bodies--body(\d)(\d)(i[01])--.*")
 FACE = re.compile(r"faces--face(\d)(\d)i0--.*-record-(\d+)-frame-000")
 CREATURE = re.compile(r"creatures--((\w{4})\d\di0)--.*-record-(\d+)-frame-000")
+BACKGROUND = re.compile(r"backgrounds--(scbg\d\di0)--.*-record-(\d+)-frame-000")
 GENDER = {"0": "male", "1": "female"}
 
 
@@ -179,6 +192,12 @@ def replaces(key):
         return f"character.head.{GENDER[m[1]]}.0{m[2]}.{int(m[3])}"
     if m := CREATURE.fullmatch(key):
         return f"character.{m[2]}.{m[1]}.{int(m[3])}"
+    if m := BACKGROUND.fullmatch(key):
+        return f"character.scbg.{m[1]}.{int(m[2])}"
+    if m := UI_SCREEN.fullmatch(key):
+        return UI_SCREENS[m[1]]
+    if m := UI_FACE.fullmatch(key):
+        return f"character.faction-face.{int(m[2]):02d}" if m[1].startswith("faction") else f"character.child-face.{int(m[2])}"
     raise SystemExit(f"No classic media id for art key {key}.")
 
 
@@ -349,6 +368,22 @@ def spell_icons():
     replaced = {key: f"spell.icon.{int(m[1])}" for key in notes if (m := SPELL_ICON.fullmatch(key))} | {key: media for key, media in SPELL_TILES.items() if key in notes}
     return [icon_entry(media, icon(final, "spells"), f"spells/{key}") for key, media in sorted(replaced.items())
             if (final := accepted_final("spells", notes, key))]
+
+
+def ui_images():
+    """An entry for every accepted `ui` final: a screen at its own size, an escort portrait at PORTRAIT pixels."""
+    notes = ledger("ui")
+    entries = []
+    for key in sorted(key for key, note in notes.items() if note.get("status") == "accepted"):
+        final = accepted_final("ui", notes, key)
+        if final is None:
+            raise SystemExit(f"{key} is accepted in ledger/ui-notes.json but has no final in gen-raw/ui.")
+        image = Image.open(final).convert("RGBA")
+        if UI_FACE.fullmatch(key):
+            image = image.crop(image.getchannel("A").getbbox())
+            image.thumbnail((PORTRAIT, PORTRAIT), Image.Resampling.LANCZOS)
+        entries.append(icon_entry(replaces(key), image, f"ui/{key}"))
+    return entries
 
 
 def classic_box(source):
@@ -642,8 +677,8 @@ def main():
         for old in [*directory.glob("*.webp"), *directory.glob("*.png")]:
             old.unlink()
         images[:] = [entry for entry in images if not entry["path"].startswith(f"{MEDIA}/{area}/")]
-        if area in ("items", "spells"):
-            promoted = inventory_icons() if area == "items" else spell_icons()
+        if area in ("items", "spells", "ui"):
+            promoted = inventory_icons() if area == "items" else spell_icons() if area == "spells" else ui_images()
             images.extend(promoted)
             print(f"{area}: {len(promoted)} icons, {sum(entry['byteLength'] for entry in promoted) / 1e6:.1f} MB", flush=True)
             continue

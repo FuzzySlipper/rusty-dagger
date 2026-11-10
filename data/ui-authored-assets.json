@@ -680,14 +680,14 @@
       "id": "ui.stone.title.v2",
       "file": "ui-stone-title-v2.png",
       "sourceFile": "ui-stone-title-v2.png",
-      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 1; keyed, fitted within 256x86, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
-      "prompt": "dark_fantasy_illustration, game UI asset: a single wide blank title bar plate, straight-on front view, polished brass plate with rivets and pointed ends set in weathered grey stone, flat blank centre, centred and filling most of the frame, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
+      "generator": "Krea 2 turbo (krea2_turbo_fp8_scaled.safetensors) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at 0.8, seed 13; keyed, fitted within 256x86, envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, hard alpha 128); scripts/ui-art-kit.py",
+      "prompt": "dark_fantasy_illustration, game UI asset: a single very wide blank title bar plate, straight-on front view, a long plain horizontal band of brushed polished brass with a thin dark bevel along its top and bottom edges, the same plain brass all along its length, ornate pointed brass end caps set with weathered grey stone at the left and right ends only, no rivets or ornaments along the band, flat blank centre, centred and filling most of the frame, isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters",
       "display": {
         "slice": [
           0,
-          48,
+          59,
           0,
-          48
+          59
         ],
         "scale": 0.5
       }

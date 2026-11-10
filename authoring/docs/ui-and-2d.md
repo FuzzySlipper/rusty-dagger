@@ -35,3 +35,24 @@ Three dispositions:
 | Paintings | `*PAINT.CIF` | None | — |
 | Fonts | `FONT0000–0004.FNT` | None (published as `font.classic.*`, not drawn); the DOM uses system fonts | — |
 
+
+## Converting the screens, backgrounds and portraits
+
+`authoring/tools/ui/export.py` (export-ui) writes the classic images that still draw into the `df-raw` layout, from
+the import's published images under `local/import/staging` (so run the import first):
+
+- `df-raw/ui/screens/<name>/`: the title, character creation's `CHGN00I0` and `PICK02I0`, prison and death;
+- `df-raw/ui/faction-faces/tfac00i0/` and `df-raw/ui/child-faces/kids00i0/`: the escort portraits, record N being
+  face N;
+- `df-raw/paper-doll/backgrounds/scbgNNi0/`: the race backgrounds, placed in the frame the doll draws them in.
+
+They convert with the other areas' recipe (`item-icons.md`): `ui` batches for the screens and portraits
+(`specs/ui/`), and a `paper-doll` batch for the backgrounds. The backgrounds, the faction portraits and the screens
+are framed or whole pictures, fitted afterwards by `tools/items/pictures.py`; the child faces are heads and keep the
+cut-out. The screens are painted without lettering: the title from its painting alone (a source edit in
+`gen-raw/source-edits/ui-screens` crops the stone surround and the logo goes), so the page sets the game's name over
+it, and the death and creation screens lose their baked-in words.
+
+`promote.py --area ui` writes the accepted screens at their own size and the portraits at 256 pixels, and
+`promote.py --area paper-doll` the backgrounds with the doll rect of the frame they fill. The HUD names the image each
+screen draws (`screens`), so a refreshed screen fills the window and classic art stays selectable.
