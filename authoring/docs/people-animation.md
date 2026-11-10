@@ -223,12 +223,13 @@ repainted in the stationary people's style rather than converted from its classi
    divides.
 5. **Retarget:** `rig-pose clean --loop --depth walk --hold off`, then retarget with the feet
    planted. Front and back let the shin shorten to 0.55, and the front orders the legs by depth.
-   **Arms:** the retarget turns each segment to its picture angle only. From the front and behind,
-   an arm swinging toward and away from the camera shows as shortening, and what the retarget makes
-   of it is the arms swinging out and in. There the sideways turn keeps 30 % of its swing about its
-   own mean, and each arm segment shortens along itself as `clean --depth` measured it, its picture
-   length over its longest in the cycle. In profile the forearm trails the shoulder: it turns by 0.6
-   of how far the upper arm moved over the last 0.1 s, the other way, never bending back past
+   **Arms:** a townsperson walks calmly, legs moving more than arms, so every arm motion keeps 55 %
+   of the clip's about its own mean. The retarget turns each segment to its picture angle only. From
+   the front and behind, an arm swinging toward and away from the camera shows as shortening, and what
+   the retarget makes of it is the arms swinging out and in. There the sideways turn keeps 20 % of its
+   swing, and each arm segment shortens along itself by 55 % of what `clean --depth` measured, its
+   picture length over its longest in the cycle. In profile the forearm trails the shoulder: it turns
+   by 0.6 of how far the upper arm moved over the last 0.1 s, the other way, never bending back past
    straight further than the clip does.
 6. **Placement:** each clip draws the figure at its own height and offset. After the retarget, the
    rig's root moves so the walk's planted foot stands on y = 0 and the rig source's neck on x = 0, so
