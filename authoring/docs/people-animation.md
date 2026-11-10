@@ -233,7 +233,12 @@ repainted in the stationary people's style rather than converted from its classi
    straight further than the clip does.
    **Secondary motion:** the body and what hangs on it carry the walk with the arms, and it is
    derived offline and kept as keys, so nothing simulates at runtime and every player shows the
-   same closed loop. From the front and behind, the hips sway 5 units toward the standing foot and
+   same closed loop. From behind, a stride's depth draws as height: the legs shorten in the picture
+   at every hand-over while the hips barely drop, so with the feet held on one floor the retarget
+   keeps none of the bob. The back therefore takes its hip height from the front. Every view's cycle
+   starts on the same footfall and lasts as long, so the front's hip height carries over unchanged. The
+   back's thighs shorten along themselves by what the hips dropped (the shins take the thigh's scale),
+   so the feet stay down. From the front and behind, the hips sway 5 units toward the standing foot and
    roll 2.5° down on the swinging leg's side. The chest turns back 1.6 times that roll against the
    hips, and the neck turns 0.5 of it, leaving the head nearly level. The thighs turn back by the roll
    and the sway, so a planted foot stays where the clip put it. A profile shows neither. Then rig-c's
