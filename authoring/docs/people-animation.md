@@ -238,7 +238,11 @@ repainted in the stationary people's style rather than converted from its classi
    keeps none of the bob. The back therefore takes its hip height from the front. Every view's cycle
    starts on the same footfall and lasts as long, so the front's hip height carries over unchanged. The
    back's thighs shorten along themselves by what the hips dropped (the shins take the thigh's scale),
-   so the feet stay down. From the front and behind, the hips sway 5 units toward the standing foot and
+   so the feet stay down. A foot seen from behind moves mostly away from the camera and back, which the
+   retarget turns into the legs swinging out and in. As with the arms, the back's legs keep 30 % of
+   their sideways turn about its mean. Each foot rises by half the height the clip draws it above its
+   lowest, so a far step draws higher and the hem hides the feet more than it shows them. From the
+   front and behind, the hips sway 5 units toward the standing foot and
    roll 2.5° down on the swinging leg's side. The chest turns back 1.6 times that roll against the
    hips, and the neck turns 0.5 of it, leaving the head nearly level. The thighs turn back by the roll
    and the sway, so a planted foot stays where the clip put it. A profile shows neither. Then rig-c's
@@ -246,7 +250,8 @@ repainted in the stationary people's style rather than converted from its classi
    panels, the back's skirt panels, and the profile's hem and the pouch, which hangs from its belt on
    a bone of its own. The walk plays four times so the springs settle. Each link's turn against its
    parent, less the same turn without physics, is read off the last cycle, smoothed and keyed into
-   the walk on the chain's control bone. The physics is then dropped. Hair and bangs cut with a
+   the walk on the chain's control bone. The back's hips move too little to swing its skirt as the
+   front's does, so its derived swing is scaled by 3. The physics is then dropped. Hair and bangs cut with a
    profile's or the back's head can't swing. The figure walks on the spot, so a stop or a turn has
    no response.
 6. **Placement:** each clip draws the figure at its own height and offset. After the retarget, the
