@@ -226,6 +226,12 @@ repainted in the stationary people's style rather than converted from its classi
    dark, cool colour. The hip segment is laid along the belt's middle from end to end, the chest
    segment ends a belt's height above it, and the falloff exponent is 4. The belt is then at least
    94 % hip in every view, and the waist above it blends.
+   Hands sit on their own bones. The proposer's arm is two links ending at the wrist, with the hand
+   painted on the forearm, because the body keypoints stop at the wrist. RTMW whole-body also reads
+   21 points per hand on the view's body image. The middle fingertip, seen from the wrist, gives each
+   arm a third link, and the hand is cut off the forearm at the wrist as its own rigid part on it.
+   The idle sways the hand as much as the forearm, since the chain's sway may not shrink toward its
+   tip.
 4. **Cycle:** RTMW on every frame. The period comes from the ankles: the shortest whose
    correlation is within 0.03 of the best, since two cycles correlate as well as one. The cycle is cut where its
    two ends agree best and turned to start where the left foot pushes off, the same event in
@@ -242,7 +248,9 @@ repainted in the stationary people's style rather than converted from its classi
    swing, and each arm segment shortens along itself by 55 % of what `clean --depth` measured, its
    picture length over its longest in the cycle. In profile the forearm trails the shoulder: it turns
    by 0.6 of how far the upper arm moved over the last 0.1 s, the other way, never bending back past
-   straight further than the clip does.
+   straight further than the clip does. The hand trails the forearm the same way: it turns by 1.2
+   times how far the forearm turned over the last 0.15 s, the other way, at most 12°. From the
+   front and behind a hand swings toward the camera, so there it stays with the forearm.
    **Secondary motion:** the body and what hangs on it carry the walk with the arms, and it is
    derived offline and kept as keys, so nothing simulates at runtime and every player shows the
    same closed loop. From behind, a stride's depth draws as height: the legs shorten in the picture
