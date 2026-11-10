@@ -630,6 +630,12 @@ internal sealed class DaggerfallInventoryPresentation
                 _ => [],
             };
         }
+        else if (display.Facts is { } facts)
+        {
+            // A magical or conjured item's text repeats its condition and figures; it adds only these.
+            detailsStateFacts = true;
+            notes = facts;
+        }
         // Eligibility belongs to the carried rows only: a loot or container row is taken before it is used.
         bool carried = owner is null;
         string? equipRefusal = carried ? moves.EquipRefusal(definition, key.StartsWith("unique:", StringComparison.Ordinal), metadata?.CurrentCondition) : null;
@@ -680,8 +686,16 @@ internal sealed class DaggerfallInventoryPresentation
         DaggerfallItemCondition condition = itemCondition.Condition(metadata);
         ItemConditionPresentation presentedCondition = new(condition.Current, condition.Maximum, condition.Percentage, condition.IsBroken);
         string conditionDetail = condition.Maximum == 0 ? string.Empty : $"Condition: {condition.Current}/{condition.Maximum} ({condition.Percentage}%); ";
-        if (metadata.CapturedSoulMobileId is int soul) conditionDetail += $"Captured soul: {SoulName(soul)}; ";
-        if (metadata.Conjuration is { } conjured) conditionDetail += $"Conjured: {ConjurationRemaining(conjured.ExpiresAtMinute)}; ";
+        // What the item says beyond its name, condition and figures, which the row's own fields state.
+        List<string> facts = [];
+        if (metadata.CapturedSoulMobileId is int soul) { conditionDetail += $"Captured soul: {SoulName(soul)}; "; facts.Add($"Holding: {SoulName(soul)}"); }
+        if (metadata.Conjuration is { } conjured)
+        {
+            string remaining = ConjurationRemaining(conjured.ExpiresAtMinute);
+            conditionDetail += $"Conjured: {remaining}; ";
+            facts.Add($"Conjured: {remaining}");
+        }
+        string[]? Facts(string? magic) => magic is null && facts.Count == 0 ? null : [.. facts, .. magic is null ? [] : new[] { magic }];
         if (metadata.PotionRecipeKey is int recipeKey)
         {
             var recipe = definitions.Magic.PotionRecipes[recipeKey];
@@ -689,22 +703,25 @@ internal sealed class DaggerfallInventoryPresentation
             string ingredients = string.Join(", ", recipe.Ingredients.Select(value => $"{value.Count} × {definitions.RequireItem(new(value.Item)).Template!.Name}"));
             return new(sheet ? $"Recipe: {recipe.Name}" : $"Potion of {recipe.Name}", sheet ? ingredients : "Drink to apply its effects to yourself.", presentedCondition, true);
         }
+        const string Unidentified = "A magical item: identify it to learn its powers.";
         if (metadata.MadeEnchantment is { } made)
-            return new(baseLabel,
-                conditionDetail + (metadata.Identified ? string.Join(", ", made.Settings.Select(value => definitions.Magic.EnchantmentSettings[value.Key].DisplayName)) : "Unidentified magical item"),
-                presentedCondition, metadata.Identified);
-        if (metadata.Enchantment is null) return new(baseLabel, conditionDetail + Details(definition), presentedCondition, true);
+        {
+            string powers = string.Join(", ", made.Settings.Select(value => definitions.Magic.EnchantmentSettings[value.Key].DisplayName));
+            return new(baseLabel, conditionDetail + (metadata.Identified ? powers : "Unidentified magical item"),
+                presentedCondition, metadata.Identified) { Facts = Facts(metadata.Identified ? $"Enchantment: {powers}" : Unidentified) };
+        }
+        if (metadata.Enchantment is null) return new(baseLabel, conditionDetail + Details(definition), presentedCondition, true) { Facts = Facts(null) };
         if (!definitions.Magic.MagicItems.TryGetValue(metadata.Enchantment, out DaggerfallMagicItemDefinition? magic))
             throw new InvalidOperationException($"Item '{metadata.ItemId}' names unpublished magic metadata '{metadata.Enchantment}'.");
         if (!metadata.Identified)
-            return new(baseLabel, conditionDetail + "Unidentified magical item", presentedCondition, false);
+            return new(baseLabel, conditionDetail + "Unidentified magical item", presentedCondition, false) { Facts = Facts(Unidentified) };
         string namedMagic = baseLabel;
         // The donor names each identified enchantment by its setting ("Cast When Used: Fireball",
         // "Enhances Skill: Long Blade"); an artifact power or an unpublished setting keeps its meaning.
         string effects = string.Join(", ", magic.Enchantments.Select(enchantment =>
             definitions.Magic.EnchantmentSettings.TryGetValue($"enchantment.{enchantment.Type}.{enchantment.Param}", out DaggerfallEnchantmentSetting named)
                 ? named.DisplayName : Label(enchantment.ParamMeaning)));
-        return new(namedMagic, conditionDetail + Details(definition) + $"; Enchantment: {effects}", presentedCondition, true);
+        return new(namedMagic, conditionDetail + Details(definition) + $"; Enchantment: {effects}", presentedCondition, true) { Facts = Facts($"Enchantment: {effects}") };
     }
 
     /// <summary>The creature a soul gem holds, named by the actor the pack publishes for that mobile.</summary>
@@ -720,7 +737,11 @@ internal sealed class DaggerfallInventoryPresentation
             : "fades in " + DaggerfallCalendar.DescribeDuration(checked(remaining * DaggerfallCalendar.SecondsPerMinute));
     }
 
-    private sealed record ItemDisplay(string Label, string Details, ItemConditionPresentation? Condition, bool Identified);
+    /// <summary><paramref name="Details"/> in full, and <see cref="Facts"/>: the part of it beyond the row's own fields, where it is not the classic text.</summary>
+    private sealed record ItemDisplay(string Label, string Details, ItemConditionPresentation? Condition, bool Identified)
+    {
+        internal string[]? Facts { get; init; }
+    }
 
     private static bool TryParseUnique(InventoryItemPresentation row, out UniqueInventoryItem item)
     {

@@ -426,6 +426,25 @@ test('an item tooltip states each fact once: information text gives way to the r
   } finally { f.dispose(); }
 });
 
+test('an enchanted item\'s tooltip states its condition and damage once and adds its enchantment', () => {
+  const f = fixture();
+  try {
+    f.publish({ inventory: { gridCapacity: 80,
+      revision: '1', message: '', equipmentChange: null, slots: [],
+      items: [{ key: 'unique:9', definition: 'longsword', label: 'Iron Longsword', quantity: '1', weight: 2, weightKilograms: 2, value: 450,
+        details: 'Condition: 60/80 (75%); Damage 2–16; Iron; Long Blade; Enchantment: Cast when used: Silence', detailsStateFacts: true,
+        notes: ['Enchantment: Cast when used: Silence'], stats: [{ label: 'Damage', text: '2–16', value: 9 }], icon: null,
+        condition: { current: 60, maximum: 80, percentage: 75, broken: false }, identified: true, enchanted: true,
+        gridSlot: 0, equippedSlots: [], compatibleSlots: [] }],
+    } });
+    f.root.querySelector('[data-inventory-item="unique:9"]').dispatchEvent(new window.Event('focusin', { bubbles: true }));
+    const tip = f.root.querySelector('.dagger-inventory-tip');
+    assert.equal(tip.querySelector('.dagger-inventory-tip-details').textContent, 'Enchantment: Cast when used: Silence');
+    assert.equal(tip.textContent.match(/Condition/g).length, 1, 'Condition is stated once.');
+    assert.equal(tip.textContent.match(/2–16/g).length, 1, 'Damage is stated once.');
+  } finally { f.dispose(); }
+});
+
 test('a drawn tooltip goes away when the slot it named is filled', async () => {
   const f = fixture();
   try {

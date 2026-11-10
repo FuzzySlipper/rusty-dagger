@@ -230,6 +230,12 @@ public sealed class DaggerfallItemConditionServiceTests
         Assert.True(known.Identified);
         // The identified enchantment is named by its setting, as the donor names it.
         Assert.Contains("Enchantment: Cast when used: Silence", known.Details, StringComparison.Ordinal);
+        // The tooltip states condition and figures from the row's own fields, so a magical item adds only its magic.
+        Assert.True(unknown.DetailsStateFacts);
+        Assert.Equal(["A magical item: identify it to learn its powers."], unknown.Notes);
+        Assert.True(known.DetailsStateFacts);
+        Assert.Equal(["Enchantment: Cast when used: Silence"], known.Notes);
+        Assert.NotNull(known.Condition);
         Assert.True(restored.Identified);
         Assert.Equal(magicKey, restored.Enchantment);
         Assert.Equal(DaggerfallItemOwner.Corpse(17), restored.Owner);
