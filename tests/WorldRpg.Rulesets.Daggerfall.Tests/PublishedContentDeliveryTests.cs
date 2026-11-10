@@ -864,7 +864,9 @@ public sealed class PublishedContentDeliveryTests
             .SelectMany(path => Index(path).Artifacts).Select(artifact => artifact.GetProperty("mediaId").GetString()!)];
         // A design of its own over classic records another item keeps: the flanged mace, the template's refreshedArt.
         string[] designs = ["paper-doll.mace.14", "paper-doll.mace.15"];
-        HashSet<string> doll = [.. dollPublication.Where(id => !id.StartsWith("item.", StringComparison.Ordinal)), .. designs];
+        // The escort portraits the character publication also carries fill their own frame, not the doll.
+        static bool Portrait(string id) => id.StartsWith("character.faction-face.", StringComparison.Ordinal) || id.StartsWith("character.child-face.", StringComparison.Ordinal);
+        HashSet<string> doll = [.. dollPublication.Where(id => !id.StartsWith("item.", StringComparison.Ordinal) && !Portrait(id)), .. designs];
         HashSet<string> classic = [.. dollPublication, .. designs, .. Index("worldrpg/media/classic-media-inventory.json").Artifacts.Select(artifact => artifact.GetProperty("mediaId").GetString()!)];
         Assert.Contains(DaggerfallSpellConstruction.IconAtlasMedia, classic);
         Assert.Contains(DaggerfallSpellConstruction.SelectorAtlasMedia, classic);
