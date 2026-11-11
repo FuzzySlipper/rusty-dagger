@@ -100,8 +100,8 @@ internal static partial class DaggerfallSiteContent
         string mediaPath = Prefix(DaggerfallWorldMedia.DungeonSidecarRelativePath);
         ContentSha256 spatialHash = RequireArtifact(artifacts, spatialPath, diagnostics);
         ContentSha256 meshHash = RequireArtifact(artifacts, meshPath, diagnostics);
-        _ = files.GetExactlyOne(spatialPath);
-        _ = files.GetExactlyOne(meshPath);
+        files.RequireExactlyOne(spatialPath);
+        files.RequireExactlyOne(meshPath);
         _ = RequireArtifact(artifacts, normalizedPath, diagnostics);
         _ = RequireArtifact(artifacts, mediaPath, diagnostics);
         // A site presents the product-wide classic sidecar unless it carries its own (an authored overlay).
@@ -851,7 +851,7 @@ internal static partial class DaggerfallSiteContent
 
                 try
                 {
-                    _ = files.GetExactlyOne(visualArtifact.Path);
+                    files.RequireExactlyOne(visualArtifact.Path);
                     IReadOnlyList<DaggerfallMeshMaterialBinding> materialBindings = ActionModelMaterials(
                         visualMaterialIds, actionId, worldMaterialSlots, diagnostics);
                     DaggerfallDoorVisual visual = new DaggerfallDoorVisual(visualArtifact.Path, visualArtifact.Sha256, materialBindings).Validate();
@@ -2102,7 +2102,7 @@ internal static partial class DaggerfallSiteContent
                 continue;
             }
 
-            _ = files.GetExactlyOne(path);
+            files.RequireExactlyOne(path);
 
             // The descriptor states the texture each of the mesh's own material slots draws with. The
             // importer publishes each slot from the assembly that wrote the mesh and checks that every
@@ -2609,7 +2609,14 @@ internal sealed class AdmittedFiles
     private readonly DaggerfallData _content;
     private AdmittedFiles(DaggerfallData content) => _content = content;
     internal static AdmittedFiles From(DaggerfallData content) => new(content ?? throw new ArgumentNullException(nameof(content)));
-    internal bool ContainsExactlyOne(string path) => _content.TryReadFile(path, out _);
+    internal bool ContainsExactlyOne(string path) => _content.Contains(path);
+
+    /// <summary>Requires a file to be admitted without reading it.</summary>
+    internal void RequireExactlyOne(string path)
+    {
+        if (!_content.Contains(path))
+            throw new DaggerfallContentException([$"Required admitted file '{path}' is missing; the site cannot be loaded without it."]);
+    }
     internal ReadOnlyMemory<byte> GetExactlyOne(string path) => _content.TryReadFile(path, out ReadOnlyMemory<byte> bytes)
         ? bytes
         : throw new DaggerfallContentException([$"Required admitted file '{path}' is missing; the site cannot be loaded without it."]);
