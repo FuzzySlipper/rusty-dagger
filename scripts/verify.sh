@@ -105,7 +105,6 @@ dotnet build src/WorldRpg.Host/WorldRpg.Host.csproj --configuration Release --no
 # The UI tests type-check the DOM against the Engine's UI types, which the Host build copies into
 # src/ui/engine-types; on a fresh checkout they exist only from here on.
 node --test tests/WorldRpg.Ui.Tests/*.test.mjs
-dotnet build src/WorldRpg.SpriteWorkbench/WorldRpg.SpriteWorkbench.csproj --configuration Release
 
 # The importer's tool is a product of its own and nothing else in this script compiles it, so a
 # change to the import API could leave it broken while every test and build here stayed green. That
@@ -158,10 +157,6 @@ dotnet test tests/WorldRpg.Rulesets.Canary.Tests/WorldRpg.Rulesets.Canary.Tests.
 dotnet test tests/WorldRpg.Kit.Tests/WorldRpg.Kit.Tests.csproj
 dotnet test tests/WorldRpg.Host.Tests/WorldRpg.Host.Tests.csproj
 
-# The workbench's suite belongs here for the same reason: its fake lagged the Engine contract until the
-# project no longer compiled, and since nothing ran the project the rot was invisible. It is a product
-# in this repository, so its suite is part of the tree that must run.
-dotnet test tests/WorldRpg.SpriteWorkbench.Tests/WorldRpg.SpriteWorkbench.Tests.csproj
 dotnet msbuild src/WorldRpg.Host/WorldRpg.Host.csproj -t:StageRustyEngineCoreClrProduct -p:Configuration=Release
 
 # Every suite above proves its Engine-facing paths against fakes that do not enforce the Engine's

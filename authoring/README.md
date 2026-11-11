@@ -21,8 +21,7 @@ local/art/  (ignored, beside the other working files in local/; see the README)
 ```
 
 `authoring/` holds tracked files only. A path says what a file is: `local/art/reference` → `local/art/generated` →
-(accepted) `content/worldrpg/media/refreshed/`. Never commit anything from `local/art`. The sprite workbench's
-overlays in `authoring/sprites/` are separate (`src/scripts/run-sprite-workbench.sh`).
+(accepted) `content/worldrpg/media/refreshed/`. Never commit anything from `local/art`.
 
 ## Reference exports
 

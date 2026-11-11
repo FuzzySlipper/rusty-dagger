@@ -46,7 +46,6 @@ and don't invent task records or infer completion from source or Git.
 | `WorldRpg.Host` | Product lifecycle, the one product type and bundle declaration, built-in ruleset/default selection, the entry screen's bundle choice, and session construction. It may select Daggerfall; it never interprets Daggerfall rules or source files. |
 | `Daggerfall.Import` | Offline Arena2 and Daggerfall Unity knowledge: source formats, conversion quirks, provenance, differential validation. Runtime code consumes normalized packs, not source-shaped data. |
 | `WorldRpg.SpriteAuthoring` | Product-neutral sprite inspection document and overlay contract. No references, packages or ruleset vocabulary. |
-| `WorldRpg.SpriteWorkbench` | Developer-only Engine product for sprite atlases and overlays, not part of a bundle. References only Kit and SpriteAuthoring. |
 | Content packs | Authored actors, items, worlds, placements, encounters, quests, assets and scenario state that a ruleset interprets. |
 | TypeScript UI | Thin DOM presentation of Engine-delivered projections and semantic actions. It owns no gameplay state and no world rendering. |
 
