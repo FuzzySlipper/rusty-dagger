@@ -13,7 +13,6 @@
 # --evidence DIR also moves local/evidence's entries into DIR (on den-agents, the NAS's evidence/rusty-dagger), checks
 # the copy byte for byte, then leaves local/evidence a link to DIR. An entry DIR already has stops it.
 set -euo pipefail
-shopt -s extglob
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
 cd "$root"
@@ -62,7 +61,7 @@ moves=(
 layout=(inputs data build art scratch evidence)
 
 # In use: an open or mapped file, or a working directory, under what moves; or one of the repository's own commands
-# running in this checkout or a worktree of it.
+# running in this checkout or a worktree of it. local/evidence counts only with --evidence, since nothing else moves it.
 checkouts=("$root")
 if git rev-parse --git-dir >/dev/null 2>&1; then
   while read -r key path; do [[ $key == worktree && $path != "$root" ]] && checkouts+=("$path"); done < <(git worktree list --porcelain)
@@ -71,13 +70,12 @@ busy=()
 for proc in /proc/[0-9]*; do
   pid=${proc#/proc/}
   [[ $pid == "$$" || $pid == "$BASHPID" || $pid == "$PPID" ]] && continue
-  held=$( { find "$proc/fd" -maxdepth 1 -lname "$root/local/*" 2>/dev/null
-           find "$proc/fd" -maxdepth 1 -regextype egrep -lname "$root/authoring/(df-raw|gen-raw|review)/.*" 2>/dev/null
-           grep -lE " $root/(local|authoring/(df-raw|gen-raw|review))/" "$proc/maps" 2>/dev/null
-         } | head -n 1) || true
   cwd=$(readlink "$proc/cwd" 2>/dev/null) || continue
   cmd=$(tr '\0' ' ' < "$proc/cmdline" 2>/dev/null) || continue
-  [[ $cwd == "$root/local" || $cwd == "$root/local/"* || $cwd == "$root/authoring/"@(df-raw|gen-raw|review)?(/*) ]] && held=$cwd
+  # Open and mapped files and the working directory; local/evidence only when it moves.
+  held=$( { find "$proc/fd" -maxdepth 1 -printf '%l\n' 2>/dev/null; awk '{print $6}' "$proc/maps" 2>/dev/null; echo "$cwd"; } \
+    | grep -E "^$root/(local|authoring/(df-raw|gen-raw|review))(/|$)" \
+    | { if [[ -n $evidence ]]; then cat; else grep -vE "^$root/local/evidence(/|$)"; fi; } | head -n 1) || true
   if [[ -z $held ]] && grep -qE 'Daggerfall\.Import\.Tool|daggerfall-import-tool|WorldRpg\.Host|authoring/tools/|tools/[a-z]+/[a-z_]+\.(py|sh)|scripts/fp-arms/|scripts/verify\.sh' <<<"$cmd"; then
     for checkout in "${checkouts[@]}"; do [[ $cwd == "$checkout" || $cwd == "$checkout/"* || $cmd == *"$checkout/"* ]] && held="runs in $checkout"; done
   fi
