@@ -353,8 +353,10 @@ update to acknowledge in, so it runs the same phases at once.
   with the directions. The legend and the facing come from the projection.
 - **Travel** (`travel.ts`, `atlas.ts`, `transport.ts`): the map you travel from, with a journey column beside it and a
   transport strip below, on the wide panel. Opening the screen opens the map, which the ruleset then publishes.
-  - The map is the atlas the importer draws from the land (`DaggerfallAtlas`): shaded relief in each climate's colour,
-    the rivers, the coast and region borders, as a pyramid of tiles. The page asks for the tiles in view
+  - The map is the atlas the importer draws from the land (`DaggerfallAtlas`): shaded relief in each climate's colour
+    climbing through upland to stone and snow, drawn mountains, hills and each climate's forests, marsh or dunes, the
+    rivers, the coast with its ripples and region borders, as a pyramid of tiles. Each level is marked at its own
+    scale, so a drawn mark is as large at every zoom and a closer level has more of them. The page asks for the tiles in view
     (`atlas-tiles`); the ruleset grants each through the Engine's UI image service and names its URL, so no tile's
     bytes ride a snapshot. Under the classic art set, or with a data container from before the atlas, the map draws
     the classic world image and, zoomed into a region, its sheets. It opens on the player at a region's zoom.

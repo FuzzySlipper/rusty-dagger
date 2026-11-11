@@ -227,9 +227,12 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
     if (!map) { ground.replaceChildren(); tiles.clear(); return; }
     const { width, height } = size();
     const left = cx - width / 2 / scale, top = cy - height / 2 / scale;
-    ground.style.transform = `translate(${-left * scale}px, ${-top * scale}px) scale(${scale})`;
-    ground.style.width = `${map.worldWidth}px`;
-    ground.style.height = `${map.worldHeight}px`;
+    // Atlas tiles are placed on whole screen pixels, each meeting the next exactly, since a scaled layer leaves a seam
+    // of background between tiles that end between pixels. The classic images scale with the layer.
+    ground.style.transform = map.atlas ? 'none' : `translate(${-left * scale}px, ${-top * scale}px) scale(${scale})`;
+    ground.style.width = map.atlas ? '100%' : `${map.worldWidth}px`;
+    ground.style.height = map.atlas ? '100%' : `${map.worldHeight}px`;
+    const screenX = (x: number): number => Math.round((x - left) * scale), screenY = (y: number): number => Math.round((y - top) * scale);
     const want = new Set<string>();
     const missing: [number, number, number][] = [];
     if (map.atlas) {
@@ -250,10 +253,11 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
             tile.alt = '';
             tile.className = 'dagger-atlas-tile';
             tile.dataset.mediaId = id;
-            Object.assign(tile.style, { left: `${c * unit}px`, top: `${r * unit}px`, width: `${unit}px`, height: `${unit}px` });
             tiles.set(id, tile);
             ground.append(tile);
           }
+          const x0 = screenX(c * unit), y0 = screenY(r * unit);
+          Object.assign(tile.style, { left: `${x0}px`, top: `${y0}px`, width: `${screenX((c + 1) * unit) - x0}px`, height: `${screenY((r + 1) * unit) - y0}px` });
           const source = granted.get(id);
           if (source && tile.getAttribute('src') !== source) tile.src = source;
           if (!source && !asked.has(id)) { asked.add(id); missing.push([level.level, c, r]); }

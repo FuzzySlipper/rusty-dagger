@@ -28,7 +28,7 @@ internal static class AtlasCommand
             File.ReadAllBytes(Path.Combine(root, DaggerfallRelief.RelativePath)), File.ReadAllBytes(Path.Combine(root, DaggerfallRivers.RelativePath)),
             PayloadFiles.ReadSection<DaggerfallClimateGrid>(args["--pack"], "climate"), PayloadFiles.ReadSection<DaggerfallPoliticGrid>(args["--pack"], "politic"));
         Stopwatch clock = Stopwatch.StartNew();
-        List<(string Path, byte[] Bytes, string MediaId)> tiles = [.. AtlasBake.Tiles(input, AtlasPalette.Atlas).Select(tile =>
+        List<(string Path, byte[] Bytes, string MediaId)> tiles = [.. AtlasBake.Tiles(input, AtlasPalette.Painted).Select(tile =>
             ($"{Root}/{tile.Level}/{tile.Column}-{tile.Row}.png", DeterministicPngEncoder.EncodeRgba8(tile.Size, tile.Size, tile.Rgba), $"atlas.{tile.Level}.{tile.Column}.{tile.Row}"))];
         IReadOnlyList<AtlasLevel> levels = AtlasBake.Levels(input.Width, input.Height);
         Console.WriteLine($"atlas: {levels.Count} levels, {tiles.Count} tiles, {tiles.Sum(tile => tile.Bytes.Length) / 1e6:F1} MB, in {clock.Elapsed.TotalSeconds:F0} s");

@@ -3273,6 +3273,15 @@ test('the travel map draws the atlas tiles in view, asks for the ones it lacks, 
     assert.ok(asked.some(([, column, row]) => column === Math.floor(207 * 4 / 256) && row === Math.floor(213 * 4 / 256)), 'The tile under the player is asked for.');
     const tile = atlas.querySelector('.dagger-atlas-tile');
     assert.equal(tile.getAttribute('src'), null, 'A tile not yet delivered draws nothing.');
+    // Tiles stand on whole screen pixels, each meeting its neighbour exactly, so no seam shows between them.
+    const placed = new Map([...atlas.querySelectorAll('.dagger-atlas-tile')].map(node => [node.dataset.mediaId, node.style]));
+    for (const [id, style] of placed) {
+      const [, lvl, c, r] = id.split('.').map(Number);
+      assert.ok([style.left, style.top, style.width, style.height].every(value => Number.isInteger(parseFloat(value))), `${id} stands on whole pixels.`);
+      const east = placed.get(`atlas.${lvl}.${c + 1}.${r}`), south = placed.get(`atlas.${lvl}.${c}.${r + 1}`);
+      if (east) assert.equal(parseFloat(style.left) + parseFloat(style.width), parseFloat(east.left));
+      if (south) assert.equal(parseFloat(style.top) + parseFloat(style.height), parseFloat(south.top));
+    }
     // A granted tile is drawn from the URL the ruleset names for it, and is asked for no more.
     const [level, column, row] = asked[0];
     const url = '/ui/images/7';
