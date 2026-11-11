@@ -124,6 +124,19 @@ done
 for ((i = 0; i < ${#moves[@]}; i += 2)); do move "${moves[i]}" "${moves[i + 1]}"; done
 if ! $dry && [[ -d local/exports && -z $(ls -A local/exports) ]]; then rmdir local/exports; fi
 
+# The art tools record absolute paths in their JSON (a study's plan.json holds each job's output and argv, which
+# postprocess and a resumed generate open), so point those at the moved folders. Logs and text keep what they said.
+# Modification times are kept: they are how a study's age is judged.
+pattern="\\Q$root\\E/authoring/(df-raw|gen-raw|review)(?=[/\"])"
+where=local/art; $dry && where="local/art authoring/df-raw authoring/gen-raw authoring/review"
+while IFS= read -r -d '' file; do
+  if $dry; then echo "would repoint $file"; continue; fi
+  stamp=$(stat -c %y "$file")
+  ROOT=$root perl -pi -e 'BEGIN { %to = ("df-raw", "reference", "gen-raw", "generated", "review", "review") }
+    s{\Q$ENV{ROOT}\E/authoring/(df-raw|gen-raw|review)(?=[/"])}{$ENV{ROOT}/local/art/$to{$1}}g' -- "$file"
+  touch -d "$stamp" "$file"
+done < <(for dir in $where; do [[ -d $dir ]] && grep -rlZP --include='*.json' --include='*.jsonl' "$pattern" "$dir"; done || true)
+
 if [[ -n $evidence ]]; then
   if [[ -L local/evidence ]]; then
     echo "local/evidence already links to $(readlink local/evidence)"
