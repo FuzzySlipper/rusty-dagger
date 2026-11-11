@@ -3344,6 +3344,32 @@ test('the travel panel opens its map as it shows and closes it once when it is l
     assert.equal(f.root.querySelector('.dagger-atlas').hidden, false);
     // Travel opens on the map, not on its Back button.
     assert.equal(document.activeElement, f.root.querySelector('.dagger-atlas'));
+    // Accepting the focused map starts panning: repeated directions from the pad or the arrows then move the view across
+    // the land, wherever places are, and focus stays on the map; the triggers zoom, and Back stops panning.
+    const atlas = f.root.querySelector('.dagger-atlas');
+    const player = () => atlas.querySelector('.dagger-atlas-player');
+    const at = () => `${player()?.style.left},${player()?.style.top}`;
+    await new Promise(resolve => setTimeout(resolve, 40));
+    const start = at();
+    f.pad('button-0');
+    assert.equal(atlas.getAttribute('aria-pressed'), 'true');
+    for (const button of ['button-15', 'button-15', 'button-13']) f.pad(button);
+    await new Promise(resolve => setTimeout(resolve, 40));
+    assert.equal(document.activeElement, atlas);
+    const padded = at();
+    assert.notEqual(padded, start, 'The pad pans the map.');
+    for (const code of ['ArrowLeft', 'ArrowLeft', 'ArrowUp'])
+      document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { code, key: code, bubbles: true, cancelable: true }));
+    await new Promise(resolve => setTimeout(resolve, 40));
+    assert.equal(document.activeElement, atlas);
+    assert.notEqual(at(), padded, 'The arrows pan the map.');
+    const panned = at();
+    f.pad('button-7');
+    await new Promise(resolve => setTimeout(resolve, 40));
+    assert.notEqual(at(), panned, 'The triggers zoom the map.');
+    f.pad('button-1');
+    assert.equal(atlas.getAttribute('aria-pressed'), 'false');
+    assert.equal(f.root.querySelector('.dagger-atlas').hidden, false, 'Back stops panning without leaving the map.');
     // Leaving the panel for the menu home closes the map once, even before the ruleset answers.
     f.root.querySelector('[data-action="back"]').click();
     assert.equal(closes(), 1);

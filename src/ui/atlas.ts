@@ -1,4 +1,5 @@
 import { image, reportMissingArt } from './art.js';
+import { BACK_EVENT, DIRECTION_EVENT, type Direction } from './navigation.js';
 
 /** A published map image and the world-map rectangle, in world-map pixels, its corners show. */
 export interface TravelMapImageProjection {
@@ -104,10 +105,10 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
   choose: (region: number, index: number, keyed: boolean) => void, askPlaces: () => void): Atlas {
   const element = document.createElement('div');
   element.className = 'dagger-atlas';
-  // The map surface takes focus itself, so the arrows pan it and + and - zoom it.
+  // The map surface takes focus itself. Accepting it starts panning, as the local map's view does: the directions then
+  // move the map rather than focus, the triggers and + and - zoom it, and accept or Back stop.
   element.tabIndex = 0;
   element.setAttribute('role', 'application');
-  element.setAttribute('aria-label', 'Travel map');
   const ground = document.createElement('div');
   ground.className = 'dagger-atlas-ground';
   const marks = document.createElement('div');
@@ -131,7 +132,9 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
   const legend = document.createElement('ul');
   legend.className = 'dagger-atlas-legend';
   legend.setAttribute('aria-label', 'Map legend');
-  element.append(ground, routeLayer, marks, controls, readout, legend);
+  const hint = document.createElement('p');
+  hint.className = 'dagger-atlas-hint';
+  element.append(ground, routeLayer, marks, controls, readout, legend, hint);
 
   let map: TravelMapProjection | null = null;
   // The places as last sent, and the revision they are; a snapshot that names another revision without them asks again.
@@ -209,14 +212,43 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
     // The world point under the pointer stays under it.
     setView(cx + px / scale - px / next, cy + py / scale - py / next, next);
   }, { passive: false });
+  let panning = false;
+  const setPanning = (on: boolean): void => {
+    panning = on;
+    element.classList.toggle('is-panning', on);
+    element.setAttribute('aria-pressed', String(on));
+    element.setAttribute('aria-label', on ? 'Travel map, panning' : 'Travel map');
+    hint.textContent = on ? 'Directions pan · triggers or Page Up and Down zoom · accept or Back to stop'
+      : 'Drag to pan · wheel to zoom · accept to pan with keys or a controller';
+  };
+  setPanning(false);
+  // A step is a quarter of the view, so a few steps cross empty land or sea between places.
+  const pan = (direction: Direction): void => {
+    const { width, height } = size();
+    const across = width / 4 / scale, down = height / 4 / scale;
+    const [dx, dy] = direction === 'left' ? [-across, 0] : direction === 'right' ? [across, 0] : direction === 'up' ? [0, -down] : [0, down];
+    setView(cx + dx, cy + dy, scale);
+  };
+  element.addEventListener(DIRECTION_EVENT, event => {
+    if (!panning || document.activeElement !== element) return;
+    event.preventDefault();
+    measure();
+    pan((event as CustomEvent<Direction>).detail);
+  });
+  element.addEventListener(BACK_EVENT, event => {
+    if (!panning || document.activeElement !== element) return;
+    event.preventDefault();
+    setPanning(false);
+  });
+  // A controller's accept clicks the focused control; a mouse click on the map is not a request to pan.
+  element.addEventListener('click', event => { if (event.target === element && event.detail === 0) setPanning(!panning); });
   element.addEventListener('keydown', event => {
     if (event.target !== element) return;
-    const pan = 80 / scale;
-    const moves: Record<string, [number, number]> = { ArrowLeft: [-pan, 0], ArrowRight: [pan, 0], ArrowUp: [0, -pan], ArrowDown: [0, pan] };
-    if (moves[event.key]) { setView(cx + moves[event.key]![0], cy + moves[event.key]![1], scale); event.preventDefault(); event.stopPropagation(); }
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setPanning(!panning); }
     else if (event.key === '+' || event.key === '=') { atlas.zoom(1); event.preventDefault(); }
     else if (event.key === '-' || event.key === '_') { atlas.zoom(-1); event.preventDefault(); }
   });
+  element.addEventListener('blur', () => setPanning(false));
   zoomIn.addEventListener('click', () => atlas.zoom(1));
   zoomOut.addEventListener('click', () => atlas.zoom(-1));
   here.addEventListener('click', () => { if (map?.player) atlas.centre(map.player.x + .5, map.player.y + .5, Math.max(scale, ZOOM.region)); });

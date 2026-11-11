@@ -365,8 +365,10 @@ update to acknowledge in, so it runs the same phases at once.
     they do not cover one already written, and every place is named when focused or pointed at. The names of the land
     and sea come from the game's one list of them (`worldNames`), each written from its kind's zoom. The thousands of
     known places travel only when `placesRevision` changes or the page asks again.
-  - Drag pans and the wheel zooms about the pointer; the map surface pans with the arrows and zooms with + and -;
-    Page Up and Down, or the triggers, zoom; arrows and a pad step between places, and the view follows the focus.
+  - Drag pans and the wheel zooms about the pointer; Page Up and Down, the triggers, and + and - zoom. Accepting the
+    focused map starts panning, as the local map's view does: the directions then move it a quarter of the view at a
+    time, over land or sea with no places, and accept or Back stop. Otherwise arrows and a pad step between places,
+    and the view follows the focus.
     Choosing a place, on the map or from the column's search, asks for its route; the quote is drawn on the map and
     worded in the column, and a journey asks through the drawn confirm.
   - The strip chooses foot, horse or cart, boards or leaves your ship, and names the wagon's load; what the wagon holds
