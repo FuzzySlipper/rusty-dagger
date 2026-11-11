@@ -417,7 +417,10 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     {
         float phase = (calendar.SecondOfDay / 60f - DaggerfallCalendar.DawnHour * 60f)
             / ((DaggerfallCalendar.DuskHour - DaggerfallCalendar.DawnHour) * 60f);
-        Vector3 direction = Vector3.Normalize(new(MathF.Cos(phase * MathF.PI), -MathF.Sin(phase * MathF.PI), 0f));
+        // The sun rises in the east, crosses the southern sky leaning by its tilt, and sets in the west. The direction is
+        // the way its light travels, with x east and z south: westward at dawn, and northward as it climbs.
+        float tilt = _tuning.SunTiltDegrees * MathF.PI / 180f, height = MathF.Sin(phase * MathF.PI);
+        Vector3 direction = Vector3.Normalize(new(-MathF.Cos(phase * MathF.PI), -height * MathF.Cos(tilt), -height * MathF.Sin(tilt)));
         // The sun climbs out of its low colour by a third of the way to noon.
         Vector3 color = Vector3.Lerp(_tuning.LowSunColor, Vector3.One, Math.Clamp(-direction.Y * LowSunClimb, 0, 1));
         return new(_sunId, false, 0, new LightDescriptor(LightKind.Directional, color,

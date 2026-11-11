@@ -107,16 +107,22 @@ off, and that is what `bloom` spreads.
 - **One sky.** The world has one sun and ambient, carried by the active site and kept
   when its location unloads behind the player. Resident locations bring only their lamps.
 - **Scale.** The Engine divides light by pi, so `siteLighting` levels are multiplied per
-  kind of place. Outdoors, ambient and sun together make pi at noon, which lands level
-  ground at its texture's own value. Ambient carries most of it: an upright sprite takes
-  little of an overhead sun, and would fall dark at noon.
+  kind of place. Outdoors, the day's ambient and the sun together make about pi, which
+  lands level ground under a high sun near its texture's own value. The sun carries most
+  of it, as a clear day's direct light does, so what its shadow covers falls to about a
+  fifth of the light.
+- **The sun's path.** The sun rises in the east, crosses the southern sky and sets in the
+  west, its path leaning `sunTiltDegrees` south of overhead. At noon it stands that far
+  from the zenith, so south-facing walls take the sun and what stands in its way casts a
+  shadow beside it rather than under it.
 - **Night.** The ambient cools toward `nightColor`, so a lamp's warmth stands out. A grade
   would cool the lamps too. The sun warms toward `lowSunColor` near the horizon.
-- **Sun shadows.** The sun always asks for its shadow (`sunShadowRange`,
-  `sunShadowResolution`). It draws only when the player turns on Shadows in Settings'
-  video options, which are off by default. With ambient carrying most of the light, the
-  shadows are faint: a sun-heavy balance would deepen them, but it darkens upright sprites
-  across their faces. Static flats neither cast nor receive; enemies cast as before.
+- **Sun shadows.** The sun is the only light that asks for a shadow (`sunShadowRange`,
+  `sunShadowResolution`). The product draws scene shadows by default
+  (`RustyEngineProductSceneShadows`), and a player can turn off Shadows in Settings' video
+  options. Every lit sprite receives shadows. Flats that stand in the world cast them, the
+  Engine turning each to face the sun: decorations, nature flats, townspeople and enemies.
+  Flats that give light, ground sprites and remains don't cast.
 - **Sprites.** Flats, nature, people and items take the light around them
   (`SpriteLightingMode.Synthetic`), so they fall with the day.
   Each kind of flat in the `flats` tuning (nature, decorations, actors, items) stands

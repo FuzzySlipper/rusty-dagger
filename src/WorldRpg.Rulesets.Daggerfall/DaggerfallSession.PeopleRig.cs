@@ -19,8 +19,7 @@ internal sealed partial class DaggerfallSession : IDeveloperPeopleSession
     private const TextureFilter PeopleRigFilter = TextureFilter.Linear;
 
     /// <summary>The figure takes the light around it as a person's sprite does, and casts her shape into the sun's shadow.</summary>
-    private static readonly SpriteMaterialDescriptor PeopleRigMaterial =
-        DaggerfallSiteAppearance.LitSprite with { Shadow = SpriteShadowPolicy.CastAndReceive };
+    private static readonly SpriteMaterialDescriptor PeopleRigMaterial = DaggerfallSiteAppearance.CastingSprite;
 
     private PartsRigCrowd? _peopleRigs;
 

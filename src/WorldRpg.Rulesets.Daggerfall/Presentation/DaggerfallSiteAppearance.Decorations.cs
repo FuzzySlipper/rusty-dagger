@@ -62,9 +62,15 @@ internal sealed partial class DaggerfallSiteAppearance
     private static bool GivesLight((int Archive, int Record) source) =>
         LightFlats.TryGetValue(source.Archive, out int[]? records) && records.Contains(source.Record);
 
-    /// <summary>A decoration takes the light around it. A tree or plant from the nature archives leans in the wind as wild nature does.</summary>
-    private SpriteMaterialDescriptor Material(DaggerfallSiteDecoration flat) =>
-        DaggerfallExteriorEnvironment.IsNatureArchive(flat.Source.Archive) ? flats.Flora(LitSprite) : LitSprite;
+    /// <summary>
+    /// A decoration takes the light around it and casts a shadow, except one that gives light. A tree or plant from the
+    /// nature archives leans in the wind as wild nature does.
+    /// </summary>
+    private SpriteMaterialDescriptor Material(DaggerfallSiteDecoration flat)
+    {
+        SpriteMaterialDescriptor lit = GivesLight(flat.Source) ? LitSprite : CastingSprite;
+        return DaggerfallExteriorEnvironment.IsNatureArchive(flat.Source.Archive) ? flats.Flora(lit) : lit;
+    }
 
     /// <summary>A flat that gives light, under <paramref name="material"/>: what <paramref name="map"/> holds shines at the lamps' level.</summary>
     private SpriteMaterialDescriptor Lamp(SpriteMaterialDescriptor material, RenderResource map) => Glowing(material, map, lampLevel);

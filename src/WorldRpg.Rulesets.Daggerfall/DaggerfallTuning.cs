@@ -277,6 +277,7 @@ internal sealed record DaggerfallTuning(
                 SpellLightIntensity = siteLighting.GetProperty("spellLightIntensity").GetSingle(),
                 ExteriorScale = siteLighting.GetProperty("exteriorScale").GetSingle(),
                 ExteriorSun = siteLighting.GetProperty("exteriorSun").GetSingle(),
+                SunTiltDegrees = siteLighting.GetProperty("sunTiltDegrees").GetSingle(),
                 SunShadowRange = siteLighting.GetProperty("sunShadowRange").GetSingle(),
                 SunShadowResolution = siteLighting.GetProperty("sunShadowResolution").GetUInt32(),
                 InteriorScale = siteLighting.GetProperty("interiorScale").GetSingle(),
@@ -656,6 +657,7 @@ internal sealed record DaggerfallPresentationAudioTuning(float Volume, float Pit
 /// <summary>
 /// Neutral site fill from the donor's PlayerAdvanced prefab, independent of weather cues. Those levels count 1 as full
 /// light; the Engine's lights divide by pi, so each kind of place scales its lights to stand where the art wants them.
+/// Outdoors by day the sun carries most of the light, so the day's ambient stands well below the donor's.
 /// </summary>
 internal sealed record DaggerfallSiteLightingTuning(
     float InteriorDay,
@@ -674,13 +676,20 @@ internal sealed record DaggerfallSiteLightingTuning(
     internal float InteriorScale { get; init; } = 1.3f;
     internal float DungeonScale { get; init; } = 1f;
     /// <summary>
-    /// The sun at full daylight. Ambient and sun together make pi, which lands noon on level ground at its texture's own
-    /// value. An upright sprite takes little of an overhead sun, so ambient carries most of it, or sprites fall dark at noon.
+    /// The sun at full daylight. The day's ambient and the sun together make about pi, which lands level ground under a
+    /// high sun near its texture's own value; the sun carries most of it, as a clear day's direct light does, so what
+    /// its shadow covers falls to about a fifth of the light.
     /// </summary>
-    internal float ExteriorSun { get; init; } = 1.05f;
+    internal float ExteriorSun { get; init; } = 2.5f;
+    /// <summary>
+    /// How far the sun's path leans south of overhead, in degrees, as at the Iliac Bay's latitude: at noon it stands that
+    /// far from the zenith, so walls facing it take the sun and what stands in its way casts a shadow beside it.
+    /// </summary>
+    internal float SunTiltDegrees { get; init; } = 30f;
     /// <summary>
     /// How far from the camera the sun's shadow reaches, in metres, and the texels on a side of each of its cascades.
-    /// The sun always asks for its shadow; it draws only when the player turns on the Engine's Shadows video option.
+    /// The sun always asks for its shadow; the product draws scene shadows by default, and the player can turn off the
+    /// Engine's Shadows video option.
     /// </summary>
     internal float SunShadowRange { get; init; } = 150f;
     internal uint SunShadowResolution { get; init; } = 2048;
@@ -704,7 +713,7 @@ internal sealed record DaggerfallSiteLightingTuning(
     /// <summary>How much of the light above 1 spreads as a glow; 0 for none.</summary>
     internal float Bloom { get; init; } = .25f;
     internal static DaggerfallSiteLightingTuning Classic { get; } = new(
-        160F / 255F, 100F / 255F, 75F / 255F, .7F, .1333F);
+        160F / 255F, 100F / 255F, 75F / 255F, .2F, .1333F);
 
     internal DaggerfallSiteLightingTuning Validate()
     {
@@ -716,6 +725,8 @@ internal sealed record DaggerfallSiteLightingTuning(
             throw new ArgumentOutOfRangeException(nameof(LowSunColor), "The low sun's colour is finite and not negative.");
         if (!float.IsFinite(NightColor.X + NightColor.Y + NightColor.Z) || NightColor.X < 0 || NightColor.Y < 0 || NightColor.Z < 0)
             throw new ArgumentOutOfRangeException(nameof(NightColor), "The night's colour is finite and not negative.");
+        if (!float.IsFinite(SunTiltDegrees) || SunTiltDegrees is < 0 or >= 90)
+            throw new ArgumentOutOfRangeException(nameof(SunTiltDegrees), "The sun's path leans from 0 up to but not including 90 degrees.");
         if (!float.IsFinite(SunShadowRange) || SunShadowRange <= 0 || SunShadowResolution is not (256 or 512 or 1024 or 2048))
             throw new ArgumentOutOfRangeException(nameof(SunShadowRange), "The sun's shadow reaches a finite positive range, at 256, 512, 1024 or 2048 texels.");
         if (!float.IsFinite(Bloom) || Bloom < 0) throw new ArgumentOutOfRangeException(nameof(Bloom), "The bloom is finite and not negative.");

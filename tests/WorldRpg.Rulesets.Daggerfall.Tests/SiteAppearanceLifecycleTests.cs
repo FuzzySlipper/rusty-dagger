@@ -371,7 +371,7 @@ public sealed class SiteAppearanceLifecycleTests
         Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.ExteriorNoon * DaggerfallTuning.Defaults.SiteLighting.ExteriorScale,
             appearance.LightUpdates.Single(update => update.Replacement.Descriptor.Kind == LightKind.Ambient).Replacement.Descriptor.Intensity);
         LightRequest sun = Assert.Single(appearance.LightRequests, request => request.Descriptor.Kind == LightKind.Directional);
-        // The sun asks for its shadow at the tuned reach and detail; the Engine's Shadows video option decides whether it draws.
+        // The sun asks for its shadow at the tuned reach and detail; the Engine's Shadows video option, on by default, decides whether it draws.
         Assert.Equal(LightShadowIntent.Requested, sun.Descriptor.ShadowIntent);
         Assert.True(sun.Descriptor.HasRange);
         Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.SunShadowRange, sun.Descriptor.Range);
@@ -385,7 +385,15 @@ public sealed class SiteAppearanceLifecycleTests
             ambientUpdate.Replacement.Descriptor.Intensity);
         var sunUpdate = appearance.LightUpdates.Last(update => update.Replacement.Descriptor.Kind == LightKind.Directional);
         Assert.Equal(daylight * DaggerfallTuning.Defaults.SiteLighting.ExteriorSun, sunUpdate.Replacement.Descriptor.Intensity);
-        Assert.Equal(-1f, sunUpdate.Replacement.Descriptor.Direction.Y, 4);
+        // At noon the sun stands its tilt south of overhead, so its light travels down and north (z is south).
+        float tilt = DaggerfallTuning.Defaults.SiteLighting.SunTiltDegrees * MathF.PI / 180f;
+        Assert.Equal(0f, sunUpdate.Replacement.Descriptor.Direction.X, 4);
+        Assert.Equal(-MathF.Cos(tilt), sunUpdate.Replacement.Descriptor.Direction.Y, 4);
+        Assert.Equal(-MathF.Sin(tilt), sunUpdate.Replacement.Descriptor.Direction.Z, 4);
+        // In the morning it is in the east, so its light travels west (x is east).
+        exteriorLighting.UpdateAmbient(DaggerfallCalendar.Start with { Hour = 8 }, daylight);
+        Assert.True(appearance.LightUpdates.Last(update => update.Replacement.Descriptor.Kind == LightKind.Directional).Replacement.Descriptor.Direction.X < -.5f);
+        exteriorLighting.UpdateAmbient(noon, daylight);
         exteriorLighting.UpdateAmbient(noon, daylight, lightningFlash: 2);
         Assert.Equal(2f * DaggerfallTuning.Defaults.SiteLighting.ExteriorScale, appearance.LightUpdates.Last().Replacement.Descriptor.Intensity);
         exteriorLighting.UpdateAmbient(noon, daylight);

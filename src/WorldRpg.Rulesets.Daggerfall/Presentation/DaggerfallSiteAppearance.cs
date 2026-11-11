@@ -47,6 +47,11 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// the sky is none.
     /// </summary>
     internal static readonly SpriteMaterialDescriptor LitSprite = new(SpriteLightingMode.Synthetic, default, default, 1f, 0f, SpriteAlphaMode.Mask, .5f, SpriteShadowPolicy.None);
+    /// <summary>
+    /// A lit sprite that also casts: a figure or object standing in the world, whose shadow the Engine draws as the sprite
+    /// turned to face the light. Ground sprites, glows and remains keep <see cref="LitSprite"/>; every lit sprite receives.
+    /// </summary>
+    internal static readonly SpriteMaterialDescriptor CastingSprite = LitSprite with { Shadow = SpriteShadowPolicy.CastAndReceive };
 
     /// <summary><paramref name="material"/> shining at <paramref name="level"/> over the light it takes, where and in what colour <paramref name="map"/> says.</summary>
     private static SpriteMaterialDescriptor Glowing(SpriteMaterialDescriptor material, RenderResource map, float level) =>
@@ -1101,7 +1106,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     {
         if (npcVisuals.ContainsKey(id)) return;
         var (_, visual) = CreateSprite(content, new NormalizedActorSprite(sprite.TexturePath, sprite.TextureSha256,
-            sprite.AtlasWidth, sprite.AtlasHeight, sprite.Frames, sprite.InitialFrameId, sprite.Pivot, sprite.Size), material: LitSprite);
+            sprite.AtlasWidth, sprite.AtlasHeight, sprite.Frames, sprite.InitialFrameId, sprite.Pivot, sprite.Size), material: CastingSprite);
         npcVisuals.Add(id, new(id, visual));
     }
 

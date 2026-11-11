@@ -14,6 +14,8 @@
     <RustyEngineProductId>rusty-dagger-worldrpg</RustyEngineProductId>
     <RustyEngineProductTitle>Rusty Dagger / WorldRpg</RustyEngineProductTitle>
     <RustyEngineProductDefaultWorldLights>disabled</RustyEngineProductDefaultWorldLights>
+    <!-- The sun's shadow draws by default: it is the only light that asks for one. -->
+    <RustyEngineProductSceneShadows>enabled</RustyEngineProductSceneShadows>
     <RustyEngineProductUiRoot>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(BaseIntermediateOutputPath)', 'product-ui'))</RustyEngineProductUiRoot>
     <RustyEngineProductContentRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../content'))</RustyEngineProductContentRoot>
     <!-- The containers converted from the player's Daggerfall files (daggerfall-data.rpak, music.rpak) are
