@@ -60,9 +60,12 @@ say what may be deleted:
 - Supply the game's `ARENA2` directory as `local/inputs/arena2` (or pass
   `--arena2` the folder Daggerfall is installed in) and the song folder as
   `local/inputs/Sound`. A link is fine.
-- Import once, and again after a pull that changes `src/Daggerfall.Import*`,
-  `src/WorldRpg.SpriteAuthoring`, `data/` or the authored UI art. The entry
-  screen says when the data is missing, damaged or from another importer.
+- Import once, and again after a pull that changes the importer revision: its
+  inputs are `src/Daggerfall.Import`, `src/Daggerfall.Import.Tool`, the data
+  files under `data/`, the authored UI art and
+  `content/worldrpg/payloads/daggerfall.base.json`
+  (`src/ImporterRevision.targets` lists them). The entry screen says when the
+  data is missing, damaged or from another importer.
 
   ```bash
   dotnet run --project src/Daggerfall.Import.Tool -- import --music local/inputs/Sound
@@ -132,8 +135,10 @@ Rules for the tracked side:
 - In `data/content-source-manifest.csv`, never renumber or recreate a `CNT-` ID;
   reclassify a file by changing its `family_id`. Only `Daggerfall.Source.Tool`'s
   `source-manifest --update-inventory` writes the disposition column.
-- Any edit under `data/` changes the importer revision, so every machine's data
-  goes stale. Make one deliberately.
+- An edit to an importer revision input, including any file under `data/` but its
+  README and the authored base payload, makes every machine's data stale. Make one
+  deliberately. A command that does not feed the containers goes in
+  `Daggerfall.Source.Tool`, never `Daggerfall.Import.Tool`, whose every file is an input.
 
 The wiki page `wiki/rusty-dagger/import-and-data-container` has the fuller account.
 
