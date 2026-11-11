@@ -683,7 +683,7 @@ public static class DungeonNormalizer
                 navigation,
                 resources);
             NormalizedImportDocument document = new NormalizedImportDocument(
-                new ImportProvenance(ImporterId, ImporterBuild.Revision,
+                new ImportProvenance(ImporterId,
                     request.Sources.Sources.Select(source => new LogicalSourceRecord(source.Label, ContentDigest.Compute(source.Bytes.Span), source.Bytes.Length)).ToArray()),
                 spatialPublication.ArtifactDescriptors,
                 new NormalizedCoordinateConvention(NormalizedHandedness.Right, NormalizedVerticalAxis.PositiveY, 1F),

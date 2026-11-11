@@ -282,10 +282,10 @@ public sealed record LogicalSourceRecord(string SourcePath, ContentDigest Conten
 }
 
 /// <summary>
-/// Aggregate importer provenance without machine-local or time-varying fields. The revision names the
-/// importer source that produced the document (see <see cref="ImporterBuild.Revision"/>).
+/// Aggregate importer provenance without machine-local or time-varying fields. Which importer source produced
+/// it is recorded once, in the data container's description, so a document's bytes change only with its content.
 /// </summary>
-public sealed record ImportProvenance(string ImporterId, string ImporterRevision, IReadOnlyList<LogicalSourceRecord> Sources)
+public sealed record ImportProvenance(string ImporterId, IReadOnlyList<LogicalSourceRecord> Sources)
 {
     public ImportProvenance Canonicalize() => this with
     {
@@ -295,7 +295,6 @@ public sealed record ImportProvenance(string ImporterId, string ImporterRevision
     public void Validate()
     {
         NormalizedImportDocument.RequireLogicalId(ImporterId, nameof(ImporterId));
-        NormalizedImportDocument.RequireLogicalId(ImporterRevision, nameof(ImporterRevision));
         ArgumentNullException.ThrowIfNull(Sources);
         if (Sources.Count == 0)
         {

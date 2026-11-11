@@ -177,7 +177,7 @@ public static class Arena2SitePublication
             (GeometryPublication geometry, Arena2DungeonMediaPublication dungeonMedia, Arena2ClassicMediaPublication classicMedia) = PublishMedia(
                 sources, null, meshIds, media, "product-wide world media", textures.Materials, textures.Billboards, WorldMediaQuotas,
                 leaves => PlacementTrims(sources, locations, leaves));
-            ImportProvenance provenance = new(WorldMediaImporterId, ImporterBuild.Revision, [.. sources.DungeonSources
+            ImportProvenance provenance = new(WorldMediaImporterId, [.. sources.DungeonSources
                 .Select(source => new LogicalSourceRecord(source.Label, ContentDigest.Compute(source.Bytes.Span), source.Bytes.Length))]);
             return new Arena2WorldMediaPublication(
                 Arena2MediaBundlePublication.CreateWorldMedia(provenance, dungeonMedia, classicMedia, geometry, classicGroup),

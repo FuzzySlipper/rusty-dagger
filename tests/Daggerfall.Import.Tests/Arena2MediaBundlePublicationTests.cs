@@ -311,7 +311,7 @@ public sealed class Arena2MediaBundlePublicationTests
         Arena2MediaBundlePublication.CreateWorldMedia(WorldProvenance(), CreateDungeonMedia(), classic, CreateGeometry(), group);
 
     private static ImportProvenance WorldProvenance() => new(
-        Arena2SitePublication.WorldMediaImporterId, "test", [new LogicalSourceRecord("arena2/ARCH3D.BSA", ContentDigest.Compute("arch"u8), 4)]);
+        Arena2SitePublication.WorldMediaImporterId, [new LogicalSourceRecord("arena2/ARCH3D.BSA", ContentDigest.Compute("arch"u8), 4)]);
 
     private static Dictionary<string, ImportPublicationManifestArtifact> ClassicGroup(ImportPublicationArtifact artifact) => new(StringComparer.Ordinal)
     {
@@ -390,7 +390,6 @@ public sealed class Arena2MediaBundlePublicationTests
         NormalizedImportDocument document = new NormalizedImportDocument(
             new ImportProvenance(
                 "daggerfall-import/test",
-                "test-revision",
                 [new LogicalSourceRecord("arena2/PAL.PAL", paletteDigest, 7)]),
             spatial.ArtifactDescriptors,
             new NormalizedCoordinateConvention(

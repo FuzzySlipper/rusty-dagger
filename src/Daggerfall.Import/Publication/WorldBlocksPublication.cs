@@ -115,7 +115,7 @@ public static class Arena2WorldBlocksPublication
             published);
         artifacts.Add(new(IndexRelativePath, JsonSerializer.SerializeToUtf8Bytes(index, PublishedJson.SectionCompact),
             [.. entries.Select(entry => entry.Document).Order(StringComparer.Ordinal)]));
-        ImportProvenance provenance = new(ImporterId, ImporterBuild.Revision,
+        ImportProvenance provenance = new(ImporterId,
             [.. sources.Sources.Select(source => new LogicalSourceRecord(source.Label, ContentDigest.Compute(source.Bytes.Span), source.Bytes.Length))]);
         string[] meshes = [.. normalized.SelectMany(block => block.Block.Models).Select(model => model.MeshArtifactId).OfType<string>()
             .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];

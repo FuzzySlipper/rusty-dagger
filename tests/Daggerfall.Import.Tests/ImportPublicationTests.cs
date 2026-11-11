@@ -30,10 +30,10 @@ public sealed class ImportPublicationTests : IDisposable
     }
 
     [Fact]
-    public void ManifestRecordsTheImporterRevisionCommandAndAuthoredOverlays()
+    public void ManifestRecordsTheCommandAndAuthoredOverlaysButNotTheImporterRevision()
     {
         ImportPublicationPlan plan = CreatePlan(new ImportPublicationArtifact("value.bin", "value"u8));
-        PublishedSource overlay = new("sprites/site.json", ContentDigest.Compute("overlay"u8), 7);
+        PublishedSource overlay = new("world-block-variants/index.json", ContentDigest.Compute("overlay"u8), 7);
         ImportPublicationPlan invoked = plan.WithInvocation(new ImportInvocation(["daggerfall-import-tool", "write", "--arena2", "arena2"], [overlay]));
 
         // Only the manifest changes: the recorded invocation is provenance, not another artifact.
@@ -44,11 +44,11 @@ public sealed class ImportPublicationTests : IDisposable
         CanonicalImportManifest reopened = ImportPublicationManifestSerializer.Deserialize(manifestBytes.Span);
         // The command and overlays are stated once, as top-level fields.
         Assert.DoesNotContain("\"invocation\"", Encoding.UTF8.GetString(manifestBytes.Span), StringComparison.Ordinal);
-        Assert.Equal("test-revision", reopened.ImporterRevision);
+        // The importer revision is the data container's, so a revision change rewrites no manifest.
+        Assert.DoesNotContain("importerRevision", Encoding.UTF8.GetString(manifestBytes.Span), StringComparison.Ordinal);
         Assert.Equal(["daggerfall-import-tool", "write", "--arena2", "arena2"], reopened.Command);
         Assert.Equal(overlay, Assert.Single(reopened.AuthoredOverlays));
-        // An overlay is recorded beside the sources, never among them: the sprite authoring basis is
-        // computed from the sources, and an overlay cannot be part of the basis it is written against.
+        // An authored overlay is recorded beside the sources it overlays, never among them.
         Assert.DoesNotContain(reopened.Sources, source => source.Path == overlay.Path);
         Assert.Empty(plan.Manifest.Command);
         Assert.Throws<ArgumentException>(() => plan.WithInvocation(new ImportInvocation(["write\n"], [])));
@@ -144,7 +144,6 @@ public sealed class ImportPublicationTests : IDisposable
     private static ImportPublicationPlan CreatePlan(params ImportPublicationArtifact[] artifacts) => ImportPublicationPlan.Create(
         new ImportProvenance(
             "daggerfall-import/test",
-            "test-revision",
             [new LogicalSourceRecord("arena2/MAPS.BSA", new ContentDigest("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"), 4)]),
         artifacts);
 }

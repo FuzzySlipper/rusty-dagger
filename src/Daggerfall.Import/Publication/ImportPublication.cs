@@ -125,14 +125,13 @@ public sealed record ImportInvocation(IReadOnlyList<string> Command, IReadOnlyLi
 }
 
 /// <summary>
-/// Canonical statement of an import result: the importer revision and command line that produced it, the
-/// sources and authored overlays it read, and the artifacts it wrote. It excludes timestamps; the command is
-/// recorded as the caller spelled it, so a caller that passes repository-relative paths keeps the manifest
-/// host-independent.
+/// Canonical statement of an import result: the command line that produced it, the sources and authored
+/// overlays it read, and the artifacts it wrote. It excludes timestamps and the importer revision, which the
+/// data container's description records once; the command is recorded as the caller spelled it, so a caller
+/// that passes repository-relative paths keeps the manifest host-independent.
 /// </summary>
 public sealed record CanonicalImportManifest(
     string ImporterId,
-    string ImporterRevision,
     IReadOnlyList<string> Command,
     IReadOnlyList<PublishedSource> Sources,
     IReadOnlyList<PublishedSource> AuthoredOverlays,
@@ -152,7 +151,6 @@ public sealed record CanonicalImportManifest(
     public void Validate()
     {
         NormalizedImportDocument.RequireLogicalId(ImporterId, nameof(ImporterId));
-        NormalizedImportDocument.RequireLogicalId(ImporterRevision, nameof(ImporterRevision));
         ArgumentNullException.ThrowIfNull(Sources);
         ArgumentNullException.ThrowIfNull(Artifacts);
         Invocation.Validate();
@@ -311,7 +309,6 @@ public sealed class ImportPublicationPlan
         ImportPublicationArtifact[] orderedContent = materialized.OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal).ToArray();
         CanonicalImportManifest manifest = new(
             provenance.ImporterId,
-            provenance.ImporterRevision,
             invocation.Command.ToArray(),
             provenance.Sources.Select(source => new PublishedSource(source.SourcePath, source.ContentDigest, source.ByteLength)).ToArray(),
             invocation.AuthoredOverlays.ToArray(),
@@ -334,7 +331,6 @@ public sealed class ImportPublicationPlan
         return Create(
             new ImportProvenance(
                 Manifest.ImporterId,
-                Manifest.ImporterRevision,
                 Manifest.Sources.Select(source => new LogicalSourceRecord(
                     source.Path,
                     source.ContentDigest,

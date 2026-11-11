@@ -253,7 +253,7 @@ public sealed class ProductWorldMedia
             [.. entry.Artifact.DependsOnPaths.Where(paths.Contains)],
             entry.Artifact.MediaId))];
         return ImportPublicationPlan.Create(
-            new ImportProvenance(site.Manifest.ImporterId, site.Manifest.ImporterRevision,
+            new ImportProvenance(site.Manifest.ImporterId,
                 [.. site.Manifest.Sources.Select(source => new LogicalSourceRecord(source.Path, source.ContentDigest, source.ByteLength))]),
             artifacts,
             site.Manifest.Invocation);

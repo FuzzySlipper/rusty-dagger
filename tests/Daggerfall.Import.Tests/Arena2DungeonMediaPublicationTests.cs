@@ -565,7 +565,6 @@ public sealed class Arena2DungeonMediaPublicationTests
         return new NormalizedImportDocument(
             new ImportProvenance(
                 "daggerfall-import/test",
-                "test-revision",
                 [new LogicalSourceRecord("arena2/MAPS.BSA", new ContentDigest(new string('0', 64)), 1)]),
             [artifact],
             new NormalizedCoordinateConvention(NormalizedHandedness.Right, NormalizedVerticalAxis.PositiveY, 1F),

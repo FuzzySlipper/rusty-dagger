@@ -56,7 +56,7 @@ public static class WorldBlockVariantPublication
         artifacts.Add("blocks.json", new("blocks.json", JsonSerializer.SerializeToUtf8Bytes(index, PublishedJson.SectionCompact),
             [.. publication.Index.Blocks.Select(value => value.Document), .. variants.Select(value => value!["document"]!.GetValue<string>())]));
         var manifest = publication.Plan.Manifest;
-        var provenance = new ImportProvenance(manifest.ImporterId, manifest.ImporterRevision,
+        var provenance = new ImportProvenance(manifest.ImporterId,
             [.. manifest.Sources.Select(value => new LogicalSourceRecord(value.Path, value.ContentDigest, value.ByteLength))]);
         var plan = ImportPublicationPlan.Create(provenance, artifacts.Values, new(manifest.Command, [.. manifest.AuthoredOverlays, .. overlays]));
         return publication with { Plan = plan, MeshArtifactIds = [.. meshes.Order(StringComparer.Ordinal)] };

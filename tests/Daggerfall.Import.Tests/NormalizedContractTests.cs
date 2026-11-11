@@ -139,7 +139,6 @@ public sealed class NormalizedContractTests
         return new(
             new(
                 "importer/example",
-                "test-revision",
                 [new("content/example.mesh.json", geometryDigest, 12)]),
             [
                 new("artifact/geometry", "geometry.json", geometryDigest, 12, ["artifact/materials"]),

@@ -50,7 +50,7 @@ public sealed class WorldBlockVariantPublicationTests : IDisposable
     private static WorldBlocksPublication Publication()
     {
         var index = new DaggerfallWorldBlockIndex("shared", new(0, 0, 1), [new("rdb/test", DaggerfallWorldBlockKind.Rdb, "TEST.RDB", null, "base.json", null)], [], []);
-        var plan = ImportPublicationPlan.Create(new("daggerfall-import/world-blocks", "test", [new("arena2/BLOCKS.BSA", ContentDigest.Compute("test"u8), 4)]),
+        var plan = ImportPublicationPlan.Create(new("daggerfall-import/world-blocks", [new("arena2/BLOCKS.BSA", ContentDigest.Compute("test"u8), 4)]),
             [new("base.json", JsonSerializer.SerializeToUtf8Bytes(Block(), PublishedJson.Section)), new("blocks.json", JsonSerializer.SerializeToUtf8Bytes(index, PublishedJson.Section))]);
         return new(plan, index, []);
     }
