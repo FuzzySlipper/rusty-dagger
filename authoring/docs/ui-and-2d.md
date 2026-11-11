@@ -36,7 +36,7 @@ Five dispositions:
 | Automap and town maps | `AMAP*`, `TMAP*`, `TOWN*`, `TRAV0I01–04` | None: the local map is a vector diagram | `maps.ts` |
 | Compass | — | None: a DOM strip | `hud.ts` |
 | Paintings | `*PAINT.CIF` | None | — |
-| Fonts | `FONT0000–0004.FNT` | None (published as `font.classic.*`, not drawn); the DOM uses system fonts | — |
+| Fonts | `FONT0000–0004.FNT` | None (published as `font.classic.*`, not drawn): the UI ships its own open typefaces, Alegreya, Alegreya SC and Cinzel (`src/ui/fonts/`, licences in `THIRD_PARTY_NOTICES.md`) | `styles.css` |
 
 
 ## Converting the screens, backgrounds and portraits
