@@ -89,10 +89,14 @@ if [[ ${#busy[@]} -gt 0 ]]; then
   exit 1
 fi
 
+# An old name kept as a link to its new place (for worktrees not yet rebased) has nothing left to move.
+moved() { [[ -L $1 && -e $2 && $(readlink -f "$1") == "$(readlink -f "$2")" ]]; }
+
 # Moves one path; merges a directory into an existing one, refusing to replace anything.
 move() {
   local from=$1 to=$2
   [[ -e $from || -L $from ]] || return 0
+  moved "$from" "$to" && return 0
   if [[ ! -e $to && ! -L $to ]]; then
     if $dry; then echo "would move $from -> $to"; return 0; fi
     mkdir -p "$(dirname "$to")"
@@ -114,7 +118,7 @@ move() {
 # Check every move first, so a conflict stops the run before anything has moved.
 for ((i = 0; i < ${#moves[@]}; i += 2)); do
   from=${moves[i]} to=${moves[i + 1]}
-  if [[ (-e $from || -L $from) && (-e $to || -L $to) ]] && ! [[ -d $from && ! -L $from && -d $to ]]; then
+  if [[ (-e $from || -L $from) && (-e $to || -L $to) ]] && ! [[ -d $from && ! -L $from && -d $to ]] && ! moved "$from" "$to"; then
     echo "both $from and $to exist; move or remove one by hand and run again" >&2
     exit 1
   fi
