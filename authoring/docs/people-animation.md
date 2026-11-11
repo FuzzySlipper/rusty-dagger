@@ -228,6 +228,8 @@ Faults the route now handles itself, found on the three men, who wear tunics wit
 - **Empty layers:** a part whose See-through layer is empty is left out of the plan.
 - **Bob:** a view whose own bob is under half the front's takes only the share it lacks.
 - **Profiles:** a tunic's hem gets springs. A rig without foot bones gets no heel-to-toe roll.
+- **A tunic given whole:** when See-through gives a tunic as topwear alone, the build cuts it at the belt so the skirt rides the hips.
+  The cut skirt then hangs on three chains spread along its flare, like a split skirt, and swings with springs and the clip's edges.
 - **Walking shoes** replace the whole shin drawing, so they suit legs hidden under a skirt only.
 
 Faults found on 397, a hooded woman in a floor-length skirt:
