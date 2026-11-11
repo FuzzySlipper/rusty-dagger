@@ -497,6 +497,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
         // A standing panel request ages on the same admitted world time as everything else.
         _interactions.AgePanelRequest(deltaSeconds * facts.AdmittedStepCount);
+        // The tutorial's next page waits on play, not on a menu or a held moment.
+        _tutorial.Age(deltaSeconds * facts.AdmittedStepCount);
 
         // Ordering within this one admitted update is clock, calendar consumers (magic rounds among
         // them), simulation, then locomotion minutes. A normal game minute is one magic round; a
@@ -934,6 +936,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             InputDevice = _lastInputDevice,
             Loading = _loading,
             Screens = DaggerfallUiArt.Screens.ToDictionary(screen => screen, screen => DrawnArt?.Drawn(screen) ?? screen, StringComparer.Ordinal),
+            TutorialOffer = _tutorial.Offer,
+            TutorialRunning = _tutorial.Running,
+            Tutorial = _tutorial.View,
         });
         _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);
         Vector3 facing = ActorHeading.Forward(State.PlayerControl.YawRadians);

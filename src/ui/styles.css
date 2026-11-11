@@ -610,6 +610,18 @@ body, dialog { font-family: var(--font-body); }
 
 /* Help: the pages as a column of tabs beside the page shown, read on parchment. */
 .dagger-help { display: grid; grid-template-columns: 14rem minmax(0, 1fr); gap: 1rem; align-items: start; }
+.dagger-help-column { display: grid; gap: 1.25rem; align-content: start; }
+.dagger-help-tutorial { display: grid; gap: .5rem; padding-top: 1rem; border-top: 1px solid rgb(212 181 107 / .35); }
+.dagger-help-tutorial[hidden] { display: none; }
+.dagger-help-tutorial p { margin: 0; color: var(--ink-dim); font-size: .85rem; line-height: 1.4; }
+/* The tutorial page that is up: parchment over the held world. */
+.dagger-tutorial { width: var(--panel-narrow); max-height: var(--panel-height); overflow: auto; padding: 1.5rem 2rem 1.25rem; color: #2a170a; }
+.dagger-tutorial-progress { margin: 0 0 .25rem; font: 700 .75rem var(--font-label); letter-spacing: .08em; text-transform: uppercase; color: #6b4e26; }
+.dagger-tutorial h3 { margin: 0 0 .75rem; font: 700 1.35rem var(--font-title); }
+.dagger-tutorial-page p { margin: 0 0 .75rem; line-height: 1.55; }
+.dagger-tutorial-page kbd { display: inline-block; white-space: nowrap; padding: 0 .35rem; border: 1px solid #7a5a2c; border-radius: 2px; background: rgb(122 90 44 / .14); color: #2a170a; font: 700 .85em var(--font-label); }
+.dagger-tutorial-page kbd.is-unbound { font-style: italic; font-weight: 400; }
+.dagger-tutorial-actions { display: flex; justify-content: space-between; gap: .75rem; margin-top: 1rem; }
 .dagger-help-tabs { display: grid; gap: .375rem; }
 .dagger-help-tabs [role="tab"] { text-align: left; }
 .dagger-help-page { min-height: 24rem; padding: 1.5rem 2rem; }

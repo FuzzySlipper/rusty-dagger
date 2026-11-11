@@ -20,6 +20,7 @@ import { applySkin } from './skin.js';
 import { isHud, isSaveSlots, type SaveSlotProjection } from './projection.js';
 import { renderQuestMessages } from './quests.js';
 import { mountRadial } from './radial.js';
+import { mountTutorial } from './tutorial.js';
 import { mountShell } from './shell.js';
 import { isSpellbookProjection } from './spells.js';
 import { mountTooltips } from './tooltip.js';
@@ -118,13 +119,14 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     openDeveloper: () => { if (!developer.isOpen()) void developer.toggle(); } });
   const radial = mountRadial(shell, { send, runMenuAction: action => menu.runAction(action), sync });
   let radialRevision: string | null = null;
+  const tutorial = mountTutorial(shell, send);
   const entry = mountEntry(shell, send, menu.creation, () => { if (menu.dialog.open) menu.dialog.close(); });
   const dialogue = mountDialogue(shell, send, ask);
 
   // A pointer lock the world held, lost in play, is the player asking for the menu: the browser and
   // the desktop shell spend Escape on releasing the lock, so this is what Escape does in play.
   const interaction = mountInteraction(context, { onLockLostInPlay: () => { if (!menu.dialog.open && !dead && !entry.isTitle()) menu.open(); } });
-  interaction.needsCursor(() => loading.open() || menu.dialog.open || radial.isOpen() || dialogue.window.open || dialogue.summoningOffer.open || developer.isOpen());
+  interaction.needsCursor(() => loading.open() || menu.dialog.open || radial.isOpen() || tutorial.isOpen() || dialogue.window.open || dialogue.summoningOffer.open || developer.isOpen());
   // The surfaces that take the cursor, topmost first. Escape and Back go to the topmost: from any menu
   // panel Escape closes the whole menu while Back steps out one panel. A question the product needs
   // answered (a summoning offer, a court, a quest prompt, the death and title screens) has no back, so
@@ -134,6 +136,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     navigation.register({ name: 'loading', root: loading.dialog, layer: 110, isOpen: loading.open, initialFocus: loading.initialFocus }),
     navigation.register({ name: 'confirm', root: confirmPrompt.dialog, layer: 100, isOpen: confirmPrompt.open, back: confirmPrompt.cancel }),
     navigation.register({ name: 'radial', root: radial.root, layer: 95, isOpen: radial.isOpen, back: radial.close }),
+    // A tutorial page holds the world over play; Back reads on.
+    navigation.register({ name: 'tutorial', root: tutorial.root, layer: 85, isOpen: tutorial.isOpen, back: tutorial.readOn }),
     navigation.register({ name: 'menu', root: menu.dialog, layer: 90, isOpen: () => menu.dialog.open,
       back: menu.back, panel: menu.stepPanel, page: menu.page, pageHint: menu.pageHint }),
     navigation.register({ name: 'summoning-offer', root: dialogue.summoningOffer, layer: 80, isOpen: () => dialogue.summoningOffer.open }),
@@ -225,6 +229,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     entry.update(value);
     hud.update(value);
     radial.update(value);
+    tutorial.update(value);
     // The radial's key or the pad's Y reach the product in play, which asks for the radial as it asks for a panel.
     const request = value.panelRequest ?? null;
     if (request?.panel === 'radial' && request.revision !== radialRevision) {
@@ -257,6 +262,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     hud.dispose();
     menu.dispose();
     radial.dispose();
+    tutorial.dispose();
     developer.dispose();
     document.removeEventListener('keydown', onKeyDown, true);
     document.removeEventListener('keyup', onKeyUp, true);

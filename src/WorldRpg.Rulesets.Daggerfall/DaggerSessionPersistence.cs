@@ -58,6 +58,7 @@ internal sealed class DaggerSessionPersistence
     internal Func<DaggerfallCreateItemRequest?> PendingCreateItem { get; set; } = () => null;
     internal Func<DaggerfallIdentifyRequest?> PendingIdentify { get; set; } = () => null;
     internal Func<DaggerfallDispelRequest?> PendingDispel { get; set; } = () => null;
+    internal Func<DaggerfallTutorialProgress?> Tutorial { get; set; } = () => null;
     internal Func<string?> PendingTeleport { get; set; } = () => null;
     internal Func<double> PlaySeconds { get; set; } = () => 0;
     internal Func<DaggerfallTeleportAnchor?> TeleportAnchor { get; set; } = () => null;
@@ -164,6 +165,7 @@ internal sealed class DaggerSessionPersistence
             PlaySeconds = PlaySeconds(),
             TeleportAnchor = TeleportAnchor(),
             PendingIdentify = PendingIdentify(),
+            Tutorial = Tutorial(),
             BanishedActors = [.. BanishedActors().Order()],
             Quests = State.Quests.Capture(),
             Doors = _doors().Capture(),

@@ -57,6 +57,11 @@ internal sealed record DaggerfallHudFrame(
     /// painting, or the classic screen itself.
     /// </summary>
     internal IReadOnlyDictionary<string, string> Screens { get; init; } = new Dictionary<string, string>();
+    /// <summary>The line Help offers the tutorial with, or null when the game has none.</summary>
+    internal string? TutorialOffer { get; init; }
+    internal bool TutorialRunning { get; init; }
+    /// <summary>The tutorial page that is up, holding the world, or null.</summary>
+    internal DaggerfallTutorialView? Tutorial { get; init; }
 }
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
@@ -277,9 +282,11 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("applied", builder.Boolean(activation.Applied)),
             ("dialogue", activation.Dialogue is null ? builder.Null() : Dialogue(builder, activation.Dialogue))))];
         if (quests is not null) fields = [.. fields, ("quests", Quests(builder, quests))];
-        fields = [.. fields, ("help", builder.Array(Help.Select(page => builder.Object(("title", builder.String(page.Title)),
-            ("paragraphs", builder.Array(page.Paragraphs.Select(paragraph => builder.Array(paragraph.Select(segment => segment.Action is { } action
-                ? builder.Object(("action", builder.String(action))) : builder.Object(("text", builder.String(segment.Text!)))).ToArray())).ToArray())))).ToArray()))];
+        fields = [.. fields, ("help", builder.Array(Help.Select(page => HelpPage(builder, page)).ToArray()))];
+        if (frame.TutorialOffer is { } offer)
+            fields = [.. fields, ("tutorial", builder.Object(("offer", builder.String(offer)), ("running", builder.Boolean(frame.TutorialRunning)),
+                ("page", frame.Tutorial is { } shown ? builder.Object(("index", builder.Number(shown.Index)), ("count", builder.Number(shown.Count)),
+                    ("content", HelpPage(builder, shown.Page))) : builder.Null())))];
         if (notebook is not null) fields = [.. fields, ("notebook", Notebook(builder, notebook))];
         if (frame.CreateItem is { } createItem) fields = [.. fields, ("createItem", builder.Object(("revision", builder.String(createItem.Revision)),
             ("options", builder.Array(createItem.Options.Select(option => builder.Object(("id", builder.String(option.Id)), ("label", builder.String(option.Label)))).ToArray()))))];
@@ -719,6 +726,11 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("succeeded", builder.Boolean(group.Succeeded)), ("status", builder.String(group.Status)),
                 ("entries", builder.Array(group.Entries.Select(message => QuestMessage(builder, message)).ToArray())))).ToArray())))),
         ("pending", quests.Pending is null ? builder.Null() : QuestMessage(builder, quests.Pending)));
+
+    /// <summary>A help or tutorial page: its title and its paragraphs, each words and the controls it names.</summary>
+    private static uint HelpPage(UiValueBuilder builder, DaggerfallHelpPage page) => builder.Object(("title", builder.String(page.Title)),
+        ("paragraphs", builder.Array(page.Paragraphs.Select(paragraph => builder.Array(paragraph.Select(segment => segment.Action is { } action
+            ? builder.Object(("action", builder.String(action))) : builder.Object(("text", builder.String(segment.Text!)))).ToArray())).ToArray())));
 
     private static uint Notebook(UiValueBuilder builder, DaggerfallNotebookPresentation notebook) => builder.Object(
         ("revision", builder.String(notebook.Revision)),

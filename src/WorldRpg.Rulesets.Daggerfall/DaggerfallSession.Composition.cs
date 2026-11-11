@@ -571,7 +571,8 @@ internal sealed partial class DaggerfallSession
                 dialogueOpen: () => _activationPresentation.View.Dialogue is not null,
                 characterCreationOpen: () => State.Character.Pending is not null,
                 levelUpOpen: () => State.LevelUps.Pending is not null,
-                bankOpen: () => ActiveBankRegion() is not null, dispelOpen: () => _pendingDispel is not null, identifyOpen: () => _pendingIdentify is not null, teleportOpen: () => _pendingTeleport is not null, createItemOpen: () => _pendingCreateItem is not null, legalOpen: () => LegalModalOpen);
+                bankOpen: () => ActiveBankRegion() is not null, dispelOpen: () => _pendingDispel is not null, identifyOpen: () => _pendingIdentify is not null, teleportOpen: () => _pendingTeleport is not null, createItemOpen: () => _pendingCreateItem is not null, legalOpen: () => LegalModalOpen,
+                tutorialOpen: () => _tutorial.Shown);
             itemInstances.StackChanged += State.Quests.ObserveStackChange;
             // Only a held bundle lives as long as its item is worn and whole. A used or striking item's
             // cast, its readied spell and its missile outlive the item breaking or changing hands, as in
@@ -625,6 +626,7 @@ internal sealed partial class DaggerfallSession
             _playSeconds = saved?.PlaySeconds ?? 0;
             _teleportAnchor = saved?.TeleportAnchor;
             _pendingIdentify = saved?.PendingIdentify;
+            _tutorial = new(definitions.Tutorial, saved?.Tutorial);
             State.Character.SpellForgotten+=key=>
             { if(Casting.ReadyFor(actors.Player.DurableId)?.SpellKey==key) Casting.Cancel(actors.Player.DurableId); };
             _persistence.Infections = Infections.Capture;
@@ -642,6 +644,7 @@ internal sealed partial class DaggerfallSession
             _persistence.PlaySeconds = () => _playSeconds;
             _persistence.TeleportAnchor = () => _teleportAnchor;
             _persistence.PendingIdentify = () => CurrentIdentifyRequest;
+            _persistence.Tutorial = () => _tutorial.Progress;
             _roster.BanishedActors.UnionWith(saved?.BanishedActors ?? []);
             _persistence.BanishedActors = () => _roster.BanishedActors;
             _sites = new DaggerfallSiteLifecycle(engine, State, definitions, tuning, _time, _site, _spatial, _camera, audioBundles,

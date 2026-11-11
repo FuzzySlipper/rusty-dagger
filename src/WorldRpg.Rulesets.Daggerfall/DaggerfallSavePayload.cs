@@ -70,6 +70,8 @@ internal sealed record DaggerfallSavePayload(
     [JsonRequired] public DaggerfallTeleportAnchor? TeleportAnchor { get; init; }
     [JsonRequired] public DaggerfallIdentifyRequest? PendingIdentify { get; init; }
     [JsonRequired] public DaggerfallCreateItemRequest? PendingCreateItem { get; init; }
+    /// <summary>How far the player is through the tutorial Help offers, or null when none is under way.</summary>
+    [JsonRequired] public DaggerfallTutorialProgress? Tutorial { get; init; }
     [JsonRequired]
     public long[] BanishedActors { get; init; } = [];
 
@@ -1760,6 +1762,7 @@ internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definiti
 
 [JsonSourceGenerationOptions(WriteIndented = false)]
 [JsonSerializable(typeof(DaggerfallDispelRequest))]
+[JsonSerializable(typeof(DaggerfallTutorialProgress))]
 [JsonSerializable(typeof(DaggerfallTeleportAnchor))]
 [JsonSerializable(typeof(DaggerfallIdentifyRequest))]
 [JsonSerializable(typeof(DaggerfallSoulTrapState))]

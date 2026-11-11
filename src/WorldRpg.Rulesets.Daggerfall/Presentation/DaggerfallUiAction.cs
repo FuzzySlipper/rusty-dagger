@@ -25,7 +25,7 @@ internal enum DaggerfallUiActionKind
     CharacterClassQuestions, CharacterClassAnswer, CharacterClassBack,
     CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel, CharacterQuickStart,
     CharacterLevelAllocate, CharacterLevelCommit,
-    ActivationMode, Attack, Loot, WeaponToggle, Menu,
+    ActivationMode, Attack, Loot, WeaponToggle, Menu, TutorialStart, TutorialContinue, TutorialEnd,
     DialogueTone, DialogueTopic, DialogueClose, TavernBuy, TrainingCommit, MerchantBuy, MerchantSell, MerchantRepair, MerchantCollectRepair, MerchantIdentify, MerchantShoplift, MerchantQuote,
     LegalChoice, CreateItemSelect, CreateItemCancel, DispelSelect, DispelCancel, TeleportSelect, IdentifySelect, IdentifyCancel,
     TransportSelect, TransportToggle, TransportLeaveShip, TransportBoardShip,
@@ -186,6 +186,9 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.Loot, "loot", DaggerfallUiPhases.Playing),
         // The command radial readies or sheathes the weapon as its key does, on the first step play admits.
         new(DaggerfallUiActionKind.WeaponToggle, "weapon-toggle", DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.TutorialStart, "tutorial-start", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.TutorialContinue, "tutorial-continue", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.TutorialEnd, "tutorial-end", DaggerfallUiPhases.Interaction),
         // The DOM reports whether its game menu (and so any of its panels) is open, because an open
         // menu holds the world. A menu closed over death still reaches the session.
         new(DaggerfallUiActionKind.Menu, "menu", DaggerfallUiPhases.Live | DaggerfallUiPhases.Dead),
@@ -555,6 +558,8 @@ internal static class DaggerfallUiAction
                 return fields.SetEquals(["action", "note"]) && !string.IsNullOrWhiteSpace(note) ? new(action, Note: note) : null;
             if (action == "menu") return fields.SetEquals(["action", "open"]) ? new(action, Open: open) : null;
             if (action == "weapon-toggle") return fields.SetEquals(["action"]) ? new(action) : null;
+            if (action is "tutorial-start" or "tutorial-end") return fields.SetEquals(["action"]) ? new(action) : null;
+            if (action == "tutorial-continue") return fields.SetEquals(["action", "page"]) && page is >= 0 ? new(action, Page: page) : null;
             if (action == "save-slots") return fields.SetEquals(["action"]) ? new(action) : null;
             if (action is "content-import" or "content-import-cancel") return fields.SetEquals(["action"]) ? new(action) : null;
             if (action == "save-slot")

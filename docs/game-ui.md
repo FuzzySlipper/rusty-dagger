@@ -339,8 +339,12 @@ update to acknowledge in, so it runs the same phases at once.
 - **Help** (`help.ts`): the game's help pages, authored in the base payload's `help` section, as a
   column of tabs beside the page read on parchment; the triggers or Page Up and Down turn them. A
   paragraph names a control by its action (`{inventory}`), and the page draws the key or button the
-  player has bound to it on the device in use. The tutorial is this page, not a quest a new game asks
-  about.
+  player has bound to it on the device in use. Under the tabs Help offers the tutorial (`help.tutorial`);
+  a new game never asks about it.
+- **Tutorial** (`tutorial.ts`, `DaggerfallTutorial`): taken from Help, it closes the menu and shows its
+  pages one at a time on a parchment card that holds the world. Each page names controls as Help does.
+  Reading on (or Back) puts the card away, and the next page comes up after its `afterSeconds` of play;
+  End tutorial stops it, and Help can start it again. Its progress is saved.
 - **Journal** (`journal.ts`): Quests, Finished, Notes and Book are tabs over
   their panels. Each quest entry takes focus, and up and down scroll an entry
   taller than its page. The notebook key and an opened book open the journal on

@@ -10,7 +10,7 @@ import type { MapProjection } from './maps.js';
 import type { NotebookProjection } from './notebook.js';
 import type { PropertyProjection } from './property.js';
 import type { TravelProjection } from './travel.js';
-import type { HelpPage } from './help.js';
+import type { HelpPage, TutorialOffer, TutorialPage } from './help.js';
 
 /** The HUD snapshot the ruleset publishes and the semantic actions the UI sends back. */
 
@@ -92,6 +92,8 @@ export interface DaggerHud {
   readonly inputDevice?: 'keyboard' | 'controller';
   /** The game's help pages, each paragraph its words and the controls it names. */
   readonly help?: readonly HelpPage[];
+  /** The tutorial Help offers, whether it runs, and the page of it that is up. */
+  readonly tutorial?: TutorialOffer & { readonly page: TutorialPage | null };
   readonly transport?: TransportProjection | null;
   readonly property?: PropertyProjection | null;
   readonly travel?: TravelProjection | null;

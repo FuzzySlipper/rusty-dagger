@@ -4,7 +4,7 @@ import type { ConfirmQuestion } from './confirm.js';
 import { mountControls } from './controls.js';
 import { button, type Send } from './host.js';
 import { mountInventory } from './inventory.js';
-import { isHelpPages, mountHelp } from './help.js';
+import { isHelpPages, isTutorial, mountHelp } from './help.js';
 import { mountJournal } from './journal.js';
 import { mountLodging, isLodgingProjection } from './lodging.js';
 import { mountLoot, type LootProjection } from './loot.js';
@@ -136,7 +136,8 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
   const notebookRoot = shell.querySelector<HTMLElement>('.dagger-notebook-root')!;
   const journalView = mountJournal(notebookRoot, send, ask);
   const helpRoot = shell.querySelector<HTMLElement>('.dagger-help-root')!;
-  const helpView = mountHelp(helpRoot);
+  // The tutorial starts from Help and plays over the world, so the menu closes for it.
+  const helpView = mountHelp(helpRoot, () => { send({ action: 'tutorial-start' }); closeMenu(); });
   const spellsRoot = shell.querySelector<HTMLElement>('.dagger-spells-root')!;
   const lootRoot = shell.querySelector<HTMLElement>('.dagger-loot-root')!;
   const lootView = mountLoot(lootRoot, send);
@@ -526,7 +527,8 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
         if (magic.length === 0) { const empty = document.createElement('p'); empty.textContent = 'No usable magic items or potions.'; magicItemsRoot.replaceChildren(empty); }
         else magicItemsRoot.replaceChildren(list);
       });
-      helpView.update(isHelpPages(value.help) ? value.help : [], value.controls ?? null, value.inputDevice ?? 'keyboard');
+      helpView.update(isHelpPages(value.help) ? value.help : [], value.controls ?? null, value.inputDevice ?? 'keyboard',
+        isTutorial(value.tutorial) ? value.tutorial : null);
       if (value.controls) {
         controlsView.update(value.controls, host.uiScale());
         videoView.update(value.controls.groundCover);

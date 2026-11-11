@@ -1865,6 +1865,57 @@ test('help pages name the controls the player has bound, on the device in use, a
   } finally { f.dispose(); }
 });
 
+test('Help offers the tutorial, which starts only when taken and closes the menu for play', () => {
+  const f = fixture();
+  try {
+    const help = [{ title: 'Getting around', paragraphs: [[{ text: 'Walk about.' }]] }];
+    f.publish({ help, tutorial: { offer: 'A short tutorial walks you through your first steps.', running: false, page: null } });
+    assert.equal(f.actions.some(action => action.action === 'tutorial-start'), false, 'Nothing starts the tutorial unasked.');
+    f.root.querySelector('[data-action="help"]').click();
+    const offer = f.root.querySelector('.dagger-help-tutorial');
+    const take = offer.querySelector('.dagger-help-tutorial-start');
+    assert.equal(offer.hidden, false);
+    assert.equal(offer.querySelector('p').textContent, 'A short tutorial walks you through your first steps.');
+    assert.equal(take.textContent, 'Take the tutorial');
+    take.click();
+    assert.deepEqual(f.actions.slice(-2), [{ action: 'tutorial-start' }, { action: 'menu', open: false }]);
+    assert.equal(f.root.querySelector('.dagger-menu').open, false, 'The tutorial plays over the world, so the menu closes for it.');
+    f.publish({ help, tutorial: { offer: 'A short tutorial walks you through your first steps.', running: true, page: null } });
+    f.root.querySelector('[data-action="help"]').click();
+    assert.equal(take.disabled, true);
+    assert.equal(take.textContent, 'Tutorial under way');
+    // A game with no tutorial offers none.
+    f.publish({ help });
+    assert.equal(offer.hidden, true);
+  } finally { f.dispose(); }
+});
+
+test('a tutorial page names the player\'s controls and reads on, finishes or ends by its own choice', () => {
+  const f = fixture();
+  try {
+    const controls = { diagnostic: '', bindings: [{ id: 'inventory', category: 'interface', label: 'Inventory', keys: ['KeyI'], fixed: false, buttons: [8] }] };
+    const page = (index, count) => ({ offer: 'Tutorial.', running: true, page: { index, count,
+      content: { title: 'Arm yourself', paragraphs: [[{ text: 'Open your inventory with ' }, { action: 'inventory' }, { text: '.' }]] } } });
+    f.publish({ controls, tutorial: page(1, 3) });
+    const card = f.root.querySelector('.dagger-tutorial');
+    assert.equal(card.open, true);
+    assert.equal(card.querySelector('.dagger-tutorial-progress').textContent, 'Tutorial · 2 of 3');
+    assert.equal(card.querySelector('h3').textContent, 'Arm yourself');
+    assert.equal(card.querySelector('.dagger-tutorial-page p').textContent, 'Open your inventory with I.');
+    card.querySelector('.dagger-tutorial-next').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'tutorial-continue', page: 1 });
+    // Back puts the page aside and reads on; it does not end the tutorial.
+    card.dispatchEvent(new window.Event('cancel', { cancelable: true }));
+    assert.deepEqual(f.actions.at(-1), { action: 'tutorial-continue', page: 1 });
+    card.querySelector('.dagger-tutorial-end').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'tutorial-end' });
+    f.publish({ controls, tutorial: page(2, 3) });
+    assert.equal(card.querySelector('.dagger-tutorial-next').textContent, 'Finish');
+    f.publish({ controls, tutorial: { offer: 'Tutorial.', running: true, page: null } });
+    assert.equal(card.open, false, 'Between pages the card goes and play runs.');
+  } finally { f.dispose(); }
+});
+
 test('repeated notebook projections retain note drafts and the focused textarea', () => {
   const f = fixture();
   try {

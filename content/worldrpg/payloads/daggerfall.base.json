@@ -4924,7 +4924,83 @@
           "Quick save with {quick-save} and quick load with {quick-load}. The game menu, opened with {menu}, saves and loads named games and holds the settings, where every control can be changed."
         ]
       }
-    ]
+    ],
+    "tutorial": {
+      "offer": "A short tutorial walks you through your first steps, a page at a time while you play.",
+      "pages": [
+        {
+          "title": "Your first steps",
+          "afterSeconds": 0,
+          "paragraphs": [
+            "This tutorial shows a page at a time while you play. Read on to carry on playing; the next page follows shortly. End it whenever you like, and take it again from Help.",
+            "Walk with {move.forward}, {move.left}, {move.backward} and {move.right}, and look about with the mouse or the right stick. Every control can be changed: open the menu with {menu} and choose Settings."
+          ]
+        },
+        {
+          "title": "Arm yourself",
+          "afterSeconds": 10,
+          "paragraphs": [
+            "Open your inventory with {inventory}. Put the best weapon you are trained in into your hand and any armour you carry onto your body.",
+            "A weapon your training does not cover, or one of weak metal, will seldom land a blow."
+          ]
+        },
+        {
+          "title": "Fighting",
+          "afterSeconds": 15,
+          "paragraphs": [
+            "Ready or sheathe your weapon with {toggle-weapon}. Press {attack} to strike, hold {block} to guard and press {kick} to kick.",
+            "Every blow spends stamina, the green bar, which refills when you stop to catch your breath."
+          ]
+        },
+        {
+          "title": "The command radial",
+          "afterSeconds": 10,
+          "paragraphs": [
+            "Press {radial} for the command radial. From it you ready your weapon, choose how you use what you touch (grab, look, talk or steal) and reach your spells, map, travel and rest.",
+            "Its centre tells you where you are, the date and the hour, and what you hold ready."
+          ]
+        },
+        {
+          "title": "Resting",
+          "afterSeconds": 5,
+          "paragraphs": [
+            "When your health, stamina or magicka run low, rest with {rest}. You cannot rest with enemies near, and the guards will not let you sleep in the streets: take a room at an inn."
+          ]
+        },
+        {
+          "title": "Magic",
+          "afterSeconds": 10,
+          "paragraphs": [
+            "If you know spells, open your spellbook with {spell} and cast one from it. A spell aimed at a target is loosed where you look, and {recast} casts your last spell again.",
+            "Creatures often resist magic, so keep a weapon to hand."
+          ]
+        },
+        {
+          "title": "Saving",
+          "afterSeconds": 10,
+          "paragraphs": [
+            "Save often. Open the menu with {menu} and choose Save, or save at once with {quick-save}."
+          ]
+        },
+        {
+          "title": "Out of the cave",
+          "afterSeconds": 20,
+          "paragraphs": [
+            "Your first task is to find your way out of this cave. Some doors look like the stone walls around them, so try any wall that seems out of place.",
+            "Open doors, treasure piles and the bodies of the fallen with {interact}, and take what they hold into your pack."
+          ]
+        },
+        {
+          "title": "Choose your fights",
+          "afterSeconds": 45,
+          "paragraphs": [
+            "Some creatures can be hurt only by stronger metal: an imp shrugs off iron, so carry steel or better.",
+            "You need not fight everything. Run from what you cannot beat: your skills grow by using them, not by slaying the strongest foe.",
+            "That is all. The rest is under Help in the menu. Good fortune."
+          ]
+        }
+      ]
+    }
   },
   "questJournalTitles": {
     "S0000999": "Main Quest"

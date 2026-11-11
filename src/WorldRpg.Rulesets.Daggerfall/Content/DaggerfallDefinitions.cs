@@ -330,6 +330,8 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
 
     /// <summary>The game's help pages, read from the Help entry of the game menu.</summary>
     internal IReadOnlyList<DaggerfallHelpPage> Help { get; init; } = [];
+    /// <summary>The tutorial the Help page offers, or none.</summary>
+    internal DaggerfallTutorialDefinition? Tutorial { get; init; }
 
     /// <summary>The authored presentation locations assembled from their blocks share, when the payload carries it.</summary>
     internal DaggerfallAssembledSiteDefinition? AssembledSites { get; init; }
