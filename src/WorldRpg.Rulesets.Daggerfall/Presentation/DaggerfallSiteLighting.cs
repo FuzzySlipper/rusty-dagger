@@ -258,10 +258,12 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         _daylight = exteriorDaylight;
         _dungeonLevel = dungeonLevel;
         _flash = lightningFlash;
-        if (_carriesSky && _profileKind == DaggerfallWorldProfileKind.Exterior)
-            _sunRequest = SunRequest(calendar, exteriorDaylight);
-        if (_sun is { } sun && _sunRequest is { } sunRequest)
-            _graphics.UpdateLight(new(sun, sunRequest));
+        if (_carriesSky && _profileKind == DaggerfallWorldProfileKind.Exterior
+            && SunRequest(calendar, exteriorDaylight) is var next && (_sunRequest is not { } held || Moved(held.Descriptor, next.Descriptor)))
+        {
+            _sunRequest = next;
+            if (_sun is { } sun) _graphics.UpdateLight(new(sun, next));
+        }
         float level = AmbientLevel(calendar);
         if (level == _ambientLevel) return;
         if (_ambient is { } ambient)
@@ -412,6 +414,21 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         _ambientId, false, 0,
         new LightDescriptor(LightKind.Ambient, AmbientColor(level), level * Scale, true,
             Vector3.Zero, Vector3.Zero, false, 0F, 0F, 0F, 0F, LightShadowIntent.Disabled));
+
+    /// <summary>
+    /// Whether the sun has changed enough to show. Every turn makes the Engine refit and redraw the sun's shadow, and game
+    /// time moves the sun about a twentieth of a degree each real second, so it turns once it has moved
+    /// <see cref="SunTurnDegrees"/>, or brightened, dimmed or changed colour by a step the eye can see.
+    /// </summary>
+    private static bool Moved(LightDescriptor held, LightDescriptor next) =>
+        Vector3.Dot(Vector3.Normalize(held.Direction), Vector3.Normalize(next.Direction)) < SunTurnCosine
+        || MathF.Abs(next.Intensity - held.Intensity) > SunStep * MathF.Max(held.Intensity, SunStep)
+        || Vector3.Distance(next.Color, held.Color) > SunStep;
+
+    private const float SunTurnDegrees = .05f;
+    private static readonly float SunTurnCosine = MathF.Cos(SunTurnDegrees * MathF.PI / 180f);
+    /// <summary>A sun's brightness or colour changes by less than this share before it shows.</summary>
+    private const float SunStep = .005f;
 
     private LightRequest SunRequest(DaggerfallCalendar calendar, float daylight)
     {

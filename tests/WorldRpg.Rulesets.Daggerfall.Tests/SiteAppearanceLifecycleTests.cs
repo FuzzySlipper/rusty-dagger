@@ -394,6 +394,14 @@ public sealed class SiteAppearanceLifecycleTests
         exteriorLighting.UpdateAmbient(DaggerfallCalendar.Start with { Hour = 8 }, daylight);
         Assert.True(appearance.LightUpdates.Last(update => update.Replacement.Descriptor.Kind == LightKind.Directional).Replacement.Descriptor.Direction.X < -.5f);
         exteriorLighting.UpdateAmbient(noon, daylight);
+        // A game second moves the sun too little to show, so it isn't turned; a game minute moves it a quarter of a degree.
+        int SunTurns() => appearance.LightUpdates.Count(update => update.Replacement.Descriptor.Kind == LightKind.Directional);
+        int turns = SunTurns();
+        exteriorLighting.UpdateAmbient(noon with { Second = 1 }, daylight);
+        Assert.Equal(turns, SunTurns());
+        exteriorLighting.UpdateAmbient(noon with { Minute = 1 }, daylight);
+        Assert.Equal(turns + 1, SunTurns());
+        exteriorLighting.UpdateAmbient(noon, daylight);
         exteriorLighting.UpdateAmbient(noon, daylight, lightningFlash: 2);
         Assert.Equal(2f * DaggerfallTuning.Defaults.SiteLighting.ExteriorScale, appearance.LightUpdates.Last().Replacement.Descriptor.Intensity);
         exteriorLighting.UpdateAmbient(noon, daylight);
@@ -712,11 +720,16 @@ public sealed class SiteAppearanceLifecycleTests
         DaggerfallCalendar noon = DaggerfallCalendar.Start with { Hour = 12 };
         using DaggerfallSiteLighting lighting = new(appearance, engine.Context.CameraView, SkyExterior(), DaggerfallTuning.Defaults.SiteLighting, noon);
 
+        // The sun as last sent: created with the site, then turned only when it has visibly changed.
+        LightDescriptor Sun() => appearance.LightUpdates.Where(update => update.Replacement.Descriptor.Kind == LightKind.Directional)
+            .Select(update => update.Replacement.Descriptor)
+            .DefaultIfEmpty(appearance.LightRequests.Last(request => request.Descriptor.Kind == LightKind.Directional).Descriptor).Last();
+
         lighting.UpdateAmbient(noon, 1);
-        Assert.Equal(Vector3.One, appearance.LightUpdates.Last(update => update.Replacement.Descriptor.Kind == LightKind.Directional).Replacement.Descriptor.Color);
+        Assert.Equal(Vector3.One, Sun().Color);
 
         lighting.UpdateAmbient(noon with { Hour = 6, Minute = 10 }, .3f);
-        Vector3 low = appearance.LightUpdates.Last(update => update.Replacement.Descriptor.Kind == LightKind.Directional).Replacement.Descriptor.Color;
+        Vector3 low = Sun().Color;
         Assert.True(low.Z < low.X);
     }
 }
