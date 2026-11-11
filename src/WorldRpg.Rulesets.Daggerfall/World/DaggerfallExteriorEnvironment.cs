@@ -227,7 +227,8 @@ internal sealed class DaggerfallExteriorEnvironment
         DaggerfallExteriorWorldOrigin origin,
         Func<DaggerfallExteriorCellId, DaggerfallExteriorCellGround> grounds,
         IReadOnlyDictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> locations,
-        DaggerfallWorldGridsSet grids)
+        DaggerfallWorldGridsSet grids,
+        DaggerfallExteriorCellId? center = null)
     {
         ArgumentNullException.ThrowIfNull(residentCells);
         ArgumentNullException.ThrowIfNull(grounds);
@@ -240,6 +241,10 @@ internal sealed class DaggerfallExteriorEnvironment
             throw new ArgumentException("Exterior environment residency contains a duplicate cell.", nameof(residentCells));
 
         Dictionary<DaggerfallExteriorCellId, CellFacts> staged = [];
+        // Nature draws from the Engine's random streams, so it is placed here, on the update. A cell that a moving window
+        // brings in away from the player waits its turn for nature, one a step, so a crossing does not place a whole row
+        // in one update; it enters cells away from anyone who could see the trees arrive.
+        bool waitingPlaced = false;
         foreach (DaggerfallExteriorCellId cell in desired)
         {
             locations.TryGetValue(cell, out DaggerfallSiteExterior? location);
@@ -252,15 +257,26 @@ internal sealed class DaggerfallExteriorEnvironment
                 climate.Name,
                 GroundTextureArchive(climate.Value, variantSeason),
                 variantSeason);
-            if (_cells.TryGetValue(cell, out CellFacts? retained) && retained.Variant == variant)
+            _cells.TryGetValue(cell, out CellFacts? held);
+            if (held is not null && held.Variant == variant && (!held.NatureWaiting || waitingPlaced))
             {
-                staged.Add(cell, retained);
+                staged.Add(cell, held);
                 continue;
             }
             DaggerfallExteriorCellGround ground = grounds(cell)
                 ?? throw new InvalidOperationException($"Exterior cell ({cell.X},{cell.Y}) produced no ground for environment admission.");
             _rivers ??= ground.Surface.Rivers;
-            // Nature draws from the Engine's random streams, so it alone is placed here, on the update.
+            bool entersAway = held is null && _initialized && center is { } near
+                && Math.Max(Math.Abs(cell.X - near.X), Math.Abs(cell.Y - near.Y)) > 1;
+            if (entersAway || held is { NatureWaiting: true })
+            {
+                if (waitingPlaced)
+                {
+                    staged.Add(cell, new(cell, variant, ground.Water, ground.Terrain, [], NatureWaiting: true));
+                    continue;
+                }
+                waitingPlaced = true;
+            }
             staged.Add(cell, new(cell, variant, ground.Water, ground.Terrain, BuildNature(cell, ground, variant)));
         }
 
@@ -743,7 +759,8 @@ internal sealed class DaggerfallExteriorEnvironment
         DaggerfallExteriorTerrainVariant Variant,
         IReadOnlyList<DaggerfallExteriorWaterVolume> Water,
         IReadOnlyList<DaggerfallExteriorTerrainTile> Terrain,
-        IReadOnlyList<DaggerfallExteriorNaturePlacement> Nature);
+        IReadOnlyList<DaggerfallExteriorNaturePlacement> Nature,
+        bool NatureWaiting = false);
 
     /// <summary>
     /// Indexed beach jitter keeps bit parity with the donor's Unity.Mathematics.Random.CreateFromIndex,

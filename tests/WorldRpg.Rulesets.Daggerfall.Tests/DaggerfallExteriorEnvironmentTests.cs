@@ -198,6 +198,26 @@ public sealed class DaggerfallExteriorEnvironmentTests
     }
 
     [Fact]
+    public void Cells_a_moving_window_brings_in_away_from_the_player_take_their_nature_one_a_step()
+    {
+        DaggerfallExteriorCellId center = new(0, 0), next = new(2, 0), last = new(3, 0);
+        DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(center);
+        DaggerfallExteriorEnvironment moving = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
+        DaggerfallExteriorEnvironment whole = new(ScopedStreamRandom.Wrap(RandomMinimum.Create()));
+        whole.ReconcileSurfaces([center, next, last], origin, _ => Surface(100F), Locations(), Grids(224, "temperate"), center);
+
+        moving.ReconcileSurfaces([center], origin, _ => Surface(100F), Locations(), Grids(224, "temperate"), center);
+        moving.ReconcileSurfaces([center, next, last], origin, _ => Surface(100F), Locations(), Grids(224, "temperate"), center);
+        Assert.Equal(whole.NatureFor(next), moving.NatureFor(next));
+        Assert.Empty(moving.NatureFor(last));
+        Assert.NotEmpty(moving.TerrainTilesFor(last));
+
+        moving.ReconcileSurfaces([center, next, last], origin, _ => Surface(100F), Locations(), Grids(224, "temperate"), center);
+        Assert.NotEmpty(moving.NatureFor(last));
+        Assert.Equal(whole.NatureFor(last), moving.NatureFor(last));
+    }
+
+    [Fact]
     public void Nature_is_deterministic_and_excludes_the_expanded_location_footprint()
     {
         DaggerfallExteriorCellId cell = new(1, 0);

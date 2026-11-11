@@ -2221,7 +2221,7 @@ internal sealed class DaggerfallSiteLifecycle
         // The window's missing cells build side by side, and its bordering cells after them, ready for the next crossing.
         grounds.Hold(residency.ResidentCells.Concat(residency.Bordering()));
         DaggerfallExteriorEnvironment environment = _exteriorEnvironment ??= new(_random);
-        environment.Reconcile(residency.ResidentCells, ActiveOrigin(residency), grounds.Ground, ExteriorLocations(), _definitions.Grids);
+        environment.Reconcile(residency.ResidentCells, ActiveOrigin(residency), grounds.Ground, ExteriorLocations(), _definitions.Grids, residency.Center);
         DaggerfallExteriorTerrainAppearance appearance =
             _exteriorTerrainAppearance ??= NewTerrainAppearance();
         appearance.ConfigureProfile(Projection.Inputs);

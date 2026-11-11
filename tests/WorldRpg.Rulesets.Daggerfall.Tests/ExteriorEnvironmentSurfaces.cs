@@ -13,7 +13,8 @@ internal static class ExteriorEnvironmentSurfaces
         DaggerfallExteriorWorldOrigin origin,
         Func<DaggerfallExteriorCellId, DaggerfallTerrainSurface> surfaces,
         IReadOnlyDictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> locations,
-        DaggerfallWorldGridsSet grids) =>
+        DaggerfallWorldGridsSet grids,
+        DaggerfallExteriorCellId? center = null) =>
         environment.Reconcile(cells, origin,
-            cell => DaggerfallExteriorEnvironment.Ground(cell, surfaces(cell), locations.GetValueOrDefault(cell), DaggerfallGroundTuning.Default), locations, grids);
+            cell => DaggerfallExteriorEnvironment.Ground(cell, surfaces(cell), locations.GetValueOrDefault(cell), DaggerfallGroundTuning.Default), locations, grids, center);
 }
