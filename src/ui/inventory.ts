@@ -5,7 +5,7 @@ import { mountDrag, type Drag } from './drag.js';
 import type { NavigationSurface } from './navigation.js';
 import { redraw } from './redraw.js';
 import { createStepper, type Stepper } from './stepper.js';
-import { inventoryTransferRow, mountTransfer } from './transfer.js';
+import { inventoryTransferRow, mountTransfer, stackCount } from './transfer.js';
 import type { WagonProjection } from './projection.js';
 
 export interface InventoryProjection {
@@ -1004,8 +1004,10 @@ function itemTooltip(item: InventoryItem, slotLabel: (id: string) => string): HT
   };
   if (item.stackable) fact('Quantity', item.quantity);
   for (const stat of item.stats ?? []) fact(stat.label, stat.text);
-  fact('Weight', item.weightKilograms === undefined ? formatNumber(item.weight) : `${formatNumber(item.weightKilograms)} kg`);
-  fact('Value', `${formatNumber(item.value)} gold`);
+  // A stack's weight and worth are the whole stack's, as its information text gives them.
+  const count = stackCount(item);
+  fact('Weight', item.weightKilograms === undefined ? formatNumber(item.weight * count) : `${formatNumber(item.weightKilograms * count)} kg`);
+  fact('Value', `${formatNumber(item.value * count)} gold`);
   if (item.equippedSlots.length > 0) fact('Worn', item.equippedSlots.map(slotLabel).join(', '));
   parts.push(facts);
   // Wear means something only where there is more than one step of it: a coin is not worn down.

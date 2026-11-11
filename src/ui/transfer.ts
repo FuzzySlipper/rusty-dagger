@@ -255,10 +255,18 @@ function emptyRow(text: string): HTMLElement {
 }
 
 /** The facts a row shows under its name: weight, value and wear, all from the projection. */
+/** How many items a row stands for: a stack's quantity, else one. */
+export function stackCount(item: InventoryItem): number {
+  const count = Number(item.quantity);
+  return item.stackable === true && Number.isFinite(count) && count > 1 ? count : 1;
+}
+
+/** A row's facts; a stack's weight and worth are the whole stack's. */
 export function itemFacts(item: InventoryItem): string {
+  const count = stackCount(item);
   const parts = [
-    item.weightKilograms === undefined ? null : `${formatNumber(item.weightKilograms)} kg`,
-    `${formatNumber(item.value)} gold`,
+    item.weightKilograms === undefined ? null : `${formatNumber(item.weightKilograms * count)} kg`,
+    `${formatNumber(item.value * count)} gold`,
     item.condition !== null && item.condition.maximum > 1
       ? item.condition.broken ? 'broken' : `condition ${item.condition.percentage}%` : null,
     item.identified ? null : 'unidentified',

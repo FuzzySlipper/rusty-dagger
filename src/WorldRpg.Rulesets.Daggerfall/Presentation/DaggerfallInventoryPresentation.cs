@@ -30,8 +30,11 @@ internal sealed record InventoryItemPresentation(string Key, string Definition, 
     /// <summary>What the information text says that no field of the row does: a book's author, the soul a gem holds.</summary>
     internal string[] Notes { get; init; } = [];
 
-    /// <summary>The weight in kilograms; <see cref="Weight"/> is in the template's quarter-kilogram units.</summary>
-    internal double WeightKilograms => Weight * (double)DaggerfallEncumbrancePolicy.TemplateWeightToClassicUnits / DaggerfallEncumbrance.ClassicUnitsPerKilogram;
+    /// <summary>
+    /// What one of the item weighs in kilograms, a gold piece's classic unit included; <see cref="Weight"/> is in the
+    /// template's quarter-kilogram units.
+    /// </summary>
+    internal double WeightKilograms { get; init; }
 }
 internal sealed record ItemConditionPresentation(int Current, int Maximum, int Percentage, bool Broken)
 {
@@ -652,7 +655,7 @@ internal sealed class DaggerfallInventoryPresentation
             CanUseMagic: carried && metadata is not null && (metadata.HasEnchantment || metadata.PotionRecipeKey is not null)
                 && itemUse?.CanUse(itemId, metadata) == true,
             Category: Category(definition, metadata), Stackable: key.StartsWith("stack:", StringComparison.Ordinal), DropRefusal: dropRefusal,
-            Stats: Stats(definition, metadata)) { IconTint = iconTint, Enchanted = metadata?.HasEnchantment == true, DetailsStateFacts = detailsStateFacts, Notes = notes };
+            Stats: Stats(definition, metadata)) { WeightKilograms = DaggerfallEncumbrancePolicy.UnitKilograms(definition, metadata), IconTint = iconTint, Enchanted = metadata?.HasEnchantment == true, DetailsStateFacts = detailsStateFacts, Notes = notes };
     }
 
     /// <summary>The durable meaning of one equipped item, or null before item meaning is composed.</summary>

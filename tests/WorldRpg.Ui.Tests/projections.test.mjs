@@ -2262,7 +2262,7 @@ test('loot sits beside the pack: Take moves a chosen part of a stack or a whole 
       inventory: { gridCapacity: 80, revision: '1', message: '', equipmentChange: null, slots: [], items: [row('stack:gold', { label: 'Gold', quantity: '25', stackable: true, gridSlot: 0 })],
         encumbrance: { currentClassicUnits: 4000, maximumClassicUnits: 20000, canMove: true, currentKilograms: 10, maximumKilograms: 50 } },
       loot: { container: '2000:1', revision: '3', title: 'Rat — loot', message: 'Choose an item to take, or take everything.',
-        items: [row('stack:5', { label: 'Arrows', quantity: '12', stackable: true, weightKilograms: 1.2, value: 12 }), row('unique:9', { label: 'Dagger' })] } });
+        items: [row('stack:5', { label: 'Arrows', quantity: '12', stackable: true, weightKilograms: .1, value: 1 }), row('unique:9', { label: 'Dagger' })] } });
     const panel = f.root.querySelector('.dagger-loot');
     const source = panel.querySelector('[data-transfer-side="source"]');
     const pack = panel.querySelector('[data-transfer-side="pack"]');
@@ -2270,6 +2270,7 @@ test('loot sits beside the pack: Take moves a chosen part of a stack or a whole 
     assert.match(pack.textContent, /Gold × 25/, 'The pack pane shows what the player carries.');
     assert.equal(pack.querySelector('button'), null, 'Nothing is put into a corpse.');
     assert.match(panel.querySelector('.dagger-transfer-load').textContent, /Load 10 \/ 50 kg/);
+    // A stack's row states the whole stack's weight and worth from one arrow's.
     assert.match(source.querySelector('[data-transfer-item="stack:5"]').textContent, /1\.2 kg · 12 gold/);
     const quantity = source.querySelector('[data-transfer-item="stack:5"] .dagger-stepper input');
     assert.equal(quantity.max, '12');

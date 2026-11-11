@@ -83,7 +83,7 @@ internal static class DaggerfallTextContexts
                 { <= 1 => "Broken", <= 5 => "Useless", <= 15 => "Battered", <= 40 => "Worn", <= 60 => "Used",
                     <= 75 => "SlightlyUsed", <= 91 => "AlmostNew", _ => "New" })
             : Number(metadata.CurrentCondition);
-        double weight = (metadata.WeightClassicUnits is ulong units ? units / 400d : definition.Weight / 4d) * quantity;
+        double weight = DaggerfallEncumbrancePolicy.UnitKilograms(definition, metadata) * quantity;
         int materialDamage = DaggerfallFormulaPolicy.WeaponMaterialDamageModifier(metadata.Material,
             DaggerfallFormulaPolicy.ClassicWeaponMaterialModifiers);
         string? damage = definition.Weapon is { } weapon

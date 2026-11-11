@@ -96,6 +96,18 @@ internal sealed class DaggerfallEncumbrancePolicy
     internal static ItemCapacityCost[]? CapacityOverride(ulong? weight) => weight is null ? null
         : weight == 0 ? [] : [new(DaggerActorFactory.ClassicWeightMetric, weight.Value)];
 
+    /// <summary>
+    /// What one of an item weighs in kilograms, as its information names it: its own recorded weight, a gold piece's one
+    /// classic unit, else its template's. Unlike <see cref="ClassicWeightCost"/>, an item that adds nothing to the load
+    /// (a cart, a map) still names what it weighs.
+    /// </summary>
+    internal static double UnitKilograms(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata? metadata = null)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        ulong units = metadata?.WeightClassicUnits ?? (IsGold(definition) ? 1UL : checked((ulong)definition.Weight * TemplateWeightToClassicUnits));
+        return units / (double)DaggerfallEncumbrance.ClassicUnitsPerKilogram;
+    }
+
     internal static ulong ClassicWeightCost(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata? metadata = null)
     {
         ArgumentNullException.ThrowIfNull(definition);
