@@ -50,12 +50,12 @@ internal static class SiteInputs
 
     /// <summary>
     /// What the site publishes beyond its spatial selection: the actors the imported mobile catalog says the
-    /// runtime may spawn, the authored UI art and any dungeon sprite overlays.
+    /// runtime may spawn and the authored UI art.
     /// </summary>
-    public static Arena2SiteMedia Media(CommandArguments args, Arena2ClassicMediaProfile classicMedia, IReadOnlyList<AuthoredMediaOverlay>? dungeonOverlays = null)
+    public static Arena2SiteMedia Media(CommandArguments args, Arena2ClassicMediaProfile classicMedia)
     {
         string imported = PayloadFiles.ReadGeneratedText(args[Options.Pack.Name]);
-        return new(Arena2SitePublication.RuntimeActorResources(imported), classicMedia, dungeonOverlays ?? [])
+        return new(Arena2SitePublication.RuntimeActorResources(imported), classicMedia)
         {
             RuntimeNpcResources = Arena2SitePublication.RuntimeNpcResources(imported),
             RuntimeNatureResources = Arena2SitePublication.RuntimeNatureResources(),

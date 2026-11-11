@@ -45,7 +45,7 @@ and don't invent task records or infer completion from source or Git.
 | `WorldRpg.Rulesets.Daggerfall.Variants` | Compiled deviations from classic rules that a bundle selects with `variants`. Each declares a manifest (ruleset, claimed seams, tuning profile, content packs) and replaces whole seam owners. Classic owners never branch on a variant and never reference this project. |
 | `WorldRpg.Host` | Product lifecycle, the one product type and bundle declaration, built-in ruleset/default selection, the entry screen's bundle choice, and session construction. It may select Daggerfall; it never interprets Daggerfall rules or source files. |
 | `Daggerfall.Import` | Offline Arena2 and Daggerfall Unity knowledge: source formats, conversion quirks, provenance, differential validation. Runtime code consumes normalized packs, not source-shaped data. |
-| `WorldRpg.SpriteAuthoring` | Product-neutral sprite inspection document and overlay contract. No references, packages or ruleset vocabulary. |
+| `Daggerfall.Import.Tool` | The `import` command, its steps and `pack`. Every file is an importer revision input, so a command that does not feed the data containers belongs in `Daggerfall.Source.Tool` (reference exports, inventory reports). |
 | Content packs | Authored actors, items, worlds, placements, encounters, quests, assets and scenario state that a ruleset interprets. |
 | TypeScript UI | Thin DOM presentation of Engine-delivered projections and semantic actions. It owns no gameplay state and no world rendering. |
 

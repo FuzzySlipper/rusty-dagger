@@ -77,7 +77,7 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void Every_missing_input_is_named_before_anything_is_written()
     {
-        ImportCommand.Inputs inputs = new("local/inputs/arena2", "local/inputs/Sound", "authoring", "variants.json");
+        ImportCommand.Inputs inputs = new("local/inputs/arena2", "local/inputs/Sound", "variants.json");
 
         string[] missing = [.. ImportCommand.MissingInputs(inputs, root)];
 
@@ -86,7 +86,6 @@ public sealed class DataContainerImportTests : IDisposable
         Assert.Contains($"tracked file '{ImportCommand.Donor}/Assets/Scripts/Utility/EnemyBasics.cs'", missing);
         Assert.Contains($"tracked directory '{ImportCommand.Donor}/Assets/StreamingAssets/Quests'", missing);
         Assert.Contains(missing, entry => entry.StartsWith("music folder 'local/inputs/Sound'", StringComparison.Ordinal));
-        Assert.Contains(missing, entry => entry.StartsWith("sprite authoring root 'authoring'", StringComparison.Ordinal));
         Assert.Contains("tracked file 'data/content-source-manifest.csv'", missing);
         Assert.Contains("tracked file 'content/worldrpg/payloads/daggerfall.base.json'", missing);
 
@@ -209,8 +208,8 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void Without_FFmpeg_the_import_converts_no_cinematics_and_changes_nothing_else()
     {
-        IReadOnlyList<ImportCommand.Step> with = ImportCommand.Steps(new("local/inputs/arena2", null, null, null), root);
-        IReadOnlyList<ImportCommand.Step> without = ImportCommand.Steps(new("local/inputs/arena2", null, null, null, Cinematics: false), root);
+        IReadOnlyList<ImportCommand.Step> with = ImportCommand.Steps(new("local/inputs/arena2", null, null));
+        IReadOnlyList<ImportCommand.Step> without = ImportCommand.Steps(new("local/inputs/arena2", null, null, Cinematics: false));
 
         Assert.Equal(["cinematic-media-vid", "cinematic-media-flc"], with.Select(step => step.Label).Where(label => label.StartsWith("cinematic-media", StringComparison.Ordinal)));
         Assert.Equal(
@@ -221,7 +220,7 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void The_relief_is_baked_after_the_sections_it_reads()
     {
-        string[] labels = [.. ImportCommand.Steps(new("local/inputs/arena2", null, null, null), root).Select(step => step.Label)];
+        string[] labels = [.. ImportCommand.Steps(new("local/inputs/arena2", null, null)).Select(step => step.Label)];
 
         int relief = Array.IndexOf(labels, "relief");
         Assert.True(relief > Array.IndexOf(labels, "locations"));
@@ -231,9 +230,9 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void Every_step_is_a_tool_command_the_commands_own_grammar_accepts()
     {
-        ImportCommand.Inputs inputs = new("local/inputs/arena2", "local/inputs/Sound", null, "variants.json");
+        ImportCommand.Inputs inputs = new("local/inputs/arena2", "local/inputs/Sound", "variants.json");
 
-        IReadOnlyList<ImportCommand.Step> steps = ImportCommand.Steps(inputs, root);
+        IReadOnlyList<ImportCommand.Step> steps = ImportCommand.Steps(inputs);
 
         Assert.Equal(steps.Count, steps.Select(step => step.Label).Distinct(StringComparer.Ordinal).Count());
         foreach (ImportCommand.Step step in steps)
@@ -254,7 +253,7 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void A_command_rerun_without_its_staged_options_reads_and_writes_what_the_import_does()
     {
-        IReadOnlyList<ImportCommand.Step> steps = ImportCommand.Steps(new("local/inputs/arena2", "local/inputs/Sound", null, null), root);
+        IReadOnlyList<ImportCommand.Step> steps = ImportCommand.Steps(new("local/inputs/arena2", "local/inputs/Sound", null));
 
         int staged = 0;
         foreach (ImportCommand.Step step in steps)
@@ -287,8 +286,8 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void The_data_container_steps_are_the_same_whichever_music_was_supplied()
     {
-        IReadOnlyList<ImportCommand.Step> without = ImportCommand.Steps(new("local/inputs/arena2", null, null, null), root);
-        IReadOnlyList<ImportCommand.Step> with = ImportCommand.Steps(new("local/inputs/arena2", "local/inputs/Sound", null, null), root);
+        IReadOnlyList<ImportCommand.Step> without = ImportCommand.Steps(new("local/inputs/arena2", null, null));
+        IReadOnlyList<ImportCommand.Step> with = ImportCommand.Steps(new("local/inputs/arena2", "local/inputs/Sound", null));
 
         // Only the music container's own step reads the music folder; no other step names it or what it staged.
         Assert.DoesNotContain(without, step => step.Label == "music-tracks");

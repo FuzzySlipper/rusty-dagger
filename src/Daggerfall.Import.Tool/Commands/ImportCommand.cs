@@ -55,7 +55,7 @@ internal static class ImportCommand
     public static ToolCommand Command { get; } = new("import",
     [
         CommandOption.Optional("--arena2", "DIR"), CommandOption.Optional("--music", "DIR"),
-        CommandOption.Optional("--sprite-authoring", "DIR"), CommandOption.Optional("--block-variants", "FILE"),
+        CommandOption.Optional("--block-variants", "FILE"),
         CommandOption.Optional("--repository", "DIR"), CommandOption.Optional("--install", "DIR"), CommandOption.Optional("--only", "STEP[,STEP...]"),
         CommandOption.Switch("--compress"),
     ], Run);
@@ -67,7 +67,7 @@ internal static class ImportCommand
     /// The inputs a run reads, as repository-relative paths where they lie inside the repository. The cinematics
     /// are converted only when FFmpeg is on PATH; without it the game plays with none.
     /// </summary>
-    internal sealed record Inputs(string Arena2, string? Music, string? SpriteAuthoring, string? BlockVariants, bool Cinematics = true);
+    internal sealed record Inputs(string Arena2, string? Music, string? BlockVariants, bool Cinematics = true);
 
     private static int Run(CommandArguments args)
     {
@@ -83,10 +83,9 @@ internal static class ImportCommand
         Inputs inputs = new(
             Portable(Arena2Folder(Path.GetFullPath(arena2, invoked)) ?? arena2, invoked, repository),
             args.Optional("--music") is { } music ? Portable(music, invoked, repository) : null,
-            args.Optional("--sprite-authoring") is { } sprites ? Portable(sprites, invoked, repository) : null,
             args.Optional("--block-variants") is { } variants ? Portable(variants, invoked, repository) : null,
             cinematics);
-        IReadOnlyList<Step> steps = Steps(inputs, repository);
+        IReadOnlyList<Step> steps = Steps(inputs);
         HashSet<string>? only = args.Optional("--only") is { } names
             ? [.. names.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)]
             : null;
@@ -134,10 +133,9 @@ internal static class ImportCommand
     }
 
     /// <summary>
-    /// Every step, in the importer's dependency order; several read what an earlier one wrote. A site's sprite
-    /// overlay is passed when the authoring root, read from the repository root, holds one for it.
+    /// Every step, in the importer's dependency order; several read what an earlier one wrote.
     /// </summary>
-    internal static IReadOnlyList<Step> Steps(Inputs inputs, string repository)
+    internal static IReadOnlyList<Step> Steps(Inputs inputs)
     {
         string arena2 = inputs.Arena2;
         static string Donor(string path) => $"{ImportCommand.Donor}/{path}";
@@ -225,14 +223,11 @@ internal static class ImportCommand
         //    from the world media publication above. Its source manifest goes to the import records.
         string[] common = ["--arena2", arena2, "--ui-authored-assets", UiAssets, "--ui-original", UiOriginal, "--inventory", Inventory,
             "--pack", imported, "--shared", worldMedia, "--classic-group", classicGroup];
-        string[] Overlay(string site) => inputs.SpriteAuthoring is { } root && File.Exists(Path.Combine(repository, root, "sprites", site + ".json"))
-            ? ["--sprite-authoring", root, "--sprite-overlay", $"sprites/{site}.json"]
-            : [];
         void Site(string verb, string label, string output, string region, string location, params string[] more) =>
             Add(label, [verb, .. common, "--out", $"{staging}/worldrpg/imports/{output}",
                 "--source-manifest", $"{records}/sites/{label}.sources.json", "--region", region, "--location", location, .. more]);
-        Site("write", "privateers-hold", "privateers-hold", "17", "Privateer's Hold", Overlay("privateers-hold"));
-        Site("write", "castle-necromoghan", "castle-necromoghan", "17", "Castle Necromoghan", Overlay("castle-necromoghan"));
+        Site("write", "privateers-hold", "privateers-hold", "17", "Privateer's Hold");
+        Site("write", "castle-necromoghan", "castle-necromoghan", "17", "Castle Necromoghan");
         Site("write", "the-hawkston-cemetery", "the-hawkston-cemetery", "17", "The Hawkston Cemetery");
         Site("write", "the-tombs-of-klerd", "the-tombs-of-klerd", "0", "The Tombs of Klerd");
         Site("rmb-spatial", "the-hawkston-cemetery-exterior", "the-hawkston-cemetery/exterior", "17", "The Hawkston Cemetery", "--profile", "exterior");
@@ -302,7 +297,6 @@ internal static class ImportCommand
             yield return $"tracked directory '{Donor}/Assets/StreamingAssets/Quests'";
 
         if (inputs.Music is { } music && !IsDirectory(music)) yield return $"music folder '{music}' (a folder of <track>.<ext> recordings, or leave out --music)";
-        if (inputs.SpriteAuthoring is { } sprites && !IsDirectory(sprites)) yield return $"sprite authoring root '{sprites}'";
         foreach (string file in new[] { Inventory, UiAssets, Authored }.Where(file => !IsFile(file)))
             yield return $"tracked file '{file}'";
         if (!IsDirectory(UiOriginal)) yield return $"tracked directory '{UiOriginal}'";

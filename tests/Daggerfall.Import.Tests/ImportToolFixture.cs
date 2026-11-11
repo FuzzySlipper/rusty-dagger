@@ -6,7 +6,6 @@ using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
-using WorldRpg.SpriteAuthoring;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;
@@ -40,8 +39,6 @@ internal sealed partial class ImportToolFixture : IDisposable
     private string ClassicGroup => ImportedContent.Staged("worldrpg");
     private string AuthoredUiArt => Repo(global::Daggerfall.Import.Tool.AuthoredUi.ProductDirectory);
     private ProductWorldMedia ProductMedia => ProductWorldMedia.Read(Shared, ClassicGroup, AuthoredUiArt);
-    internal string OverlayFile => At("authoring/sprites/test.json");
-    private SpritePublicationSnapshot Sprites => SpritePublicationReader.Read(Publication, ProductMedia);
     private IReadOnlyList<SourceInventoryRow> Rows => SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Inventory));
 
     internal ImportToolFixture()
@@ -53,9 +50,6 @@ internal sealed partial class ImportToolFixture : IDisposable
         File.WriteAllBytes(At("buildings.json"), ImportedContent.Read("worldrpg/payloads/daggerfall.blocks.json"));
         Copy("content/worldrpg/payloads/daggerfall.base.json", Authored);
         Copy("data/content-source-manifest.csv", Inventory);
-        var sprites = Sprites;
-        SpriteAuthoredOverlayStore.Write(Publication, At("authoring"), "sprites/test.json",
-            new(SpriteAuthoredOverlayDocument.CurrentSchemaVersion, sprites.AuthoringBasisDigest, []), sprites.Catalog, sprites.AuthoringBasisDigest);
         foreach (string file in Directory.EnumerateFiles(Root, "*", SearchOption.AllDirectories)) File.SetLastWriteTimeUtc(file, OldTime);
     }
 
@@ -116,8 +110,6 @@ internal sealed partial class ImportToolFixture : IDisposable
             ["--location"] = name == "rmb-spatial" ? RmbLocation : "Privateer's Hold",
             ["--source-manifest"] = At("site.sources.json"), ["--profile"] = Interior ? "interior" : "exterior",
             ["--ui-authored-assets"] = Repo("data/ui-authored-assets.json"), ["--ui-original"] = AuthoredUiArt,
-            ["--authoring"] = name == "sprite-overlay-write" ? At("writer-authoring") : At("authoring"),
-            ["--overlay"] = "sprites/test.json", ["--input"] = OverlayFile, ["--id"] = Sprites.Catalog.Entries.First().Id,
             ["--shared"] = Shared, ["--classic-group"] = ClassicGroup,
             // Coverage reads the import's staging tree over the repository's content, with its import records.
             ["--content"] = ImportedContent.Staged(""), ["--import-records"] = TestData.ImportRecords,
@@ -131,9 +123,6 @@ internal sealed partial class ImportToolFixture : IDisposable
         if (name == "classic-media") args.AddRange(["--ui-authored-assets", values["--ui-authored-assets"], "--ui-original", values["--ui-original"]]);
         if (name == "cinematic-media" && CinematicKind == DaggerfallCinematicKind.Flc) args.AddRange(["--kind", "flc"]);
         if (name == "rmb-spatial" && Interior) args.AddRange(["--block-x", "1", "--block-y", "1", "--building", "0"]);
-        // A sprite command reads the site closure together with the product-wide media it references.
-        if (name.StartsWith("sprite-", StringComparison.Ordinal) && ToolPrograms.Commands[name].Options.Any(option => option.Name == "--shared"))
-            args.AddRange(["--shared", Shared, "--classic-group", ClassicGroup]);
         return [.. args];
     }
 

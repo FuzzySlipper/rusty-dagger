@@ -170,12 +170,6 @@ public sealed record Arena2DungeonMediaRequest(
     /// </summary>
     public IReadOnlyList<string> RuntimeMaterialResources { get; init; } = [];
 
-    /// <summary>
-    /// Narrow authored tuning may name generated sprite artifact IDs only.
-    /// Layout, bytes, dimensions, and digests are always regenerated.
-    /// </summary>
-    public IReadOnlyList<AuthoredMediaOverlay> AuthoredOverlays { get; init; } = [];
-
     /// <summary>Source mobile resource IDs selected by runtime tables rather than an RDB placement.</summary>
     public IReadOnlyList<string> RuntimeActorResources { get; init; } = [];
 
@@ -212,7 +206,6 @@ public sealed record Arena2DungeonMediaRequest(
         ArgumentNullException.ThrowIfNull(Quotas);
         Dungeon?.Validate();
         Quotas.Validate();
-        ArgumentNullException.ThrowIfNull(AuthoredOverlays);
         ArgumentNullException.ThrowIfNull(RuntimeMaterialResources);
         if (RuntimeMaterialResources.Any(string.IsNullOrWhiteSpace)
             || RuntimeMaterialResources.Distinct(StringComparer.Ordinal).Count() != RuntimeMaterialResources.Count)
@@ -571,7 +564,6 @@ public sealed record Arena2DungeonMediaPublication(
         {
             request.Sources.RequireTextureLeaves(request.TextureLeaves, request.TextureLeafConsumer!);
         }
-        EnforceSpriteOnlyOverlays(request.AuthoredOverlays, selection.Materials);
 
         Dictionary<ushort, TextureArchive> archives = selection.RequiredArchives
             .OrderBy(value => value)
@@ -581,13 +573,9 @@ public sealed record Arena2DungeonMediaPublication(
         List<BillboardDraft> billboardDrafts = BuildBillboards(selection.Billboards, archives, palette, request.Quotas, generated);
         BuildTerrainTextures(selection.TerrainTextures, archives, palette, request.Quotas, generated);
         List<ActorDraft> actorDrafts = BuildActors(selection.Actors, archives, palette, request.Quotas, generated);
-        Dictionary<string, AuthoredMediaOverlay> overlaysById = request.AuthoredOverlays.ToDictionary(overlay => overlay.Id, StringComparer.Ordinal);
-        ValidateActorTimingOverlays(overlaysById, actorDrafts);
-
         NormalizedMediaManifest mediaManifest = MediaManifestNormalizer.Normalize(
             generated,
-            request.AuthoredOverlays,
-            request.Quotas.MaximumArtifactBytes);
+            maximumArtifactBytes: request.Quotas.MaximumArtifactBytes);
         Dictionary<string, NormalizedMediaDescriptor> descriptors = mediaManifest.Resources.ToDictionary(resource => resource.Id, StringComparer.Ordinal);
         List<DungeonMaterialTextureMedia> materials = materialDrafts
             .Select(draft => draft.Finish(descriptors[draft.Id]))
@@ -598,7 +586,7 @@ public sealed record Arena2DungeonMediaPublication(
             .OrderBy(media => media.SpriteResourceId, StringComparer.Ordinal)
             .ToList();
         List<DungeonActorSpriteMedia> actors = actorDrafts
-            .Select(draft => draft.Finish(descriptors, request.DisplayProfile, overlaysById.GetValueOrDefault(draft.SpriteResourceId)))
+            .Select(draft => draft.Finish(descriptors, request.DisplayProfile))
             .OrderBy(media => media.ActorResourceId, StringComparer.Ordinal)
             .ToList();
 
@@ -1026,10 +1014,9 @@ public sealed record Arena2DungeonMediaPublication(
         DungeonSpritePlaybackSource source,
         float? sourceEffectiveFramesPerSecond,
         NormalizedMediaDescriptor descriptor,
-        float profileFramesPerSecond,
-        AuthoredMediaStateTiming? timing = null) => new(
-            timing?.FramesPerSecond ?? descriptor.FramesPerSecond ?? sourceEffectiveFramesPerSecond ?? profileFramesPerSecond,
-            timing?.Loop ?? descriptor.Loop ?? source.Loops);
+        float profileFramesPerSecond) => new(
+            descriptor.FramesPerSecond ?? sourceEffectiveFramesPerSecond ?? profileFramesPerSecond,
+            descriptor.Loop ?? source.Loops);
 
     private static NormalizedVector2 ResolveWorldSize(
         NormalizedVector2 source,
@@ -1072,48 +1059,6 @@ public sealed record Arena2DungeonMediaPublication(
             string[] unneeded = supplied.Except(requiredArchives).OrderBy(value => value).Select(value => $"TEXTURE.{value:000}").ToArray();
             throw new MissingDungeonMediaTexturesException(missing, unneeded,
                 $"Arena2 dungeon media texture closure does not match normalized references. Missing: [{string.Join(", ", missing)}]. Unneeded: [{string.Join(", ", unneeded)}].");
-        }
-    }
-
-    private static void EnforceSpriteOnlyOverlays(
-        IEnumerable<AuthoredMediaOverlay> overlays,
-        IReadOnlyList<MaterialSelection> materials)
-    {
-        HashSet<string> materialIds = materials
-            .Select(material => $"material/texture-{material.Archive}-{material.Record}")
-            .ToHashSet(StringComparer.Ordinal);
-        foreach (AuthoredMediaOverlay overlay in overlays)
-        {
-            if (materialIds.Contains(overlay.Id))
-            {
-                throw new InvalidOperationException("Dungeon material texture metadata is regenerated and cannot accept a sprite overlay.");
-            }
-        }
-    }
-
-    private static void ValidateActorTimingOverlays(
-        IReadOnlyDictionary<string, AuthoredMediaOverlay> overlays,
-        IReadOnlyList<ActorDraft> actors)
-    {
-        Dictionary<string, ActorDraft> actorsBySpriteId = actors.ToDictionary(actor => actor.SpriteResourceId, StringComparer.Ordinal);
-        foreach (AuthoredMediaOverlay overlay in overlays.Values)
-        {
-            if (overlay.ActionTimings is { Count: > 0 })
-            {
-                throw new ArgumentException("Dungeon sprite overlays cannot author action playback; attack sequences remain source facts.", nameof(overlays));
-            }
-
-            if (overlay.StateTimings is not { Count: > 0 }) continue;
-            if (!actorsBySpriteId.TryGetValue(overlay.Id, out ActorDraft? actor))
-            {
-                throw new ArgumentException("An authored state timing must identify a generated dungeon actor sprite.", nameof(overlays));
-            }
-
-            HashSet<string> states = actor.States.Select(state => state.Layout.State.ToString()).ToHashSet(StringComparer.Ordinal);
-            if (overlay.StateTimings.Any(timing => !states.Contains(timing.Name)))
-            {
-                throw new ArgumentException("An authored state timing must name a generated dungeon actor state.", nameof(overlays));
-            }
         }
     }
 
@@ -1320,7 +1265,7 @@ public sealed record Arena2DungeonMediaPublication(
     {
         public ActorDraft? Female { get; init; }
 
-        public DungeonActorSpriteMedia Finish(IReadOnlyDictionary<string, NormalizedMediaDescriptor> descriptors, DungeonMediaDisplayProfile profile, AuthoredMediaOverlay? overlay)
+        public DungeonActorSpriteMedia Finish(IReadOnlyDictionary<string, NormalizedMediaDescriptor> descriptors, DungeonMediaDisplayProfile profile)
         {
             NormalizedMediaDescriptor descriptor = descriptors[SpriteResourceId];
             DungeonActorCorpseSpriteMedia? corpse = Corpse is null
@@ -1334,19 +1279,14 @@ public sealed record Arena2DungeonMediaPublication(
                     ApplyFrameRectangle(Corpse.Frame, descriptors[Corpse.SpriteResourceId]),
                     Corpse.Artifact,
                     descriptors[Corpse.SpriteResourceId]);
-            DungeonActorSpriteStateLayout[] states = States.Select(state =>
+            DungeonActorSpriteStateLayout[] states = States.Select(state => state.Layout with
             {
-                AuthoredMediaStateTiming? timing = overlay?.StateTimings?.SingleOrDefault(value => StringComparer.Ordinal.Equals(value.Name, state.Layout.State.ToString()));
-                return state.Layout with
-                {
-                    Frames = ApplyFrameRectangles(state.Layout.Frames, descriptor),
-                    Playback = ResolvePlayback(
-                        state.Layout.SourcePlayback,
-                        state.SourceEffectiveFramesPerSecond,
-                        descriptor,
-                        profile.FramesPerSecondFor(state.Layout.State),
-                        timing),
-                };
+                Frames = ApplyFrameRectangles(state.Layout.Frames, descriptor),
+                Playback = ResolvePlayback(
+                    state.Layout.SourcePlayback,
+                    state.SourceEffectiveFramesPerSecond,
+                    descriptor,
+                    profile.FramesPerSecondFor(state.Layout.State)),
             }).ToArray();
             if (!states.Any(state => state.State == PreferredRestState))
             {
@@ -1366,7 +1306,7 @@ public sealed record Arena2DungeonMediaPublication(
                 states,
                 corpse,
                 Artifact,
-                descriptor) { Female = Female?.Finish(descriptors, profile, null) };
+                descriptor) { Female = Female?.Finish(descriptors, profile) };
         }
     }
 

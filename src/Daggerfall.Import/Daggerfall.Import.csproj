@@ -9,10 +9,6 @@
     <Deterministic>true</Deterministic>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
-  <ItemGroup>
-    <ProjectReference Include="../WorldRpg.SpriteAuthoring/WorldRpg.SpriteAuthoring.csproj" />
-  </ItemGroup>
-
   <!-- Stamps ImporterBuild.Revision, the importer revision every normalized document and the data
        container record. -->
   <PropertyGroup>

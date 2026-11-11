@@ -134,8 +134,7 @@ public sealed record Arena2ClassicMediaProfile(
     string? FontMediaId = null,
     IReadOnlyList<ClassicMediaPresentation>? Presentation = null,
     ClassicAuthoredUiManifestInput? AuthoredUiManifest = null,
-    IReadOnlyList<ClassicAuthoredUiAsset>? AuthoredUiAssets = null,
-    IReadOnlyList<AuthoredMediaOverlay>? AuthoredOverlays = null);
+    IReadOnlyList<ClassicAuthoredUiAsset>? AuthoredUiAssets = null);
 
 /// <summary>Adjustable visual and timing handles for one fixed dagger action record.</summary>
 public sealed record ClassicWeaponActionPresentation(
@@ -1316,7 +1315,7 @@ public sealed record Arena2ClassicMediaPublication(
             throw new ArgumentOutOfRangeException(nameof(options), "The classic dagger atlas needs at least a 320px atlas dimension.");
         }
 
-        ResolvedProfile resolved = ApplyAuthoredEffectTiming(ResolveProfile(profile), profile.AuthoredOverlays);
+        ResolvedProfile resolved = ResolveProfile(profile);
         SourceBytes source = SourceBytes.From(inputs, effectiveOptions.MaximumSourceBytes);
         Arena2Palette artPalette = PaletteDecoder.Decode(source.ArtPalette, "arena2/ART_PAL.COL");
         Arena2Palette palette = PaletteDecoder.Decode(source.Palette, "arena2/PAL.PAL");
@@ -1365,7 +1364,7 @@ public sealed record Arena2ClassicMediaPublication(
 
         NormalizedMediaManifest mediaManifest = MediaManifestNormalizer.Normalize(
             generated,
-            BuildOverlays(resolved, profile.AuthoredOverlays),
+            BuildOverlays(resolved),
             effectiveOptions.MaximumArtifactBytes);
         // A world visual's textures are the site's own artifacts rather than entries in the classic media
         // group: the mesh they belong to is published per site, and the group's inventory closes over the
@@ -1893,7 +1892,7 @@ public sealed record Arena2ClassicMediaPublication(
         return artifacts;
     }
 
-    private static IReadOnlyList<AuthoredMediaOverlay> BuildOverlays(ResolvedProfile profile, IReadOnlyList<AuthoredMediaOverlay>? authoredOverlays)
+    private static IReadOnlyList<AuthoredMediaOverlay> BuildOverlays(ResolvedProfile profile)
     {
         IReadOnlyDictionary<string, ClassicMediaPresentation> visual = profile.Presentation;
         List<AuthoredMediaOverlay> overlays = [];
@@ -1924,150 +1923,7 @@ public sealed record Arena2ClassicMediaPublication(
                 presentation.Sequence));
         }
 
-        if (authoredOverlays is not null)
-        {
-            Dictionary<string, AuthoredMediaOverlay> byId = overlays.ToDictionary(overlay => overlay.Id, StringComparer.Ordinal);
-            foreach (AuthoredMediaOverlay overlay in authoredOverlays)
-            {
-                ArgumentNullException.ThrowIfNull(overlay);
-                if (!overlay.IsAuthored)
-                {
-                    throw new ArgumentException("External classic media overlays must be authored values.", nameof(authoredOverlays));
-                }
-                if (byId.TryGetValue(overlay.Id, out AuthoredMediaOverlay? existing))
-                {
-                    byId[overlay.Id] = existing with
-                    {
-                        DisplayName = overlay.DisplayName ?? existing.DisplayName,
-                        Pivot = overlay.Pivot ?? existing.Pivot,
-                        DisplaySize = overlay.DisplaySize ?? existing.DisplaySize,
-                        FramesPerSecond = overlay.FramesPerSecond ?? existing.FramesPerSecond,
-                        Loop = overlay.Loop ?? existing.Loop,
-                        Sequence = overlay.Sequence ?? existing.Sequence,
-                        FrameRects = overlay.FrameRects ?? existing.FrameRects,
-                        StateTimings = overlay.StateTimings ?? existing.StateTimings,
-                        ActionTimings = overlay.ActionTimings ?? existing.ActionTimings,
-                    };
-                }
-                else
-                {
-                    byId.Add(overlay.Id, overlay);
-                }
-            }
-
-            return byId.Values.OrderBy(overlay => overlay.Id, StringComparer.Ordinal).ToArray();
-        }
-
         return overlays;
-    }
-
-    private static ResolvedProfile ApplyAuthoredEffectTiming(ResolvedProfile profile, IReadOnlyList<AuthoredMediaOverlay>? authoredOverlays)
-    {
-        if (authoredOverlays is null)
-        {
-            return profile;
-        }
-
-        Dictionary<ClassicEffect, ClassicEffectPresentation> effects = profile.Effects.ToDictionary(pair => pair.Key, pair => pair.Value);
-        Dictionary<ClassicDaggerWeaponAction, ClassicWeaponActionPresentation> weaponActions = profile.WeaponActions.ToDictionary(pair => pair.Key, pair => pair.Value);
-        foreach (AuthoredMediaOverlay overlay in authoredOverlays)
-        {
-            ArgumentNullException.ThrowIfNull(overlay);
-            if (!overlay.IsAuthored)
-            {
-                throw new ArgumentException("External classic media overlays must be authored values.", nameof(authoredOverlays));
-            }
-
-            if (overlay.StateTimings is { Count: > 0 })
-            {
-                throw new ArgumentException("Classic media does not publish named sprite states for authored timing.", nameof(authoredOverlays));
-            }
-
-            if (StringComparer.Ordinal.Equals(overlay.Id, profile.WeaponMediaId)
-                && (overlay.FramesPerSecond is not null || overlay.Loop is not null || overlay.Sequence is not null))
-            {
-                throw new ArgumentException("Classic weapon timing and sequence are action-specific and cannot be supplied as resource-wide overlays.", nameof(authoredOverlays));
-            }
-
-            if (StringComparer.Ordinal.Equals(overlay.Id, profile.WeaponMediaId))
-            {
-                ApplyWeaponActionTimings(weaponActions, overlay.ActionTimings, nameof(authoredOverlays));
-                continue;
-            }
-
-            ClassicEffectPresentation[] matched = effects.Values
-                .Where(effect => StringComparer.Ordinal.Equals(effect.MediaId, overlay.Id))
-                .ToArray();
-            if (matched.Length == 0)
-            {
-                if (overlay.ActionTimings is { Count: > 0 })
-                {
-                    throw new ArgumentException("An action timing overlay must identify a classic effect resource.", nameof(authoredOverlays));
-                }
-                continue;
-            }
-
-            if (overlay.FramesPerSecond is not null || overlay.Loop is not null)
-            {
-                ClassicSpriteTiming current = matched[0].Timing;
-                if (matched.Any(effect => effect.Timing != current))
-                {
-                    throw new ArgumentException("A shared classic effect media resource must have compatible timings before a resource-wide timing overlay can be applied.", nameof(authoredOverlays));
-                }
-
-                ClassicSpriteTiming updated = new(overlay.FramesPerSecond ?? current.FramesPerSecond, overlay.Loop ?? current.Loop);
-                updated.Validate();
-                foreach (ClassicEffectPresentation effect in matched)
-                {
-                    effects[effect.Effect] = effect with { Timing = updated };
-                }
-            }
-
-            ApplyEffectActionTimings(effects, overlay.Id, overlay.ActionTimings, nameof(authoredOverlays));
-        }
-
-        return profile with { Effects = effects, WeaponActions = weaponActions };
-    }
-
-    private static void ApplyWeaponActionTimings(
-        IDictionary<ClassicDaggerWeaponAction, ClassicWeaponActionPresentation> actions,
-        IReadOnlyList<AuthoredMediaActionTiming>? timings,
-        string parameterName)
-    {
-        if (timings is null) return;
-        foreach (AuthoredMediaActionTiming timing in timings)
-        {
-            if (!Enum.TryParse(timing.Name, ignoreCase: false, out ClassicDaggerWeaponAction action) || !actions.TryGetValue(action, out ClassicWeaponActionPresentation? current))
-            {
-                throw new ArgumentException("An authored classic weapon action timing must name a generated weapon action.", parameterName);
-            }
-
-            ClassicSpriteTiming updated = new(timing.FramesPerSecond ?? current.Timing.FramesPerSecond, timing.Loop ?? current.Timing.Loop);
-            updated.Validate();
-            actions[action] = current with { Timing = updated };
-        }
-    }
-
-    private static void ApplyEffectActionTimings(
-        IDictionary<ClassicEffect, ClassicEffectPresentation> effects,
-        string mediaId,
-        IReadOnlyList<AuthoredMediaActionTiming>? timings,
-        string parameterName)
-    {
-        if (timings is null) return;
-        foreach (AuthoredMediaActionTiming timing in timings)
-        {
-            if (!Enum.TryParse(timing.Name, ignoreCase: false, out ClassicEffect effect)
-                || !effects.TryGetValue(effect, out ClassicEffectPresentation? current)
-                || !StringComparer.Ordinal.Equals(current.MediaId, mediaId))
-            {
-                throw new ArgumentException("An authored classic effect timing must name an effect published by the selected resource.", parameterName);
-            }
-
-            ClassicSpriteTiming updated = new(timing.FramesPerSecond ?? current.Timing.FramesPerSecond, timing.Loop ?? current.Timing.Loop);
-            updated.Validate();
-            effects[effect] = current with { Timing = updated };
-        }
     }
 
     private static IReadOnlyList<LogicalSourceRecord> MergeSources(

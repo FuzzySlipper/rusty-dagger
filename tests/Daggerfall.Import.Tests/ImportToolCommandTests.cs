@@ -148,9 +148,6 @@ public sealed class ImportToolCommandTests
     [InlineData("texture-leaves")]
     [InlineData("residual-paths")]
     [InlineData("map-art")]
-    [InlineData("sprite-list")]
-    [InlineData("sprite-show")]
-    [InlineData("sprite-overlay-validate")]
     [InlineData("plan")]
     [InlineData("verify-real-data")]
     public void Report_only_verbs_leave_all_supplied_outputs_untouched(string name)
@@ -245,8 +242,6 @@ public sealed class ImportToolCommandTests
     [InlineData("classic-quest-corpora")]
     [InlineData("source-manifest")]
     [InlineData("source-coverage")]
-    [InlineData("sprite-inspection")]
-    [InlineData("sprite-overlay-write")]
     [InlineData("write")]
     [InlineData("rmb-spatial")]
     public void Explicit_writer_verbs_publish_exact_builder_output(string name)
@@ -259,22 +254,6 @@ public sealed class ImportToolCommandTests
         var result = Run(args);
         Assert.True(result.Code == 0, result.Error);
         fixture.AssertPublication(before, expected);
-    }
-
-    [ImportToolDataFact]
-    public void Overlay_discard_preserves_bytes_at_the_recovery_path_and_repeated_discard_is_quiet()
-    {
-        using ImportToolFixture fixture = new();
-        string original = fixture.OverlayFile;
-        byte[] bytes = File.ReadAllBytes(original);
-        Assert.Equal(0, Run(fixture.Arguments("sprite-overlay-discard")).Code);
-        Assert.False(File.Exists(original));
-        Assert.Equal(bytes, File.ReadAllBytes(original + ".discarded"));
-        var before = fixture.Snapshot();
-        var again = Run(fixture.Arguments("sprite-overlay-discard"));
-        Assert.Equal(0, again.Code);
-        Assert.Contains("was not present", again.Output, StringComparison.Ordinal);
-        fixture.AssertUnchanged(before);
     }
 
     internal static (int Code, string Output, string Error) Run(string[] args)

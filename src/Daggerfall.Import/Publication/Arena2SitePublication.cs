@@ -7,12 +7,10 @@ namespace Daggerfall.Import.Publication;
 
 /// <summary>What a site closure publishes beyond its own spatial selection.</summary>
 /// <param name="RuntimeActorResources">The actor media every site carries because the runtime may spawn any of them there.</param>
-/// <param name="ClassicMedia">The classic media profile: authored UI art and any classic sprite overlays.</param>
-/// <param name="DungeonOverlays">Authored overlays that apply to the site's dungeon sprites.</param>
+/// <param name="ClassicMedia">The classic media profile, with the authored UI art.</param>
 public sealed record Arena2SiteMedia(
     IReadOnlyList<string> RuntimeActorResources,
-    Arena2ClassicMediaProfile ClassicMedia,
-    IReadOnlyList<AuthoredMediaOverlay> DungeonOverlays)
+    Arena2ClassicMediaProfile ClassicMedia)
 {
     /// <summary>Normalized faction and NPC flats available to quest admission at this site.</summary>
     public IReadOnlyList<string> RuntimeNpcResources { get; init; } = [];
@@ -177,7 +175,7 @@ public static class Arena2SitePublication
         return sources.LoadingOnDemand(() =>
         {
             (GeometryPublication geometry, Arena2DungeonMediaPublication dungeonMedia, Arena2ClassicMediaPublication classicMedia) = PublishMedia(
-                sources, null, meshIds, media with { DungeonOverlays = [] }, "product-wide world media", textures.Materials, textures.Billboards, WorldMediaQuotas,
+                sources, null, meshIds, media, "product-wide world media", textures.Materials, textures.Billboards, WorldMediaQuotas,
                 leaves => PlacementTrims(sources, locations, leaves));
             ImportProvenance provenance = new(WorldMediaImporterId, ImporterBuild.Revision, [.. sources.DungeonSources
                 .Select(source => new LogicalSourceRecord(source.Label, ContentDigest.Compute(source.Bytes.Span), source.Bytes.Length))]);
@@ -241,7 +239,6 @@ public static class Arena2SitePublication
                     .Concat(runtimeBillboards ?? [])
                     .Distinct(StringComparer.Ordinal)],
                 RuntimeTerrainResources = media.RuntimeTerrainResources,
-                AuthoredOverlays = media.DungeonOverlays,
                 TextureLeaves = textureLeaves,
                 TextureLeafConsumer = textureLeafConsumer,
             });

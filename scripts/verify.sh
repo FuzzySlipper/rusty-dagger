@@ -141,7 +141,7 @@ dotnet test tests/WorldRpg.Architecture.Tests/WorldRpg.Architecture.Tests.csproj
 # records directory is what says an import has run.
 import_stamp=local/build/verify/import-suite.stamp
 import_inputs() {
-  find src/Daggerfall.Import src/Daggerfall.Import.Tool src/Daggerfall.Source.Tool src/WorldRpg.SpriteAuthoring data content \
+  find src/Daggerfall.Import src/Daggerfall.Import.Tool src/Daggerfall.Source.Tool data content \
       tests/Daggerfall.Import.Tests tests/Shared tests/SharedEngine \( -name bin -o -name obj \) -prune -o -type f -print \
     | LC_ALL=C sort | xargs sha256sum
   sha256sum src/ImporterRevision.targets tests/Directory.Build.props Directory.Build.props

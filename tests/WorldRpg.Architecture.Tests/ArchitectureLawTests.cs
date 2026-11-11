@@ -24,21 +24,6 @@ public sealed class ArchitectureLawTests
     }
 
     [Fact]
-    public void Sprite_authoring_contract_does_not_encode_reference_ruleset_vocabulary()
-    {
-        // The contract is shared by the offline importer and the developer workbench; the importer adapts
-        // its own formats into it, so nothing it carries may name the reference ruleset or its sources.
-        string source = WithoutComments(ReadSources(SourceDirectory("WorldRpg.SpriteAuthoring")));
-        string project = ProjectFile("WorldRpg.SpriteAuthoring");
-
-        foreach (string forbidden in new[] { "Daggerfall", "Arena2", "PrivateersHold", "DFUnity" })
-        {
-            Assert.DoesNotContain(forbidden, source, StringComparison.OrdinalIgnoreCase);
-            Assert.DoesNotContain(forbidden, WithoutXmlComments(File.ReadAllText(project)), StringComparison.OrdinalIgnoreCase);
-        }
-    }
-
-    [Fact]
     public void Canary_does_not_use_reference_ruleset_vocabulary_or_references()
     {
         string canary = SourceDirectory("WorldRpg.Rulesets.Canary.Tests");
@@ -57,8 +42,7 @@ public sealed class ArchitectureLawTests
     [Fact]
     public void Project_references_follow_the_worldrpg_dependency_graph()
     {
-        AssertProjectReferences("WorldRpg.SpriteAuthoring", []);
-        AssertProjectReferences("Daggerfall.Import", ["WorldRpg.SpriteAuthoring"]);
+        AssertProjectReferences("Daggerfall.Import", []);
         AssertProjectReferences("WorldRpg.Kit", []);
         AssertProjectReferences("WorldRpg.Rulesets.Daggerfall", ["WorldRpg.Kit"]);
         AssertProjectReferences("WorldRpg.Host", ["WorldRpg.Kit", "WorldRpg.Rulesets.Daggerfall", "WorldRpg.Rulesets.Daggerfall.Variants"]);
@@ -73,10 +57,8 @@ public sealed class ArchitectureLawTests
     [Fact]
     public void Offline_importer_is_not_a_runtime_dependency()
     {
-        // The importer and the contract it shares with the workbench carry no packages, so the importer
-        // never reaches the Engine through that contract.
-        foreach (string offline in new[] { "Daggerfall.Import", "WorldRpg.SpriteAuthoring" })
-            Assert.Empty(XDocument.Load(ProjectFile(offline)).Descendants("PackageReference"));
+        // The importer library carries no packages, so it never reaches the Engine.
+        Assert.Empty(XDocument.Load(ProjectFile("Daggerfall.Import")).Descendants("PackageReference"));
 
         // A release ships the import tool beside the product (RustyEngineProductTool) without linking it; any
         // other item that names the importer would compile or load it into the product.
@@ -202,7 +184,7 @@ public sealed class ArchitectureLawTests
             ("handwritten native interop", @"\b(DllImport|LibraryImport|GCHandle|Native[A-Z]\w*)"),
         ];
 
-        foreach (string project in ActiveRuntimeProjects().Append("WorldRpg.SpriteAuthoring"))
+        foreach (string project in ActiveRuntimeProjects())
         {
             foreach (string file in SourceFiles(SourceDirectory(project)))
             {

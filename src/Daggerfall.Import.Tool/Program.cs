@@ -57,13 +57,6 @@ internal static class Program
         RmbSpatialCommand.Command,
         // Reconciles every producer citation against the documented inventory.
         SourceCoverageCommand.Command,
-        // Sprite inspection and authored overlays.
-        SpriteListCommand.Command,
-        SpriteShowCommand.Command,
-        SpriteInspectionCommand.Command,
-        SpriteOverlayValidateCommand.Command,
-        SpriteOverlayWriteCommand.Command,
-        SpriteOverlayDiscardCommand.Command,
     }.ToDictionary(command => command.Name, StringComparer.Ordinal);
 
     internal static int Main(string[] args)

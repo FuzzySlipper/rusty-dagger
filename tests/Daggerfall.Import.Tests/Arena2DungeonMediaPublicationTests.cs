@@ -362,34 +362,17 @@ public sealed class Arena2DungeonMediaPublicationTests
     }
 
     [Fact]
-    public void ProjectsDescriptorsAndDisplayProfileWithoutChangingRegeneratedAtlasFacts()
+    public void ProjectsDisplayProfileWithoutChangingRegeneratedAtlasFacts()
     {
         Arena2DungeonMediaPublication generated = Arena2DungeonMediaPublication.Create(CreateRequest());
+        DungeonMediaDisplayProfile defaults = DungeonMediaDisplayProfile.DaggerfallDefault;
         Arena2DungeonMediaRequest editedRequest = CreateRequest() with
         {
-            AuthoredOverlays =
-            [
-                new AuthoredMediaOverlay(
-                    "sprite/mobile-0",
-                    true,
-                    DisplayName: "Fixture rat",
-                    Pivot: new NormalizedVector2(0.4F, 0F),
-                    DisplaySize: new NormalizedVector2(1.2F, 0.8F),
-                    FramesPerSecond: 9F,
-                    Loop: false,
-                    Sequence: [0, 1, 0]),
-                new AuthoredMediaOverlay(
-                    "sprite/texture-2-1",
-                    true,
-                    Pivot: new NormalizedVector2(0.2F, 0.8F),
-                    DisplaySize: new NormalizedVector2(3F, 2F)),
-            ],
-            DisplayProfile = DungeonMediaDisplayProfile.DaggerfallDefault with
+            DisplayProfile = defaults with
             {
-                ActorWorldScale = 2F,
-                MoveFramesPerSecond = 7F,
+                ActorWorldScale = defaults.ActorWorldScale * 2F,
                 ActorPivot = new NormalizedVector2(0.7F, 0.1F),
-                BillboardWorldScale = 2F,
+                BillboardWorldScale = defaults.BillboardWorldScale * 2F,
             },
         };
 
@@ -399,43 +382,11 @@ public sealed class Arena2DungeonMediaPublicationTests
         DungeonActorSpriteMedia updated = Assert.Single(edited.Actors);
         Assert.Equal(original.Artifact.Bytes.ToArray(), updated.Artifact.Bytes.ToArray());
         Assert.Equal(original.States.SelectMany(state => state.Frames), updated.States.SelectMany(state => state.Frames));
-        Assert.Equal("Fixture rat", updated.Descriptor.DisplayName);
-        Assert.Equal(new NormalizedVector2(0.4F, 0F), updated.Descriptor.Pivot);
-        Assert.Equal(9F, updated.Descriptor.FramesPerSecond);
-        Assert.Equal(new NormalizedVector2(0.4F, 0F), updated.Pivot);
-        Assert.Equal(new NormalizedVector2(1.2F, 0.8F), updated.WorldSize);
-        Assert.All(updated.States, state =>
-        {
-            Assert.Equal(9F, state.Playback.FramesPerSecond);
-            Assert.False(state.Playback.Loops);
-        });
-        Assert.Equal(6F, updated.States[0].SourcePlayback.FramesPerSecond);
-        Assert.True(updated.States[0].SourcePlayback.Loops);
+        Assert.Equal(new NormalizedVector2(0.7F, 0.1F), updated.Pivot);
+        Assert.Equal(new NormalizedVector2(original.WorldSize.X * 2F, original.WorldSize.Y * 2F), updated.WorldSize);
+        DungeonBillboardSpriteMedia originalBillboard = Assert.Single(generated.Billboards);
         DungeonBillboardSpriteMedia updatedBillboard = Assert.Single(edited.Billboards);
-        Assert.Equal(new NormalizedVector2(0.2F, 0.8F), updatedBillboard.Pivot);
-        Assert.Equal(new NormalizedVector2(3F, 2F), updatedBillboard.WorldSize);
-    }
-
-    [Fact]
-    public void ReappliesPerFrameAndPerStateAuthoredOverlayDuringDungeonRegeneration()
-    {
-        Arena2DungeonMediaPublication baseline = Arena2DungeonMediaPublication.Create(CreateRequest());
-        DungeonActorSpriteMedia baselineActor = Assert.Single(baseline.Actors);
-        AuthoredMediaOverlay overlay = new(
-            baselineActor.SpriteResourceId,
-            true,
-            FrameRects: [new(0, 0, 0, 1, 1)],
-            StateTimings: [new(DungeonActorSpriteState.Move.ToString(), 11F, false)]);
-
-        Arena2DungeonMediaPublication regenerated = Arena2DungeonMediaPublication.Create(CreateRequest() with { AuthoredOverlays = [overlay] });
-        DungeonActorSpriteMedia actor = Assert.Single(regenerated.Actors);
-
-        Assert.Equal(1, actor.Descriptor.Frames[0].Width);
-        Assert.Equal(1, actor.States.SelectMany(state => state.Frames).Single(frame => frame.AtlasFrameIndex == 0).AtlasFrame.Width);
-        DungeonActorSpriteStateLayout move = actor.States.Single(state => state.State == DungeonActorSpriteState.Move);
-        Assert.Equal(11F, move.Playback.FramesPerSecond);
-        Assert.False(move.Playback.Loops);
-        Assert.Equal(baselineActor.States.Single(state => state.State == DungeonActorSpriteState.Move).SourcePlayback, move.SourcePlayback);
+        Assert.Equal(new NormalizedVector2(originalBillboard.WorldSize.X * 2F, originalBillboard.WorldSize.Y * 2F), updatedBillboard.WorldSize);
     }
 
     [Fact]
@@ -475,18 +426,13 @@ public sealed class Arena2DungeonMediaPublicationTests
     }
 
     [Fact]
-    public void RejectsMaterialOverlaysAndInvalidDisplayProfileValues()
+    public void RejectsInvalidDisplayProfileValues()
     {
-        Arena2DungeonMediaRequest materialOverlay = CreateRequest() with
-        {
-            AuthoredOverlays = [new AuthoredMediaOverlay("material/texture-2-0", true, DisplayName: "not a sprite")],
-        };
         Arena2DungeonMediaRequest invalidProfile = CreateRequest() with
         {
             DisplayProfile = DungeonMediaDisplayProfile.DaggerfallDefault with { ActorWorldScale = 0F },
         };
 
-        Assert.Throws<InvalidOperationException>(() => Arena2DungeonMediaPublication.Create(materialOverlay));
         Assert.Throws<ArgumentOutOfRangeException>(() => Arena2DungeonMediaPublication.Create(invalidProfile));
     }
 

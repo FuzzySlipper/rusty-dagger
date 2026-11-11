@@ -4,7 +4,6 @@ using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
-using WorldRpg.SpriteAuthoring;
 
 namespace Daggerfall.Import.Tests;
 
@@ -101,11 +100,9 @@ internal sealed partial class ImportToolFixture
                 var request = new SourceManifestRequest("arena2", "data/content-source-manifest.csv", Arena2, imported, [], Rows.Where(row => row.Disposition == "excluded").Select(row => row.PathOrPattern.StartsWith("arena2/", StringComparison.Ordinal) ? row.PathOrPattern["arena2/".Length..] : row.PathOrPattern).ToArray());
                 var coverage = SourceCoverageReconciler.Build(SourceManifestBuilder.Scan(request, File.ReadAllBytes(Inventory)), inputs.Consumers, inputs.Quests, inputs.Unsupported, Rows);
                 result.Add(At("report.json"), SourceCoverageReconciler.Serialize(coverage)); break;
-            case "sprite-inspection": result.Add(At("report.json"), SpriteInspectionDocumentSerializer.Serialize(Sprites.ToInspectionDocument())); break;
-            case "sprite-overlay-write": result.Add(At("writer-authoring/sprites/test.json"), File.ReadAllBytes(OverlayFile)); break;
             case "write":
             case "rmb-spatial":
-                var siteMedia = new Arena2SiteMedia(Arena2SitePublication.RuntimeActorResources(File.ReadAllText(Pack)), ClassicProfile(), [])
+                var siteMedia = new Arena2SiteMedia(Arena2SitePublication.RuntimeActorResources(File.ReadAllText(Pack)), ClassicProfile())
                 {
                     RuntimeNpcResources = Arena2SitePublication.RuntimeNpcResources(File.ReadAllText(Pack)),
                     RuntimeNatureResources = Arena2SitePublication.RuntimeNatureResources(),
