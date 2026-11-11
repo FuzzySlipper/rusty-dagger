@@ -206,6 +206,7 @@ internal static partial class DaggerfallBaseContent
                 QuestJournalTitles = ReadQuestJournalTitles(root, diagnostics),
                 Help = ReadHelp(root, diagnostics),
                 Tutorial = ReadTutorial(root, diagnostics),
+                WorldNames = ReadWorldNames(root, diagnostics),
             };
         }
         catch (JsonException exception)

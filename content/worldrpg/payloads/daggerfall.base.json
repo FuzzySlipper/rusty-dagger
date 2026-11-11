@@ -5004,5 +5004,22 @@
   },
   "questJournalTitles": {
     "S0000999": "Main Quest"
+  },
+  "worldNames": {
+    "kinds": [
+      { "id": "sea", "shownFrom": "world" },
+      { "id": "bay", "shownFrom": "world" },
+      { "id": "range", "shownFrom": "world" },
+      { "id": "desert", "shownFrom": "world" },
+      { "id": "forest", "shownFrom": "region" },
+      { "id": "moor", "shownFrom": "region" },
+      { "id": "island", "shownFrom": "region" },
+      { "id": "lake", "shownFrom": "region" },
+      { "id": "river", "shownFrom": "close" },
+      { "id": "coast", "shownFrom": "close" }
+    ],
+    "names": [
+      { "id": "iliac-bay", "name": "Iliac Bay", "kind": "bay", "x": 480, "y": 300 }
+    ]
   }
 }

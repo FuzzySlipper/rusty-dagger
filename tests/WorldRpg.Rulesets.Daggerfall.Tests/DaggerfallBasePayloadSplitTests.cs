@@ -42,7 +42,7 @@ public sealed class DaggerfallBasePayloadSplitTests
         using JsonDocument imported = JsonDocument.Parse(TestContentFiles.ReadCopy(Path.Combine(payloads, "daggerfall.imported.json")));
 
         Assert.Equal(
-            ["ruleset", "enemyRanged", "vocabulary", "armorValuesByMaterial", "actors", "authoredItemTemplates", "items", "equipmentSlots", "actions", "lootTables", "hudResources", "donorErrata", "encounters", "assembledSites", "newGame", "enemySpells", "dialogueWorldRules", "help", "questJournalTitles"],
+            ["ruleset", "enemyRanged", "vocabulary", "armorValuesByMaterial", "actors", "authoredItemTemplates", "items", "equipmentSlots", "actions", "lootTables", "hudResources", "donorErrata", "encounters", "assembledSites", "newGame", "enemySpells", "dialogueWorldRules", "help", "questJournalTitles", "worldNames"],
             authored.RootElement.EnumerateObject().Select(section => section.Name));
         Assert.Empty(imported.RootElement.EnumerateObject().Select(section => section.Name)
             .Intersect(authored.RootElement.EnumerateObject().Select(section => section.Name)));
@@ -72,5 +72,37 @@ public sealed class DaggerfallBasePayloadSplitTests
         Assert.NotEmpty(TestPayload.Definitions.Help);
         Assert.All(TestPayload.Definitions.Help.SelectMany(page => page.Paragraphs).SelectMany(paragraph => paragraph),
             segment => Assert.True(segment.Action is null || DaggerfallControlSettings.Catalog.Any(action => action.Id == segment.Action)));
+    }
+
+    [Fact]
+    public void World_names_are_one_list_of_kinds_and_names_and_a_name_the_atlas_could_not_place_is_refused()
+    {
+        using JsonDocument root = JsonDocument.Parse("""
+            { "worldNames": {
+              "kinds": [ { "id": "bay", "shownFrom": "world" }, { "id": "river", "shownFrom": "close" } ],
+              "names": [
+                { "id": "iliac-bay", "name": "Iliac Bay", "kind": "bay", "x": 480, "y": 300 },
+                { "id": "bjoulsae", "name": "Bjoulsae", "kind": "stream", "x": 700, "y": 200 },
+                { "id": "iliac-bay", "name": "Again", "kind": "bay", "x": 1, "y": 1 },
+                { "id": "edge", "name": "Edge", "kind": "river", "x": 1000, "y": 20 }
+              ] } }
+            """);
+        DaggerfallContentDiagnostics diagnostics = new();
+
+        DaggerfallWorldNames names = DaggerfallBaseContent.ReadWorldNames(root.RootElement, diagnostics);
+
+        Assert.Equal(DaggerfallWorldNameZoom.World, names.KindOf(names.Names[0]).ShownFrom);
+        string refused = Assert.Throws<DaggerfallContentException>(diagnostics.ThrowIfAny).Message;
+        Assert.Contains("'bjoulsae' is a 'stream', a kind the list does not declare", refused, StringComparison.Ordinal);
+        Assert.Contains("'iliac-bay' is listed twice", refused, StringComparison.Ordinal);
+        Assert.Contains("'edge' is written at (1000, 20), off the 1000 by 500 world map", refused, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_game_without_a_world_names_list_has_an_empty_one_and_the_authored_list_names_the_bay()
+    {
+        using JsonDocument empty = JsonDocument.Parse("{}");
+        Assert.Empty(DaggerfallBaseContent.ReadWorldNames(empty.RootElement, new()).Names);
+        Assert.Contains(TestPayload.Definitions.WorldNames.Names, name => name.Name == "Iliac Bay" && name.Kind == "bay");
     }
 }

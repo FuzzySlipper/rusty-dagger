@@ -332,6 +332,8 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     internal IReadOnlyList<DaggerfallHelpPage> Help { get; init; } = [];
     /// <summary>The tutorial the Help page offers, or none.</summary>
     internal DaggerfallTutorialDefinition? Tutorial { get; init; }
+    /// <summary>The names of the land and sea's features, which the atlas writes and any other system may read.</summary>
+    internal DaggerfallWorldNames WorldNames { get; init; } = DaggerfallWorldNames.None;
 
     /// <summary>The authored presentation locations assembled from their blocks share, when the payload carries it.</summary>
     internal DaggerfallAssembledSiteDefinition? AssembledSites { get; init; }
