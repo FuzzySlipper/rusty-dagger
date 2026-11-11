@@ -55,7 +55,9 @@ public sealed class ActorSpritePresentationTests
         SpriteFromAtlasRequest torch = graphics.SpriteRequests.Single(request => request.Material.EmissionMap != default);
         Assert.Equal(SpriteLightingMode.Synthetic, torch.Material.Lighting);
         Assert.Equal(Vector3.One, torch.Material.EmissionColor);
-        Assert.Contains(graphics.SpriteRequests, request => request.Material == DaggerfallSiteAppearance.LitSprite);
+        // A flat that gives light casts no shadow; the barrel beside it stands in the world and casts.
+        Assert.Equal(SpriteShadowPolicy.None, torch.Material.Shadow);
+        Assert.Contains(graphics.SpriteRequests, request => request.Material == DaggerfallSiteAppearance.CastingSprite);
 
         presentation.UpdateLampGlow(1.5f);
         Assert.Equal(1.5f, Assert.Single(graphics.EmissionUpdates).Intensity);
