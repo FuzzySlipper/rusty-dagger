@@ -186,6 +186,7 @@ internal static class ImportCommand
             "--flat-captions", Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Flats.csv"), "--update");
         Add("terrain", "terrain", "--arena2", arena2, "--pack", imported, "--out", staging, "--inventory", Inventory, "--update");
         Add("relief", "relief", "--arena2", arena2, "--pack", imported, "--out", staging, "--update");
+        Add("atlas", "atlas", "--pack", imported, "--out", staging, "--update");
         Add("items", "items", "--arena2", arena2, "--pack", imported, "--inventory", Inventory,
             "--item-templates", Donor("Assets/Resources/ItemTemplates.txt"),
             "--item-enums", Donor("Assets/Scripts/Game/Items/ItemEnums.cs"),

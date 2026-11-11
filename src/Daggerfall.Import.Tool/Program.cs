@@ -36,6 +36,7 @@ internal static class Program
         FactionsCommand.Command,
         TerrainCommand.Command,
         ReliefCommand.Command,
+        AtlasCommand.Command,
         ItemsCommand.Command,
         QuestsCommand.Command,
         VideosCommand.Command,
