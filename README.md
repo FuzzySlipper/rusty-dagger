@@ -72,8 +72,25 @@ say what may be deleted:
   optional, and so are `ffmpeg` and `ffprobe` on `PATH`: without them cinematics
   play as skipped.
 - To work on the importer, `import --only STEP,...` reruns named steps and repacks.
-- On our own network, copy the containers from a machine that has imported; don't
-  import again on a second machine.
+- On our own network only den-agents imports; every other machine copies its
+  containers with `scripts/data-sync.sh` and never imports. They are derived from
+  arena2, so they never leave the network.
+
+  ```bash
+  scripts/data-sync.sh pull                                  # a new checkout, from the NAS store
+  scripts/data-sync.sh push den-k8:build/workspaces/rusty-dagger   # refresh another Linux box (on den-agents)
+  scripts/data-sync.sh status                                # is this copy stale?
+  ```
+
+  Over ssh only changed 8 KiB blocks travel, so a refresh after an import sends
+  tens of megabytes; to or from the store (`/mnt/den-nas-backup/data/rusty-dagger/lan`)
+  changed files go whole. After an import den-agents also runs
+  `scripts/data-sync.sh push`, which keeps the store current. Nothing is deleted
+  unless you add `--mirror`. Windows pulls whole files from den-agents through
+  `P:` on the console desktop: `powershell -File scripts\data-sync.ps1`.
+- Every run prints the container's importer revision beside the checkout's. When
+  they differ the copy is stale for this tree (or the tree is ahead of the last
+  import): pull again once den-agents has imported that revision.
 - `local/data/first-person.rpak` is optional: 3D first-person arms built from
   purchased art by `scripts/fp-arms/build.sh`. Without it a 3D `viewmodel.style`
   draws the classic weapon sprites, with a warning.
