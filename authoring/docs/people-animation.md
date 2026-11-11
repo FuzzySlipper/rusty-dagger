@@ -238,8 +238,22 @@ unchanged. A shirt See-through gives whole as topwear is cut at the belt in ever
 classic sprite through the New B loop: a Qwen edit of the upscaled sprite, then Krea image-to-image at denoise 0.32 with the
 Brom, Elmore and RetroInk adapters.
 
+**Idles across views:** a walk lines its views up on a shared footfall, but an idle has no such event. One 3D idle seen from each
+view's heading gives every view the same motion at the same times. A free PINOC library idle is dumped to joints with Blender and
+projected orthographically at 0°, 45°, 90°, 135° and 180°. Each view keeps its own still's stance and takes only the clip's
+displacement from its mean pose, enlarged 2.5 times, since the library's calm idles read as near still at game size. `route/idle.sh`
+then cleans and retargets it onto each rig and runs the springs, the attention layer and placement. On 184-20 the worst bone jump
+across a view switch is about 1.7 px with the figure 354 px tall.
+
+**Seams under motion:**
+- A shirt cut at the belt overlaps 8 px, so the chest and hip meshes don't part.
+- Two limbs cut from one layer, both legs from one legwear layer, meet on a bare seam that any motion opens. Each limb part grows
+  16 px under the same-layer limb parts drawn over it (`cast/underfill.py`). Grown under cloth or another layer's limb, the band
+  would ride out with the part instead.
+
 **Judging a rig:** `out/recomposite_rig.png` and `out/idle.gif` are drawn before the route's passes, so a hair streak or a seam seen
-there may not ship. Judge a render of the built rig.
+there may not ship. Judge a render of the built rig. `rp rig` can report a refusal and still exit 0, leaving the last rig in
+place, so the build stops on any FAIL in `rig.log`.
 
 Faults found on 397, a hooded woman in a floor-length skirt:
 - **Hidden paint:** assembly colours a part from the painting only where it counts the part visible. Under a hood, a three-quarter
