@@ -70,6 +70,9 @@ internal sealed record DaggerfallHudFrame(
 internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<DaggerfallHudResourceDefinition> resources, ResolvedCompositionIdentity? compositionIdentity, DaggerfallUiArt? uiArt = null) : IDisposable
 {
     private readonly UiStream _hud = ui.OpenStream(new UiStreamRequest("dagger.hud", "dagger.ui.snapshot.v1"));
+    // One builder, cleared each update, and a publisher that sends the snapshot only when it changed.
+    private readonly UiValueBuilder _builder = new();
+    private UiProjectionPublisher? _publisher;
 
     // The art a snapshot carries is worth a few hundred kilobytes, so it travels when it is new or
     // asked for rather than on every admitted update. The UI keeps the block and asks again with the
@@ -107,7 +110,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         var (player, presentation, mode, controls, slots, inventory, loot, character, panelRequest,
             saveSlots, saveSlotDiagnostic, controlSettings, controlDiagnostic, activation, quests, notebook, transport,
             dungeonText, death, rest, travel, siteName, lodging, map, dispel, identifyView, detectors, spells, _, _, _, _, _, calendar, effects, cinematicSource, _, bundles) = frame;
-        UiValueBuilder builder = new();
+        UiValueBuilder builder = _builder;
+        builder.Clear();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
         (string Key, uint Value)[] fields =
         [
@@ -361,7 +365,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         }
 
         uint root = builder.Object(fields);
-        ui.PublishProjection(new UiProjection(_hud, builder.Build(root)));
+        (_publisher ??= new UiProjectionPublisher(ui, _hud)).Publish(builder, root);
     }
 
     /// <summary>

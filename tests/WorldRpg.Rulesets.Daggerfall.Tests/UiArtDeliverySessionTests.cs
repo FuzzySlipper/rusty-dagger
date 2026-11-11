@@ -593,6 +593,10 @@ public sealed class UiArtDeliverySessionTests
         Assert.Contains("uiArt", attached.Keys);
         Assert.Equal(revision, attached["uiArtRevision"]);
 
+        // Play goes on without the block; an unchanged snapshot is not published again.
+        session.Update(new ProductUpdate(OuterUpdate(3), [Input(InputEventKind.DirectDigital)]));
+        Assert.DoesNotContain("uiArt", Assert.IsType<Dictionary<string, object?>>(engine.Published()).Keys);
+
         // A DOM that reloaded holds nothing and names the revision it is missing.
         ProductInputEvent ask = Input(InputEventKind.DirectDigital) with
         {
@@ -601,7 +605,7 @@ public sealed class UiArtDeliverySessionTests
             PayloadData = Encoding.UTF8.GetBytes($"{{\"action\":\"art-request\",\"revision\":\"{revision}\"}}"),
         };
         int before = engine.PublishedHistory().Count;
-        session.Update(new ProductUpdate(OuterUpdate(3), [ask]));
+        session.Update(new ProductUpdate(OuterUpdate(4), [ask]));
         // An admitted update publishes per step and once more at its end, so the block is answered by
         // whichever snapshot follows the request rather than necessarily by the update's last one.
         Assert.Contains(engine.PublishedHistory().Skip(before), snapshot =>
