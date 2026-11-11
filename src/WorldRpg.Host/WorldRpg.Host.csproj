@@ -20,8 +20,8 @@
     <RustyEngineProductContentRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../content'))</RustyEngineProductContentRoot>
     <!-- The containers converted from the player's Daggerfall files (daggerfall-data.rpak, music.rpak) are
          installed beside the product: in a release beside product.rpak, under rusty dev in the repository's
-         local/ directory, where the import command writes them. -->
-    <RustyEngineProductInstalledContent>../../local</RustyEngineProductInstalledContent>
+         local/data/ directory, where the import command writes them. -->
+    <RustyEngineProductInstalledContent>../../local/data</RustyEngineProductInstalledContent>
     <!-- A release (rusty build with its release option) names the launcher a player starts; the import tool ships in
          tools/Daggerfall.Import.Tool/ and installs the containers beside product.rpak. -->
     <RustyEngineProductLauncherName>rusty-dagger</RustyEngineProductLauncherName>

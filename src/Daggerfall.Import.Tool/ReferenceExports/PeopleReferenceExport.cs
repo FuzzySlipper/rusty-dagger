@@ -92,8 +92,8 @@ internal static class PeopleReferenceExport
             new { note = "Usage counts distinct blocks and placements: RMB exterior people and faction flats, RMB interior people, and RDB flats in the layout NPC archives. Townspeople wander, so no block places them." },
             "Open index.html for the visual catalog, usage.csv for every record's size, frames and placements.\n" +
             "Each subject is one texture archive: static NPC billboards by archive, and the wandering townspeople's outfits under townspeople/.\n" +
-            "Reproduce: dotnet run --project src/Daggerfall.Import.Tool -- export-people --output authoring/df-raw/NEW_PEOPLE_DIRECTORY\n" +
-            "Extracted art stays in ignored authoring/df-raw/.",
+            "Reproduce: dotnet run --project src/Daggerfall.Import.Tool -- export-people --output local/art/reference/NEW_PEOPLE_DIRECTORY\n" +
+            "Extracted art stays in ignored local/art/reference/.",
             sources);
     }
 }

@@ -5,8 +5,8 @@
 The Daggerfall ruleset's content is derived from the game data of *The Elder Scrolls II: Daggerfall*
 (Bethesda Softworks). This repository does not contain or redistribute that data, or any file
 converted from it. The operator supplies their own copy of the game's `ARENA2` directory as
-`local/arena2`, and the import command converts it into the data container
-`local/daggerfall-data.rpak` on their machine (ignored by Git). The project wiki's
+`local/inputs/arena2`, and the import command converts it into the data container
+`local/data/daggerfall-data.rpak` on their machine (ignored by Git). The project wiki's
 `import-and-data-container` page says what is generated and what is authored.
 
 ## What a release redistributes
@@ -21,8 +21,8 @@ on their own machine.
 ## Music (not redistributed)
 
 The score is packed from an operator-supplied folder of recordings named by the classic song
-identifiers (`<track>.<ext>`, such as the donor installation's song folder `local/Sound`) into
-`local/music.rpak`. It is not part of this repository and is not redistributed.
+identifiers (`<track>.<ext>`, such as the donor installation's song folder `local/inputs/Sound`) into
+`local/data/music.rpak`. It is not part of this repository and is not redistributed.
 
 ## Typefaces
 

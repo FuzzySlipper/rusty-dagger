@@ -206,7 +206,7 @@ def main():
                     "library of layers that combine freely")
     ap.add_argument("--face", type=int, default=0, help="head record drawn for items that need the head (default 0)")
     ap.add_argument("--source", type=Path, action="append", default=[],
-                    help="worn source edit to read first, in the export's layout (e.g. gen-raw/source-edits/worn-neutral-mens)")
+                    help="worn source edit to read first, in the export's layout (e.g. local/art/generated/source-edits/worn-neutral-mens)")
     ap.add_argument("--seed", type=int, default=4101)
     ap.add_argument("--steps", type=int, default=STEPS, help="Qwen sampling steps")
     ap.add_argument("--paper-doll", type=Path, action="append", default=[],

@@ -1,13 +1,13 @@
 # First-person arms
 
-Builds `local/first-person.rpak`, the 3D arms, weapons and mounts the held viewmodel draws (`viewmodel.style` `held`
+Builds `local/data/first-person.rpak`, the 3D arms, weapons and mounts the held viewmodel draws (`viewmodel.style` `held`
 or `heldRetro`). The design is on the wiki page `wiki/rusty-dagger/first-person-held-art`.
 
 ## Licence: never commit the art
 
 The meshes and clips are Unity Asset Store purchases. They may ship inside the game, but the raw assets, and any GLB
-converted from them, must never be committed: this repository is public. They live in the ignored `local/fp-melee/`
-(sources) and `local/first-person.rpak` (the built container), and stay out of tracked content packs. That covers the
+converted from them, must never be committed: this repository is public. They live in the ignored `local/inputs/fp-melee/`
+(sources) and `local/data/first-person.rpak` (the built container), and stay out of tracked content packs. That covers the
 arms' pixel paint and the claw arms' GLBs too: they derive from the pack or carry its clips. The held definition
 (`content/worldrpg/first-person/daggerfall.held.json`) and the game's own weapon and mount models are committed.
 
@@ -22,7 +22,7 @@ scripts/fp-arms/build.sh
   `build.py` failed, rerun `build.py` by hand to see Blender's output.
 - A clip is named by its FBX file stem. To add one, name it in the definition and build again. A name ending
   `.mirrored` bakes the clip the other way round.
-- The build writes `local/fp-arms/measure.json` (shoulder, palm, grips, holds, `bowSeat`, suggested marks). Copy
+- The build writes `local/build/fp-arms/measure.json` (shoulder, palm, grips, holds, `bowSeat`, suggested marks). Copy
   what the definition should take from it, then tune in the game. Changing where the bow clips aim means copying
   `bowSeat` to `bow.seat` again.
 - A shield `seat` is in centimetres with `scale` 100: the arms' skeleton root is scaled 0.01.

@@ -77,31 +77,31 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void Every_missing_input_is_named_before_anything_is_written()
     {
-        ImportCommand.Inputs inputs = new("local/arena2", "local/Sound", "authoring", "variants.json");
+        ImportCommand.Inputs inputs = new("local/inputs/arena2", "local/inputs/Sound", "authoring", "variants.json");
 
         string[] missing = [.. ImportCommand.MissingInputs(inputs, root)];
 
         Assert.Contains(missing, entry => entry.StartsWith("block variant descriptor 'variants.json'", StringComparison.Ordinal));
-        Assert.Contains(missing, entry => entry.StartsWith("Arena2 directory 'local/arena2'", StringComparison.Ordinal));
+        Assert.Contains(missing, entry => entry.StartsWith("Arena2 directory 'local/inputs/arena2'", StringComparison.Ordinal));
         Assert.Contains($"tracked file '{ImportCommand.Donor}/Assets/Scripts/Utility/EnemyBasics.cs'", missing);
         Assert.Contains($"tracked directory '{ImportCommand.Donor}/Assets/StreamingAssets/Quests'", missing);
-        Assert.Contains(missing, entry => entry.StartsWith("music folder 'local/Sound'", StringComparison.Ordinal));
+        Assert.Contains(missing, entry => entry.StartsWith("music folder 'local/inputs/Sound'", StringComparison.Ordinal));
         Assert.Contains(missing, entry => entry.StartsWith("sprite authoring root 'authoring'", StringComparison.Ordinal));
         Assert.Contains("tracked file 'data/content-source-manifest.csv'", missing);
         Assert.Contains("tracked file 'content/worldrpg/payloads/daggerfall.base.json'", missing);
 
         // A folder that is not ARENA2 is named as such rather than as a list of every archive it lacks.
-        Directory.CreateDirectory(Path.Combine(root, "local/arena2"));
+        Directory.CreateDirectory(Path.Combine(root, "local/inputs/arena2"));
         missing = [.. ImportCommand.MissingInputs(inputs, root)];
-        Assert.Contains("Arena2 folder: 'local/arena2' is not Daggerfall's ARENA2 folder and none was found inside it", missing);
+        Assert.Contains("Arena2 folder: 'local/inputs/arena2' is not Daggerfall's ARENA2 folder and none was found inside it", missing);
         Assert.DoesNotContain(missing, entry => entry.StartsWith("Arena2 file", StringComparison.Ordinal));
 
         // An ARENA2 folder that exists is checked file by file, so each absent archive is named.
-        File.WriteAllBytes(Path.Combine(root, "local/arena2/BLOCKS.BSA"), []);
+        File.WriteAllBytes(Path.Combine(root, "local/inputs/arena2/BLOCKS.BSA"), []);
         missing = [.. ImportCommand.MissingInputs(inputs, root)];
-        Assert.Contains("Arena2 file 'local/arena2/MAPS.BSA'", missing);
-        Assert.Contains("Arena2 sky file 'local/arena2/SKY31.DAT'", missing);
-        Assert.Contains("Arena2 books directory 'local/arena2/books'", missing);
+        Assert.Contains("Arena2 file 'local/inputs/arena2/MAPS.BSA'", missing);
+        Assert.Contains("Arena2 sky file 'local/inputs/arena2/SKY31.DAT'", missing);
+        Assert.Contains("Arena2 books directory 'local/inputs/arena2/books'", missing);
         Assert.DoesNotContain(missing, entry => entry.StartsWith("Arena2 directory", StringComparison.Ordinal));
     }
 
@@ -151,9 +151,41 @@ public sealed class DataContainerImportTests : IDisposable
 
         File.WriteAllBytes(Path.Combine(release, "product.rpak"), []);
         Assert.Equal(release, ImportLayout.FindRelease(tool));
-        // Tests run from a build, never a release, so the containers stay in local/.
+        // Tests run from a build, never a release, so the containers stay in local/data/.
         Assert.Null(ImportLayout.ReleaseDirectory);
         Assert.Equal(ImportLayout.DataContainer, ImportLayout.Installed(ImportLayout.DataContainer));
+    }
+
+    [Fact]
+    public void An_import_refuses_to_write_through_a_link_to_another_checkouts_containers_or_staging()
+    {
+        string repository = Directory.CreateDirectory(Path.Combine(root, "worktree")).FullName;
+        string shared = Directory.CreateDirectory(Path.Combine(root, "shared", "data")).FullName;
+        Directory.CreateDirectory(Path.Combine(repository, "local"));
+        Directory.CreateSymbolicLink(Path.Combine(repository, "local", "data"), shared);
+
+        InvalidOperationException refused = Assert.Throws<InvalidOperationException>(() => ImportLayout.RefuseLinkedOutputs(repository, null));
+        Assert.Contains("'local/data' is a link", refused.Message, StringComparison.Ordinal);
+        // The same link as the whole local/ (an older worktree's) is refused too; a directory of its own, or an
+        // install directory outside the repository, is not.
+        Directory.Delete(Path.Combine(repository, "local"), recursive: true);
+        Directory.CreateSymbolicLink(Path.Combine(repository, "local"), Path.GetDirectoryName(shared)!);
+        Assert.Throws<InvalidOperationException>(() => ImportLayout.RefuseLinkedOutputs(repository, null));
+        Directory.Delete(Path.Combine(repository, "local"));
+        Directory.CreateDirectory(Path.Combine(repository, "local", "data"));
+        ImportLayout.RefuseLinkedOutputs(repository, null);
+        ImportLayout.RefuseLinkedOutputs(repository, shared);
+        // A container linked on its own, in a directory of the checkout's own, is refused by name.
+        File.WriteAllBytes(Path.Combine(shared, "music.rpak"), []);
+        File.CreateSymbolicLink(Path.Combine(repository, "local", "data", "music.rpak"), Path.Combine(shared, "music.rpak"));
+        refused = Assert.Throws<InvalidOperationException>(() => ImportLayout.RefuseLinkedOutputs(repository, null));
+        Assert.Contains("'local/data/music.rpak' is a link", refused.Message, StringComparison.Ordinal);
+        // So is a linked staging tree, which the tests in a worktree may read from the main checkout.
+        File.Delete(Path.Combine(repository, "local", "data", "music.rpak"));
+        Directory.CreateDirectory(Path.Combine(repository, "local", "build"));
+        Directory.CreateSymbolicLink(Path.Combine(repository, "local", "build", "import"), Directory.CreateDirectory(Path.Combine(root, "shared", "import")).FullName);
+        refused = Assert.Throws<InvalidOperationException>(() => ImportLayout.RefuseLinkedOutputs(repository, null));
+        Assert.Contains("'local/build/import' is a link", refused.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -177,8 +209,8 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void Without_FFmpeg_the_import_converts_no_cinematics_and_changes_nothing_else()
     {
-        IReadOnlyList<ImportCommand.Step> with = ImportCommand.Steps(new("local/arena2", null, null, null), root);
-        IReadOnlyList<ImportCommand.Step> without = ImportCommand.Steps(new("local/arena2", null, null, null, Cinematics: false), root);
+        IReadOnlyList<ImportCommand.Step> with = ImportCommand.Steps(new("local/inputs/arena2", null, null, null), root);
+        IReadOnlyList<ImportCommand.Step> without = ImportCommand.Steps(new("local/inputs/arena2", null, null, null, Cinematics: false), root);
 
         Assert.Equal(["cinematic-media-vid", "cinematic-media-flc"], with.Select(step => step.Label).Where(label => label.StartsWith("cinematic-media", StringComparison.Ordinal)));
         Assert.Equal(
@@ -189,7 +221,7 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void The_relief_is_baked_after_the_sections_it_reads()
     {
-        string[] labels = [.. ImportCommand.Steps(new("local/arena2", null, null, null), root).Select(step => step.Label)];
+        string[] labels = [.. ImportCommand.Steps(new("local/inputs/arena2", null, null, null), root).Select(step => step.Label)];
 
         int relief = Array.IndexOf(labels, "relief");
         Assert.True(relief > Array.IndexOf(labels, "locations"));
@@ -199,7 +231,7 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void Every_step_is_a_tool_command_the_commands_own_grammar_accepts()
     {
-        ImportCommand.Inputs inputs = new("local/arena2", "local/Sound", null, "variants.json");
+        ImportCommand.Inputs inputs = new("local/inputs/arena2", "local/inputs/Sound", null, "variants.json");
 
         IReadOnlyList<ImportCommand.Step> steps = ImportCommand.Steps(inputs, root);
 
@@ -222,7 +254,7 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void A_command_rerun_without_its_staged_options_reads_and_writes_what_the_import_does()
     {
-        IReadOnlyList<ImportCommand.Step> steps = ImportCommand.Steps(new("local/arena2", "local/Sound", null, null), root);
+        IReadOnlyList<ImportCommand.Step> steps = ImportCommand.Steps(new("local/inputs/arena2", "local/inputs/Sound", null, null), root);
 
         int staged = 0;
         foreach (ImportCommand.Step step in steps)
@@ -255,13 +287,13 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void The_data_container_steps_are_the_same_whichever_music_was_supplied()
     {
-        IReadOnlyList<ImportCommand.Step> without = ImportCommand.Steps(new("local/arena2", null, null, null), root);
-        IReadOnlyList<ImportCommand.Step> with = ImportCommand.Steps(new("local/arena2", "local/Sound", null, null), root);
+        IReadOnlyList<ImportCommand.Step> without = ImportCommand.Steps(new("local/inputs/arena2", null, null, null), root);
+        IReadOnlyList<ImportCommand.Step> with = ImportCommand.Steps(new("local/inputs/arena2", "local/inputs/Sound", null, null), root);
 
         // Only the music container's own step reads the music folder; no other step names it or what it staged.
         Assert.DoesNotContain(without, step => step.Label == "music-tracks");
         ImportCommand.Step tracks = Assert.Single(with, step => step.Label == "music-tracks");
-        Assert.Equal(["music-tracks", "--music", "local/Sound", "--out", ImportLayout.MusicTracks], tracks.Arguments);
+        Assert.Equal(["music-tracks", "--music", "local/inputs/Sound", "--out", ImportLayout.MusicTracks], tracks.Arguments);
         Assert.Equal(
             without.Select(step => string.Join('\u001f', [step.Label, .. step.Arguments])),
             with.Where(step => step != tracks).Select(step => string.Join('\u001f', [step.Label, .. step.Arguments])));
@@ -272,8 +304,8 @@ public sealed class DataContainerImportTests : IDisposable
     {
         string repository = Directory.CreateDirectory(Path.Combine(root, "repo")).FullName;
 
-        Assert.Equal("local/arena2", ImportCommand.Portable("local/arena2", repository, repository));
-        Assert.Equal("local/Sound", ImportCommand.Portable("../local/Sound", Path.Combine(repository, "scripts"), repository));
+        Assert.Equal("local/inputs/arena2", ImportCommand.Portable("local/inputs/arena2", repository, repository));
+        Assert.Equal("local/inputs/Sound", ImportCommand.Portable("../local/inputs/Sound", Path.Combine(repository, "scripts"), repository));
         Assert.Equal(Path.Combine(root, "games", "ARENA2"), ImportCommand.Portable(Path.Combine(root, "games", "ARENA2"), repository, repository));
     }
 
@@ -442,5 +474,5 @@ internal sealed class ImportedDataContainerFactAttribute : FactAttribute
 {
     public ImportedDataContainerFactAttribute() => Skip = File.Exists(Path.Combine(TestData.RepositoryRoot, ImportLayout.DataContainer))
         ? null
-        : $"no data container at {ImportLayout.DataContainer}; run `daggerfall-import-tool import` with local/arena2 supplied.";
+        : $"no data container at {ImportLayout.DataContainer}; run `daggerfall-import-tool import` with local/inputs/arena2 supplied.";
 }

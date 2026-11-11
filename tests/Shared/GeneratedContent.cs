@@ -5,7 +5,7 @@ using Xunit.Sdk;
 namespace WorldRpg.Tests.Support;
 
 // Content derived from the operator's Arena2 files is not tracked: the import command packs it from
-// local/arena2 into local/daggerfall-data.rpak, with its records in local/import/records. A test that reads
+// local/inputs/arena2 into local/data/daggerfall-data.rpak, with its records in local/build/import/records. A test that reads
 // it skips at discovery with that command named, instead of failing on an I/O error in a clone that has not
 // imported.
 

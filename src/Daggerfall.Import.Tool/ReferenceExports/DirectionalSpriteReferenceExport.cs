@@ -137,7 +137,7 @@ internal static class DirectionalSpriteReferenceExport
             "supplemental/ contains other directional character source archives outside the baseline; their gameplay use is not established. Other animation groups retain neutral source-record identities. Lysandus uses the existing spectral conversion.\n" +
             "The baseline is read only. Covered archives and exact duplicate aliases are recorded in manifest.json rather than copied. Static/special NPC billboards are catalogued in archive-audit.json, not exported as invented directional sets.\n" +
             "Native dimensions, palette and transparency; no mirroring, resizing, pose edits or generated views. See manifest.json for the baseline path and decoder provenance.\n" +
-            "Reproduce: dotnet run --project src/Daggerfall.Import.Tool -- export-directional-sprites --baseline local/exports/daggerfall-mobile-idle-unmirrored-r01 --output local/exports/NEW_DIRECTIONAL_DIRECTORY\n" +
+            "Reproduce: dotnet run --project src/Daggerfall.Import.Tool -- export-directional-sprites --baseline local/art/reference/daggerfall-mobile-idle-unmirrored-r01 --output local/art/reference/NEW_DIRECTIONAL_DIRECTORY\n" +
             "Use a fresh output directory to preserve references and experiments. Extracted art stays ignored; no inference is submitted.",
             exported.Select(source => $"arena2/TEXTURE.{source.Archive:000}"));
         StringBuilder csv = new("archive,name,family,displayRace,gender,outfit,directory,sourceRecords,sourceFrames,referenceDirections,selection\n");

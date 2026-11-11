@@ -49,8 +49,8 @@ internal static class MediaReferenceExport
                 note = "Worn-item layers and dyes are in the item export (player role); these are the bodies and heads they are drawn over." },
             "Open index.html for the visual catalog; index.csv lists every file. Native-resolution frames, palette ART_PAL.COL, index 0 transparent, never resized or mirrored.\n" +
             "bodies/, faces/ and creatures/ hold the BODY, FACE and WERE/WOLF/BOAR/VAMP files; each file is its own subject with every record it carries.\n" +
-            "Reproduce: dotnet run --project src/Daggerfall.Import.Tool -- export-paper-doll --output authoring/df-raw/NEW_PAPER_DOLL_DIRECTORY\n" +
-            "Use a fresh output directory to preserve experiments. No generation jobs have been submitted. Extracted art stays in ignored authoring/df-raw/.",
+            "Reproduce: dotnet run --project src/Daggerfall.Import.Tool -- export-paper-doll --output local/art/reference/NEW_PAPER_DOLL_DIRECTORY\n" +
+            "Use a fresh output directory to preserve experiments. No generation jobs have been submitted. Extracted art stays in ignored local/art/reference/.",
             sources);
     }
 
@@ -75,8 +75,8 @@ internal static class MediaReferenceExport
             new { note = "The element missiles and impacts (TEXTURE.375-379) and the casting hands are in the spell export; TEXTURE.380 records 1 and 3 also appear there and in the item export." },
             "Open index.html for the visual catalog. Every record and frame of each archive, native resolution, ART_PAL.COL with index 0 transparent.\n" +
             "380 is the shared effect set and 434 the inventory glints. TEXTURE.370-372 (interior surfaces) and 374 (doors) are world surfaces and are not exported here.\n" +
-            "Reproduce: dotnet run --project src/Daggerfall.Import.Tool -- export-effects --output authoring/df-raw/NEW_EFFECTS_DIRECTORY\n" +
-            "Use a fresh output directory to preserve experiments. No generation jobs have been submitted. Extracted art stays in ignored authoring/df-raw/.",
+            "Reproduce: dotnet run --project src/Daggerfall.Import.Tool -- export-effects --output local/art/reference/NEW_EFFECTS_DIRECTORY\n" +
+            "Use a fresh output directory to preserve experiments. No generation jobs have been submitted. Extracted art stays in ignored local/art/reference/.",
             sources);
     }
 

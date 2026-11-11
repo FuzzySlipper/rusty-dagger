@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A final lands in the doll where its generation put it, whatever the spec's canvas size and occupancy.
 
-    python3 -m unittest test_registration     # from authoring/tools/items; needs df-raw/items exported
+    python3 -m unittest test_registration     # from authoring/tools/items; needs local/art/reference/items exported
 
 Prepares one held weapon (a worn final drawn alone, with no dressed sidecar) at a non-default canvas size and
 occupancy, publishes a stand-in cut-out through finalize.py, and checks that doll_preview.py and promote.py place

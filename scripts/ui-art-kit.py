@@ -25,7 +25,7 @@ entries in data/ui-authored-assets.json; the import then lists them in the class
    transparent area filled with #00FF00, then colours reduced and the green keyed out. Hard alpha, no pixel grid.
 
 Requires Python 3 with Pillow and numpy, and ASSET_PIPELINE (default /home/agent/dev/asset-pipeline).
-Raw generations and graphs go to RAW (default ./local/ui-art-kit, which is ignored).
+Raw generations and graphs go to RAW (default ./local/scratch/ui-art-kit, which is ignored).
 """
 import argparse
 import hashlib
@@ -40,7 +40,7 @@ from PIL import Image, ImageFilter
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PIPELINE = os.environ.get("ASSET_PIPELINE", "/home/agent/dev/asset-pipeline")
-RAW = os.environ.get("RAW", os.path.join(ROOT, "local", "ui-art-kit"))
+RAW = os.environ.get("RAW", os.path.join(ROOT, "local", "scratch", "ui-art-kit"))
 ORIGINALS = os.path.join(ROOT, "content", "worldrpg", "media", "ui", "authored")
 MANIFEST = os.path.join(ROOT, "data", "ui-authored-assets.json")
 HOSTS = {"den-m5": "http://192.168.1.24:8188", "den-nimo": "http://192.168.1.23:8188"}

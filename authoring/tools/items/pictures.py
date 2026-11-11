@@ -9,10 +9,10 @@ fullest are the picture, which is cropped, stretched to the classic picture's as
 paper-doll picture also gets a sidecar stating the classic rect, so doll_preview.py and promote.py draw it
 exactly where the classic picture was.
 
-    pictures.py BP_DIR SPEC.json [--area paper-doll]   # e.g. gen-raw/studies/paper-doll-c1-beasts-bp-DATE specs/paper-doll/paper-doll-c1-beasts.json
-    pictures.py BP_DIR SPEC.json --area ui --source gen-raw/source-edits/ui-screens --image original --only title death
+    pictures.py BP_DIR SPEC.json [--area paper-doll]   # e.g. local/art/generated/studies/paper-doll-c1-beasts-bp-DATE specs/paper-doll/paper-doll-c1-beasts.json
+    pictures.py BP_DIR SPEC.json --area ui --source local/art/generated/source-edits/ui-screens --image original --only title death
 
-Finals go to gen-raw/AREA under their art keys.
+Finals go to local/art/generated/AREA under their art keys.
 """
 import argparse, json
 from pathlib import Path
@@ -21,7 +21,7 @@ import numpy as np
 from PIL import Image
 
 from art_key import art_key
-from doll_preview import AUTHORING, doll_layer
+from doll_preview import ART, doll_layer
 
 EDGE = 8                   # border pixels whose median is the background the model actually painted
 UNLIKE = 24                # summed channel difference over which a pixel is not background
@@ -44,13 +44,13 @@ def main():
     ap.add_argument("bp", type=Path)
     ap.add_argument("spec", type=Path)
     ap.add_argument("--area", default="paper-doll")
-    ap.add_argument("--source", type=Path, help="the source root the batch ran from (its SOURCE), when not df-raw/AREA")
+    ap.add_argument("--source", type=Path, help="the source root the batch ran from (its SOURCE), when not local/art/reference/AREA")
     ap.add_argument("--image", choices=("bp-broad-half", "original"), default="bp-broad-half",
                     help="original takes the picture before back-projection, which would bring back lettering the batch painted out")
     ap.add_argument("--only", nargs="+", help="item ids to fit; the rest are left as they are")
     a = ap.parse_args()
-    finals = AUTHORING / "gen-raw" / a.area
-    sources = a.source or AUTHORING / "df-raw" / a.area
+    finals = ART / "generated" / a.area
+    sources = a.source or ART / "reference" / a.area
     for item in json.load(open(a.spec))["items"]:
         if a.only and item["id"] not in a.only:
             continue

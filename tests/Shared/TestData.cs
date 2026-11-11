@@ -15,8 +15,8 @@ internal static class TestData
     /// <summary>The directory holding <c>AGENTS.md</c>, found by walking up from the test output.</summary>
     public static string RepositoryRoot => FoundRoot.Value;
 
-    /// <summary>The Arena2 corpus: <c>DAGGER_ARENA2</c> when set, else <c>local/arena2</c> in the repository.</summary>
-    public static string CorpusRoot => Configured(CorpusVariable) ?? Path.Combine(RepositoryRoot, "local", "arena2");
+    /// <summary>The Arena2 corpus: <c>DAGGER_ARENA2</c> when set, else <c>local/inputs/arena2</c> in the repository.</summary>
+    public static string CorpusRoot => Configured(CorpusVariable) ?? Path.Combine(RepositoryRoot, "local", "inputs", "arena2");
 
     /// <summary>The donor files: <c>DAGGER_DONOR_ROOT</c> when set, else the tracked <c>data/daggerfall-unity</c>.</summary>
     public static string DonorRoot => Configured(DonorVariable) ?? Path.Combine(RepositoryRoot, "data", "daggerfall-unity");
@@ -26,13 +26,13 @@ internal static class TestData
     public static string Donor(string relative) => Path.Combine(DonorRoot, relative);
 
     /// <summary>The one command that converts the operator's Arena2 files into the data containers and records.</summary>
-    public const string RegenerationCommand = "dotnet run --project src/Daggerfall.Import.Tool -- import --music local/Sound";
+    public const string RegenerationCommand = "dotnet run --project src/Daggerfall.Import.Tool -- import --music local/inputs/Sound";
 
     /// <summary>The data container a real import packed.</summary>
-    public static string DataContainer => Path.Combine(RepositoryRoot, "local", "daggerfall-data.rpak");
+    public static string DataContainer => Path.Combine(RepositoryRoot, "local", "data", "daggerfall-data.rpak");
 
     /// <summary>The import records a real import wrote beside the containers; nothing at runtime reads them.</summary>
-    public static string ImportRecords => Path.Combine(RepositoryRoot, "local", "import", "records");
+    public static string ImportRecords => Path.Combine(RepositoryRoot, "local", "build", "import", "records");
 
     /// <summary>
     /// Why a test reading generated content cannot run, or null when a real import's data container and import
@@ -42,7 +42,7 @@ internal static class TestData
     {
         string[] missing = [.. new[] { DataContainer, ImportRecords }.Where(path => !File.Exists(path) && !Directory.Exists(path))
             .Select(path => Path.GetRelativePath(RepositoryRoot, path))];
-        return missing.Length == 0 ? null : $"generated content is absent ({string.Join(", ", missing)}); run `{RegenerationCommand}` with local/arena2 supplied.";
+        return missing.Length == 0 ? null : $"generated content is absent ({string.Join(", ", missing)}); run `{RegenerationCommand}` with local/inputs/arena2 supplied.";
     }
 
     /// <summary>Why a test needing these corpus entries cannot run, or null when they are all present.</summary>

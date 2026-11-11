@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Convert surface texture families (rusty-dagger #10497): every used record of the named families, from the
-export-surfaces reference set (authoring/df-raw/surfaces, usage.csv), to a refreshed final in authoring/gen-raw/surfaces.
+export-surfaces reference set (local/art/reference/surfaces, usage.csv), to a refreshed final in local/art/generated/surfaces.
 
 For each record, in order, each step skipped when its output exists:
   1. prepare  the classic record; a floor or ceiling (mostly flat planes) without its bevel frame (reduce.unframe).
@@ -19,7 +19,7 @@ redrew as another picture (not reduce.snowed) is converted like a summer one.
 
     batch.py --host den-m5 --family exterior-city-a --family exterior-roofs
     batch.py --host den-nimo --families-from list.txt
-Writes gen-raw/surfaces/<set>/texture-AAA-R.png (finals), raw/, and captions.json; a run log on stdout.
+Writes local/art/generated/surfaces/<set>/texture-AAA-R.png (finals), raw/, and captions.json; a run log on stdout.
 """
 import argparse, csv, json, os, shutil, sys, tempfile, time
 from pathlib import Path
@@ -28,13 +28,14 @@ import numpy as np
 from PIL import Image
 
 AUTHORING = Path(__file__).resolve().parents[2]
+ART = AUTHORING.parent / "local" / "art"
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import reduce  # noqa: E402
 
 AP = Path(os.environ.get("ASSET_PIPELINE", Path.home() / "dev/asset-pipeline"))
 HOSTS = {"den-m5": "http://192.168.1.24:8188", "den-nimo": "http://192.168.1.23:8188"}
-RAW = AUTHORING / "df-raw/surfaces"
-OUT = AUTHORING / "gen-raw/surfaces"
+RAW = ART / "reference/surfaces"
+OUT = ART / "generated/surfaces"
 CORRECTIONS = json.loads((Path(__file__).resolve().parent / "corrections.json").read_text())
 TEXELS = 16  # ARCH3D texture-coordinate units per texel
 CAPTION = ("Describe this game texture in one sentence of at most 45 words: what surface or object it shows (materials, "

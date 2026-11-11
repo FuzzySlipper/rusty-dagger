@@ -4,7 +4,7 @@ using Rusty.Engine.Testing;
 namespace WorldRpg.Tests.Support;
 
 /// <summary>
-/// The containers a real import packed (<c>local/daggerfall-data.rpak</c>, <c>local/music.rpak</c>), read through
+/// The containers a real import packed (<c>local/data/daggerfall-data.rpak</c>, <c>local/data/music.rpak</c>), read through
 /// one shared Engine test host so a suite reads exactly what the product opens.
 /// </summary>
 /// <remarks>
@@ -23,8 +23,8 @@ internal static class TestDataContainers
     private static readonly Dictionary<string, Opened> OpenedContainers = new(StringComparer.Ordinal);
     private static EngineTestHost? host;
 
-    /// <summary>A container's path in the repository's <c>local/</c> directory.</summary>
-    public static string PathOf(string container) => Path.Combine(TestData.RepositoryRoot, "local", container);
+    /// <summary>A container's path in the repository's <c>local/data/</c> directory.</summary>
+    public static string PathOf(string container) => Path.Combine(TestData.RepositoryRoot, "local", "data", container);
 
     /// <summary>Whether a real import packed this container.</summary>
     public static bool Exists(string container) => File.Exists(PathOf(container));
@@ -50,7 +50,7 @@ internal static class TestDataContainers
             if (OpenedContainers.TryGetValue(container, out Opened? opened)) return opened;
             string path = PathOf(container);
             if (!File.Exists(path))
-                throw new FileNotFoundException($"No {container} at {path}; run `{TestData.RegenerationCommand}` with local/arena2 supplied.", path);
+                throw new FileNotFoundException($"No {container} at {path}; run `{TestData.RegenerationCommand}` with local/inputs/arena2 supplied.", path);
             ProductContentBundle bundle = Host().Call(engine => ProductContentBundle.OpenContainer(engine.Content, path));
             opened = new(bundle, bundle.Entries.ToArray().ToDictionary(entry => entry.Path, StringComparer.Ordinal));
             OpenedContainers.Add(container, opened);

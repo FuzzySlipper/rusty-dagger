@@ -224,7 +224,7 @@ def PROMOTED():
 
 
 def outline(family, name, record, mode):
-    """A layer's silhouette, small holes filled: classic, generated ("canvas", the gen-raw final) or "promoted" (the
+    """A layer's silhouette, small holes filled: classic, generated ("canvas", the local/art/generated final) or "promoted" (the
     image the game draws, at its payload rect); None when there is no generated or promoted image.
 
     A large hole stays open: an Argonian's tail encloses the gap between its legs."""
@@ -347,7 +347,7 @@ def check(mode="canvas"):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("command", choices=("standard", "check"))
-    ap.add_argument("--promoted", action="store_true", help="check the promoted images, as the game draws them, not gen-raw")
+    ap.add_argument("--promoted", action="store_true", help="check the promoted images, as the game draws them, not local/art/generated")
     ap.add_argument("--paper-doll", type=Path, action="append", default=[],
                     help="body or head finals directory to look in first; repeat, first wins")
     a = ap.parse_args()

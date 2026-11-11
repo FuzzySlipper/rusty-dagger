@@ -182,8 +182,8 @@ internal static class SurfaceReferenceExport
             new { note = "Usage counts distinct blocks: RMB exteriors through every climate and season swap, RMB interiors through every climate, RDB dungeons through every classic texture table. A record no block reaches may still be drawn by a placed flat or another path; check before skipping it." },
             "Open index.html for the visual catalog, usage.csv for every record's size and block usage.\n" +
             "Each subject is one texture archive under its classic texture set (DFU DFLocation.ClimateTextureSet); a set's climates are 0xx desert, 1xx mountain, 3xx temperate, 4xx swamp, and its winter variant is one archive up.\n" +
-            "Reproduce: dotnet run --project src/Daggerfall.Import.Tool -- export-surfaces --output authoring/df-raw/NEW_SURFACES_DIRECTORY\n" +
-            "Extracted art stays in ignored authoring/df-raw/.",
+            "Reproduce: dotnet run --project src/Daggerfall.Import.Tool -- export-surfaces --output local/art/reference/NEW_SURFACES_DIRECTORY\n" +
+            "Extracted art stays in ignored local/art/reference/.",
             sources);
     }
 }

@@ -15,7 +15,7 @@ SOURCE_DIR = {"worn": "items"}
 
 
 def source_dir(area):
-    """df-raw subdirectory that holds an area's source images."""
+    """local/art/reference subdirectory that holds an area's source images."""
     return SOURCE_DIR.get(area, area)
 
 

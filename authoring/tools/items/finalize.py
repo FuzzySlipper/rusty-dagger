@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Publish cut-out finals: copy `<id>.png` from a cutout directory to gen-raw/<area> under the image's art key.
+"""Publish cut-out finals: copy `<id>.png` from a cutout directory to local/art/generated/<area> under the image's art key.
 
 A paper-doll or worn final also gets a sidecar JSON stating its doll-space rect, from the generation's own input
 transform: the source's whole-number scale and its placement on the canvas, as `run.py prepare` recorded them in
@@ -14,6 +14,7 @@ from art_key import art_key
 from doll_preview import generation_rect
 
 AUTHORING = Path(__file__).resolve().parents[2]
+ART = AUTHORING.parent / "local" / "art"
 DOLL_AREAS = ("paper-doll", "worn")
 ap = argparse.ArgumentParser()
 ap.add_argument("spec"); ap.add_argument("cutout")
@@ -23,7 +24,7 @@ ap.add_argument("--study", type=Path, help="the study the cut-outs came from; pa
 a = ap.parse_args()
 if a.area in DOLL_AREAS and a.study is None:
     ap.error(f"--study is required for {a.area} finals, which state their doll-space rect")
-finals = Path(a.finals or AUTHORING / "gen-raw" / a.area); finals.mkdir(parents=True, exist_ok=True)
+finals = Path(a.finals or ART / "generated" / a.area); finals.mkdir(parents=True, exist_ok=True)
 spec = json.load(open(a.spec))
 for i in spec["items"]:
     target = finals / (art_key(a.area, i["directory"], i["image"]) + ".png")

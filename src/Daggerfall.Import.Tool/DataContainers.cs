@@ -19,11 +19,14 @@ namespace Daggerfall.Import.Tool;
 /// </remarks>
 internal static class ImportLayout
 {
-    public const string Staging = "local/import/staging";
-    public const string Records = "local/import/records";
+    /// <summary>Where the player's ARENA2 folder is supplied in a repository, with the other supplied inputs.</summary>
+    public const string Arena2 = "local/inputs/arena2";
+
+    public const string Staging = "local/build/import/staging";
+    public const string Records = "local/build/import/records";
 
     /// <summary>The music container's files: one recording per track at the root, by the naming scheme.</summary>
-    public const string MusicTracks = "local/import/music";
+    public const string MusicTracks = "local/build/import/music";
 
     /// <summary>The imported payload: every base section the commands derive.</summary>
     public const string ImportedPayload = $"{Staging}/worldrpg/payloads/daggerfall.imported.json";
@@ -49,8 +52,8 @@ internal static class ImportLayout
     /// <summary>The per-block world publication.</summary>
     public const string WorldBlocks = $"{Staging}/worldrpg/imports/world-blocks";
 
-    public const string DataContainer = "local/daggerfall-data.rpak";
-    public const string MusicContainer = "local/music.rpak";
+    public const string DataContainer = "local/data/daggerfall-data.rpak";
+    public const string MusicContainer = "local/data/music.rpak";
 
     /// <summary>Each container's own description, at its container-relative path.</summary>
     public const string DescriptorPath = "worldrpg/data-container.json";
@@ -80,10 +83,34 @@ internal static class ImportLayout
 
     /// <summary>
     /// Where a container is installed: in the directory the caller names (the product passes the one the host
-    /// opens containers from), else beside <c>product.rpak</c> in a release, else in <c>local/</c> in a repository.
+    /// opens containers from), else beside <c>product.rpak</c> in a release, else in <c>local/data/</c> in a repository.
     /// </summary>
     public static string Installed(string container, string? install = null) =>
         (install ?? ReleaseDirectory) is { } directory ? Path.Combine(directory, Path.GetFileName(container)) : container;
+
+    /// <summary>
+    /// Refuses to write the import's output where it is, or lies under, a link inside the repository. A worktree links
+    /// <c>local/data</c> (and may link <c>local/build/import</c>) to the main checkout's to run the game and its tests;
+    /// an import there would replace them for every checkout that shares them with this worktree's importer revision.
+    /// </summary>
+    public static void RefuseLinkedOutputs(string repository, string? install)
+    {
+        foreach (string output in new[] { Installed(DataContainer, install), Installed(MusicContainer, install), Staging, Records, MusicTracks })
+        {
+            for (FileSystemInfo? current = new FileInfo(Path.GetFullPath(output, repository));
+                 current is not null;
+                 current = current is FileInfo file ? file.Directory : ((DirectoryInfo)current).Parent)
+            {
+                string relative = Path.GetRelativePath(repository, current.FullName);
+                if (relative == "." || relative.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relative)) break;
+                if (current.LinkTarget is not { } target) continue;
+                string linked = relative.Replace('\\', '/');
+                throw new InvalidOperationException(
+                    $"'{linked}' is a link to '{target}', so an import here would replace what every checkout sharing it opens. "
+                    + $"Give this checkout its own (rm {linked}), then import again.");
+            }
+        }
+    }
 
     /// <summary>
     /// The repository root a command works in: <c>--repository</c>, or the current directory; in a release, the
@@ -188,6 +215,7 @@ internal static class DataContainers
     /// </summary>
     internal static void Pack(bool compress, string? install = null)
     {
+        ImportLayout.RefuseLinkedOutputs(Directory.GetCurrentDirectory(), install);
         WriteDescriptor(ImportLayout.Staging);
         if (Directory.Exists(ImportLayout.MusicTracks)) WriteMusicDescriptor(ImportLayout.MusicTracks);
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions());

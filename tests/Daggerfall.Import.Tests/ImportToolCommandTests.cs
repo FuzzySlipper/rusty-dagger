@@ -21,7 +21,7 @@ internal sealed class ImportToolDataFactAttribute : FactAttribute
     // containers; a machine given only the containers and the records has no staging tree to give them.
     private static string? MissingStaging() => Directory.Exists(ImportedContent.Staged(""))
         ? null
-        : $"the import's staging tree (local/import/staging) is absent; run `{TestData.RegenerationCommand}` with local/arena2 supplied.";
+        : $"the import's staging tree (local/build/import/staging) is absent; run `{TestData.RegenerationCommand}` with local/inputs/arena2 supplied.";
 }
 
 /// <summary>Exercises the actual compiled dispatch, parser, commands and file publications.</summary>

@@ -20,5 +20,5 @@ internal static class ImportedContent
     public static string RecordPath(string path) => Path.Combine(TestData.ImportRecords, path);
 
     /// <summary>A content-root-relative path in the staging tree the data container was packed from.</summary>
-    public static string Staged(string path) => Path.Combine(TestData.RepositoryRoot, "local", "import", "staging", path);
+    public static string Staged(string path) => Path.Combine(TestData.RepositoryRoot, "local", "build", "import", "staging", path);
 }

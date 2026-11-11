@@ -20,7 +20,7 @@ already gives every race of a morph its body colour.
     skin.py OUT [--face 00 --face 10]        # every generated head of those FACE files (default all)
 
 Run it after heads.py has trimmed the heads. Remapped heads go to OUT/finals for doll_preview.py --paper-doll OUT/finals
-before they replace gen-raw/paper-doll.
+before they replace local/art/generated/paper-doll.
 """
 import argparse
 from pathlib import Path

@@ -35,24 +35,24 @@ cd "$repo_root"
 # The corpus suites skip, with a stated reason, when their data is absent, so a green run means different
 # things with and without them. Say up front whether this run has it. The Daggerfall Unity files the import
 # reads are tracked in data/daggerfall-unity; DAGGER_DONOR_ROOT points the tests at a full checkout instead.
-arena2_root=${DAGGER_ARENA2:-local/arena2}
+arena2_root=${DAGGER_ARENA2:-local/inputs/arena2}
 donor_root=${DAGGER_DONOR_ROOT:-data/daggerfall-unity}
 corpora="Arena2 corpus $arena2_root: $([[ -d "$arena2_root" ]] && echo present || echo absent); donor files $donor_root"
 echo "corpora: $corpora"
 
-# The Arena2-derived content is not tracked: the import command packs it into local/daggerfall-data.rpak,
-# with its import records in local/import/records (and the score in local/music.rpak). Without it the product
+# The Arena2-derived content is not tracked: the import command packs it into local/data/daggerfall-data.rpak,
+# with its import records in local/build/import/records (and the score in local/data/music.rpak). Without it the product
 # still stages and states why it cannot be played, the suites that read it skip with the reason printed, and
 # --play, which plays it, is refused.
-import_command="dotnet run --project src/Daggerfall.Import.Tool -- import --music local/Sound"
+import_command="dotnet run --project src/Daggerfall.Import.Tool -- import --music local/inputs/Sound"
 generated_missing=()
-for path in local/daggerfall-data.rpak local/import/records; do
+for path in local/data/daggerfall-data.rpak local/build/import/records; do
   [[ -e "$path" ]] || generated_missing+=("$path")
 done
 if [[ ${#generated_missing[@]} -eq 0 ]]; then
   generated="present"
 else
-  generated="absent (${generated_missing[*]}); run \`$import_command\` with local/arena2 supplied"
+  generated="absent (${generated_missing[*]}); run \`$import_command\` with local/inputs/arena2 supplied"
 fi
 echo "generated content: $generated"
 skip() { echo "skipped $1: the data container is absent; run \`$import_command\`"; }
@@ -124,17 +124,17 @@ dotnet test tests/WorldRpg.Architecture.Tests/WorldRpg.Architecture.Tests.csproj
 # art among it), the suite's own sources and the Engine pin, the corpus, a relocated donor checkout, or the imported data
 # (the data container, the staging tree and the records). A green run leaves a stamp of those on this machine,
 # and a later run that finds the same stamp skips its 15 to 20 minutes; --import runs it anyway. The ruleset suite
-# always runs, and its contract tests read what the importer wrote. The stamp lives outside local/import, whose
+# always runs, and its contract tests read what the importer wrote. The stamp lives outside local/build/import, whose
 # records directory is what says an import has run.
-import_stamp=local/verify/import-suite.stamp
+import_stamp=local/build/verify/import-suite.stamp
 import_inputs() {
   find src/Daggerfall.Import src/Daggerfall.Import.Tool src/WorldRpg.SpriteAuthoring data content \
       tests/Daggerfall.Import.Tests tests/Shared tests/SharedEngine \( -name bin -o -name obj \) -prune -o -type f -print \
     | LC_ALL=C sort | xargs sha256sum
   sha256sum src/ImporterRevision.targets tests/Directory.Build.props Directory.Build.props
   # The corpus and the imported data by name, size and modification time; a relocated donor by its commit.
-  for path in "$arena2_root"/* local/daggerfall-data.rpak; do [[ -e "$path" ]] && stat -c '%n %s %Y' "$path"; done
-  for path in local/import/staging local/import/records; do
+  for path in "$arena2_root"/* local/data/daggerfall-data.rpak; do [[ -e "$path" ]] && stat -c '%n %s %Y' "$path"; done
+  for path in local/build/import/staging local/build/import/records; do
     [[ -d "$path" ]] && find "$path" -type f -printf '%p %s %T@\n' | LC_ALL=C sort
   done
   git -C "$donor_root" rev-parse HEAD 2>/dev/null || true

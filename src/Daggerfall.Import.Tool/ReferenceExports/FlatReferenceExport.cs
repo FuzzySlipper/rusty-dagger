@@ -122,8 +122,8 @@ internal static class FlatReferenceExport
             new { note = "Usage counts distinct blocks and placements: RMB exteriors (a building's nature flat and a ground scenery plant count toward every nature set, since they draw their location's climate), RMB interiors and RDB dungeons. Scattered records are drawn by the terrain without any block placing them." },
             "Open index.html for the visual catalog, usage.csv for every record's size, placements, terrain scatter and light.\n" +
             "Each subject is one texture archive under its family: nature sets by climate, and props by what they hold.\n" +
-            "Reproduce: dotnet run --project src/Daggerfall.Import.Tool -- export-flats --output authoring/df-raw/NEW_FLATS_DIRECTORY\n" +
-            "Extracted art stays in ignored authoring/df-raw/.",
+            "Reproduce: dotnet run --project src/Daggerfall.Import.Tool -- export-flats --output local/art/reference/NEW_FLATS_DIRECTORY\n" +
+            "Extracted art stays in ignored local/art/reference/.",
             sources);
     }
 

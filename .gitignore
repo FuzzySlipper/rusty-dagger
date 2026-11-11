@@ -1,3 +1,4 @@
+# Every ignored working file lives under local/, by lifecycle (README, Game data).
 /local
 /.runtime/
 /node_modules/
@@ -10,10 +11,6 @@ src/sprite-ui/generated/
 src/ui/engine-types/
 src/sprite-ui/engine-types/
 src/WorldRpg.SpriteWorkbench/workbench-content/
-# Operator-local sprite-workbench overlays (run-sprite-workbench.sh default authoring root).
-/authoring/df-raw/
-/authoring/gen-raw/
-/authoring/review/
 **/bin/
 **/obj/
 

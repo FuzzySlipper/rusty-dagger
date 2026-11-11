@@ -14,9 +14,9 @@ canvas, so the trimmed final keeps its registration and its sidecar is copied be
     heads.py OUT --creature vamp00i0 --creature wolf00i0        # every record of those creature files instead
 
 Trimmed heads go to OUT/finals with the paper-doll naming, for doll_preview.py --paper-doll OUT/finals and
-landmarks.py check --paper-doll OUT/finals before they replace gen-raw/paper-doll (a creature's too: a vampire
+landmarks.py check --paper-doll OUT/finals before they replace local/art/generated/paper-doll (a creature's too: a vampire
 head, or a beast doll, whose classic picture is a solid frame, losing only stray specks); trimmed held items go to
-OUT/worn, for doll_preview.py --worn OUT/worn before they replace gen-raw/worn.
+OUT/worn, for doll_preview.py --worn OUT/worn before they replace local/art/generated/worn.
 """
 import argparse, shutil
 from pathlib import Path

@@ -16,67 +16,67 @@ internal static class ReferenceExportCommands
 
     public static ToolCommand Items { get; } = new("export-items", ItemOptions, args =>
     {
-        ItemReferenceExport.Run(args.Optional("--arena2") ?? "local/arena2",
+        ItemReferenceExport.Run(args.Optional("--arena2") ?? ImportLayout.Arena2,
             args.Optional("--donor") ?? "data/daggerfall-unity",
-            args.Optional("--output") ?? "authoring/df-raw/items");
+            args.Optional("--output") ?? "local/art/reference/items");
         return 0;
     });
 
     public static ToolCommand Spells { get; } = new("export-spells", [Arena2, Output], args =>
     {
-        SpellReferenceExport.Run(args.Optional("--arena2") ?? "local/arena2",
-            args.Optional("--output") ?? "authoring/df-raw/spells");
+        SpellReferenceExport.Run(args.Optional("--arena2") ?? ImportLayout.Arena2,
+            args.Optional("--output") ?? "local/art/reference/spells");
         return 0;
     });
 
     public static ToolCommand PaperDoll { get; } = new("export-paper-doll", [Arena2, Output], args =>
     {
-        MediaReferenceExport.RunPaperDoll(args.Optional("--arena2") ?? "local/arena2",
-            args.Optional("--output") ?? "authoring/df-raw/paper-doll");
+        MediaReferenceExport.RunPaperDoll(args.Optional("--arena2") ?? ImportLayout.Arena2,
+            args.Optional("--output") ?? "local/art/reference/paper-doll");
         return 0;
     });
 
     public static ToolCommand Surfaces { get; } = new("export-surfaces", [Arena2, Output], args =>
     {
-        SurfaceReferenceExport.Run(args.Optional("--arena2") ?? "local/arena2",
-            args.Optional("--output") ?? "authoring/df-raw/surfaces");
+        SurfaceReferenceExport.Run(args.Optional("--arena2") ?? ImportLayout.Arena2,
+            args.Optional("--output") ?? "local/art/reference/surfaces");
         return 0;
     });
 
     public static ToolCommand Flats { get; } = new("export-flats", [Arena2, Output], args =>
     {
-        FlatReferenceExport.Run(args.Optional("--arena2") ?? "local/arena2",
-            args.Optional("--output") ?? "authoring/df-raw/flats");
+        FlatReferenceExport.Run(args.Optional("--arena2") ?? ImportLayout.Arena2,
+            args.Optional("--output") ?? "local/art/reference/flats");
         return 0;
     });
 
     public static ToolCommand People { get; } = new("export-people", [Arena2, Output], args =>
     {
-        PeopleReferenceExport.Run(args.Optional("--arena2") ?? "local/arena2",
-            args.Optional("--output") ?? "authoring/df-raw/people");
+        PeopleReferenceExport.Run(args.Optional("--arena2") ?? ImportLayout.Arena2,
+            args.Optional("--output") ?? "local/art/reference/people");
         return 0;
     });
 
     public static ToolCommand Terrain { get; } = new("export-terrain", [Arena2, Output], args =>
     {
-        TerrainReferenceExport.Run(args.Optional("--arena2") ?? "local/arena2",
-            args.Optional("--output") ?? "authoring/df-raw/terrain");
+        TerrainReferenceExport.Run(args.Optional("--arena2") ?? ImportLayout.Arena2,
+            args.Optional("--output") ?? "local/art/reference/terrain");
         return 0;
     });
 
     public static ToolCommand Effects { get; } = new("export-effects", [Arena2, Output], args =>
     {
-        MediaReferenceExport.RunEffects(args.Optional("--arena2") ?? "local/arena2",
-            args.Optional("--output") ?? "authoring/df-raw/effects");
+        MediaReferenceExport.RunEffects(args.Optional("--arena2") ?? ImportLayout.Arena2,
+            args.Optional("--output") ?? "local/art/reference/effects");
         return 0;
     });
 
     public static ToolCommand DirectionalSprites { get; } = new("export-directional-sprites",
         [Arena2, Output, CommandOption.Optional("--baseline", "MOBILE_EXPORT_DIR")], args =>
     {
-        DirectionalSpriteReferenceExport.Run(args.Optional("--arena2") ?? "local/arena2",
-            args.Optional("--baseline") ?? "local/exports/daggerfall-mobile-idle-unmirrored-r01",
-            args.Optional("--output") ?? "local/exports/daggerfall-remaining-directional-unmirrored-r01");
+        DirectionalSpriteReferenceExport.Run(args.Optional("--arena2") ?? ImportLayout.Arena2,
+            args.Optional("--baseline") ?? "local/art/reference/daggerfall-mobile-idle-unmirrored-r01",
+            args.Optional("--output") ?? "local/art/reference/daggerfall-remaining-directional-unmirrored-r01");
         return 0;
     });
 }

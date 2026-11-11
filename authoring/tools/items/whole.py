@@ -11,7 +11,7 @@ across each gap, made from the piece beside it moved along their shared axis by 
 end is drawn on to the bow's lower tip.
 
 Only the records an icon draws need one: a weapon's own record (the katana's right-hand record, as the donor draws it)
-and each artifact weapon's record, in both artifact archives. Each goes to gen-raw/worn/whole/KEY.png with the accepted
+and each artifact weapon's record, in both artifact archives. Each goes to local/art/generated/worn/whole/KEY.png with the accepted
 layer's sidecar, on the same canvas, and promote.py publishes it as the layer's `icon`.
 
     whole.py [KEY ...]      no key makes every one
@@ -23,11 +23,11 @@ import numpy as np
 from PIL import Image, ImageDraw
 from scipy import ndimage
 
-from doll_preview import AUTHORING
+from doll_preview import ART
 
-WORN = AUTHORING / "gen-raw/worn"
+WORN = ART / "generated/worn"
 OUT = WORN / "whole"
-STUDIES = AUTHORING / "gen-raw/studies"
+STUDIES = ART / "generated/studies"
 WEAPONS = STUDIES / "worn-weapons-shared-bp-20261101/cutout"
 ARTIFACTS = STUDIES / "worn-artifacts-bp-20261101/cutout"
 REDRAWN = STUDIES / "warhammer-model-20261107/cutout"   # the warhammer, redrawn to follow its 3D model

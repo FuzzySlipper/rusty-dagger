@@ -2,7 +2,7 @@
 # In-game contact sheet of a family's attacks, drawn by the game's own held viewmodel through the developer workbench
 # (scripts/fp-arms/README.md): for each attack, the view at rest and held every STEP seconds of the attack as the rules
 # time it, each tile labelled with its moment, phase and clip time, the hit's tile outlined. The host must run with
-# --live-debug, a 3D viewmodel style and local/first-person.rpak; the sheet holds world time while it
+# --live-debug, a 3D viewmodel style and local/data/first-person.rpak; the sheet holds world time while it
 # draws, then gives it back and leaves the viewer off.
 #
 #   scripts/fp-arms/sheet.sh ORIGIN LOOK OUT_DIR [STEP=0.05] [ATTACK...]

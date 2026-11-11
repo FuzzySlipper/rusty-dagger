@@ -4,7 +4,7 @@
     make_spec.py AREA NAME ITEMS.json --template KIND [--title TEXT]
 
 ITEMS.json is a list of {id, directory, image, content, uncertainty, invention, name?}. `directory` and
-`image` address a source image the way the importer manifest does, relative to df-raw/AREA. Every image
+`image` address a source image the way the importer manifest does, relative to local/art/reference/AREA. Every image
 is checked against its manifest; `name` defaults to the id plus the native size. The templates
 (specs/AREA/templates/KIND.json and KIND-retro.json, or specs/TEMPLATE-AREA/templates with --template-area; the fx template is shared by effects and spells) carry the style, collection rules and routes.
 Writes specs/AREA/PREFIX-NAME.json and PREFIX-NAME-retro.json, PREFIX being items-icons for items
@@ -16,6 +16,7 @@ from pathlib import Path
 from art_key import source_dir
 
 AUTHORING = Path(__file__).resolve().parents[2]
+ART = AUTHORING.parent / "local" / "art"
 ap = argparse.ArgumentParser()
 ap.add_argument("area"); ap.add_argument("name"); ap.add_argument("items")
 ap.add_argument("--template", required=True)
@@ -28,11 +29,11 @@ prefix = "items-icons" if a.area == "items" else a.area
 items = json.load(open(a.items))
 seen = {}
 for it in items:
-    manifest = json.load(open(AUTHORING / "df-raw" / source_dir(a.area) / it["directory"] / "manifest.json"))
+    manifest = json.load(open(ART / "reference" / source_dir(a.area) / it["directory"] / "manifest.json"))
     entry = next((e for e in manifest["images"] if e["file"] == it["image"]), None)
     if entry is None:
         sys.exit(f"{it['id']}: {it['image']} is not in {it['directory']}/manifest.json")
-    digest = hashlib.md5((AUTHORING / "df-raw" / source_dir(a.area) / it["directory"] / it["image"]).read_bytes()).hexdigest()
+    digest = hashlib.md5((ART / "reference" / source_dir(a.area) / it["directory"] / it["image"]).read_bytes()).hexdigest()
     if digest in seen:
         print(f"warning: {it['id']} has the same pixels as {seen[digest]}")
     seen[digest] = it["id"]

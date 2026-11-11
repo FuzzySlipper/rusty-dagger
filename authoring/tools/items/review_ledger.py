@@ -3,10 +3,10 @@
 
 Joins what already exists on disk into one row per source image:
 
-  - the importer export (`df-raw/<area>`): subject, size, and for items the templates that share a sprite;
+  - the importer export (`local/art/reference/<area>`): subject, size, and for items the templates that share a sprite;
   - the contract specs (`authoring/specs/<area>/`): contract text and uncertainty;
-  - post-process metrics (`gen-raw/studies/<prefix>-<spec>-bp-*/metrics.json`): back-projection error;
-  - the finals directory (`gen-raw/<area>`): whether a final exists and its file;
+  - post-process metrics (`local/art/generated/studies/<prefix>-<spec>-bp-*/metrics.json`): back-projection error;
+  - the finals directory (`local/art/generated/<area>`): whether a final exists and its file;
   - `authoring/ledger/<area>-notes.json`: the only hand-edited input (status overrides, notes).
 
 Areas are `items` (world sprites), `paper-doll`, `spells` and `effects`. Writes `review/index.html`
@@ -23,6 +23,7 @@ from art_key import TEXTURE_AREAS, art_key, source_dir
 
 HERE = Path(__file__).resolve().parent
 AUTHORING = HERE.parents[1]
+ART = AUTHORING.parent / "local" / "art"
 # Per-spell copies of icons and effects duplicate icons/ and elements/. Casting hands become a hand mesh.
 NOT_CONVERTED_DIRS = ("spells/", "source-atlases")
 NOT_CONVERTED_ROLES = ("casting",)
@@ -92,11 +93,11 @@ def thumb(src, dst, size, nearest):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--area", default="items", choices=["items", "worn", "paper-doll", "spells", "effects", "flats", "people", "ui"])
-    ap.add_argument("--studies", default=str(AUTHORING / "gen-raw/studies"))
+    ap.add_argument("--studies", default=str(ART / "generated/studies"))
     args = ap.parse_args()
     area = args.area
-    export, finals = AUTHORING / "df-raw" / source_dir(area), AUTHORING / "gen-raw" / area
-    review = AUTHORING / "review" if area == "items" else AUTHORING / "review" / area
+    export, finals = ART / "reference" / source_dir(area), ART / "generated" / area
+    review = ART / "review" if area == "items" else ART / "review" / area
     notes_path = AUTHORING / "ledger" / f"{area}-notes.json"
     (review / "thumbs").mkdir(parents=True, exist_ok=True)
     notes = json.load(open(notes_path)) if notes_path.exists() else {}

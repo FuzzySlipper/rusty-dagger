@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Review sheets for the ground (rusty-dagger #10498), in authoring/review/terrain/. For each set, CLIMATE-SEASON.png:
+"""Review sheets for the ground (rusty-dagger #10498), in local/art/review/terrain/. For each set, CLIMATE-SEASON.png:
 every record's classic above its refreshed final at the same size. And a set's materials.png row: each base repeated
 2x2, so seams show. Writes one sheet per built set.
 """
@@ -9,9 +9,9 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from ground import AUTHORING, OUT, RECORDS, SETS, classic, folders  # noqa: E402
+from ground import ART, OUT, RECORDS, SETS, classic, folders  # noqa: E402
 
-REVIEW = AUTHORING / "review/terrain"
+REVIEW = ART / "review/terrain"
 CELL = 128
 COLUMNS = 14
 

@@ -1,8 +1,8 @@
 #!/bin/bash
 # Convert one batch of source sprites end to end: Qwen painted reconstruction, Krea retro, back-projection,
-# transparent cut-out, compare sheets, then publish the finals to gen-raw/<area>.
+# transparent cut-out, compare sheets, then publish the finals to local/art/generated/<area>.
 #   [AREA=items] run_batch.sh NAME HOST RESOURCE      e.g. AREA=spells run_batch.sh pilot-icons den-m5 m5-comfy
-# AREA (items, worn, paper-doll, spells, effects, flats, people) picks the source root df-raw/AREA (worn reads df-raw/items), the spec directory specs/AREA and the finals gen-raw/AREA
+# AREA (items, worn, paper-doll, spells, effects, flats, people) picks the source root local/art/reference/AREA (worn reads local/art/reference/items), the spec directory specs/AREA and the finals local/art/generated/AREA
 # (default items). NAME picks specs/AREA/PREFIX-NAME.json and PREFIX-NAME-retro.json, PREFIX being
 # items-icons for items and the area name otherwise. Qwen and retro both run on HOST
 # (den-m5 / m5-comfy or den-nimo / nimo-comfy; the owner's den-5090 has no resource, pass none). SOURCE=dir overrides the source root.
@@ -12,9 +12,10 @@ N=$1; H=$2; RES=$3
 AREA=${AREA:-items}
 if [[ $AREA == items ]]; then PFX=items-icons; else PFX=$AREA; fi
 AUTH=$(cd "$(dirname "$0")/../.." && pwd)
+ART=$(dirname "$AUTH")/local/art
 AP=${ASSET_PIPELINE:-$HOME/dev/asset-pipeline}
 SPEC=$AUTH/specs/$AREA; TOOLS=$AUTH/tools/items; if [[ $AREA == worn ]]; then SRCDIR=items; else SRCDIR=$AREA; fi
-RAW=${SOURCE:-$AUTH/df-raw/$SRCDIR}; ST=$AUTH/gen-raw/studies
+RAW=${SOURCE:-$ART/reference/$SRCDIR}; ST=$ART/generated/studies
 PAL=${ART_PAL:-$HOME/research/daggerfall-files/ART_PAL.COL}
 D=$(date +%Y%m%d)
 Q=$ST/$PFX-$N-$D; R=$ST/$PFX-$N-retro-$D; B=$ST/$PFX-$N-bp-$D

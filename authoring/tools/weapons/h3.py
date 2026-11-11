@@ -5,7 +5,7 @@
   python3 authoring/tools/weapons/h3.py prepare dagger r01 [--size 512]
 
 `join` has Qwen rejoin an icon the paper doll draws in pieces. `prepare` writes
-authoring/gen-raw/weapons/<name>/h3-<rev>/: icon.png (the joined icon, or else the refreshed paper-doll layer with the
+local/art/generated/weapons/<name>/h3-<rev>/: icon.png (the joined icon, or else the refreshed paper-doll layer with the
 gap the hand left in a straight grip filled, stood upright, point up; a spec `flip` turns a joined icon over) and spec.json for asset-pipeline's
 legacy/experiments/h3-turnaround/run_turnaround.py. A changed request needs a new rev, so an older
 attempt is never mistaken for the new one.
@@ -26,8 +26,8 @@ from PIL import Image, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[3]
 SPEC = ROOT / 'authoring/specs/weapons/weapons.json'
-WORN = ROOT / 'authoring/gen-raw/worn'
-OUT = ROOT / 'authoring/gen-raw/weapons'
+WORN = ROOT / 'local/art/generated/worn'
+OUT = ROOT / 'local/art/generated/weapons'
 PIPELINE = Path(os.environ.get('ASSET_PIPELINE', ROOT.parent / 'asset-pipeline'))
 COMFY = os.environ.get('COMFY_URL', 'http://192.168.1.20:8188')
 GREEN = (0, 177, 64)

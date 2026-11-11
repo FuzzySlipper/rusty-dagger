@@ -11,7 +11,7 @@ Each area says whether its holes fill. People fill: their cut-out opens holes in
 their cut-out already opens the gaps their source draws open, such as an hourglass's waist or a chain's links, so a filled
 hole there would pack ground back in.
 
-The first run keeps each final under gen-raw/AREA/pre-matte/, with the mask it was given, and every later run starts from
+The first run keeps each final under local/art/generated/AREA/pre-matte/, with the mask it was given, and every later run starts from
 those, so reruns are safe. Each final's generation image comes from its study: the one its opaque pixels match.
 
     matte.py [--area people|flats] [KEY ...]      e.g. matte.py texture-184-record-015-frame-000; no key cleans the area
@@ -36,7 +36,7 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage
 
-from doll_preview import AUTHORING
+from doll_preview import ART
 from postprocess import blur
 
 COMFY = os.environ.get("COMFY_URL", "http://192.168.1.24:8188")
@@ -62,7 +62,7 @@ def generation(area, key, final):
     after the first has its own study folder, ending -fN."""
     archive, record, frame = (int(n) for n in re.fullmatch(AREAS[area]["key"], key).groups())
     folder = AREAS[area]["studies"].format(archive=archive, record=record, frame=f"-f{frame}" if frame else "")
-    paths = glob.glob(str(AUTHORING / f"gen-raw/studies/{folder}/bp-broad-half.png"))
+    paths = glob.glob(str(ART / f"generated/studies/{folder}/bp-broad-half.png"))
     if not paths:
         raise NoStudy(key)
     solid = final[..., 3] > 0.99
@@ -124,7 +124,7 @@ def cleaned(final, painted, mask, fill=True, ground_match=0.05):
 def clean(area, key):
     """Cleans one final; one with no study image (such as the hanging lanterns, texture 200 records 7 to 9) is left as
     it is, and said so."""
-    finals = AUTHORING / "gen-raw" / area
+    finals = ART / "generated" / area
     kept = finals / "pre-matte" / f"{key}.png"
     final = np.array(Image.open(kept if kept.exists() else finals / f"{key}.png").convert("RGBA"), np.float32) / 255
     try:
@@ -150,7 +150,7 @@ def main():
     parser.add_argument("--area", choices=sorted(AREAS), default="people")
     parser.add_argument("keys", nargs="*", help="finals to clean; none cleans the whole area")
     args = parser.parse_args()
-    for key in args.keys or sorted(path.stem for path in (AUTHORING / "gen-raw" / args.area).glob("texture-*.png")):
+    for key in args.keys or sorted(path.stem for path in (ART / "generated" / args.area).glob("texture-*.png")):
         clean(args.area, key)
 
 

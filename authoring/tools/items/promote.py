@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Promote ledger-accepted finals into the tracked refreshed-art content pack.
 
-Each accepted final in gen-raw/AREA stands in for one classic media id, which the game draws in its place
+Each accepted final in local/art/generated/AREA stands in for one classic media id, which the game draws in its place
 when the refreshed art set is chosen (classic stays selectable). For each final this:
 
   - finds the classic media id it replaces, from its art key: a worn layer `texture-A-record-R-frame-000` is
@@ -23,7 +23,7 @@ when the refreshed art set is chosen (classic stays selectable). For each final 
 The pack also states each clothing dye's and metal's tint (`dyeTints`): the colour, and a brightness the multiply
 cannot reach on its own, that turn the neutral cloth or steel into the classic dye or metal, measured as the mean
 colour of the pixels each classic dye or metal recolours against the mean of the final's neutral pixels (read from
-the import's published paper-doll images under local/import/staging).
+the import's published paper-doll images under local/build/import/staging).
 
 Two areas promote icons rather than their own finals, each standing in for a classic UI image:
 
@@ -56,16 +56,16 @@ women alike, so it is no one in particular) and record 4 (the bone pile placed i
 mesh's footprint, its longest side in metres, so the game draws it at the width of the classic sprite it replaces.
 
 The `surfaces` area promotes the walls, floors and ceilings (`surfaces`): each accepted final `texture-AAA-R`, from
-its family's folder under gen-raw/surfaces (tools/surfaces/batch.py), stands in for classic TEXTURE.AAA record R as an
+its family's folder under local/art/generated/surfaces (tools/surfaces/batch.py), stands in for classic TEXTURE.AAA record R as an
 8-bit RGBA PNG at its own size, and the game draws it on the location materials and terrain that draw that record.
-The `terrain` area does the same into `surfaces` for the ground tiles, from gen-raw/terrain (tools/terrain/ground.py). A
+The `terrain` area does the same into `surfaces` for the ground tiles, from local/art/generated/terrain (tools/terrain/ground.py). A
 record has one entry: a ground tile models also draw is marked superseded in the surfaces ledger.
 
-The `flats` area promotes the world's placed billboards and terrain nature (`flats`): each record in df-raw/flats/usage.csv
+The `flats` area promotes the world's placed billboards and terrain nature (`flats`): each record in local/art/reference/flats/usage.csv
 whose every frame has an accepted final becomes one PNG atlas, as an effect does, and the game draws it at the classic
 sprite's size and anchor. A record an item also draws takes its accepted `items` final unless the area has its own.
 
-The `people` area promotes the placed static people (`people`): each record in df-raw/people/usage.csv with a placement
+The `people` area promotes the placed static people (`people`): each record in local/art/reference/people/usage.csv with a placement
 becomes a one-frame atlas of its standing figure, the only frame a static person shows, crunched at PEOPLE_CRUNCH pixels to
 a classic pixel on the whole of ART_PAL, whose small accents a smaller palette loses. Records with the same frame share the
 atlas of whichever has an accepted final, since only one of them was painted. A record without one stays classic. The game
@@ -80,7 +80,7 @@ clips every view holds, its layer stack (`layers.json`, parts-rig-layers/1) and 
 
 Icons are written at their area's ICON pixels on the longer side and carry no doll rect.
 
-A held weapon's layer leaves a gap where the doll's hand holds it; its whole image (whole.py, in gen-raw/worn/whole/)
+A held weapon's layer leaves a gap where the doll's hand holds it; its whole image (whole.py, in local/art/generated/worn/whole/)
 is published beside it as its `icon`, which the inventory, shops and the ground draw instead.
 
 A worn image and an item icon is also what a dropped item stands as on the ground, and the renderer reads PNG, so
@@ -92,7 +92,7 @@ opaque box in the import's published image), from which the game sizes it on the
 Only finals whose ledger/AREA-notes.json status is `accepted` are promoted. Rerunning an area replaces that
 area's entries and files and keeps every other area's: it deletes the area's files and writes them all again, about ten
 minutes for `worn`, so don't interrupt it. `--key KEY` promotes one accepted paper-doll or worn final and leaves the rest.
-The import must have run (local/import/staging), and a paper-doll or worn final without its rect sidecar is refused.
+The import must have run (local/build/import/staging), and a paper-doll or worn final without its rect sidecar is refused.
 
     promote.py --area paper-doll --area worn --area items --area spells --area effects --area surfaces --area terrain
 """
@@ -103,7 +103,7 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage
 
-from doll_preview import AUTHORING, doll_layer, placed, worn_layer
+from doll_preview import ART, AUTHORING, doll_layer, placed, worn_layer
 
 sys.path.insert(0, str(AUTHORING / "tools/surfaces"))
 import reduce  # noqa: E402
@@ -127,10 +127,10 @@ UI_SCREEN = re.compile(r"screens--([a-z0-9-]+)--.*")
 UI_SCREENS = {"title": "screen.title", "character-generation": "screen.character-generation", "pick-02": "screen.pick.02",
               "prison": "screen.prison", "death": "screen.death"}
 UI_FACE = re.compile(r"(faction-faces--tfac00i0|child-faces--kids00i0)--.*-record-(\d+)-frame-000")
-CLASSIC_MANIFEST = REPOSITORY / "local/import/staging/worldrpg/imports/shared/media/classic/manifest.json"
-IMPORTED = REPOSITORY / "local/import/staging/worldrpg/payloads/daggerfall.imported.json"
+CLASSIC_MANIFEST = REPOSITORY / "local/build/import/staging/worldrpg/imports/shared/media/classic/manifest.json"
+IMPORTED = REPOSITORY / "local/build/import/staging/worldrpg/payloads/daggerfall.imported.json"
 ITEM_IMAGE = re.compile(r"item\.(\d+)\.(\d+)")
-STAGED = REPOSITORY / "local/import/staging"
+STAGED = REPOSITORY / "local/build/import/staging"
 SPELL_ICON = re.compile(r"icons--icon-(\d+)--icon")
 # The classic targeting tiles in range-type order and element tiles in element order (donor SpellIconCollection).
 SPELL_TILES = {**{f"targets--{name}--target-icon": f"spell.target.{index}" for index, name in enumerate(
@@ -168,7 +168,7 @@ DARK = (40, 70)      # brightness (max channel) under which a pixel is an outlin
                      # tinting it rims a piece of its own colour (tan trousers) in the dye
 DYES = ["blue", "grey", "red", "dark-brown", "purple", "light-brown", "white", "aquamarine", "yellow", "green"]
 METALS = ["iron", "silver", "elven", "dwarven", "mithril", "adamantium", "ebony", "orcish", "daedric"]
-CLASSIC = REPOSITORY / "local/import/staging/worldrpg/media/character/paper-doll"
+CLASSIC = REPOSITORY / "local/build/import/staging/worldrpg/media/character/paper-doll"
 
 WORN = re.compile(r"texture-(\d+)-record-(\d+)-frame-000")
 # A design of its own over classic records another item keeps (the flanged mace over the club's), named by the
@@ -296,7 +296,7 @@ def dye_tints(promoted, dyes, probe):
 
 
 def promote(area, key, path, rect=None, mediaId=None, name=None):
-    """A final's entry. A worn final with a whole image in gen-raw/worn/whole/ (whole.py) also carries it as its `icon`,
+    """A final's entry. A worn final with a whole image in local/art/generated/worn/whole/ (whole.py) also carries it as its `icon`,
     on the same canvas and rect, which is what the inventory and the ground draw instead of the doll's layer."""
     image = Image.open(path).convert("RGBA")
     x, y, w, h = rect or rect_of(area, key, path)
@@ -333,7 +333,7 @@ def ledger(area):
 
 
 def accepted_final(area, notes, key):
-    path = AUTHORING / "gen-raw" / area / f"{key}.png"
+    path = ART / "generated" / area / f"{key}.png"
     return path if notes.get(key, {}).get("status") == "accepted" and path.exists() else None
 
 
@@ -379,7 +379,7 @@ def ui_images():
     for key in sorted(key for key, note in notes.items() if note.get("status") == "accepted"):
         final = accepted_final("ui", notes, key)
         if final is None:
-            raise SystemExit(f"{key} is accepted in ledger/ui-notes.json but has no final in gen-raw/ui.")
+            raise SystemExit(f"{key} is accepted in ledger/ui-notes.json but has no final in local/art/generated/ui.")
         image = Image.open(final).convert("RGBA")
         if UI_FACE.fullmatch(key):
             image = image.crop(image.getchannel("A").getbbox())
@@ -452,7 +452,7 @@ def world_effects():
     entries, classic = [], []
     for media, (area, key, raw) in sorted(WORLD_EFFECTS.items()):
         notes = ledger(area)
-        sources = sorted((AUTHORING / "df-raw").glob(f"{raw}-frame-*.png"))
+        sources = sorted((ART / "reference").glob(f"{raw}-frame-*.png"))
         finals = [accepted_final(area, notes, f"{key}-frame-{frame:03d}") for frame in range(len(sources))]
         if not sources or None in finals:
             classic.append(media)
@@ -485,7 +485,7 @@ def world_meshes():
     """Copies each world mesh final into the pack, with an entry for every classic record it replaces."""
     entries = []
     for name, records, footprint in WORLD_MESHES:
-        final = AUTHORING / "gen-raw" / "effects" / name
+        final = ART / "generated" / "effects" / name
         if not final.exists():
             print(f"effects: no {name} final; {', '.join(f'{a}/{r}' for a, r in records)} stay sprites")
             continue
@@ -511,13 +511,13 @@ def classic_size(media):
 
 def surfaces(area):
     """Each accepted final's entry in the area, by the classic texture record it replaces."""
-    finals = {path.stem: path for path in (AUTHORING / "gen-raw" / area).glob("*/texture-*.png") if path.parent.name != "raw"}
+    finals = {path.stem: path for path in (ART / "generated" / area).glob("*/texture-*.png") if path.parent.name != "raw"}
     promoted = []
     for key, note in ledger(area).items():
         if note.get("status") != "accepted":
             continue
         if key not in finals:
-            raise SystemExit(f"{key} is accepted in ledger/{area}-notes.json but has no final under gen-raw/{area}.")
+            raise SystemExit(f"{key} is accepted in ledger/{area}-notes.json but has no final under local/art/generated/{area}.")
         archive, record = map(int, SURFACE.fullmatch(key).groups())
         promoted.append({"replaces": {"archive": archive, "record": record},
                          **world_png(Image.open(finals[key]), f"{MEDIA}/{area}/{key}.png")})
@@ -536,10 +536,10 @@ def flats():
     for a record an item also draws, its accepted `items` final."""
     entries, classic = [], []
     area_notes = {area: ledger(area) for area in ("flats", "items")}
-    for row in csv.DictReader(open(AUTHORING / "df-raw/flats/usage.csv")):
+    for row in csv.DictReader(open(ART / "reference/flats/usage.csv")):
         archive, record = int(row["archive"]), int(row["record"])
         stem = f"texture-{archive:03d}-record-{record:03d}"
-        sources = sorted((AUTHORING / "df-raw/flats" / row["family"] / f"texture-{archive:03d}/flat").glob(f"{stem}-frame-*-source.png"))
+        sources = sorted((ART / "reference/flats" / row["family"] / f"texture-{archive:03d}/flat").glob(f"{stem}-frame-*-source.png"))
         finals = [accepted_final("flats", area_notes["flats"], f"{stem}-frame-{frame:03d}")
                   or accepted_final("items", area_notes["items"], f"{stem}-frame-{frame:03d}") for frame in range(len(sources))]
         if not sources or None in finals:
@@ -555,11 +555,11 @@ def people():
     """An atlas entry for every placed person whose standing frame, or a record's with the same frame, has an accepted final."""
     notes = ledger("people")
     placed_people = []
-    for row in csv.DictReader(open(AUTHORING / "df-raw/people/usage.csv")):
+    for row in csv.DictReader(open(ART / "reference/people/usage.csv")):
         if not any(int(row[f"{place}_placements"]) for place in ("exterior", "interior", "dungeon")):
             continue
         stem = f"texture-{int(row['archive']):03d}-record-{int(row['record']):03d}"
-        source = AUTHORING / "df-raw/people" / row["family"] / f"texture-{int(row['archive']):03d}/person/{stem}-frame-000-source.png"
+        source = ART / "reference/people" / row["family"] / f"texture-{int(row['archive']):03d}/person/{stem}-frame-000-source.png"
         image = Image.open(source).convert("RGBA")
         placed_people.append((row, stem, source, (image.size, image.tobytes())))
     atlases = {}
@@ -632,7 +632,7 @@ def main():
                 if notes.get(key, {}).get("status") != "accepted":
                     raise SystemExit(f"{key} is not accepted in ledger/{area}-notes.json.")
                 images[:] = [entry for entry in images if entry["replaces"] != replaces(key)]
-                images.append(promote(area, key, AUTHORING / "gen-raw" / area / f"{key}.png"))
+                images.append(promote(area, key, ART / "generated" / area / f"{key}.png"))
                 print(f"{area}: {key}", flush=True)
             continue
         if area == "effects":
@@ -685,13 +685,13 @@ def main():
             print(f"{area}: {len(promoted)} icons, {sum(entry['byteLength'] for entry in promoted) / 1e6:.1f} MB", flush=True)
             continue
         for key in accepted:
-            path = AUTHORING / "gen-raw" / area / f"{key}.png"
+            path = ART / "generated" / area / f"{key}.png"
             if not path.exists():
                 raise SystemExit(f"{key} is accepted in ledger/{area}-notes.json but {path} does not exist.")
             images.append(promote(area, key, path))
         if area == "worn":
             # A named design is left out: the tints are measured against the classic images of each record.
-            finals = [(key, AUTHORING / "gen-raw" / area / f"{key}.png") for key in accepted if WORN.fullmatch(key)]
+            finals = [(key, ART / "generated" / area / f"{key}.png") for key in accepted if WORN.fullmatch(key)]
             clothing = [final for final in finals if int(WORN.fullmatch(final[0])[1]) in CLOTHING]
             metal = [final for final in finals if int(WORN.fullmatch(final[0])[1]) not in CLOTHING]
             payload["artReplacements"]["dyeTints"] = dye_tints(clothing, DYES, "red") | dye_tints(metal, METALS, "daedric")

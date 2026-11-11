@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """export-ui: the classic 2D screen art the game still draws, as conversion sources.
 
-Reads the import's published classic images (local/import/staging/worldrpg/media, so run the import first) and
-writes them in the df-raw layout every area uses: one directory per subject, `<file>-record-RRR-frame-000-source.png`
+Reads the import's published classic images (local/build/import/staging/worldrpg/media, so run the import first) and
+writes them in the local/art/reference layout every area uses: one directory per subject, `<file>-record-RRR-frame-000-source.png`
 at native resolution, with index.csv, manifest.json and a README.
 
   ui/screens/<name>/            the full screens: title, character creation (CHGN00I0, PICK02I0), prison, death
@@ -12,7 +12,7 @@ at native resolution, with index.csv, manifest.json and a README.
 
 The race backgrounds go with the paper-doll area, whose doll draws them; the rest is the `ui` area.
 
-    authoring/tools/ui/export.py [--staging DIR] [--output authoring/df-raw]
+    authoring/tools/ui/export.py [--staging DIR] [--output local/art/reference]
 """
 import argparse
 import csv
@@ -36,8 +36,8 @@ def records(inventory, pattern):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--staging", type=Path, default=ROOT / "local/import/staging")
-    ap.add_argument("--output", type=Path, default=ROOT / "authoring/df-raw")
+    ap.add_argument("--staging", type=Path, default=ROOT / "local/build/import/staging")
+    ap.add_argument("--output", type=Path, default=ROOT / "local/art/reference")
     a = ap.parse_args()
     media = a.staging / "worldrpg/media"
     classic = json.loads((media / "classic-media-inventory.json").read_text())

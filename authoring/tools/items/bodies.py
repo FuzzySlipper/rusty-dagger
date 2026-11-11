@@ -18,7 +18,7 @@ them from one base body per morph and gender:
 
 Finals keep the paper-doll naming and the base's generation canvas, with a sidecar JSON stating the base's
 doll-space rect (every race of the morph is drawn there, not at its own classic offset), so
-doll_preview.py --paper-doll OUT/finals draws them and they can replace gen-raw/paper-doll. Inputs, Qwen records and the finals stay in OUT.
+doll_preview.py --paper-doll OUT/finals draws them and they can replace local/art/generated/paper-doll. Inputs, Qwen records and the finals stay in OUT.
 
     bodies.py OUT [--gender male --gender female] [--base human=00 --base elf=03]
 """
@@ -30,12 +30,12 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage
 
-from doll_preview import AUTHORING, GROUND, doll_layer, placed
+from doll_preview import ART, GROUND, doll_layer, placed
 from dress import mask_image, qwen
 from postprocess import cutout, oklab_to_srgb, srgb_to_oklab
 
 MORPHS = {"human": [0, 1, 2], "elf": [3, 4, 5], "khajiit": [6], "argonian": [7]}
-GENERATED = AUTHORING / "gen-raw" / "paper-doll"
+GENERATED = ART / "generated" / "paper-doll"
 CLOTH_MIN = 60  # source pixels: smaller differences between classic I1 and I0 are not underwear
 CLOTH_SHADE = 0.03  # OKLab distance between classic I1 and I0 under which a pixel is the same skin redrawn
 CLOTH_REACH = 1  # doll units the underwear's repaint may extend past it: Qwen paints glossy blotches on the skin it reaches

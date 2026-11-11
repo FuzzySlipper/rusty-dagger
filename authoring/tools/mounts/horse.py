@@ -9,8 +9,8 @@ footfalls. OUT-retro.glb beside it is the same with a small texture, for the hel
 retro are the horse with no saddle, for a cart's shafts.
 
 Before: generate MESH with asset-pipeline's `image-to-mesh-local` (TRELLIS.2) on the cutout
-authoring/gen-raw/studies/items-icons-player-icons-bp-20261103/cutout/horse.png with `--mask-source alpha`, into the ignored
-authoring/gen-raw/mounts/horse-generated.glb. After: `rusty asset check` on OUT, then `player.ride horse` in the game.
+local/art/generated/studies/items-icons-player-icons-bp-20261103/cutout/horse.png with `--mask-source alpha`, into the ignored
+local/art/generated/mounts/horse-generated.glb. After: `rusty asset check` on OUT, then `player.ride horse` in the game.
 
 A gait is one row of GAITS: the loop's seconds, the share of it a foot is down, each leg's phase, how far the legs swing and
 the body bobs. REINS_AHEAD and its neighbours place the reins' end where RIDE_HAND in scripts/fp-arms/build.py puts the hands,

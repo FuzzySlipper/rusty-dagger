@@ -13,14 +13,16 @@ authoring/
             trees/, ui/, weapons/, mounts/, tour/
   specs/    tracked contract specs: items, worn, paper-doll, spells, effects, flats, people, ui, weapons
   ledger/   <area>-notes.json: status and notes per image key, the only hand-edited tracking input
-  df-raw/   importer exports of the classic art                         (ignored)
-  gen-raw/  finals (one directory per area), studies/, source-edits/    (ignored)
-  review/   generated review pages and ledgers                          (ignored)
+
+local/art/  (ignored, beside the other working files in local/; see the README)
+  reference/  importer exports of the classic art
+  generated/  finals (one directory per area), studies/, source-edits/
+  review/     generated review pages and ledgers
 ```
 
-A path says what a file is: `df-raw` → `gen-raw` → (accepted) `content/worldrpg/media/refreshed/`. Never commit
-`df-raw`, `gen-raw` or `review`. The sprite workbench's overlays in `authoring/sprites/` are separate
-(`src/scripts/run-sprite-workbench.sh`).
+`authoring/` holds tracked files only. A path says what a file is: `local/art/reference` → `local/art/generated` →
+(accepted) `content/worldrpg/media/refreshed/`. Never commit anything from `local/art`. The sprite workbench's
+overlays in `authoring/sprites/` are separate (`src/scripts/run-sprite-workbench.sh`).
 
 ## Reference exports
 
@@ -29,13 +31,13 @@ dotnet run --project src/Daggerfall.Import.Tool -- export-items
 ```
 
 - Also `export-spells`, `export-paper-doll`, `export-effects`, `export-flats`, `export-people`, `export-surfaces` and
-  `export-terrain`. Each writes `authoring/df-raw/<name>/`: an `index.html` catalogue, a CSV index, JSON manifests and
+  `export-terrain`. Each writes `local/art/reference/<name>/`: an `index.html` catalogue, a CSV index, JSON manifests and
   native-resolution PNGs with their source record and frame. Missing source art is recorded, not skipped.
 - `--output DIR` writes somewhere else. Use a fresh directory for a new export: existing ones are kept experiments.
-- `--arena2 DIR` relocates the source (default `local/arena2`); `export-items --donor DIR` relocates the Daggerfall
+- `--arena2 DIR` relocates the source (default `local/inputs/arena2`); `export-items --donor DIR` relocates the Daggerfall
   Unity tables (default `data/daggerfall-unity`).
-- `export-directional-sprites` writes `local/exports/daggerfall-remaining-directional-unmirrored-r01/`, compared
-  against `--baseline` (default `local/exports/daggerfall-mobile-idle-unmirrored-r01`).
+- `export-directional-sprites` writes `local/art/reference/daggerfall-remaining-directional-unmirrored-r01/`, compared
+  against `--baseline` (default `local/art/reference/daggerfall-mobile-idle-unmirrored-r01`).
 - `tools/ui/export.py` writes the screens and portraits from an import's staging, so run the import first.
 
 ## Items and the other 2D areas
@@ -52,7 +54,7 @@ dotnet run --project src/Daggerfall.Import.Tool -- export-items
 - Frames 1+ of an animated sprite go through a `frames-*` batch.
 - Gore becomes clean gothic bones in the same outline; plain blood smears stay. Check a `flat_specs.py` caption
   against the classic before accepting its final.
-- An edited source goes under `gen-raw/source-edits/NAME/` in the same layout; run the batch with `SOURCE=` at it.
+- An edited source goes under `local/art/generated/source-edits/NAME/` in the same layout; run the batch with `SOURCE=` at it.
 - Paper doll: `landmarks.py check` on bodies and heads before dressing or promoting. `heads.py`, then `skin.py`,
   then `doll_preview.py`.
 - `matte.py` only once an area's finals are accepted. Never despeckle effects that carry embers.

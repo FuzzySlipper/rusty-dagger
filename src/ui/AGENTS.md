@@ -42,7 +42,7 @@ On top of the root `AGENTS.md` and the Engine's game-UI rules.
 
 1. Add the source prompt and published entry to `scripts/ui-art-kit.py`.
 2. Run its `generate`, pick a seed, then `process` and `manifest`.
-3. Run the import: `dotnet run --project src/Daggerfall.Import.Tool -- import --music local/Sound`.
+3. Run the import: `dotnet run --project src/Daggerfall.Import.Tool -- import --music local/inputs/Sound`.
 
 - An original is at most 256 px a side, published unresampled. `display.scale` is 0.5; `display.slice` is top, right, bottom, left in image pixels.
 - Draw kit art smoothed. `image-rendering: pixelated` and `fitPixelArt` are for classic art, which is never committed.

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Review sheets for converted surface families (rusty-dagger #10497): for each family, every converted record's classic
 beside its refreshed final, both repeated 2x2 at the same size with square pixels, labelled with its ledger key, and its
-caption where it has one. Writes authoring/review/surfaces/<family>.png.
+caption where it has one. Writes local/art/review/surfaces/<family>.png.
 
     sheet.py exterior-city-a interior-marble-floors      (or no arguments for every converted family)
 """
@@ -11,11 +11,12 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 AUTHORING = Path(__file__).resolve().parents[2]
+ART = AUTHORING.parent / "local" / "art"
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from batch import CORRECTIONS, OUT, classic, records  # noqa: E402
 
 CELL = 192
-REVIEW = AUTHORING / "review/surfaces"
+REVIEW = ART / "review/surfaces"
 
 
 def repeated(image, width):

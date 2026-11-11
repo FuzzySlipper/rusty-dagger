@@ -33,7 +33,7 @@ def closed(image):
 def main():
     name, out = sys.argv[1], Path(sys.argv[2])
     shield = next(w for w in json.loads((ROOT / 'authoring/specs/weapons/weapons.json').read_text())['weapons'] if w['name'] == name)
-    layer = Image.open(ROOT / f'authoring/gen-raw/worn/texture-{shield["art"]}-record-{shield["icon"]:03d}-frame-000.png').convert('RGBA')
+    layer = Image.open(ROOT / f'local/art/generated/worn/texture-{shield["art"]}-record-{shield["icon"]:03d}-frame-000.png').convert('RGBA')
     layer = layer.crop(layer.getbbox())
     if shield.get('mirror'):
         whole = Image.new('RGBA', (layer.width * 2, layer.height))

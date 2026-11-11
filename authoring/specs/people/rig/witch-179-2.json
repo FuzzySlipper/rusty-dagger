@@ -2,7 +2,7 @@
  "title": "Rig sources for the witch (texture-179 record 2): stance opened for rigging, and her skirt generated as separate layers",
  "figure": "texture-179-record-002-frame-000",
  "input": {
-  "image": "authoring/gen-raw/people/texture-179-record-002-frame-000.png",
+  "image": "local/art/generated/people/texture-179-record-002-frame-000.png",
   "ground": [
    48,
    52,

@@ -4,8 +4,8 @@ namespace Daggerfall.Import.Tool.Commands;
 
 /// <summary>
 /// Turns the player's Daggerfall files into the data containers in one run: every import step in the
-/// importer's dependency order, in process, into the staging tree, then <c>local/daggerfall-data.rpak</c>
-/// and, when a music folder is supplied, <c>local/music.rpak</c>.
+/// importer's dependency order, in process, into the staging tree, then <c>local/data/daggerfall-data.rpak</c>
+/// and, when a music folder is supplied, <c>local/data/music.rpak</c>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -23,7 +23,6 @@ namespace Daggerfall.Import.Tool.Commands;
 /// </remarks>
 internal static class ImportCommand
 {
-    private const string DefaultArena2 = "local/arena2";
     /// <summary>The Daggerfall Unity values the import reads, tracked in the repository under DFU's own paths.</summary>
     internal const string Donor = "data/daggerfall-unity";
     private const string Inventory = ImportLayout.Inventory;
@@ -74,11 +73,11 @@ internal static class ImportCommand
     {
         string invoked = Directory.GetCurrentDirectory();
         string repository = ImportLayout.RepositoryRoot(args);
-        // The product names the directory the host opens containers from; by hand they go to the release or local/.
+        // The product names the directory the host opens containers from; by hand they go to the release or local/data/.
         string? install = args.Optional("--install") is { } named ? Path.GetFullPath(named, invoked) : null;
-        // A release has no local/arena2: the player names the folder.
+        // A release has no local/inputs/arena2: the player names the folder.
         string arena2 = args.Optional("--arena2")
-            ?? (ImportLayout.ReleaseDirectory is null ? Environment.GetEnvironmentVariable("DAGGER_ARENA2") ?? Path.Combine(repository, DefaultArena2) : null)
+            ?? (ImportLayout.ReleaseDirectory is null ? Environment.GetEnvironmentVariable("DAGGER_ARENA2") ?? Path.Combine(repository, ImportLayout.Arena2) : null)
             ?? throw args.Invalid("name the folder Daggerfall is installed in, or its ARENA2 folder.");
         bool cinematics = FindOnPath("ffmpeg") is not null && FindOnPath("ffprobe") is not null;
         Inputs inputs = new(
@@ -107,6 +106,7 @@ internal static class ImportCommand
             throw new InvalidOperationException($"missing input{(missing.Length == 1 ? "" : "s")}:{Environment.NewLine}  {string.Join(Environment.NewLine + "  ", missing)}{next}");
         }
         Directory.SetCurrentDirectory(repository);
+        ImportLayout.RefuseLinkedOutputs(repository, install);
 
         // The cinematics' bytes depend on the FFmpeg build (each artifact records it), so name it up front.
         Console.WriteLine(cinematics
@@ -280,7 +280,7 @@ internal static class ImportCommand
         if (inputs.BlockVariants is { } variants && !IsFile(variants)) yield return $"block variant descriptor '{variants}'";
         if (!IsDirectory(inputs.Arena2))
         {
-            yield return $"Arena2 directory '{inputs.Arena2}' (link local/arena2 to the game's ARENA2 folder or pass --arena2)";
+            yield return $"Arena2 directory '{inputs.Arena2}' (link local/inputs/arena2 to the game's ARENA2 folder or pass --arena2)";
         }
         else if (!IsFile(Path.Combine(inputs.Arena2, "MAPS.BSA")) && !IsFile(Path.Combine(inputs.Arena2, "BLOCKS.BSA")))
         {

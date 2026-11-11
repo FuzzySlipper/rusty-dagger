@@ -4,7 +4,7 @@
 Each doll is drawn three ways side by side, with every layer placed where the game places it: at its
 header offset less the donor's paperDollOrigin (200, 8), in the classic 110x184 doll grid.
 
-  - classic:   the df-raw source layers.
+  - classic:   the local/art/reference source layers.
   - generated: each final at the doll-space rect its sidecar JSON states, so drift from the source shows as
                offset or overhang.
   - overlay:   the generated doll at half strength over the classic one, to judge registration by eye.
@@ -28,7 +28,7 @@ draw order and pick the body layer (i0 unclothed, i1 clothed) to match.
     doll_preview.py --sheet faces --race 0 --gender female
 
 Races are the BODY/FACE file numbers: 0 breton, 1 redguard, 2 nord, 3 dark elf, 4 high elf, 5 wood elf,
-6 khajiit, 7 argonian. Output goes to authoring/review/paper-doll/ unless --out says otherwise.
+6 khajiit, 7 argonian. Output goes to local/art/review/paper-doll/ unless --out says otherwise.
 """
 import argparse, glob, json
 from functools import lru_cache
@@ -38,11 +38,12 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 AUTHORING = Path(__file__).resolve().parents[2]
-DF_DOLL = AUTHORING / "df-raw" / "paper-doll"
-DF_ITEMS = AUTHORING / "df-raw" / "items"
+ART = AUTHORING.parent / "local" / "art"
+DF_DOLL = ART / "reference" / "paper-doll"
+DF_ITEMS = ART / "reference" / "items"
 # Where finals are looked for, first match first: --paper-doll and --worn put a directory in front.
-FINALS = {"paper-doll": [AUTHORING / "gen-raw" / "paper-doll"], "worn": [AUTHORING / "gen-raw" / "worn"]}
-# Where worn sources are read, first match first: a source edit (gen-raw/source-edits/worn-neutral-mens, with
+FINALS = {"paper-doll": [ART / "generated" / "paper-doll"], "worn": [ART / "generated" / "worn"]}
+# Where worn sources are read, first match first: a source edit (local/art/generated/source-edits/worn-neutral-mens, with
 # the dye placeholder neutralised) in the export's layout goes in front.
 WORN_SOURCES = [DF_ITEMS]
 
@@ -188,7 +189,7 @@ def main():
     FINALS["worn"][:0] = a.worn
     FINALS["paper-doll"][:0] = a.paper_doll
 
-    out_dir = AUTHORING / "review" / "paper-doll"
+    out_dir = ART / "review" / "paper-doll"
     if a.sheet == "bodies":
         dolls = [(race, gender, a.face) for gender in ("male", "female") for race in range(8)]
     elif a.sheet == "faces":

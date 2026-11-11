@@ -3,7 +3,7 @@
 
 usage: blender -b --factory-startup --python scripts/fp-arms/build.py -- SOURCES DEFINITION OUT_DIR
 
-SOURCES is local/fp-melee (scripts/fp-arms/copy-sources.sh). DEFINITION is the held definition, which names every clip
+SOURCES is local/inputs/fp-melee (scripts/fp-arms/copy-sources.sh). DEFINITION is the held definition, which names every clip
 the game plays: the rig's own clip and each family's idle, power hold and attack clips, by their FBX file stems. Writes into OUT_DIR:
 
 - each of the definition's armSets: its model, the arms (mesh, skeleton and a colour map painted by paint.py and drawn

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Ground tiles (rusty-dagger #10498): every climate and season's 56 records, from the export-terrain reference set
-(authoring/df-raw/terrain), to refreshed finals in authoring/gen-raw/terrain.
+(local/art/reference/terrain), to refreshed finals in local/art/generated/terrain.
 
 Every set shares one layout: pure ground records (water, the climate's three grounds, paving, a ploughed field) and the
 transitions between them. So a set is a few materials and a map of which pixels show which:
@@ -20,7 +20,7 @@ transitions between them. So a set is a few materials and a map of which pixels 
 
     ground.py generate --host den-m5 --part 0/2
     ground.py build
-Writes gen-raw/terrain/raw/MATERIAL.png, gen-raw/terrain/CLIMATE-SEASON/texture-AAA-R.png and bases/.
+Writes local/art/generated/terrain/raw/MATERIAL.png, local/art/generated/terrain/CLIMATE-SEASON/texture-AAA-R.png and bases/.
 """
 import argparse, csv, os, sys
 from pathlib import Path
@@ -31,11 +31,12 @@ from scipy import ndimage
 from scipy.spatial import cKDTree
 
 AUTHORING = Path(__file__).resolve().parents[2]
+ART = AUTHORING.parent / "local" / "art"
 sys.path.insert(0, str(AUTHORING / "tools/surfaces"))
 import batch, reduce  # noqa: E402
 
-RAW = AUTHORING / "df-raw/terrain"
-OUT = AUTHORING / "gen-raw/terrain"
+RAW = ART / "reference/terrain"
+OUT = ART / "generated/terrain"
 SIZE = 128        # a refreshed tile: twice the classic's 64
 GENERATE = 1024
 CALM = 0.75

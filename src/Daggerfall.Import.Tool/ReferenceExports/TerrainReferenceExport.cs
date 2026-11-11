@@ -42,8 +42,8 @@ internal static class TerrainReferenceExport
         export.Finish("Daggerfall terrain references", new { archives, records },
             new { note = "Every set shares one record layout, so a record is the same ground in each climate and season." },
             "Open index.html for the visual catalog, tiles.csv for every record's climate, season and size.\n" +
-            "Reproduce: dotnet run --project src/Daggerfall.Import.Tool -- export-terrain --output authoring/df-raw/NEW_TERRAIN_DIRECTORY\n" +
-            "Extracted art stays in ignored authoring/df-raw/.",
+            "Reproduce: dotnet run --project src/Daggerfall.Import.Tool -- export-terrain --output local/art/reference/NEW_TERRAIN_DIRECTORY\n" +
+            "Extracted art stays in ignored local/art/reference/.",
             sources);
     }
 }

@@ -5,7 +5,7 @@ already drew stays out: promote.py takes its accepted `items` final. Animated re
 own batches.
 
     flat_specs.py --host den-nimo nature-desert props-statues
-Writes specs/flats/flats-FAMILY(-retro).json, and keeps captions in gen-raw/flats/captions.json.
+Writes specs/flats/flats-FAMILY(-retro).json, and keeps captions in local/art/generated/flats/captions.json.
 """
 import argparse, csv, json, os, subprocess, sys, tempfile
 from pathlib import Path
@@ -13,10 +13,11 @@ from pathlib import Path
 from PIL import Image
 
 AUTHORING = Path(__file__).resolve().parents[2]
+ART = AUTHORING.parent / "local" / "art"
 AP = Path(os.environ.get("ASSET_PIPELINE", Path.home() / "dev/asset-pipeline"))
 HOSTS = {"den-m5": "http://192.168.1.24:8188", "den-nimo": "http://192.168.1.23:8188"}
-RAW = AUTHORING / "df-raw/flats"
-CAPTIONS = AUTHORING / "gen-raw/flats/captions.json"
+RAW = ART / "reference/flats"
+CAPTIONS = ART / "generated/flats/captions.json"
 CAPTION = ("This is a sprite from an old fantasy game, on a plain grey background. In one sentence of at most 30 words, say what "
            "single object it shows: its shape, parts, materials and main colours. Start with 'One'. Do not mention the background, "
            "style, pixels or that it is a sprite. Reply with the sentence only.")
@@ -59,7 +60,7 @@ def main():
             key = f"texture-{archive:03d}-record-{record:03d}-frame-000"
             if row["family"] != family or int(row["frames"]) > 1:
                 continue
-            if (AUTHORING / "gen-raw/flats" / f"{key}.png").exists() or (AUTHORING / "gen-raw/items" / f"{key}.png").exists():
+            if (ART / "generated/flats" / f"{key}.png").exists() or (ART / "generated/items" / f"{key}.png").exists():
                 continue
             directory, image = f"{family}/texture-{archive:03d}", f"flat/{key}-source.png"
             items.append({"id": f"flat-{archive}-{record}", "directory": directory, "image": image,

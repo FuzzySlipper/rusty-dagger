@@ -68,7 +68,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
         (folder, install) => ["import", "--arena2", folder, "--install", install]);
 
     /// <summary>The import command a developer runs in the repository root to produce the containers.</summary>
-    private const string ImportCommand = "dotnet run --project src/Daggerfall.Import.Tool -- import --music local/Sound";
+    private const string ImportCommand = "dotnet run --project src/Daggerfall.Import.Tool -- import --music local/inputs/Sound";
 
     /// <summary>
     /// The containers the player's own Daggerfall files are converted into: the data every game reads, and the
@@ -78,7 +78,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
     public IReadOnlyList<InstalledContentRequirement> InstalledContent { get; } =
     [
         new(DaggerfallData.DataContainerName, "the Daggerfall data", Required: true,
-            DevelopmentStep: $"Choose Import, or with the game's ARENA2 folder at local/arena2 run `{ImportCommand}` in the repository root.",
+            DevelopmentStep: $"Choose Import, or with the game's ARENA2 folder at local/inputs/arena2 run `{ImportCommand}` in the repository root.",
             ReleaseStep: "Choose Import and select the folder Daggerfall is installed in, or its ARENA2 folder.",
             Import: DataImport),
         new(DaggerfallMusicBundle.ContainerName, "the Daggerfall music", Required: false,

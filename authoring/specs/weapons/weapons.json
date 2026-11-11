@@ -1,5 +1,5 @@
 {
- "about": "3D weapon models (#10511). Each weapon's identity is its accepted refreshed paper-doll layer (authoring/gen-raw/worn/texture-234-record-NNN, `icon`); classic first-person frames add construction detail only where firstPerson.use says so (`compared`: checked against them, and nothing taken). Lengths are overall, in metres. subject and invent are the H3 turnaround request (authoring/tools/weapons/h3.py); grip and parts are how build.py builds the model from the icon. secondGrip is where the off hand closes on a weapon held in both hands: a point in the held-look frame (metres; origin at the grip, +Z toward the pommel or butt), measured as hand_l from hand_r along the weapon_r bone in the idle clip of the family that draws it (0.142 FPP_Longs_Idle, 0.508 FPP_Halb_Idle).",
+ "about": "3D weapon models (#10511). Each weapon's identity is its accepted refreshed paper-doll layer (local/art/generated/worn/texture-234-record-NNN, `icon`); classic first-person frames add construction detail only where firstPerson.use says so (`compared`: checked against them, and nothing taken). Lengths are overall, in metres. subject and invent are the H3 turnaround request (authoring/tools/weapons/h3.py); grip and parts are how build.py builds the model from the icon. secondGrip is where the off hand closes on a weapon held in both hands: a point in the held-look frame (metres; origin at the grip, +Z toward the pommel or butt), measured as hand_l from hand_r along the weapon_r bone in the idle clip of the family that draws it (0.142 FPP_Longs_Idle, 0.508 FPP_Halb_Idle).",
  "style": "Keep the reference's painted dark-fantasy look: its own colours, broad painted colour areas and plain fittings, now as one solid three-dimensional object with real thickness, bevels and edges. The set is one kit: steel blades and heads, antique-brass fittings, red-brown leather wrapped grips, oiled brown wood. No photorealism, glossy modern redesign or microtexture; no added gems, runes, engraving, inscriptions, faces, chains, tassels or ornament the reference does not show.",
  "pose": "One complete standalone weapon standing upright, point or head at the top and pommel or butt at the bottom, centred with generous margin and frozen in shape. Its broad face is toward the camera at the start. Keep the tip, guard, grip and pommel fully inside the image. No hand, arm, person, scabbard, sheath, stand, hanger or other object. Neutral grey background.",
  "crunch": {"cell": 0.002, "steps": 6, "dither": 0.2, "light": 0.15, "size": 512},
@@ -164,7 +164,7 @@
   {
    "item": 124, "name": "mace", "family": "blunt", "hands": 1, "length": 0.70,
    "records": [14, 15], "icon": 15, "art": "mace",
-   "note": "The flanged head of the classic first-person frames; its paper-doll art is new (authoring/gen-raw/worn/texture-mace-record-*, #10581).",
+   "note": "The flanged head of the classic first-person frames; its paper-doll art is new (local/art/generated/worn/texture-mace-record-*, #10581).",
    "firstPerson": {"cif": "WEAPON05", "use": "construction", "why": "the flanges seen from the side and below"},
    "subject": "A one-handed flanged mace: a short steel head of five or six broad flat flanges running along its length, parallel to the haft, each a plate with a straight outer edge, around a central steel core, with a short steel spike at the tip and a ringed steel collar below; a straight oiled brown wooden haft, the lower part bound in red-brown leather straps for the grip, ending in a steel butt cap.",
    "invent": "The flanges are spaced evenly round the head and are the same on every side; seen end-on the head is a star of flat plates around a round core. The haft is round in section. The grip binding is continuous from where the wood ends to the butt cap.",
@@ -280,7 +280,7 @@
   {
    "item": 131, "name": "arrow", "family": "bow", "hands": 0, "length": 0.75,
    "records": [], "icon": null,
-   "note": "No paper-doll layer: its design is the accepted refreshed ground icon, authoring/gen-raw/items/texture-207-record-016.",
+   "note": "No paper-doll layer: its design is the accepted refreshed ground icon, local/art/generated/items/texture-207-record-016.",
    "firstPerson": {"cif": "WEAPON09", "use": "compared", "why": "the nocked arrow's thin shaft and green fletching agree with the ground icon"},
    "subject": "One straight arrow: a barbed steel broadhead bound to a thin straight brown wooden shaft, with green and yellow feather fletching and a dark nock at the far end.",
    "invent": "The shaft is round in section. The broadhead is flat and thin at its edges. The feathers stand out from the shaft in three vanes spaced evenly round it.",

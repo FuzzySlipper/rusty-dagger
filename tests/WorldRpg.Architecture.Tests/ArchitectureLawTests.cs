@@ -116,7 +116,7 @@ public sealed class ArchitectureLawTests
     public void Every_file_under_content_is_tracked()
     {
         // The product's content/ tree holds only tracked, authored files; everything derived from the player's
-        // Daggerfall files lives in the data containers under local/. A file there that Git does not track (an
+        // Daggerfall files lives in the data containers under local/data/. A file there that Git does not track (an
         // ignored or untracked one) is derived content that would be staged with the product, or authored
         // content that is not committed.
         if (!Directory.Exists(Path.Combine(RepositoryRoot, ".git")) && !File.Exists(Path.Combine(RepositoryRoot, ".git"))) return;

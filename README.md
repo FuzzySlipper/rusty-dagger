@@ -44,30 +44,64 @@ the pin may move.
 ## Game data
 
 The game content is not in the repository: it is converted from your own copy of
-Daggerfall into containers under the ignored `local/`.
+Daggerfall into containers under `local/`, the one ignored folder. Its folders
+say what may be deleted:
 
-- Supply the game's `ARENA2` directory as `local/arena2` (or pass `--arena2` the
-  folder Daggerfall is installed in) and the song folder as `local/Sound`. A link
-  is fine.
+| Folder | Holds | Lifecycle |
+| --- | --- | --- |
+| `local/inputs/` | `arena2`, `Sound`, `fp-melee` (purchased art) | supplied, never regenerated: keep a copy |
+| `local/data/` | `daggerfall-data.rpak`, `music.rpak`, `first-person.rpak` | what the game opens; rebuilt by the import and `scripts/fp-arms/build.sh` |
+| `local/build/` | import staging and records, the fp-arms build, verify stamps | regenerable |
+| `local/art/` | `reference/` exports, `generated/` finals and studies, `review/` pages | the art pipeline's working files ([authoring/README.md](authoring/README.md)) |
+| `local/scratch/` | experiments | deletable at any time |
+| `local/evidence` | a link to the den NAS's `evidence/rusty-dagger/`, a folder per task | kept off the checkout |
+
+- Supply the game's `ARENA2` directory as `local/inputs/arena2` (or pass
+  `--arena2` the folder Daggerfall is installed in) and the song folder as
+  `local/inputs/Sound`. A link is fine.
 - Import once, and again after a pull that changes `src/Daggerfall.Import*`,
   `src/WorldRpg.SpriteAuthoring`, `data/` or the authored UI art. The entry
   screen says when the data is missing, damaged or from another importer.
 
   ```bash
-  dotnet run --project src/Daggerfall.Import.Tool -- import --music local/Sound
+  dotnet run --project src/Daggerfall.Import.Tool -- import --music local/inputs/Sound
   ```
 
 - It checks every input before writing anything, then packs
-  `local/daggerfall-data.rpak` and `local/music.rpak`. `--music` is optional, and
-  so are `ffmpeg` and `ffprobe` on `PATH`: without them cinematics play as skipped.
+  `local/data/daggerfall-data.rpak` and `local/data/music.rpak`. `--music` is
+  optional, and so are `ffmpeg` and `ffprobe` on `PATH`: without them cinematics
+  play as skipped.
 - To work on the importer, `import --only STEP,...` reruns named steps and repacks.
 - On our own network, copy the containers from a machine that has imported; don't
   import again on a second machine.
-- `local/first-person.rpak` is optional: 3D first-person arms built from purchased
-  art by `scripts/fp-arms/build.sh`. Without it a 3D `viewmodel.style` draws the
-  classic weapon sprites, with a warning.
+- `local/data/first-person.rpak` is optional: 3D first-person arms built from
+  purchased art by `scripts/fp-arms/build.sh`. Without it a 3D `viewmodel.style`
+  draws the classic weapon sprites, with a warning.
 - The Daggerfall Unity tables and quest scripts the import reads are tracked in
   `data/daggerfall-unity`; no donor checkout is needed.
+- A checkout from before this layout moves its files once with
+  `scripts/split-local.sh` (`--dry-run` first), while nothing imports, promotes
+  art or runs the game from it or a worktree that links it.
+
+A worktree links only the inputs and the containers of the main checkout, so its
+build and art files stay its own; on den machines evidence links to the NAS:
+
+```bash
+main=$(git worktree list --porcelain | head -n 1 | cut -d' ' -f2)
+mkdir -p local && ln -s "$main/local/inputs" "$main/local/data" local/
+ln -s /mnt/den-nas-backup/data/evidence/rusty-dagger local/evidence
+ln -s "$main/node_modules" node_modules
+```
+
+Tests that read the import's staging tree and records skip without them. While
+the branch leaves the importer's inputs (the list above) alone, link those too:
+`mkdir -p local/build && ln -s "$main/local/build/import" local/build/`.
+
+The import refuses to write through any of these links, since it would replace
+what every checkout opens. A worktree whose branch changes the importer's inputs
+imports into its own: `rm local/data local/build/import && mkdir local/data`,
+link back `first-person.rpak` if it needs one, then import. Build
+`first-person.rpak` the same way.
 
 Rules for the tracked side:
 

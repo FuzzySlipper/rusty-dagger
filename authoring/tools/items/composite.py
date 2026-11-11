@@ -5,7 +5,7 @@ import json,re,sys
 from pathlib import Path
 import numpy as np
 from PIL import Image, ImageFilter
-R=Path(__file__).resolve().parents[2]/'gen-raw'
+R=Path(__file__).resolve().parents[3]/'local'/'art'/'generated'
 spec,study,cut=sys.argv[1:4]
 L=R/(sys.argv[4] if len(sys.argv)>4 else 'items')
 for it in json.load(open(spec))['items']:
