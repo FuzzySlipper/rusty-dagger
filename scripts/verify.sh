@@ -106,6 +106,19 @@ dotnet build src/WorldRpg.Host/WorldRpg.Host.csproj --configuration Release --no
 # src/ui/engine-types; on a fresh checkout they exist only from here on.
 node --test tests/WorldRpg.Ui.Tests/*.test.mjs
 
+# The art pipeline's tests. They need its Python modules, and the paper doll's need the classic items
+# exported; without either they skip with the reason.
+if python3 -c 'import numpy, scipy, PIL' 2>/dev/null; then
+  python3 -m unittest discover -s authoring/tools/surfaces -p 'test_*.py'
+  if [[ -d local/art/reference/items ]]; then
+    python3 -m unittest discover -s authoring/tools/paper-doll -p 'test_*.py'
+  else
+    echo "skipped authoring/tools/paper-doll tests: local/art/reference/items is absent; run \`dotnet run --project src/Daggerfall.Import.Tool -- export-items\`"
+  fi
+else
+  echo "skipped the art pipeline's tests: python3 lacks numpy, scipy or Pillow"
+fi
+
 # The importer's tool is a product of its own and nothing else in this script compiles it, so a
 # change to the import API could leave it broken while every test and build here stayed green. That
 # happened: a new field in an import record was passed by the tests and missed by the tool, and the
