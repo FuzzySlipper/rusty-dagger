@@ -937,6 +937,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             Loading = _loading,
             Screens = DaggerfallUiArt.Screens.ToDictionary(screen => screen, screen => DrawnArt?.Drawn(screen) ?? screen, StringComparer.Ordinal),
             TutorialOffer = _tutorial.Offer,
+            Radial = RadialCommands(ActivationView.Mode),
             TutorialRunning = _tutorial.Running,
             Tutorial = _tutorial.View,
         });
@@ -980,7 +981,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     {
         if (panel == DaggerfallPanel.Inventory && State.RacialOverrides.Current?.SuppressInventory == true)
         {
-            Presentation.SetOutcome("You cannot use your inventory in beast form.");
+            Presentation.SetOutcome(DaggerfallRacialOverrideView.InventoryRefusal);
             return;
         }
         _interactions.RequestPanel(panel);

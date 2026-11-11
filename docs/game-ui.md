@@ -365,10 +365,12 @@ update to acknowledge in, so it runs the same phases at once.
   pace. Opening a screen leaves the feed as it was. It takes no focus in play.
 - **Command radial** (`radial.ts`): play's quick commands on a stone ring, opened by its control (X by default,
   the pad's Y), which the ruleset publishes as a `radial` panel request. It holds the world as the menu does. The
-  ring holds: ready or sheathe the weapon (`weapon-toggle`); the activation modes, named by the ruleset, the current
-  one marked; spells, inventory, character, journal, map, travel and rest, each opening the menu on its panel; and
-  the game menu. Its centre shows the place, how play runs, the date and time, the readied spell and the weapon. Pointing
-  anywhere along a command's bearing selects it, and a click, Enter or A accepts it; the arrows, the stick and the
+  ring holds: ready or sheathe the weapon (`weapon-toggle`); the activation modes, the current one marked; spells,
+  inventory, character, journal, map, travel and rest, each opening the menu on its panel; and the game menu. The
+  ruleset publishes the ring (`radial`): each command's words, whether the rules let it be used now and, when not,
+  why (no weapon on horseback, no inventory in beast form). The DOM draws a refused command dimmed with its reason
+  in the centre, and it does nothing. Its centre shows the place, how play runs, the date and time, the readied spell and the weapon. Pointing
+  anywhere along a command's bearing selects it, and a click on its stretch of the ring, Enter or A accepts it; the arrows, the stick and the
   D-pad move round the ring. Its key or Y pressed again, Escape or B close it, and releasing its key after a hold
   accepts the command pointed at. Its key closes it as the key comes up, as a panel hotkey closes the menu over its
   own panel, so play never receives a release without its press; a press the page receives as the radial opens is

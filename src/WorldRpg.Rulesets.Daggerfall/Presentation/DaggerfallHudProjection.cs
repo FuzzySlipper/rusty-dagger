@@ -62,6 +62,8 @@ internal sealed record DaggerfallHudFrame(
     internal bool TutorialRunning { get; init; }
     /// <summary>The tutorial page that is up, holding the world, or null.</summary>
     internal DaggerfallTutorialView? Tutorial { get; init; }
+    /// <summary>The command radial's commands, in ring order.</summary>
+    internal IReadOnlyList<DaggerfallRadialCommand> Radial { get; init; } = [];
 }
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
@@ -190,6 +192,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("yawRadians", builder.Number(controls.YawRadians)),
                 ("interaction", builder.String(mode == ProductMode.Modal ? "modal" : mode == ProductMode.Playing ? "aiming" : "held")),
                 ("heading", builder.String(DaggerfallMapProjection.Compass(controls.YawRadians))))),
+            ("radial", builder.Array(frame.Radial.Select(command => builder.Object(("id", builder.String(command.Id)),
+                ("label", builder.String(command.Label)), ("available", builder.Boolean(command.Available)), ("current", builder.Boolean(command.Current)),
+                ("reason", command.Reason is { } reason ? builder.String(reason) : builder.Null()))).ToArray())),
             ("weapon", frame.Weapon is not { } weapon ? builder.Null() : builder.Object(
                 ("drawn", builder.Boolean(weapon.Drawn)), ("name", builder.String(weapon.Name)),
                 ("state", builder.String(DaggerfallHudText.WeaponState(weapon))))),

@@ -2914,13 +2914,21 @@ test('a panel hotkey closes its own panel back to play as it comes up, and switc
   } finally { f.dispose(); }
 });
 
+/** The radial's commands as the ruleset publishes them, with any command's fields replaced. */
+function radialCommands(changes = {}) {
+  const commands = [['weapon', 'Ready weapon'], ['mode-grab', 'Grab'], ['mode-info', 'Information'], ['mode-talk', 'Talk'],
+    ['mode-steal', 'Steal / Lockpick'], ['spells', 'Spells'], ['inventory', 'Inventory'], ['character', 'Character'], ['journal', 'Journal'],
+    ['map', 'Map'], ['transport', 'Travel'], ['rest', 'Rest'], ['menu', 'Game menu']];
+  return commands.map(([id, label]) => ({ id, label, available: true, current: id === 'mode-talk', reason: null, ...changes[id] }));
+}
+
 test('the command radial opens on its request, sends each command\'s own action, and closes by its key, the pad\'s Y or Escape', () => {
   const f = fixture();
   try {
     const activation = { mode: 'talk', label: 'Talk', message: '', applied: true, dialogue: null,
       modes: [{ id: 'grab', label: 'Grab' }, { id: 'info', label: 'Information' }, { id: 'talk', label: 'Talk' }, { id: 'steal', label: 'Steal / Lockpick' }] };
     const controls = { diagnostic: '', bindings: [{ id: 'radial', category: 'interface', label: 'Command radial', keys: ['KeyX'], fixed: false, buttons: [3] }] };
-    const base = { mode: 'playing', activation, controls, weapon: { drawn: false, name: 'Steel Dagger', state: 'Sheathed' } };
+    const base = { mode: 'playing', activation, controls, weapon: { drawn: false, name: 'Steel Dagger', state: 'Sheathed' }, radial: radialCommands() };
     let revision = 0;
     const open = () => f.publish({ ...base, panelRequest: { panel: 'radial', revision: String(++revision) } });
     const radial = f.root.querySelector('.dagger-radial');
@@ -2971,6 +2979,58 @@ test('the command radial opens on its request, sends each command\'s own action,
     f.pressEscape();
     assert.equal(radial.open, false);
     assert.equal(f.root.querySelector('.dagger-menu').open, false, 'Escape closes the radial without opening the menu.');
+  } finally { f.dispose(); }
+});
+
+test('the radial draws the ruleset\'s words and availability: a command the rules refuse says why and does nothing', () => {
+  const f = fixture();
+  try {
+    const radial = f.root.querySelector('.dagger-radial');
+    const command = id => radial.querySelector(`[data-command="${id}"]`);
+    const riding = radialCommands({ weapon: { available: false, reason: 'The reins take your hands while you ride.' } });
+    f.publish({ mode: 'playing', radial: riding, panelRequest: { panel: 'radial', revision: '1' } });
+    assert.equal(command('weapon').getAttribute('aria-disabled'), 'true');
+    assert.equal(command('weapon').classList.contains('is-unavailable'), true);
+    command('weapon').focus();
+    assert.equal(radial.querySelector('.dagger-radial-label').textContent, 'Ready weapon');
+    assert.equal(radial.querySelector('.dagger-radial-reason').textContent, 'The reins take your hands while you ride.');
+    const before = f.actions.length;
+    command('weapon').click();
+    assert.equal(radial.open, true, 'A refused command leaves the radial open.');
+    assert.equal(f.actions.length, before, 'A refused command sends nothing.');
+    // The words are the ruleset's: a drawn weapon's command reads as sheathing it.
+    f.publish({ mode: 'playing', radial: radialCommands({ weapon: { label: 'Sheathe weapon' } }) });
+    assert.equal(command('weapon').getAttribute('aria-label'), 'Sheathe weapon');
+    assert.equal(command('weapon').getAttribute('aria-disabled'), 'false');
+    assert.equal(radial.querySelector('.dagger-radial-reason').textContent, '');
+  } finally { f.dispose(); }
+});
+
+test('a click anywhere on a command\'s stretch of the ring accepts it once', () => {
+  const f = fixture();
+  try {
+    const radial = f.root.querySelector('.dagger-radial');
+    f.publish({ mode: 'playing', radial: radialCommands(), panelRequest: { panel: 'radial', revision: '1' } });
+    // jsdom lays nothing out: the ring is 400 pixels across at the origin and the centre 200.
+    radial.querySelector('.dagger-radial-ring').getBoundingClientRect = () => ({ left: 0, top: 0, width: 400, height: 400, right: 400, bottom: 400, x: 0, y: 0 });
+    Object.defineProperty(radial.querySelector('.dagger-radial-centre'), 'offsetWidth', { value: 200 });
+    const at = (type, x, y) => radial.dispatchEvent(new window.MouseEvent(type, { clientX: x, clientY: y, bubbles: true }));
+    // Straight up from the centre, between the disc and the weapon's icon.
+    at('pointermove', 200, 50);
+    assert.equal(document.activeElement?.dataset.command, 'weapon');
+    const before = f.actions.length;
+    at('click', 200, 50);
+    assert.deepEqual(f.actions.slice(before), [{ action: 'menu', open: false }, { action: 'weapon-toggle' }]);
+    // The centre and the world outside the ring are no command's.
+    f.publish({ mode: 'playing', radial: radialCommands(), panelRequest: { panel: 'radial', revision: '2' } });
+    const after = f.actions.length;
+    at('click', 200, 200);
+    at('click', 200, -100);
+    assert.equal(radial.open, true);
+    assert.equal(f.actions.length, after);
+    // A click on the command itself runs it once, not again for the ring around it.
+    radial.querySelector('[data-command="mode-grab"]').click();
+    assert.deepEqual(f.actions.slice(after), [{ action: 'menu', open: false }, { action: 'activation-mode', mode: 'grab' }]);
   } finally { f.dispose(); }
 });
 

@@ -1,5 +1,6 @@
 import type { Send } from './host.js';
-import type { DaggerHud } from './projection.js';
+import type { DaggerHud, RadialCommand } from './projection.js';
+import { redraw } from './redraw.js';
 
 /**
  * The command radial: play's quick commands on a ring around the place, the time and what the player holds ready.
@@ -20,13 +21,18 @@ export interface Radial {
   dispose(): void;
 }
 
-interface Command {
-  readonly id: string;
-  readonly icon: string;
-  label(value: DaggerHud | null): string;
-  run(): void;
-  current?(value: DaggerHud | null): boolean;
+function isRadialCommands(value: unknown): value is readonly RadialCommand[] {
+  return Array.isArray(value) && value.every(command => typeof command === 'object' && command !== null
+    && typeof command.id === 'string' && typeof command.label === 'string' && typeof command.available === 'boolean'
+    && typeof command.current === 'boolean' && (command.reason === null || typeof command.reason === 'string'));
 }
+
+/** Each command's icon: how the radial draws a command, not what it is. */
+const ICONS: Readonly<Record<string, string>> = {
+  weapon: 'category-weapons-armor', 'mode-grab': 'grab', 'mode-info': 'info', 'mode-talk': 'talk', 'mode-steal': 'steal',
+  spells: 'spells', inventory: 'inventory', character: 'character', journal: 'journal', map: 'map', transport: 'travel', rest: 'rest',
+  menu: 'settings',
+};
 
 /** A key held longer than this and released over a command accepts it; a quicker press leaves the radial open. */
 const HOLD_MS = 350;
@@ -62,69 +68,82 @@ export function mountRadial(shell: HTMLElement, host: RadialHost): Radial {
     send({ action: 'menu', open: false });
     sync(focus);
   };
-  const thenClose = (run: () => void) => (): void => { close(); run(); };
-  const mode = (id: string): Command => ({
-    id: `mode-${id}`, icon: id,
-    label: value => value?.activation?.modes?.find(entry => entry.id === id)?.label ?? id,
-    current: value => value?.activation?.mode === id,
-    run: thenClose(() => send({ action: 'activation-mode', mode: id })),
-  });
-  // A panel command hands over to the menu, which keeps the cursor.
-  const panel = (id: string, icon: string, words: string): Command =>
-    ({ id, icon, label: () => words, run: () => { close(false); runMenuAction(id); } });
-  const commands: readonly Command[] = [
-    { id: 'weapon', icon: 'category-weapons-armor',
-      label: value => value?.weapon?.drawn ? 'Sheathe weapon' : 'Ready weapon',
-      run: thenClose(() => send({ action: 'weapon-toggle' })) },
-    mode('grab'), mode('info'), mode('talk'), mode('steal'),
-    panel('spells', 'spells', 'Spells'),
-    panel('inventory', 'inventory', 'Inventory'),
-    panel('character', 'character', 'Character'),
-    panel('journal', 'journal', 'Journal'),
-    panel('map', 'map', 'Map'),
-    panel('transport', 'travel', 'Travel'),
-    panel('rest', 'rest', 'Rest'),
-    panel('menu', 'settings', 'Game menu'),
-  ];
+  const reason = document.createElement('p');
+  reason.className = 'dagger-radial-reason';
+  label.after(reason);
+  let commands: readonly RadialCommand[] = [];
+  let buttons: HTMLButtonElement[] = [];
 
-  const buttons = commands.map((command, index) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'dagger-radial-command';
-    button.dataset.command = command.id;
-    button.dataset.icon = command.icon;
-    button.setAttribute('role', 'menuitem');
-    // Clockwise from the top, as a clock face reads.
-    const angle = index / commands.length * 2 * Math.PI;
-    button.style.setProperty('--x', String(Math.sin(angle)));
-    button.style.setProperty('--y', String(-Math.cos(angle)));
-    button.addEventListener('click', () => command.run());
-    button.addEventListener('focus', () => { label.textContent = button.getAttribute('aria-label'); });
-    button.addEventListener('pointerenter', () => { pointed = true; button.focus(); });
-    ring.append(button);
-    return button;
-  });
+  // Each command sends what its own control sends; one the rules refuse now does nothing, and the centre says why.
+  const run = (command: RadialCommand | undefined): void => {
+    if (command === undefined || !command.available) return;
+    if (command.id === 'weapon') { close(); send({ action: 'weapon-toggle' }); }
+    else if (command.id.startsWith('mode-')) { close(); send({ action: 'activation-mode', mode: command.id.slice('mode-'.length) }); }
+    // A panel command hands over to the menu, which keeps the cursor.
+    else { close(false); runMenuAction(command.id); }
+  };
 
-  // Pointing anywhere along a command's bearing selects it, so the pointer need not land on the command itself.
-  root.addEventListener('pointermove', event => {
+  const name = (button: Element | null): void => {
+    const command = commands[buttons.indexOf(button as HTMLButtonElement)];
+    label.textContent = command?.label ?? '';
+    reason.textContent = command !== undefined && !command.available ? command.reason ?? '' : '';
+  };
+
+  const build = (): void => { redraw(ring, JSON.stringify(commands.map(command => command.id)), () => {
+    buttons = commands.map((command, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'dagger-radial-command';
+      button.dataset.command = command.id;
+      if (ICONS[command.id]) button.dataset.icon = ICONS[command.id];
+      button.setAttribute('role', 'menuitem');
+      // Clockwise from the top, as a clock face reads.
+      const angle = index / commands.length * 2 * Math.PI;
+      button.style.setProperty('--x', String(Math.sin(angle)));
+      button.style.setProperty('--y', String(-Math.cos(angle)));
+      button.addEventListener('click', () => run(commands[index]));
+      button.addEventListener('focus', () => name(button));
+      button.addEventListener('pointerenter', () => { pointed = true; button.focus(); });
+      return button;
+    });
+    ring.replaceChildren(...buttons);
+  }); };
+
+  // The command whose stretch of the ring a point lies on: anywhere along its bearing outside the centre, and for a
+  // click, inside the ring too.
+  const commandAt = (event: MouseEvent, onRing: boolean): number | null => {
     const box = ring.getBoundingClientRect();
     const dx = event.clientX - (box.left + box.width / 2), dy = event.clientY - (box.top + box.height / 2);
-    if (Math.hypot(dx, dy) < centre.offsetWidth / 2) return;
+    const distance = Math.hypot(dx, dy);
+    if (buttons.length === 0 || distance < centre.offsetWidth / 2 || (onRing && distance > box.width / 2)) return null;
     const turn = (Math.atan2(dx, -dy) / (2 * Math.PI) + 1) % 1;
-    const index = Math.round(turn * commands.length) % commands.length;
+    return Math.round(turn * buttons.length) % buttons.length;
+  };
+  // Pointing anywhere along a command's bearing selects it, so the pointer need not land on the command itself.
+  root.addEventListener('pointermove', event => {
+    const index = commandAt(event, false);
+    if (index === null) return;
     pointed = true;
     if (document.activeElement !== buttons[index]) buttons[index]!.focus();
   });
+  // A click anywhere on that stretch of the ring accepts it; a click on the command itself is its own button's.
+  root.addEventListener('click', event => {
+    if (event.target instanceof Element && event.target.closest('.dagger-radial-command')) return;
+    const index = commandAt(event, true);
+    if (index !== null) run(commands[index]);
+  });
 
   const draw = (): void => {
+    commands = isRadialCommands(latest?.radial) ? latest.radial : [];
+    build();
     buttons.forEach((button, index) => {
       const command = commands[index]!;
-      const words = command.label(latest);
-      button.setAttribute('aria-label', words);
-      button.classList.toggle('is-current', command.current?.(latest) === true);
+      button.setAttribute('aria-label', command.label);
+      button.setAttribute('aria-disabled', String(!command.available));
+      button.classList.toggle('is-current', command.current);
+      button.classList.toggle('is-unavailable', !command.available);
     });
-    const focused = buttons.find(button => button === document.activeElement);
-    label.textContent = focused?.getAttribute('aria-label') ?? '';
+    name(document.activeElement);
   };
 
   const radialKeys = (): readonly string[] => latest?.controls?.bindings.find(binding => binding.id === 'radial')?.keys ?? [];
@@ -155,7 +174,7 @@ export function mountRadial(shell: HTMLElement, host: RadialHost): Radial {
       if (event.type === 'keydown') { if (!event.repeat && performance.now() - openedAt > OPENING_PRESS_MS) closing = true; return true; }
       if (event.type !== 'keyup') return false;
       const focused = buttons.indexOf(document.activeElement as HTMLButtonElement);
-      if (!closing && pointed && focused >= 0 && performance.now() - openedAt > HOLD_MS) commands[focused]!.run();
+      if (!closing && pointed && focused >= 0 && performance.now() - openedAt > HOLD_MS) run(commands[focused]);
       else if (closing) close();
       closing = false;
       return true;

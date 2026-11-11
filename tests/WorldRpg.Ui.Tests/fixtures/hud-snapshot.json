@@ -180,6 +180,99 @@
     "interaction": "aiming",
     "heading": "south"
   },
+  "radial": [
+    {
+      "id": "weapon",
+      "label": "Sheathe weapon",
+      "available": true,
+      "current": false,
+      "reason": null
+    },
+    {
+      "id": "mode-grab",
+      "label": "Grab",
+      "available": true,
+      "current": true,
+      "reason": null
+    },
+    {
+      "id": "mode-info",
+      "label": "Information",
+      "available": true,
+      "current": false,
+      "reason": null
+    },
+    {
+      "id": "mode-talk",
+      "label": "Talk",
+      "available": true,
+      "current": false,
+      "reason": null
+    },
+    {
+      "id": "mode-steal",
+      "label": "Steal / Lockpick",
+      "available": true,
+      "current": false,
+      "reason": null
+    },
+    {
+      "id": "spells",
+      "label": "Spells",
+      "available": true,
+      "current": false,
+      "reason": null
+    },
+    {
+      "id": "inventory",
+      "label": "Inventory",
+      "available": true,
+      "current": false,
+      "reason": null
+    },
+    {
+      "id": "character",
+      "label": "Character",
+      "available": true,
+      "current": false,
+      "reason": null
+    },
+    {
+      "id": "journal",
+      "label": "Journal",
+      "available": true,
+      "current": false,
+      "reason": null
+    },
+    {
+      "id": "map",
+      "label": "Map",
+      "available": true,
+      "current": false,
+      "reason": null
+    },
+    {
+      "id": "transport",
+      "label": "Travel",
+      "available": true,
+      "current": false,
+      "reason": null
+    },
+    {
+      "id": "rest",
+      "label": "Rest",
+      "available": true,
+      "current": false,
+      "reason": null
+    },
+    {
+      "id": "menu",
+      "label": "Game menu",
+      "available": true,
+      "current": false,
+      "reason": null
+    }
+  ],
   "weapon": {
     "drawn": true,
     "name": "Iron Longsword",

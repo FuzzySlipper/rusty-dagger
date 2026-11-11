@@ -77,7 +77,7 @@ internal sealed partial class DaggerfallSession
             DaggerfallUiActionKind.InventoryInspect or DaggerfallUiActionKind.InventoryUse or DaggerfallUiActionKind.InventoryDrop or DaggerfallUiActionKind.InventorySort
             or DaggerfallUiActionKind.BankOpen)
         {
-            Presentation.SetOutcome("You cannot use your inventory in beast form.");
+            Presentation.SetOutcome(DaggerfallRacialOverrideView.InventoryRefusal);
             return;
         }
         if (LegalModalOpen && action.Kind is not (DaggerfallUiActionKind.LegalChoice or DaggerfallUiActionKind.SaveGame

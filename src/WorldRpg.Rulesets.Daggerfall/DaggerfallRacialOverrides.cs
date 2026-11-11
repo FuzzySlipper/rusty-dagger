@@ -38,6 +38,8 @@ internal sealed record DaggerfallRacialOverrideView(string Source, DaggerfallRac
     internal bool SuppressCrime => State.BeastForm;
     internal bool SuppressTalk => State.BeastForm;
     internal bool SuppressInventory => State.BeastForm;
+    /// <summary>What the player is told when beast form refuses the inventory.</summary>
+    internal const string InventoryRefusal = "You cannot use your inventory in beast form.";
     internal bool SuppressPopulationSpawns => State.BeastForm;
     internal bool IsVampire => State.Kind == DaggerfallRacialKind.Vampire;
     internal bool RequiresSilver => State.BeastForm || IsVampire;

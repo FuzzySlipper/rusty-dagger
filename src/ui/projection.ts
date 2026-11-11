@@ -32,6 +32,16 @@ export interface Unavailable {
   readonly import?: ContentImport | null;
 }
 
+/** One command of the radial as the ruleset publishes it: its words, whether it can be used now, and why not when it cannot. */
+export interface RadialCommand {
+  readonly id: string;
+  readonly label: string;
+  readonly available: boolean;
+  /** The activation mode in use. */
+  readonly current: boolean;
+  readonly reason: string | null;
+}
+
 export interface DaggerHud {
   /** Detect spells' contacts: each bearing is clockwise from north, as the view's yaw reads. */
   readonly detectors?: readonly { readonly source: string; readonly kind: string; readonly label?: string; readonly contacts: readonly {
@@ -92,6 +102,8 @@ export interface DaggerHud {
   readonly inputDevice?: 'keyboard' | 'controller';
   /** The game's help pages, each paragraph its words and the controls it names. */
   readonly help?: readonly HelpPage[];
+  /** The command radial's commands in ring order, each with its words and whether the rules let it be used now. */
+  readonly radial?: readonly RadialCommand[];
   /** The tutorial Help offers, whether it runs, and the page of it that is up. */
   readonly tutorial?: TutorialOffer & { readonly page: TutorialPage | null };
   readonly transport?: TransportProjection | null;

@@ -6,6 +6,12 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// <summary>What the player holds: a drawn weapon (or bare hands) or a sheathed one.</summary>
 internal sealed record DaggerfallWeaponView(bool Drawn, string Name);
 
+/// <summary>
+/// One command of the radial: what it is (<paramref name="Id"/>), its words, whether it can be used now and, when it cannot,
+/// why; <paramref name="Current"/> marks the activation mode in use.
+/// </summary>
+internal sealed record DaggerfallRadialCommand(string Id, string Label, bool Available, bool Current = false, string? Reason = null);
+
 /// <summary>What ordinary use would do to the target the player aims at, in the active activation mode.</summary>
 internal sealed record DaggerfallInteractionPromptView(string Action, string Target);
 
@@ -21,6 +27,14 @@ internal static class DaggerfallHudText
     /// <summary>The activation modes in the order the menu offers them, with their player names.</summary>
     internal static readonly IReadOnlyList<(string Id, string Label)> ActivationModes =
         [("grab", "Grab"), ("info", "Information"), ("talk", "Talk"), ("steal", "Steal / Lockpick"), ("bash", "Bash")];
+
+    /// <summary>The activation modes the radial offers, in its ring order; bash stays on its own control.</summary>
+    internal static readonly IReadOnlyList<string> RadialModes = ["grab", "info", "talk", "steal"];
+
+    /// <summary>The menu panels the radial opens, in its ring order after the modes, by the menu action that opens each.</summary>
+    internal static readonly IReadOnlyList<(string Id, string Label)> RadialPanels =
+        [("spells", "Spells"), (DaggerfallPanel.Inventory, "Inventory"), ("character", "Character"), ("journal", "Journal"),
+         ("map", "Map"), ("transport", "Travel"), ("rest", "Rest"), ("menu", "Game menu")];
 
     internal static string ModeLabel(string mode) =>
         ActivationModes.FirstOrDefault(row => row.Id == mode).Label ?? mode;
