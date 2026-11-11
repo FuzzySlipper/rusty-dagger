@@ -107,10 +107,10 @@ off, and that is what `bloom` spreads.
 - **One sky.** The world has one sun and ambient, carried by the active site and kept
   when its location unloads behind the player. Resident locations bring only their lamps.
 - **Scale.** The Engine divides light by pi, so `siteLighting` levels are multiplied per
-  kind of place. Outdoors, the day's ambient and the sun together make about pi, which
-  lands level ground under a high sun near its texture's own value. The sun carries most
-  of it, as a clear day's direct light does, so what its shadow covers falls to about a
-  fifth of the light.
+  kind of place. Outdoors, the day's ambient and the sun together light level ground
+  under a high sun near its texture's own value. The sun carries most of it, as a clear
+  day's direct light does, so what its shadow covers falls to about a third of the light
+  at noon, and less deep as the sun lowers.
 - **The sun's path.** The sun rises in the east, crosses the southern sky and sets in the
   west, its path leaning `sunTiltDegrees` south of overhead. At noon it stands that far
   from the zenith, so south-facing walls take the sun and what stands in its way casts a

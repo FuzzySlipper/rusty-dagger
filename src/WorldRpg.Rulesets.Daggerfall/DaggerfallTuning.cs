@@ -676,11 +676,11 @@ internal sealed record DaggerfallSiteLightingTuning(
     internal float InteriorScale { get; init; } = 1.3f;
     internal float DungeonScale { get; init; } = 1f;
     /// <summary>
-    /// The sun at full daylight. The day's ambient and the sun together make about pi, which lands level ground under a
-    /// high sun near its texture's own value; the sun carries most of it, as a clear day's direct light does, so what
-    /// its shadow covers falls to about a fifth of the light.
+    /// The sun at full daylight. The day's ambient and the sun together light level ground under a high sun near its
+    /// texture's own value; the sun carries most of it, as a clear day's direct light does, so what its shadow covers
+    /// falls to about a third of the light at noon, and less deep as the sun lowers.
     /// </summary>
-    internal float ExteriorSun { get; init; } = 2.5f;
+    internal float ExteriorSun { get; init; } = 2.3f;
     /// <summary>
     /// How far the sun's path leans south of overhead, in degrees, as at the Iliac Bay's latitude: at noon it stands that
     /// far from the zenith, so walls facing it take the sun and what stands in its way casts a shadow beside it.
@@ -713,7 +713,7 @@ internal sealed record DaggerfallSiteLightingTuning(
     /// <summary>How much of the light above 1 spreads as a glow; 0 for none.</summary>
     internal float Bloom { get; init; } = .25f;
     internal static DaggerfallSiteLightingTuning Classic { get; } = new(
-        160F / 255F, 100F / 255F, 75F / 255F, .2F, .1333F);
+        160F / 255F, 100F / 255F, 75F / 255F, .3333F, .1333F);
 
     internal DaggerfallSiteLightingTuning Validate()
     {
