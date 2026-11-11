@@ -83,7 +83,7 @@ public sealed class ImportToolCommandTests
             Assert.Equal(command.Usage, Assert.Throws<ArgumentException>(() => command.Invoke(args)).Message);
             var result = Run(args);
             Assert.Equal(1, result.Code);
-            Assert.Equal($"daggerfall-import-tool: {command.Usage}{Environment.NewLine}", result.Error);
+            Assert.Equal($"{command.Tool}: {command.Usage}{Environment.NewLine}", result.Error);
             Assert.Empty(result.Output);
         }
     }
