@@ -137,6 +137,10 @@ internal sealed class DaggerfallExteriorEnvironment
     private bool _initialized;
     private readonly IRandomService _random;
 
+    // Every character proposal asks for the window's water, so it is kept until the cells or the origin change.
+    private IReadOnlyList<CharacterWaterVolume>? _characterWater;
+    private DaggerfallExteriorWorldOrigin _characterWaterOrigin;
+
     // Nature decoration draws from one Engine stream per cell, seeded by the cell's terrain key, so a
     // cell's placements are the same on every admission without consuming gameplay draws.
     private const string NatureScope = "daggerfall.exterior.nature.v1";
@@ -161,12 +165,15 @@ internal sealed class DaggerfallExteriorEnvironment
     /// Returns the source water tiles as call-local Engine movement volumes. The environment keeps
     /// only source facts; the lifecycle owns when these values are admitted as active triggers.
     /// </summary>
-    internal IReadOnlyList<CharacterWaterVolume> CharacterWaterVolumes(DaggerfallExteriorWorldOrigin origin) =>
-        WaterVolumes
+    internal IReadOnlyList<CharacterWaterVolume> CharacterWaterVolumes(DaggerfallExteriorWorldOrigin origin)
+    {
+        if (_characterWater is { } held && _characterWaterOrigin == origin) return held;
+        _characterWaterOrigin = origin;
+        return _characterWater = [.. WaterVolumes
             .OrderBy(value => value.TileY)
             .ThenBy(value => value.TileX)
-            .Select(value => value.ToCharacterVolume(origin))
-            .ToArray();
+            .Select(value => value.ToCharacterVolume(origin))];
+    }
 
     internal IReadOnlyList<DaggerfallExteriorNaturePlacement> NaturePlacements => _cells.Values
         .OrderBy(value => value.Cell.Y).ThenBy(value => value.Cell.X)
@@ -210,6 +217,7 @@ internal sealed class DaggerfallExteriorEnvironment
             // Season changes are material policy, not a reason to discard source placement facts.
             // The next residency reconciliation rebuilds the compact variant records atomically.
             _cells.Clear();
+            _characterWater = null;
             _initialized = false;
         }
     }
@@ -256,12 +264,19 @@ internal sealed class DaggerfallExteriorEnvironment
             staged.Add(cell, new(cell, variant, ground.Water, ground.Terrain, BuildNature(cell, ground, variant)));
         }
 
-        _cells.Clear();
-        foreach ((DaggerfallExteriorCellId cell, CellFacts facts) in staged)
-            _cells.Add(cell, facts);
-        _riverBoxes.Clear();
-        foreach (DaggerfallExteriorWaterVolume water in _cells.Values.SelectMany(facts => facts.Water).Where(water => water.RiverSection != 0))
-            _riverBoxes.Add(water.StableId);
+        // The window is reconciled every step; its cells change only when it moves or a season changes them.
+        bool unchanged = _initialized && staged.Count == _cells.Count
+            && staged.All(pair => _cells.TryGetValue(pair.Key, out CellFacts? held) && ReferenceEquals(held, pair.Value));
+        if (!unchanged)
+        {
+            _cells.Clear();
+            foreach ((DaggerfallExteriorCellId cell, CellFacts facts) in staged)
+                _cells.Add(cell, facts);
+            _riverBoxes.Clear();
+            foreach (DaggerfallExteriorWaterVolume water in _cells.Values.SelectMany(facts => facts.Water).Where(water => water.RiverSection != 0))
+                _riverBoxes.Add(water.StableId);
+            _characterWater = null;
+        }
         _origin = origin;
         _initialized = true;
     }

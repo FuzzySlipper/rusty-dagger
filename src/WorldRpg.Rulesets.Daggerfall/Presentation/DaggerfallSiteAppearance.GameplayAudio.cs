@@ -18,6 +18,7 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         if (doors is not null) doors.SoundRequested -= PlayDoorSound;
         doors = owner;
+        doorFacts = null;
         if (doors is not null) doors.SoundRequested += PlayDoorSound;
     }
 

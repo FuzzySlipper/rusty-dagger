@@ -224,6 +224,12 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
 
     internal IEnumerable<DaggerfallDoorView> All => _suspended ? [] : Ordered.Select(View);
 
+    /// <summary>
+    /// Changes whenever a door is added, moves, or the doors are suspended or resumed, so a reader of every door's pose
+    /// can keep what it read until then.
+    /// </summary>
+    internal int Revision { get; private set; }
+
     /// <summary>The doors standing within <paramref name="distance"/> of a point across the ground, in the order of <see cref="All"/>.</summary>
     internal IEnumerable<DaggerfallDoorView> Near(WorldPoint point, double distance) => _suspended
         ? []
@@ -253,6 +259,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
             door.Entity = default;
         }
         _suspended = true;
+        Revision++;
     }
 
     /// <summary>Re-admits suspended door entities without changing their lock or motion state.</summary>
@@ -272,6 +279,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
                 Apply(door);
             }
             _suspended = false;
+            Revision++;
         }
         catch
         {
@@ -602,6 +610,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         _doors.Clear();
         _ordered = null;
         _obstacles = null;
+        Revision++;
     }
 
     private void Add(DaggerfallRdbDoorDefinition definition, DaggerfallDoorSave? saved)
@@ -626,6 +635,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
             _doors.Remove(definition.Id);
             _ordered = null;
             _obstacles = null;
+            Revision++;
             _entities.Destroy(identity);
             throw;
         }
@@ -681,6 +691,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         _store.Set(door.Entity, EngineComponentTypes.Transform, pose);
         _store.Set(door.Entity, EngineComponentTypes.SpatialCollider, collider);
         _obstacles = null;
+        Revision++;
     }
 
     private static Transform Pose(Door door)

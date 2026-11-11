@@ -122,8 +122,9 @@ public sealed class DaggerfallControlSettings
     /// menu, which keeps its button. Moving rides the left stick, and running, crouching and jumping are read
     /// from their keys by locomotion, so a button for them would do nothing.
     /// </summary>
-    public static bool IsControllerBindable(string action) =>
-        action != MenuAction && DaggerfallInput.Bindings.Any(binding => binding.Action == InputAction(action));
+    public static bool IsControllerBindable(string action) => action != MenuAction && Raised.Contains(InputAction(action));
+
+    private static readonly HashSet<InputActionId> Raised = [.. DaggerfallInput.Bindings.Select(binding => binding.Action)];
 
     // Whether an action reads how long its binding stays down. A mapping fires on its one edge, so these map the
     // release as well as the press.
@@ -141,9 +142,11 @@ public sealed class DaggerfallControlSettings
     }
 
     /// <summary>The controller buttons each catalog action answers to under the given authored layout.</summary>
-    public IReadOnlyDictionary<string, IReadOnlyList<int>> ControllerButtons(IReadOnlyList<ControllerActionBinding> authored) =>
-        Catalog.ToDictionary(action => action.Id, action => (IReadOnlyList<int>)[.. ControllerActions(authored)
-            .Where(binding => binding.Action == InputAction(action.Id)).Select(binding => Number(binding.Button)).Order()], StringComparer.Ordinal);
+    public IReadOnlyDictionary<string, IReadOnlyList<int>> ControllerButtons(IReadOnlyList<ControllerActionBinding> authored)
+    {
+        ILookup<InputActionId, int> buttons = ControllerActions(authored).ToLookup(binding => binding.Action, binding => Number(binding.Button));
+        return Catalog.ToDictionary(action => action.Id, action => (IReadOnlyList<int>)[.. buttons[InputAction(action.Id)].Order()], StringComparer.Ordinal);
+    }
 
     /// <summary>
     /// Puts one action on one controller button: refuses the menu's button and a button another action holds,

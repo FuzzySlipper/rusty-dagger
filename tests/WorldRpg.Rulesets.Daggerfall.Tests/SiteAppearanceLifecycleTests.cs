@@ -70,6 +70,15 @@ public sealed class SiteAppearanceLifecycleTests
         Assert.Equal(1 + inputs.Doors.Count + inputs.DungeonActionModels.Count + 1, graphics.StaticMeshPaths.Count);
         foreach (DaggerfallRdbDoorDefinition door in inputs.Doors)
             Assert.Contains(snapshot, fact => fact.Transform.Translation == door.Position);
+
+        // The doors' facts are kept between snapshots while the doors stand still, and follow one that swings.
+        DaggerfallRdbDoorDefinition swung = inputs.Doors[0];
+        AppearanceFact closed = Assert.Single(snapshot, fact => fact.Transform.Translation == swung.Position);
+        Assert.Equal(DaggerfallDoorOperationResult.Started, session.Doors.Open(swung.Id, DaggerfallDoorOperationSource.DungeonAction));
+        session.Doors.Advance(swung.OpenDurationSeconds);
+        session.PublishInitial();
+        AppearanceFact open = Assert.Single(graphics.Snapshots.Last(), fact => fact.ObjectId == closed.ObjectId);
+        Assert.NotEqual(closed.Transform.Rotation, open.Transform.Rotation);
     }
 
     [Fact]

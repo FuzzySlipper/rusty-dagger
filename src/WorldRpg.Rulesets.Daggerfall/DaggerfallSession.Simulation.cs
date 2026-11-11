@@ -350,12 +350,17 @@ internal sealed partial class DaggerfallSession
     /// request: a request missing either family would drop its rows (actor navigation then finds no
     /// water) and report false exits and re-entries. Each owner reads its own facts from the result.
     /// </summary>
+    // The water's trigger colliders, kept while the environment keeps its water.
+    private (ReadOnlyMemory<CharacterWaterVolume> Water, SpatialEntityCollider[] Colliders) _waterColliders = (ReadOnlyMemory<CharacterWaterVolume>.Empty, []);
+
     private void ReconcileTriggers(CharacterStepEnvironment environment, ulong simulationStep, DaggerfallDungeonActionGraph? actionGraph)
     {
         EntityId player = State.Actors.Player.Actor.Entity;
+        if (!_waterColliders.Water.Equals(environment.WaterVolumes))
+            _waterColliders = (environment.WaterVolumes, [.. environment.WaterVolumes.ToArray().Select(SpatialMovementSystem.ProjectWaterCollider)]);
         SpatialEntityCollider[] triggers =
         [
-            .. environment.WaterVolumes.Span.ToArray().Select(SpatialMovementSystem.ProjectWaterCollider),
+            .. _waterColliders.Colliders,
             .. actionGraph is null ? [] : _sites.ActionTriggers.ContactColliders(actionGraph, simulationStep),
             _spatial.ProjectCharacterCollider(State.PlayerControl, player.Value),
         ];

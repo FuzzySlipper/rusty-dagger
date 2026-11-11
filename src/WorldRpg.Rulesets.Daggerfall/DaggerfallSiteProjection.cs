@@ -222,6 +222,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         if (!float.IsFinite(delta.X) || !float.IsFinite(delta.Y) || !float.IsFinite(delta.Z))
             throw new ArgumentOutOfRangeException(nameof(delta), "A site rebase delta must be finite.");
         _worldOffset += delta;
+        (_environment, _water) = (null, null);
         Doors.Rebase(delta);
         Motion.Rebase(delta);
         CityGates.Rebase(delta);
@@ -233,24 +234,28 @@ internal sealed class DaggerfallSiteProjection : IDisposable
     internal CharacterStepEnvironment CharacterEnvironment(CharacterMotion motion)
     {
         if (_suspended) return CharacterStepEnvironment.Empty;
-        CharacterStepEnvironment motionModels = Motion.CharacterEnvironment();
-        CharacterStepEnvironment gates = CityGates.CharacterEnvironment();
-        if (gates.MeshInstances.Length != 0)
-            motionModels = new CharacterStepEnvironment(motionModels.Support, motionModels.Obstacles,
-                motionModels.MeshInstances.ToArray().Concat(gates.MeshInstances.ToArray()).ToArray(), motionModels.WaterVolumes.ToArray());
         // Motion models enter Engine Spatial as exact triangle instances bound to their current
         // entity identities. Passing those instances lets Engine resolve support and carry from
         // retained triangle geometry; projecting the same models as AABB obstacles would duplicate
         // collision and over-block.
         _ = motion;
+        CharacterMeshInstance[] meshes = [.. Motion.CharacterEnvironment().MeshInstances.Span, .. CityGates.CharacterEnvironment().MeshInstances.Span];
         CharacterStepEnvironment doors = Doors.CharacterEnvironment();
-        CharacterWaterVolume[] water = Inputs.WaterVolumes
-            .Select(volume => _worldOffset == Vector3.Zero
-                ? volume
-                : new CharacterWaterVolume(volume.Trigger, volume.Minimum + _worldOffset, volume.Maximum + _worldOffset))
-            .ToArray();
-        return CombineCharacterEnvironments([doors, motionModels], water);
+        // The doors keep their obstacles until one moves, so while the models and gates hold still too the
+        // environment last joined is this one.
+        if (_environment is { } held && held.Doors.Equals(doors.Obstacles) && held.Meshes.AsSpan().SequenceEqual(meshes))
+            return held.Environment;
+        _water ??= [.. Inputs.WaterVolumes.Select(volume => _worldOffset == Vector3.Zero
+            ? volume
+            : new CharacterWaterVolume(volume.Trigger, volume.Minimum + _worldOffset, volume.Maximum + _worldOffset))];
+        CharacterStepEnvironment joined = CombineCharacterEnvironments(
+            [doors, new CharacterStepEnvironment(default, ReadOnlyMemory<CharacterObstacle>.Empty, meshes)], _water);
+        _environment = (doors.Obstacles, meshes, joined);
+        return joined;
     }
+
+    private (ReadOnlyMemory<CharacterObstacle> Doors, CharacterMeshInstance[] Meshes, CharacterStepEnvironment Environment)? _environment;
+    private CharacterWaterVolume[]? _water;
 
     /// <summary>
     /// Joins environments into one proposal's, in the order given: their mesh instances, their obstacles less any whose entity

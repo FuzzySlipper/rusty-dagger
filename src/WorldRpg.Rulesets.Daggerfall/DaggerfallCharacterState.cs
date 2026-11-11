@@ -209,7 +209,7 @@ internal sealed partial class DaggerfallCharacterState
                 ? ToChoices(storedCustom)
                 : DaggerfallCustomCareerChoices.Default(_definitions, Career)),
         };
-        DaggerfallCharacterChoice[] races = _definitions.Catalogs.Races.Select(race =>
+        DaggerfallCharacterChoice[] races = _raceChoices ??= _definitions.Catalogs.Races.Select(race =>
         {
             bool available = _definitions.CharacterPresentation.Races.TryGetValue(race.Id, out DaggerfallRaceLayers? layers)
                 && layers.Heads(DaggerfallCharacterGender.Male).Count != 0 && layers.Heads(DaggerfallCharacterGender.Female).Count != 0;
@@ -217,7 +217,7 @@ internal sealed partial class DaggerfallCharacterState
                 .FirstOrDefault(value => value.RaceId == race.Id)?.Reason ?? "No complete character media is published.";
             return new DaggerfallCharacterChoice(race.Id, DaggerfallCharacterPresentation.Label(race.Id), available, restriction);
         }).ToArray();
-        DaggerfallCharacterChoice[] careers = _definitions.Catalogs.Careers.Select(career => new DaggerfallCharacterChoice(
+        DaggerfallCharacterChoice[] careers = _careerChoices ??= _definitions.Catalogs.Careers.Select(career => new DaggerfallCharacterChoice(
             career.Id, career.Name, _definitions.NewGame.Careers.Any(value => value.Career == career.Id),
             _definitions.NewGame.Careers.All(value => value.Career != career.Id) ? "This career is not selectable for a new player character." : null))
             .Append(new DaggerfallCharacterChoice(DaggerfallCustomCareerPolicy.CareerId, "Custom class", true, null)).ToArray();
@@ -229,7 +229,7 @@ internal sealed partial class DaggerfallCharacterState
             ? new(draft, [.. DaggerfallCustomCareerPolicy.Validate(_definitions, draft)], [.. _definitions.Catalogs.Skills.Select(skill => skill.Id)], DaggerfallCustomCareerPolicy.Options(DaggerfallCustomCareerPolicy.SupportedAdvantages), DaggerfallCustomCareerPolicy.Options(DaggerfallCustomCareerPolicy.SupportedDisadvantages))
             : null;
         DaggerfallCharacterBackgroundPresentation? background = current.Background is { } backgroundDraft && (Pending is not null || _background is not null)
-            ? DaggerfallCharacterBackgroundPolicy.Present(_definitions, PresentedCareer(current), current.ToIdentity(), backgroundDraft) : null;
+            ? PresentBackground(PresentedCareer(current), current.ToIdentity(), backgroundDraft) : null;
         // What stops the draft committing, in the player's words, so the screen never decides it.
         List<string> blocked = [];
         if (string.IsNullOrWhiteSpace(current.Name)) blocked.Add("Enter a name.");
@@ -249,6 +249,22 @@ internal sealed partial class DaggerfallCharacterState
         return new DaggerfallCharacterCreationPresentation(Pending is not null, current, races, careers, faces, reflexes, custom, background, CreationMode, ReadClassQuiz(), _definitions.Catalogs.ClassQuestionnaire is not null,
             Pending is null && _background is not null ? NewGameSummary() : null)
         { Blocked = [.. blocked], QuickStartBlocked = quickStartBlocked };
+    }
+
+    // The character sheet carries creation and is projected every update, so what reads only the catalogs is read once
+    // and the background is presented again only when its draft, identity or career changes.
+    private DaggerfallCharacterChoice[]? _raceChoices, _careerChoices;
+    private (DaggerfallCareerDefinition Career, DaggerfallCharacterIdentity Identity, DaggerfallCharacterBackgroundSave Draft,
+        DaggerfallCharacterBackgroundPresentation Presentation)? _presentedBackground;
+
+    private DaggerfallCharacterBackgroundPresentation PresentBackground(
+        DaggerfallCareerDefinition career, DaggerfallCharacterIdentity identity, DaggerfallCharacterBackgroundSave draft)
+    {
+        if (_presentedBackground is { } held && held.Career == career && held.Identity == identity && held.Draft == draft)
+            return held.Presentation;
+        DaggerfallCharacterBackgroundPresentation presented = DaggerfallCharacterBackgroundPolicy.Present(_definitions, career, identity, draft);
+        _presentedBackground = (career, identity, draft, presented);
+        return presented;
     }
 
     internal void BeginChoices() { _classQuestions = null; Pending = DaggerfallCharacterCreationChoices.From(Identity) with { Background = _background }; }

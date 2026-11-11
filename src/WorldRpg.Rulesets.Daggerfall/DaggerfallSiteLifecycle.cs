@@ -224,18 +224,32 @@ internal sealed class DaggerfallSiteLifecycle
     /// </summary>
     internal CharacterStepEnvironment CharacterEnvironment(CharacterMotion motion)
     {
-        CharacterStepEnvironment projection = Projection.CharacterEnvironment(motion);
-        if (_residentExteriorLocations.Count != 0)
-            projection = DaggerfallSiteProjection.CombineCharacterEnvironments([projection, .. _residentExteriorLocations.Values
-                .OrderBy(value => value.Profile.ProfileKey.LogicalId, StringComparer.Ordinal)
-                .Select(resident => resident.Projection.CharacterEnvironment(motion))]);
-        if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior
-            || Projection.Inputs.ProfileKey != ActiveProfile
-            || _exteriorResidency is not { IsInitialized: true } residency
-            || _exteriorEnvironment is not { IsInitialized: true } environment)
-            return projection;
+        CharacterStepEnvironment[] parts = [Projection.CharacterEnvironment(motion), .. _residentExteriorLocations.Values
+            .OrderBy(value => value.Profile.ProfileKey.LogicalId, StringComparer.Ordinal)
+            .Select(resident => resident.Projection.CharacterEnvironment(motion))];
+        IReadOnlyList<CharacterWaterVolume>? sourceWater = ActiveProfile.Kind == DaggerfallWorldProfileKind.Exterior
+            && Projection.Inputs.ProfileKey == ActiveProfile
+            && _exteriorResidency is { IsInitialized: true } residency
+            && _exteriorEnvironment is { IsInitialized: true } environment
+                ? environment.CharacterWaterVolumes(ActiveOrigin(residency)) : null;
+        // Each part keeps its arrays while it is unchanged, so the joined environment is too: a city's doors are
+        // thousands of obstacles, and every proposal of every character asks for them.
+        if (parts.AsSpan().SequenceEqual(_environmentParts) && ReferenceEquals(sourceWater, _environmentWater))
+            return _environment;
+        CharacterStepEnvironment joined = JoinCharacterEnvironment(parts, sourceWater);
+        (_environmentParts, _environmentWater, _environment) = (parts, sourceWater, joined);
+        return joined;
+    }
 
-        CharacterWaterVolume[] sourceWater = [.. environment.CharacterWaterVolumes(ActiveOrigin(residency))];
+    private CharacterStepEnvironment[] _environmentParts = [];
+    private IReadOnlyList<CharacterWaterVolume>? _environmentWater;
+    private CharacterStepEnvironment _environment;
+
+    private CharacterStepEnvironment JoinCharacterEnvironment(CharacterStepEnvironment[] parts, IReadOnlyList<CharacterWaterVolume>? sourceWater)
+    {
+        CharacterStepEnvironment projection = parts.Length == 1 ? parts[0] : DaggerfallSiteProjection.CombineCharacterEnvironments(parts);
+        if (sourceWater is null) return projection;
+
         Dictionary<ulong, CharacterWaterVolume> water = [];
         foreach (CharacterWaterVolume volume in projection.WaterVolumes.Span)
         {
@@ -250,7 +264,7 @@ internal sealed class DaggerfallSiteLifecycle
                 throw new InvalidOperationException($"Exterior water trigger {validated.Trigger} overlaps an admitted projection trigger.");
         }
         ReconcileExteriorWaterTriggers(sourceWater);
-        if (sourceWater.Length == 0) return projection;
+        if (sourceWater.Count == 0) return projection;
         return new CharacterStepEnvironment(projection.Support, projection.Obstacles, projection.MeshInstances,
             water.Values.OrderBy(value => value.Trigger).ToArray());
     }
@@ -2067,6 +2081,8 @@ internal sealed class DaggerfallSiteLifecycle
     /// <summary>Releases all source-water trigger references before SpatialSession disposal or a profile switch.</summary>
     internal void ReleaseExteriorWaterTriggers()
     {
+        _reconciledWater = null;
+        _environmentParts = [];
         foreach (ulong trigger in _exteriorWaterTriggers.OrderBy(value => value).ToArray())
         {
             _spatial.ReleaseTrigger(trigger, tick: 0);
@@ -2245,6 +2261,7 @@ internal sealed class DaggerfallSiteLifecycle
     private void ReconcileExteriorWaterTriggers(IReadOnlyList<CharacterWaterVolume> desired)
     {
         ArgumentNullException.ThrowIfNull(desired);
+        if (ReferenceEquals(desired, _reconciledWater)) return;
         Dictionary<ulong, CharacterWaterVolume> unique = [];
         foreach (CharacterWaterVolume volume in desired)
         {
@@ -2282,7 +2299,11 @@ internal sealed class DaggerfallSiteLifecycle
             _spatial.ReleaseTrigger(trigger, tick: 0);
             _exteriorWaterTriggers.Remove(trigger);
         }
+        _reconciledWater = desired;
     }
+
+    // The window's water last registered as triggers, which the environment keeps until its cells or origin change.
+    private IReadOnlyList<CharacterWaterVolume>? _reconciledWater;
 
     /// <summary>Applies the calendar/weather season to the resident terrain environment.</summary>
     /// <summary>The light the eye stands in at <paramref name="eye"/>: the one sky, and the lamps of every location resident around it.</summary>

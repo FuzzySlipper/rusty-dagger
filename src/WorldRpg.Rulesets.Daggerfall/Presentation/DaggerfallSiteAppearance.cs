@@ -178,6 +178,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private readonly Dictionary<DaggerfallRdbDoorId, Appearance> doorVisuals = [];
     private readonly Dictionary<DaggerfallRdbDoorId, ulong> doorVisualOrdinals = [];
     private readonly Dictionary<DaggerfallRdbDoorId, Transform> doorVisualPoses = [];
+    // The door facts last appended, kept while the doors' revision, the slot and the door visuals stand.
+    private (int Revision, int Slot, AppearanceFact[] Facts)? doorFacts;
     private readonly Dictionary<string, (Appearance Visual, ulong Ordinal)> actionModelVisuals = new(StringComparer.Ordinal);
     // Each city gate draws its open or its closed model; both are created with the location and the
     // current state's is published under the gate's one ordinal.
@@ -494,10 +496,16 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         foreach ((Appearance staticWorld, Transform pose, int index) in world)
             facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.WorldMesh(slot, index), false, 0,
                 Compose(worldAppearance.Transform, pose), staticWorld, worldAppearance.Visible, worldAppearance.Layer));
-        if (doors is not null) foreach (DaggerfallDoorView door in doors.All)
-            if (doorVisuals.TryGetValue(door.Id, out Appearance? visual))
-                facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.LocationVisual(slot, doorVisualOrdinals[door.Id]), false, 0,
-                    doorVisualPoses.TryGetValue(door.Id, out Transform local) ? Compose(door.Pose, local) : door.Pose, visual, true, RenderLayer.Scene));
+        if (doors is not null)
+        {
+            // A city has thousands of doors, nearly all of them still: their facts are read again only once one moves.
+            if (doorFacts is not { } held || held.Revision != doors.Revision || held.Slot != slot)
+                doorFacts = held = (doors.Revision, slot, [.. doors.All.Where(door => doorVisuals.ContainsKey(door.Id)).Select(door =>
+                    new AppearanceFact(DaggerfallPresentationObjectIds.LocationVisual(slot, doorVisualOrdinals[door.Id]), false, 0,
+                        doorVisualPoses.TryGetValue(door.Id, out Transform local) ? Compose(door.Pose, local) : door.Pose,
+                        doorVisuals[door.Id], true, RenderLayer.Scene))]);
+            facts.AddRange(held.Facts);
+        }
         if (cityGates is not null)
             foreach ((DaggerfallCityGateDefinition gate, EntityId _, DaggerfallDoorVisual _, Transform pose) in cityGates.Visuals)
                 if (gateVisuals.TryGetValue(gate.Id, out (Appearance Open, Appearance Closed, ulong Ordinal) visual))
@@ -859,6 +867,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         doorVisuals.Clear();
         doorVisualOrdinals.Clear();
         doorVisualPoses.Clear();
+        doorFacts = null;
         foreach ((Appearance visual, ulong _) in actionModelVisuals.Values.Reverse()) Dispose(visual, ref failures);
         actionModelVisuals.Clear();
         // Sprite atlases borrow textures that location materials may also use. Retire every
@@ -977,6 +986,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                     : throw new InvalidOperationException($"Door '{door.Id}' refers to missing world material slot {binding.WorldMaterialSlot}."))
                 .ToArray()));
             doorVisuals.Add(door.Id, created);
+            doorFacts = null;
             doorVisualOrdinals.Add(door.Id, NextLocationVisualOrdinal());
             if (visual.LocalPose is { } local) doorVisualPoses.Add(door.Id, local);
         }
@@ -1046,6 +1056,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         doorVisuals.Clear();
         doorVisualOrdinals.Clear();
         doorVisualPoses.Clear();
+        doorFacts = null;
         retired.AddRange(actionModelVisuals.Values.Select(value => value.Visual).Reverse());
         actionModelVisuals.Clear();
         foreach ((Appearance open, Appearance closed, ulong _) in gateVisuals.Values.Reverse()) retired.AddRange([closed, open]);
