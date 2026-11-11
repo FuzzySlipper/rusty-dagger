@@ -403,6 +403,12 @@ test('the wagon, while the cart is near, is a tab of the inventory that stores a
     f.root.querySelector('[data-inventory-tab="wagon"]').click();
     const wagon = f.root.querySelector('.dagger-inventory-wagon');
     assert.equal(wagon.hidden, false);
+    // The wagon's tab keeps no room for an icon it lacks, and a row of more than five tabs drops the icons to fit.
+    assert.equal(f.root.querySelector('[data-inventory-tab="wagon"]').dataset.icon, undefined);
+    const tabs = f.root.querySelector('.dagger-inventory-tabs');
+    assert.equal(tabs.classList.contains('is-crowded'), tabs.querySelectorAll('[role="tab"]').length > 5);
+    // A row that takes an amount sets it beneath the name, so a narrow pane keeps the name readable.
+    assert.ok(wagon.querySelector('[data-transfer-side="pack"] .dagger-transfer-row.has-amount'));
     assert.match(wagon.querySelector('[data-transfer-side="source"]').textContent, /Wagon · 0\.03 \/ 750 kg/);
     wagon.querySelector('[data-transfer-side="pack"] [data-transfer-key="stack:pack.gold"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'wagon-put', revision: '21:2:0', item: 'stack:pack.gold', amount: 4 });

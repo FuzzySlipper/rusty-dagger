@@ -518,12 +518,15 @@ export function mountInventory(
       ...(value.bank ? [{ id: BANK_TAB, label: 'Bank' }] : [])];
     if (!entries.some(entry => entry.id === tab)) tab = ALL_TAB;
     redraw(tabs, JSON.stringify([entries, tab]), () => {
+      // More tabs than the row holds with their icons, as with the wagon's beside the categories, drop the icons.
+      tabs.classList.toggle('is-crowded', entries.length > 5);
       tabs.replaceChildren(...entries.map(entry => {
         const button = document.createElement('button');
         button.type = 'button';
         button.setAttribute('role', 'tab');
         button.dataset.inventoryTab = entry.id;
-        button.dataset.icon = `category-${entry.id}`;
+        // The storage and the wagon have no kit icon, so they keep no room for one.
+        if (entry.id !== STORAGE_TAB && entry.id !== WAGON_TAB) button.dataset.icon = `category-${entry.id}`;
         button.setAttribute('aria-selected', String(entry.id === tab));
         button.textContent = entry.label;
         return button;

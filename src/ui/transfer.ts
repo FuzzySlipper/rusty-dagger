@@ -172,7 +172,7 @@ export function mountTransfer(root: HTMLElement, handlers: {
           show();
           amounts.append(total);
         }
-        if (amounts.childElementCount > 0) entry.append(amounts);
+        if (amounts.childElementCount > 0) { entry.append(amounts); entry.classList.add('has-amount'); }
         const commands = document.createElement('div');
         commands.className = 'dagger-transfer-commands';
         for (const command of row.commands) {

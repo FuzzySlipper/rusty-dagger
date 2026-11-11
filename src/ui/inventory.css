@@ -39,11 +39,14 @@
 .dagger-inventory-accessories { display: grid; gap: .375rem; grid-auto-columns: var(--accessory-slot); grid-auto-flow: column; grid-template-rows: repeat(2, var(--accessory-slot)); }
 
 /* The pack. */
-.dagger-inventory-pack-section { display: grid; gap: .625rem; min-width: 0; }
+/* The pack's one column may be narrower than its tab row's labels laid end to end, so a sixth tab (the wagon's)
+   shortens the tabs rather than widening the pack past the panel. */
+.dagger-inventory-pack-section { display: grid; gap: .625rem; grid-template-columns: minmax(0, 1fr); min-width: 0; }
 .dagger-inventory-pack-header { display: flex; flex-wrap: wrap; gap: .5rem; }
 .dagger-inventory-tabs { display: flex; flex: 1 1 100%; gap: .25rem; min-width: 0; }
 /* One row of tabs sharing the pack's width, so the grid starts at the same height whatever the tab names. */
-.dagger-inventory-tabs [role="tab"] { flex: 1 1 auto; font: .75rem var(--font-body); min-width: 0; overflow: hidden; padding: .375rem .5rem; text-overflow: ellipsis; white-space: nowrap; }
+.dagger-hud .dagger-inventory-tabs [role="tab"] { flex: 1 1 auto; font: .75rem var(--font-body); min-width: 0; overflow: hidden; padding: .375rem .5rem; text-overflow: ellipsis; white-space: nowrap; }
+.dagger-inventory-tabs.is-crowded [data-icon]::before { display: none; }
 .dagger-inventory-grid { display: grid; gap: .375rem; grid-template-columns: repeat(10, minmax(0, var(--pack-cell))); }
 .dagger-inventory-overflow { border-top: 1px solid rgb(197 164 94 / .35); display: flex; flex-wrap: wrap; gap: .375rem; margin-top: .5rem; padding-top: .5rem; }
 .dagger-inventory-overflow::before { color: #c3b48b; content: "Overflow"; flex-basis: 100%; font: .7rem var(--font-label); letter-spacing: .08em; text-transform: uppercase; }

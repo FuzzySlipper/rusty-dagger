@@ -28,6 +28,11 @@
 .dagger-transfer-row p { color: #c3b48b; font: .72rem var(--font-label); margin: .15rem 0 0; }
 .dagger-transfer-row .dagger-transfer-refusal { color: #f0b48c; font: italic .75rem var(--font-body); }
 .dagger-transfer-amount { align-items: center; display: flex; gap: .5rem; }
+/* A row that takes an amount gives its name and facts the line and sets the amount and commands beneath, so a narrow
+   pane (the wagon's, beside the pack) never squeezes the name to nothing. */
+.dagger-transfer-row.has-amount { grid-template-columns: 3.25rem minmax(0, 1fr) auto; }
+.dagger-transfer-row.has-amount > .dagger-transfer-icon { grid-row: span 2; }
+.dagger-transfer-row.has-amount > :nth-child(2) { grid-column: 2 / 4; }
 .dagger-transfer-total { color: #f3d77e; font: .78rem var(--font-label); min-width: 4.5rem; text-align: right; }
 .dagger-transfer-commands { display: flex; flex-wrap: wrap; gap: .375rem; justify-content: flex-end; }
 .dagger-transfer-commands > button { font: .8rem var(--font-body); min-width: 4.5rem; padding: .375rem .75rem; }
