@@ -13,7 +13,7 @@ local/art/generated/studies/items-icons-player-icons-bp-20261103/cutout/horse.pn
 local/art/generated/mounts/horse-generated.glb. After: `rusty asset check` on OUT, then `player.ride horse` in the game.
 
 A gait is one row of GAITS: the loop's seconds, the share of it a foot is down, each leg's phase, how far the legs swing and
-the body bobs. REINS_AHEAD and its neighbours place the reins' end where RIDE_HAND in scripts/fp-arms/build.py puts the hands,
+the body bobs. REINS_AHEAD and its neighbours place the reins' end where RIDE_HAND in authoring/tools/fp-arms/build.py puts the hands,
 so change them together.
 """
 import json

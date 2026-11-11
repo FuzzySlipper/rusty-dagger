@@ -1,9 +1,9 @@
 """Builds the first-person arms with their clips from the old game's MedievalFPArms and FPP melee clips
-(run under Blender 5 by scripts/fp-arms/build.sh; scripts/fp-arms/README.md).
+(run under Blender 5 by authoring/tools/fp-arms/build.sh; authoring/tools/fp-arms/README.md).
 
-usage: blender -b --factory-startup --python scripts/fp-arms/build.py -- SOURCES DEFINITION OUT_DIR
+usage: blender -b --factory-startup --python authoring/tools/fp-arms/build.py -- SOURCES DEFINITION OUT_DIR
 
-SOURCES is local/inputs/fp-melee (scripts/fp-arms/copy-sources.sh). DEFINITION is the held definition, which names every clip
+SOURCES is local/inputs/fp-melee (authoring/tools/fp-arms/copy-sources.sh). DEFINITION is the held definition, which names every clip
 the game plays: the rig's own clip and each family's idle, power hold and attack clips, by their FBX file stems. Writes into OUT_DIR:
 
 - each of the definition's armSets: its model, the arms (mesh, skeleton and a colour map painted by paint.py and drawn

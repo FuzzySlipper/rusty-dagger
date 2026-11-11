@@ -85,8 +85,8 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
             DevelopmentStep: $"Run `{ImportCommand}` with a folder of <track>.<ext> recordings, such as the Daggerfall Unity song pack.",
             ReleaseStep: $"Run {ReleaseImportTool} with the folder Daggerfall is installed in and --music with a folder of the game's music recordings (<track>.<ext>)."),
         new(DaggerfallHeldArt.ContainerName, "the 3D first-person arms", Required: false,
-            DevelopmentStep: "Run `scripts/fp-arms/build.sh` in the repository root (scripts/fp-arms/README.md).",
-            ReleaseStep: "Build first-person.rpak on a development checkout with scripts/fp-arms/build.sh and place it beside the product."),
+            DevelopmentStep: "Run `authoring/tools/fp-arms/build.sh` in the repository root (authoring/tools/fp-arms/README.md).",
+            ReleaseStep: "Build first-person.rpak on a development checkout with authoring/tools/fp-arms/build.sh and place it beside the product."),
     ];
 
     /// <summary>

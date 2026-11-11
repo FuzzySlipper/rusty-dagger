@@ -32,7 +32,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-REPOSITORY = Path(__file__).resolve().parents[3]
+REPOSITORY = Path(__file__).resolve().parents[2]
 PROFILE = "rusty-dagger-hosted"
 WILDERNESS = "Developer: wilderness start"
 WIDTH, HEIGHT = 1920, 1080

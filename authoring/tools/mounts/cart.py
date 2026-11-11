@@ -8,7 +8,7 @@ from boxes and cylinders, in the art's wood colours.
 
 The game draws the horse ahead of it, at `mount.cartHorse` in the held definition. The reins run from the driver's fists (FIST)
 to the horse's own (REINS_END), overlapping them so the horse can move: moving the seat, the horse or RIDE_HAND in
-scripts/fp-arms/build.py means moving FIST and REINS_END too.
+authoring/tools/fp-arms/build.py means moving FIST and REINS_END too.
 """
 import math
 import sys
@@ -26,7 +26,7 @@ RETRO_SIZE = 64
 WOOD = ((.2, .12, .06), (.3, .18, .09), (.4, .26, .13), (.5, .33, .18))
 IRON = ((.12, .12, .13), (.2, .2, .22))
 LEATHER = ((.22, .13, .07), (.3, .18, .1))
-# The driver's fists from the seat (`RIDE_HAND` in scripts/fp-arms/build.py on the seat's height, `mount.cartSeat` in the
+# The driver's fists from the seat (`RIDE_HAND` in authoring/tools/fp-arms/build.py on the seat's height, `mount.cartSeat` in the
 # held definition), and where the horse's own reins end from the seat (horse.py's REINS_ at `mount.cartHorse`), a little
 # past it so the two overlap as the horse moves.
 FIST = Vector((.07, .43, 1.46))

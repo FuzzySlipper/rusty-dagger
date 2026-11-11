@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Copies the old Rift Riders game's first-person melee art into Dagger's ignored local/inputs/fp-melee/ once
-# (scripts/fp-arms/README.md): Ironbelly's MedievalFPArms meshes, textures and unarmed clips, and the FPP_* melee clip
+# (authoring/tools/fp-arms/README.md): Ironbelly's MedievalFPArms meshes, textures and unarmed clips, and the FPP_* melee clip
 # folders. They are Unity Asset Store purchases: never commit them or anything converted from them.
 #
-#   scripts/fp-arms/copy-sources.sh ../rusty-riders/old-game/Assets/MoreArt/FpMelee
+#   authoring/tools/fp-arms/copy-sources.sh ../rusty-riders/old-game/Assets/MoreArt/FpMelee
 set -euo pipefail
-root=$(cd "$(dirname "$0")/../.." && pwd)
+root=$(cd "$(dirname "$0")/../../.." && pwd)
 from=${1:?usage: copy-sources.sh FPMELEE_DIR}
 out=$root/local/inputs/fp-melee
 [[ -d $from/MedievalFPArms/Meshes && -f $from/FPP_Dag_Idle.fbx ]] || { echo "$from is not the old game's FpMelee folder" >&2; exit 1; }

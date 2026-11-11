@@ -14,12 +14,13 @@ exactly where the classic picture was.
 
 Finals go to local/art/generated/AREA under their art keys.
 """
-import argparse, json
+import argparse, json, sys
 from pathlib import Path
 
 import numpy as np
 from PIL import Image
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "paper-doll"))
 from art_key import art_key
 from doll_preview import ART, doll_layer
 

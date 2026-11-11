@@ -23,7 +23,7 @@
   },
   "why": "The final already carries that style, so a second pass repaints her: the face came out softer and younger, and the staff smooth with yellow vines."
  },
- "cut_out": "authoring/tools/items/matte.py ask_mask (BiRefNet) united with a ground-colour key, then laid on white for See-through.",
+ "cut_out": "authoring/tools/shared/matte.py ask_mask (BiRefNet) united with a ground-colour key, then laid on white for See-through.",
  "edits": [
   {
    "tool": "asset-pipeline tools/texture-edit/qwen_edit.py",

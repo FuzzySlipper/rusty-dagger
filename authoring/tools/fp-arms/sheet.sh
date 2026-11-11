@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # In-game contact sheet of a family's attacks, drawn by the game's own held viewmodel through the developer workbench
-# (scripts/fp-arms/README.md): for each attack, the view at rest and held every STEP seconds of the attack as the rules
+# (authoring/tools/fp-arms/README.md): for each attack, the view at rest and held every STEP seconds of the attack as the rules
 # time it, each tile labelled with its moment, phase and clip time, the hit's tile outlined. The host must run with
 # --live-debug, a 3D viewmodel style and local/data/first-person.rpak; the sheet holds world time while it
 # draws, then gives it back and leaves the viewer off.
 #
-#   scripts/fp-arms/sheet.sh ORIGIN LOOK OUT_DIR [STEP=0.05] [ATTACK...]
-#   scripts/fp-arms/sheet.sh http://127.0.0.1:39937 weapon.dagger.steel local/evidence/sheets
+#   authoring/tools/fp-arms/sheet.sh ORIGIN LOOK OUT_DIR [STEP=0.05] [ATTACK...]
+#   authoring/tools/fp-arms/sheet.sh http://127.0.0.1:39937 weapon.dagger.steel local/evidence/sheets
 set -euo pipefail
 origin=$1; look=$2; out=$3; step=${4:-0.05}; shift $(( $# < 4 ? $# : 4 ))
-root=$(cd "$(dirname "$0")/../.." && pwd)
+root=$(cd "$(dirname "$0")/../../.." && pwd)
 pin=$(sed -n 's:.*<RustyEnginePackageVersion>\(.*\)</RustyEnginePackageVersion>.*:\1:p' "$root/Directory.Build.props")
 debug=${RUSTY_ENGINE_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/rusty-engine}/pairs/$pin/runtime-pack/bin/rusty-live-debug
 run() { "$debug" --origin "$origin" --command "$*"; }

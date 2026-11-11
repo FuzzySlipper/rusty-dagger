@@ -103,6 +103,7 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "paper-doll"))
 from doll_preview import ART, AUTHORING, doll_layer, placed, worn_layer
 
 sys.path.insert(0, str(AUTHORING / "tools/surfaces"))

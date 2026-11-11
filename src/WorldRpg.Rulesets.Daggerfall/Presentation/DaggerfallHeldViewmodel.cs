@@ -117,7 +117,7 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
         {
             string[] missing = [.. new[] { family.Idle.Clip }.Concat(family.Strikes.Values.Select(clip => clip.Clip)).Where(clip => !arms.Clips.Contains(clip))];
             if (missing.Length > 0)
-                throw new InvalidDataException($"{DaggerfallHeldArt.DocumentPath}: families.{drawing.Family} names clips the arms lack: {string.Join(", ", missing)}. Rebuild {DaggerfallHeldArt.ContainerName} with scripts/fp-arms/build.sh.");
+                throw new InvalidDataException($"{DaggerfallHeldArt.DocumentPath}: families.{drawing.Family} names clips the arms lack: {string.Join(", ", missing)}. Rebuild {DaggerfallHeldArt.ContainerName} with authoring/tools/fp-arms/build.sh.");
             if ((item?.Model ?? family.Look.Model) is { } path)
             {
                 using ContentReference lookModel = art.Container.OpenReference(path);

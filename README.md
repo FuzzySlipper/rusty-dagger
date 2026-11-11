@@ -15,8 +15,9 @@ content source; it is not the WorldRpg architecture.
 | Design and reference (architecture, combat, UI, world, coverage, import, art) | den-wiki, under `wiki/rusty-dagger` |
 | Tasks, status, evidence and review | Den project `rusty-dagger` |
 | Open questions and discussion | Crew board `rusty-dagger` |
-| Art pipeline | [authoring/README.md](authoring/README.md); first-person arms in [scripts/fp-arms](scripts/fp-arms/README.md) |
+| Art pipeline | [authoring/README.md](authoring/README.md); first-person arms in [authoring/tools/fp-arms](authoring/tools/fp-arms/README.md) |
 | Agent playtesting | [docs/playtesting.md](docs/playtesting.md) |
+| Development tools: verify, play smoke, data sync, tour and cost | [scripts](scripts), usage in each tool's header |
 | Review lanes and the reviewer packet | [docs/agent-review](docs/agent-review/README.md) |
 | What is and isn't redistributed | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) |
 
@@ -50,7 +51,7 @@ say what may be deleted:
 | Folder | Holds | Lifecycle |
 | --- | --- | --- |
 | `local/inputs/` | `arena2`, `Sound`, `fp-melee` (purchased art) | supplied, never regenerated: keep a copy |
-| `local/data/` | `daggerfall-data.rpak`, `music.rpak`, `first-person.rpak` | what the game opens; rebuilt by the import and `scripts/fp-arms/build.sh` |
+| `local/data/` | `daggerfall-data.rpak`, `music.rpak`, `first-person.rpak` | what the game opens; rebuilt by the import and `authoring/tools/fp-arms/build.sh` |
 | `local/build/` | import staging and records, the fp-arms build, verify stamps | regenerable |
 | `local/art/` | `reference/` exports, `generated/` finals and studies, `review/` pages | the art pipeline's working files ([authoring/README.md](authoring/README.md)) |
 | `local/scratch/` | experiments | deletable at any time |
@@ -94,7 +95,7 @@ say what may be deleted:
   they differ the copy is stale for this tree (or the tree is ahead of the last
   import): pull again once den-agents has imported that revision.
 - `local/data/first-person.rpak` is optional: 3D first-person arms built from
-  purchased art by `scripts/fp-arms/build.sh`. Without it a 3D `viewmodel.style`
+  purchased art by `authoring/tools/fp-arms/build.sh`. Without it a 3D `viewmodel.style`
   draws the classic weapon sprites, with a warning.
 - The Daggerfall Unity tables and quest scripts the import reads are tracked in
   `data/daggerfall-unity`; no donor checkout is needed.

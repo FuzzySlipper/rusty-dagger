@@ -40,7 +40,7 @@ On top of the root `AGENTS.md` and the Engine's game-UI rules.
 
 ## Authored art
 
-1. Add the source prompt and published entry to `scripts/ui-art-kit.py`.
+1. Add the source prompt and published entry to `authoring/tools/ui/ui-art-kit.py`.
 2. Run its `generate`, pick a seed, then `process` and `manifest`.
 3. Run the import: `dotnet run --project src/Daggerfall.Import.Tool -- import --music local/inputs/Sound`.
 

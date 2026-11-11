@@ -37,6 +37,7 @@ import numpy as np
 from PIL import Image, ImageFilter
 from scipy import ndimage
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "shared"))
 from postprocess import oklab_to_srgb, srgb_to_oklab
 from doll_preview import FINALS, GROUND, MORPH, WORN_SOURCES, doll_layer, placed, worn_layer
 

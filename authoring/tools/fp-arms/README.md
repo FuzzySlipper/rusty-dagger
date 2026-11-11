@@ -14,8 +14,8 @@ arms' pixel paint and the claw arms' GLBs too: they derive from the pack or carr
 ## Building
 
 ```sh
-scripts/fp-arms/copy-sources.sh ../rusty-riders/old-game/Assets/MoreArt/FpMelee    # once
-scripts/fp-arms/build.sh
+authoring/tools/fp-arms/copy-sources.sh ../rusty-riders/old-game/Assets/MoreArt/FpMelee    # once
+authoring/tools/fp-arms/build.sh
 ```
 
 - Needs Blender 5 and the `rusty` CLI; about two minutes for each set of arms. If `build.sh` reports that
@@ -38,7 +38,7 @@ Run `rusty dev --output window --live-debug` at 1920×1080 or more, with `held` 
   its marks and fade, the idle loop, grips and holds, the shoulder and the palm. A look is a classic visual
   (`weapon.dagger.steel`) or `item.N` for template N. **Save** writes into the held definition: commit it.
 - `held.clip` reads what the arms play now; `held.shield` moves a shield's seat or carry and answers what to save.
-- `scripts/fp-arms/sheet.sh ORIGIN LOOK OUT_DIR [STEP] [ATTACK...]` writes a contact sheet per attack from a running
+- `authoring/tools/fp-arms/sheet.sh ORIGIN LOOK OUT_DIR [STEP] [ATTACK...]` writes a contact sheet per attack from a running
   host, its hit outlined: the quickest way to place marks. It jumps between moments, so film a flail's chain with
   `held.motion.play` and `engine.time.advance` instead.
 - Without the container, or under `classic`, each command answers why and how to fix it.

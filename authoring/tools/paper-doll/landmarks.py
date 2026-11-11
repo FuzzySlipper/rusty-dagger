@@ -33,6 +33,7 @@ from scipy import ndimage
 
 from functools import lru_cache
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "shared"))
 from bodies import MORPHS
 from doll_preview import AUTHORING, FINALS, doll_layer, placed
 from promote import CONTENT, PAYLOAD, replaces

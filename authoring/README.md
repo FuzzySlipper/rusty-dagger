@@ -9,8 +9,9 @@ Each tool's usage is in its own header.
 
 ```
 authoring/
-  tools/    items/ (every 2D area: batches, cut-out, paper doll, ledger, promote), surfaces/, terrain/, groundcover/,
-            trees/, ui/, weapons/, mounts/, tour/
+  tools/    shared/ (what every 2D area runs: batches, cut-out, finals, matte, ledger, promote), paper-doll/ (bodies,
+            heads, worn layers, doll preview), flats/, surfaces/, terrain/, groundcover/, trees/, ui/ (screen export, UI
+            art kit), weapons/, mounts/, fp-arms/ (first-person.rpak)
   specs/    tracked contract specs: items, worn, paper-doll, spells, effects, flats, people, ui, weapons
   ledger/   <area>-notes.json: status and notes per image key, the only hand-edited tracking input
 
@@ -66,7 +67,7 @@ dotnet run --project src/Daggerfall.Import.Tool -- export-items
 - Look at `joined.png` and at every turnaround attempt. A changed prompt is a new rev; build each rev into a new
   folder.
 - Adopting a model: copy it to `content/worldrpg/first-person/weapons/NAME.glb`, `rusty asset check`, rerun
-  `arcs.py`, `scripts/fp-arms/build.sh`, then `scripts/fp-arms/sheet.sh` in a 1920×1080 window run.
+  `arcs.py`, `authoring/tools/fp-arms/build.sh`, then `authoring/tools/fp-arms/sheet.sh` in a 1920×1080 window run.
 - Film a chain with `held.motion.play` and `engine.time.advance`; `sheet.sh` jumps between moments and gives a chain
   nothing to follow.
 - Models are in the held-look frame: grip at the origin, length along -Z, the striking edge on +Y.
@@ -75,7 +76,7 @@ dotnet run --project src/Daggerfall.Import.Tool -- export-items
 
 - `horse.py`, then `rusty asset check`, then `player.ride horse` in the game.
 - The reins meet the hands: `REINS_AHEAD` (`horse.py`), `FIST` and `REINS_END` (`cart.py`) change together with
-  `RIDE_HAND` in `scripts/fp-arms/build.py`.
+  `RIDE_HAND` in `authoring/tools/fp-arms/build.py`.
 
 ## Animated people
 

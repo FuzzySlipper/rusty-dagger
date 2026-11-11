@@ -13,7 +13,7 @@ Areas are `items` (world sprites), `paper-doll`, `spells` and `effects`. Writes 
 (items) or `review/<area>/index.html` (cards, filters, detail), the matching `*-ledger.csv` and
 `thumbs/`. The notes file is the thing to edit; the page and CSV are regenerated views.
 
-    python3 authoring/tools/items/review_ledger.py [--area items]
+    python3 authoring/tools/shared/review_ledger.py [--area items]
 """
 import argparse, csv, glob, json, os
 from pathlib import Path

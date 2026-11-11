@@ -72,7 +72,7 @@ def main():
         with tempfile.NamedTemporaryFile("w", suffix=".json") as listing:
             json.dump(items, listing)
             listing.flush()
-            subprocess.run([sys.executable, Path(__file__).with_name("make_spec.py"), "flats", family, listing.name, "--template", "flats",
+            subprocess.run([sys.executable, AUTHORING / "tools/shared/make_spec.py", "flats", family, listing.name, "--template", "flats",
                             "--title", f"Flats: {family}"], check=True)
         print(family, len(items), flush=True)
 

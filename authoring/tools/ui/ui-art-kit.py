@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Generates and processes the authored UI art kit (#10110) with the recipe the owner chose on #10120.
 
-    scripts/ui-art-kit.py generate [SOURCE ...] [--host den-m5|den-nimo] [--seeds 1-2]
-    scripts/ui-art-kit.py process  [--pick SOURCE=SEED ...]
-    scripts/ui-art-kit.py manifest
+    authoring/tools/ui/ui-art-kit.py generate [SOURCE ...] [--host den-m5|den-nimo] [--seeds 1-2]
+    authoring/tools/ui/ui-art-kit.py process  [--pick SOURCE=SEED ...]
+    authoring/tools/ui/ui-art-kit.py manifest
 
 This is an operator tool, not a step of the import: it needs the LAN GPU hosts. Its output is the processed
 originals in content/worldrpg/media/ui/authored/ (committed product content the ruleset reads in place) and their
@@ -38,7 +38,7 @@ import sys
 import numpy as np
 from PIL import Image, ImageFilter
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 PIPELINE = os.environ.get("ASSET_PIPELINE", "/home/agent/dev/asset-pipeline")
 RAW = os.environ.get("RAW", os.path.join(ROOT, "local", "scratch", "ui-art-kit"))
 ORIGINALS = os.path.join(ROOT, "content", "worldrpg", "media", "ui", "authored")
@@ -51,6 +51,7 @@ LORA = "civitai_retro_dark_fantasy_krea2.safetensors"
 LORA_STRENGTH = 0.8
 TRIGGER = "dark_fantasy_illustration, "
 GROUND = "isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters"
+# The provenance each entry of data/ui-authored-assets.json records, naming the kit where it was made.
 GENERATOR = (f"Krea 2 turbo ({UNET}) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at {LORA_STRENGTH}, "
              "seed {seed}; keyed, fitted within {size}, {states}envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, "
              "hard alpha 128); scripts/ui-art-kit.py")

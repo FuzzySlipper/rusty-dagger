@@ -811,7 +811,7 @@ public sealed class DaggerfallHeldArtTests
     private static string[] ArmModels() => Document()["armSets"]!.AsObject()
         .SelectMany(set => new[] { set.Value!["model"]!.GetValue<string>(), set.Value!["retroModel"]!.GetValue<string>() }).ToArray();
 
-    // The definition read over a container that carries the given models (by default what scripts/fp-arms/build.sh
+    // The definition read over a container that carries the given models (by default what authoring/tools/fp-arms/build.sh
     // packs: every arm set and the committed weapon models).
     internal static DaggerfallHeldArt Read(JsonObject document, string[]? models = null)
     {

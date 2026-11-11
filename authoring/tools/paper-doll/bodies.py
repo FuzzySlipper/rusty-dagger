@@ -22,7 +22,7 @@ doll_preview.py --paper-doll OUT/finals draws them and they can replace local/ar
 
     bodies.py OUT [--gender male --gender female] [--base human=00 --base elf=03]
 """
-import argparse, json
+import argparse, json, sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -30,6 +30,7 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "shared"))
 from doll_preview import ART, GROUND, doll_layer, placed
 from dress import mask_image, qwen
 from postprocess import cutout, oklab_to_srgb, srgb_to_oklab

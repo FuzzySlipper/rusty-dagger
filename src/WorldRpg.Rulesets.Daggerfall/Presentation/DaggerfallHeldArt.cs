@@ -16,7 +16,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// The 3D first-person art: the authored held definition in the product's content (<see cref="DocumentPath"/>) drawn
 /// with the models in the optional container installed beside the product (<see cref="ContainerName"/>): rigged arms
 /// carrying their clips and the held weapons that replace the classic weapon sprites when the viewmodel tuning asks for
-/// them. The container is built on the operator's machine by <c>scripts/fp-arms/build.sh</c> from the old game's
+/// them. The container is built on the operator's machine by <c>authoring/tools/fp-arms/build.sh</c> from the old game's
 /// first-person arms and melee clips, which may not be committed. The arms are clip-led: each weapon family plays its
 /// idle loop at rest and a clip per classic strike, fitted to the strike's timing by its marks, and the look rides the
 /// hand. Marks and holds are tuned in the developer workbench, which saves back to the definition.

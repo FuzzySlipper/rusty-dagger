@@ -14,7 +14,7 @@ if [[ $AREA == items ]]; then PFX=items-icons; else PFX=$AREA; fi
 AUTH=$(cd "$(dirname "$0")/../.." && pwd)
 ART=$(dirname "$AUTH")/local/art
 AP=${ASSET_PIPELINE:-$HOME/dev/asset-pipeline}
-SPEC=$AUTH/specs/$AREA; TOOLS=$AUTH/tools/items; if [[ $AREA == worn ]]; then SRCDIR=items; else SRCDIR=$AREA; fi
+SPEC=$AUTH/specs/$AREA; TOOLS=$AUTH/tools/shared; if [[ $AREA == worn ]]; then SRCDIR=items; else SRCDIR=$AREA; fi
 RAW=${SOURCE:-$ART/reference/$SRCDIR}; ST=$ART/generated/studies
 PAL=${ART_PAL:-$HOME/research/daggerfall-files/ART_PAL.COL}
 D=$(date +%Y%m%d)

@@ -10,6 +10,7 @@ the study's `inputs/<id>/input.json`, and the spec's canvas size.
 import argparse, json, shutil, subprocess, sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "paper-doll"))
 from art_key import art_key
 from doll_preview import generation_rect
 

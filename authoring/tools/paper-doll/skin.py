@@ -22,13 +22,14 @@ already gives every race of a morph its body colour.
 Run it after heads.py has trimmed the heads. Remapped heads go to OUT/finals for doll_preview.py --paper-doll OUT/finals
 before they replace local/art/generated/paper-doll.
 """
-import argparse
+import argparse, sys
 from pathlib import Path
 
 import numpy as np
 from PIL import Image
 from scipy import ndimage
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "shared"))
 from doll_preview import doll_layer, placed
 from landmarks import BODIES, HEADS
 from postprocess import oklab_to_srgb, srgb_to_oklab

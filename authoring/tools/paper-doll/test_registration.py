@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A final lands in the doll where its generation put it, whatever the spec's canvas size and occupancy.
 
-    python3 -m unittest test_registration     # from authoring/tools/items; needs local/art/reference/items exported
+    python3 -m unittest test_registration     # from authoring/tools/paper-doll; needs local/art/reference/items exported
 
 Prepares one held weapon (a worn final drawn alone, with no dressed sidecar) at a non-default canvas size and
 occupancy, publishes a stand-in cut-out through finalize.py, and checks that doll_preview.py and promote.py place
@@ -12,11 +12,12 @@ from pathlib import Path
 
 from PIL import Image
 
+SHARED = Path(__file__).resolve().parents[1] / "shared"
+sys.path.insert(0, str(SHARED))
 import doll_preview
 from doll_preview import DF_ITEMS, ORIGIN, placed, worn_layer
 from promote import rect_of
 
-HERE = Path(__file__).resolve().parent
 KEY = "texture-234-record-013-frame-000"
 SIZE, OCCUPANCY = 768, 0.6
 
@@ -35,11 +36,11 @@ class Registration(unittest.TestCase):
                     "items": [{"id": "weapon", "directory": str(directory), "image": entry["file"], "content": "c", "uncertainty": "u",
                                "invention": "i", "name": "weapon"}]}
             (temp / "spec.json").write_text(json.dumps(spec))
-            subprocess.run([sys.executable, HERE / "run.py", "prepare", "--spec", temp / "spec.json", "--source", DF_ITEMS,
+            subprocess.run([sys.executable, SHARED / "run.py", "prepare", "--spec", temp / "spec.json", "--source", DF_ITEMS,
                             "--out", temp / "study"], check=True, capture_output=True)
             (temp / "cutout").mkdir()
             Image.new("RGBA", (SIZE, SIZE), (200, 200, 200, 255)).save(temp / "cutout" / "weapon.png")
-            subprocess.run([sys.executable, HERE / "finalize.py", temp / "spec.json", temp / "cutout", "--area", "worn",
+            subprocess.run([sys.executable, SHARED / "finalize.py", temp / "spec.json", temp / "cutout", "--area", "worn",
                             "--finals", temp / "finals", "--study", temp / "study"], check=True, capture_output=True)
 
             # The source, scaled by the largest whole number within the occupancy, is centred on the canvas.

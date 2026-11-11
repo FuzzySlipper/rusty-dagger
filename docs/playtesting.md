@@ -55,7 +55,7 @@ which `rusty-live-debug --origin URL` (`help`, `complete world.`) and the in-gam
 - They act through the owners ordinary play uses, so the next save holds the result, and they wait while a screen
   or question is open.
 - Reaching a trainer: `world.enter Charing "Temple of Kynareth"`, `world.find training`, `world.goto Actor:<id>`.
-- `authoring/tools/tour/tour.py` and `cost.py` drive them over many scenes (usage in their headers).
+- `scripts/tour/tour.py` and `cost.py` drive them over many scenes (usage in their headers).
 
 ## Implementation ownership
 

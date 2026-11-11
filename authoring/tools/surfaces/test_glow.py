@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 """A light's emission map holds its flame or glass and leaves the metal dark.
 
-    python3 -m unittest test_glow     # from authoring/tools/items
+    python3 -m unittest test_glow     # from authoring/tools/surfaces
 """
-import sys, unittest
-from pathlib import Path
+import unittest
 
 import numpy as np
 from PIL import Image
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "surfaces"))
-import reduce  # noqa: E402
+import reduce
 
 FLAME, GLASS, IRON = (250, 190, 80), (60, 120, 240), (40, 40, 40)
 

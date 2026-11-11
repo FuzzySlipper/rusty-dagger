@@ -24,7 +24,7 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
-REPOSITORY = Path(__file__).resolve().parents[3]
+REPOSITORY = Path(__file__).resolve().parents[2]
 SETTLE_SECONDS = 60
 MEASURE_SECONDS = 8
 

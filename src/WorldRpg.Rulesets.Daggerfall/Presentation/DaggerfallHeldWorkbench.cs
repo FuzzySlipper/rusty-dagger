@@ -48,7 +48,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
 
     /// <summary>Why nothing can be viewed, or null when the art is drawn.</summary>
     internal string? Unavailable => art is null
-        ? $"No first-person art: {DaggerfallHeldArt.ContainerName} is not installed beside the product. Build it with scripts/fp-arms/build.sh."
+        ? $"No first-person art: {DaggerfallHeldArt.ContainerName} is not installed beside the product. Build it with authoring/tools/fp-arms/build.sh."
         : style == DaggerfallViewmodelStyle.Classic
             ? "viewmodel.style is classic, which draws the weapon sprites: set it to held or heldRetro in the tuning payload."
             : null;

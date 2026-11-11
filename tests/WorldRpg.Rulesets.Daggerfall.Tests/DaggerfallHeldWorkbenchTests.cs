@@ -12,7 +12,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// The developer first-person workbench's answers: why nothing can be viewed without the art or under the classic
 /// style, the refusals that name what can be shown, and the page's values, each bound to the authored held definition
 /// where Save writes it and applied to the loaded art. Drawing the viewed arms needs the Engine's animation services
-/// and the container's models, which window runs and scripts/fp-arms/sheet.sh cover.
+/// and the container's models, which window runs and authoring/tools/fp-arms/sheet.sh cover.
 /// </summary>
 public sealed class DaggerfallHeldWorkbenchTests
 {
@@ -25,7 +25,7 @@ public sealed class DaggerfallHeldWorkbenchTests
         {
             Assert.False(result.Succeeded);
             Assert.Contains("first-person.rpak is not installed", result.Message, StringComparison.Ordinal);
-            Assert.Contains("scripts/fp-arms/build.sh", result.Message, StringComparison.Ordinal);
+            Assert.Contains("authoring/tools/fp-arms/build.sh", result.Message, StringComparison.Ordinal);
         }
         TunablesPage page = workbench.Page();
         Assert.Empty(page.Groups);
