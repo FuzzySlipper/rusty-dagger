@@ -232,6 +232,15 @@ Faults the route now handles itself, found on the three men, who wear tunics wit
   The cut skirt then hangs on three chains spread along its flare, like a split skirt, and swings with springs and the clip's edges.
 - **Walking shoes** replace the whole shin drawing, so they suit legs hidden under a skirt only.
 
+**Static figures:** a standing NPC has no walk clip, so each view's rig source is that view's still itself. `route/prep_still.py`
+cuts it out and lays it at the walkers' rig geometry (1600 px tall, soles at y = 1700 on 1024×1792), so the rest of the route runs
+unchanged. A shirt See-through gives whole as topwear is cut at the belt in every view, front included. Its design comes from the
+classic sprite through the New B loop: a Qwen edit of the upscaled sprite, then Krea image-to-image at denoise 0.32 with the
+Brom, Elmore and RetroInk adapters.
+
+**Judging a rig:** `out/recomposite_rig.png` and `out/idle.gif` are drawn before the route's passes, so a hair streak or a seam seen
+there may not ship. Judge a render of the built rig.
+
 Faults found on 397, a hooded woman in a floor-length skirt:
 - **Hidden paint:** assembly colours a part from the painting only where it counts the part visible. Under a hood, a three-quarter
   face was counted mostly hidden and kept See-through's pale fill, and the hood kept grey streaks. After assembly, every part but
