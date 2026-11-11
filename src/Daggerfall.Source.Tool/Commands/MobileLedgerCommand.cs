@@ -1,6 +1,6 @@
 using Daggerfall.Import.Arena2;
 
-namespace Daggerfall.Import.Tool.Commands;
+namespace Daggerfall.Source.Tool.Commands;
 
 /// <summary>
 /// Reconciles the donor's static mobile table with the published pack and reports every entry nothing
@@ -10,7 +10,7 @@ namespace Daggerfall.Import.Tool.Commands;
 internal static class MobileLedgerCommand
 {
     public static ToolCommand Command { get; } = new("mobile-ledger",
-        [CommandOption.Required("--donor", "ENEMY_BASICS.cs"), Options.Authored, Options.Pack], Run);
+        [CommandOption.Required("--donor", "ENEMY_BASICS.cs"), Options.Authored, Options.Pack], Run, Program.Tool);
 
     private static int Run(CommandArguments args)
     {

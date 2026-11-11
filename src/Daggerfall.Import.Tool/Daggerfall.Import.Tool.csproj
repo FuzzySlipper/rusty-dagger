@@ -16,6 +16,7 @@
     <PackageReference Include="Rusty.Engine" Version="[$(RustyEnginePackageVersion)]" />
     <ProjectReference Include="../Daggerfall.Import/Daggerfall.Import.csproj" />
     <InternalsVisibleTo Include="Daggerfall.Import.Tests" />
+    <InternalsVisibleTo Include="Daggerfall.Source.Tool" />
   </ItemGroup>
   <!-- A release runs the tool from tools/Daggerfall.Import.Tool/, with no repository: the tracked files the import
        reads (data/ and content/, which holds only tracked files) are published beside it at their repository

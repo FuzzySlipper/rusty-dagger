@@ -3,7 +3,7 @@ using System.Text;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalization;
 
-namespace Daggerfall.Import.Tool.ReferenceExports;
+namespace Daggerfall.Source.Tool.ReferenceExports;
 
 /// <summary>
 /// The people the world shows: static NPC billboards and the townspeople who wander, every record and frame, with how many

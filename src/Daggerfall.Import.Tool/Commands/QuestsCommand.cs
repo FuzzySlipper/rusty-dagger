@@ -56,7 +56,7 @@ internal static class QuestsCommand
         DaggerfallQuestCatalog catalog = DaggerfallQuestCatalogReader.Read(
             Table("QuestList-Classic.txt"), Tables + "QuestList-Classic.txt",
             Directory.EnumerateFiles(args["--quest-text"], "*.txt"));
-        DaggerfallQuestOriginalSourceSet originals = DaggerfallQuestOriginalSourceBuilder.Build(args["--arena2"], QuestSourcesCommand.Enumerate(args["--arena2"]), pack);
+        DaggerfallQuestOriginalSourceSet originals = DaggerfallQuestOriginalSourceBuilder.Build(args["--arena2"], QuestSources(args["--arena2"]), pack);
         Console.WriteLine($"classic catalog: {catalog.Rows.Count(row => row.Active)} active, {catalog.Rows.Count(row => !row.Active)} disabled, {catalog.Rows.Count(row => row.SourceDisposition == "missing")} missing sources");
         Console.WriteLine($"quests: {pack.Quests.Count} sources, {pack.Quests.Count(quest => quest.Disposition == DaggerfallQuestDisposition.Compiled)} compiled");
         Console.WriteLine($"original quest sources: {originals.Quests.Count} stems, {originals.Quests.Count(quest => quest.Selection == DaggerfallQuestOriginalSourceSelection.RewrittenText)} rewritten text selections, {originals.Quests.Count(quest => quest.Selection != DaggerfallQuestOriginalSourceSelection.RewrittenText)} not enabled");
@@ -69,5 +69,16 @@ internal static class QuestsCommand
         });
         PayloadFiles.WriteSection(args["--records"], "questOriginalSources", originals);
         return 0;
+    }
+
+    /// <summary>Every QBN and QRC file the corpus directory supplies.</summary>
+    internal static QuestSourceInventory QuestSources(string arena2)
+    {
+        string[] paths = [.. Directory.EnumerateFiles(arena2)
+            .Where(path => path.EndsWith(QuestSourceInventory.BinaryExtension, StringComparison.OrdinalIgnoreCase)
+                || path.EndsWith(QuestSourceInventory.ResourcesExtension, StringComparison.OrdinalIgnoreCase))
+            .Select(Path.GetFileName)
+            .OfType<string>()];
+        return QuestSourceInventory.Enumerate(paths, Options.CorpusLabel(arena2));
     }
 }

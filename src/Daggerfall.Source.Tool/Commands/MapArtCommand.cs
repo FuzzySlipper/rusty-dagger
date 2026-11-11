@@ -1,6 +1,6 @@
 using Daggerfall.Import.Arena2;
 
-namespace Daggerfall.Import.Tool.Commands;
+namespace Daggerfall.Source.Tool.Commands;
 
 /// <summary>
 /// Enumerates the map, automap, travel and town artwork against the documented inventory, so a region,
@@ -9,7 +9,7 @@ namespace Daggerfall.Import.Tool.Commands;
 /// </summary>
 internal static class MapArtCommand
 {
-    public static ToolCommand Command { get; } = new("map-art", [Options.Arena2, CommandOption.Optional("--inventory", "CSV")], Run);
+    public static ToolCommand Command { get; } = new("map-art", [Options.Arena2, CommandOption.Optional("--inventory", "CSV")], Run, Program.Tool);
 
     private static int Run(CommandArguments args)
     {

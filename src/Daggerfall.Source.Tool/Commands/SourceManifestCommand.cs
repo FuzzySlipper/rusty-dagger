@@ -1,7 +1,7 @@
 using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
 
-namespace Daggerfall.Import.Tool.Commands;
+namespace Daggerfall.Source.Tool.Commands;
 
 /// <summary>
 /// Reconciles the documented inventory against a real source tree and writes the machine-readable source
@@ -12,7 +12,7 @@ namespace Daggerfall.Import.Tool.Commands;
 internal static class SourceManifestCommand
 {
     public static ToolCommand Command { get; } = new("source-manifest",
-        [Options.Arena2, Options.Inventory, CommandOption.Required("--output", "FILE"), CommandOption.Required("--publication", "PUBLISHED_DIR"), CommandOption.Switch("--update-inventory")], Run);
+        [Options.Arena2, Options.Inventory, CommandOption.Required("--output", "FILE"), CommandOption.Required("--publication", "PUBLISHED_DIR"), CommandOption.Switch("--update-inventory")], Run, Program.Tool);
 
     private static int Run(CommandArguments args)
     {

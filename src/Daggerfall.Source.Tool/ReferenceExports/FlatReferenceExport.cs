@@ -3,7 +3,7 @@ using System.Text;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalization;
 
-namespace Daggerfall.Import.Tool.ReferenceExports;
+namespace Daggerfall.Source.Tool.ReferenceExports;
 
 /// <summary>
 /// The non-actor billboards the world places: the nature sets (TEXTURE.500-511) and every other archive a block places

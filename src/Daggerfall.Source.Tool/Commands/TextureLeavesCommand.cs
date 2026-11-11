@@ -1,7 +1,7 @@
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Publication;
 
-namespace Daggerfall.Import.Tool.Commands;
+namespace Daggerfall.Source.Tool.Commands;
 
 /// <summary>
 /// Enumerates the supplied texture leaves, reports what every documented id holds, and — when the
@@ -10,7 +10,7 @@ namespace Daggerfall.Import.Tool.Commands;
 internal static class TextureLeavesCommand
 {
     public static ToolCommand Command { get; } = new("texture-leaves",
-        [Options.Arena2, CommandOption.Optional("--inventory", "CSV")], Run);
+        [Options.Arena2, CommandOption.Optional("--inventory", "CSV")], Run, Program.Tool);
 
     private static int Run(CommandArguments args)
     {

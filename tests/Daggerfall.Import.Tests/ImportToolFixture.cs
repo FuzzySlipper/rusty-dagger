@@ -125,14 +125,14 @@ internal sealed partial class ImportToolFixture : IDisposable
         if (name == "internal-strings") values["--label"] = PublishedSourcePath.Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv");
         List<string> args = [name];
         // A staged option is passed too: its default is the repository's staging tree, which these private roots replace.
-        foreach (var option in global::Daggerfall.Import.Tool.Program.Commands[name].Options.Where(option => option.IsRequired || option.Default is not null))
+        foreach (var option in ToolPrograms.Commands[name].Options.Where(option => option.IsRequired || option.Default is not null))
             args.AddRange([option.Name, values[option.Name]]);
         // Exercise nonempty source sets and all real artifact writers, rather than no-op success paths.
         if (name == "classic-media") args.AddRange(["--ui-authored-assets", values["--ui-authored-assets"], "--ui-original", values["--ui-original"]]);
         if (name == "cinematic-media" && CinematicKind == DaggerfallCinematicKind.Flc) args.AddRange(["--kind", "flc"]);
         if (name == "rmb-spatial" && Interior) args.AddRange(["--block-x", "1", "--block-y", "1", "--building", "0"]);
         // A sprite command reads the site closure together with the product-wide media it references.
-        if (name.StartsWith("sprite-", StringComparison.Ordinal) && global::Daggerfall.Import.Tool.Program.Commands[name].Options.Any(option => option.Name == "--shared"))
+        if (name.StartsWith("sprite-", StringComparison.Ordinal) && ToolPrograms.Commands[name].Options.Any(option => option.Name == "--shared"))
             args.AddRange(["--shared", Shared, "--classic-group", ClassicGroup]);
         return [.. args];
     }

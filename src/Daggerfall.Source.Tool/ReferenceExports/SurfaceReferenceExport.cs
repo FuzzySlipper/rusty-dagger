@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text;
 using Daggerfall.Import.Arena2;
 
-namespace Daggerfall.Import.Tool.ReferenceExports;
+namespace Daggerfall.Source.Tool.ReferenceExports;
 
 /// <summary>
 /// The surface textures walls, floors, ceilings, roofs and doors draw (TEXTURE.000-199 and 300-499; the 200s are item

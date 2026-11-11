@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Daggerfall.Import.Tool.Commands;
 
 namespace Daggerfall.Import.Tool;
@@ -8,6 +7,11 @@ namespace Daggerfall.Import.Tool;
 /// option grammar in <see cref="CommandArguments"/>. <c>import</c> runs them in the importer's dependency order
 /// and packs the data containers; <c>pack</c> repacks them after one command was rerun.
 /// </summary>
+/// <remarks>
+/// Every file here is an input of the importer revision, so only what the import runs belongs here: a command
+/// that reads the classic sources for anything else (reference exports, inventory reports) lives in
+/// <c>Daggerfall.Source.Tool</c>, where an edit leaves the imported data current.
+/// </remarks>
 internal static class Program
 {
     internal static readonly IReadOnlyDictionary<string, ToolCommand> Commands = new ToolCommand[]
@@ -51,15 +55,8 @@ internal static class Program
         DungeonSiteCommand.Plan,
         DungeonSiteCommand.VerifyRealData,
         RmbSpatialCommand.Command,
-        // Reports and reconciliation against the documented inventory.
-        SourceManifestCommand.Command,
+        // Reconciles every producer citation against the documented inventory.
         SourceCoverageCommand.Command,
-        MobileLedgerCommand.Command,
-        MonsterArchiveCommand.Command,
-        QuestSourcesCommand.Command,
-        TextureLeavesCommand.Command,
-        ResidualPathsCommand.Command,
-        MapArtCommand.Command,
         // Sprite inspection and authored overlays.
         SpriteListCommand.Command,
         SpriteShowCommand.Command,
@@ -67,16 +64,6 @@ internal static class Program
         SpriteOverlayValidateCommand.Command,
         SpriteOverlayWriteCommand.Command,
         SpriteOverlayDiscardCommand.Command,
-        // Local image-generation reference sets (never product content).
-        ReferenceExportCommands.Items,
-        ReferenceExportCommands.Spells,
-        ReferenceExportCommands.PaperDoll,
-        ReferenceExportCommands.Effects,
-        ReferenceExportCommands.Surfaces,
-        ReferenceExportCommands.Flats,
-        ReferenceExportCommands.People,
-        ReferenceExportCommands.Terrain,
-        ReferenceExportCommands.DirectionalSprites,
     }.ToDictionary(command => command.Name, StringComparer.Ordinal);
 
     internal static int Main(string[] args)
@@ -103,23 +90,7 @@ internal static class Program
             ? ["import", "--arena2", args[0], .. args[1..]]
             : args;
 
-    private static int Run(string[] args)
-    {
-        try
-        {
-            if (args.Length == 0 || !Commands.TryGetValue(args[0], out ToolCommand? command))
-            {
-                throw new ArgumentException(ImportLayout.ReleaseDirectory is null
-                    ? $"usage: daggerfall-import-tool <{string.Join('|', Commands.Keys)}> [options]; each command prints its own options when they are wrong."
-                    : "usage: Daggerfall.Import.Tool <the folder Daggerfall is installed in, or its ARENA2 folder> [--music <a folder of the game's music recordings>]");
-            }
-
-            return command.Invoke(args);
-        }
-        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException or InvalidDataException or UnauthorizedAccessException or FormatException or JsonException or Rusty.Engine.EngineCallException)
-        {
-            Console.Error.WriteLine($"daggerfall-import-tool: {exception.Message}");
-            return 1;
-        }
-    }
+    private static int Run(string[] args) => ToolCommand.Dispatch(Commands, args, ToolCommand.ImportTool, ImportLayout.ReleaseDirectory is null
+        ? $"usage: {ToolCommand.ImportTool} <{string.Join('|', Commands.Keys)}> [options]; each command prints its own options when they are wrong."
+        : "usage: Daggerfall.Import.Tool <the folder Daggerfall is installed in, or its ARENA2 folder> [--music <a folder of the game's music recordings>]");
 }

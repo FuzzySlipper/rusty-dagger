@@ -27,7 +27,7 @@ local/art/  (ignored, beside the other working files in local/; see the README)
 ## Reference exports
 
 ```sh
-dotnet run --project src/Daggerfall.Import.Tool -- export-items
+dotnet run --project src/Daggerfall.Source.Tool -- export-items
 ```
 
 - Also `export-spells`, `export-paper-doll`, `export-effects`, `export-flats`, `export-people`, `export-surfaces` and

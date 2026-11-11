@@ -1,7 +1,7 @@
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Publication;
 
-namespace Daggerfall.Import.Tool.Commands;
+namespace Daggerfall.Source.Tool.Commands;
 
 /// <summary>
 /// Classifies every residual (CNT-027) source path against the documented inventory: which bounded family
@@ -9,7 +9,7 @@ namespace Daggerfall.Import.Tool.Commands;
 /// </summary>
 internal static class ResidualPathsCommand
 {
-    public static ToolCommand Command { get; } = new("residual-paths", [Options.Arena2, Options.Inventory], Run);
+    public static ToolCommand Command { get; } = new("residual-paths", [Options.Arena2, Options.Inventory], Run, Program.Tool);
 
     private static int Run(CommandArguments args)
     {

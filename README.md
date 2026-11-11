@@ -130,7 +130,7 @@ Rules for the tracked side:
 - `daggerfall.base` is authored by hand and `daggerfall.imported` is generated.
   A payload section belongs to one of them: the reader refuses a section both carry.
 - In `data/content-source-manifest.csv`, never renumber or recreate a `CNT-` ID;
-  reclassify a file by changing its `family_id`. Only the tool's
+  reclassify a file by changing its `family_id`. Only `Daggerfall.Source.Tool`'s
   `source-manifest --update-inventory` writes the disposition column.
 - Any edit under `data/` changes the importer revision, so every machine's data
   goes stale. Make one deliberately.

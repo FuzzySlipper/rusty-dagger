@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace Daggerfall.Import.Tool.ReferenceExports;
+namespace Daggerfall.Source.Tool.ReferenceExports;
 
 /// <summary>
 /// The ground tiles exterior terrain draws: each climate's TEXTURE.x02 summer set, its x03 winter set and its x04 rain

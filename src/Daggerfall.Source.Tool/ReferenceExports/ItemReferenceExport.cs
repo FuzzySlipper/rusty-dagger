@@ -3,7 +3,7 @@ using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
 
-namespace Daggerfall.Import.Tool.ReferenceExports;
+namespace Daggerfall.Source.Tool.ReferenceExports;
 
 /// <summary>All item templates, their reachable player records, artifacts and first-person companions.</summary>
 internal static class ItemReferenceExport

@@ -1,6 +1,6 @@
 using Daggerfall.Import.Arena2;
 
-namespace Daggerfall.Import.Tool.ReferenceExports;
+namespace Daggerfall.Source.Tool.ReferenceExports;
 
 /// <summary>
 /// Source art the item and spell exports do not carry: the paper-doll bodies, faces and creature heads, and the

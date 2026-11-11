@@ -6,7 +6,7 @@ using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Publication;
 
-namespace Daggerfall.Import.Tool.ReferenceExports;
+namespace Daggerfall.Source.Tool.ReferenceExports;
 
 /// <summary>One native, unmirrored source frame. Paths are relative to its subject directory.</summary>
 internal sealed record ReferenceImage(string File, string Role, string Source, int Record, int Frame,

@@ -1,6 +1,7 @@
 using Daggerfall.Import.Arena2;
+using Daggerfall.Import.Tool.Commands;
 
-namespace Daggerfall.Import.Tool.Commands;
+namespace Daggerfall.Source.Tool.Commands;
 
 /// <summary>
 /// Enumerates the classic quest source corpus, decodes both envelopes, and — when the documented inventory
@@ -10,12 +11,12 @@ namespace Daggerfall.Import.Tool.Commands;
 internal static class QuestSourcesCommand
 {
     public static ToolCommand Command { get; } = new("quest-sources",
-        [Options.Arena2, CommandOption.Optional("--inventory", "CSV")], Run);
+        [Options.Arena2, CommandOption.Optional("--inventory", "CSV")], Run, Program.Tool);
 
     private static int Run(CommandArguments args)
     {
         string arena2 = args["--arena2"];
-        QuestSourceInventory inventory = Enumerate(arena2);
+        QuestSourceInventory inventory = QuestsCommand.QuestSources(arena2);
         int marked = 0, unmarked = 0, decoded = 0, badResources = 0, badBinaries = 0;
         long records = 0;
         foreach (QuestSourceFile file in inventory.Files)
@@ -52,16 +53,5 @@ internal static class QuestSourcesCommand
             Options.DocumentedFiles(Options.ReadInventory(args), row => row.FamilyId == "CNT-017"),
             [.. inventory.Files.Select(file => file.Path)],
             "quest source paths");
-    }
-
-    /// <summary>Every QBN and QRC file the corpus directory supplies.</summary>
-    internal static QuestSourceInventory Enumerate(string arena2)
-    {
-        string[] paths = [.. Directory.EnumerateFiles(arena2)
-            .Where(path => path.EndsWith(QuestSourceInventory.BinaryExtension, StringComparison.OrdinalIgnoreCase)
-                || path.EndsWith(QuestSourceInventory.ResourcesExtension, StringComparison.OrdinalIgnoreCase))
-            .Select(Path.GetFileName)
-            .OfType<string>()];
-        return QuestSourceInventory.Enumerate(paths, Options.CorpusLabel(arena2));
     }
 }

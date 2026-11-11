@@ -113,17 +113,18 @@ if python3 -c 'import numpy, scipy, PIL' 2>/dev/null; then
   if [[ -d local/art/reference/items ]]; then
     python3 -m unittest discover -s authoring/tools/paper-doll -p 'test_*.py'
   else
-    echo "skipped authoring/tools/paper-doll tests: local/art/reference/items is absent; run \`dotnet run --project src/Daggerfall.Import.Tool -- export-items\`"
+    echo "skipped authoring/tools/paper-doll tests: local/art/reference/items is absent; run \`dotnet run --project src/Daggerfall.Source.Tool -- export-items\`"
   fi
 else
   echo "skipped the art pipeline's tests: python3 lacks numpy, scipy or Pillow"
 fi
 
-# The importer's tool is a product of its own and nothing else in this script compiles it, so a
+# The importer's tools are products of their own and nothing else in this script compiles them, so a
 # change to the import API could leave it broken while every test and build here stayed green. That
 # happened: a new field in an import record was passed by the tests and missed by the tool, and the
 # error sat unnoticed until someone ran the tool by hand.
 dotnet build src/Daggerfall.Import.Tool/Daggerfall.Import.Tool.csproj --configuration Release
+dotnet build src/Daggerfall.Source.Tool/Daggerfall.Source.Tool.csproj --configuration Release
 dotnet test tests/WorldRpg.Architecture.Tests/WorldRpg.Architecture.Tests.csproj --no-restore
 
 # The behavior suites, because compiling projects is not the same as exercising them: a pin move that
@@ -140,7 +141,7 @@ dotnet test tests/WorldRpg.Architecture.Tests/WorldRpg.Architecture.Tests.csproj
 # records directory is what says an import has run.
 import_stamp=local/build/verify/import-suite.stamp
 import_inputs() {
-  find src/Daggerfall.Import src/Daggerfall.Import.Tool src/WorldRpg.SpriteAuthoring data content \
+  find src/Daggerfall.Import src/Daggerfall.Import.Tool src/Daggerfall.Source.Tool src/WorldRpg.SpriteAuthoring data content \
       tests/Daggerfall.Import.Tests tests/Shared tests/SharedEngine \( -name bin -o -name obj \) -prune -o -type f -print \
     | LC_ALL=C sort | xargs sha256sum
   sha256sum src/ImporterRevision.targets tests/Directory.Build.props Directory.Build.props

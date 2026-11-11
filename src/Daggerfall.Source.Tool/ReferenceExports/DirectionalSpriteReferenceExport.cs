@@ -2,7 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Daggerfall.Import.Arena2;
 
-namespace Daggerfall.Import.Tool.ReferenceExports;
+namespace Daggerfall.Source.Tool.ReferenceExports;
 
 /// <summary>Original directional character archives outside an existing mobile-reference export.</summary>
 internal static class DirectionalSpriteReferenceExport

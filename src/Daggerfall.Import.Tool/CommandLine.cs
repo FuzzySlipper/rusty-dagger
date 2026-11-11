@@ -27,12 +27,32 @@ internal sealed record CommandOption(string Name, string? Value, bool IsRequired
         : $"[{Name} {Value}]";
 }
 
-/// <summary>A tool command: its verb, the options it accepts and what it runs.</summary>
-internal sealed record ToolCommand(string Name, IReadOnlyList<CommandOption> Options, Func<CommandArguments, int> Run)
+/// <summary>A tool command: its verb, the options it accepts, what it runs and the tool whose verb it is.</summary>
+internal sealed record ToolCommand(string Name, IReadOnlyList<CommandOption> Options, Func<CommandArguments, int> Run, string Tool = ToolCommand.ImportTool)
 {
-    public string Usage => $"usage: daggerfall-import-tool {Name} {string.Join(' ', Options.Select(option => option.Usage))}";
+    public const string ImportTool = "daggerfall-import-tool";
+
+    public string Usage => $"usage: {Tool} {Name} {string.Join(' ', Options.Select(option => option.Usage))}";
 
     public int Invoke(IReadOnlyList<string> args) => Run(CommandArguments.Parse(args, this));
+
+    /// <summary>
+    /// Runs the verb <paramref name="args"/> names from <paramref name="commands"/>, printing a refusal and
+    /// returning 1 when the verb is unknown or the command refuses its input.
+    /// </summary>
+    public static int Dispatch(IReadOnlyDictionary<string, ToolCommand> commands, IReadOnlyList<string> args, string tool, string usage)
+    {
+        try
+        {
+            if (args.Count == 0 || !commands.TryGetValue(args[0], out ToolCommand? command)) throw new ArgumentException(usage);
+            return command.Invoke(args);
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException or InvalidDataException or UnauthorizedAccessException or FormatException or System.Text.Json.JsonException or Rusty.Engine.EngineCallException)
+        {
+            Console.Error.WriteLine($"{tool}: {exception.Message}");
+            return 1;
+        }
+    }
 }
 
 /// <summary>

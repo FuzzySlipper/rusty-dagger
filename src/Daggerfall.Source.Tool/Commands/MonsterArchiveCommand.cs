@@ -1,6 +1,6 @@
 using Daggerfall.Import.Arena2;
 
-namespace Daggerfall.Import.Tool.Commands;
+namespace Daggerfall.Source.Tool.Commands;
 
 /// <summary>
 /// Enumerates MONSTER.BSA and reports what every record is, which source mobile it belongs to, and which
@@ -9,7 +9,7 @@ namespace Daggerfall.Import.Tool.Commands;
 /// </summary>
 internal static class MonsterArchiveCommand
 {
-    public static ToolCommand Command { get; } = new("monster-archive", [CommandOption.Required("--monster", "MONSTER.BSA")], Run);
+    public static ToolCommand Command { get; } = new("monster-archive", [CommandOption.Required("--monster", "MONSTER.BSA")], Run, Program.Tool);
 
     private static int Run(CommandArguments args)
     {

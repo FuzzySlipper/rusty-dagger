@@ -1,6 +1,6 @@
 using Daggerfall.Import.Arena2;
 
-namespace Daggerfall.Import.Tool.ReferenceExports;
+namespace Daggerfall.Source.Tool.ReferenceExports;
 
 /// <summary>Icons, element-selected casting hands and world billboards, joined to every stock spell.</summary>
 internal static class SpellReferenceExport

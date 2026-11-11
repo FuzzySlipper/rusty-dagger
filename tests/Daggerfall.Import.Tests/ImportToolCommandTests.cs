@@ -1,6 +1,7 @@
 using Daggerfall.Import.Tool;
 using Xunit;
-using ToolProgram = Daggerfall.Import.Tool.Program;
+using ImportProgram = Daggerfall.Import.Tool.Program;
+using SourceProgram = Daggerfall.Source.Tool.Program;
 
 namespace Daggerfall.Import.Tests;
 
@@ -24,13 +25,24 @@ internal sealed class ImportToolDataFactAttribute : FactAttribute
         : $"the import's staging tree (local/build/import/staging) is absent; run `{TestData.RegenerationCommand}` with local/inputs/arena2 supplied.";
 }
 
+/// <summary>Both tools' verbs, each run through the tool that owns it.</summary>
+internal static class ToolPrograms
+{
+    internal static readonly IReadOnlyDictionary<string, ToolCommand> Commands =
+        ImportProgram.Commands.Concat(SourceProgram.Commands).ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+
+    internal static int Dispatch(string[] args) => args.Length != 0 && SourceProgram.Commands.ContainsKey(args[0])
+        ? SourceProgram.Main(args)
+        : ImportProgram.Main(args);
+}
+
 /// <summary>Exercises the actual compiled dispatch, parser, commands and file publications.</summary>
 [Collection("Import tool console")]
 public sealed class ImportToolCommandTests
 {
-    public static IEnumerable<object[]> Commands => ToolProgram.Commands.Keys.Select(name => new object[] { name });
+    public static IEnumerable<object[]> Commands => ToolPrograms.Commands.Keys.Select(name => new object[] { name });
     // The relief takes minutes over the real map, three times here: ReliefBakeTests covers the bake on a small one.
-    public static IEnumerable<object[]> UpdateCommands => ToolProgram.Commands.Values
+    public static IEnumerable<object[]> UpdateCommands => ToolPrograms.Commands.Values
         // The relief bake and the atlas drawn from it run on the whole map; AtlasBakeTests and ReliefBakeTests cover them.
         .Where(command => command.Options.Any(option => option.Name == "--update") && command.Name is not ("relief" or "atlas"))
         .Select(command => new object[] { command.Name });
@@ -39,7 +51,7 @@ public sealed class ImportToolCommandTests
     [MemberData(nameof(Commands))]
     public void Every_command_refuses_missing_unknown_repeated_and_valueless_options_with_its_usage(string name)
     {
-        ToolCommand command = ToolProgram.Commands[name];
+        ToolCommand command = ToolPrograms.Commands[name];
         string[] valid = [name, .. command.Options.Where(option => option.IsRequired)
             .SelectMany(option => new[] { option.Name, "value" })];
         Assert.NotNull(CommandArguments.Parse(valid, command));
@@ -94,7 +106,7 @@ public sealed class ImportToolCommandTests
     [InlineData("write", "--region", "-1")]
     public void Invalid_command_choices_exit_one_with_usage_before_any_publication(string name, string option, string value)
     {
-        var command = ToolProgram.Commands[name];
+        var command = ToolPrograms.Commands[name];
         List<string> args = [name];
         foreach (var required in command.Options.Where(entry => entry.IsRequired && entry.Name != option))
             args.AddRange([required.Name, "unused"]);
@@ -273,7 +285,7 @@ public sealed class ImportToolCommandTests
         {
             Console.SetOut(capturedOutput);
             Console.SetError(capturedError);
-            int code = ToolProgram.Main(args);
+            int code = ToolPrograms.Dispatch(args);
             return (code, capturedOutput.ToString(), capturedError.ToString());
         }
         finally { Console.SetOut(output); Console.SetError(error); }
