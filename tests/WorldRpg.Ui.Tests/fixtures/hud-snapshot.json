@@ -1008,346 +1008,652 @@
     "guildTeleport": false,
     "destinations": [],
     "map": {
-      "world": {
-        "image": "map.trav0i00",
-        "width": 320,
-        "height": 200,
-        "left": 0,
-        "top": -37.5,
-        "right": 1000,
-        "bottom": 587.5
+      "worldWidth": 1000,
+      "worldHeight": 500,
+      "atlas": null,
+      "classic": {
+        "world": {
+          "image": "map.trav0i00",
+          "width": 320,
+          "height": 200,
+          "left": 0,
+          "top": -37.5,
+          "right": 1000,
+          "bottom": 587.5
+        },
+        "sheets": [
+          {
+            "region": 0,
+            "art": {
+              "image": "map.fmapai00",
+              "width": 320,
+              "height": 160,
+              "left": 212,
+              "top": 340,
+              "right": 532,
+              "bottom": 500
+            }
+          },
+          {
+            "region": 0,
+            "art": {
+              "image": "map.fmapbi00",
+              "width": 320,
+              "height": 160,
+              "left": 322,
+              "top": 340,
+              "right": 642,
+              "bottom": 500
+            }
+          },
+          {
+            "region": 1,
+            "art": {
+              "image": "map.fmapai01",
+              "width": 320,
+              "height": 160,
+              "left": 583,
+              "top": 279,
+              "right": 903,
+              "bottom": 439
+            }
+          },
+          {
+            "region": 1,
+            "art": {
+              "image": "map.fmapbi01",
+              "width": 320,
+              "height": 160,
+              "left": 680,
+              "top": 279,
+              "right": 1000,
+              "bottom": 439
+            }
+          },
+          {
+            "region": 1,
+            "art": {
+              "image": "map.fmapci01",
+              "width": 320,
+              "height": 160,
+              "left": 583,
+              "top": 340,
+              "right": 903,
+              "bottom": 500
+            }
+          },
+          {
+            "region": 1,
+            "art": {
+              "image": "map.fmapdi01",
+              "width": 320,
+              "height": 160,
+              "left": 680,
+              "top": 340,
+              "right": 1000,
+              "bottom": 500
+            }
+          },
+          {
+            "region": 5,
+            "art": {
+              "image": "map.fmap0i05",
+              "width": 320,
+              "height": 160,
+              "left": 381,
+              "top": 4,
+              "right": 701,
+              "bottom": 164
+            }
+          },
+          {
+            "region": 9,
+            "art": {
+              "image": "map.fmap0i09",
+              "width": 320,
+              "height": 160,
+              "left": 525,
+              "top": 114,
+              "right": 845,
+              "bottom": 274
+            }
+          },
+          {
+            "region": 11,
+            "art": {
+              "image": "map.fmap0i11",
+              "width": 320,
+              "height": 160,
+              "left": 437,
+              "top": 340,
+              "right": 757,
+              "bottom": 500
+            }
+          },
+          {
+            "region": 16,
+            "art": {
+              "image": "map.fmapai16",
+              "width": 320,
+              "height": 160,
+              "left": 578,
+              "top": 0,
+              "right": 898,
+              "bottom": 160
+            }
+          },
+          {
+            "region": 16,
+            "art": {
+              "image": "map.fmapbi16",
+              "width": 320,
+              "height": 160,
+              "left": 680,
+              "top": 0,
+              "right": 1000,
+              "bottom": 160
+            }
+          },
+          {
+            "region": 16,
+            "art": {
+              "image": "map.fmapci16",
+              "width": 320,
+              "height": 160,
+              "left": 578,
+              "top": 52,
+              "right": 898,
+              "bottom": 212
+            }
+          },
+          {
+            "region": 16,
+            "art": {
+              "image": "map.fmapdi16",
+              "width": 320,
+              "height": 160,
+              "left": 680,
+              "top": 52,
+              "right": 1000,
+              "bottom": 212
+            }
+          },
+          {
+            "region": 17,
+            "art": {
+              "image": "map.fmap0i17",
+              "width": 320,
+              "height": 160,
+              "left": 39,
+              "top": 106,
+              "right": 359,
+              "bottom": 266
+            }
+          },
+          {
+            "region": 18,
+            "art": {
+              "image": "map.fmap0i18",
+              "width": 320,
+              "height": 160,
+              "left": 20,
+              "top": 29,
+              "right": 340,
+              "bottom": 189
+            }
+          },
+          {
+            "region": 19,
+            "art": {
+              "image": "map.fmap0i19",
+              "width": 320,
+              "height": 160,
+              "left": 80,
+              "top": 242.75,
+              "right": 160,
+              "bottom": 282.75
+            }
+          },
+          {
+            "region": 20,
+            "art": {
+              "image": "map.fmap0i20",
+              "width": 320,
+              "height": 160,
+              "left": 217,
+              "top": 293,
+              "right": 537,
+              "bottom": 453
+            }
+          },
+          {
+            "region": 21,
+            "art": {
+              "image": "map.fmap0i21",
+              "width": 320,
+              "height": 160,
+              "left": 263,
+              "top": 79,
+              "right": 583,
+              "bottom": 239
+            }
+          },
+          {
+            "region": 22,
+            "art": {
+              "image": "map.fmap0i22",
+              "width": 320,
+              "height": 160,
+              "left": 548,
+              "top": 219,
+              "right": 868,
+              "bottom": 379
+            }
+          },
+          {
+            "region": 23,
+            "art": {
+              "image": "map.fmap0i23",
+              "width": 320,
+              "height": 160,
+              "left": 680,
+              "top": 146,
+              "right": 1000,
+              "bottom": 306
+            }
+          },
+          {
+            "region": 26,
+            "art": {
+              "image": "map.fmap0i26",
+              "width": 320,
+              "height": 160,
+              "left": 680,
+              "top": 80,
+              "right": 1000,
+              "bottom": 240
+            }
+          },
+          {
+            "region": 32,
+            "art": {
+              "image": "map.fmap0i32",
+              "width": 320,
+              "height": 160,
+              "left": 41,
+              "top": 0,
+              "right": 361,
+              "bottom": 160
+            }
+          },
+          {
+            "region": 33,
+            "art": {
+              "image": "map.fmap0i33",
+              "width": 320,
+              "height": 160,
+              "left": 660,
+              "top": 101,
+              "right": 980,
+              "bottom": 261
+            }
+          },
+          {
+            "region": 34,
+            "art": {
+              "image": "map.fmap0i34",
+              "width": 320,
+              "height": 160,
+              "left": 578,
+              "top": 40,
+              "right": 898,
+              "bottom": 200
+            }
+          },
+          {
+            "region": 35,
+            "art": {
+              "image": "map.fmap0i35",
+              "width": 320,
+              "height": 160,
+              "left": 525,
+              "top": 3,
+              "right": 845,
+              "bottom": 163
+            }
+          },
+          {
+            "region": 36,
+            "art": {
+              "image": "map.fmap0i36",
+              "width": 320,
+              "height": 160,
+              "left": 440,
+              "top": 40,
+              "right": 760,
+              "bottom": 200
+            }
+          },
+          {
+            "region": 37,
+            "art": {
+              "image": "map.fmap0i37",
+              "width": 320,
+              "height": 160,
+              "left": 448,
+              "top": 0,
+              "right": 768,
+              "bottom": 160
+            }
+          },
+          {
+            "region": 38,
+            "art": {
+              "image": "map.fmap0i38",
+              "width": 320,
+              "height": 160,
+              "left": 366,
+              "top": 0,
+              "right": 686,
+              "bottom": 160
+            }
+          },
+          {
+            "region": 39,
+            "art": {
+              "image": "map.fmap0i39",
+              "width": 320,
+              "height": 160,
+              "left": 300,
+              "top": 8,
+              "right": 620,
+              "bottom": 168
+            }
+          },
+          {
+            "region": 40,
+            "art": {
+              "image": "map.fmap0i40",
+              "width": 320,
+              "height": 160,
+              "left": 202,
+              "top": 0,
+              "right": 522,
+              "bottom": 160
+            }
+          },
+          {
+            "region": 41,
+            "art": {
+              "image": "map.fmap0i41",
+              "width": 320,
+              "height": 160,
+              "left": 223,
+              "top": 6,
+              "right": 543,
+              "bottom": 166
+            }
+          },
+          {
+            "region": 42,
+            "art": {
+              "image": "map.fmap0i42",
+              "width": 320,
+              "height": 160,
+              "left": 148,
+              "top": 76,
+              "right": 468,
+              "bottom": 236
+            }
+          },
+          {
+            "region": 43,
+            "art": {
+              "image": "map.fmap0i43",
+              "width": 320,
+              "height": 160,
+              "left": 15,
+              "top": 340,
+              "right": 335,
+              "bottom": 500
+            }
+          },
+          {
+            "region": 44,
+            "art": {
+              "image": "map.fmap0i44",
+              "width": 320,
+              "height": 160,
+              "left": 61,
+              "top": 340,
+              "right": 381,
+              "bottom": 500
+            }
+          },
+          {
+            "region": 45,
+            "art": {
+              "image": "map.fmap0i45",
+              "width": 320,
+              "height": 160,
+              "left": 86,
+              "top": 338,
+              "right": 406,
+              "bottom": 498
+            }
+          },
+          {
+            "region": 46,
+            "art": {
+              "image": "map.fmap0i46",
+              "width": 320,
+              "height": 160,
+              "left": 132,
+              "top": 340,
+              "right": 452,
+              "bottom": 500
+            }
+          },
+          {
+            "region": 47,
+            "art": {
+              "image": "map.fmap0i47",
+              "width": 320,
+              "height": 160,
+              "left": 344,
+              "top": 309,
+              "right": 664,
+              "bottom": 469
+            }
+          },
+          {
+            "region": 48,
+            "art": {
+              "image": "map.fmap0i48",
+              "width": 320,
+              "height": 160,
+              "left": 381,
+              "top": 251,
+              "right": 701,
+              "bottom": 411
+            }
+          },
+          {
+            "region": 49,
+            "art": {
+              "image": "map.fmap0i49",
+              "width": 320,
+              "height": 160,
+              "left": 553,
+              "top": 255,
+              "right": 873,
+              "bottom": 415
+            }
+          },
+          {
+            "region": 50,
+            "art": {
+              "image": "map.fmap0i50",
+              "width": 320,
+              "height": 160,
+              "left": 661,
+              "top": 217,
+              "right": 981,
+              "bottom": 377
+            }
+          },
+          {
+            "region": 51,
+            "art": {
+              "image": "map.fmap0i51",
+              "width": 320,
+              "height": 160,
+              "left": 672,
+              "top": 275,
+              "right": 992,
+              "bottom": 435
+            }
+          },
+          {
+            "region": 52,
+            "art": {
+              "image": "map.fmap0i52",
+              "width": 320,
+              "height": 160,
+              "left": 680,
+              "top": 256,
+              "right": 1000,
+              "bottom": 416
+            }
+          },
+          {
+            "region": 53,
+            "art": {
+              "image": "map.fmap0i53",
+              "width": 320,
+              "height": 160,
+              "left": 680,
+              "top": 340,
+              "right": 1000,
+              "bottom": 500
+            }
+          },
+          {
+            "region": 54,
+            "art": {
+              "image": "map.fmap0i54",
+              "width": 320,
+              "height": 160,
+              "left": 491,
+              "top": 340,
+              "right": 811,
+              "bottom": 500
+            }
+          },
+          {
+            "region": 55,
+            "art": {
+              "image": "map.fmap0i55",
+              "width": 320,
+              "height": 160,
+              "left": 293,
+              "top": 340,
+              "right": 613,
+              "bottom": 500
+            }
+          },
+          {
+            "region": 56,
+            "art": {
+              "image": "map.fmap0i56",
+              "width": 320,
+              "height": 160,
+              "left": 263,
+              "top": 340,
+              "right": 583,
+              "bottom": 500
+            }
+          },
+          {
+            "region": 57,
+            "art": {
+              "image": "map.fmap0i57",
+              "width": 320,
+              "height": 160,
+              "left": 680,
+              "top": 157,
+              "right": 1000,
+              "bottom": 317
+            }
+          },
+          {
+            "region": 58,
+            "art": {
+              "image": "map.fmap0i58",
+              "width": 320,
+              "height": 160,
+              "left": 17,
+              "top": 53,
+              "right": 337,
+              "bottom": 213
+            }
+          },
+          {
+            "region": 59,
+            "art": {
+              "image": "map.fmap0i59",
+              "width": 320,
+              "height": 160,
+              "left": 0,
+              "top": 0,
+              "right": 320,
+              "bottom": 160
+            }
+          },
+          {
+            "region": 60,
+            "art": {
+              "image": "map.fmap0i60",
+              "width": 320,
+              "height": 160,
+              "left": 107,
+              "top": 11,
+              "right": 427,
+              "bottom": 171
+            }
+          },
+          {
+            "region": 61,
+            "art": {
+              "image": "map.fmap0i61",
+              "width": 320,
+              "height": 160,
+              "left": 393.75,
+              "top": 323.75,
+              "right": 473.75,
+              "bottom": 363.75
+            }
+          }
+        ]
       },
       "player": {
         "x": 109,
-        "y": 158
+        "y": 158,
+        "heading": 180.00000531252033
       },
       "regions": [
-        {
-          "region": 0,
-          "name": "Alik\u0027r Desert",
-          "x": 372,
-          "y": 420,
-          "discovered": 0
-        },
-        {
-          "region": 1,
-          "name": "Dragontail Mountains",
-          "x": 743,
-          "y": 359,
-          "discovered": 0
-        },
-        {
-          "region": 5,
-          "name": "Dwynnen",
-          "x": 541,
-          "y": 84,
-          "discovered": 0
-        },
-        {
-          "region": 9,
-          "name": "Isle of Balfiera",
-          "x": 685,
-          "y": 194,
-          "discovered": 0
-        },
-        {
-          "region": 11,
-          "name": "Dak\u0027fron",
-          "x": 597,
-          "y": 420,
-          "discovered": 0
-        },
-        {
-          "region": 16,
-          "name": "Wrothgarian Mountains",
-          "x": 738,
-          "y": 80,
-          "discovered": 0
-        },
         {
           "region": 17,
           "name": "Daggerfall",
           "x": 109,
           "y": 158,
           "discovered": 0
-        },
-        {
-          "region": 18,
-          "name": "Glenpoint",
-          "x": 180,
-          "y": 109,
-          "discovered": 0
-        },
-        {
-          "region": 19,
-          "name": "Betony",
-          "x": 120,
-          "y": 262.75,
-          "discovered": 0
-        },
-        {
-          "region": 20,
-          "name": "Sentinel",
-          "x": 377,
-          "y": 373,
-          "discovered": 0
-        },
-        {
-          "region": 21,
-          "name": "Anticlere",
-          "x": 423,
-          "y": 159,
-          "discovered": 0
-        },
-        {
-          "region": 22,
-          "name": "Lainlyn",
-          "x": 708,
-          "y": 299,
-          "discovered": 0
-        },
-        {
-          "region": 23,
-          "name": "Wayrest",
-          "x": 840,
-          "y": 226,
-          "discovered": 0
-        },
-        {
-          "region": 26,
-          "name": "Orsinium Area",
-          "x": 840,
-          "y": 160,
-          "discovered": 0
-        },
-        {
-          "region": 32,
-          "name": "Northmoor",
-          "x": 201,
-          "y": 80,
-          "discovered": 0
-        },
-        {
-          "region": 33,
-          "name": "Menevia",
-          "x": 820,
-          "y": 181,
-          "discovered": 0
-        },
-        {
-          "region": 34,
-          "name": "Alcaire",
-          "x": 738,
-          "y": 120,
-          "discovered": 0
-        },
-        {
-          "region": 35,
-          "name": "Koegria",
-          "x": 685,
-          "y": 83,
-          "discovered": 0
-        },
-        {
-          "region": 36,
-          "name": "Bhoriane",
-          "x": 600,
-          "y": 120,
-          "discovered": 0
-        },
-        {
-          "region": 37,
-          "name": "Kambria",
-          "x": 608,
-          "y": 80,
-          "discovered": 0
-        },
-        {
-          "region": 38,
-          "name": "Phrygias",
-          "x": 526,
-          "y": 80,
-          "discovered": 0
-        },
-        {
-          "region": 39,
-          "name": "Urvaius",
-          "x": 460,
-          "y": 88,
-          "discovered": 0
-        },
-        {
-          "region": 40,
-          "name": "Ykalon",
-          "x": 362,
-          "y": 80,
-          "discovered": 0
-        },
-        {
-          "region": 41,
-          "name": "Daenia",
-          "x": 383,
-          "y": 86,
-          "discovered": 0
-        },
-        {
-          "region": 42,
-          "name": "Shalgora",
-          "x": 308,
-          "y": 156,
-          "discovered": 0
-        },
-        {
-          "region": 43,
-          "name": "Abibon-Gora",
-          "x": 175,
-          "y": 420,
-          "discovered": 0
-        },
-        {
-          "region": 44,
-          "name": "Kairou",
-          "x": 221,
-          "y": 420,
-          "discovered": 0
-        },
-        {
-          "region": 45,
-          "name": "Pothago",
-          "x": 246,
-          "y": 418,
-          "discovered": 0
-        },
-        {
-          "region": 46,
-          "name": "Myrkwasa",
-          "x": 292,
-          "y": 420,
-          "discovered": 0
-        },
-        {
-          "region": 47,
-          "name": "Ayasofya",
-          "x": 504,
-          "y": 389,
-          "discovered": 0
-        },
-        {
-          "region": 48,
-          "name": "Tigonus",
-          "x": 541,
-          "y": 331,
-          "discovered": 0
-        },
-        {
-          "region": 49,
-          "name": "Kozanset",
-          "x": 713,
-          "y": 335,
-          "discovered": 0
-        },
-        {
-          "region": 50,
-          "name": "Satakalaam",
-          "x": 821,
-          "y": 297,
-          "discovered": 0
-        },
-        {
-          "region": 51,
-          "name": "Totambu",
-          "x": 832,
-          "y": 355,
-          "discovered": 0
-        },
-        {
-          "region": 52,
-          "name": "Mournoth",
-          "x": 840,
-          "y": 336,
-          "discovered": 0
-        },
-        {
-          "region": 53,
-          "name": "Ephesus",
-          "x": 840,
-          "y": 420,
-          "discovered": 0
-        },
-        {
-          "region": 54,
-          "name": "Santaki",
-          "x": 651,
-          "y": 420,
-          "discovered": 0
-        },
-        {
-          "region": 55,
-          "name": "Antiphyllos",
-          "x": 453,
-          "y": 420,
-          "discovered": 0
-        },
-        {
-          "region": 56,
-          "name": "Bergama",
-          "x": 423,
-          "y": 420,
-          "discovered": 0
-        },
-        {
-          "region": 57,
-          "name": "Gavaudon",
-          "x": 840,
-          "y": 237,
-          "discovered": 0
-        },
-        {
-          "region": 58,
-          "name": "Tulune",
-          "x": 177,
-          "y": 133,
-          "discovered": 0
-        },
-        {
-          "region": 59,
-          "name": "Glenumbra Moors",
-          "x": 160,
-          "y": 80,
-          "discovered": 0
-        },
-        {
-          "region": 60,
-          "name": "Ilessan Hills",
-          "x": 267,
-          "y": 91,
-          "discovered": 0
-        },
-        {
-          "region": 61,
-          "name": "Cybiades",
-          "x": 433.75,
-          "y": 343.75,
-          "discovered": 0
         }
       ],
-      "sheet": {
-        "region": 17,
-        "name": "Daggerfall",
-        "page": 0,
-        "pages": 1,
-        "art": {
-          "image": "map.fmap0i17",
-          "width": 320,
-          "height": 160,
-          "left": 39,
-          "top": 106,
-          "right": 359,
-          "bottom": 266
-        },
-        "destinations": [],
-        "legend": []
-      }
+      "placesRevision": "0.cbf29ce484222325",
+      "places": [],
+      "legend": [],
+      "names": []
     },
     "message": null,
     "executionAvailable": false,
@@ -3051,6 +3357,7 @@
   "uiArtDemandedRevision": "session-art-revision.6",
   "uiArtDemanded": {
     "revision": "session-art-revision.6",
+    "from": 0,
     "images": [
       {
         "id": "character.body-unclothed.male.00.0",

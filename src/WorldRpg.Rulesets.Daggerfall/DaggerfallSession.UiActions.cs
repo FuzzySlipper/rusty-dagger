@@ -88,7 +88,7 @@ internal sealed partial class DaggerfallSession
         // play resumes; reading panels, preparing spells and editing preferences remain free.
         if (action.Kind is DaggerfallUiActionKind.SpellCast or DaggerfallUiActionKind.InventoryUse
             or DaggerfallUiActionKind.InventoryMove or DaggerfallUiActionKind.InventoryDrop
-            or DaggerfallUiActionKind.TransportSelect or DaggerfallUiActionKind.TransportToggle)
+            or DaggerfallUiActionKind.TransportSelect)
             _pendingWorldAction = true;
     }
 
@@ -185,7 +185,6 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.MerchantShoplift: ChangeMerchant(action); break;
             case DaggerfallUiActionKind.MerchantQuote: QuoteMerchantTrade(action); break;
             case DaggerfallUiActionKind.TransportSelect:
-            case DaggerfallUiActionKind.TransportToggle:
             case DaggerfallUiActionKind.TransportLeaveShip:
             case DaggerfallUiActionKind.TransportBoardShip: ChangeTransport(action); break;
             case DaggerfallUiActionKind.PropertyBuy:
@@ -196,6 +195,7 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.TravelSearch:
             case DaggerfallUiActionKind.TravelPreview: ChangeTravel(action); break;
             case DaggerfallUiActionKind.TravelMap: ChangeTravelMap(action); break;
+            case DaggerfallUiActionKind.AtlasTiles: DemandAtlasTiles(action.Tiles!); break;
             case DaggerfallUiActionKind.TravelAccept:
                 if (!elapsedSubmitted) { elapsedSubmitted = true; AcceptTravel(action.Key!, action.Amount!.Value); }
                 break;

@@ -314,6 +314,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         // went away must not hold the world for a client that cannot see it.
         _interactions.SetMenuOpen(false);
         _hud.RequestArt();
+        // A fresh page holds none of the travel map's places either.
+        _hud.RequestTravelPlaces();
         SyncWeatherContext();
         PublishPresentation();
     }
@@ -722,7 +724,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         try { _sites.RetireResidentExteriorLocations(capture: false); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
-        try { DisposeAll([.. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }, _hud, _camera, _spatial, State.Actors, _heldEnchantments, _sites.Projection, State.Effects, _sites.ActionTriggers, Infections, _horizon, _weatherPresentation]); }
+        try { DisposeAll([.. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }, .. _atlasTiles is null ? Array.Empty<IDisposable>() : new IDisposable[] { _atlasTiles }, _hud, _camera, _spatial, State.Actors, _heldEnchantments, _sites.Projection, State.Effects, _sites.ActionTriggers, Infections, _horizon, _weatherPresentation]); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         try { _sites.RetireExteriorAppearance(); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }

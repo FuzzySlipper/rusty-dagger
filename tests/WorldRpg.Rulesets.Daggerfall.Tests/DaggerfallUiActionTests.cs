@@ -218,8 +218,7 @@ public sealed class DaggerfallUiActionTests
     [InlineData("{\"action\":\"transport-select\",\"mode\":\"horse\"}", true)]
     [InlineData("{\"action\":\"transport-select\",\"mode\":\"ship\"}", false)]
     [InlineData("{\"action\":\"transport-select\"}", false)]
-    [InlineData("{\"action\":\"transport-toggle\"}", true)]
-    [InlineData("{\"action\":\"transport-toggle\",\"mode\":\"horse\"}", false)]
+    [InlineData("{\"action\":\"transport-toggle\"}", false)]
     [InlineData("{\"action\":\"wagon-put\",\"revision\":\"1:2\",\"item\":\"stack:gold-piece\",\"amount\":5}", true)]
     [InlineData("{\"action\":\"wagon-take\",\"revision\":\"1:2\",\"item\":\"unique:1002\"}", true)]
     [InlineData("{\"action\":\"wagon-put\",\"item\":\"stack:gold-piece\"}", false)]
@@ -243,16 +242,17 @@ public sealed class DaggerfallUiActionTests
     [Theory]
     [InlineData("{\"action\":\"travel-map\",\"open\":true}", true)]
     [InlineData("{\"action\":\"travel-map\",\"open\":false}", true)]
-    [InlineData("{\"action\":\"travel-map\",\"open\":true,\"region\":17,\"page\":0}", true)]
-    [InlineData("{\"action\":\"travel-map\",\"open\":false,\"region\":17,\"page\":0}", false)]
-    [InlineData("{\"action\":\"travel-map\",\"open\":true,\"region\":17}", false)]
-    [InlineData("{\"action\":\"travel-map\",\"open\":true,\"region\":-1,\"page\":0}", false)]
-    [InlineData("{\"action\":\"travel-map\",\"open\":true,\"region\":17,\"page\":-1}", false)]
+    [InlineData("{\"action\":\"travel-map\",\"open\":true,\"region\":17,\"page\":0}", false)]
     [InlineData("{\"action\":\"travel-map\"}", false)]
+    [InlineData("{\"action\":\"atlas-tiles\",\"tiles\":[[0,1,1],[2,15,7]]}", true)]
+    [InlineData("{\"action\":\"atlas-tiles\",\"tiles\":[]}", false)]
+    [InlineData("{\"action\":\"atlas-tiles\",\"tiles\":[[0,1]]}", false)]
+    [InlineData("{\"action\":\"atlas-tiles\",\"tiles\":[[0,1,\"x\"]]}", false)]
+    [InlineData("{\"action\":\"atlas-tiles\",\"tiles\":[[0,1,1]],\"open\":true}", false)]
     [InlineData("{\"action\":\"content-import\"}", true)]
     [InlineData("{\"action\":\"content-import-cancel\"}", true)]
     [InlineData("{\"action\":\"content-import\",\"key\":\"x\"}", false)]
-    public void Travel_map_views_are_opened_closed_or_turned_by_region_and_sheet(string json, bool accepted) =>
+    public void The_travel_map_opens_and_closes_and_asks_for_the_atlas_tiles_it_shows(string json, bool accepted) =>
         Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
 
     [Fact]

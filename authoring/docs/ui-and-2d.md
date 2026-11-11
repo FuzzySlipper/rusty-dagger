@@ -4,13 +4,14 @@ Which art each family of 2D screen art draws in the product, and which screen dr
 bodies are the `paper-doll` area (#10495); inventory and spell icons are the `items` and `spells` areas. The
 UI's structure and kit are described in [docs/game-ui.md](../../docs/game-ui.md).
 
-Four dispositions:
+Five dispositions:
 
 - **Authored:** the stone and parchment kit in `content/worldrpg/media/ui/authored/` (recipe:
   `scripts/ui-art-kit.py`, `data/ui-authored-assets.json`, `docs/game-ui.md` "Authored UI art").
 - **Refreshed:** a redrawn painting promoted into `content/worldrpg/media/refreshed/` (below); the classic art stays
   selectable with the art set.
 - **Classic:** the operator's Arena2 art, published by the importer and drawn as square pixels.
+- **Generated:** drawn by the importer from the game's own data, as the travel atlas is.
 - **None:** the DOM UI replaced the classic surface; the importer may still publish the file, but nothing draws it.
 
 ## Families
@@ -30,8 +31,8 @@ Four dispositions:
 | Story sprites | `*.BSS` | None | — |
 | Faction faces | `TFAC00I0.RCI` | Refreshed | `quests.ts` (escort portraits) |
 | Child faces | `KIDS00I0.CIF` | Refreshed | `quests.ts` (escort portraits) |
-| World travel map | `TRAV0I00` | Classic, with its own chrome and EXIT plate | `travel.ts` |
-| Region travel sheets | `FMAP*` | Classic | `travel.ts` |
+| World travel map | `TRAV0I00` | Generated: the importer's `atlas` step draws the land itself (relief, rivers, climate, regions) as tiles; the classic image draws under the classic art set | `atlas.ts` |
+| Region travel sheets | `FMAP*` | Classic, under the classic art set, zoomed into their region | `atlas.ts` |
 | Automap and town maps | `AMAP*`, `TMAP*`, `TOWN*`, `TRAV0I01–04` | None: the local map is a vector diagram | `maps.ts` |
 | Compass | — | None: a DOM strip | `hud.ts` |
 | Paintings | `*PAINT.CIF` | None | — |

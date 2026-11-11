@@ -348,6 +348,17 @@ internal static class DaggerfallSiteKinds
         _ => "other",
     };
 
+    /// <summary>
+    /// From which zoom of the travel map a kind of place is named: cities across a region (1), towns, the large dungeons,
+    /// temples and the player's ship close in (2), and every other place at the closest zoom or when pointed at (3).
+    /// </summary>
+    internal static int MapTier(DaggerfallSiteKind kind) => kind switch
+    {
+        DaggerfallSiteKind.TownCity => 1,
+        DaggerfallSiteKind.TownHamlet or DaggerfallSiteKind.DungeonLabyrinth or DaggerfallSiteKind.ReligionTemple or DaggerfallSiteKind.HomeYourShips => 2,
+        _ => 3,
+    };
+
     /// <summary>The travel map legend's words for a dot family <see cref="MapCategory"/> names.</summary>
     internal static string MapCategoryLabel(string category) => category switch
     {

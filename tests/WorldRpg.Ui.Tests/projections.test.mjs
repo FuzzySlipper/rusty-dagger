@@ -335,8 +335,8 @@ test('transport projection exposes land selection and admitted ship boarding', (
     const horse = f.root.querySelector('[data-transport-mode="horse"]');
     horse.click();
     assert.deepEqual(f.actions.at(-1), { action: 'transport-select', mode: 'horse' });
-    f.root.querySelector('[data-action="transport-toggle"]').click();
-    assert.deepEqual(f.actions.at(-1), { action: 'transport-toggle' });
+    assert.equal(f.root.querySelector('[data-transport-mode="foot"]').getAttribute('aria-pressed'), 'true', 'The way you travel now is marked.');
+    assert.equal(f.root.querySelector('[data-transport-mode="cart"]').disabled, true);
     const ship = f.root.querySelector('[data-transport-mode="ship"]');
     assert.equal(ship.disabled, false);
     ship.click();
@@ -380,13 +380,13 @@ test('rest panel sends semantic durations bounded by the ruleset and shows the e
   } finally { f.dispose(); }
 });
 
-test('accessible wagon projection sends revision guarded put and take selections', () => {
+test('the wagon, while the cart is near, is a tab of the inventory that stores and takes against the pack\'s revision', () => {
   const f = fixture();
   try {
     f.publish({
       inventory: { gridCapacity: 80,
         revision: '21:2:0', message: 'Inventory ready.', equipmentChange: null,
-        items: [{ key: 'stack:pack.gold', definition: 'gold-piece', label: 'Gold piece', quantity: '4', weight: 0, value: 1, details: 'Coins', icon: null, condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [] }],
+        items: [{ key: 'stack:pack.gold', definition: 'gold-piece', label: 'Gold piece', quantity: '4', stackable: true, weight: 0, value: 1, details: 'Coins', icon: null, condition: null, identified: true, gridSlot: 0, equippedSlots: [], compatibleSlots: [] }],
         slots: [],
       },
       transport: {
@@ -399,11 +399,19 @@ test('accessible wagon projection sends revision guarded put and take selections
         },
       },
     });
-    f.root.querySelector('[data-action="transport"]').click();
-    f.root.querySelector('[data-action="wagon-put"]').click();
+    f.root.querySelector('[data-action="inventory"]').click();
+    f.root.querySelector('[data-inventory-tab="wagon"]').click();
+    const wagon = f.root.querySelector('.dagger-inventory-wagon');
+    assert.equal(wagon.hidden, false);
+    assert.match(wagon.querySelector('[data-transfer-side="source"]').textContent, /Wagon · 0\.03 \/ 750 kg/);
+    wagon.querySelector('[data-transfer-side="pack"] [data-transfer-key="stack:pack.gold"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'wagon-put', revision: '21:2:0', item: 'stack:pack.gold', amount: 4 });
-    f.root.querySelector('[data-action="wagon-take"]').click();
+    wagon.querySelector('[data-transfer-side="source"] [data-transfer-key="stack:daggerfall.wagon.7.gold"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'wagon-take', revision: '21:2:0', item: 'stack:daggerfall.wagon.7.gold', amount: 2 });
+    // The travel screen names the wagon's load and sends you to the inventory for its contents.
+    f.root.querySelector('[data-action="back"]').click();
+    f.root.querySelector('[data-action="transport"]').click();
+    assert.match(f.root.querySelector('.dagger-transport-wagon').textContent, /store and take in your inventory/);
   } finally { f.dispose(); }
 });
 
@@ -3106,8 +3114,9 @@ test('wagon put is refused for the definitions the ruleset names', () => {
         },
       },
     });
-    f.root.querySelector('[data-action="transport"]').click();
-    assert.equal(f.root.querySelector('[data-action="wagon-put"]').disabled, true);
+    f.root.querySelector('[data-action="inventory"]').click();
+    f.root.querySelector('[data-inventory-tab="wagon"]').click();
+    assert.equal(f.root.querySelector('.dagger-inventory-wagon [data-transfer-key="unique:9"]').disabled, true);
   } finally { f.dispose(); }
 });
 
@@ -3235,157 +3244,106 @@ test('travel accepts only the current quote and shows actual paid arrival or int
   } finally { f.dispose(); }
 });
 
-test('travel map draws the published world and region art from the projected map and previews a chosen destination', async () => {
-  const { mountTravel } = await import(pathToFileURL(join(output, 'travel.js')));
+test('the travel map draws the atlas tiles in view, asks for the ones it lacks, names places by zoom and previews a chosen place', async () => {
   const f = fixture();
-  const warn = console.warn; const warnings = []; console.warn = message => warnings.push(message);
   try {
-    // The world view, regions and sheet frame are the ones a real session published (HudSnapshotContractTests);
-    // the fixture session discovers no destination on its sheet, so two dots are written into that shape here.
+    const levels = [{ level: 0, width: 1000, height: 500, columns: 4, rows: 2 }, { level: 1, width: 2000, height: 1000, columns: 8, rows: 4 },
+      { level: 2, width: 4000, height: 2000, columns: 16, rows: 8 }];
+    const place = (index, name, tier, x, y, kind = 'City', category = 'town') => ({ region: 17, index, name, kind, category, tier, x, y });
+    const map = { worldWidth: 1000, worldHeight: 500, atlas: { tileSize: 256, levels, tiles: [] }, classic: null,
+      player: { x: 207, y: 213, heading: 90 },
+      regions: [{ region: 17, name: 'Daggerfall', x: 180, y: 180, discovered: 3 }], placesRevision: '3.a',
+      places: [place(1, 'Daggerfall', 1, 207, 213), place(2, 'Charing', 2, 241, 132, 'Town'), place(3, 'Caarcun Manor', 3, 220, 220, 'Wealthy home', 'home')],
+      legend: [{ category: 'home', label: 'Homes' }, { category: 'town', label: 'Towns' }],
+      names: [{ id: 'iliac-bay', name: 'Iliac Bay', kind: 'bay', shownFrom: 'world', x: 480, y: 300 }] };
+    const travel = { destinations: [], quote: null, executionAvailable: false, message: null, lastResult: null, map };
+    f.publish({ travel });
+    f.root.querySelector('[data-action="transport"]').click();
+    assert.deepEqual(f.actions.filter(action => action.action === 'travel-map'), [{ action: 'travel-map', open: true }], 'Opening travel opens the map.');
+    // The ruleset publishes the map it opened on the next snapshot.
+    f.publish({ travel });
+    const atlas = f.root.querySelector('.dagger-atlas');
+    assert.equal(atlas.hidden, false);
+    // The map opens on the player at a region's zoom, which draws the finest level, and asks for the tiles in view.
+    const requests = f.actions.filter(action => action.action === 'atlas-tiles');
+    assert.ok(requests.length > 0);
+    const asked = requests.flatMap(request => request.tiles);
+    assert.ok(requests.every(request => request.tiles.length <= 64));
+    assert.ok(asked.every(([level]) => level === 2));
+    assert.ok(asked.some(([, column, row]) => column === Math.floor(207 * 4 / 256) && row === Math.floor(213 * 4 / 256)), 'The tile under the player is asked for.');
+    const tile = atlas.querySelector('.dagger-atlas-tile');
+    assert.equal(tile.getAttribute('src'), null, 'A tile not yet delivered draws nothing.');
+    // A granted tile is drawn from the URL the ruleset names for it, and is asked for no more.
+    const [level, column, row] = asked[0];
+    const url = '/ui/images/7';
+    const granted = { ...travel, map: { ...map, atlas: { ...map.atlas, tiles: [{ id: `atlas.${level}.${column}.${row}`, url }] } } };
+    f.publish({ travel: granted });
+    assert.equal(atlas.querySelector(`[data-media-id="atlas.${level}.${column}.${row}"]`).getAttribute('src'), url);
+    const before = f.actions.filter(action => action.action === 'atlas-tiles').length;
+    f.publish({ travel: granted });
+    assert.equal(f.actions.filter(action => action.action === 'atlas-tiles').length, before);
+    // The places travel once: a snapshot of the same revision without them keeps them, and one of a new revision
+    // without them asks for the map again, once.
+    const { places: _places, legend: _legend, ...bare } = map;
+    f.publish({ travel: { ...travel, map: bare } });
+    assert.ok(atlas.querySelector('[data-key="17:1"]'));
+    const reopens = () => f.actions.filter(action => action.action === 'travel-map' && action.open === true).length;
+    const opened = reopens();
+    f.publish({ travel: { ...travel, map: { ...bare, placesRevision: '4.b' } } });
+    f.publish({ travel: { ...travel, map: { ...bare, placesRevision: '4.b' } } });
+    assert.equal(reopens(), opened + 1);
+    f.publish({ travel });
+    // At a region's zoom cities are named; towns and every other place wait for closer zooms; the bay is named.
+    const marker = key => atlas.querySelector(`[data-key="17:${key}"]`);
+    assert.equal(marker(1).dataset.name, 'Daggerfall');
+    assert.equal(marker(3)?.dataset.name, undefined);
+    assert.ok([...atlas.querySelectorAll('.dagger-atlas-name')].some(node => node.textContent === 'Iliac Bay'));
+    assert.equal(atlas.querySelector('.dagger-atlas-player').style.getPropertyValue('--heading'), '90deg');
+    // Zooming in names the towns, then every place.
+    for (let i = 0; i < 4; i++) f.root.querySelector('[aria-label="Zoom in"]').click();
+    await new Promise(resolve => setTimeout(resolve, 40));
+    assert.equal(marker(3).dataset.name, 'Caarcun Manor');
+    // Choosing a place previews its route, with the journey's options.
+    marker(1).click();
+    assert.deepEqual(f.actions.at(-1), { action: 'travel-preview', region: 17, destination: 1, cautious: true, inn: false, ship: false });
+    // The route the quote measured is drawn.
+    const quote = { identity: 'q', destination: 'Daggerfall', route: { fromX: 241, fromY: 132, toX: 207, toY: 213 }, minutes: 60, duration: '1 hour', distance: 1,
+      oceanPixels: 0, innCost: 0, shipCost: 0, totalCost: 0, canAfford: true,
+      options: { cautious: true, inn: false, ship: false, hasHorse: false, hasCart: false, hasShip: false, availableGold: '0', availableGoldPieces: '0' } };
+    f.publish({ travel: { ...travel, quote } });
+    assert.equal(atlas.querySelectorAll('.dagger-atlas-route line').length, 1);
+    assert.equal(marker(1).getAttribute('aria-pressed'), 'true');
+    // The classic art set draws the classic world image instead, under the same places.
     const snapshot = JSON.parse(await readFile(new URL('./fixtures/hud-snapshot.json', import.meta.url), 'utf8'));
-    const published = snapshot.travel.map;
-    assert.ok(published.world && published.sheet && published.regions.length > 0);
-    const worldImage = 'data:image/png;base64,d29ybGQ=';
-    const sheetImage = 'data:image/png;base64,c2hlZXQ=';
-    art.adopt({ revision: 'travel-map-art', images: [{ id: published.world.image, image: worldImage }, { id: published.sheet.art.image, image: sheetImage }] });
-    const root = document.createElement('div'); f.root.append(root);
-    const actions = []; const asked = []; const view = mountTravel(root, action => actions.push(action), question => { asked.push(question.message); question.onAccept(); });
-    const value = { destinations: [], quote: null, executionAvailable: false, message: null, lastResult: null, map: null };
-    const percent = element => [parseFloat(element.style.left), parseFloat(element.style.top)];
-    const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9, `${actual} is not ${expected}`);
-
-    view.update(value);
-    assert.equal(root.querySelector('.dagger-travel-map-canvas').hidden, true);
-    root.querySelector('.dagger-travel-map-toggle').click();
-    assert.deepEqual(actions.at(-1), { action: 'travel-map', open: true });
-
-    // World view: the published overview with one marker per region, placed by the projected world pixels.
-    const world = { ...published, sheet: null };
-    view.update({ ...value, map: world });
-    assert.equal(root.querySelector('.dagger-travel-map-canvas').hidden, false);
-    assert.equal(root.querySelector('.dagger-travel-map-canvas img').src, worldImage);
-    assert.equal(root.querySelector('.dagger-travel-map-world').hidden, true);
-    const regions = root.querySelectorAll('.dagger-travel-map-region');
-    assert.equal(regions.length, world.regions.length);
-    const first = world.regions[0];
-    const [left, top] = percent(regions[0]);
-    near(left, (first.x - world.world.left) / (world.world.right - world.world.left) * 100);
-    near(top, (first.y - world.world.top) / (world.world.bottom - world.world.top) * 100);
-    assert.match(regions[0].dataset.label, new RegExp(`^${first.name}: ${first.discovered} known`));
-    assert.match(root.querySelector('.dagger-travel-map-legend').textContent, /You are here.*Region/);
-    // A focused marker's name shows in the readout as well as beside it, not only on hover.
-    regions[0].dispatchEvent(new window.FocusEvent('focusin', { bubbles: true }));
-    assert.equal(root.querySelector('.dagger-travel-map-readout').textContent, regions[0].dataset.label);
-    assert.ok(root.querySelector('.dagger-travel-map-player'));
-    const picker = root.querySelector('.dagger-travel-map-regions');
-    assert.equal(picker.options.length, world.regions.length + 1);
-    assert.equal(picker.value, '');
-    picker.value = String(world.regions[1].region); picker.dispatchEvent(new window.Event('change'));
-    assert.deepEqual(actions.at(-1), { action: 'travel-map', open: true, region: world.regions[1].region, page: 0 });
-    regions[0].click();
-    assert.deepEqual(actions.at(-1), { action: 'travel-map', open: true, region: first.region, page: 0 });
-
-    // Region sheet: the published sheet art with a dot per discovered destination, coloured by its family.
-    const frame = published.sheet.art;
-    const destinations = [
-      { index: 5, name: 'Hand-drawn Hamlet', kind: 'Town', category: 'town', x: frame.left + 70, y: frame.top + 52 },
-      { index: 9, name: 'Hand-drawn Keep', kind: 'Dungeon', category: 'dungeon', x: frame.left + 200, y: frame.top + 100 },
-    ];
-    const legend = [{ category: 'town', label: 'Towns' }, { category: 'dungeon', label: 'Dungeons' }];
-    const open = { ...published, sheet: { ...published.sheet, destinations, legend } };
-    // Focus on a region it opens follows onto the sheet's first place.
-    regions[0].focus();
-    view.update({ ...value, map: open });
-    assert.equal(document.activeElement, root.querySelector('.dagger-travel-map-dot'));
-    assert.deepEqual([...root.querySelectorAll('.dagger-travel-map-legend .dagger-travel-map-key-dot')].map(key => key.dataset.category), ['town', 'dungeon']);
-    assert.match(root.querySelector('.dagger-travel-map-legend').textContent, /Towns.*Dungeons/);
-    assert.equal(root.querySelector('.dagger-travel-map-canvas img').src, sheetImage);
-    assert.equal(root.querySelector('.dagger-travel-map-canvas').style.aspectRatio, `${frame.width} / ${frame.height}`);
-    assert.equal(picker.value, String(published.sheet.region));
-    assert.equal(root.querySelector('.dagger-travel-map-world').hidden, false);
-    assert.equal(root.querySelector('.dagger-travel-map-next').hidden, published.sheet.pages < 2);
-    assert.match(root.querySelector('.dagger-travel-map-caption').textContent, new RegExp(published.sheet.name));
-    const dots = root.querySelectorAll('.dagger-travel-map-dot');
-    assert.equal(dots.length, 2);
-    assert.deepEqual([dots[0].dataset.category, dots[1].dataset.category], ['town', 'dungeon']);
-    assert.equal(dots[0].dataset.label, 'Hand-drawn Hamlet (Town)');
-    assert.equal(dots[0].getAttribute('aria-label'), 'Hand-drawn Hamlet (Town)');
-    const [dotLeft, dotTop] = percent(dots[0]);
-    near(dotLeft, 70 / (frame.right - frame.left) * 100);
-    near(dotTop, 52 / (frame.bottom - frame.top) * 100);
-
-    // Choosing a dot drives the ordinary preview, and the quote it answers with is the one accepted.
-    dots[1].click();
-    assert.deepEqual(actions.at(-1), { action: 'travel-preview', region: published.sheet.region, destination: 9,
-      cautious: true, inn: false, ship: false });
-    const route = { fromX: frame.left + 70, fromY: frame.top + 52, toX: frame.left + 200, toY: frame.top + 100, region: published.sheet.region };
-    const quote = { identity: 'map-quote', destination: 'Hand-drawn Keep', route, minutes: 60, duration: '1 hour', distance: 3, oceanPixels: 0,
-      innCost: 0, shipCost: 0, totalCost: 4, canAfford: true,
-      options: { cautious: true, inn: false, ship: false, hasHorse: false, hasCart: false, hasShip: false, availableGold: '9', availableGoldPieces: '9' } };
-    dots[1].focus();
-    view.update({ ...value, map: open, quote, executionAvailable: true });
-    assert.equal(root.querySelector('.dagger-travel-map-dot[data-index="9"]').getAttribute('aria-pressed'), 'true');
-    // The chosen place keeps focus through the redraw, and its name rests in the readout.
-    assert.equal(document.activeElement, root.querySelector('.dagger-travel-map-dot[data-index="9"]'));
-    assert.equal(root.querySelector('.dagger-travel-map-readout').textContent, 'Hand-drawn Keep (Dungeon)');
-    // The quoted route is drawn from where it starts to the chosen place, in the sheet art's pixels.
-    const line = root.querySelector('.dagger-travel-map-route line');
-    assert.equal(root.querySelector('.dagger-travel-map-route').getAttribute('viewBox'), `0 0 ${frame.width} ${frame.height}`);
-    near(Number(line.getAttribute('x1')), 70 / (frame.right - frame.left) * frame.width);
-    near(Number(line.getAttribute('y2')), 100 / (frame.bottom - frame.top) * frame.height);
-    assert.match(root.querySelector('.dagger-travel-map-legend').textContent, /Route/);
-    // The place was chosen with no pointer (as Enter or a pad's accept clicks), so once its quote is in,
-    // focus goes on to Begin journey rather than leaving the player to step out through every place.
-    await Promise.resolve();
-    assert.equal(document.activeElement, root.querySelector('.dagger-travel-accept'));
-    // Back from a place on the sheet is a step out to the world, not out of the panel.
-    const back = new window.CustomEvent('dagger-back', { bubbles: true, cancelable: true });
-    root.querySelector('.dagger-travel-map-dot[data-index="9"]').dispatchEvent(back);
-    assert.equal(back.defaultPrevented, true);
-    assert.deepEqual(actions.at(-1), { action: 'travel-map', open: true });
-    root.querySelector('.dagger-travel-accept').click();
-    assert.deepEqual(actions.at(-1), { action: 'travel-accept', key: 'map-quote', amount: 4 });
-    root.querySelector('.dagger-travel-map-world').click();
-    assert.deepEqual(actions.at(-1), { action: 'travel-map', open: true });
-
-    // Art this session has not published is marked rather than drawn from anywhere else.
-    art.adopt({ revision: 'travel-map-partial', images: [{ id: published.world.image, image: worldImage }] });
-    view.update({ ...value, map: { ...open, sheet: { ...open.sheet, destinations: destinations.slice(0, 1) } } });
-    assert.equal(root.querySelector('.dagger-travel-map-canvas').dataset.artMissing, frame.image);
-    assert.ok(warnings.some(message => message.includes(frame.image)));
-    root.querySelector('.dagger-travel-map-toggle').click();
-    assert.deepEqual(actions.at(-1), { action: 'travel-map', open: false });
-    view.dispose();
-  } finally { console.warn = warn; art.adopt({ revision: '', images: [] }); f.dispose(); }
+    f.publish({ travel: { ...travel, map: snapshot.travel.map } });
+    assert.equal(atlas.querySelector('.dagger-atlas-tile'), null);
+    assert.ok(atlas.querySelector('.dagger-atlas-classic'));
+  } finally { f.dispose(); }
 });
 
-test('hiding the travel panel closes an open travel map so its sheet stops being published', async () => {
+test('the travel panel opens its map as it shows and closes it once when it is left', async () => {
   const f = fixture();
   try {
     const snapshot = JSON.parse(await readFile(new URL('./fixtures/hud-snapshot.json', import.meta.url), 'utf8'));
     const travel = { destinations: [], quote: null, executionAvailable: false, message: null, lastResult: null, map: snapshot.travel.map };
+    const opens = () => f.actions.filter(action => action.action === 'travel-map' && action.open === true).length;
     const closes = () => f.actions.filter(action => action.action === 'travel-map' && action.open === false).length;
     f.publish({ travel });
     f.root.querySelector('[data-action="transport"]').click();
-    assert.equal(f.root.querySelector('.dagger-travel-map-canvas').hidden, false);
-    // Travel opens on choosing where to go, not on its Back button.
-    assert.equal(document.activeElement, f.root.querySelector('.dagger-travel-map-toggle'));
-    assert.equal(closes(), 0);
+    assert.equal(opens(), 1);
+    f.publish({ travel });
+    assert.equal(f.root.querySelector('.dagger-atlas').hidden, false);
+    // Travel opens on the map, not on its Back button.
+    assert.equal(document.activeElement, f.root.querySelector('.dagger-atlas'));
     // Leaving the panel for the menu home closes the map once, even before the ruleset answers.
     f.root.querySelector('[data-action="back"]').click();
-    assert.deepEqual(f.actions.filter(action => action.action === 'travel-map').at(-1), { action: 'travel-map', open: false });
     assert.equal(closes(), 1);
     f.root.querySelector('[data-action="back"]').click();
     assert.equal(closes(), 1);
     // Switching straight to another panel closes it too.
-    f.publish({ travel });
     f.root.querySelector('[data-action="transport"]').click();
+    assert.equal(opens(), 2);
     f.root.querySelector('[data-action="map"]').click();
-    assert.equal(closes(), 2);
-    // A closed map needs no word when the panel is left.
-    f.publish({ travel: { ...travel, map: null } });
-    f.root.querySelector('[data-action="transport"]').click();
-    f.root.querySelector('[data-action="back"]').click();
     assert.equal(closes(), 2);
   } finally { f.dispose(); }
 });

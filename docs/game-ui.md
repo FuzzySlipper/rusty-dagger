@@ -111,14 +111,13 @@ cursor registers with `navigation.register` in `main.ts`:
   the parts of character creation on the title, and a person's service pages).
 - `page(direction)` with `pageHint()`: the triggers, or Page Up and Page
   Down, turn what the surface shows (a journal's quests, a book's pages, the
-  local map's zoom, the travel map's sheets). The hint names what they do
+  local map's zoom, the travel map's zoom). The hint names what they do
   there, and is absent when they do nothing.
 
 A control that uses the directions itself claims them: navigation first
 offers each direction to the focused control as a cancellable
 `dagger-direction` event, and Back as `dagger-back`, and moves focus or steps
-back only when nothing claimed it. The local map's panning mode and the travel
-map's sheets use this. Moving into a row of tabs lands on the tab shown, and
+back only when nothing claimed it. The local map's panning mode uses this. Moving into a row of tabs lands on the tab shown, and
 tabs follow focus.
 
 A focused number or range field takes the controller's left and right as a
@@ -352,9 +351,24 @@ update to acknowledge in, so it runs the same phases at once.
 - **Local map** (`maps.ts`): dragging pans (through `followPress`) and the
   wheel zooms about the cursor. Accepting the focused diagram starts panning
   with the directions. The legend and the facing come from the projection.
-- **Travel** (`travel.ts`): the travel map names the focused or hovered marker
-  beside it and in a readout, draws the quoted route, and keeps focus on the map
-  as it redraws. A journey asks through the drawn confirm.
+- **Travel** (`travel.ts`, `atlas.ts`, `transport.ts`): the map you travel from, with a journey column beside it and a
+  transport strip below, on the wide panel. Opening the screen opens the map, which the ruleset then publishes.
+  - The map is the atlas the importer draws from the land (`DaggerfallAtlas`): shaded relief in each climate's colour,
+    the rivers, the coast and region borders, as a pyramid of tiles. The page asks for the tiles in view
+    (`atlas-tiles`); the ruleset grants each through the Engine's UI image service and names its URL, so no tile's
+    bytes ride a snapshot. Under the classic art set, or with a data container from before the atlas, the map draws
+    the classic world image and, zoomed into a region, its sheets. It opens on the player at a region's zoom.
+  - Places, names, the route and the player are drawn at screen size over the scaled map. A region shows its cities,
+    close in its towns and great places, closest every place (`tier`); names are written most important first where
+    they do not cover one already written, and every place is named when focused or pointed at. The names of the land
+    and sea come from the game's one list of them (`worldNames`), each written from its kind's zoom. The thousands of
+    known places travel only when `placesRevision` changes or the page asks again.
+  - Drag pans and the wheel zooms about the pointer; the map surface pans with the arrows and zooms with + and -;
+    Page Up and Down, or the triggers, zoom; arrows and a pad step between places, and the view follows the focus.
+    Choosing a place, on the map or from the column's search, asks for its route; the quote is drawn on the map and
+    worded in the column, and a journey asks through the drawn confirm.
+  - The strip chooses foot, horse or cart, boards or leaves your ship, and names the wagon's load; what the wagon holds
+    is stored and taken in the inventory's Wagon tab while the cart is near.
 - **HUD** (`hud.ts`): bars for vitals and breath; a compass strip with the
   ruleset's heading and the Detect spells' contacts as marks; and a prompt naming what
   use would do to the aimed target, worded by that target's owner, with the use
@@ -413,7 +427,7 @@ update to acknowledge in, so it runs the same phases at once.
   skipping unavailable ones. A pad steps them with accept as easily as the
   mouse clicks them. Character creation, the title's game choice and the
   custom-class fields use them. The remaining native `<select>`s (the crafting
-  fields, travel's region and destination, the activation mode, the dialogue
+  fields, travel's destination, the activation mode, the dialogue
   tone) draw the window's own popup for the mouse, and navigation changes their
   value with left and right for a controller.
 - **Numbers** are bounded by limits the projection publishes, so an invalid

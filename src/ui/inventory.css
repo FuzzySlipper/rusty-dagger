@@ -163,7 +163,7 @@
 .dagger-bank-balances { background: rgb(12 13 10 / .74); border: 1px solid #7d6c45; display: grid; gap: 2px .5rem; grid-template-columns: repeat(3, minmax(0, 1fr)); list-style: none; margin: 0; max-height: 8rem; overflow-y: auto; padding: .375rem; }
 .dagger-bank-balances li { color: #c3b48b; font: .7rem var(--font-label); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dagger-bank-balances li.is-current { color: #fff0a7; font-weight: 700; }
-.dagger-inventory-storage[hidden] { display: none; }
+.dagger-inventory-storage[hidden], .dagger-inventory-wagon[hidden] { display: none; }
 
 /* Narrow windows stack the equipment above the pack and let the pack's cells shrink. */
 @media (max-width: 78rem) {

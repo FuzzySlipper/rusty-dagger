@@ -78,6 +78,8 @@ public sealed class PublishedContentDeliveryTests
                 && !path.Contains("/cinematics/", StringComparison.Ordinal)
                 && !path.Contains("/music/", StringComparison.Ordinal)
                 && !path.StartsWith("worldrpg/media/sky/", StringComparison.Ordinal)
+                // The travel atlas is its own generated group, indexed by its own inventory.
+                && !path.StartsWith("worldrpg/media/atlas", StringComparison.Ordinal)
                 && !path.StartsWith("worldrpg/media/refreshed/", StringComparison.Ordinal))];
         Assert.Equal(published.Order(StringComparer.Ordinal), listed.Order(StringComparer.Ordinal));
         // The published group carries every classic descriptor except audio: each site closure publishes

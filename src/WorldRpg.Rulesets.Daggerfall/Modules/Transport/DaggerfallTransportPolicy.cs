@@ -205,30 +205,6 @@ internal sealed class DaggerfallTransportPolicy
     internal bool HasHorse(InventoryView inventory) => ContainsUnique(inventory, HorseItemId);
     internal bool HasCart(InventoryView inventory) => ContainsUnique(inventory, CartItemId);
 
-    internal DaggerfallTransportActionResult ToggleMount(InventoryView inventory, DaggerfallTransportAccessContext context)
-    {
-        ArgumentNullException.ThrowIfNull(inventory);
-        context.Validate();
-        if (_onShip) return Reject(DaggerfallTransportRejection.ShipUnavailableAtSite, "Leave the ship before choosing a mount.");
-        if (_mode is DaggerfallTransportMode.Horse or DaggerfallTransportMode.Cart)
-        {
-            _mode = DaggerfallTransportMode.Foot;
-            return Accepted("You are on foot.");
-        }
-        if (!context.MountsAllowed) return Reject(DaggerfallTransportRejection.Indoor, "Mounts are unavailable indoors.");
-        if (HasHorse(inventory))
-        {
-            _mode = DaggerfallTransportMode.Horse;
-            return Accepted("You mounted your horse.");
-        }
-        if (HasCart(inventory))
-        {
-            _mode = DaggerfallTransportMode.Cart;
-            return Accepted("You took your cart.");
-        }
-        return Reject(DaggerfallTransportRejection.MissingHorse, "You do not own a horse or cart.");
-    }
-
     internal DaggerfallTransportActionResult SelectMount(DaggerfallTransportMode mode, InventoryView inventory,
         DaggerfallTransportAccessContext context)
     {

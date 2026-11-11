@@ -64,6 +64,10 @@ internal sealed class DaggerfallData
         return false;
     }
 
+    /// <summary>A reference to a file of the data container, by its exact content-root-relative path, for the Engine to read.</summary>
+    internal ContentReference OpenReference(string path) =>
+        (_data ?? throw new InvalidOperationException($"'{path}' is read from {DataContainerName}, which is not open.")).OpenReference(path);
+
     /// <summary>Whether a file is at this exact path, without reading it.</summary>
     internal bool Contains(string path)
     {

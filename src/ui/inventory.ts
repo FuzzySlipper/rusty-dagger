@@ -6,6 +6,7 @@ import type { NavigationSurface } from './navigation.js';
 import { redraw } from './redraw.js';
 import { createStepper, type Stepper } from './stepper.js';
 import { inventoryTransferRow, mountTransfer } from './transfer.js';
+import type { WagonProjection } from './projection.js';
 
 export interface InventoryProjection {
   readonly revision: string;
@@ -169,6 +170,11 @@ export type InventoryAction = {
 } | {
   readonly action: 'inventory-sort';
 } | {
+  readonly action: 'wagon-put' | 'wagon-take';
+  readonly revision: string;
+  readonly item: string;
+  readonly amount?: number;
+} | {
   readonly action: 'property-put' | 'property-take';
   readonly key: string;
   readonly item: string;
@@ -196,6 +202,8 @@ const RIGHT_GROUPS = new Set(['clothing', 'weapons']);
 const ALL_TAB = 'all';
 const BANK_TAB = 'bank';
 const STORAGE_TAB = 'storage';
+/** The wagon's load, while the cart is near: a container beside the pack, as storage is. */
+const WAGON_TAB = 'wagon';
 
 /**
  * The inventory: equipment around a paper doll, and the pack as a grid of slots with category tabs.
@@ -214,6 +222,7 @@ export function mountInventory(
   update(value: InventoryProjection): void;
   updatePaperDoll(doll: PaperDoll | null | undefined): void;
   updateStorage(value: PropertyStorage | null): void;
+  updateWagon(value: WagonProjection | null): void;
   refresh(): void;
   release(): boolean;
   openActions(): boolean;
@@ -312,7 +321,10 @@ export function mountInventory(
   const storagePane = document.createElement('div');
   storagePane.className = 'dagger-inventory-storage';
   storagePane.hidden = true;
-  packSection.append(packHeader, actions.element, packPane, bankControls.element, storagePane);
+  const wagonPane = document.createElement('div');
+  wagonPane.className = 'dagger-inventory-wagon';
+  wagonPane.hidden = true;
+  packSection.append(packHeader, actions.element, packPane, bankControls.element, storagePane, wagonPane);
   let storage: PropertyStorage | null = null;
   const storageTransfer = mountTransfer(storagePane, {
     command(side, key, _command, amount) {
@@ -327,6 +339,35 @@ export function mountInventory(
       source: { title: 'Stored here', empty: 'Nothing is stored here.', rows: storage.items.map(item => inventoryTransferRow(item, 'Take')) },
       pack: { title: 'Your pack', empty: 'Your pack is empty.',
         rows: current.items.map(item => inventoryTransferRow(item, 'Store', refusals.get(item.key) ?? null)) },
+      takeAll: null,
+      encumbrance: current.encumbrance ?? null,
+    });
+  };
+
+  let wagon: WagonProjection | null = null;
+  const wagonTransfer = mountTransfer(wagonPane, {
+    command(side, key, _command, amount) {
+      if (wagon === null || current === null) return;
+      // A stack moves the amount chosen; a single item moves itself.
+      const stack = key.startsWith('stack:');
+      claim(stack ? { action: side === 'source' ? 'wagon-take' : 'wagon-put', revision: current.revision, item: key, amount }
+        : { action: side === 'source' ? 'wagon-take' : 'wagon-put', revision: current.revision, item: key });
+    },
+  });
+  const renderWagon = (): void => {
+    if (wagon === null || !wagon.accessible || current === null) { wagonTransfer.update(null); return; }
+    const refused = new Set(wagon.refusedDefinitions);
+    wagonTransfer.update({
+      source: { title: `Wagon · ${formatNumber(wagon.usedKilograms)} / ${formatNumber(wagon.capacityKilograms)} kg`, empty: 'The wagon is empty.',
+        rows: wagon.items.map(item => {
+          const count = Number(item.quantity);
+          return { key: item.key, label: item.label, icon: null, quantity: count > 1 ? String(item.quantity) : null,
+            maximumQuantity: Number.isSafeInteger(count) && count > 0 ? count : 1, facts: '',
+            commands: [{ id: 'move', label: 'Take', takesAmount: true }] };
+        }) },
+      pack: { title: 'Your pack', empty: 'Your pack is empty.',
+        rows: current.items.filter(item => item.equippedSlots.length === 0)
+          .map(item => inventoryTransferRow(item, 'Store', refused.has(item.definition) ? 'That cannot be stored in the wagon.' : null)) },
       takeAll: null,
       encumbrance: current.encumbrance ?? null,
     });
@@ -414,6 +455,7 @@ export function mountInventory(
     renderTabs(value);
     bankControls.render(value.bank ?? null);
     renderStorage();
+    renderWagon();
     const byKey = new Map(value.items.map(item => [item.key, item]));
     sizeGrid(value.gridCapacity ?? 0);
     const byGrid = new Map(value.items.flatMap(item => item.gridSlot === null || item.gridSlot < 0 || item.gridSlot >= gridButtons.length
@@ -472,6 +514,7 @@ export function mountInventory(
   const renderTabs = (value: InventoryProjection): void => {
     const entries: readonly InventoryCategory[] = [{ id: ALL_TAB, label: 'All' }, ...(value.categories ?? []),
       ...(storage !== null ? [{ id: STORAGE_TAB, label: 'Storage' }] : []),
+      ...(wagon?.accessible ? [{ id: WAGON_TAB, label: 'Wagon' }] : []),
       ...(value.bank ? [{ id: BANK_TAB, label: 'Bank' }] : [])];
     if (!entries.some(entry => entry.id === tab)) tab = ALL_TAB;
     redraw(tabs, JSON.stringify([entries, tab]), () => {
@@ -499,10 +542,11 @@ export function mountInventory(
   /** A category tab dims the items outside it; every item keeps its place in the pack. */
   const applyFilter = (): void => {
     const banking = tab === BANK_TAB;
-    packPane.hidden = banking || tab === STORAGE_TAB;
+    packPane.hidden = banking || tab === STORAGE_TAB || tab === WAGON_TAB;
     actions.element.hidden = packPane.hidden;
     bankControls.element.hidden = !banking;
     storagePane.hidden = tab !== STORAGE_TAB;
+    wagonPane.hidden = tab !== WAGON_TAB;
     for (const button of [...gridButtons, ...overflow.querySelectorAll<HTMLButtonElement>('button')]) {
       const item = itemFor(button.dataset.inventoryItem);
       button.classList.toggle('is-filtered-out', item !== undefined && tab !== ALL_TAB && item.category !== tab);
@@ -689,7 +733,7 @@ export function mountInventory(
       open(next) {
         // The bar sits above the pack, so actions opened from the Bank or Storage tab (on a worn
         // item beside it) bring the pack back first.
-        if (tab === BANK_TAB || tab === STORAGE_TAB) selectTab(ALL_TAB);
+        if (tab === BANK_TAB || tab === STORAGE_TAB || tab === WAGON_TAB) selectTab(ALL_TAB);
         if (drag.release() && current !== null) status.textContent = equipmentStatus(current);
         hideTip();
         key = next;
@@ -862,6 +906,7 @@ export function mountInventory(
       if (disposed || current === null) return;
       render(current);
       storageTransfer.refresh();
+      wagonTransfer.refresh();
     },
     /** The owned property's storage while the player is inside it; it becomes the Storage tab. */
     updateStorage(value: PropertyStorage | null): void {
@@ -871,6 +916,16 @@ export function mountInventory(
       renderTabs(current);
       applyFilter();
       renderStorage();
+    renderWagon();
+    },
+    /** The wagon while the cart is near; it becomes the Wagon tab. */
+    updateWagon(value: WagonProjection | null): void {
+      if (disposed) return;
+      wagon = value;
+      if (current === null) return;
+      renderTabs(current);
+      applyFilter();
+      renderWagon();
     },
     /** Close the action bar, or release a held or dragged item; returns whether there was one, so Back does that first. */
     release(): boolean {
@@ -889,6 +944,7 @@ export function mountInventory(
       disposed = true;
       drag.dispose();
       storageTransfer.dispose();
+      wagonTransfer.dispose();
       for (const dispose of disposers) dispose();
       shell.removeEventListener('pointerdown', onPointerDown, true);
       shell.removeEventListener('click', onClickCapture, true);

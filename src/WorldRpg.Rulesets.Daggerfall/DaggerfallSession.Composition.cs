@@ -726,6 +726,7 @@ internal sealed partial class DaggerfallSession
                 Help = definitions.Help,
             };
             partiallyConstructed.Add(_hud);
+            _atlasTiles = composition.Data is { } atlasData && DaggerfallAtlas.Read(atlasData) is { } atlas ? new(atlas, atlasData, engine.Ui) : null;
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments, RestoreDungeonText);
             foreach (var spell in definitions.Magic.Spells.Values.Where(spell => spell.IsCustom))

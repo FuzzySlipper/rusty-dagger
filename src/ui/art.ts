@@ -24,6 +24,11 @@ export interface UiArt {
   readonly images: readonly UiArtImage[];
 }
 
+/// The demanded block: the images from `from` on, so a page that holds the earlier ones takes only what is new.
+export interface UiArtDemanded extends UiArt {
+  readonly from: number;
+}
+
 /// The one player action this module sends: the DOM has no art for the revision a snapshot named.
 export type ArtRequestAction = {
   readonly action: 'art-request';
@@ -81,12 +86,16 @@ export function adopt(value: unknown): string {
 }
 
 /// Adopts the block of images a projection demanded - art read on first use, such as the paper doll's worn
-/// items - into the held art, and returns the demanded revision now held. The block is cumulative, so
-/// adopting it never removes an image.
+/// items or the atlas's tiles - into the held art, and returns the demanded revision now held. The block is
+/// cumulative, so adopting it never removes an image. It carries the images from `from` on: a block that
+/// continues from a count this page does not hold is not adopted, and the revision check asks for it whole.
 export function adoptDemanded(value: unknown): string {
   if (typeof value !== 'object' || value === null) return demandedRevision;
-  const block = value as { revision?: unknown; images?: unknown };
+  const block = value as Partial<Record<keyof UiArtDemanded, unknown>> & Partial<UiArtDemanded>;
   if (typeof block.revision !== 'string' || !Array.isArray(block.images)) return demandedRevision;
+  const from = typeof block.from === 'number' && Number.isInteger(block.from) && block.from > 0 ? block.from : 0;
+  const publication = block.revision.slice(0, block.revision.lastIndexOf('.'));
+  if (from > 0 && demandedRevision !== `${publication}.${from}`) return demandedRevision;
   for (const entry of block.images as readonly UiArtImage[]) {
     if (typeof entry?.id === 'string' && typeof entry?.image === 'string' && entry.image.length > 0) {
       images.set(entry.id, entry.image);

@@ -357,8 +357,12 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             fields = [.. fields, ("uiArtDemandedRevision", builder.String(uiArt.DemandedRevision))];
             if (_demandedPending || uiArt.Demanded.Count != _demandedSent)
             {
-                fields = [.. fields, ("uiArtDemanded", builder.Object(("revision", builder.String(uiArt.DemandedRevision)),
-                    ("images", builder.Array(uiArt.Demanded.Select(image => ArtImage(builder, image)).ToArray()))))];
+                // A DOM that holds the block as far as the last send takes only what was demanded since, so a growing
+                // block - the atlas's tiles among it - never travels whole again; one that asked for it by revision, or
+                // that holds a different count, takes it whole.
+                int from = _demandedPending ? 0 : _demandedSent;
+                fields = [.. fields, ("uiArtDemanded", builder.Object(("revision", builder.String(uiArt.DemandedRevision)), ("from", builder.Number(from)),
+                    ("images", builder.Array(uiArt.Demanded.Skip(from).Select(image => ArtImage(builder, image)).ToArray()))))];
                 _demandedSent = uiArt.Demanded.Count;
                 _demandedPending = false;
             }
@@ -372,43 +376,66 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
     /// The open travel map. Positions are world-map pixels and each image states the world rectangle it
     /// draws, so the DOM places a dot or a region name by proportion and decides nothing about travel.
     /// </summary>
-    private static uint TravelMap(UiValueBuilder builder, DaggerfallTravelMapView map)
+    private uint TravelMap(UiValueBuilder builder, DaggerfallTravelMapView map)
     {
         uint Image(DaggerfallTravelMapImage image) => builder.Object(
             ("image", builder.String(image.MediaId)),
             ("width", builder.Number(image.Width)), ("height", builder.Number(image.Height)),
             ("left", builder.Number(image.Left)), ("top", builder.Number(image.Top)),
             ("right", builder.Number(image.Right)), ("bottom", builder.Number(image.Bottom)));
-        return builder.Object(
-            ("world", Image(map.World)),
+        // The atlas: the page asks for the tiles it shows (atlas-tiles), and draws each granted one from its URL.
+        uint Atlas(DaggerfallAtlasTiles tiles) => builder.Object(("tileSize", builder.Number(tiles.Atlas.TileSize)),
+            ("levels", builder.Array(tiles.Atlas.Levels.Select(level => builder.Object(("level", builder.Number(level.Level)),
+                ("width", builder.Number(level.Width)), ("height", builder.Number(level.Height)),
+                ("columns", builder.Number(level.Columns)), ("rows", builder.Number(level.Rows)))).ToArray())),
+            ("tiles", builder.Array(tiles.Urls.Select(tile => builder.Object(("id", builder.String(tile.Id)), ("url", builder.String(tile.Url)))).ToArray())));
+        // The places, and the legend that names their families, travel only when they changed or the page asked again.
+        bool sendPlaces = map.PlacesRevision != _travelPlacesSent;
+        _travelPlacesSent = map.PlacesRevision;
+        (string, uint)[] places = !sendPlaces ? [] : [
+            ("places", builder.Array(map.Places.Select(place => builder.Object(
+                ("region", builder.Number(place.Id.Region)),
+                ("index", builder.Number(place.Id.Index)),
+                ("name", builder.String(place.Name)),
+                ("kind", builder.String(DaggerfallSiteKinds.Label(place.Kind))),
+                ("category", builder.String(DaggerfallSiteKinds.MapCategory(place.Kind))),
+                ("tier", builder.Number(DaggerfallSiteKinds.MapTier(place.Kind))),
+                ("x", builder.Number(place.MapPixel.X)),
+                ("y", builder.Number(place.MapPixel.Y)))).ToArray())),
+            ("legend", builder.Array(map.Places.Select(place => DaggerfallSiteKinds.MapCategory(place.Kind)).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)
+                .Select(category => builder.Object(
+                    ("category", builder.String(category)),
+                    ("label", builder.String(DaggerfallSiteKinds.MapCategoryLabel(category))))).ToArray()))];
+        return builder.Object([
+            ("worldWidth", builder.Number(DaggerfallTravelMapPixel.Width)), ("worldHeight", builder.Number(DaggerfallTravelMapPixel.Height)),
+            ("atlas", map.Base.Atlas is { } atlas ? Atlas(atlas) : builder.Null()),
+            // The classic map: the world image, and each region's sheet at the rectangle it draws.
+            ("classic", map.Base.Atlas is not null ? builder.Null() : builder.Object(("world", Image(map.Base.ClassicWorld)),
+                ("sheets", builder.Array(map.Base.ClassicSheets.Select(sheet => builder.Object(
+                    ("region", builder.Number(sheet.Region)), ("art", Image(sheet.Image)))).ToArray())))),
             ("player", map.Player is not { } player ? builder.Null() : builder.Object(
-                ("x", builder.Number(player.X)), ("y", builder.Number(player.Y)))),
+                ("x", builder.Number(player.X)), ("y", builder.Number(player.Y)),
+                ("heading", map.Heading is { } heading ? builder.Number(heading) : builder.Null()))),
             ("regions", builder.Array(map.Regions.Select(region => builder.Object(
                 ("region", builder.Number(region.Region)),
                 ("name", builder.String(region.Name)),
                 ("x", builder.Number(region.X)), ("y", builder.Number(region.Y)),
                 ("discovered", builder.Number(region.Discovered)))).ToArray())),
-            ("sheet", map.Sheet is not { } sheet ? builder.Null() : builder.Object(
-                ("region", builder.Number(sheet.Region)),
-                ("name", builder.String(sheet.Name)),
-                ("page", builder.Number(sheet.Page)),
-                ("pages", builder.Number(sheet.Pages)),
-                ("art", Image(sheet.Image)),
-                ("destinations", builder.Array(sheet.Destinations.Select(destination => builder.Object(
-                    ("index", builder.Number(destination.Id.Index)),
-                    ("name", builder.String(destination.Name)),
-                    ("kind", builder.String(DaggerfallSiteKinds.Label(destination.Kind))),
-                    ("category", builder.String(DaggerfallSiteKinds.MapCategory(destination.Kind))),
-                    ("x", builder.Number(destination.MapPixel.X)),
-                    ("y", builder.Number(destination.MapPixel.Y)))).ToArray())),
-                // The legend names the dot families this sheet draws, in the order they first appear.
-                ("legend", builder.Array(sheet.Destinations.Select(destination => DaggerfallSiteKinds.MapCategory(destination.Kind))
-                    .Distinct(StringComparer.Ordinal).Select(category => builder.Object(
-                        ("category", builder.String(category)),
-                        ("label", builder.String(DaggerfallSiteKinds.MapCategoryLabel(category))))).ToArray())))));
+            ("placesRevision", builder.String(map.PlacesRevision)),
+            .. places,
+            // The names of the land and sea, from the game's one list of them, each written from its kind's zoom.
+            ("names", builder.Array(map.Names.Names.Select(name => builder.Object(
+                ("id", builder.String(name.Id)), ("name", builder.String(name.Name)), ("kind", builder.String(name.Kind)),
+                ("shownFrom", builder.String(map.Names.KindOf(name).ShownFrom.ToString().ToLowerInvariant())),
+                ("x", builder.Number(name.X)), ("y", builder.Number(name.Y)))).ToArray()))]);
     }
 
-    private static uint Travel(UiValueBuilder builder, DaggerfallTravelPresentation travel) => builder.Object(
+    private string? _travelPlacesSent;
+
+    /// <summary>Sends the travel map's places on the next snapshot, because the page opened the map or lost them.</summary>
+    internal void RequestTravelPlaces() => _travelPlacesSent = null;
+
+    private uint Travel(UiValueBuilder builder, DaggerfallTravelPresentation travel) => builder.Object(
         ("guildTeleport", builder.Boolean(travel.GuildTeleport)),
         ("destinations", builder.Array(travel.Destinations.Select(destination => builder.Object(
             ("region", builder.Number(destination.Id.Region)),
@@ -429,8 +456,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             // The route the quote measures, in world-map pixels, so the map can draw it.
             ("route", builder.Object(
                 ("fromX", builder.Number(travel.Quote.Origin.X)), ("fromY", builder.Number(travel.Quote.Origin.Y)),
-                ("toX", builder.Number(travel.Quote.Destination.MapPixel.X)), ("toY", builder.Number(travel.Quote.Destination.MapPixel.Y)),
-                ("region", builder.Number(travel.Quote.Destination.Id.Region)))),
+                ("toX", builder.Number(travel.Quote.Destination.MapPixel.X)), ("toY", builder.Number(travel.Quote.Destination.MapPixel.Y)))),
             ("minutes", builder.Number(travel.Quote.TravelMinutes)),
             ("duration", builder.String(DaggerfallCalendar.DescribeDuration(checked((long)travel.Quote.TravelMinutes * DaggerfallCalendar.SecondsPerMinute)))),
             ("distance", builder.Number(travel.Quote.DistanceMapPixels)),

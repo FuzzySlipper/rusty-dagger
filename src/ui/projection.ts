@@ -1,4 +1,4 @@
-import type { ArtTint, UiArt } from './art.js';
+import type { ArtTint, UiArt, UiArtDemanded } from './art.js';
 import type { CharacterProjection } from './character.js';
 import type { ControlsProjection } from './controls.js';
 import type { InventoryProjection } from './inventory.js';
@@ -81,7 +81,7 @@ export interface DaggerHud {
   readonly uiArt?: UiArt | null;
   /** The images projections demanded since the session began; travels when it grew or was asked for. */
   readonly uiArtDemandedRevision?: string;
-  readonly uiArtDemanded?: UiArt | null;
+  readonly uiArtDemanded?: UiArtDemanded | null;
   readonly panelRequest?: PanelRequest | null;
   readonly saveSlots?: SaveSlotProjection;
   /** Why no game can be played, with the step that fixes each problem; the entry screen then offers nothing to play but Import. */
@@ -392,7 +392,6 @@ export interface TransportProjection {
 
 export type TransportAction =
   | { readonly action: 'transport-select'; readonly mode: Exclude<TransportMode, 'ship'> }
-  | { readonly action: 'transport-toggle' }
   | { readonly action: 'transport-leave-ship' }
   | { readonly action: 'transport-board-ship' }
   | { readonly action: 'wagon-put'; readonly revision: string; readonly item: string; readonly amount?: number }

@@ -9,22 +9,42 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// (<see cref="Right"/>, <see cref="Bottom"/>), so a reader places a world pixel on the image by
 /// proportion alone.
 /// </summary>
-internal sealed record DaggerfallTravelMapImage(string MediaId, int Width, int Height, double Left, double Top, double Right, double Bottom)
-{
-    /// <summary>Whether this image draws the world pixel.</summary>
-    internal bool Shows(DaggerfallTravelMapPixel pixel) => pixel.X >= Left && pixel.X < Right && pixel.Y >= Top && pixel.Y < Bottom;
-}
+internal sealed record DaggerfallTravelMapImage(string MediaId, int Width, int Height, double Left, double Top, double Right, double Bottom);
 
-/// <summary>One region the world view offers: where it sits on the world map and how many of its destinations play has revealed.</summary>
+/// <summary>One region as the travel map names it: where its name sits on the world map, and how many of its places play has revealed.</summary>
 internal sealed record DaggerfallTravelMapRegion(int Region, string Name, double X, double Y, int Discovered);
 
-/// <summary>The region sheet the travel map shows and the discovered destinations it draws.</summary>
-internal sealed record DaggerfallTravelMapSheetView(
-    int Region, string Name, int Page, int Pages, DaggerfallTravelMapImage Image, IReadOnlyList<DaggerfallTravelDestination> Destinations);
+/// <summary>One classic region sheet and the region it draws, for the classic map.</summary>
+internal sealed record DaggerfallTravelMapSheet(int Region, DaggerfallTravelMapImage Image);
 
-/// <summary>What the travel map shows: the world view, the player's map pixel, the regions it offers and the open region sheet.</summary>
+/// <summary>
+/// What the travel map is drawn on: the atlas the import drew from the land when there is one and the player has not chosen
+/// classic art, else the classic world image with each region's sheet at the rectangle it draws.
+/// </summary>
+internal sealed record DaggerfallTravelMapBase(DaggerfallAtlasTiles? Atlas, DaggerfallTravelMapImage ClassicWorld, IReadOnlyList<DaggerfallTravelMapSheet> ClassicSheets);
+
+/// <summary>
+/// What the travel map shows: its base, the player's map pixel and heading (degrees clockwise from north), the regions
+/// it names, every place play has revealed, and the names of the land and sea.
+/// </summary>
 internal sealed record DaggerfallTravelMapView(
-    DaggerfallTravelMapImage World, DaggerfallTravelMapPixel? Player, IReadOnlyList<DaggerfallTravelMapRegion> Regions, DaggerfallTravelMapSheetView? Sheet);
+    DaggerfallTravelMapBase Base, DaggerfallTravelMapPixel? Player, double? Heading, IReadOnlyList<DaggerfallTravelMapRegion> Regions,
+    IReadOnlyList<DaggerfallTravelDestination> Places, DaggerfallWorldNames Names)
+{
+    /// <summary>
+    /// Which places the map draws, as one token that changes whenever they do. Thousands of places are known from the
+    /// start, so the list travels only when this changes or the page asks for it again.
+    /// </summary>
+    internal string PlacesRevision { get; } = Revision(Places);
+
+    private static string Revision(IReadOnlyList<DaggerfallTravelDestination> places)
+    {
+        ulong hash = 14695981039346656037UL;
+        foreach (DaggerfallTravelDestination place in places)
+            hash = unchecked((hash ^ (ulong)((place.Id.Region << 16) ^ place.Id.Index)) * 1099511628211UL);
+        return $"{places.Count}.{hash:x16}";
+    }
+}
 
 /// <summary>
 /// The travel map's placement of the published map art over the world map, and the views it reads
@@ -113,40 +133,29 @@ internal sealed class DaggerfallTravelMap
     {
         ArgumentNullException.ThrowIfNull(destinations);
         _anchors = destinations
-            .Where(destination => Sheets.ContainsKey(destination.Id.Region))
             .GroupBy(destination => destination.Id.Region)
             .ToDictionary(group => group.Key, group => (group.Average(item => (double)item.MapPixel.X), group.Average(item => (double)item.MapPixel.Y)));
     }
 
-    /// <summary>The number of sheets a region's map spans, or zero when the travel map has no art for it.</summary>
-    internal static int PageCount(int region) => Sheets.TryGetValue(region, out DaggerfallTravelMapImage[]? sheets) ? sheets.Length : 0;
+    /// <summary>Every classic region sheet with the region it draws, in region order.</summary>
+    private static IReadOnlyList<DaggerfallTravelMapSheet> ClassicSheets { get; } =
+        [.. Sheets.OrderBy(entry => entry.Key).SelectMany(entry => entry.Value.Select(image => new DaggerfallTravelMapSheet(entry.Key, image)))];
 
     /// <summary>
-    /// Reads the travel map's view. <paramref name="discovered"/> are the travel owner's discovered
-    /// destinations; the open sheet draws those inside it.
+    /// Reads the travel map's view. <paramref name="discovered"/> are the travel owner's discovered destinations, the only
+    /// places it draws; <paramref name="atlas"/> is the base drawn from the land, or null for the classic art.
     /// </summary>
     internal DaggerfallTravelMapView Read(IReadOnlyList<DaggerfallTravelDestination> discovered, IReadOnlyList<string> regionNames,
-        DaggerfallTravelMapPixel? player, int? region, int page)
+        DaggerfallTravelMapPixel? player, double? heading, DaggerfallAtlasTiles? atlas, DaggerfallWorldNames names)
     {
         ArgumentNullException.ThrowIfNull(discovered);
         ArgumentNullException.ThrowIfNull(regionNames);
+        ArgumentNullException.ThrowIfNull(names);
         Dictionary<int, int> counts = discovered.GroupBy(destination => destination.Id.Region).ToDictionary(group => group.Key, group => group.Count());
-        DaggerfallTravelMapRegion[] regions = [.. Sheets.Keys.Order().Select(id =>
-        {
-            (double x, double y) = _anchors.TryGetValue(id, out (double X, double Y) anchor) ? anchor : Center(Sheets[id][0]);
-            return new DaggerfallTravelMapRegion(id, DaggerfallRegionNames.Name(regionNames, id), x, y, counts.GetValueOrDefault(id));
-        })];
-        DaggerfallTravelMapSheetView? sheet = null;
-        if (region is int open && Sheets.TryGetValue(open, out DaggerfallTravelMapImage[]? sheets) && page >= 0 && page < sheets.Length)
-        {
-            DaggerfallTravelMapImage image = sheets[page];
-            sheet = new(open, DaggerfallRegionNames.Name(regionNames, open), page, sheets.Length, image,
-                [.. discovered.Where(destination => destination.Id.Region == open && image.Shows(destination.MapPixel))]);
-        }
-        return new(World, player, regions, sheet);
+        DaggerfallTravelMapRegion[] regions = [.. _anchors.Keys.Order().Select(id =>
+            new DaggerfallTravelMapRegion(id, DaggerfallRegionNames.Name(regionNames, id), _anchors[id].X, _anchors[id].Y, counts.GetValueOrDefault(id)))];
+        return new(new(atlas, World, ClassicSheets), player, heading, regions, discovered, names);
     }
-
-    private static (double X, double Y) Center(DaggerfallTravelMapImage image) => ((image.Left + image.Right) / 2, (image.Top + image.Bottom) / 2);
 
     private static DaggerfallTravelMapImage Sheet(string mediaId, double originX, double originY, int scale = 1) =>
         new(mediaId, SheetWidth, SheetHeight, originX, originY, originX + (double)SheetWidth / scale, originY + (double)SheetHeight / scale);

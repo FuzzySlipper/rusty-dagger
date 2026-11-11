@@ -52,7 +52,6 @@ public sealed class DaggerfallTravelSessionTests
         Assert.Equal(quote.Origin.Y, Convert.ToInt32(route["fromY"]));
         Assert.Equal(quote.Destination.MapPixel.X, Convert.ToInt32(route["toX"]));
         Assert.Equal(quote.Destination.MapPixel.Y, Convert.ToInt32(route["toY"]));
-        Assert.Equal(quote.Destination.Id.Region, Convert.ToInt32(route["region"]));
     }
 
     [Fact]
@@ -188,19 +187,20 @@ public sealed class DaggerfallTravelSessionTests
     }
 
     [Fact]
-    public void The_travel_map_projects_regions_and_the_open_sheet_s_discovered_destinations_at_their_map_pixels()
+    public void The_travel_map_projects_the_regions_the_discovered_places_at_their_map_pixels_and_the_player()
     {
         using Fixture fixture = new();
         Assert.Null(fixture.Session.ReadTravelPresentation().Map);
         fixture.Submit(new { action = "travel-map", open = true });
         DaggerfallTravelMapView world = fixture.Session.ReadTravelPresentation().Map!;
-        Assert.Equal("map.trav0i00", world.World.MediaId);
-        Assert.Null(world.Sheet);
+        // The test content carries no atlas, so the map is drawn on the classic art.
+        Assert.Null(world.Base.Atlas);
+        Assert.Equal("map.trav0i00", world.Base.ClassicWorld.MediaId);
         Assert.NotNull(world.Player);
-        Assert.True(world.World.Shows(world.Player.Value));
+        Assert.NotNull(world.Heading);
 
-        // Every region the map offers carries its published name, a place on the world view, and how many
-        // destinations the travel owner reports discovered there.
+        // Every region carries its published name, a place on the map, and how many places the travel owner
+        // reports discovered there.
         DaggerfallSiteId destination = fixture.Destination.Site!.Value;
         DaggerfallTravelMapRegion region = Assert.Single(world.Regions, candidate => candidate.Region == destination.Region);
         IReadOnlyList<string> names = TestPayload.Definitions.BuildingNames.RegionNames;
@@ -209,45 +209,19 @@ public sealed class DaggerfallTravelSessionTests
         int discovered = regionSites.Count(site => site.Exterior is not null && site.Kind != DaggerfallSiteKind.HomeYourShips
             && fixture.Session.Site.IsDiscovered(site.Id) && site.Exterior.MapPixelX == site.MapPixelX && site.Exterior.MapPixelY == site.MapPixelY);
         Assert.Equal(discovered, region.Discovered);
-        Assert.True(world.World.Shows(new((int)region.X, (int)region.Y)));
 
-        // Opening the region shows its sheet with the discovered destinations it draws, each at its own
-        // map pixel with its kind; an undiscovered site of the region is never drawn.
-        int pages = DaggerfallTravelMap.PageCount(destination.Region);
-        Assert.True(pages > 0);
-        DaggerfallTravelMapSheetView? sheet = null;
-        for (int page = 0; page < pages && sheet is null; page++)
-        {
-            fixture.Submit(new { action = "travel-map", open = true, region = destination.Region, page });
-            DaggerfallTravelMapSheetView candidate = fixture.Session.ReadTravelPresentation().Map!.Sheet!;
-            Assert.Equal(page, candidate.Page);
-            if (candidate.Destinations.Any(item => item.Id == destination)) sheet = candidate;
-        }
-        Assert.NotNull(sheet);
-        Assert.Equal(names[destination.Region], sheet.Name);
-        Assert.Equal(pages, sheet.Pages);
-        Assert.StartsWith("map.fmap", sheet.Image.MediaId, StringComparison.Ordinal);
-        DaggerfallTravelDestination drawn = sheet.Destinations.Single(item => item.Id == destination);
+        // The map draws every discovered place at its own map pixel with its kind; an undiscovered place is never drawn.
+        DaggerfallTravelDestination drawn = world.Places.Single(item => item.Id == destination);
         DaggerfallSiteRecord record = regionSites.Single(site => site.Id == destination);
         Assert.Equal(new DaggerfallTravelMapPixel(record.MapPixelX, record.MapPixelY), drawn.MapPixel);
         Assert.Equal(record.Kind, drawn.Kind);
-        Assert.All(sheet.Destinations, item =>
-        {
-            Assert.Equal(destination.Region, item.Id.Region);
-            Assert.True(fixture.Session.Site.IsDiscovered(item.Id));
-            Assert.True(sheet.Image.Shows(item.MapPixel));
-        });
+        Assert.All(world.Places, item => Assert.True(fixture.Session.Site.IsDiscovered(item.Id)));
 
         // Choosing the dot is the ordinary preview: the same quote the destination list produces.
         DaggerfallTravelQuote quote = fixture.Preview(inn: false);
         Assert.Equal(destination, quote.Destination.Id);
         Assert.Equal(quote.Origin, world.Player);
 
-        // A page the region does not have is refused in words and leaves the open sheet as it was.
-        fixture.Submit(new { action = "travel-map", open = true, region = destination.Region, page = pages });
-        DaggerfallTravelPresentation refused = fixture.Session.ReadTravelPresentation();
-        Assert.Equal(sheet.Image, refused.Map!.Sheet!.Image);
-        Assert.Equal("The travel map has no such view of that region.", refused.Message);
         fixture.Submit(new { action = "travel-map", open = false });
         Assert.Null(fixture.Session.ReadTravelPresentation().Map);
 
@@ -255,7 +229,7 @@ public sealed class DaggerfallTravelSessionTests
         // host pause keeps it for the resume.
         foreach (ProductMode leaving in new[] { ProductMode.Title, ProductMode.Dead })
         {
-            fixture.Submit(new { action = "travel-map", open = true, region = destination.Region, page = 0 });
+            fixture.Submit(new { action = "travel-map", open = true });
             Assert.NotNull(fixture.Session.ReadTravelPresentation().Map);
             fixture.Session.ApplyProductMode(ProductMode.Paused);
             Assert.NotNull(fixture.Session.ReadTravelPresentation().Map);
@@ -266,12 +240,32 @@ public sealed class DaggerfallTravelSessionTests
     }
 
     [Fact]
+    public void The_maps_places_travel_once_for_each_revision_and_again_when_the_map_is_opened()
+    {
+        using Fixture fixture = new();
+        Dictionary<string, object?> Map() => Assert.IsType<Dictionary<string, object?>>(Assert.IsType<Dictionary<string, object?>>(
+            Assert.IsType<Dictionary<string, object?>>(fixture.Engine.Published())["travel"])["map"]);
+        fixture.Submit(new { action = "travel-map", open = true });
+        Dictionary<string, object?> opened = Map();
+        object?[] places = Assert.IsType<object?[]>(opened["places"]);
+        Assert.NotEmpty(places);
+        Assert.Equal(fixture.Session.ReadTravelPresentation().Map!.Places.Count, places.Length);
+        // The next snapshot names the same places by revision alone; opening the map again sends them again.
+        fixture.Submit(new { action = "travel-search", text = "" });
+        Dictionary<string, object?> next = Map();
+        Assert.False(next.ContainsKey("places"));
+        Assert.Equal(opened["placesRevision"], next["placesRevision"]);
+        fixture.Submit(new { action = "travel-map", open = true });
+        Assert.Equal(places.Length, Assert.IsType<object?[]>(Map()["places"]).Length);
+    }
+
+    [Fact]
     public void Beginning_a_journey_closes_the_travel_map()
     {
         using Fixture fixture = new();
         fixture.AddGold(1000);
         DaggerfallSiteId destination = fixture.Destination.Site!.Value;
-        fixture.Submit(new { action = "travel-map", open = true, region = destination.Region, page = 0 });
+        fixture.Submit(new { action = "travel-map", open = true });
         Assert.NotNull(fixture.Session.ReadTravelPresentation().Map);
         fixture.Accept(fixture.Preview(inn: false));
         Assert.Equal(DaggerfallTravelOutcome.Arrived, fixture.Session.State.Travel.LastResult!.Outcome);

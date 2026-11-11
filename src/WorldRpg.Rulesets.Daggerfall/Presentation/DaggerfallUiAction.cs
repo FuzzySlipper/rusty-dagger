@@ -11,11 +11,15 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
     string? QuestInstance = null, int? QuestMessage = null, int? QuestChoice = null, string? QuestPrompt = null, string? QuestDelivery = null,
     string? Note = null, string? Text = null, int? Page = null, int? Destination = null,
     string? Tone = null, string? Topic = null, int? Hours = null, int? Region = null, int? Days = null,
-    bool Cautious = false, bool Inn = false, bool Ship = false, bool Open = false, int? Question = null, int? Answer = null, float? Sensitivity = null, bool? Invert = null, bool? Enabled = null, float? Scale = null)
+    bool Cautious = false, bool Inn = false, bool Ship = false, bool Open = false, int? Question = null, int? Answer = null, float? Sensitivity = null, bool? Invert = null, bool? Enabled = null, float? Scale = null,
+    IReadOnlyList<DaggerfallAtlasTileRequest>? Tiles = null)
 {
     /// <summary>The typed action the wire name names; resolved once when the action is built.</summary>
     internal DaggerfallUiActionKind Kind { get; } = DaggerfallUiAction.KindOf(Action);
 }
+
+/// <summary>One atlas tile the page asks for: its level, column and row.</summary>
+internal readonly record struct DaggerfallAtlasTileRequest(int Level, int Column, int Row);
 
 /// <summary>Every player action the <c>dagger.ui.action.v1</c> contract carries, by meaning.</summary>
 internal enum DaggerfallUiActionKind
@@ -28,9 +32,9 @@ internal enum DaggerfallUiActionKind
     ActivationMode, Attack, Loot, WeaponToggle, Menu, TutorialStart, TutorialContinue, TutorialEnd,
     DialogueTone, DialogueTopic, DialogueClose, TavernBuy, TrainingCommit, MerchantBuy, MerchantSell, MerchantRepair, MerchantCollectRepair, MerchantIdentify, MerchantShoplift, MerchantQuote,
     LegalChoice, CreateItemSelect, CreateItemCancel, DispelSelect, DispelCancel, TeleportSelect, IdentifySelect, IdentifyCancel,
-    TransportSelect, TransportToggle, TransportLeaveShip, TransportBoardShip,
+    TransportSelect, TransportLeaveShip, TransportBoardShip,
     PropertyBuy, PropertySell, PropertyEnter, PropertyPut, PropertyTake,
-    TravelSearch, TravelPreview, TravelAccept, TravelMap, MapOpen, MapBuilding,
+    TravelSearch, TravelPreview, TravelAccept, TravelMap, AtlasTiles, MapOpen, MapBuilding,
     Rest, LodgingQuote, LodgingBook,
     WagonPut, WagonTake,
     QuestChoice, QuestDismiss, QuestOfferAnswer,
@@ -213,7 +217,6 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.MerchantShoplift, "merchant-shoplift", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.MerchantQuote, "merchant-quote", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TransportSelect, "transport-select", DaggerfallUiPhases.Interaction),
-        new(DaggerfallUiActionKind.TransportToggle, "transport-toggle", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TransportBoardShip, "transport-board-ship", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.PropertyBuy, "property-buy", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.PropertySell, "property-sell", DaggerfallUiPhases.Interaction),
@@ -230,6 +233,7 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.TravelPreview, "travel-preview", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TravelAccept, "travel-accept", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TravelMap, "travel-map", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.AtlasTiles, "atlas-tiles", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.LodgingQuote, "lodging-quote", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.LodgingBook, "lodging-book", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.Rest, "rest", DaggerfallUiPhases.Interaction),
@@ -306,6 +310,7 @@ internal static class DaggerfallUiAction
             float? sensitivity = null, scale = null; bool? invert = null, enabled = null;
             bool confirm = false, cautious = false, inn = false, ship = false, open = false;
             int? questChoice = null, classQuestion = null, classAnswer = null;
+            List<DaggerfallAtlasTileRequest>? tiles = null;
             foreach (JsonProperty property in root.EnumerateObject())
             {
                 if (!fields.Add(property.Name)) return null;
@@ -322,6 +327,19 @@ internal static class DaggerfallUiAction
                     else if (property.Name == "hours") hours = grid;
                     else if (property.Name == "days") days = grid;
                     else region = grid;
+                    continue;
+                }
+                if (property.Name == "tiles")
+                {
+                    // [[level, column, row], ...]: a bounded read of what the page shows.
+                    if (property.Value.ValueKind != JsonValueKind.Array || property.Value.GetArrayLength() is 0 or > Content.DaggerfallAtlas.MaximumTilesPerRequest) return null;
+                    tiles = [];
+                    foreach (JsonElement tile in property.Value.EnumerateArray())
+                    {
+                        if (tile.ValueKind != JsonValueKind.Array || tile.GetArrayLength() != 3
+                            || !tile[0].TryGetInt32(out int level) || !tile[1].TryGetInt32(out int column) || !tile[2].TryGetInt32(out int row)) return null;
+                        tiles.Add(new(level, column, row));
+                    }
                     continue;
                 }
                 if (property.Name == "sensitivity")
@@ -507,10 +525,8 @@ internal static class DaggerfallUiAction
                 return fields.SetEquals(["action", "region", "destination", "cautious", "inn", "ship"])
                     && region is >= 0 && destination is >= 0
                     ? new(action, Region: region, Destination: destination, Cautious: cautious, Inn: inn, Ship: ship) : null;
-            if (action == "travel-map")
-                return fields.SetEquals(["action", "open"]) ? new(action, Open: open)
-                    : fields.SetEquals(["action", "open", "region", "page"]) && open && region is >= 0 && page is >= 0
-                        ? new(action, Open: open, Region: region, Page: page) : null;
+            if (action == "atlas-tiles") return fields.SetEquals(["action", "tiles"]) && tiles is not null ? new(action, Tiles: tiles) : null;
+            if (action == "travel-map") return fields.SetEquals(["action", "open"]) ? new(action, Open: open) : null;
             if (action == "dungeon-text-answer")
                 return fields.SetEquals(["action", "revision", "item", "text"])
                     && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
@@ -630,7 +646,7 @@ internal static class DaggerfallUiAction
                 return fields.SetEquals(["action", "mode"])
                     && mode is "foot" or "horse" or "cart"
                     ? new(action, Mode: mode) : null;
-            if (action is "transport-toggle" or "transport-leave-ship" or "transport-board-ship")
+            if (action is "transport-leave-ship" or "transport-board-ship")
                 return fields.SetEquals(["action"]) ? new(action) : null;
             if (action == "rest")
             {

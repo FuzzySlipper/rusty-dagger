@@ -251,6 +251,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     if (activePanel === 'loot' && action !== 'loot') closeLoot();
     reportMap(action === 'map');
     if (action !== 'transport') travelView.hide();
+    else travelView.show();
     activePanel = action;
     home.hidden = true;
     panel.hidden = false;
@@ -279,8 +280,8 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     const content: HTMLElement | null = action === 'loot'
       ? lootRoot.querySelector<HTMLButtonElement>('[data-transfer-move]:not(:disabled)') ?? lootRoot.querySelector<HTMLButtonElement>('.dagger-transfer-take-all:not(:disabled)')
       : action === 'inventory' ? inventoryRoot.querySelector<HTMLButtonElement>('.dagger-inventory-grid [data-inventory-item], .dagger-inventory-grid button')
-      // Travel opens on choosing where to go: the chosen place on an open map, else the map's own button.
-      : action === 'transport' ? transportRoot.querySelector<HTMLButtonElement>('.dagger-travel-map-dot[aria-pressed="true"], .dagger-travel-map-toggle')
+      // Travel opens on the map: the chosen place on it, else the map itself.
+      : action === 'transport' ? transportRoot.querySelector<HTMLElement>('.dagger-atlas-place[aria-pressed="true"], .dagger-atlas')
       // Rest opens on its first action that can be taken, with its hours just above it.
       : action === 'rest' ? restRoot.querySelector<HTMLButtonElement>('[data-rest-mode]:not(:disabled)')
       // The journal opens on the first entry of the page it shows, or on that page's tab when it is empty.
@@ -451,7 +452,8 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       inventoryView.updatePaperDoll(value.character && isCharacterProjection(value.character) ? value.character.paperDoll ?? null : null);
       propertyView.update(value.property ?? null);
       inventoryView.updateStorage(value.property?.storage ?? null);
-      transportView.update(isTransportProjection(value.transport) ? value.transport : null, value.inventory);
+      inventoryView.updateWagon(isTransportProjection(value.transport) ? value.transport.wagon : null);
+      transportView.update(isTransportProjection(value.transport) ? value.transport : null);
       lastMap = value.map;
       mapView.update(isMapProjection(value.map) ? value.map : null);
       travelView.update(isTravelProjection(value.travel) ? value.travel : null);
@@ -550,6 +552,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       inventoryView.refresh();
       characterView.refresh();
       lootView.refresh();
+      travelView.refreshArt();
     },
     dispose() {
       reportMap(false);

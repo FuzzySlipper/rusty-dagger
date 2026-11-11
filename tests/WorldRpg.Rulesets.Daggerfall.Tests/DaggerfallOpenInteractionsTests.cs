@@ -72,7 +72,6 @@ public sealed class DaggerfallOpenInteractionsTests
     [InlineData("CharacterLevelAllocate")]
     [InlineData("CharacterLevelCommit")]
     [InlineData("TransportSelect")]
-    [InlineData("TransportToggle")]
     [InlineData("TransportLeaveShip")]
     [InlineData("Rest")]
     [InlineData("WagonPut")]

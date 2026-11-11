@@ -499,6 +499,17 @@ public sealed class UiArtDeliverySessionTests
         Assert.Equal(steel.DyeMask!.MediaId, metal["mask"]);
         Assert.Subset(Assert.IsType<object?[]>(Assert.IsType<Dictionary<string, object?>>(hud["uiArtDemanded"])["images"]).Cast<Dictionary<string, object?>>()
             .Select(image => Assert.IsType<string>(image["id"])).ToHashSet(), new HashSet<string> { cuirassIcon, steel.DyeMask.MediaId });
+        // The grown block continues from what the first snapshot sent, so the doll's art is not sent again; asking for the
+        // block by its revision, as a page that lost it does, brings it whole.
+        Dictionary<string, object?> grown = Assert.IsType<Dictionary<string, object?>>(hud["uiArtDemanded"]);
+        string[] Ids(Dictionary<string, object?> block) => [.. Assert.IsType<object?[]>(block["images"]).Cast<Dictionary<string, object?>>().Select(image => Assert.IsType<string>(image["id"]))];
+        Assert.Equal(Ids(demanded).Length, Convert.ToInt32(grown["from"], CultureInfo.InvariantCulture));
+        Assert.DoesNotContain(bodyId, Ids(grown));
+        session.Update(new ProductUpdate(OuterUpdate(3), [Ui(JsonSerializer.Serialize(new { action = "art-request", revision = hud["uiArtDemandedRevision"] }))]));
+        Dictionary<string, object?> whole = Assert.IsType<Dictionary<string, object?>>(Assert.IsType<Dictionary<string, object?>>(engine.Published())["uiArtDemanded"]);
+        Assert.Equal(0, Convert.ToInt32(whole["from"], CultureInfo.InvariantCulture));
+        Assert.Contains(bodyId, Ids(whole));
+        Assert.Contains(cuirassIcon, Ids(whole));
 
         // The item lists' glints draw from their refreshed atlases, delivered with the session, at the donor's rates, the
         // slot holding the classic part of a refreshed frame.

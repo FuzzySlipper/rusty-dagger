@@ -27,14 +27,14 @@ public sealed class DaggerfallTransportTests
     }
 
     [Fact]
-    public void Toggle_mount_prefers_horse_and_interior_transition_removes_mount()
+    public void Mounting_the_horse_stops_running_and_an_interior_transition_leaves_it()
     {
         using Fixture fixture = new();
         fixture.AddCart(20);
         fixture.AddHorse(21);
         DaggerfallTransportPolicy policy = new(DaggerfallTuning.Defaults.Transport);
 
-        DaggerfallTransportActionResult mounted = policy.ToggleMount(fixture.ReadPlayer(), new());
+        DaggerfallTransportActionResult mounted = policy.SelectMount(DaggerfallTransportMode.Horse, fixture.ReadPlayer(), new());
 
         Assert.True(mounted.Applied);
         Assert.Equal(DaggerfallTransportMode.Horse, policy.Mode);
@@ -54,7 +54,7 @@ public sealed class DaggerfallTransportTests
         using Fixture fixture = new();
         DaggerfallTransportPolicy policy = new(DaggerfallTuning.Defaults.Transport);
 
-        DaggerfallTransportActionResult missing = policy.ToggleMount(fixture.ReadPlayer(), new());
+        DaggerfallTransportActionResult missing = policy.SelectMount(DaggerfallTransportMode.Horse, fixture.ReadPlayer(), new());
         Assert.Equal(DaggerfallTransportRejection.MissingHorse, missing.Rejection);
 
         fixture.AddHorse(22);

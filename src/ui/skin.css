@@ -111,7 +111,7 @@
 /* Buttons: every game-UI button is the stone button unless it is a slot, a tab, a map marker or a menu
    entry, which have their own primitives. Hover and keyboard or controller focus light it; pressed
    sinks it; disabled dims it. Focus also keeps an outline, so it is visible on any ground. */
-.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-travel-map-layer > *) {
+.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-atlas-place) {
   border: 1px solid var(--brass);
   border-width: var(--skin-stone-button-width, 1px);
   border-image: var(--skin-stone-button) var(--skin-stone-button-slice) fill / var(--skin-stone-button-width) stretch;
@@ -123,17 +123,17 @@
 }
 /* Focus rings: :focus-visible, and any focus while keys or a controller move it. Servo never matches
    :focus-visible after script focus, which is how navigation moves it, so keyed navigation says so itself. */
-.dagger-hud:not(.keyed-navigation) button:not(.dagger-slot, [role="tab"], .dagger-travel-map-layer > *):hover:not(:disabled),
-.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-travel-map-layer > *):is(:focus-visible, :where(.keyed-navigation) :focus):not(:disabled) {
+.dagger-hud:not(.keyed-navigation) button:not(.dagger-slot, [role="tab"], .dagger-atlas-place):hover:not(:disabled),
+.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-atlas-place):is(:focus-visible, :where(.keyed-navigation) :focus):not(:disabled) {
   border-image-source: var(--skin-stone-button-focus, none);
   background: var(--skin-button-face, #594521);
 }
-.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-travel-map-layer > *):active:not(:disabled),
-.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-travel-map-layer > *)[aria-pressed="true"] {
+.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-atlas-place):active:not(:disabled),
+.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-atlas-place)[aria-pressed="true"] {
   border-image-source: var(--skin-stone-button-pressed, none);
   background: var(--skin-button-face, #5a4520);
 }
-.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-travel-map-layer > *):disabled {
+.dagger-hud button:not(.dagger-slot, [role="tab"], .dagger-atlas-place):disabled {
   border-image-source: var(--skin-stone-button-disabled, none);
   color: #a39a85;
   cursor: default;

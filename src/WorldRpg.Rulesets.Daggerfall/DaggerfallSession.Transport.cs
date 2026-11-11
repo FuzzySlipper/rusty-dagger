@@ -38,7 +38,6 @@ internal sealed partial class DaggerfallSession
     {
         DaggerfallTransportActionResult result = action.Kind switch
         {
-            DaggerfallUiActionKind.TransportToggle => State.Transport.ToggleMount(State.Inventory.Read(), TransportAccess()),
             DaggerfallUiActionKind.TransportSelect => State.Transport.SelectMount(action.Mode switch
             {
                 "foot" => DaggerfallTransportMode.Foot,

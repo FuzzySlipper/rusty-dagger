@@ -26,7 +26,6 @@ internal sealed partial class DaggerfallSession
         _guildTeleportProvider = provider;
         _travelSelectedDestination = null;
         _travelMapOpen = true;
-        _travelMapRegion = null;
         _travelMessage = "Select a destination for free guild teleportation.";
         RequestPanel(DaggerfallPanel.Travel);
         return new(true, DaggerfallGuildProviderDenial.None, _travelMessage);
@@ -35,25 +34,19 @@ internal sealed partial class DaggerfallSession
     private bool GuildTeleportAvailable() => _guildTeleportProvider is { } provider
         && State.ConcreteGuildServices.Evaluate(DaggerfallConcreteGuildCatalog.MagesFactionId,
             DaggerfallConcreteGuildService.Teleport, checked((int)_time.Calendar.DayNumber), new(provider)).CanUse;
-    private int? _travelMapRegion;
-    private int _travelMapPage;
+    /// <summary>The atlas the import drew and the tiles granted to the page, or null when the data container carries none and the travel map draws classic art.</summary>
+    private DaggerfallAtlasTiles? _atlasTiles;
 
-    /// <summary>Opens, closes or turns the travel map. Which view is open is presentation state and is not saved.</summary>
+    /// <summary>Grants the atlas tiles the page shows, which the map then names with the URLs it draws them from.</summary>
+    private void DemandAtlasTiles(IReadOnlyList<DaggerfallAtlasTileRequest> tiles) => _atlasTiles?.Grant(tiles);
+
+    /// <summary>Opens or closes the travel map. Whether it is open is presentation state and is not saved.</summary>
     private void ChangeTravelMap(DaggerfallPlayerUiAction action)
     {
-        if (!action.Open)
-        {
-            CloseTravelMap();
-            return;
-        }
-        if (action.Region is int region && action.Page is int page && page >= DaggerfallTravelMap.PageCount(region))
-        {
-            _travelMessage = "The travel map has no such view of that region.";
-            return;
-        }
+        if (!action.Open) { CloseTravelMap(); return; }
         _travelMapOpen = true;
-        _travelMapRegion = action.Region;
-        _travelMapPage = action.Region is null ? 0 : action.Page ?? 0;
+        // An open map's places travel again: the page opened it afresh, or asks because it lost them.
+        _hud.RequestTravelPlaces();
     }
 
     /// <summary>
@@ -64,7 +57,7 @@ internal sealed partial class DaggerfallSession
     private void CloseTravelMap()
     {
         _guildTeleportProvider = null;
-        _travelMapOpen = false; _travelMapRegion = null; _travelMapPage = 0;
+        _travelMapOpen = false;
     }
 
     private DaggerfallTravelMapView ReadTravelMap()
@@ -73,7 +66,11 @@ internal sealed partial class DaggerfallSession
         DaggerfallTravelMapPixel? player;
         try { player = QuestTravelOrigin(); }
         catch (InvalidOperationException) { player = null; }
-        return _travelMap.Read(_travelPolicy.SupportedDestinations(), _definitions.BuildingNames.RegionNames, player, _travelMapRegion, _travelMapPage);
+        // North is up and yaw turns to the right, so the heading reads as a compass bearing.
+        double? heading = player is null ? null : ((State.PlayerControl.YawRadians * 180 / Math.PI) % 360 + 360) % 360;
+        // The atlas is the land's own map; the classic art set draws the classic map instead.
+        return _travelMap.Read(_travelPolicy.SupportedDestinations(), _definitions.BuildingNames.RegionNames, player, heading,
+            _controlSettings.ClassicArt ? null : _atlasTiles, _definitions.WorldNames);
     }
 
     private void ChangeTravel(DaggerfallPlayerUiAction action)
