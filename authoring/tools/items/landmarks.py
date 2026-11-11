@@ -12,7 +12,8 @@ see doll_preview.py), the same way for a classic source and a generated final:
 
 The outline check compares the whole silhouette: for each band of the classic body (neck and shoulders, arms
 and torso, hips and thighs, shins, feet) the 95th-percentile distance from each outline to the other, in doll
-units. A landmark or band beyond TOLERANCE fails.
+units. A landmark or band beyond TOLERANCE (two doll units, plus a gradual landmark's span) fails. Run the check on
+bodies and heads before dressing (dress.py) or promoting them.
 
 Every race of a morph wears one generated body shape (bodies.py), so a body is checked by morph: its body
 landmarks and outline against the classic body of the morph's base race, and its head box against its own

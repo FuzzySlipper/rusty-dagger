@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Writes each weapon model's lightning: where an enchanted weapon's arcs crawl over it (authoring/docs/weapons.md).
+"""Writes each weapon model's lightning: where an enchanted weapon's arcs crawl over it (design: wiki/rusty-dagger/first-person-held-art).
 
-usage: arcs.py [NAME ...]
+usage: arcs.py [NAME ...]        rerun it whenever a model changes
 
 Reads the committed models in content/worldrpg/first-person/weapons and writes NAME.arcs.json beside each. All of it works
 on the model's metal, or all of the model when it has no metal slot; on a bow only the middle, which the draw barely bends,

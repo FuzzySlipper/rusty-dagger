@@ -2,6 +2,10 @@
 
   blender -b --factory-startup --python authoring/tools/weapons/build.py -- NAME ICON.png OUT_DIR
 
+Build each rev into a new OUT_DIR, so a failed build cannot leave an older model to be mistaken for the new one. A head
+needs something holding it to its haft (give an axe a lathe socket running up into the head), and a detail thinner than
+about a centimetre reads as a crack at this crunch: leave it to the paint rather than making it a part.
+
 Each part is the icon's pixels of one material class (steel, brass, leather), picked by `pick`: `top` or `bottom`
 when the class appears more than once (a guard and a pommel), a piece's index counted from the top (a ring between
 them), or `all` its pieces; build.json lists every piece per class to choose from. A `flat` part is two sheets that

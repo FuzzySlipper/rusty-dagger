@@ -81,7 +81,7 @@ def main():
         if area == "ui":
             (root / "README.txt").write_text(
                 "Classic 2D screens and escort portraits the game still draws, from the import's published images.\n"
-                "Reproduce: authoring/tools/ui/export.py (after the import). See authoring/docs/ui-and-2d.md.\n")
+                "Reproduce: authoring/tools/ui/export.py (after the import). See authoring/README.md.\n")
         with open(root / ("index.csv" if area == "ui" else "backgrounds.csv"), "w", newline="") as f:
             writer = csv.DictWriter(f, ["mediaId", "directory", "image", "source"])
             writer.writeheader()

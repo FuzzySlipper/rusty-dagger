@@ -9,6 +9,11 @@ authoring/gen-raw/weapons/<name>/h3-<rev>/: icon.png (the joined icon, or else t
 gap the hand left in a straight grip filled, stood upright, point up; a spec `flip` turns a joined icon over) and spec.json for asset-pipeline's
 legacy/experiments/h3-turnaround/run_turnaround.py. A changed request needs a new rev, so an older
 attempt is never mistaken for the new one.
+
+Look at joined.png before `prepare`: a join can leave a gap or redraw a fitting. A weapon with no paper-doll layer copies
+its accepted item icon to joined.png. Run the request on the lab 5090 with run_turnaround.py inside
+`asset-resources run --host gpu-lab --resource lab-comfy`, from the asset-pipeline root, two seeds at 25 steps. Look at
+every attempt, then copy eight frames of the chosen orbit to h3-<rev>/views/ for sheet.py.
 """
 import argparse
 import json

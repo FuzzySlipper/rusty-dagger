@@ -4,7 +4,7 @@ import { createLiveDebugHttpTransport, mountDeveloperShell, type DeveloperShellM
 /**
  * Developer tools: the Engine's developer shell docked beside play, with Dagger's own panel and the first-person
  * workbench (the Engine tunables panel over the ruleset's held-art workbench, `held.motion*`). This is diagnostic UI
- * (`docs/game-ui.md` "Diagnostic UI"): it lives outside the game's shell and skin, carries no game state, and opens
+ * (`src/ui/AGENTS.md`, "Ownership"): it lives outside the game's shell and skin, carries no game state, and opens
  * only when the host runs with live-debug, which it asks the host before opening. The Dagger panel pauses and steps
  * the Engine's held time, flies the Engine's observer camera, and turns the ruleset's debug overlay sets on and off;
  * every control is one or two debug commands, the same ones the console takes.

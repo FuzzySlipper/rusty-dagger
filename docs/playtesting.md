@@ -1,277 +1,66 @@
 # Adaptive playtesting
 
-Dagger uses the shared Engine/Crew playtest tools for its live 3D world. The
-tester chooses short actions from observations; C# remains the gameplay owner.
-Use Crew's [agent prompt guide](https://github.com/FuzzySlipper/crew-services/blob/main/docs/playtest-agent-prompts.md)
-and [integration guide](https://github.com/FuzzySlipper/crew-services/blob/main/docs/playtest-product-integration.md).
+Dagger uses the shared Engine/Crew playtest tools; the tester chooses short actions from observations and C# stays
+the gameplay owner. Follow Crew's
+[agent prompt guide](https://github.com/FuzzySlipper/crew-services/blob/main/docs/playtest-agent-prompts.md) and
+[integration guide](https://github.com/FuzzySlipper/crew-services/blob/main/docs/playtest-product-integration.md).
+This file adds what is Dagger's. The developer tools panel is on the wiki page `wiki/rusty-dagger/game-ui`.
 
 ## Start and ownership
 
-Install the pinned Engine pair with `rusty install`, then start the host with
-`--live-debug`, as the repository development service (`.den-serve.json`) does:
-
 ```bash
+rusty install
 rusty dev --project ./src/WorldRpg.Host/WorldRpg.Host.csproj --live-debug
 ```
 
-Register the host URL as a local Crew browser profile and use the installed
-`playtest` CLI. Run `playtest assist --help` for current syntax.
-
-Give each concurrent tester a separate native host and persistence directory.
-Browsers connected to one host share player, world, simulation mode and health.
-Reconnecting does not reset gameplay. New Game and Load use the ordinary menu;
-the debug callbacks resolve the replacement session on every call.
-To start a fresh game quickly, open character creation and press **Quick start**:
-it keeps the draft's identity and career, completes the background without
-asking, and begins the game.
-The developer games on the title screen skip both: **Developer: Charing town
-start** begins in Charing's streets, and **Developer: wilderness start** at noon
-in open woodland outside the Hawkston Cemetery, for looking at nature and
-terrain. Begin starts either at once, with no character creation or cinematics.
-Only stop browser sessions and hosts the tester owns.
+- Register the host URL as a local Crew browser profile and use the `playtest` CLI (`playtest assist --help`).
+- Give each concurrent tester its own native host and persistence directory: browsers on one host share the player,
+  world, simulation mode and health. Stop only the sessions and hosts you own.
+- Reconnecting does not reset gameplay. New Game and Load use the ordinary menu.
+- A fresh game quickly: character creation's **Quick start**. No creation or cinematics at all: the title's
+  **Developer: Charing town start** or **Developer: wilderness start**.
 
 ## Agent procedure
 
-1. Discover capabilities, capture the original screen, and observe live mode.
-   Complete entry/cinematics through ordinary UI before expecting movement.
-2. Set action-driven time. An `act` call delivers the current physical binding,
-   advances the requested bounded window, then holds simulation. Look does not
-   advance time.
-3. Choose a nearby named target. Compare actual XYZ movement after short inputs.
-   Use free look and a 4/8-view survey when facing a wall or losing orientation.
-4. Check alive, hostile, attack eligibility, aim, reach and current refusal facts.
-   Attack eligibility alone does not establish hostility. An attack action is a
-   tap, a fast attack that the rules' attack clock plays out on later admitted
-   steps. Inspect again if still recovering. The reasons `attack-animation-active`
-   and `attack-cooldown` identify separate guards; `attackReadyAtStep` is a cooldown
-   threshold, not a promise that the motion has finished.
-5. Use ordinary UI for controls, inventory and loot. Rebinding Attack to KeyQ in
-   Settings must be visible in the next action query; never assume Primary stays
-   bound. The harness supports ordinary pointer buttons as well as keyboard keys.
-   Raw DOM/settings input does not automatically advance held time; use a short
-   explicit advance to let C# consume the pending UI action, then reobserve.
-6. On uncertain delivery, observe before acting again. Do not automatically replay
-   attack/use. A delivered swing with no target is a gameplay outcome, distinct
-   from a disconnected browser or missing pointer lock.
-7. Stop at death, the mission deadline, repeated movement without progress, or an
-   unrecoverable transport failure. Preserve original captures and receipts with
-   the owning Den record, not in the repository, then give an exit interview:
-   progress, blockers, confusing fields, workarounds, missing tools, and the next
-   most useful improvement.
+1. Finish entry and cinematics through the ordinary UI before expecting movement.
+2. Set action-driven time. Look does not advance time.
+3. Compare actual XYZ movement after short inputs; survey 4 or 8 views when facing a wall.
+4. Attack eligibility does not establish hostility: check hostile, aim, reach and the refusal facts. An attack is a
+   tap that the rules' attack clock plays out on later steps. `attack-animation-active` and `attack-cooldown` are
+   separate guards; `attackReadyAtStep` is a cooldown threshold, not the end of the motion.
+5. Read the binding from the next action query; never assume Primary stays bound. Raw DOM or settings input does not
+   advance held time: advance briefly so C# consumes the pending UI action, then observe again.
+6. On uncertain delivery, observe before acting again; never replay attack or use automatically. A delivered swing
+   with no target is a gameplay outcome, not a transport failure.
+7. Stop at death, the deadline, repeated movement without progress or a transport failure. Captures and receipts go
+   with the owning Den record, never into the repository. Give an exit interview.
 
-## Current facts and limits
+## Limits
 
-- `playtest.observe`: live mode, simulation stamp, character center and camera
-  viewpoint, facing, grounded/stance/velocity, resources, equipped weapon,
-  bindings, recent combat event and last use step, loot and compact target lists.
-- `playtest.action`: current physical binding, tap/hold, duration and availability.
-  Preflight reads policy and resources; normal input admission still owns spends,
-  cooldown and the final outcome.
-- `playtest.look`: relative yaw/pitch through the normal look rules. Changes aim
-  and camera without advancing gameplay.
-- `navigation.targets`: loaded actors and activation objects with stable IDs,
-  3D positions, policy aim points, turn/pitch guidance, distances, attack visibility
-  and Engine interaction focus rejection facts. Positions are discoveries, not
-  walking routes. Visual angles use the camera; gameplay angles use the ordinary
-  character-center targeting origin.
-
-Visibility currently follows gameplay's retained-geometry perception query.
-Call-local moving door/support colliders are not included. A visible target is
-not proof of collision clearance or a traversable path. Interaction focus facts
-also do not promise that a door is unlocked or that the current activation mode
-will succeed; normal owner policy runs when the action is delivered.
-
-Floor height and a traversable route are explicitly unavailable. This adapter
-has not yet connected the shared probe/grid/capsule/jump helpers to Dagger's full
-controller environment, which includes moving supports and special locomotion.
-Do not substitute a guessed floor or straight line route. Capture navigation
-stalls for a focused follow-up.
-
-HUD outcome text is historical. Compare recent combat event sequence/step and
-last use step across receipts. These are practical freshness hints, not proof of
-exact timing or deterministic replay. Engine time only advances forward; there
-is no rewind, second simulation clock, or scripted combat-roll prediction.
+- Floor height and a traversable route are not available. Never substitute a guessed floor or a straight line;
+  capture a navigation stall for a follow-up.
+- A visible target is not proof of collision clearance; moving door and support colliders are not in the
+  visibility query. Interaction focus does not promise a door is unlocked.
+- `playtest.action` preflight reads policy and resources; input admission still owns spends, cooldown and outcome.
+- HUD outcome text is historical: compare the combat event's sequence and step, and the last use step, across
+  receipts. Engine time only moves forward.
 
 ## Developer commands
 
-Developer movement for playtests and manual checks. These are live-debug commands
-only (the in-game **Engine debug console**, `rusty-live-debug`, or a playtest's
-debug execution); no game surface offers them. Each lands the player through the
-same site and movement owners ordinary play uses, so the next save holds the
-result. Positions are scene-local, as `navigation.targets` and `playtest.observe`
-report them; names with spaces are quoted.
+Every developer command (`world.*`, `player.*`, `people.*`, `held.*`) carries its description in code:
+`[DebugCommand]` in `src/WorldRpg.Kit/Developer*.cs`. A `--live-debug` host serves them as its debug catalogue,
+which `rusty-live-debug --origin URL` (`help`, `complete world.`) and the in-game Engine debug console read.
 
-| Command | What it does |
-|---|---|
-| `world.where` | Current place, site, profile, building, feet and centre, facing, the nearest targets with their ids, and `playing`: false on the title, which stands a world behind it too. |
-| `world.teleport X Y Z` | Stands the player on feet `X Y Z` in the current scene. A spot with no floor within three metres below is refused (an interior is a box in empty space), and so is one the standing body would overlap, with the Engine's clearance facts. |
-| `world.teleport-force X Y Z` | The same, placed even with no floor or where the body overlaps collision. Outside, a spot past the world edge lands at the edge. |
-| `world.move DX DY DZ` | Moves by an offset from the current feet, refusing a spot as `world.teleport` does. |
-| `world.forward METRES` | Moves along the facing on the ground plane, refusing a spot as `world.teleport` does. |
-| `world.travel PLACE` | Lands at a map place, named (ranked as the travel search ranks: exact, prefix, contains, region) or as `region/index`. It lands as guild teleport does, with no time, cost or encounter. Several matches are listed with their ids. |
-| `world.enter PLACE BUILDING` | Travels there if needed, stands at the building's door, and lands inside as the door would, without its greeting, hours or trespass. The building is named or given as `block-x/block-y/index`. Leaving returns to the doorstep. |
-| `world.find SERVICE` | The people of the current place offering a service (`training`, `food-drink`, `buy-spells`, `shop`, …): those loaded now with their target ids, and those placed in its buildings, each with the `world.enter` line that reaches it. |
-| `world.hour HOUR` | Lets world time run on to the next HOUR (0 to 23) of the clock, as resting would. |
-| `world.ground-blend CONTRAST METRES SHARPNESS` | Changes how open ground blends for this run, reporting the rebuild's time. Contrast `0` tiles it instead, for comparing the two on one spot. |
-| `world.weather KIND` | Sets the weather everywhere until the next day: `Sunny`, `Cloudy`, `Overcast`, `Fog`, `Rain`, `Thunder` or `Snow`. |
-| `world.season SEASON` | Lets world time run on to the first day of the next `Winter`, `Spring`, `Summer` or `Autumn`, at this hour: winter brings each climate's winter ground. |
-| `world.ground-weather WET SNOW` | Leaves open ground this wet and this snowed, both from 0 to 1; weather carries on from there. |
-| `world.stand EAST SOUTH` | Stands the player on the ground that far away, inside the walked window: a way out into the wilderness. |
-| `world.scout KIND KM` | Stands the player in the middle of the nearest open ground that is mostly `grass`, `dirt`, `rock`, `sand`, `snow`, `lush` or `beach`, out to KM kilometres. A spot farther than 4 km is reached by landing at the place nearest it first. |
-| `world.river` | The nearest river's bearing, surface and width, to find water with `world.stand`. |
-| `world.ground-survey` | Slopes at walking scale from random land points, and what a surface costs to build. |
-| `world.horizon` | What the distant horizon is drawing: its lift and base, the haze, and its tiles. |
-| `world.horizon-set LIFT FOG` | Sets the horizon's lift (1 is true height) and haze per metre for this run, to judge them by eye. |
-| `world.farforest STATE` | Grows forest on the far hills, `on` or `off`, for this run, to compare them. |
-| `world.trees KIND` | Grows trees that have meshes as `mesh` or `sprite` for this run, to compare them. |
-| `world.groundcover KINDS` | Draws only these kinds of refreshed ground cover for this run, to compare them: `grass`, `relief` and `tufts`, separated by commas, or `all` or `none`. |
-| `world.flora DENSITY` | Grows refreshed nature at DENSITY times the donor's count for this run, each climate keeping its `climateDensity` share, to judge density by eye. `world.horizon` reports what the field holds. |
-| `world.goto TARGET` | Stands within reach of a loaded person, door or container, facing it. The target is a `navigation.targets` id or label. A door or portal is approached from its outside; other targets from the side nearest the player. The spot must fit the body, have floor below, and have a clear line from the eye to the target. |
-
-Developer overrides of the player's possessions and progress go through the same owners play uses (the item factory
-and equipment rules, currency, skill progression, the level-up and vitals), so the result behaves and saves as if
-earned. Like the movement commands they wait while a screen or question is open.
-
-| Command | What it does |
-|---|---|
-| `player.items FILTER` | The item names `player.give` and `player.hold` take that contain FILTER (`""` for all), the weapon and armour materials, and the skill ids. |
-| `player.give ITEM COUNT` | Gives COUNT of an item, named as the game labels it (`"Steel Dagger"`), by template name or index, with an optional material first (`"ebony 113"`); a weapon or armour without a material takes one rolled for the player's level. A stackable item comes as one stack. |
-| `player.hold ITEM` | Gives one item and wields it in the main hand, drawn, through the ordinary equip rules: the quickest way to test a weapon's first-person view or animation. |
-| `player.hold.magic` | Gives a magic weapon, its base chosen as loot's is, and wields it: an enchanted weapon's look in play. |
-| `player.equip ITEM` | Gives one item and wears it through the ordinary equip rules: a shield goes on the off arm, anything else in the first slot that takes it. |
-| `player.gold AMOUNT` | Gives gold. |
-| `player.spell SPELL` | Teaches a spell, by its name or a part only it has. |
-| `player.skill SKILL VALUE` | Sets a skill (`short-blade`, …) within 0–100. |
-| `player.levelup` | Raises the career's level skills until the next level is due and opens the ordinary level-up on the character sheet. |
-| `player.heal` | Restores health, fatigue and magicka. |
-| `player.ride MOUNT` | Puts the player on `horse` or `cart`, giving them it if they have none, or back on `foot`. Riding needs the outdoors. |
-| `player.ride.state` | Reports the mount under the player: its speed, its heading and how far the view looks past it. |
-| `player.morph FORM` | Changes the player into `werewolf` or `wereboar`, cursing them with it if they have no curse, through the ordinary change; `""` changes them back. |
-| `people.rig SET` | Draws every walking townsperson as the art set's parts-rig test figure (`peopleRig`) seen from `4` or `8` directions, facing where she heads, walking while she moves to a waypoint and idling otherwise; `off` draws their own art again. |
-
-For example, to reach the Temple of Kynareth's trainer from anywhere:
-`world.enter Charing "Temple of Kynareth"`, then `world.find training`, then
-`world.goto Actor:<id>`.
-
-The motion viewer draws the 3D first-person art (`viewmodel.style` `held` or
-`heldRetro`, with `local/first-person.rpak` installed; `scripts/fp-arms/README.md`)
-through the game's own held viewmodel. A
-look is a classic weapon visual the art draws (`weapon.dagger.steel`), shown by the
-family that draws it, and an action one of its attacks with a clip
-(`fastA`). It shows the family's arms whatever the hands wield. An attack is timed as
-play times it, by the attack tuning for the family's weapon class, with the hit where
-the windup ends, where the clip's strike mark plays.
-The keys are the clip's four marks: 0 start, 1 strike, 2 recover, 3 end.
-
-| Command | What it does |
-|---|---|
-| `held.motion LOOK ACTION` | Shows the look's family at rest with the attack, and lists its clip, timing and marks. A look is a classic visual, or `item.N` for an item template the definition lists. |
-| `held.motion.key N` | Holds the attack at mark N (-1 is rest). |
-| `held.motion.next` / `held.motion.prev` | Holds the next or previous mark, through rest. |
-| `held.motion.play SPEED` | Plays the attack from rest at SPEED (1 as in play, 0.25 a quarter; 0.01 to 4). |
-| `held.motion.at SECONDS` | Shows the attack paused SECONDS after its start, with the clip time it plays there (`heldRetro` holds each frame's sample). |
-| `held.arms SET` | Shows the viewer's look in an arm set, or `worn` for what the player wears. |
-| `held.shield PART X Y Z TX TY TZ` | Moves a shield's `seat` on the hand joint or the hand's `carry` in the loaded art, to place it by eye, and answers with what to save. |
-| `held.clip` | What the drawn arms play now, in play or in the viewer: the clip, its time and phase, what fades out under it. |
-| `held.motion.off` | Gives the hands back what they wield. Closing the developer tools does this too. |
-
-`scripts/fp-arms/sheet.sh` drives these over a running host and writes a contact sheet per attack, its hit outlined.
-
-Without the container, or under `classic`, each command answers why and how to fix it.
-
-## Environment tours
-
-`authoring/tools/tour/tour.py TOUR.json` looks at many environments in one run. Each scene
-of a tour file lands somewhere (`world.travel`, then `world.scout` for a kind of ground),
-sets the season, hour and weather, looks one way and captures a world frame for each
-`world.groundcover` setting it compares. Frames, a `scenes.json` of what each shows and a
-labelled `sheet.png` go to `local/evidence/tour-NAME-TIME/`; a scene whose ground was not
-reached is labelled so. It runs on a hosted playtest session (`rusty-dagger-hosted`,
-started and stopped for the run unless `--session` names one) and presses Begin on the
-wilderness start, so choose that game on the title once; the host keeps the choice. A host
-that restarted after a rebuild is back at the title, and the tour begins again.
-`authoring/tools/tour/environments.json` visits each climate and ground kind, winter's snow
-included, and `trees.json` compares tree meshes with their sprites. A scene's comparison may
-name any developer command. `--only NAME ...` runs some scenes of a tour.
-
-`authoring/tools/tour/cost.py cost.json` measures what the world costs in the same kind of
-scenes: dense forest, a big town at noon and at night, rain, winter and the view over a
-range. In each scene it reads the renderer's per-pass GPU time (`engine.renderer`) and the
-updates' own cost, first for the whole world and then with ground cover, tree meshes, the
-far forest or flora turned off, and writes `cost.json` and a `cost.md` table. It drives any
-host with live debug by `--origin`, so it measures den-win11's window too, or a playtest
-session by `--session`; give the view 1920x1080 first.
-
-## Developer tools
-
-The **`** key in play, or the game menu's **Developer tools**, opens the Engine's
-developer shell docked beside play. It opens only when the host runs with
-`--live-debug`; otherwise a note says so. It is diagnostic UI: it lives outside the
-game's shell and skin, holds the cursor while open, and gives play its input back
-when closed. Its tabs:
-
-- **Dagger:**
-  - **Time:** Pause and Resume switch the Engine's held time
-    (`engine.time.mode manual` / `realtime`). Step advances it by 0.1 s or 1 s
-    (`engine.time.advance`).
-  - **Free camera:** flies the Engine's observer (`engine.renderer.camera`) from the
-    player's eye with W/S/A/D, R/F (up/down), Q/E (turn) and T/G (look), or the
-    buttons. The player never moves. Turning it off, or closing the tools, gives the
-    camera back.
-  - **Collision:** draws the Engine's collision wires at a radius, and lists the
-    colliders it drew (below).
-  - **Overlays:** a checkbox per set. A ruleset set is built only while it is on
-    (`world.overlay-on` / `world.overlay-off`) and drawn by
-    `engine.inspect.overlay show set NAME`.
-- **Workbench:** the first-person workbench, the Engine's tunables panel over the
-  motion viewer. Its choosers pick the look and strike; its timeline holds a mark,
-  scrubs to a moment and plays at 0.1× to 2×; its values are the strike's marks and
-  fade, the family's idle loop and the hand's grip and hold on its look, and the arms'
-  shoulder and the rig's palm. A value shows at once on the loaded art. **Save** writes the changed values
-  into the authored held definition, `content/worldrpg/first-person/daggerfall.held.json`,
-  keeping the file's other bytes; **Reset** sets them back to the file's. The
-  console takes the same as `tunables.describe`, `tunables.set ID VALUE`,
-  `tunables.diff` and `tunables.save PATH SHA256`. It shows nothing but a notice
-  without the container or under `classic`.
-- **Console, View, Scene, Metrics:** the Engine's own panels. The View pane frames
-  the inspection targets `player`, `dialogue` (the person spoken to) and `door` (the
-  nearest door or portal).
-
-| Overlay set | What it draws (within 60 m) |
-|---|---|
-| `interaction` | The activation query's ray, and each target's point, reach sphere and focus reason (green Ready, red Occluded or OutOfReach, grey otherwise). |
-| `people` | Each loaded person's height, facing, name, role and services. |
-| `doors` | Door and portal points and outward normals, locks, and whether a building's entry rule opens it now. |
-| `actors` | Creatures' melee reach, hearing radius (hostile), behaviour state and next navigation waypoint. |
-| `markers` | The profile's dungeon enemy and treasure markers, quest markers, anchors and street population. |
-| `player` | The standing capsule, the height a step clears, and the floor below (red when there is none). |
-| `probe` | The last `spatial.probe` rays or `spatial.clearance` body, from the console. |
-| `inspect.targets` | The inspection targets' markers. |
-
-**Collision** in the Dagger panel draws the Engine's retained collision as wires
-within a radius of the observer, or of the player's camera without one
-(`engine.inspect.overlay show collision RADIUS`; colours and limits in the Engine's
-`docs/playtest-inspection.md`). **List colliders here** shows what it drew
-(`engine.inspect.collision RADIUS`): each collider's kind and content artifact. A
-place's whole exterior, or a whole interior, is one artifact (for example
-`charing/exterior/collision-navigation.rspatial`), so the list names the place,
-not a building. The drawing stays on after the tools close, as overlay sets do, and
-the panel opens showing what the Engine draws.
+- Positions are scene-local, as `navigation.targets` reports them. Quote names with spaces.
+- They act through the owners ordinary play uses, so the next save holds the result, and they wait while a screen
+  or question is open.
+- Reaching a trainer: `world.enter Charing "Temple of Kynareth"`, `world.find training`, `world.goto Actor:<id>`.
+- `authoring/tools/tour/tour.py` and `cost.py` drive them over many scenes (usage in their headers).
 
 ## Implementation ownership
 
-`WorldRpgProduct` implements `IDebugCommandModuleSource` and registers the shared
-Engine module with current-session delegates. The developer commands are Kit's
-`DeveloperWorldDebugModule` over the session's `IDeveloperWorldSession`; Dagger
-resolves places, buildings and targets. The overlay sets are Kit's
-`DeveloperInspectionDebugModule` over `IDeveloperInspectionSession`, with the
-Engine's `InspectionTargetsDebugModule` and `SpatialClearanceDebugModule`; Dagger
-builds each set from its owners at presentation. The motion viewer is Kit's
-`DeveloperHeldDebugModule` over `IDeveloperHeldSession`, and the Workbench tab the
-Engine's `TunablesDebugModule` over the same session; Dagger's
-`DaggerfallHeldWorkbench` drives the site's `DaggerfallHeldViewmodel` and
-`DaggerfallHeldTunables` binds each value to the held definition. The panel is `src/ui/developer.ts`. Kit defines the optional session
-interface and read-only targeting mechanisms. Dagger supplies live ruleset facts,
-control mappings, hostility, equipment and animation policy. Crew owns bounded
-input, time coordination and capture. Querying does not activate targets, spend
-resources, replace selected targets, or overwrite last gameplay evidence.
+`WorldRpgProduct` registers the Engine's debug module with current-session delegates. Kit owns the developer
+modules over optional session interfaces and the read-only targeting mechanisms. Dagger supplies the live ruleset
+facts: places, buildings and targets, control mappings, hostility, equipment and animation policy. Crew owns bounded
+input, time coordination and capture. A query never activates a target, spends a resource, replaces the selected
+target or overwrites the last gameplay evidence.

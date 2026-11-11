@@ -28,8 +28,8 @@ Name all four:
 Search before concluding: the existing owner may live in `src/WorldRpg.Kit/`,
 `src/WorldRpg.Rulesets.Daggerfall/`, `src/WorldRpg.Host/`, or `Daggerfall.Import`
 depending on what the concept is. Read `AGENTS.md` for the current ownership
-table and `docs/gameplay-design.md` for the discovery table rather than
-assuming from a directory name.
+table and the wiki page `rusty-dagger/architecture` ("Entry points") for the
+discovery table rather than assuming from a directory name.
 
 ## Placement and mechanism shape
 

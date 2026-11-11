@@ -1,53 +1,26 @@
 # Agent review workflow
 
-The Den project document `rusty-dagger/agent-review-workflow` owns the policy,
-including reviewer model routing; the files here are the packets handed to
-reviewers. Where the two disagree, Den wins.
+The Den project document `rusty-dagger/agent-review-workflow` owns the policy: which lanes run and why, reviewer
+model routing, and who decides a disagreement. Where it and these files disagree, Den wins. The files here are the
+packets handed to reviewers by path: every reviewer gets [reviewer-packet.md](reviewer-packet.md) plus its own lane
+file, never the other lanes'.
 
-Reviewers are persistent agents, not one-shot checks. An identified issue is
-re-checked by the same reviewer in the same session, so round two verifies the
-fix instead of rediscovering the problem from a blank context.
+## Lanes
 
-This is not an approval system and not an interactive gate. Reviewers report
-source-backed findings; the root agent reconciles them and decides.
+| Lane | Run | Packet |
+| --- | --- | --- |
+| Engine reuse | every task | [lanes/engine-reuse.md](lanes/engine-reuse.md) |
+| Existing product reuse | every task | [lanes/existing-product-reuse.md](lanes/existing-product-reuse.md) |
+| Runtime trust | every task | [lanes/runtime-trust.md](lanes/runtime-trust.md) |
+| Ownership and values | the change crosses an ownership seam, adds tuning, or touches Daggerfall vocabulary | [lanes/ownership-and-values.md](lanes/ownership-and-values.md) |
+| Behavior and interoperability | the task specifies behavior, real callers, persistence, or save/UI contracts | [lanes/behavior-and-interoperability.md](lanes/behavior-and-interoperability.md) |
+| Requirement and acceptance | the task carries explicit acceptance criteria | [lanes/requirement-and-acceptance.md](lanes/requirement-and-acceptance.md) |
+| Error and boundary paths | the change adds parsing, input handling, or failure paths | [lanes/error-and-boundary-paths.md](lanes/error-and-boundary-paths.md) |
+| Test claims | the change adds or edits tests, or claims verification | [lanes/test-claims.md](lanes/test-claims.md) |
 
-## Lane roster
-
-Three lanes run on **every** task (the third is a counterbalance whose
-retirement condition is stated in its lane file):
-
-| Lane | Packet |
-| --- | --- |
-| Engine reuse — upstream reinvention | [lanes/engine-reuse.md](lanes/engine-reuse.md) |
-| Existing product reuse — repo-local reinvention, placement, and mechanism shape | [lanes/existing-product-reuse.md](lanes/existing-product-reuse.md) |
-| Runtime trust — validation ceremony on trusted paths | [lanes/runtime-trust.md](lanes/runtime-trust.md) |
-
-The reuse lanes are always on because agents skip capabilities that already
-exist. New code gets written for something the Engine already guarantees, or for
-something rusty-dagger already owns, instead of extending it. Runtime trust is
-always on for the opposite failure: agents add checking the runtime does not
-need. Import-side validation gravity (bounds, provenance, digests) leaks into
-trusted single-player runtime paths as propose/validate/mutate steps, repeated
-hash admission, revision guards, snapshots, and rollback. The recent refactors
-removed that machinery (see `docs/gameplay-design.md` and rusty-engine Board
-post 147); this lane keeps it from returning.
-
-Optional lanes. In DSH, pick to a total of three to four reviewers, and pick lanes
-whose questions can disagree with each other. Codex/Prime mapping is below:
-
-| Lane | Use when |
-| --- | --- |
-| [Ownership and values](lanes/ownership-and-values.md) | the change crosses an ownership seam, adds tuning, or touches Daggerfall vocabulary |
-| [Behavior and interoperability](lanes/behavior-and-interoperability.md) | the task specifies behavior, real callers, persistence, or save/UI contracts |
-| [Requirement and acceptance](lanes/requirement-and-acceptance.md) | the task carries explicit acceptance criteria |
-| [Error and boundary paths](lanes/error-and-boundary-paths.md) | the change adds parsing, input handling, or failure paths |
-| [Test claims](lanes/test-claims.md) | the change adds or edits tests, or claims verification |
-
-Do not open a lane that repeats another lane's question in different words. Do
-not run the full roster to be safe. Under the DSH roster, a trivial task is three
-reviewers, and a task that changes a boundary, a save contract, or an ownership
-seam is four. Codex/Prime uses the standing partners below instead of adding this
-roster on top of them.
+In DSH, pick optional lanes to a total of three to four reviewers: three for a trivial task, four for one that
+changes a boundary, a save contract or an ownership seam. Do not open a lane that repeats another lane's question,
+and do not run the full roster to be safe. Codex/Prime uses its standing partners instead of this roster.
 
 ## DSH agents: choosing the reviewer tool
 
@@ -125,20 +98,3 @@ Respect live slot limits. Defer optional helpers or do their work at the root
 rather than discarding a standing reviewer. State an unavailable review lane
 honestly; do not claim it ran. The selected Codex/Prime workflow does not launch
 an external Den review by default; honor an explicit task-owned external gate.
-
-## Authority on disagreement
-
-Findings are claims to verify, not instructions to apply.
-
-- A factual dispute is settled with evidence and a re-check in the reviewer's own
-  session. That exchange is the point of persistence.
-- A scope dispute is not the reviewer's call. The task's stated contract and the
-  user decide; the root records the disposition and the reason.
-- A reviewer's verdict never amends user intent, and an unresolved finding is
-  never silently dropped — it is deferred explicitly, or declined with a reason.
-
-## What reviewers must not report
-
-Stylistic preferences, new scope, broad redesign proposals, invented acceptance
-criteria, or interactive gates. A finding that is not backed by a file and line,
-command output, or a command that reproduces it does not belong in the report.

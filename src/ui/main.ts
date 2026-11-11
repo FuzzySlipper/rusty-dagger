@@ -39,7 +39,7 @@ const RADIAL_BUTTON = 'button-3';
  * Mounts the product UI and routes each published snapshot to the surface that draws it. Every
  * surface lives in its own module; this file only composes them with the two shared owners: the
  * interaction lifecycle (interface or gameplay, pointer lock) and keyboard and controller
- * navigation (`docs/game-ui.md`).
+ * navigation (wiki/rusty-dagger/game-ui, "Input").
  */
 export function mountProductUi(root: HTMLElement, context: RustyApplicationUiContext): { dispose(): void } {
   const { shell, dispose: disposeShell } = mountShell(root);

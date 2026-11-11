@@ -1,12 +1,7 @@
 # Lane: Runtime trust
 
-**Always on (counterbalance).** Its retirement condition is that the runtime
-refactors have landed and ordinary trusted-path code is the established gravity.
-The refactors have landed: `docs/gameplay-design.md` ("Direct mutation, concrete
-safeguards", "Admit content once") describes the current trusted-path shape.
-Whether that shape is now the established gravity is a decision for Patch; until
-the Den policy document `rusty-dagger/agent-review-workflow` demotes the lane to
-optional or retires it, run it on every task. It is not meant as a permanent tax.
+**Always on (counterbalance).** Run it on every task for as long as the Den policy
+document `rusty-dagger/agent-review-workflow` lists it as always on.
 
 ## One question
 
@@ -26,8 +21,8 @@ The recent refactors deliberately removed that ceremony: facts-based
 propose/validate/mutate paths, per-action proposal/accept/commit protocols,
 revision guards, whole-state snapshots, rollback around terminal callbacks,
 and repeated SHA/hash admission of already-admitted bytes. See
-`docs/gameplay-design.md` ("Direct mutation, concrete safeguards", "Admit
-content once") and rusty-engine Board post 147 ("Default to trust"). A
+the wiki page `rusty-dagger/architecture` ("Direct mutation and its
+safeguards", "Content admission and caches") and rusty-engine Board post 147 ("Default to trust"). A
 reviewer that re-asks for the removed machinery undoes the refactor.
 
 ## Basis required for an actionable finding

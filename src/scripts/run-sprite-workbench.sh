@@ -1,4 +1,20 @@
 #!/usr/bin/env bash
+# Launches WorldRpg.SpriteWorkbench, the separate package-backed, developer-only authoring product for sprite atlases and
+# overlays, on port 4175. It reads the neutral inspection document the importer's `sprite-inspection` command writes
+# (staged below) and never references the importer. The game menu's Sprite animation tool entry gives this command.
+#
+#   bash src/scripts/run-sprite-workbench.sh [PUBLICATION_ROOT [AUTHORING_ROOT [OVERLAY_PATH [PORT]]]]
+#   bash src/scripts/run-sprite-workbench.sh content/worldrpg/imports/privateers-hold /absolute/authoring-directory sprites/privateers-hold.json 4175
+#   RUSTY_WORKBENCH_PORT=4176 RUSTY_WORKBENCH_OVERLAY=sprites/rats.json bash src/scripts/run-sprite-workbench.sh
+#
+# An omitted argument falls back to RUSTY_WORKBENCH_PUBLICATION, RUSTY_WORKBENCH_AUTHORING, RUSTY_WORKBENCH_OVERLAY or
+# RUSTY_WORKBENCH_PORT, then to Privateer's Hold, authoring/, sprites/privateers-hold.json and 4175.
+#
+# The tool shows the Engine preview alongside atlas/frame inspection, a draggable pivot, directional review, frame
+# rectangles, and resource/per-animation timing. Apply updates the preview; Save persists the typed overlay; Discard
+# restores the saved preview. Reopening applies saved edits. The import consumes them with
+# `import --sprite-authoring authoring`, which passes each site's sprites/SITE.json to its `write` step; generated media
+# stays separate from authored files.
 set -euo pipefail
 
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)

@@ -15,6 +15,10 @@ The first run keeps each final under gen-raw/AREA/pre-matte/, with the mask it w
 those, so reruns are safe. Each final's generation image comes from its study: the one its opaque pixels match.
 
     matte.py [--area people|flats] [KEY ...]      e.g. matte.py texture-184-record-015-frame-000; no key cleans the area
+
+Run it for an area only once its finals are accepted, and check per area whether filling helps. It needs a ComfyUI that
+serves BiRefNet (den-m5's does; COMFY_URL names another) and takes about a second a final. A final with no generation
+image, such as the hanging lanterns (texture 200, records 7 to 9), keeps its cut-out.
 """
 import argparse
 import glob

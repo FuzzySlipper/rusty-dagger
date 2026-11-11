@@ -6,8 +6,8 @@ The Daggerfall ruleset's content is derived from the game data of *The Elder Scr
 (Bethesda Softworks). This repository does not contain or redistribute that data, or any file
 converted from it. The operator supplies their own copy of the game's `ARENA2` directory as
 `local/arena2`, and the import command converts it into the data container
-`local/daggerfall-data.rpak` on their machine (ignored by Git). See
-[content scope](docs/coverage/content-scope.md) for what is generated and what is authored.
+`local/daggerfall-data.rpak` on their machine (ignored by Git). The project wiki's
+`import-and-data-container` page says what is generated and what is authored.
 
 ## What a release redistributes
 

@@ -36,7 +36,7 @@ Two areas promote icons rather than their own finals, each standing in for a cla
     `spell.icons` atlas, and each accepted targeting and element tile as `spell.target.N` and `spell.element.N`, tile N
     of the classic `spell.selectors` atlas.
 
-The `ui` area promotes the screens and escort portraits the game draws whole (authoring/docs/ui-and-2d.md): a screen
+The `ui` area promotes the screens and escort portraits the game draws whole (wiki/rusty-dagger/art-conversion): a screen
 `screens--NAME--...` stands in for `screen.NAME` (the title, character creation's `screen.character-generation` and
 `screen.pick.02`, prison and death) at its own size, and a faction or child escort portrait
 `faction-faces--tfac00i0--...-record-NNN-...` or `child-faces--kids00i0--...-record-NNN-...` for
@@ -90,7 +90,9 @@ PNG the same size as the image's, clear wherever it is. The menus draw the smoot
 opaque box in the import's published image), from which the game sizes it on the ground as a worn image is sized from its doll rect.
 
 Only finals whose ledger/AREA-notes.json status is `accepted` are promoted. Rerunning an area replaces that
-area's entries and files and keeps every other area's.
+area's entries and files and keeps every other area's: it deletes the area's files and writes them all again, about ten
+minutes for `worn`, so don't interrupt it. `--key KEY` promotes one accepted paper-doll or worn final and leaves the rest.
+The import must have run (local/import/staging), and a paper-doll or worn final without its rect sidecar is refused.
 
     promote.py --area paper-doll --area worn --area items --area spells --area effects --area surfaces --area terrain
 """

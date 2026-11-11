@@ -1,10 +1,14 @@
-"""Builds the small cart a driver sits on (authoring/docs/mounts.md).
+"""Builds the small cart a driver sits on (design: wiki/rusty-dagger/first-person-held-art).
 
 usage: blender -b --factory-startup --python-exit-code 1 --python authoring/tools/mounts/cart.py -- OUT.glb
 
 OUT holds a two-wheeled cart of planks, on its origin's ground with the seat over the origin and its shafts along -Z, with
 the reins from the driver's hands to the horse's own, and OUT-retro.glb beside it the same with a smaller texture. It is built
 from boxes and cylinders, in the art's wood colours.
+
+The game draws the horse ahead of it, at `mount.cartHorse` in the held definition. The reins run from the driver's fists (FIST)
+to the horse's own (REINS_END), overlapping them so the horse can move: moving the seat, the horse or RIDE_HAND in
+scripts/fp-arms/build.py means moving FIST and REINS_END too.
 """
 import math
 import sys

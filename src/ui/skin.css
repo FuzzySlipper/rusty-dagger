@@ -3,7 +3,7 @@
  * custom properties on the root). A primitive whose image is absent keeps the plain look below, so
  * missing art is reported, never blank. Screens lay out; they do not set frame, button or slot art.
  *
- * Vocabulary (docs/game-ui.md, "Skin"):
+ * Vocabulary (src/ui/AGENTS.md, "Scale and skin"):
  *   .dagger-frame                      stone window with the stone ground behind its content
  *   .dagger-frame[data-skin=parchment] parchment reading surface, dark ink, stone controls
  *   .dagger-frame-title                brass title plate

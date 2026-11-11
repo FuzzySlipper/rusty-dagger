@@ -19,16 +19,21 @@ state here. Before substantial work, read the owning Den task. Patch's request
 and that task override older wording elsewhere. If Den is unreachable, say so
 and don't invent task records or infer completion from source or Git.
 
-- Gameplay and persistence design: [docs/gameplay-design.md](docs/gameplay-design.md)
-- Actors and mechanics owners: [docs/actors-and-mechanics.md](docs/actors-and-mechanics.md)
-- Game UI: [docs/game-ui.md](docs/game-ui.md)
-- Exterior horizon, light, far ground, open ground blending and cleared skies: [docs/exterior-horizon.md](docs/exterior-horizon.md)
-- Coverage direction: `docs/daggerfall-coverage-plan.md`; scope contract and
-  decisions: `docs/daggerfall-task-preparation.md`; stable inventory IDs:
-  `docs/coverage/` (`content-scope.md` names each content section's owner)
+- **Rules beside the code.** Before working in `src/ui` or
+  `src/WorldRpg.Rulesets.Daggerfall`, read the `AGENTS.md` in that folder. The
+  art pipeline's steps are in `authoring/README.md`, agent playtesting in
+  `docs/playtesting.md`, review lanes and packets in `docs/agent-review/`.
+- **Design and reference** live in den-wiki under `wiki/rusty-dagger`, read with
+  the den-wiki tools. Pages: `architecture`, `actors-and-mechanics`,
+  `combat` and `combat-rules`, `game-ui`, `exterior-terrain`,
+  `sky-light-weather`, `skills`, `survival`, `coverage-scope-and-decisions`
+  (the `DEC-nn` register that code cites), `feature-ledger`,
+  `magic-effects-inventory`, `quests`, `content-sources` (the `CNT-nnn`
+  families), `import-and-data-container`, `refreshed-art`, `art-conversion`,
+  `parts-rig-people` and `first-person-held-art`.
+- **Open questions and discussion** are on the crew board `rusty-dagger`.
 - Engine boundary brief (C# organization or Engine-boundary work):
   `[doc: rusty-engine/downstream-csharp-agent-brief]`
-- Review lanes and packets: `docs/agent-review/`
 - The paired Engine checkout is `rusty-engine`, beside this one.
 
 ## Projects and ownership
@@ -151,8 +156,15 @@ playback.
 - **Failures.** A hard failure must name the loss it prevents: data loss, an
   ownership violation or a silently wrong artifact. Otherwise warn and report
   the observed value.
-- **Docs** describe current design, not history or status. No commit hashes or
-  pinned versions in prose; evidence and dated reports go to Den.
+- **Docs.** Markdown in this repository is only what someone would get wrong at
+  the keyboard without it: setup, build, run, verify and release steps,
+  ownership boundaries, invariants and layout rules. Put it beside the code it
+  binds and keep it short. Everything else has another home: settled design and
+  reference go to a `wiki/rusty-dagger` page, edited in place; anything still
+  being worked out goes to the crew board; status, evidence and dated reports
+  go to Den; a gap left in a feature goes in the wiki `feature-ledger` page's
+  Gap column. Don't add a design, inventory, findings or history document here.
+  No commit hashes or pinned versions in prose.
 - **Code** should be clear and small: match surrounding style, name things for
   what they mean, and leave no dead branches, parallel paths or speculative
   abstraction.

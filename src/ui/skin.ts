@@ -4,7 +4,7 @@ import { display, image, reportMissingArt, type UiArtDisplay } from './art.js';
  * The skin: the published UI kit as CSS custom properties on the document root, set once each time
  * the art arrives. `skin.css` draws every primitive (frame, panel, title plate, divider, button, tab,
  * slot, scrollbar, cursor, icons) from these properties and keeps a plain-CSS look when one is absent,
- * so a screen never sets frame art of its own (`docs/game-ui.md`, "Skin").
+ * so a screen never sets frame art of its own (`src/ui/AGENTS.md`, "Scale and skin").
  *
  * A kit image `ui.<family>.<name>[.<state>].v2` becomes `--skin-<family>-<name>[-<state>]` (its
  * `url()`), with `-slice` (its 9-slice insets in image pixels, for `border-image-slice`), `-width`

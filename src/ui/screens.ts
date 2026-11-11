@@ -41,7 +41,7 @@ export const MODE_SCREENS: readonly ModeScreen[] = [
  * No published identity is an intro: the donor opens a new game on a sequence of cinematics rather than
  * on a screen, so a mode for it would be one showing an artifact no publication carries. That sequence
  * and the completion that starts the game belong to cinematic playback
- * (`docs/coverage/content-scope.md`, CNT-025), not to this table.
+ * (the wiki page `rusty-dagger/content-sources`, CNT-025), not to this table.
  */
 export const MODE_LESS_SCREENS: readonly string[] = [
   'screen.prison',
