@@ -374,6 +374,7 @@ body, dialog { font-family: var(--font-body); }
 .dagger-atlas[data-zoom="world"] .dagger-atlas-region { font-size: .75rem; letter-spacing: .15em; }
 .dagger-atlas-name { color: #36586a; font: italic 400 1rem var(--font-body); letter-spacing: .12em; white-space: nowrap; pointer-events: none; text-shadow: 0 0 .25rem rgb(220 232 230 / .9); }
 .dagger-atlas-name:is([data-kind="sea"], [data-kind="bay"]) { font-size: 1.5rem; letter-spacing: .4em; }
+.dagger-atlas-name[data-kind="realm"] { color: #4a2e18; font: 700 1.9rem var(--font-label); letter-spacing: .5em; text-transform: uppercase; text-shadow: 0 0 .3rem rgb(242 230 196 / .85); }
 .dagger-atlas-name:is([data-kind="range"], [data-kind="desert"], [data-kind="forest"], [data-kind="moor"]) { color: #5a3e26; font-style: normal; font-family: var(--font-label); text-transform: uppercase; }
 /* You: a red mark with a notch on the way you face. */
 .dagger-atlas-player { width: .95rem; height: .95rem; border: 2px solid #f2e6c4; border-radius: 50%; background: #a3270f; box-shadow: 0 0 0 1px #2a170a; pointer-events: none; z-index: 4; }

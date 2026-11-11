@@ -5007,6 +5007,7 @@
   },
   "worldNames": {
     "kinds": [
+      { "id": "realm", "shownFrom": "world" },
       { "id": "sea", "shownFrom": "world" },
       { "id": "bay", "shownFrom": "world" },
       { "id": "range", "shownFrom": "world" },
@@ -5019,7 +5020,10 @@
       { "id": "coast", "shownFrom": "close" }
     ],
     "names": [
-      { "id": "iliac-bay", "name": "Iliac Bay", "kind": "bay", "x": 480, "y": 300 }
+      { "id": "high-rock", "name": "High Rock", "kind": "realm", "x": 300, "y": 62 },
+      { "id": "hammerfell", "name": "Hammerfell", "kind": "realm", "x": 330, "y": 466 },
+      { "id": "iliac-bay", "name": "Iliac Bay", "kind": "bay", "x": 480, "y": 300 },
+      { "id": "eltheric-ocean", "name": "Eltheric Ocean", "kind": "sea", "x": 105, "y": 360 }
     ]
   }
 }
