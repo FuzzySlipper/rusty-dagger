@@ -86,7 +86,9 @@ say what may be deleted:
   tens of megabytes; to or from the store (`/mnt/den-nas-backup/data/rusty-dagger/lan`)
   changed files go whole. After an import den-agents also runs
   `scripts/data-sync.sh push`, which keeps the store current. Nothing is deleted
-  unless you add `--mirror`. Windows pulls whole files from den-agents through
+  unless you add `--mirror`. Add `--import-tree` to a box-to-box run to also copy
+  `local/build/import`, which the importer and UI tests read (a full verify needs
+  it). Windows pulls whole files from den-agents through
   `P:` on the console desktop: `powershell -File scripts\data-sync.ps1`.
 - Every run prints the container's importer revision beside the checkout's. When
   they differ the copy is stale for this tree (or the tree is ahead of the last

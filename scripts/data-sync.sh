@@ -9,6 +9,7 @@
 #   scripts/data-sync.sh pull den-agents:dev/rusty-dagger            # from that checkout over ssh
 #   scripts/data-sync.sh status                     # only compare the container's importer revision with this tree's
 #   ... --mirror                                    # also delete what the destination has and the source lacks
+#   ... HOST:CHECKOUT --import-tree                 # also local/build/import, the staging and records the tests read
 #   DAGGER_DATA_STORE=/path scripts/data-sync.sh pull
 #
 # Adds and updates by default and deletes nothing. Over ssh only the changed 8 KiB blocks travel (an importer change
@@ -19,23 +20,26 @@ set -euo pipefail
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 data=$root/local/data
 store=${DAGGER_DATA_STORE:-/mnt/den-nas-backup/data/rusty-dagger/lan}
-usage="usage: scripts/data-sync.sh push|pull [HOST:CHECKOUT] [--mirror] | status"
+usage="usage: scripts/data-sync.sh push|pull [HOST:CHECKOUT [--import-tree]] [--mirror] | status"
 
 direction=${1:-}
 shift || true
 remote=
+folders=(local/data)
 options=(-rt --info=stats1)
 for argument in "$@"; do
   case $argument in
     --mirror) options+=(--delete) ;;
-    *:*) remote=${argument%/}/local/data ;;
+    --import-tree) folders+=(local/build/import) ;;
+    *:*) remote=${argument%/} ;;
     *) echo "$usage" >&2; exit 2 ;;
   esac
 done
-there=$store
 if [[ -n $remote ]]; then
-  there=$remote
   options+=(--no-whole-file --block-size=8192)
+elif [[ ${#folders[@]} -gt 1 ]]; then
+  echo "data-sync: --import-tree copies between checkouts over ssh; the store holds only local/data" >&2
+  exit 2
 fi
 
 # The import records its revision in the container's first entry, worldrpg/data-container.json.
@@ -64,20 +68,26 @@ report() {
   fi
 }
 
+# Where a folder of this checkout is on the other side: the same path in the remote checkout, or the store for local/data.
+there() { if [[ -n $remote ]]; then echo "$remote/$1"; else echo "$store"; fi; }
+
 case $direction in
-  push) from=$data; to=$there ;;
-  pull) from=$there; to=$data ;;
-  status) report; exit 0 ;;
+  push)
+    report
+    for folder in "${folders[@]}"; do
+      [[ -d $root/$folder ]] || { echo "data-sync: $root/$folder does not exist" >&2; exit 1; }
+      if [[ -n $remote ]]; then ssh "${remote%%:*}" mkdir -p "${remote#*:}/$folder"; else mkdir -p "$store"; fi
+      rsync "${options[@]}" "$root/$folder/" "$(there "$folder")/"
+    done
+    ;;
+  pull)
+    [[ -n $remote || -d $store ]] || { echo "data-sync: $store is not reachable" >&2; exit 1; }
+    for folder in "${folders[@]}"; do
+      mkdir -p "$root/$folder"
+      rsync "${options[@]}" "$(there "$folder")/" "$root/$folder/"
+    done
+    report
+    ;;
+  status) report ;;
   *) echo "$usage" >&2; exit 2 ;;
 esac
-if [[ $direction == push ]]; then
-  report
-  [[ -d $data ]] || { echo "data-sync: $data does not exist" >&2; exit 1; }
-  if [[ -n $remote ]]; then ssh "${remote%%:*}" mkdir -p "${remote#*:}"; else mkdir -p "$store"; fi
-  rsync "${options[@]}" "$data/" "$to/"
-else
-  [[ -n $remote || -d $store ]] || { echo "data-sync: $store is not reachable" >&2; exit 1; }
-  mkdir -p "$data"
-  rsync "${options[@]}" "$from/" "$data/"
-  report
-fi
