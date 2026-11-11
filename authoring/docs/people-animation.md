@@ -208,10 +208,11 @@ stationary people's style rather than converted from its classic sprite.
 - its id;
 - the description and pronoun its clip and still prompts use;
 - the clip each view's cycle is read from, and that view's retarget flags;
-- the profile's foot-roll frame.
+- the profile's foot-roll frame;
+- `hidden_legs` when a floor-length skirt hides her legs.
 
 The scripts find that file from the folder they run in, so a figure's own folders hold only its data, and a fix proven on one figure
-reaches the rest. Figures 453, 391, 385 and 384 run on it; 453 rebuilt on it unchanged.
+reaches the rest. Figures 453, 391, 385, 384 and 397 run on it; 453 rebuilt on it unchanged.
 
 Faults the route now handles itself, found on the three men, who wear tunics with their legs showing:
 - **A belt in no layer:** See-through can put a waistband in no layer, which leaves a hole between the top and the skirt. The build
@@ -228,6 +229,26 @@ Faults the route now handles itself, found on the three men, who wear tunics wit
 - **Bob:** a view whose own bob is under half the front's takes only the share it lacks.
 - **Profiles:** a tunic's hem gets springs. A rig without foot bones gets no heel-to-toe roll.
 - **Walking shoes** replace the whole shin drawing, so they suit legs hidden under a skirt only.
+
+Faults found on 397, a hooded woman in a floor-length skirt:
+- **Hidden paint:** assembly colours a part from the painting only where it counts the part visible. Under a hood, a three-quarter
+  face was counted mostly hidden and kept See-through's pale fill, and the hood kept grey streaks. After assembly, every part but
+  the rigid limbs takes the painting's colour wherever it is the topmost part at rest. The limbs keep assembly's joint cuts.
+- **Hoods read as hair:** See-through gives a hood's crown as back hair. Hair recolouring keeps the painting's coloured visible
+  pixels (saturation at least 0.2) and recolours only what lies behind.
+- **Hidden legs:** RTMW guesses the hips and ankles under a floor-length skirt. Walking toward the camera, the forward foot also
+  sinks down the picture with the stride's depth. Planting those guesses bobbed her 54–64 units and sank her shoes below the
+  ground. For a `hidden_legs` figure the cleaned cycle is rewritten before the retarget:
+  - the hips ride the neck, which the clip shows, at their median distance below it;
+  - the lower ankle stands on one floor and the other never goes below it;
+  - each knee moves by half its ankle's change.
+
+  Her profile then also shortens its legs to 0.55, like the front.
+- **Legs past the hem:** any skirt ending within 60 rig px of the ankles has its thighs cleared, and each shin is cut to a stub
+  above its shoe, as for a split bell skirt.
+- **Shoes as feet:** a profile needs the shoes as their own layer to get foot bones and the heel-to-toe roll. When the legs were
+  drawn under the skirt with the shoes merged into them, the shoes come back out as footwear. The legwear keeps 30 px around each
+  ankle so the proposer still finds the legs. The plan is proposed again whenever the layers change.
 
 **Three-quarters:**
 - **Stills:** P-H3-Image (asset-pipeline `docs/pruna-ph3-image.md`) edits a cardinal key into the
@@ -358,4 +379,5 @@ Faults the route now handles itself, found on the three men, who wear tunics wit
    standing ones. A profile's rig is already cut from a walking frame.
 6. **Placement:** each clip draws the figure at its own height and offset. After the retarget, the
    rig's root moves so the walk's planted foot stands on y = 0 and the rig source's neck on x = 0, so
-   a change of view, mirrored or not, keeps the feet and head in place.
+   a change of view, mirrored or not, keeps the feet and head in place. The ground is measured on a render with 300 rows
+   below y = 0, so a view whose feet start below it is measured rather than clipped.
