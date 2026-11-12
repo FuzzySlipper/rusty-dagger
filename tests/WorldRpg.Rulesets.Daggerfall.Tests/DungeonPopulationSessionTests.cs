@@ -46,7 +46,7 @@ public sealed class DungeonPopulationSessionTests
     {
         var world = new AssembledWorld();
         var published = ReadProfile(TestData.RepositoryRoot, FullContent(TestData.RepositoryRoot), world.Definitions,
-            "daggerfall.castle-necromoghan.json");
+            "daggerfall.castle-necromoghan");
         var profile = assembled ? world.Profiles.Require(published.ProfileKey) : published;
         Assert.NotEmpty(profile.DungeonPopulation.Enemies);
         Assert.NotEmpty(profile.DungeonPopulation.Treasures);

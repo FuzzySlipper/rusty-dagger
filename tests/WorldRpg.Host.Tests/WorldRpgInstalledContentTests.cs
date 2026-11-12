@@ -210,8 +210,8 @@ public sealed class WorldRpgInstalledContentTests : IDisposable
     private static ProductContentFile[] ContentFiles() =>
     [
         File("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"test","contentPacks":[{"id":"test.imported"}],"tuning":{"id":"test.tuning"}}"""),
-        File("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"test","payload":"payload/tuning.json"}"""),
-        File("payload/tuning.json", "{}"),
+        File("worldrpg/tuning/test/tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"test","payload":"payload/values.json"}"""),
+        File("payload/values.json", "{}"),
     ];
 
     private static ProductContentFile File(string path, string value) => new(Encoding.UTF8.GetBytes(path), Encoding.UTF8.GetBytes(value));

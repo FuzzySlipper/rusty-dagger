@@ -227,8 +227,8 @@ public sealed class VampirismSessionTests
         {
             var root = TestData.RepositoryRoot; var definitions = TestPayload.Definitions;
             var files = FullContent(root, "worldrpg/imports/privateers-hold", "worldrpg/imports/the-hawkston-cemetery", "worldrpg/imports/the-hawkston-cemetery/exterior");
-            profiles = [ReadInputs(root), ReadProfile(root, files, definitions, "daggerfall.the-hawkston-cemetery.json"),
-                ReadProfile(root, files, definitions, "daggerfall.the-hawkston-cemetery-exterior.json")];
+            profiles = [ReadInputs(root), ReadProfile(root, files, definitions, "daggerfall.the-hawkston-cemetery"),
+                ReadProfile(root, files, definitions, "daggerfall.the-hawkston-cemetery-exterior")];
             composition = new(definitions, profiles[0], DaggerfallTuning.Defaults) { Profiles = new(profiles), VideosEnabled = false,
                 Blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(root,"content/worldrpg/payloads/daggerfall.blocks.json"))) };
             Session = DaggerfallSession.StartNew(Engine().Context, composition);

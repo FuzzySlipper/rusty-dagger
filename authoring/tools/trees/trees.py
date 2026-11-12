@@ -24,8 +24,8 @@ from scipy import ndimage, stats
 
 REPOSITORY = Path(__file__).resolve().parents[3]
 CONTENT = REPOSITORY / "content"
-MEDIA = "worldrpg/media/refreshed/trees"
-PAYLOAD = CONTENT / "worldrpg/payloads/daggerfall.art-replacements.json"
+MEDIA = "worldrpg/packs/daggerfall.art-replacements/media/trees"
+PAYLOAD = CONTENT / "worldrpg/packs/daggerfall.art-replacements/payload.json"
 CRAFTSURVIVE = REPOSITORY.parent / "rusty-craftsurvive/content/game"
 
 # The trees with meshes, by nature archive and record: every big tree of every climate but the few whose shapes are their

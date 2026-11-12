@@ -78,7 +78,7 @@ public sealed class DaggerfallDungeonDiscoveryTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(
             TestSessions.Data(GeneratedContent(root)),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")),
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")),
             definitions);
         DaggerfallDungeonMapContent map = Assert.IsType<DaggerfallDungeonMapContent>(inputs.DungeonMap);
         using JsonDocument normalized = JsonDocument.Parse(TestContentFiles.ReadCopy(
@@ -171,7 +171,7 @@ public sealed class DaggerfallDungeonDiscoveryTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         JsonObject payload = JsonNode.Parse(TestContentFiles.ReadCopy(
-            Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")))!.AsObject();
+            Path.Combine(root, "content/worldrpg/packs/daggerfall.privateers-hold/payload.json")))!.AsObject();
         payload["world"]!["transitions"] = new JsonArray(new JsonObject
         {
             ["id"] = "portal/stone-door",
@@ -202,7 +202,7 @@ public sealed class DaggerfallDungeonDiscoveryTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = GeneratedContent(root);
         DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(TestSessions.Data(content),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.privateers-hold/payload.json")), definitions);
         return (root, inputs);
     }
 

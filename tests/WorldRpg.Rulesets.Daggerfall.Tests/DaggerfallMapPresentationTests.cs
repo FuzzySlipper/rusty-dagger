@@ -117,7 +117,7 @@ public sealed class DaggerfallMapPresentationTests
     {
         string root = TestData.RepositoryRoot;
         var definitions = TestPayload.Definitions;
-        var profile = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior.json");
+        var profile = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior");
         List<string> releases = [];
         ContentFake content = new(releases); PopulateContent(content, profile);
         var engine = EngineContextFake.Create(content, SpatialFake.Create(profile.SpatialArtifact.Sha256, releases).Service,

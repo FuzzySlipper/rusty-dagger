@@ -15,10 +15,11 @@ public static class AuthoredUiAssetSet
     public const string ManifestLabel = "ui-authored-assets.json";
 
     /// <summary>
-    /// The group-relative directory the authored images are published under. It is product content: the
-    /// tracked originals live there, and the classic media group lists them without writing them.
+    /// The group-relative directory the authored images are published under. It is product content, in the art
+    /// pack's folder with the rest of the game's own art: the tracked originals live there, and the classic media
+    /// group lists them without writing them.
     /// </summary>
-    public const string RelativeRoot = "media/ui/authored";
+    public const string RelativeRoot = "packs/daggerfall.art-replacements/authored-ui";
 
     private static readonly JsonSerializerOptions Options = new(PublishedJson.SectionRead);
 

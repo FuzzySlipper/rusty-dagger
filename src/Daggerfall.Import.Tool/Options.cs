@@ -8,7 +8,7 @@ internal static class Options
     public static readonly CommandOption Arena2 = CommandOption.Required("--arena2", "SOURCE_DIR");
     // Each staged option defaults to what `import` gives it, so a command rerun alone updates the staging tree.
     public static readonly CommandOption Pack = CommandOption.Staged("--pack", "IMPORTED.json", ImportLayout.ImportedPayload);
-    public static readonly CommandOption Authored = CommandOption.Staged("--authored", "BASE.json", "content/worldrpg/payloads/daggerfall.base.json");
+    public static readonly CommandOption Authored = CommandOption.Staged("--authored", "BASE.json", "content/worldrpg/packs/daggerfall.base/payload.json");
     public static readonly CommandOption Inventory = CommandOption.Staged("--inventory", "CSV", ImportLayout.Inventory);
     public static readonly CommandOption Records = CommandOption.Staged("--records", "RECORDS.json", ImportLayout.ImportRecords);
     public static readonly CommandOption ContentRoot = CommandOption.Staged("--out", "CONTENT_ROOT", ImportLayout.Staging);

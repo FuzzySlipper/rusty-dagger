@@ -69,6 +69,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-The authored sections of `content/worldrpg/payloads/daggerfall.base.json` (for example the random
+The authored sections of `content/worldrpg/packs/daggerfall.base/payload.json` (for example the random
 encounter tables and the donor errata) transcribe values from Daggerfall Unity by hand and cite the
 source file each came from.

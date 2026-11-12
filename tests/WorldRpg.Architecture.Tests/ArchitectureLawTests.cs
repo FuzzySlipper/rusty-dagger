@@ -108,6 +108,35 @@ public sealed class ArchitectureLawTests
     }
 
     [Fact]
+    public void A_content_pack_or_tuning_profile_is_one_folder()
+    {
+        // Each pack's descriptor, payload and media sit in packs/<id>/ and each tuning profile in tuning/<id>/, so a
+        // pack is one unit; bundles are single files. A file anywhere else (a promote run from before the layout) is
+        // content no pack owns.
+        string root = Path.Combine(RepositoryRoot, "content", "worldrpg");
+        string[] stray = [.. Directory.GetFiles(root, "*", SearchOption.AllDirectories)
+            .Select(file => Path.GetRelativePath(root, file).Replace('\\', '/'))
+            .Where(path => !(path.StartsWith("bundles/", StringComparison.Ordinal) && path.Count(c => c == '/') == 1 && path.EndsWith(".bundle.json", StringComparison.Ordinal))
+                && !((path.StartsWith("packs/", StringComparison.Ordinal) || path.StartsWith("tuning/", StringComparison.Ordinal)) && path.Count(c => c == '/') >= 2))
+            .Order(StringComparer.Ordinal)];
+        Assert.True(stray.Length == 0, $"content/worldrpg/ holds files outside a bundle, pack or tuning folder:{Environment.NewLine}{string.Join(Environment.NewLine, stray.Take(20))}");
+        foreach (string folder in Directory.GetDirectories(Path.Combine(root, "packs")))
+        {
+            string descriptor = Path.Combine(folder, "pack.json");
+            Assert.True(File.Exists(descriptor), $"{Path.GetRelativePath(RepositoryRoot, folder)} has no pack.json");
+            using System.Text.Json.JsonDocument pack = System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(descriptor));
+            Assert.Equal(Path.GetFileName(folder), pack.RootElement.GetProperty("id").GetString());
+            Assert.Equal($"worldrpg/packs/{Path.GetFileName(folder)}/payload.json", pack.RootElement.GetProperty("payload").GetString());
+        }
+        foreach (string folder in Directory.GetDirectories(Path.Combine(root, "tuning")))
+        {
+            using System.Text.Json.JsonDocument tuning = System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(Path.Combine(folder, "tuning.json")));
+            Assert.Equal(Path.GetFileName(folder), tuning.RootElement.GetProperty("id").GetString());
+            Assert.Equal($"worldrpg/tuning/{Path.GetFileName(folder)}/payload.json", tuning.RootElement.GetProperty("payload").GetString());
+        }
+    }
+
+    [Fact]
     public void Host_concrete_ruleset_references_stay_at_builtin_composition_seams()
     {
         string host = SourceDirectory("WorldRpg.Host");

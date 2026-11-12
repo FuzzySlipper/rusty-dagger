@@ -354,9 +354,9 @@ public sealed class UiArtDeliverySessionTests
         byte[] skin = [9, 8, 7];
         byte[] titlebar = [6, 5, 4];
         byte[] slot = [3, 2, 1];
-        const string Skin = "worldrpg/media/ui/authored/ui-stone-texture-v2.png";
-        const string Titlebar = "worldrpg/media/ui/authored/ui-stone-title-v2.png";
-        const string Slot = "worldrpg/media/ui/authored/ui-stone-slot-v2.png";
+        const string Skin = "worldrpg/packs/daggerfall.art-replacements/authored-ui/ui-stone-texture-v2.png";
+        const string Titlebar = "worldrpg/packs/daggerfall.art-replacements/authored-ui/ui-stone-title-v2.png";
+        const string Slot = "worldrpg/packs/daggerfall.art-replacements/authored-ui/ui-stone-slot-v2.png";
         content.Add(Screen, large);
         content.Add(Skin, skin);
         content.Add(Titlebar, titlebar);
@@ -427,7 +427,7 @@ public sealed class UiArtDeliverySessionTests
         ContentFake content = new(releases);
         DaggerfallSiteProfile inputs = ReadInputs(root);
         PopulateContent(content, inputs);
-        const string payload = "worldrpg/payloads/daggerfall.art-replacements.json";
+        const string payload = "worldrpg/packs/daggerfall.art-replacements/payload.json";
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(TestContentFiles.Read(Path.Combine(root, "content", payload)), "daggerfall.art-replacements");
         foreach (DaggerfallArtImage image in art.Images) content.Add(image.Path, TestContentFiles.ReadCopy(Path.Combine(root, "content", image.Path)));
         foreach (string path in art.All.SelectMany(replacement => new[] { replacement.World?.File.Path, replacement.DyeMask?.World?.File.Path })
@@ -658,7 +658,7 @@ public sealed class UiArtDeliverySessionTests
         using JsonDocument inventory = JsonDocument.Parse(TestContentFiles.Read(Path.Combine(root, "content", DaggerfallUiArt.InventoryPath)));
         return [.. inventory.RootElement.GetProperty("artifacts").EnumerateArray()
             .Where(artifact => artifact.TryGetProperty("mediaId", out _)
-                && artifact.GetProperty("path").GetString()!.Contains(DaggerfallUiArt.AuthoredPathSegment, StringComparison.Ordinal))
+                && artifact.GetProperty("path").GetString()!.StartsWith(DaggerfallUiArt.AuthoredRoot, StringComparison.Ordinal))
             .Select(artifact => artifact.GetProperty("mediaId").GetString()!)];
     }
 }

@@ -14,8 +14,8 @@ public sealed class SessionAppearanceHooksTests
         string root = TestData.RepositoryRoot;
         var definitions = TestPayload.Definitions;
         var admitted = FullContent(root);
-        var exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
-        var interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
+        var exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
+        var interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0");
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior); PopulateContent(content, interior);

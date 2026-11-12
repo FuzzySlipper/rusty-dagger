@@ -208,7 +208,7 @@ public sealed class NewGameSessionTests
     {
         var definitions = TestPayload.Definitions;
         var root = System.Text.Json.Nodes.JsonNode.Parse(TestContentFiles.ReadText(Path.Combine(TestData.RepositoryRoot,
-            "content/worldrpg/payloads/daggerfall.base.json")))!.AsObject();
+            "content/worldrpg/packs/daggerfall.base/payload.json")))!.AsObject();
         var config = root["newGame"]!;
         var item = config["careers"]![0]!["items"]![0]!;
         switch (mutation)

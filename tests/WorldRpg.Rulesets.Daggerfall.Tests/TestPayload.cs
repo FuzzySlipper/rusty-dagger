@@ -16,7 +16,7 @@ internal static class TestPayload
     private static readonly SharedFixture<DaggerfallData> SharedData = new(() => TestSessions.Data(TestSessions.StagedContent(TestData.RepositoryRoot, out _)));
     private static readonly SharedFixture<DaggerfallDefinitions> Shared = new(() => DaggerfallBaseContent.Read(Combined.Value, Data));
     private static readonly SharedFixture<byte[]> Combined = new(() => DaggerfallBaseContent.Combine(
-        TestContentFiles.Read(PayloadPath("daggerfall.base.json")), TestContentFiles.Read(PayloadPath("daggerfall.imported.json"))));
+        TestContentFiles.Read(TestData.PackPayload("daggerfall.base")), TestContentFiles.Read(PayloadPath("daggerfall.imported.json"))));
 
     /// <summary>The parsed base definitions.</summary>
     internal static DaggerfallDefinitions Definitions => Shared.Value;

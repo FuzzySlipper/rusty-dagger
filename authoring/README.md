@@ -22,7 +22,8 @@ local/art/  (ignored, beside the other working files in local/; see the README)
 ```
 
 `authoring/` holds tracked files only. A path says what a file is: `local/art/reference` → `local/art/generated` →
-(accepted) `content/worldrpg/media/refreshed/`. Never commit anything from `local/art`.
+(accepted) the art pack, `content/worldrpg/packs/daggerfall.art-replacements/`. Never commit anything from
+`local/art`.
 
 ## Reference exports
 
@@ -60,13 +61,16 @@ dotnet run --project src/Daggerfall.Source.Tool -- export-items
 - `matte.py` only once an area's finals are accepted. Never despeckle effects that carry embers.
 - `promote.py` takes only finals the ledger marks `accepted`. A whole-area run deletes and rewrites that area's
   files (about ten minutes for `worn`): don't interrupt it, and use `--key` for one final. The import must have run.
+- Promotion writes only into the art pack's folder: commit with
+  `git add -A content/worldrpg/packs/daggerfall.art-replacements`, which takes the payload and the area's new,
+  changed and deleted files together. Nothing there is ignored, so no file needs `git add -f`.
 
 ## Weapon models
 
 - The icon wins over the classic first-person frame.
 - Look at `joined.png` and at every turnaround attempt. A changed prompt is a new rev; build each rev into a new
   folder.
-- Adopting a model: copy it to `content/worldrpg/first-person/weapons/NAME.glb`, `rusty asset check`, rerun
+- Adopting a model: copy it to `content/worldrpg/packs/daggerfall.art-replacements/first-person/weapons/NAME.glb`, `rusty asset check`, rerun
   `arcs.py`, `authoring/tools/fp-arms/build.sh`, then `authoring/tools/fp-arms/sheet.sh` in a 1920×1080 window run.
 - Film a chain with `held.motion.play` and `engine.time.advance`; `sheet.sh` jumps between moments and gives a chain
   nothing to follow.

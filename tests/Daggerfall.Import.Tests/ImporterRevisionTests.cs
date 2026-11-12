@@ -42,8 +42,8 @@ public sealed class ImporterRevisionTests
                 "data/content-source-manifest.csv",
                 "data/ui-authored-assets.json",
                 "data/daggerfall-unity/Assets/Resources/ItemTemplates.txt",
-                "content/worldrpg/media/ui/authored/ui-stone-title-v2.png",
-                "content/worldrpg/payloads/daggerfall.base.json",
+                "content/worldrpg/packs/daggerfall.art-replacements/authored-ui/ui-stone-title-v2.png",
+                "content/worldrpg/packs/daggerfall.base/payload.json",
             ];
             string[] unread =
             [
@@ -51,7 +51,10 @@ public sealed class ImporterRevisionTests
                 "src/Daggerfall.Source.Tool/Commands/MapArtCommand.cs",
                 "src/Daggerfall.Source.Tool/Program.cs",
                 "data/README.md",
-                "content/worldrpg/payloads/daggerfall.art-replacements.json",
+                "content/worldrpg/packs/daggerfall.art-replacements/payload.json",
+                "content/worldrpg/packs/daggerfall.art-replacements/media/ui/screens--title.webp",
+                "content/worldrpg/packs/daggerfall.art-replacements/first-person/daggerfall.held.json",
+                "content/worldrpg/packs/daggerfall.base/pack.json",
                 "src/WorldRpg.Rulesets.Daggerfall/DaggerfallRuleset.cs",
                 "src/Daggerfall.Import/obj/Debug/net10.0/ImporterRevision.g.cs",
                 "src/Daggerfall.Import.Tool/bin/Debug/net10.0/Daggerfall.Import.Tool.dll",
@@ -143,7 +146,7 @@ public sealed class ImporterRevisionTests
         }
 
         Assert.True(outside.Count == 0, $"import steps read repository files outside the importer revision: {string.Join(", ", outside.Distinct().Take(20))}");
-        Assert.Contains("content/worldrpg/payloads/daggerfall.base.json", checkedPaths);
+        Assert.Contains("content/worldrpg/packs/daggerfall.base/payload.json", checkedPaths);
         Assert.Contains("data/content-source-manifest.csv", checkedPaths);
         Assert.Contains("data/ui-authored-assets.json", checkedPaths);
         Assert.Contains(checkedPaths, path => path.StartsWith(AuthoredUi.ProductDirectory + "/", StringComparison.Ordinal));

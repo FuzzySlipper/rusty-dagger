@@ -154,11 +154,11 @@ public sealed class Arena2ClassicMediaPublicationTests
         // A 1254x1254 opaque plate, the shape the authored inventory skins actually have.
         byte[] source = SolidPng(1254, 1254, [204, 187, 136, 255]);
         Arena2ClassicMediaPublication publication = Arena2ClassicMediaPublication.Create(CreateInputs(), AuthoredProfile(
-            new ClassicAuthoredUiAsset("inventory.skin.panel-slate.v1", "media/ui/authored/inventory-skin-panel-slate-v1.png", "ui-original/inventory-panel-slate-v1.png", source, "generator", "prompt")));
+            new ClassicAuthoredUiAsset("inventory.skin.panel-slate.v1", "packs/daggerfall.art-replacements/authored-ui/inventory-skin-panel-slate-v1.png", "ui-original/inventory-panel-slate-v1.png", source, "generator", "prompt")));
 
         NormalizedMediaDescriptor published = publication.MediaManifest.Resources.Single(resource => resource.Id == "inventory.skin.panel-slate.v1");
         Assert.Equal((256, 256), (published.SourceWidth, published.SourceHeight));
-        byte[] bytes = Artifact(publication, "media/ui/authored/inventory-skin-panel-slate-v1.png");
+        byte[] bytes = Artifact(publication, "packs/daggerfall.art-replacements/authored-ui/inventory-skin-panel-slate-v1.png");
         Assert.True(bytes.Length < 512 * 1024, $"the published skin is {bytes.Length} bytes");
         DeterministicPngImage decoded = DeterministicPngReader.ReadRgba8(bytes, "published skin");
         Assert.Equal((256, 256), (decoded.Width, decoded.Height));
@@ -172,13 +172,13 @@ public sealed class Arena2ClassicMediaPublicationTests
     {
         ClassicAuthoredUiDisplay frame = new(0.5, Slice: [16, 16, 16, 16]);
         Arena2ClassicMediaPublication publication = Arena2ClassicMediaPublication.Create(CreateInputs(), AuthoredProfile(
-            new ClassicAuthoredUiAsset("ui.stone.window.v2", "media/ui/authored/ui-stone-window-v2.png", "ui-original/ui-stone-window-v2.png",
+            new ClassicAuthoredUiAsset("ui.stone.window.v2", "packs/daggerfall.art-replacements/authored-ui/ui-stone-window-v2.png", "ui-original/ui-stone-window-v2.png",
                 SolidPng(64, 64, [90, 90, 96, 255]), "generator", "prompt", frame)));
         Assert.Equal(frame, Assert.Single(publication.AuthoredUiAssets).Display);
 
         // An original past the publication bound is resampled, which would move every slice line.
         InvalidOperationException resampled = Assert.Throws<InvalidOperationException>(() => Arena2ClassicMediaPublication.Create(CreateInputs(), AuthoredProfile(
-            new ClassicAuthoredUiAsset("ui.stone.window.v2", "media/ui/authored/ui-stone-window-v2.png", "ui-original/ui-stone-window-v2.png",
+            new ClassicAuthoredUiAsset("ui.stone.window.v2", "packs/daggerfall.art-replacements/authored-ui/ui-stone-window-v2.png", "ui-original/ui-stone-window-v2.png",
                 SolidPng(512, 512, [90, 90, 96, 255]), "generator", "prompt", frame))));
         Assert.Contains("ui.stone.window.v2", resampled.Message, StringComparison.Ordinal);
         Assert.Contains("published size", resampled.Message, StringComparison.Ordinal);
@@ -192,7 +192,7 @@ public sealed class Arena2ClassicMediaPublicationTests
         })
         {
             InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => Arena2ClassicMediaPublication.Create(CreateInputs(), AuthoredProfile(
-                new ClassicAuthoredUiAsset("ui.stone.bad.v2", "media/ui/authored/ui-stone-bad-v2.png", "ui-original/ui-stone-bad-v2.png",
+                new ClassicAuthoredUiAsset("ui.stone.bad.v2", "packs/daggerfall.art-replacements/authored-ui/ui-stone-bad-v2.png", "ui-original/ui-stone-bad-v2.png",
                     SolidPng(64, 64, [90, 90, 96, 255]), "generator", "prompt", invalid))));
             Assert.Contains("ui.stone.bad.v2", failure.Message, StringComparison.Ordinal);
         }
@@ -203,20 +203,20 @@ public sealed class Arena2ClassicMediaPublicationTests
     {
         byte[] original = SolidPng(64, 64, [90, 90, 96, 255]);
         ClassicMediaGroup group = ClassicMediaGroup.Create(CreateInputs(), AuthoredProfile(
-            new ClassicAuthoredUiAsset("ui.stone.window.v2", "media/ui/authored/ui-stone-window-v2.png", "ui-original/ui-stone-window-v2.png", original, "generator", "prompt")));
+            new ClassicAuthoredUiAsset("ui.stone.window.v2", "packs/daggerfall.art-replacements/authored-ui/ui-stone-window-v2.png", "ui-original/ui-stone-window-v2.png", original, "generator", "prompt")));
 
         // The tracked original is the product's own content: listed with its digest, never written by the group.
-        Assert.Equal(original, group.Artifacts.Single(artifact => artifact.RelativePath == "media/ui/authored/ui-stone-window-v2.png").Bytes.ToArray());
+        Assert.Equal(original, group.Artifacts.Single(artifact => artifact.RelativePath == "packs/daggerfall.art-replacements/authored-ui/ui-stone-window-v2.png").Bytes.ToArray());
         Assert.Equal(group.Artifacts.Count - 1, group.GeneratedArtifacts.Count);
         Assert.DoesNotContain(group.GeneratedArtifacts, artifact => ClassicMediaGroup.IsAuthoredUi(artifact.RelativePath));
         System.Text.Json.Nodes.JsonNode entry = Assert.Single(System.Text.Json.Nodes.JsonNode.Parse(group.WriteInventory("worldrpg", []))!["artifacts"]!.AsArray(),
-            entry => (string)entry!["path"]! == "worldrpg/media/ui/authored/ui-stone-window-v2.png")!;
+            entry => (string)entry!["path"]! == "worldrpg/packs/daggerfall.art-replacements/authored-ui/ui-stone-window-v2.png")!;
         Assert.Equal(Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(original)), (string)entry["sha256"]!);
 
         // An original past the publication bound would be listed with the resampled bytes' digest, which the
         // tracked file the product reads does not have.
         InvalidOperationException resampled = Assert.Throws<InvalidOperationException>(() => ClassicMediaGroup.Create(CreateInputs(), AuthoredProfile(
-            new ClassicAuthoredUiAsset("ui.stone.window.v2", "media/ui/authored/ui-stone-window-v2.png", "ui-original/ui-stone-window-v2.png",
+            new ClassicAuthoredUiAsset("ui.stone.window.v2", "packs/daggerfall.art-replacements/authored-ui/ui-stone-window-v2.png", "ui-original/ui-stone-window-v2.png",
                 SolidPng(512, 512, [90, 90, 96, 255]), "generator", "prompt"))));
         Assert.Contains("ui.stone.window.v2", resampled.Message, StringComparison.Ordinal);
         Assert.Contains("published size", resampled.Message, StringComparison.Ordinal);
@@ -229,7 +229,7 @@ public sealed class Arena2ClassicMediaPublicationTests
         byte[] noisy = NoisePng(1024, 1024);
         InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => Arena2ClassicMediaPublication.Create(
             CreateInputs(),
-            AuthoredProfile(new ClassicAuthoredUiAsset("inventory.skin.noisy", "media/ui/authored/noisy.png", "ui-original/noisy.png", noisy, "generator", "prompt")),
+            AuthoredProfile(new ClassicAuthoredUiAsset("inventory.skin.noisy", "packs/daggerfall.art-replacements/authored-ui/noisy.png", "ui-original/noisy.png", noisy, "generator", "prompt")),
             new Arena2ClassicMediaPublicationOptions(AuthoredUiMaximumArtifactBytes: 4096)));
         Assert.Contains("inventory.skin.noisy", failure.Message, StringComparison.Ordinal);
         Assert.Contains("4096-byte bound", failure.Message, StringComparison.Ordinal);
@@ -413,7 +413,7 @@ public sealed class Arena2ClassicMediaPublicationTests
             [
                 new ClassicAuthoredUiAsset(
                     "inventory.skin.panel-slate.v1",
-                    "media/ui/authored/inventory-skin-panel-slate-v1.png",
+                    "packs/daggerfall.art-replacements/authored-ui/inventory-skin-panel-slate-v1.png",
                     "ui-original/inventory-panel-slate-v1.png",
                     png,
                     "test-generator",
@@ -422,7 +422,7 @@ public sealed class Arena2ClassicMediaPublicationTests
 
         Arena2ClassicMediaPublication publication = Arena2ClassicMediaPublication.Create(CreateInputs(), profile);
 
-        Assert.Equal(png, Artifact(publication, "media/ui/authored/inventory-skin-panel-slate-v1.png"));
+        Assert.Equal(png, Artifact(publication, "packs/daggerfall.art-replacements/authored-ui/inventory-skin-panel-slate-v1.png"));
         Assert.Equal("authored-ui/ui-authored-assets.json", publication.AuthoredUiManifestSource!.SourcePath);
         Assert.Contains(publication.Sources, source => source.SourcePath == "authored-ui/ui-original/inventory-panel-slate-v1.png");
         ClassicAuthoredUiAssetManifest asset = Assert.Single(publication.AuthoredUiAssets);
@@ -441,7 +441,7 @@ public sealed class Arena2ClassicMediaPublicationTests
 
         Arena2ClassicMediaProfile invalidPng = new(AuthoredUiAssets:
         [
-            new ClassicAuthoredUiAsset("inventory.skin.invalid", "media/ui/authored/invalid.png", "ui-original/invalid.png", [1], "generator", "prompt"),
+            new ClassicAuthoredUiAsset("inventory.skin.invalid", "packs/daggerfall.art-replacements/authored-ui/invalid.png", "ui-original/invalid.png", [1], "generator", "prompt"),
         ]);
         Assert.Throws<ArgumentException>(() => Arena2ClassicMediaPublication.Create(CreateInputs(), invalidPng));
 
@@ -449,7 +449,7 @@ public sealed class Arena2ClassicMediaPublicationTests
             AuthoredUiManifest: new("ui-original/same.png", [1]),
             AuthoredUiAssets:
             [
-                new ClassicAuthoredUiAsset("inventory.skin.same", "media/ui/authored/same.png", "ui-original/same.png", DeterministicPngEncoder.EncodeRgba8(1, 1, [0, 0, 0, 0]), "generator", "prompt"),
+                new ClassicAuthoredUiAsset("inventory.skin.same", "packs/daggerfall.art-replacements/authored-ui/same.png", "ui-original/same.png", DeterministicPngEncoder.EncodeRgba8(1, 1, [0, 0, 0, 0]), "generator", "prompt"),
             ]);
         Assert.Throws<ArgumentException>(() => Arena2ClassicMediaPublication.Create(CreateInputs(), collidingProvenance));
     }

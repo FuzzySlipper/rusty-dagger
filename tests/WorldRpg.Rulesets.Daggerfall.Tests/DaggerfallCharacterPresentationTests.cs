@@ -268,16 +268,16 @@ public sealed class DaggerfallCharacterPresentationTests
         // Every classic image the doll draws has a replacement with a rect of its own, as promotion writes them.
         System.Text.Json.Nodes.JsonObject Entry(string replaces, double x, double y, double width, double height) => new()
         {
-            ["replaces"] = replaces, ["mediaId"] = $"refreshed.{replaces}", ["path"] = $"worldrpg/media/refreshed/paper-doll/{replaces}.webp", ["byteLength"] = 1,
+            ["replaces"] = replaces, ["mediaId"] = $"refreshed.{replaces}", ["path"] = $"worldrpg/packs/daggerfall.art-replacements/media/paper-doll/{replaces}.webp", ["byteLength"] = 1,
             ["doll"] = new System.Text.Json.Nodes.JsonObject { ["x"] = x, ["y"] = y, ["width"] = width, ["height"] = height },
         };
         // The shirt's refreshed record is one neutral image for every dye, standing in for the record as published undyed.
         string neutralShirt = classicShirt.MediaId[..classicShirt.MediaId.LastIndexOf('.')];
         System.Text.Json.Nodes.JsonObject shirtEntry = Entry(neutralShirt, 25, 40, 60, 50);
-        shirtEntry["dyeMask"] = new System.Text.Json.Nodes.JsonObject { ["mediaId"] = $"refreshed.{neutralShirt}.dye", ["path"] = "worldrpg/media/refreshed/shirt-dye.webp", ["byteLength"] = 1 };
+        shirtEntry["dyeMask"] = new System.Text.Json.Nodes.JsonObject { ["mediaId"] = $"refreshed.{neutralShirt}.dye", ["path"] = "worldrpg/packs/daggerfall.art-replacements/media/shirt-dye.webp", ["byteLength"] = 1 };
         // The steel plate cuirass's refreshed record likewise stands in for every metal, its bare steel masked for the tint.
         System.Text.Json.Nodes.JsonObject cuirassEntry = Entry(classicCuirass.MediaId, 30, 35, 50, 60);
-        cuirassEntry["dyeMask"] = new System.Text.Json.Nodes.JsonObject { ["mediaId"] = $"refreshed.{classicCuirass.MediaId}.dye", ["path"] = "worldrpg/media/refreshed/cuirass-dye.webp", ["byteLength"] = 1 };
+        cuirassEntry["dyeMask"] = new System.Text.Json.Nodes.JsonObject { ["mediaId"] = $"refreshed.{classicCuirass.MediaId}.dye", ["path"] = "worldrpg/packs/daggerfall.art-replacements/media/cuirass-dye.webp", ["byteLength"] = 1 };
         System.Text.Json.Nodes.JsonObject payload = new()
         {
             ["artReplacements"] = new System.Text.Json.Nodes.JsonObject
@@ -335,9 +335,9 @@ public sealed class DaggerfallCharacterPresentationTests
             new(longsword.Id.Value, material, 0, 1, 1, true, false, null, null, null, DaggerfallItemOwner.Player);
         System.Text.Json.Nodes.JsonObject Image(string mediaId, double width) => new()
         {
-            ["mediaId"] = mediaId, ["path"] = $"worldrpg/media/refreshed/worn/{mediaId}.webp", ["byteLength"] = 1,
+            ["mediaId"] = mediaId, ["path"] = $"worldrpg/packs/daggerfall.art-replacements/media/worn/{mediaId}.webp", ["byteLength"] = 1,
             ["doll"] = new System.Text.Json.Nodes.JsonObject { ["x"] = 10, ["y"] = 20, ["width"] = width, ["height"] = 40 },
-            ["dyeMask"] = new System.Text.Json.Nodes.JsonObject { ["mediaId"] = $"{mediaId}.dye", ["path"] = $"worldrpg/media/refreshed/worn/{mediaId}-dye.webp", ["byteLength"] = 1 },
+            ["dyeMask"] = new System.Text.Json.Nodes.JsonObject { ["mediaId"] = $"{mediaId}.dye", ["path"] = $"worldrpg/packs/daggerfall.art-replacements/media/worn/{mediaId}-dye.webp", ["byteLength"] = 1 },
         };
         // The longsword's left-hand record, as promotion writes it: the layer with its hand gap, and the whole weapon as its icon.
         System.Text.Json.Nodes.JsonObject layer = Image("refreshed.paper-doll.234.12", 30);
@@ -429,7 +429,7 @@ public sealed class DaggerfallCharacterPresentationTests
         string beastBody = f.Definitions.CharacterPresentation.RacialForms["werewolf"].BodyMediaId;
         System.Text.Json.Nodes.JsonObject Entry(string replaces, double x, double y, double width, double height) => new()
         {
-            ["replaces"] = replaces, ["mediaId"] = $"refreshed.{replaces}", ["path"] = $"worldrpg/media/refreshed/paper-doll/{replaces}.webp", ["byteLength"] = 1,
+            ["replaces"] = replaces, ["mediaId"] = $"refreshed.{replaces}", ["path"] = $"worldrpg/packs/daggerfall.art-replacements/media/paper-doll/{replaces}.webp", ["byteLength"] = 1,
             ["doll"] = new System.Text.Json.Nodes.JsonObject { ["x"] = x, ["y"] = y, ["width"] = width, ["height"] = height },
         };
         System.Text.Json.Nodes.JsonObject payload = new()

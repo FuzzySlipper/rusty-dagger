@@ -301,9 +301,17 @@ public static class GameCompositionResolver
         return result;
     }
 
+    /// <summary>
+    /// Whether a content path names a composition descriptor: a game bundle's <c>NAME.bundle.json</c>, or the
+    /// <c>pack.json</c> or <c>tuning.json</c> of a content pack or tuning profile, which sits in the folder that holds
+    /// its payload.
+    /// </summary>
+    private static bool Descriptor(string path) =>
+        path.EndsWith(".bundle.json", StringComparison.Ordinal) || path[(path.LastIndexOf('/') + 1)..] is "pack.json" or "tuning.json";
+
     private static void ReadDescriptor(string path, ReadOnlyMemory<byte> bytes, Dictionary<GameBundleId, GameBundleDescriptor> bundles, Dictionary<ContentPackId, ContentPackDescriptor> packs, Dictionary<TuningProfileId, TuningDescriptor> tunings, List<CompositionDiagnostic> diagnostics)
     {
-        if (!path.EndsWith(".bundle.json", StringComparison.Ordinal) && !path.EndsWith(".pack.json", StringComparison.Ordinal) && !path.EndsWith(".tuning.json", StringComparison.Ordinal)) return;
+        if (!Descriptor(path)) return;
         try
         {
             using JsonDocument document = JsonDocument.Parse(bytes);

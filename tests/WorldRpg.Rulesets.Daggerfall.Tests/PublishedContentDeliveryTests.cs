@@ -69,18 +69,17 @@ public sealed class PublishedContentDeliveryTests
         }
 
         // Each content group has its own generated index, so the classic index accounts for the classic
-        // group and the character index accounts for the character canvases; the refreshed art pack's
-        // payload accounts for its own images. An artifact no index names
+        // group and the character index accounts for the character canvases; the classic index also names the
+        // authored UI kit, which the art pack's folder carries. An artifact no index names
         // fails here, which is what makes a hand-written artifact or a dropped entry visible.
-        HashSet<string> published = [.. GeneratedContentFiles(content)
+        HashSet<string> published = [.. GeneratedContentFiles(content).Concat(ContentFiles(content, DaggerfallUiArt.AuthoredRoot.TrimEnd('/')))
             .Where(path => !path.EndsWith("classic-media-inventory.json", StringComparison.Ordinal)
                 && !path.Contains("/character/", StringComparison.Ordinal)
                 && !path.Contains("/cinematics/", StringComparison.Ordinal)
                 && !path.Contains("/music/", StringComparison.Ordinal)
                 && !path.StartsWith("worldrpg/media/sky/", StringComparison.Ordinal)
                 // The travel atlas is its own generated group, indexed by its own inventory.
-                && !path.StartsWith("worldrpg/media/atlas", StringComparison.Ordinal)
-                && !path.StartsWith("worldrpg/media/refreshed/", StringComparison.Ordinal))];
+                && !path.StartsWith("worldrpg/media/atlas", StringComparison.Ordinal))];
         Assert.Equal(published.Order(StringComparer.Ordinal), listed.Order(StringComparer.Ordinal));
         // The published group carries every classic descriptor except audio: each site closure publishes
         // the clips it maps and opens them through its own audio bundle, so the group carries neither WAV
@@ -464,7 +463,7 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal("worldrpg/media/ui/window-merchant-buttons-buy.png", identified["window.merchant.buttons.buy"].Path);
         Assert.Equal("worldrpg/media/ui/window-merchant-buttons-identify.png", identified["window.merchant.buttons.identify"].Path);
         Assert.Equal("worldrpg/media/ui/inventory-icons/inventory-icon-gold-piece.png", identified["inventory.icon.gold-piece"].Path);
-        Assert.Equal("worldrpg/media/ui/authored/ui-stone-window-v2.png", identified["ui.stone.window.v2"].Path);
+        Assert.Equal("worldrpg/packs/daggerfall.art-replacements/authored-ui/ui-stone-window-v2.png", identified["ui.stone.window.v2"].Path);
         Assert.Equal("worldrpg/media/maps/map-fmap0i17.png", identified["map.fmap0i17"].Path);
         Assert.Equal("worldrpg/media/fonts/font-classic-0000-atlas.png", identified["font.classic.0000"].Path);
         Assert.Equal("worldrpg/media/combat/weapon-werecreature-atlas.png", identified["weapon.werecreature"].Path);
@@ -510,14 +509,14 @@ public sealed class PublishedContentDeliveryTests
         // asks for it.
         ProductContent content = AdmittedContent();
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
-            content.ReadBytes("worldrpg/payloads/daggerfall.base.json"), content.ReadBytes("worldrpg/payloads/daggerfall.imported.json"), TestSessions.Data(content));
+            content.ReadBytes("worldrpg/packs/daggerfall.base/payload.json"), content.ReadBytes("worldrpg/payloads/daggerfall.imported.json"), TestSessions.Data(content));
         DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(
             TestSessions.Data(content),
-            content.ReadBytes("worldrpg/payloads/daggerfall.privateers-hold.json"),
+            content.ReadBytes("worldrpg/packs/daggerfall.privateers-hold/payload.json"),
             definitions);
         DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(
             TestSessions.Data(content),
-            content.ReadBytes("worldrpg/payloads/daggerfall.castle-necromoghan.json"),
+            content.ReadBytes("worldrpg/packs/daggerfall.castle-necromoghan/payload.json"),
             definitions);
 
         DaggerfallPublishedClassicMedia media = DaggerfallPublishedClassicMedia.Read(TestSessions.Data(content), inputs.ClassicPresentation);
@@ -796,7 +795,7 @@ public sealed class PublishedContentDeliveryTests
     public void Refreshed_ground_cover_ships_its_files_grass_for_the_green_summers_alone_and_relief_for_open_ground()
     {
         ProductContent content = AdmittedContent();
-        const string payloadPath = "worldrpg/payloads/daggerfall.art-replacements.json";
+        const string payloadPath = "worldrpg/packs/daggerfall.art-replacements/payload.json";
         DaggerfallGroundCoverArt cover = DaggerfallArtReplacements.Read(content.ReadBytes(payloadPath), "daggerfall.art-replacements").GroundCover!;
 
         Assert.All(new[] { cover.Shell, cover.Shader, cover.Tuft }, file =>
@@ -826,7 +825,7 @@ public sealed class PublishedContentDeliveryTests
     public void The_people_rig_ships_each_view_with_its_pages_and_clips_and_states_four_and_eight_direction_sets()
     {
         ProductContent content = AdmittedContent();
-        DaggerfallPeopleRig rig = DaggerfallArtReplacements.Read(content.ReadBytes("worldrpg/payloads/daggerfall.art-replacements.json"),
+        DaggerfallPeopleRig rig = DaggerfallArtReplacements.Read(content.ReadBytes("worldrpg/packs/daggerfall.art-replacements/payload.json"),
             "daggerfall.art-replacements").PeopleRig!;
         Assert.Equal(["back", "back34", "front", "front34", "side"], rig.Views.Keys.Order(StringComparer.Ordinal));
         foreach ((string name, DaggerfallPeopleRigView view) in rig.Views)
@@ -853,7 +852,7 @@ public sealed class PublishedContentDeliveryTests
     public void Refreshed_art_states_the_bytes_it_ships_and_stands_in_only_for_published_classic_media()
     {
         ProductContent content = AdmittedContent();
-        const string payloadPath = "worldrpg/payloads/daggerfall.art-replacements.json";
+        const string payloadPath = "worldrpg/packs/daggerfall.art-replacements/payload.json";
         JsonElement[] images = [.. JsonDocument.Parse(content.ReadBytes(payloadPath).ToArray()).RootElement
             .GetProperty("artReplacements").GetProperty("images").EnumerateArray()];
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(content.ReadBytes(payloadPath), "daggerfall.art-replacements");
@@ -997,7 +996,7 @@ public sealed class PublishedContentDeliveryTests
         }
 
         Assert.Equal(
-            [.. GeneratedContentFiles(content).Where(path => path.StartsWith("worldrpg/media/refreshed/", StringComparison.Ordinal)).Order(StringComparer.Ordinal)],
+            [.. ContentFiles(content, DaggerfallArtReplacements.Folder + "/media").Order(StringComparer.Ordinal)],
             [.. files.Select(file => file.GetProperty("path").GetString()!).Order(StringComparer.Ordinal)]);
     }
 
@@ -1016,8 +1015,10 @@ public sealed class PublishedContentDeliveryTests
     /// Every admitted content-file name in the published group, read through the same directory listing a
     /// consumer would see rather than from the filesystem.
     /// </summary>
-    private static IEnumerable<string> GeneratedContentFiles(ProductContent content) =>
-        content.ReadDirectory("worldrpg/media", recursive: true).Select(file => Encoding.UTF8.GetString(file.Path.Span));
+    private static IEnumerable<string> GeneratedContentFiles(ProductContent content) => ContentFiles(content, "worldrpg/media");
+
+    private static IEnumerable<string> ContentFiles(ProductContent content, string root) =>
+        content.ReadDirectory(root, recursive: true).Select(file => Encoding.UTF8.GetString(file.Path.Span));
 
     /// <summary>One generated content-group index, parsed, with its entries already checked to be an array.</summary>
     /// <summary>The paper doll's worn-item image group, which carries its own generated index.</summary>

@@ -25,7 +25,7 @@ public sealed class SessionCollisionResidencyTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
-        DaggerfallSiteProfile destination = ReadProfile(root, FullContent(root), definitions, "daggerfall.castle-necromoghan.json");
+        DaggerfallSiteProfile destination = ReadProfile(root, FullContent(root), definitions, "daggerfall.castle-necromoghan");
         DaggerfallDungeonActionModelDefinition[] sourceModels = CollisionModels(source);
         DaggerfallDungeonActionModelDefinition[] destinationModels = CollisionModels(destination);
         Assert.NotEmpty(sourceModels);
@@ -94,8 +94,8 @@ public sealed class SessionCollisionResidencyTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root, "worldrpg/imports/charing");
-        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
-        DaggerfallSiteProfile interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
+        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
+        DaggerfallSiteProfile interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0");
         Assert.Equal(DaggerfallWorldProfileKind.Exterior, exterior.ProfileKey.Kind);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -189,7 +189,7 @@ public sealed class SessionCollisionResidencyTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root, "worldrpg/imports/charing");
-        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
+        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
@@ -220,7 +220,7 @@ public sealed class SessionCollisionResidencyTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root, "worldrpg/imports/charing");
-        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
+        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);

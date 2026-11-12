@@ -29,7 +29,7 @@ public sealed class SiteTransitionSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
         DaggerfallSiteProfile destination = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(root)),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source); PopulateContent(content, destination);
@@ -60,7 +60,7 @@ public sealed class SiteTransitionSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
         DaggerfallSiteProfile destination = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(root)),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source);
@@ -137,7 +137,7 @@ public sealed class SiteTransitionSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile destination = ReadProfile(root, admitted, definitions, "daggerfall.castle-necromoghan.json");
+        DaggerfallSiteProfile destination = ReadProfile(root, admitted, definitions, "daggerfall.castle-necromoghan");
         DaggerfallSiteProfiles profiles = new([source, destination]);
         ResolvedCompositionIdentity identity = TestSessions.Resolve(admitted, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         DaggerfallSessionComposition composition = new(definitions, source, DaggerfallTuning.Defaults, identity) { Profiles = profiles };
@@ -213,7 +213,7 @@ public sealed class SiteTransitionSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile destination = ReadProfile(root, admitted, definitions, "daggerfall.castle-necromoghan.json");
+        DaggerfallSiteProfile destination = ReadProfile(root, admitted, definitions, "daggerfall.castle-necromoghan");
         DaggerfallSiteProfiles profiles = new([source, destination]);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -258,8 +258,8 @@ public sealed class SiteTransitionSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
-        DaggerfallSiteProfile interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
+        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
+        DaggerfallSiteProfile interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0");
         Assert.Equal(exterior.Site, interior.Site);
         Assert.NotEqual(exterior.ProfileKey, interior.ProfileKey);
         DaggerfallSiteProfiles profiles = new([exterior, interior]);
@@ -342,7 +342,7 @@ public sealed class SiteTransitionSessionTests
         DaggerfallSiteProfile source = ReadInputs(root);
         ProductContent admitted = FullContent(root);
         DaggerfallSiteProfile destination = DaggerfallSiteContent.Read(TestSessions.Data(admitted),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
         DaggerfallSiteProfiles profiles = new([source, destination]);
         DaggerfallEffectCatalog catalog = EffectCatalog();
         List<string> releases = [];
@@ -430,7 +430,7 @@ public sealed class SiteTransitionSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
         DaggerfallSiteProfile destination = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(root)),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source);
@@ -456,7 +456,7 @@ public sealed class SiteTransitionSessionTests
         DaggerfallSiteProfile source = ReadInputs(root);
         ProductContent admitted = FullContent(root);
         DaggerfallSiteProfile destination = DaggerfallSiteContent.Read(TestSessions.Data(admitted),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source);
@@ -494,7 +494,7 @@ public sealed class SiteTransitionSessionTests
         DaggerfallSiteProfile source = ReadInputs(root);
         ProductContent admitted = FullContent(root);
         DaggerfallSiteProfile destination = DaggerfallSiteContent.Read(TestSessions.Data(admitted),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
         DaggerfallSiteProfiles profiles = new([source, destination]);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -581,7 +581,7 @@ public sealed class SiteTransitionSessionTests
         DaggerfallSiteProfile source = ReadInputs(root);
         ProductContent admitted = FullContent(root);
         DaggerfallSiteProfile destination = DaggerfallSiteContent.Read(TestSessions.Data(admitted),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
         DaggerfallSiteProfiles profiles = new([source, destination]);
         List<string> releases = [];
         ContentFake content = new(releases);

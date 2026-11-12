@@ -55,18 +55,18 @@ public sealed class TransitionDoorSightTests
     /// stops Engine sight at the door's centre: the playtested case of Privateer's Hold.
     /// </summary>
     [Theory]
-    [InlineData("daggerfall.privateers-hold.json", true)]
-    [InlineData("daggerfall.castle-necromoghan.json", false)]
-    [InlineData("daggerfall.charing-interior-1-5-17.json", false)]
-    [InlineData("daggerfall.charing-interior-2-1-0.json", false)]
-    [InlineData("daggerfall.charing-interior-3-1-13.json", false)]
-    [InlineData("daggerfall.charing-interior-3-2-14.json", false)]
-    [InlineData("daggerfall.charing-interior-3-4-0.json", false)]
-    [InlineData("daggerfall.charing-interior-4-2-0.json", false)]
-    public void Each_authored_source_exit_is_sighted_from_its_open_side(string payload, bool wallThroughDoor)
+    [InlineData("daggerfall.privateers-hold", true)]
+    [InlineData("daggerfall.castle-necromoghan", false)]
+    [InlineData("daggerfall.charing-interior-1-5-17", false)]
+    [InlineData("daggerfall.charing-interior-2-1-0", false)]
+    [InlineData("daggerfall.charing-interior-3-1-13", false)]
+    [InlineData("daggerfall.charing-interior-3-2-14", false)]
+    [InlineData("daggerfall.charing-interior-3-4-0", false)]
+    [InlineData("daggerfall.charing-interior-4-2-0", false)]
+    public void Each_authored_source_exit_is_sighted_from_its_open_side(string pack, bool wallThroughDoor)
     {
         string root = TestData.RepositoryRoot;
-        DaggerfallSiteProfile profile = ReadProfile(root, FullContent(root), TestPayload.Definitions, payload);
+        DaggerfallSiteProfile profile = ReadProfile(root, FullContent(root), TestPayload.Definitions, pack);
         Assert.NotEmpty(profile.Portals);
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = new Dictionary<string, ReadOnlyMemory<byte>>
         {
@@ -86,7 +86,7 @@ public sealed class TransitionDoorSightTests
                     new[] { new PerceptionTarget(2, sight), new PerceptionTarget(3, portal.Position.ToVector()) },
                     ReadOnlyMemory<SpatialEntityCollider>.Empty, 0, 64));
                 PerceptionPair[] pairs = result.Pairs.ToArray();
-                Assert.True(pairs.Single(pair => pair.Target == 2).Kind == PerceptionPairKind.Visible, $"{payload} {portal.Id} is hidden from its room.");
+                Assert.True(pairs.Single(pair => pair.Target == 2).Kind == PerceptionPairKind.Visible, $"{pack} {portal.Id} is hidden from its room.");
                 if (wallThroughDoor) Assert.Equal(PerceptionPairKind.Occluded, pairs.Single(pair => pair.Target == 3).Kind);
             }
         });

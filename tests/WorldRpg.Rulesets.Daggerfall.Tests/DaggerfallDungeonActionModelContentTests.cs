@@ -95,7 +95,7 @@ public sealed class DaggerfallDungeonActionModelContentTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = GeneratedContent(root);
         DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(TestSessions.Data(content),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.privateers-hold/payload.json")), definitions);
         using JsonDocument normalized = JsonDocument.Parse(TestContentFiles.ReadCopy(
             Path.Combine(root, "content/worldrpg/imports/privateers-hold/normalized.json")));
         JsonElement world = normalized.RootElement.GetProperty("world");

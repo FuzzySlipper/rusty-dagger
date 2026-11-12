@@ -63,7 +63,7 @@ say what may be deleted:
 - Import once, and again after a pull that changes the importer revision: its
   inputs are `src/Daggerfall.Import`, `src/Daggerfall.Import.Tool`, the data
   files under `data/`, the authored UI art and
-  `content/worldrpg/payloads/daggerfall.base.json`
+  `content/worldrpg/packs/daggerfall.base/payload.json`
   (`src/ImporterRevision.targets` lists them). The entry screen says when the
   data is missing, damaged or from another importer.
 
@@ -130,6 +130,12 @@ Rules for the tracked side:
 
 - Nothing converted from Daggerfall is ever committed. Git tracks `content/` and
   `data/`; an untracked file under `content/` fails the architecture tests.
+- A content pack is one folder, `content/worldrpg/packs/<id>/`: its `pack.json`,
+  the `payload.json` it names and any media it owns. A tuning profile is
+  `content/worldrpg/tuning/<id>/` the same way; bundles stay in `bundles/`. All the
+  game's own art is in `packs/daggerfall.art-replacements/`: the refreshed art in
+  `media/<area>/`, the authored UI kit in `authored-ui/` and the held definition
+  and models in `first-person/`.
 - `daggerfall.base` is authored by hand and `daggerfall.imported` is generated.
   A payload section belongs to one of them: the reader refuses a section both carry.
 - In `data/content-source-manifest.csv`, never renumber or recreate a `CNT-` ID;

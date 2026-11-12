@@ -269,7 +269,7 @@ public sealed class SanguineRoseSessionTests
                 inputs.Lights, inputs.GroundContainerSprites, inputs.DungeonMap, inputs.DungeonActions, inputs.DungeonActionModels,
                 inputs.InteriorBuilding, inputs.QuestMarkers, inputs.BillboardSprites);
             Castle = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)),
-                TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), TestPayload.Definitions);
+                TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), TestPayload.Definitions);
             var identity = TestSessions.Resolve(FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
             Composition = new(definitions ?? TestPayload.Definitions, Inputs, DaggerfallTuning.Defaults, identity);
             if (prepareComposition is not null) Composition = prepareComposition(Composition);

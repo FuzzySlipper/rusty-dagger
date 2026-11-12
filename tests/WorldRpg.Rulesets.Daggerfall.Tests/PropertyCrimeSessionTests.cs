@@ -77,7 +77,7 @@ public sealed class PropertyCrimeSessionTests
     public void Source_furniture_surface_is_visible_through_retained_native_static_collision()
     {
         string root = TestData.RepositoryRoot;
-        var profile = ReadProfile(root, FullContent(root), TestPayload.Definitions, "daggerfall.charing-interior-1-1-0.json");
+        var profile = ReadProfile(root, FullContent(root), TestPayload.Definitions, "daggerfall.charing-interior-1-1-0");
         using var host = EngineTestHost.Create(new EngineTestHostOptions { Content = new Dictionary<string, ReadOnlyMemory<byte>>
         {
             [profile.SpatialArtifact.Path] = TestContentFiles.ReadCopy(Path.Combine(root, "content", profile.SpatialArtifact.Path)),
@@ -117,7 +117,7 @@ public sealed class PropertyCrimeSessionTests
         internal Fixture(bool caught)
         {
             _caught = caught;
-            var profile = ReadProfile(TestData.RepositoryRoot, FullContent(TestData.RepositoryRoot), TestPayload.Definitions, "daggerfall.charing-interior-1-1-0.json");
+            var profile = ReadProfile(TestData.RepositoryRoot, FullContent(TestData.RepositoryRoot), TestPayload.Definitions, "daggerfall.charing-interior-1-1-0");
             Assert.NotEmpty(profile.PropertyContainers);
             _composition = new(TestPayload.Definitions, profile, DaggerfallTuning.Defaults) { Profiles = new([profile]), Blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))) };
             Session = DaggerfallSession.StartNew(Engine(), _composition);

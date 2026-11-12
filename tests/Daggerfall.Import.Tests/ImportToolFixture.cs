@@ -48,7 +48,7 @@ internal sealed partial class ImportToolFixture : IDisposable
         File.Copy(ImportedContent.RecordPath("daggerfall.import-records.json"), Records);
         File.Copy(ImportedContent.RecordPath("daggerfall.blocks.json"), At("blocks.json"));
         File.WriteAllBytes(At("buildings.json"), ImportedContent.Read("worldrpg/payloads/daggerfall.blocks.json"));
-        Copy("content/worldrpg/payloads/daggerfall.base.json", Authored);
+        Copy("content/worldrpg/packs/daggerfall.base/payload.json", Authored);
         Copy("data/content-source-manifest.csv", Inventory);
         foreach (string file in Directory.EnumerateFiles(Root, "*", SearchOption.AllDirectories)) File.SetLastWriteTimeUtc(file, OldTime);
     }

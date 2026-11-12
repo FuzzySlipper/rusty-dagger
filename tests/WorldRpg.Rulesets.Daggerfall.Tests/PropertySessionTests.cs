@@ -467,8 +467,8 @@ public sealed class PropertySessionTests
                 source.MobileSprites, source.Audio, source.ClassicPresentation, destination.Id,
                 profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: DaggerfallWorldProfileIds.Exterior(destination.Id).LogicalId,
                 billboardSprites: source.BillboardSprites, terrainTextures: source.TerrainTextures);
-            Small = ReadProfile(root, content, definitions, "daggerfall.small-ship.json");
-            Large = ReadProfile(root, content, definitions, "daggerfall.large-ship.json");
+            Small = ReadProfile(root, content, definitions, "daggerfall.small-ship");
+            Large = ReadProfile(root, content, definitions, "daggerfall.large-ship");
             profiles = new(admitShips ? [Land, House, Small, Large, Destination] : [Land, House, Destination]);
             Session = Create(null);
         }

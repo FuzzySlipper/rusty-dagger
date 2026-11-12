@@ -174,7 +174,7 @@ public sealed class DaggerfallPopulationSessionTests
             && Math.Abs(record.MapPixelX - sourceRecord.MapPixelX) <= DaggerfallExteriorCellResidency.StreamingRadius
             && Math.Abs(record.MapPixelY - sourceRecord.MapPixelY) <= DaggerfallExteriorCellResidency.StreamingRadius);
         DaggerfallSiteProfile template = ReadProfile(root, FullContent(root, "worldrpg/imports/charing"), definitions,
-            "daggerfall.charing-exterior.json");
+            "daggerfall.charing-exterior");
         DaggerfallSiteProfile source = PopulationProfile(template, sourceRecord.Id,
             includeAuthoredActors: false);
         DaggerfallSiteProfile resident = PopulationProfile(template, residentRecord.Id,
@@ -259,7 +259,7 @@ public sealed class DaggerfallPopulationSessionTests
         Assert.Equal(2, towns.Length);
 
         DaggerfallSiteProfile template = ReadProfile(root, FullContent(root, "worldrpg/imports/charing"), definitions,
-            "daggerfall.charing-exterior.json");
+            "daggerfall.charing-exterior");
         DaggerfallSiteProfile source = PopulationProfile(template, towns[0].Id);
         DaggerfallSiteProfile destination = PopulationProfile(template, towns[1].Id,
             includeAuthoredActors: false, includePopulation: false);
@@ -365,7 +365,7 @@ public sealed class DaggerfallPopulationSessionTests
     public void People_rig_draws_every_walking_civilian_as_the_test_figure_facing_its_way_and_off_draws_its_own_art_again()
     {
         // The art set's people rig alone: the rest of the refreshed set has no bearing on the switch.
-        using JsonDocument payload = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.art-replacements.json")));
+        using JsonDocument payload = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.art-replacements/payload.json")));
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(System.Text.Encoding.UTF8.GetBytes(
             """{"artReplacements": {"images": [], "peopleRig": """ + payload.RootElement.GetProperty("artReplacements").GetProperty("peopleRig").GetRawText() + "}}"),
             "daggerfall.art-replacements");
@@ -462,7 +462,7 @@ public sealed class DaggerfallPopulationSessionTests
                 && Math.Abs(record.MapPixelX - sourceRecord.MapPixelX) <= 1
                 && Math.Abs(record.MapPixelY - sourceRecord.MapPixelY) <= 1);
             DaggerfallSiteProfile template = ReadProfile(root, FullContent(root, "worldrpg/imports/charing"), definitions,
-                "daggerfall.charing-exterior.json");
+                "daggerfall.charing-exterior");
             DaggerfallSiteProfile source = PopulationProfile(template, sourceRecord.Id,
                 includeAuthoredActors: false);
             DaggerfallSiteProfile resident = PopulationProfile(template, residentRecord.Id,

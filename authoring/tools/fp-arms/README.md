@@ -9,7 +9,8 @@ The meshes and clips are Unity Asset Store purchases. They may ship inside the g
 converted from them, must never be committed: this repository is public. They live in the ignored `local/inputs/fp-melee/`
 (sources) and `local/data/first-person.rpak` (the built container), and stay out of tracked content packs. That covers the
 arms' pixel paint and the claw arms' GLBs too: they derive from the pack or carry its clips. The held definition
-(`content/worldrpg/first-person/daggerfall.held.json`) and the game's own weapon and mount models are committed.
+and the game's own weapon and mount models are committed, in the art pack's folder
+(`content/worldrpg/packs/daggerfall.art-replacements/first-person/`).
 
 ## Building
 

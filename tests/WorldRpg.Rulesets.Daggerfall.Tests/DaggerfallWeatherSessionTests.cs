@@ -78,8 +78,8 @@ public sealed class DaggerfallWeatherSessionTests
         string root = TestData.RepositoryRoot;
         var definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        var exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
-        var interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
+        var exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
+        var interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0");
         var media = DaggerfallSkyMedia.Read(TestSessions.Data(DaggerfallSkyMediaTests.Fixture().Content));
         var fairOdds = Enumerable.Range(0,24).Select(_ => new[]{100,0,0,0,0,0,0}).ToArray();
         var tuning = DaggerfallTuning.Defaults with {Weather = DaggerfallWeatherTuning.Classic with {Odds = fairOdds}};
@@ -107,8 +107,8 @@ public sealed class DaggerfallWeatherSessionTests
         string root = TestData.RepositoryRoot;
         var definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        var exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
-        var interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
+        var exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
+        var interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0");
         var media = DaggerfallSkyMedia.Read(TestSessions.Data(DaggerfallSkyMediaTests.Fixture().Content));
         var fairOdds = Enumerable.Range(0,24).Select(_ => new[]{100,0,0,0,0,0,0}).ToArray();
         var tuning = DaggerfallTuning.Defaults with {Weather = DaggerfallWeatherTuning.Classic with {Odds = fairOdds}};
@@ -154,8 +154,8 @@ public sealed class DaggerfallWeatherSessionTests
         string root = TestData.RepositoryRoot;
         var definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        var exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
-        var interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
+        var exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
+        var interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0");
         var media = DaggerfallSkyMedia.Read(TestSessions.Data(DaggerfallSkyMediaTests.Fixture().Content));
         var fairOdds = Enumerable.Range(0,24).Select(_ => new[]{100,0,0,0,0,0,0}).ToArray();
         var tuning = DaggerfallTuning.Defaults with {Weather = DaggerfallWeatherTuning.Classic with {Odds = fairOdds}};
@@ -207,8 +207,8 @@ public sealed class DaggerfallWeatherSessionTests
         string root = TestData.RepositoryRoot;
         var definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        var exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
-        var interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
+        var exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
+        var interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0");
         var mediaFixture = DaggerfallSkyMediaTests.Fixture();
         var media = DaggerfallSkyMedia.Read(TestSessions.Data(mediaFixture.Content));
         var rainOdds = Enumerable.Range(0,24).Select(_ => new[]{0,0,0,0,100,0,0}).ToArray();

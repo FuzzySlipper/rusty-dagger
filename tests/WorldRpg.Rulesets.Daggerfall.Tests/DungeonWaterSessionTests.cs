@@ -16,7 +16,7 @@ public sealed class DungeonWaterSessionTests
     {
         var world = new AssembledWorld();
         var published = ReadProfile(TestData.RepositoryRoot, FullContent(TestData.RepositoryRoot), world.Definitions,
-            "daggerfall.castle-necromoghan.json");
+            "daggerfall.castle-necromoghan");
         var profile = assembled ? world.Profiles.Require(published.ProfileKey) : published;
         var water = Assert.Single(profile.WaterVolumes);
         var center = (water.Minimum + water.Maximum) * .5f;

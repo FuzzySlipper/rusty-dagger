@@ -62,7 +62,7 @@
       <_ImporterRevisionInput Include="$(_ImporterRepositoryRoot)/src/Daggerfall.Import/**;$(_ImporterRepositoryRoot)/src/Daggerfall.Import.Tool/**"
                               Exclude="$(_ImporterRepositoryRoot)/src/*/bin/**;$(_ImporterRepositoryRoot)/src/*/obj/**" />
       <_ImporterRevisionInput Include="$(_ImporterRepositoryRoot)/data/content-source-manifest.csv;$(_ImporterRepositoryRoot)/data/ui-authored-assets.json;$(_ImporterRepositoryRoot)/data/daggerfall-unity/**" />
-      <_ImporterRevisionInput Include="$(_ImporterRepositoryRoot)/content/worldrpg/media/ui/authored/**;$(_ImporterRepositoryRoot)/content/worldrpg/payloads/daggerfall.base.json" />
+      <_ImporterRevisionInput Include="$(_ImporterRepositoryRoot)/content/worldrpg/packs/daggerfall.art-replacements/authored-ui/**;$(_ImporterRepositoryRoot)/content/worldrpg/packs/daggerfall.base/payload.json" />
     </ItemGroup>
     <ComputeImporterRevision Root="$(_ImporterRepositoryRoot)" Files="@(_ImporterRevisionInput)">
       <Output TaskParameter="Revision" PropertyName="_ImporterRevision" />

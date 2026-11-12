@@ -135,7 +135,7 @@ public sealed class QuestWorldActionTests
     public void Authored_site_variant_fields_use_normal_content_admission_and_missing_entries_fall_back()
     {
         string root = TestData.RepositoryRoot;
-        var payload = JsonNode.Parse(TestContentFiles.ReadText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")))!;
+        var payload = JsonNode.Parse(TestContentFiles.ReadText(Path.Combine(root, "content/worldrpg/packs/daggerfall.privateers-hold/payload.json")))!;
         var original = ReadInputs(root);
         payload["world"]!["variant"] = "authored";
         payload["world"]!["variantOf"] = original.ProfileKey.LogicalId;

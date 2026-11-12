@@ -222,7 +222,7 @@ public sealed class DaggerfallDoorMagicSessionTests
             _maximumRandom = maximumRandom;
             var inputs = ReadInputs(TestData.RepositoryRoot);
             Destination = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)), TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot,
-                "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), TestPayload.Definitions);
+                "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), TestPayload.Definitions);
             Composition = new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults) { Profiles = new DaggerfallSiteProfiles([inputs, Destination]) };
             Session = DaggerfallSession.StartNew(Engine(maximumRandom).Context, Composition);
             Door = Session.Doors.All.First(value => !value.IsLocked && value.Kind == DaggerfallDoorKind.Normal);

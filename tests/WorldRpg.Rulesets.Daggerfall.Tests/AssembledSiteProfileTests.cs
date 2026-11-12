@@ -28,8 +28,8 @@ public sealed class AssembledSiteProfileTests
         return (content, new DaggerfallLocationAssembly(TestPayload.Definitions, new DaggerfallWorldBlocks(TestSessions.Data(content)), () => product.Value, () => meshes.Value));
     });
 
-    private static DaggerfallSiteProfile Published(string payload) =>
-        DaggerfallSiteContent.Read(TestSessions.Data(Fixture.Value.Content), TestContentFiles.Read(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads", payload)), TestPayload.Definitions);
+    private static DaggerfallSiteProfile Published(string pack) =>
+        DaggerfallSiteContent.Read(TestSessions.Data(Fixture.Value.Content), TestContentFiles.Read(TestData.PackPayload(pack)), TestPayload.Definitions);
 
     private static JsonElement Normalized(string closure) =>
         JsonDocument.Parse(TestContentFiles.Read(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/imports", closure, "normalized.json"))).RootElement.GetProperty("world");
@@ -37,7 +37,7 @@ public sealed class AssembledSiteProfileTests
     [Fact]
     public void Published_and_assembled_hold_keep_the_cave_enter_marker_separate_from_door_arrival()
     {
-        DaggerfallSiteProfile published = Published("daggerfall.privateers-hold.json");
+        DaggerfallSiteProfile published = Published("daggerfall.privateers-hold");
         DaggerfallSiteProfile assembled = Fixture.Value.Assembly.Assemble(DaggerfallWorldProfileIds.Dungeon(PrivateersHold));
         JsonElement world = Normalized("privateers-hold");
         Vector3 cave = Vector(world.GetProperty("enterMarker").GetProperty("position"));
@@ -73,7 +73,7 @@ public sealed class AssembledSiteProfileTests
     [Fact]
     public void Published_and_assembled_town_materials_carry_real_winter_textures()
     {
-        foreach (var profile in new[] { Published("daggerfall.charing-exterior.json"), Fixture.Value.Assembly.Assemble(DaggerfallWorldProfileIds.Exterior(Charing)) })
+        foreach (var profile in new[] { Published("daggerfall.charing-exterior"), Fixture.Value.Assembly.Assemble(DaggerfallWorldProfileIds.Exterior(Charing)) })
         {
             var seasonal = profile.Materials.Where(material => material.WinterTexture is not null).ToArray();
             Assert.NotEmpty(seasonal);
@@ -84,7 +84,7 @@ public sealed class AssembledSiteProfileTests
     [Fact]
     public void Town_windows_carry_their_glass_and_a_dungeon_shows_none()
     {
-        foreach (var profile in new[] { Published("daggerfall.charing-exterior.json"), Fixture.Value.Assembly.Assemble(DaggerfallWorldProfileIds.Exterior(Charing)) })
+        foreach (var profile in new[] { Published("daggerfall.charing-exterior"), Fixture.Value.Assembly.Assemble(DaggerfallWorldProfileIds.Exterior(Charing)) })
             Assert.Contains(profile.Materials, material => material.SummerGlass is not null);
 
         var dungeon = TestPayload.Definitions.Locations.Records.First(site => site.DungeonBlocks.Any());
@@ -119,7 +119,7 @@ public sealed class AssembledSiteProfileTests
     public void Published_and_assembled_castle_admit_the_same_flooded_block_surface()
     {
         var assembled = Fixture.Value.Assembly.Assemble(DaggerfallWorldProfileIds.Dungeon(new(17, 9)));
-        var published = Published("daggerfall.castle-necromoghan.json");
+        var published = Published("daggerfall.castle-necromoghan");
         var water = Assert.Single(assembled.WaterVolumes);
         var other = Assert.Single(published.WaterVolumes);
         Assert.Equal(10F, water.Maximum.Y);
@@ -135,7 +135,7 @@ public sealed class AssembledSiteProfileTests
         DaggerfallWorldProfileKey key = DaggerfallWorldProfileIds.Exterior(Charing);
         Assert.True(Fixture.Value.Assembly.Places(key));
         DaggerfallSiteProfile assembled = Fixture.Value.Assembly.Assemble(key);
-        DaggerfallSiteProfile published = Published("daggerfall.charing-exterior.json");
+        DaggerfallSiteProfile published = Published("daggerfall.charing-exterior");
 
         Assert.Equal(published.ProfileKey, assembled.ProfileKey);
         Assert.Equal("17/4/exterior", assembled.ProfileKey.LogicalId);
@@ -171,15 +171,15 @@ public sealed class AssembledSiteProfileTests
 
     /// <summary>The other published exteriors are the exteriors their locations assemble.</summary>
     [Theory]
-    [InlineData("daggerfall.the-hawkston-cemetery-exterior.json", "the-hawkston-cemetery/exterior", 17, 0)]
-    [InlineData("daggerfall.the-tombs-of-klerd-exterior.json", "the-tombs-of-klerd/exterior", 0, 11)]
-    [InlineData("daggerfall.small-ship.json", "small-ship/exterior", 31, 1)]
-    [InlineData("daggerfall.large-ship.json", "large-ship/exterior", 31, 2)]
-    public void An_assembled_exterior_names_the_published_doors_and_people(string payload, string closure, int region, int index)
+    [InlineData("daggerfall.the-hawkston-cemetery-exterior", "the-hawkston-cemetery/exterior", 17, 0)]
+    [InlineData("daggerfall.the-tombs-of-klerd-exterior", "the-tombs-of-klerd/exterior", 0, 11)]
+    [InlineData("daggerfall.small-ship", "small-ship/exterior", 31, 1)]
+    [InlineData("daggerfall.large-ship", "large-ship/exterior", 31, 2)]
+    public void An_assembled_exterior_names_the_published_doors_and_people(string pack, string closure, int region, int index)
     {
         DaggerfallWorldProfileKey key = DaggerfallWorldProfileIds.Exterior(new DaggerfallSiteId(region, index));
         DaggerfallSiteProfile assembled = Fixture.Value.Assembly.Assemble(key);
-        DaggerfallSiteProfile published = Published(payload);
+        DaggerfallSiteProfile published = Published(pack);
 
         Assert.Equal(published.ProfileKey, assembled.ProfileKey);
         AssertSameDoors(published, assembled);
@@ -204,7 +204,7 @@ public sealed class AssembledSiteProfileTests
     {
         DaggerfallWorldProfileKey key = DaggerfallWorldProfileIds.Interior(Charing, new(x, y, building));
         DaggerfallSiteProfile assembled = Fixture.Value.Assembly.Assemble(key);
-        DaggerfallSiteProfile published = Published($"daggerfall.charing-interior-{x}-{y}-{building}.json");
+        DaggerfallSiteProfile published = Published($"daggerfall.charing-interior-{x}-{y}-{building}");
 
         Assert.Equal(published.ProfileKey, assembled.ProfileKey);
         Assert.Equal(published.InteriorBuilding, assembled.InteriorBuilding);
@@ -224,16 +224,16 @@ public sealed class AssembledSiteProfileTests
 
     /// <summary>Each published dungeon is the dungeon its location assembles, Privateer's Hold among them.</summary>
     [Theory]
-    [InlineData("daggerfall.privateers-hold.json", 17, 179)]
-    [InlineData("daggerfall.castle-necromoghan.json", 17, 9)]
-    [InlineData("daggerfall.the-hawkston-cemetery.json", 17, 0)]
-    [InlineData("daggerfall.the-tombs-of-klerd.json", 0, 11)]
-    public void An_assembled_dungeon_names_the_published_doors_actions_markers_and_map(string payload, int region, int index)
+    [InlineData("daggerfall.privateers-hold", 17, 179)]
+    [InlineData("daggerfall.castle-necromoghan", 17, 9)]
+    [InlineData("daggerfall.the-hawkston-cemetery", 17, 0)]
+    [InlineData("daggerfall.the-tombs-of-klerd", 0, 11)]
+    public void An_assembled_dungeon_names_the_published_doors_actions_markers_and_map(string pack, int region, int index)
     {
         DaggerfallSiteId site = new(region, index);
         DaggerfallWorldProfileKey key = DaggerfallWorldProfileIds.Dungeon(site);
         DaggerfallSiteProfile assembled = Fixture.Value.Assembly.Assemble(key);
-        DaggerfallSiteProfile published = Published(payload);
+        DaggerfallSiteProfile published = Published(pack);
 
         Assert.Equal(published.ProfileKey, assembled.ProfileKey);
         Assert.Equal($"{region}/{index}/dungeon", assembled.ProfileKey.LogicalId);
@@ -309,7 +309,7 @@ public sealed class AssembledSiteProfileTests
     public void An_authored_site_pack_overrides_only_the_profile_id_it_states_for_its_own_location()
     {
         System.Text.Json.Nodes.JsonObject payload = System.Text.Json.Nodes.JsonNode.Parse(TestContentFiles.Read(
-            Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.privateers-hold.json")))!.AsObject();
+            Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.privateers-hold/payload.json")))!.AsObject();
         DaggerfallSitePayloadHeader header = DaggerfallSiteContent.ReadHeader(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()), "daggerfall.privateers-hold");
         Assert.Equal(DaggerfallWorldProfileIds.Dungeon(PrivateersHold), header.Key);
 
@@ -378,17 +378,17 @@ public sealed class AssembledSiteProfileTests
     /// assembled profile places on the same source door, leading the same way.
     /// </summary>
     [Theory]
-    [InlineData("daggerfall.privateers-hold.json")]
-    [InlineData("daggerfall.castle-necromoghan.json")]
-    [InlineData("daggerfall.charing-interior-1-5-17.json")]
-    [InlineData("daggerfall.charing-interior-2-1-0.json")]
-    [InlineData("daggerfall.charing-interior-3-1-13.json")]
-    [InlineData("daggerfall.charing-interior-3-2-14.json")]
-    [InlineData("daggerfall.charing-interior-3-4-0.json")]
-    [InlineData("daggerfall.charing-interior-4-2-0.json")]
-    public void An_authored_closure_states_its_source_exits(string payload)
+    [InlineData("daggerfall.privateers-hold")]
+    [InlineData("daggerfall.castle-necromoghan")]
+    [InlineData("daggerfall.charing-interior-1-5-17")]
+    [InlineData("daggerfall.charing-interior-2-1-0")]
+    [InlineData("daggerfall.charing-interior-3-1-13")]
+    [InlineData("daggerfall.charing-interior-3-2-14")]
+    [InlineData("daggerfall.charing-interior-3-4-0")]
+    [InlineData("daggerfall.charing-interior-4-2-0")]
+    public void An_authored_closure_states_its_source_exits(string pack)
     {
-        DaggerfallSiteProfile published = Published(payload);
+        DaggerfallSiteProfile published = Published(pack);
         DaggerfallSiteProfile assembled = Fixture.Value.Assembly.Assemble(published.ProfileKey);
         Assert.Equal(assembled.Portals.Select(portal => portal.Id), published.Portals.Select(portal => portal.Id));
         foreach ((DaggerfallSitePortal expected, DaggerfallSitePortal actual) in assembled.Portals.Zip(published.Portals))

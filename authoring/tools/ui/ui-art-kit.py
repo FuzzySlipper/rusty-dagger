@@ -6,7 +6,7 @@
     authoring/tools/ui/ui-art-kit.py manifest
 
 This is an operator tool, not a step of the import: it needs the LAN GPU hosts. Its output is the processed
-originals in content/worldrpg/media/ui/authored/ (committed product content the ruleset reads in place) and their
+originals in content/worldrpg/packs/daggerfall.art-replacements/authored-ui/ (committed product content the ruleset reads in place) and their
 entries in data/ui-authored-assets.json; the import then lists them in the classic media inventory. The recipe
 (Den document rusty-dagger/ui-art-recipe):
 
@@ -41,7 +41,7 @@ from PIL import Image, ImageFilter
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 PIPELINE = os.environ.get("ASSET_PIPELINE", "/home/agent/dev/asset-pipeline")
 RAW = os.environ.get("RAW", os.path.join(ROOT, "local", "scratch", "ui-art-kit"))
-ORIGINALS = os.path.join(ROOT, "content", "worldrpg", "media", "ui", "authored")
+ORIGINALS = os.path.join(ROOT, "content", "worldrpg", "packs", "daggerfall.art-replacements", "authored-ui")
 MANIFEST = os.path.join(ROOT, "data", "ui-authored-assets.json")
 HOSTS = {"den-m5": "http://192.168.1.24:8188", "den-nimo": "http://192.168.1.23:8188"}
 REFINER_HOST = "den-m5"

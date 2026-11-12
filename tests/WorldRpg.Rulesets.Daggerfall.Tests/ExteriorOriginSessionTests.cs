@@ -27,7 +27,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior.json");
+        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior");
         Dictionary<string, ReadOnlyMemory<byte>> files = PublishedUiArt(root)
             .ToDictionary(entry => entry.Path, entry => (ReadOnlyMemory<byte>)entry.Bytes);
         foreach ((string path, ReadOnlyMemory<byte> bytes) in PresentedFiles(root, exterior)) files[path] = bytes;
@@ -216,8 +216,8 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
-        DaggerfallSiteProfile interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
+        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
+        DaggerfallSiteProfile interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0");
         DaggerfallSiteProfiles profiles = new([exterior, interior]);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -427,7 +427,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
+        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
@@ -477,7 +477,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
+        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
@@ -560,7 +560,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior.json");
+        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior");
         Dictionary<string, ReadOnlyMemory<byte>> files = PublishedUiArt(root)
             .ToDictionary(entry => entry.Path, entry => (ReadOnlyMemory<byte>)entry.Bytes);
         foreach ((string path, ReadOnlyMemory<byte> bytes) in PresentedFiles(root, exterior)) files[path] = bytes;
@@ -612,7 +612,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior.json");
+        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior");
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
@@ -627,7 +627,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
+        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
@@ -665,8 +665,8 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
-        DaggerfallSiteProfile interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
+        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
+        DaggerfallSiteProfile interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0");
         DaggerfallSiteProfiles profiles = new([exterior, interior]);
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -727,7 +727,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior.json");
+        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior");
         List<string> releases = [];
         ContentFake content = new(releases); PopulateContent(content, exterior);
         SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
@@ -763,7 +763,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior.json");
+        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior");
         List<string> releases = [];
         ContentFake content = new(releases); PopulateContent(content, exterior);
         SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
@@ -781,7 +781,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior.json");
+        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior");
         List<string> releases = [];
         ContentFake content = new(releases); PopulateContent(content, exterior);
         SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
@@ -808,7 +808,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior.json");
+        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior");
         List<string> releases = [];
         ContentFake content = new(releases); PopulateContent(content, exterior);
         SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
@@ -845,8 +845,8 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
-        DaggerfallSiteProfile interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
+        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
+        DaggerfallSiteProfile interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0");
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
@@ -893,8 +893,8 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior.json");
-        DaggerfallSiteProfile interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0.json");
+        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
+        DaggerfallSiteProfile interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0");
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);

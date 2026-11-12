@@ -89,7 +89,7 @@ public sealed class DaggerfallMusicSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = FullContent(root);
         DaggerfallSiteProfile inputs = ReadInputs(root);
-        DaggerfallSiteProfile castle = ReadProfile(root, content, definitions, "daggerfall.castle-necromoghan.json");
+        DaggerfallSiteProfile castle = ReadProfile(root, content, definitions, "daggerfall.castle-necromoghan");
         DaggerfallMusicBundle bundle = Score(content);
         List<string> releases = [];
         ContentFake contentService = new(releases);
@@ -153,16 +153,16 @@ public sealed class DaggerfallMusicSessionTests
 
     [Theory]
     [InlineData("tavern", DaggerfallMusicContext.Tavern, "song_square_2")]
-    [InlineData("daggerfall.charing-interior-1-1-0.json", DaggerfallMusicContext.Interior, "song_23")]
-    [InlineData("daggerfall.charing-interior-3-1-13.json", DaggerfallMusicContext.TempleNeutral, "song_gneut")]
-    [InlineData("daggerfall.charing-interior-3-4-0.json", DaggerfallMusicContext.MagesGuild, "song_magic_2")]
-    [InlineData("daggerfall.charing-interior-2-1-0.json", DaggerfallMusicContext.Shop, "song_gshop")]
+    [InlineData("daggerfall.charing-interior-1-1-0", DaggerfallMusicContext.Interior, "song_23")]
+    [InlineData("daggerfall.charing-interior-3-1-13", DaggerfallMusicContext.TempleNeutral, "song_gneut")]
+    [InlineData("daggerfall.charing-interior-3-4-0", DaggerfallMusicContext.MagesGuild, "song_magic_2")]
+    [InlineData("daggerfall.charing-interior-2-1-0", DaggerfallMusicContext.Shop, "song_gshop")]
     public void Entering_a_source_building_selects_its_music(string descriptor, DaggerfallMusicContext context, string track)
     {
         string root = TestData.RepositoryRoot;
         var definitions = TestPayload.Definitions;
         var content = FullContent(root);
-        var exterior = ReadProfile(root, content, definitions, "daggerfall.charing-exterior.json");
+        var exterior = ReadProfile(root, content, definitions, "daggerfall.charing-exterior");
         var interior = descriptor == "tavern" ? AssembleTavern(content, definitions)
             : ReadProfile(root, content, definitions, descriptor);
         var fixture = MusicEngine(exterior, interior);
@@ -190,7 +190,7 @@ public sealed class DaggerfallMusicSessionTests
     {
         string root = TestData.RepositoryRoot;
         var content = FullContent(root);
-        var inputs = ReadProfile(root, content, TestPayload.Definitions, "daggerfall.charing-exterior.json");
+        var inputs = ReadProfile(root, content, TestPayload.Definitions, "daggerfall.charing-exterior");
         var fixture = MusicEngine(inputs);
         var tuning = MusicTuning(root, alternate) with { Weather = DaggerfallWeatherTuning.Classic with {
             Odds = Enumerable.Range(0,24).Select(_ => new[]{0,0,0,0,100,0,0}).ToArray() } };
@@ -276,7 +276,7 @@ public sealed class DaggerfallMusicSessionTests
     private static DaggerfallTuning MusicTuning(string root, bool alternate)
     {
         System.Text.Json.Nodes.JsonNode payload = System.Text.Json.Nodes.JsonNode.Parse(TestContentFiles.ReadText(
-            Path.Combine(root, "content/worldrpg/tuning-payloads/daggerfall.defaults.json")))!;
+            Path.Combine(root, "content/worldrpg/tuning/daggerfall.defaults/payload.json")))!;
         payload["music"]!["alternatePlaylists"] = alternate;
         return DaggerfallTuning.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()));
     }

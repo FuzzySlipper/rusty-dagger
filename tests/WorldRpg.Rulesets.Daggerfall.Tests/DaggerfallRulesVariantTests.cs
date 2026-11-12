@@ -99,10 +99,10 @@ public sealed class DaggerfallRulesVariantTests
 
     private static ResolvedGameComposition Resolve(string[] variants, params DaggerfallRulesVariant[] compiled) => TestSessions.Resolve(Content(
             ("worldrpg/bundles/test.bundle.json", $$"""{"kind":"worldrpg.game-bundle","id":"test.bundle","ruleset":"daggerfall","contentPacks":[{"id":"test.base"}],"tuning":{"id":"test.tuning"},"variants":[{{string.Join(",", variants.Select(id => $"\"{id}\""))}}]}"""),
-            ("worldrpg/content-packs/test.base.pack.json", """{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"daggerfall","role":"daggerfall.base","dependencies":[],"payload":"payload/base.json"}"""),
-            ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"daggerfall","payload":"payload/tuning.json"}"""),
-            ("worldrpg/tuning/test-variant.tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.variant-tuning","ruleset":"daggerfall","payload":"payload/variant-tuning.json"}"""),
-            ("payload/base.json", "base"), ("payload/tuning.json", "tuning"), ("payload/variant-tuning.json", "variant tuning")),
+            ("worldrpg/packs/test.base/pack.json", """{"kind":"worldrpg.content-pack","id":"test.base","ruleset":"daggerfall","role":"daggerfall.base","dependencies":[],"payload":"payload/base.json"}"""),
+            ("worldrpg/tuning/test/tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"daggerfall","payload":"payload/values.json"}"""),
+            ("worldrpg/tuning/test-variant/tuning.json", """{"kind":"worldrpg.tuning-profile","id":"test.variant-tuning","ruleset":"daggerfall","payload":"payload/variant-tuning.json"}"""),
+            ("payload/base.json", "base"), ("payload/values.json", "tuning"), ("payload/variant-tuning.json", "variant tuning")),
         new GameBundleId("test.bundle"), [.. compiled.Select(variant => variant.Manifest)]).RequireComposition();
 
     /// <summary>Session reads for building owners; nothing here reads equipment.</summary>

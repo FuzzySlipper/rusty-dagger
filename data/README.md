@@ -8,11 +8,11 @@ imports again.
 | File | Contents | Readers |
 | --- | --- | --- |
 | `content-source-manifest.csv` | Per-file disposition of the operator-supplied Arena2 corpus, described on the wiki page `rusty-dagger/content-sources`. | The import's `--inventory` argument; `Daggerfall.Source.Tool`'s `source-manifest --update-inventory` rewrites it; `tests/Daggerfall.Import.Tests`. |
-| `ui-authored-assets.json` | Authored UI asset manifest: each asset's ID, published output name (`file`, under `media/ui/authored/`), original file (`sourceFile`, the same name in `content/worldrpg/media/ui/authored/`), generator, prompt and optional `display` (CSS `scale` per image pixel, 9-slice `slice` insets, cursor `hotspot`). Written by `authoring/tools/ui/ui-art-kit.py manifest`. | The import's `--ui-authored-assets` argument, with `--ui-original content/worldrpg/media/ui/authored`. |
+| `ui-authored-assets.json` | Authored UI asset manifest: each asset's ID, published output name (`file`, under `packs/daggerfall.art-replacements/authored-ui/`), original file (`sourceFile`, the same name in `content/worldrpg/packs/daggerfall.art-replacements/authored-ui/`), generator, prompt and optional `display` (CSS `scale` per image pixel, 9-slice `slice` insets, cursor `hotspot`). Written by `authoring/tools/ui/ui-art-kit.py manifest`. | The import's `--ui-authored-assets` argument, with `--ui-original content/worldrpg/packs/daggerfall.art-replacements/authored-ui`. |
 | `daggerfall-unity/` | The Daggerfall Unity tables and quest scripts the import reads; see its README. | The import's donor arguments; tests. |
 
-The authored UI images themselves are product content, tracked in
-`content/worldrpg/media/ui/authored/`: the ruleset reads them in place, and the
+The authored UI images themselves are product content, tracked in the art pack's folder,
+`content/worldrpg/packs/daggerfall.art-replacements/authored-ui/`: the ruleset reads them in place, and the
 import lists them in the classic media inventory without copying them. They are
 AI-generated originals made for this project, already processed to their
 published size. `ui-authored-assets.json` records each one's generator, seed and

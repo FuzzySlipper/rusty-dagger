@@ -332,7 +332,7 @@ public sealed class ItemTemplateLedgerTests
     {
         System.Text.Json.Nodes.JsonObject ledger = ReadPublishedLedger();
         System.Text.Json.Nodes.JsonObject pack = System.Text.Json.Nodes.JsonNode
-            .Parse(File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json")))!
+            .Parse(File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.base/payload.json")))!
             .AsObject();
 
         Assert.Equal("daggerfall-unity/Assets/Scripts/API/ItemsFile.cs", ledger["target"]!["path"]!.GetValue<string>());

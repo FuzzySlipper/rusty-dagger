@@ -25,9 +25,9 @@ public sealed class ExteriorSpatialAdmissionTests(ITestOutputHelper output)
         ProductContent content = FullContent(root);
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         // The first read also pays for JIT; the second is the cost the closure's bytes drive.
-        _ = ReadProfile(root, content, definitions, "daggerfall.charing-exterior.json");
+        _ = ReadProfile(root, content, definitions, "daggerfall.charing-exterior");
         Stopwatch read = Stopwatch.StartNew();
-        DaggerfallSiteProfile exterior = ReadProfile(root, content, definitions, "daggerfall.charing-exterior.json");
+        DaggerfallSiteProfile exterior = ReadProfile(root, content, definitions, "daggerfall.charing-exterior");
         read.Stop();
 
         Dictionary<string, ReadOnlyMemory<byte>> files = new(StringComparer.Ordinal)

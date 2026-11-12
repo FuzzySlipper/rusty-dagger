@@ -36,8 +36,11 @@ internal sealed class DaggerfallHeldArt
     /// <summary>The container's file name, installed beside the product.</summary>
     internal const string ContainerName = "first-person.rpak";
 
-    /// <summary>The held definition: a content-root path, so <c>content/worldrpg/first-person/</c> in the repository.</summary>
-    internal const string DocumentPath = "worldrpg/first-person/daggerfall.held.json";
+    /// <summary>
+    /// The held definition: a content-root path in the art pack's folder, beside the models it names, though it is read
+    /// whether or not a bundle selects that pack.
+    /// </summary>
+    internal const string DocumentPath = DaggerfallArtReplacements.Folder + "/first-person/daggerfall.held.json";
 
     private DaggerfallHeldArt(ProductContentBundle container, DaggerfallHeldArtDocument document)
     {

@@ -31,10 +31,10 @@ public sealed class ExteriorBuildingDoorSessionTests
     {
         string root = TestData.RepositoryRoot;
         ProductContent content = FullContent(root);
-        return (ReadProfile(root, content, TestPayload.Definitions, "daggerfall.charing-exterior.json"),
-            [ReadProfile(root, content, TestPayload.Definitions, "daggerfall.charing-interior-1-1-0.json"),
-             ReadProfile(root, content, TestPayload.Definitions, "daggerfall.charing-interior-2-1-0.json"),
-             ReadProfile(root, content, TestPayload.Definitions, "daggerfall.charing-interior-3-4-0.json")]);
+        return (ReadProfile(root, content, TestPayload.Definitions, "daggerfall.charing-exterior"),
+            [ReadProfile(root, content, TestPayload.Definitions, "daggerfall.charing-interior-1-1-0"),
+             ReadProfile(root, content, TestPayload.Definitions, "daggerfall.charing-interior-2-1-0"),
+             ReadProfile(root, content, TestPayload.Definitions, "daggerfall.charing-interior-3-4-0")]);
     });
 
     /// <summary>At midnight the residence is locked: picking or bashing it is breaking in, and enters it.</summary>

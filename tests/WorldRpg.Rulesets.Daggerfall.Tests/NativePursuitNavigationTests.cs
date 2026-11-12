@@ -17,7 +17,7 @@ public sealed class NativePursuitNavigationTests
         string root = TestData.RepositoryRoot;
         var inputs = ReadInputs(root);
         var tuning = DaggerfallTuning.Read(TestContentFiles.ReadCopy(Path.Combine(root,
-            "content/worldrpg/tuning-payloads/daggerfall.defaults.json")));
+            "content/worldrpg/tuning/daggerfall.defaults/payload.json")));
         Dictionary<string, ReadOnlyMemory<byte>> files = new()
         {
             [inputs.SpatialArtifact.Path] = TestContentFiles.ReadCopy(Path.Combine(root, "content", inputs.SpatialArtifact.Path)),

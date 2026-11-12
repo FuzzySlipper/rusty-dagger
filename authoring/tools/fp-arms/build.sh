@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds local/data/first-person.rpak: the 3D first-person arms and their clip packs (authoring/tools/fp-arms/README.md), baked by
 # build.py from the old game's art in local/inputs/fp-melee (copy-sources.sh) for every clip the held definition
-# (content/worldrpg/first-person/daggerfall.held.json) names, and the committed weapon models beside it. Prints what
+# (content/worldrpg/packs/daggerfall.art-replacements/first-person/daggerfall.held.json) names, and the committed weapon models beside it. Prints what
 # the definition is fitted with (local/build/fp-arms/measure.json). Needs Blender 5 and the rusty CLI. The container holds
 # Asset Store art: never commit it.
 #
@@ -10,7 +10,7 @@ set -euo pipefail
 root=$(cd "$(dirname "$0")/../../.." && pwd)
 cd "$root"
 sources=local/inputs/fp-melee
-definition=content/worldrpg/first-person/daggerfall.held.json
+definition=content/worldrpg/packs/daggerfall.art-replacements/first-person/daggerfall.held.json
 stage=local/build/fp-arms/staging
 [[ -d $sources/MedievalFPArms ]] || { echo "$sources is missing: run authoring/tools/fp-arms/copy-sources.sh first" >&2; exit 1; }
 rm -rf "$stage"
@@ -30,9 +30,9 @@ json.dump({
 PY
 # The weapon models are the game's own art (authoring/tools/weapons), committed beside the definition; the
 # provenance above covers only the arms.
-cp -r content/worldrpg/first-person/weapons "$stage/first-person/weapons"
-cp -r content/worldrpg/first-person/effects "$stage/first-person/effects"
-cp -r content/worldrpg/first-person/mounts "$stage/first-person/mounts"
+cp -r content/worldrpg/packs/daggerfall.art-replacements/first-person/weapons "$stage/first-person/weapons"
+cp -r content/worldrpg/packs/daggerfall.art-replacements/first-person/effects "$stage/first-person/effects"
+cp -r content/worldrpg/packs/daggerfall.art-replacements/first-person/mounts "$stage/first-person/mounts"
 for glb in $(find "$stage" -name '*.glb'); do rusty asset check "$glb" >/dev/null || { echo "rusty refuses $glb" >&2; exit 1; }; done
 rusty pack-content "$stage" --output local/data/first-person.rpak
 echo "BUILT local/data/first-person.rpak (fitting measured in local/build/fp-arms/measure.json)"

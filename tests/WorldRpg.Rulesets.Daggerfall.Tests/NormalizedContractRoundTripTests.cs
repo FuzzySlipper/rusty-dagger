@@ -86,7 +86,7 @@ public sealed class NormalizedContractRoundTripTests
             rewrittenSections[section] = rewritten.ToJsonString(PublishedJson.SectionCompact);
         }
 
-        byte[] authored = TestContentFiles.ReadCopy(PayloadPath("daggerfall.base.json"));
+        byte[] authored = TestContentFiles.ReadCopy(TestData.PackPayload("daggerfall.base"));
         byte[] rewrittenPayload = RewriteImportedPayload(rewrittenSections);
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(authored, rewrittenPayload, TestPayload.Data);
         Assert.NotEmpty(definitions.Catalogs.Careers);
@@ -101,7 +101,7 @@ public sealed class NormalizedContractRoundTripTests
     public void Mobile_loot_inputs_the_importer_writes_read_back_through_the_ruleset()
     {
         string enemyBasics = TestContentFiles.ReadText(TestData.Donor("Assets/Scripts/Utility/EnemyBasics.cs"));
-        byte[] authored = TestContentFiles.ReadCopy(PayloadPath("daggerfall.base.json"));
+        byte[] authored = TestContentFiles.ReadCopy(TestData.PackPayload("daggerfall.base"));
         global::Daggerfall.Import.Arena2.Arena2MobileCatalogPublication publication = global::Daggerfall.Import.Arena2.Arena2MobileCatalogDocument.Build(
             enemyBasics, Encoding.UTF8.GetString(authored), "donor/EnemyBasics.cs");
         string mobiles = JsonNode.Parse(publication.Json)!.ToJsonString(PublishedJson.SectionCompact);

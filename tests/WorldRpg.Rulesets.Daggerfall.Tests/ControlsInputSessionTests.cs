@@ -80,10 +80,10 @@ public sealed class ControlsInputSessionTests
     public void The_pads_mapping_is_tuning_and_every_payload_agrees_with_the_ruleset_defaults()
     {
         string root = TestData.RepositoryRoot;
-        ControllerInputTuning loaded = DaggerfallTuning.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/tuning-payloads/daggerfall.defaults.json"))).ControllerInput;
+        ControllerInputTuning loaded = DaggerfallTuning.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/tuning/daggerfall.defaults/payload.json"))).ControllerInput;
 
         AssertSamePad(DaggerfallTuning.Defaults.ControllerInput, loaded);
-        foreach (string payload in Directory.GetFiles(Path.Combine(root, "content/worldrpg/tuning-payloads"), "*.json"))
+        foreach (string payload in Directory.GetFiles(Path.Combine(root, "content/worldrpg/tuning"), "payload.json", SearchOption.AllDirectories))
             AssertSamePad(loaded, DaggerfallTuning.Read(TestContentFiles.ReadCopy(payload)).ControllerInput);
 
         // The values the payloads name, so a payload edit that silently changed the layout fails here
@@ -124,9 +124,9 @@ public sealed class ControlsInputSessionTests
             DaggerfallInput.Menu.Value,
             DaggerfallInput.Shortcut("radial").Value,
         ];
-        foreach (string payload in new[] { "daggerfall.defaults.json" })
+        foreach (string profile in new[] { "daggerfall.defaults" })
         {
-            DaggerfallTuning tuning = DaggerfallTuning.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/tuning-payloads", payload)));
+            DaggerfallTuning tuning = DaggerfallTuning.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/tuning", profile, "payload.json")));
             Assert.NotEmpty(tuning.ControllerInput.Actions);
             foreach (ControllerActionBinding binding in tuning.ControllerInput.Actions)
                 Assert.Contains(binding.Action.Value, declared);
@@ -623,7 +623,7 @@ public sealed class ControlsInputSessionTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        var exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior.json");
+        var exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior");
         List<string> releases = [];
         ContentFake content = new(releases); PopulateContent(content, exterior);
         var spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);

@@ -87,7 +87,7 @@ public sealed class DataContainerImportTests : IDisposable
         Assert.Contains($"tracked directory '{ImportCommand.Donor}/Assets/StreamingAssets/Quests'", missing);
         Assert.Contains(missing, entry => entry.StartsWith("music folder 'local/inputs/Sound'", StringComparison.Ordinal));
         Assert.Contains("tracked file 'data/content-source-manifest.csv'", missing);
-        Assert.Contains("tracked file 'content/worldrpg/payloads/daggerfall.base.json'", missing);
+        Assert.Contains("tracked file 'content/worldrpg/packs/daggerfall.base/payload.json'", missing);
 
         // A folder that is not ARENA2 is named as such rather than as a list of every archive it lacks.
         Directory.CreateDirectory(Path.Combine(root, "local/inputs/arena2"));
@@ -244,7 +244,7 @@ public sealed class DataContainerImportTests : IDisposable
         // Each step writes into the staging tree or the records, never into the repository's content: what it names
         // there is the authored base payload and the authored UI art, both read.
         Assert.All(steps.SelectMany(step => step.Arguments).Where(argument => argument.StartsWith("content/", StringComparison.Ordinal)),
-            argument => Assert.Contains(argument, new[] { "content/worldrpg/payloads/daggerfall.base.json", AuthoredUi.ProductDirectory }));
+            argument => Assert.Contains(argument, new[] { "content/worldrpg/packs/daggerfall.base/payload.json", AuthoredUi.ProductDirectory }));
         Assert.Equal(["music-tracks", "classic-media"], steps.Take(2).Select(step => step.Label));
         Assert.Equal("source-coverage", steps[^1].Label);
         Assert.Contains("variants.json", steps.Single(step => step.Label == "world-blocks").Arguments);
@@ -314,7 +314,7 @@ public sealed class DataContainerImportTests : IDisposable
         // The derived packs' descriptors travel only in the data container, so a tracked descriptor of the same
         // pack would be a second statement of it.
         string content = Path.Combine(TestData.RepositoryRoot, "content/worldrpg");
-        HashSet<string> tracked = [.. Directory.EnumerateFiles(Path.Combine(content, "content-packs"), "*.pack.json")
+        HashSet<string> tracked = [.. Directory.EnumerateFiles(Path.Combine(content, "packs"), "pack.json", SearchOption.AllDirectories)
             .Select(file => (string)JsonNode.Parse(File.ReadAllText(file))!["id"]!)];
         HashSet<string> derived = [.. DataContainers.DerivedPacks().Select(pack => (string)pack["id"]!)];
         Assert.Empty(tracked.Intersect(derived));
@@ -427,14 +427,14 @@ public sealed class DataContainerImportTests : IDisposable
     public void The_imported_data_container_lists_the_authored_ui_art_it_leaves_to_the_product_and_names_no_music()
     {
         IReadOnlyDictionary<string, ContentReferenceInfo> entries = TestDataContainers.Entries(TestDataContainers.Data);
-        Assert.DoesNotContain(entries.Keys, path => path.StartsWith("worldrpg/media/ui/authored/", StringComparison.Ordinal));
+        Assert.DoesNotContain(entries.Keys, path => path.StartsWith("worldrpg/packs/daggerfall.art-replacements/authored-ui/", StringComparison.Ordinal));
 
         // The classic media inventory names every tracked original by the product's content path, with its own digest.
         string tracked = Path.Combine(TestData.RepositoryRoot, AuthoredUi.ProductDirectory);
         JsonNode[] authored = [.. JsonNode.Parse(TestDataContainers.Read(TestDataContainers.Data, "worldrpg/media/classic-media-inventory.json"))!["artifacts"]!.AsArray()
-            .Select(entry => entry!).Where(entry => ((string)entry["path"]!).StartsWith("worldrpg/media/ui/authored/", StringComparison.Ordinal))];
+            .Select(entry => entry!).Where(entry => ((string)entry["path"]!).StartsWith("worldrpg/packs/daggerfall.art-replacements/authored-ui/", StringComparison.Ordinal))];
         Assert.Equal(
-            Directory.EnumerateFiles(tracked, "*.png").Select(file => "worldrpg/media/ui/authored/" + Path.GetFileName(file)).Order(StringComparer.Ordinal),
+            Directory.EnumerateFiles(tracked, "*.png").Select(file => "worldrpg/packs/daggerfall.art-replacements/authored-ui/" + Path.GetFileName(file)).Order(StringComparer.Ordinal),
             authored.Select(entry => (string)entry["path"]!).Order(StringComparer.Ordinal));
         foreach (JsonNode entry in authored)
         {

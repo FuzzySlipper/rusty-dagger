@@ -89,11 +89,11 @@ internal static class TestSessions
     internal static DaggerfallSiteProfile ReadInputs(string root)
     {
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        return DaggerfallSiteContent.Read(Data(ImportContent(root)), TestContentFiles.Read(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
+        return DaggerfallSiteContent.Read(Data(ImportContent(root)), TestContentFiles.Read(Path.Combine(root, "content/worldrpg/packs/daggerfall.privateers-hold/payload.json")), definitions);
     }
 
-    internal static DaggerfallSiteProfile ReadProfile(string root, ProductContent content, DaggerfallDefinitions definitions, string payload) =>
-        DaggerfallSiteContent.Read(Data(content), TestContentFiles.Read(Path.Combine(root, "content/worldrpg/payloads", payload)), definitions);
+    internal static DaggerfallSiteProfile ReadProfile(string root, ProductContent content, DaggerfallDefinitions definitions, string pack) =>
+        DaggerfallSiteContent.Read(Data(content), TestContentFiles.Read(Path.Combine(root, "content/worldrpg/packs", pack, "payload.json")), definitions);
 
     internal static void RegisterCorpseStack(DaggerfallSession session, DaggerfallDefinitions definitions, long actorId, string stackId)
     {
@@ -246,10 +246,8 @@ internal static class TestSessions
 
     private static bool IsGlobalContentMetadata(string relative) =>
         relative.StartsWith("worldrpg/payloads/", StringComparison.Ordinal)
-        || relative.StartsWith("worldrpg/content-packs/", StringComparison.Ordinal)
         || relative.StartsWith("worldrpg/bundles/", StringComparison.Ordinal)
         || relative.StartsWith("worldrpg/tuning/", StringComparison.Ordinal)
-        || relative.StartsWith("worldrpg/tuning-payloads/", StringComparison.Ordinal)
         || relative.StartsWith("worldrpg/media/", StringComparison.Ordinal)
             && string.Equals(Path.GetExtension(relative), ".json", StringComparison.OrdinalIgnoreCase);
 
@@ -424,7 +422,7 @@ internal static class TestSessions
         }
         // A site appearance admits the refreshed world effects and their particle glow, the items dropped piles stand
         // as, and the refreshed surfaces its walls, floors and ceilings draw, with its own textures.
-        DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(TestContentFiles.Read(Path.Combine(root, "content", "worldrpg/payloads/daggerfall.art-replacements.json")), "daggerfall.art-replacements");
+        DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(TestContentFiles.Read(Path.Combine(root, "content", "worldrpg/packs/daggerfall.art-replacements/payload.json")), "daggerfall.art-replacements");
         IEnumerable<string> world = art.All.SelectMany(replacement => new[] { replacement.World?.File.Path, replacement.DyeMask?.World?.File.Path }).OfType<string>();
         foreach (string path in art.Effects.Values.Select(effect => effect.Path).Append(art.EffectGlow!.Path).Concat(art.Meshes.Values.Select(mesh => mesh.File.Path)).Concat(world)
                      .Concat(art.Surfaces.Values.Select(surface => surface.File.Path)).Distinct())
@@ -715,7 +713,7 @@ internal static class TestSessions
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        JsonObject profile = JsonNode.Parse(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")))!.AsObject();
+        JsonObject profile = JsonNode.Parse(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.privateers-hold/payload.json")))!.AsObject();
         JsonObject placement = profile["placements"]!.AsArray().Select(value => value!.AsObject())
             .Single(value => value["entityId"]!.GetValue<long>() == placedEntityId);
         DaggerfallActorDefinition actor = definitions.RequireActor(new DaggerfallActorId(placement["actor"]!.GetValue<string>()));
@@ -766,7 +764,7 @@ internal static class TestSessions
     /// <summary>The default tuning payload with one test mutation applied.</summary>
     internal static byte[] MutatedTuning(string repositoryRoot, Action<JsonObject> mutate)
     {
-        JsonObject tuning = JsonNode.Parse(TestContentFiles.ReadText(Path.Combine(repositoryRoot, "content/worldrpg/tuning-payloads/daggerfall.defaults.json")))!.AsObject();
+        JsonObject tuning = JsonNode.Parse(TestContentFiles.ReadText(Path.Combine(repositoryRoot, "content/worldrpg/tuning/daggerfall.defaults/payload.json")))!.AsObject();
         mutate(tuning);
         return Encoding.UTF8.GetBytes(tuning.ToJsonString());
     }

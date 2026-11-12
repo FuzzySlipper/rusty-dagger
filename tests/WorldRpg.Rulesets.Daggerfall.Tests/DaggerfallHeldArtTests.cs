@@ -16,7 +16,7 @@ using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
-/// Checks the 3D first-person art is read from the authored held definition (content/worldrpg/first-person): weapon
+/// Checks the 3D first-person art is read from the authored held definition (the art pack's first-person/): weapon
 /// families whose clip-led arms play a clip per fast attack, each fitted so the clip's strike mark lands as the
 /// rules' windup ends, drawn with the container's models.
 /// </summary>
@@ -154,13 +154,13 @@ public sealed class DaggerfallHeldArtTests
     [Fact]
     public void A_models_metal_slot_is_found_by_name_and_a_tint_brightens_as_the_paper_doll_does()
     {
-        string weapons = Path.Combine(TestData.RepositoryRoot, "content/worldrpg/first-person/weapons");
+        string weapons = Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.art-replacements/first-person/weapons");
         BundleContentFake service = new();
         service.Container(DaggerfallHeldArt.ContainerName);
         foreach (string file in Directory.GetFiles(weapons, "*.glb")) service.Add(DaggerfallHeldArt.ContainerName, $"first-person/weapons/{Path.GetFileName(file)}", File.ReadAllBytes(file));
         foreach (string model in ArmModels()) service.Add(DaggerfallHeldArt.ContainerName, model, EmptyGlb);
         service.Add(DaggerfallHeldArt.ContainerName, "first-person/effects/enchant.wgsl", [7]);
-        foreach (string mount in Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/first-person/mounts"), "*.glb"))
+        foreach (string mount in Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.art-replacements/first-person/mounts"), "*.glb"))
             service.Add(DaggerfallHeldArt.ContainerName, $"first-person/mounts/{Path.GetFileName(mount)}", EmptyGlb);
         ProductContentBundle container = new ProductContent(Array.Empty<ProductContentFile>(), service).OpenContainer(DaggerfallHeldArt.ContainerName);
         DaggerfallHeldArt art = DaggerfallHeldArt.Read(container, System.Text.Encoding.UTF8.GetBytes(Document().ToJsonString()));
@@ -231,7 +231,7 @@ public sealed class DaggerfallHeldArtTests
     public void The_viewmodel_style_is_held_by_default_and_read_by_name()
     {
         string root = TestData.RepositoryRoot;
-        string defaults = Path.Combine(root, "content/worldrpg/tuning-payloads/daggerfall.defaults.json");
+        string defaults = Path.Combine(root, "content/worldrpg/tuning/daggerfall.defaults/payload.json");
         Assert.Equal(DaggerfallViewmodelStyle.Held, DaggerfallTuning.Read(TestContentFiles.ReadCopy(defaults)).Viewmodel.Style);
         foreach (var (name, style) in new[] { ("classic", DaggerfallViewmodelStyle.Classic), ("heldRetro", DaggerfallViewmodelStyle.HeldRetro) })
             Assert.Equal(style, DaggerfallTuning.Read(Mutated(defaults, name)).Viewmodel.Style);
@@ -804,7 +804,7 @@ public sealed class DaggerfallHeldArtTests
     internal static JsonObject Document() =>
         JsonNode.Parse(File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content", DaggerfallHeldArt.DocumentPath)))!.AsObject();
 
-    private static string[] Weapons() => Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/first-person/weapons"), "*.glb")
+    private static string[] Weapons() => Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.art-replacements/first-person/weapons"), "*.glb")
         .Select(path => $"first-person/weapons/{Path.GetFileName(path)}").ToArray();
 
     // Both models of every arm set.
@@ -819,10 +819,10 @@ public sealed class DaggerfallHeldArtTests
         service.Container(DaggerfallHeldArt.ContainerName);
         foreach (string model in models ?? [.. ArmModels(), .. Weapons()])
             service.Add(DaggerfallHeldArt.ContainerName, model, EmptyGlb);
-        foreach (string mount in Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/first-person/mounts"), "*.glb"))
+        foreach (string mount in Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.art-replacements/first-person/mounts"), "*.glb"))
             service.Add(DaggerfallHeldArt.ContainerName, $"first-person/mounts/{Path.GetFileName(mount)}", EmptyGlb);
         service.Add(DaggerfallHeldArt.ContainerName, "first-person/effects/enchant.wgsl", [7]);
-        foreach (string arcs in Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/first-person/weapons"), "*.arcs.json"))
+        foreach (string arcs in Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.art-replacements/first-person/weapons"), "*.arcs.json"))
             service.Add(DaggerfallHeldArt.ContainerName, $"first-person/weapons/{Path.GetFileName(arcs)}", File.ReadAllBytes(arcs));
         ProductContentBundle container = new ProductContent(Array.Empty<ProductContentFile>(), service).OpenContainer(DaggerfallHeldArt.ContainerName);
         return DaggerfallHeldArt.Read(container, System.Text.Encoding.UTF8.GetBytes(document.ToJsonString()));

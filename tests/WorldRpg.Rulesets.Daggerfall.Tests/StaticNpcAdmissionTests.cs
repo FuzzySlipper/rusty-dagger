@@ -20,7 +20,7 @@ public sealed class StaticNpcAdmissionTests
     {
         string root = TestData.RepositoryRoot;
         var inputs = StaticProviderSite(exterior
-            ? ReadProfile(root, FullContent(root), TestPayload.Definitions, "daggerfall.charing-exterior.json")
+            ? ReadProfile(root, FullContent(root), TestPayload.Definitions, "daggerfall.charing-exterior")
             : ReadInputs(root), factionId: 5911);
         List<string> releases = [];
         ContentFake content = new(releases); PopulateContent(content, inputs);
@@ -47,7 +47,7 @@ public sealed class StaticNpcAdmissionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = FullContent(root);
         DaggerfallSiteProfile providerSite = StaticProviderSite(ReadProfile(root, content, definitions,
-            "daggerfall.charing-interior-1-1-0.json"));
+            "daggerfall.charing-interior-1-1-0"));
         DaggerfallSiteProfile outside = ReadInputs(root);
         List<string> releases = [];
         ContentFake contentService = new(releases);
@@ -119,7 +119,7 @@ public sealed class StaticNpcAdmissionTests
         ProductContent content = FullContent(root);
         DaggerfallSiteProfile outside = ReadInputs(root);
         DaggerfallSiteProfile providerSite = StaticProviderSite(ReadProfile(root, content, definitions,
-            "daggerfall.charing-interior-1-1-0.json"));
+            "daggerfall.charing-interior-1-1-0"));
         List<string> releases = [];
         ContentFake contentService = new(releases);
         PopulateContent(contentService, outside);
@@ -162,7 +162,7 @@ public sealed class StaticNpcAdmissionTests
         ProductContent content = FullContent(root);
         DaggerfallSiteProfile outside = ReadInputs(root);
         DaggerfallSiteProfile providerSite = StaticProviderSite(ReadProfile(root, content, definitions,
-            "daggerfall.charing-interior-1-1-0.json"), placementCount: 2);
+            "daggerfall.charing-interior-1-1-0"), placementCount: 2);
         List<string> releases = [];
         ContentFake contentService = new(releases);
         PopulateContent(contentService, outside);

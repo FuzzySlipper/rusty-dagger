@@ -419,7 +419,7 @@ public sealed class DaggerfallCatalogTests
     private static List<string> ItemIds() =>
         [.. System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(PackPath()))!["items"]!.AsArray().Select(value => value!.AsObject()["id"]!.GetValue<string>())];
 
-    private static string PackPath() => Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json");
+    private static string PackPath() => Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.base/payload.json");
 
     private static string ImportedText() => System.Text.Encoding.UTF8.GetString(ImportedContent.Read("worldrpg/payloads/daggerfall.imported.json"));
 }

@@ -117,7 +117,7 @@ public sealed class DaggerfallFiresTests
     [Fact]
     public void The_payload_states_the_code_defaults()
     {
-        using JsonDocument payload = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/tuning-payloads/daggerfall.defaults.json")));
+        using JsonDocument payload = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/tuning/daggerfall.defaults/payload.json")));
         DaggerfallHazardTuning loaded = DaggerfallHazardTuning.Read(payload.RootElement.GetProperty("hazards"));
 
         Assert.True(Tuning.BurningFlats.SetEquals(loaded.BurningFlats));

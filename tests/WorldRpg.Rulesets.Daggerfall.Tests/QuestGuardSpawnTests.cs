@@ -99,7 +99,7 @@ public sealed class QuestGuardSpawnTests
         internal Fixture(bool immediate, DaggerfallDefinitions? definitions = null)
         {
             definitions ??= QuestWorldAdmissionTests.Definitions(actions: ["spawncityguards" + (immediate ? " immediate" : "")]);
-            profile = ReadProfile(TestData.RepositoryRoot, FullContent(TestData.RepositoryRoot), definitions, "daggerfall.charing-exterior.json");
+            profile = ReadProfile(TestData.RepositoryRoot, FullContent(TestData.RepositoryRoot), definitions, "daggerfall.charing-exterior");
             composition = new(definitions, profile, DaggerfallTuning.Defaults with { Law = new(5, 5, 2, 2, 12.8f, 51.2f, 3.2) }) { Profiles = new([profile]) };
             Session = DaggerfallSession.StartNew(Engine().Context, composition);
             var site = definitions.Locations.Records.Single(x => x.Id == profile.Site);

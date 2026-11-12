@@ -130,7 +130,7 @@ public sealed class MonsterArchiveTests
     {
         MonsterArchiveInventory inventory = ReadInventory();
         System.Text.Json.Nodes.JsonArray tables = System.Text.Json.Nodes.JsonNode
-            .Parse(File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.base.json")))!
+            .Parse(File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.base/payload.json")))!
             ["lootTables"]!.AsArray();
         string[] keys = [.. tables.Select(table => table!.AsObject()["key"]!.GetValue<string>())];
 

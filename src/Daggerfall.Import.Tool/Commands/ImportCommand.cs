@@ -28,7 +28,7 @@ internal static class ImportCommand
     private const string Inventory = ImportLayout.Inventory;
     private const string UiAssets = "data/ui-authored-assets.json";
     private const string UiOriginal = AuthoredUi.ProductDirectory;
-    private const string Authored = "content/worldrpg/payloads/daggerfall.base.json";
+    private const string Authored = "content/worldrpg/packs/daggerfall.base/payload.json";
 
     private static readonly string[] Arena2Files =
         ["MAPS.BSA", "BLOCKS.BSA", "ARCH3D.BSA", "MONSTER.BSA", "DAGGER.SND", "TEXT.RSC", "CLASSES.DAT", "CLIMATE.PAK", "POLITIC.PAK",

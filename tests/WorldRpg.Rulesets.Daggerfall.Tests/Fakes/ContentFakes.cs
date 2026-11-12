@@ -68,7 +68,7 @@ internal sealed class ContentFake : IContentService
     {
         ResolveCalls++;
         // Bundles carry the art replacements, whose hundreds of files no profile lists: a session asks for them by the art pack's digests.
-        if (request.Path.StartsWith("worldrpg/media/refreshed/", StringComparison.Ordinal)) values.TryAdd(request.Path, request.Sha256);
+        if (request.Path.StartsWith("worldrpg/packs/daggerfall.art-replacements/media/", StringComparison.Ordinal)) values.TryAdd(request.Path, request.Sha256);
         if (!values.TryGetValue(request.Path, out ContentSha256 known) || known != request.Sha256) throw new InvalidOperationException($"Unexpected content reference '{request.Path}'{(values.ContainsKey(request.Path) ? " with another digest" : "")}.");
         ulong value = nextHandle++;
         references.Add(value, new KeyValuePair<string, ContentSha256>(request.Path, known));
@@ -112,7 +112,7 @@ internal sealed class ContentFake : IContentService
     private byte[]? Bytes(string path)
     {
         if (bodies.TryGetValue(path, out byte[]? body)) return body;
-        if (!path.StartsWith("worldrpg/media/refreshed/", StringComparison.Ordinal)) return null;
+        if (!path.StartsWith("worldrpg/packs/daggerfall.art-replacements/media/", StringComparison.Ordinal)) return null;
         string file = Path.Combine(TestData.RepositoryRoot, "content", path);
         return File.Exists(file) ? bodies[path] = File.ReadAllBytes(file) : null;
     }

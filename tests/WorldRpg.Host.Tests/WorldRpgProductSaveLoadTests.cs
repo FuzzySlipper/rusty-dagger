@@ -475,10 +475,10 @@ public sealed class WorldRpgProductSaveLoadTests
         new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/bundles/test.bundle.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.game-bundle","id":"test.bundle","title":"Test bundle","ruleset":"test","contentPacks":[{"id":"test.pack"}],"tuning":{"id":"test.tuning"}}""")),
         new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/bundles/test.variants.bundle.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.game-bundle","id":"test.variants","ruleset":"test","contentPacks":[{"id":"test.pack"}],"tuning":{"id":"test.tuning"},"variants":["test.contact","test.armor"]}""")),
         new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/bundles/test.variants-reordered.bundle.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.game-bundle","id":"test.variants-reordered","ruleset":"test","contentPacks":[{"id":"test.pack"}],"tuning":{"id":"test.tuning"},"variants":["test.armor","test.contact"]}""")),
-        new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/content-packs/test.pack.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.content-pack","id":"test.pack","ruleset":"test","role":"test.content","dependencies":[],"payload":"payload/pack.json"}""")),
-        new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/tuning/test.tuning.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"test","payload":"payload/tuning.json"}""")),
-        new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("payload/pack.json"), System.Text.Encoding.UTF8.GetBytes("{}")),
-        new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("payload/tuning.json"), System.Text.Encoding.UTF8.GetBytes("{}")),
+        new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/packs/test/pack.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.content-pack","id":"test.pack","ruleset":"test","role":"test.content","dependencies":[],"payload":"payload/content.json"}""")),
+        new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/tuning/test/tuning.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"test","payload":"payload/values.json"}""")),
+        new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("payload/content.json"), System.Text.Encoding.UTF8.GetBytes("{}")),
+        new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("payload/values.json"), System.Text.Encoding.UTF8.GetBytes("{}")),
     ]));
 
     private static ProductInputConfiguration EmptyInput() => new(

@@ -23,6 +23,9 @@ internal static class TestData
 
     public static string Corpus(string relative) => Path.Combine(CorpusRoot, relative);
 
+    /// <summary>A tracked content pack's payload, <c>content/worldrpg/packs/PACK/payload.json</c>.</summary>
+    public static string PackPayload(string pack) => Path.Combine(RepositoryRoot, "content", "worldrpg", "packs", pack, "payload.json");
+
     public static string Donor(string relative) => Path.Combine(DonorRoot, relative);
 
     /// <summary>The one command that converts the operator's Arena2 files into the data containers and records.</summary>

@@ -48,7 +48,7 @@ public sealed class DaggerfallRestRecoveryModuleTests
     [Fact]
     public void The_inn_multiplier_is_tuning_and_cannot_favour_the_ground()
     {
-        using JsonDocument payload = JsonDocument.Parse(TestContentFiles.ReadText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/tuning-payloads/daggerfall.defaults.json")));
+        using JsonDocument payload = JsonDocument.Parse(TestContentFiles.ReadText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/tuning/daggerfall.defaults/payload.json")));
         Assert.Equal(DaggerfallRestTuning.Default, DaggerfallRestTuning.Read(payload.RootElement.GetProperty("rest")));
 
         using JsonDocument refused = JsonDocument.Parse("""{ "innFatigueMultiplier": 0 }""");

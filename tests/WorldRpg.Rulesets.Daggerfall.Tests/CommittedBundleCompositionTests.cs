@@ -86,13 +86,13 @@ public sealed class CommittedBundleCompositionTests
     public void No_site_payload_names_an_audio_bundle_of_its_own()
     {
         string root = TestData.RepositoryRoot;
-        string[] sitePayloads = [.. Directory.GetFiles(Path.Combine(root, "content/worldrpg/payloads"), "daggerfall.*.json")
+        string[] sitePayloads = [.. Directory.GetFiles(Path.Combine(root, "content/worldrpg/packs"), "payload.json", SearchOption.AllDirectories)
             .Where(path => TopLevelSection(TestContentFiles.Read(path), "world") is not null)];
         Assert.NotEmpty(sitePayloads);
         Assert.All(sitePayloads, path =>
         {
             using JsonDocument world = JsonDocument.Parse(TopLevelSection(TestContentFiles.Read(path), "world")!.Value);
-            Assert.False(world.RootElement.TryGetProperty("audioBundle", out _), $"Site payload '{Path.GetFileName(path)}' names an audio bundle of its own.");
+            Assert.False(world.RootElement.TryGetProperty("audioBundle", out _), $"Site payload of '{Path.GetFileName(Path.GetDirectoryName(path))}' names an audio bundle of its own.");
         });
     }
 
@@ -144,7 +144,7 @@ public sealed class CommittedBundleCompositionTests
             foreach (ContentPack pack in resolved.ContentPacks) selected.Add(pack.Id.Value);
         }
         // Every pack a source describes: the tracked descriptors and the derived packs the data container carries.
-        string[] committed = [.. Directory.GetFiles(Path.Combine(root, "content/worldrpg/content-packs"), "*.pack.json")
+        string[] committed = [.. Directory.GetFiles(Path.Combine(root, "content/worldrpg/packs"), "pack.json", SearchOption.AllDirectories)
             .Select(path => JsonDocument.Parse(TestContentFiles.ReadCopy(path)).RootElement.GetProperty("id").GetString()!)
             .Concat(TestSessions.Installed(content).SelectMany(installed => installed.Description?.ContentPacks ?? [])
                 .Select(pack => pack.GetProperty("id").GetString()!))
@@ -260,7 +260,7 @@ public sealed class CommittedBundleCompositionTests
         string root = TestData.RepositoryRoot;
         // The edited descriptor replaces one eager file; the bundles the Host stages travel with it.
         ProductContent full = StagedContent(root, out BundleContentFake bundles);
-        string manifestPath = $"worldrpg/content-packs/{packId}.pack.json";
+        string manifestPath = $"worldrpg/packs/{packId}/pack.json";
         JsonObject manifest = JsonNode.Parse(full.ReadBytes(manifestPath).Span)!.AsObject();
         manifest["role"] = role;
         ProductContentFile[] files = [.. full.Files.ToArray().Select(file => Encoding.UTF8.GetString(file.Path.Span) == manifestPath

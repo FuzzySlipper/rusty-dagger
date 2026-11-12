@@ -13,7 +13,7 @@ when the refreshed art set is chosen (classic stays selectable). For each final 
     background `backgrounds--scbgNNi0--...` is `character.scbg.scbgNNi0.0`;
   - takes its doll-space rect from its sidecar, as doll_preview.py draws it, crops transparent margins and moves
     the rect to match;
-  - writes it as WebP (lossy colour at QUALITY, lossless alpha) to content/worldrpg/media/refreshed/AREA/;
+  - writes it as WebP (lossy colour at QUALITY, lossless alpha) to content/worldrpg/packs/daggerfall.art-replacements/media/AREA/;
   - records it in the pack payload's `artReplacements` section with its size, bytes and hash;
   - for clothing (archives 235-242), and for armour and weapons the classic draws in other metals, also writes
     its dye mask: the neutral cloth or bare steel the classic dye or metal recolours, where the final's colour is
@@ -111,8 +111,8 @@ import reduce  # noqa: E402
 
 REPOSITORY = AUTHORING.parent
 CONTENT = REPOSITORY / "content"
-MEDIA = "worldrpg/media/refreshed"
-PAYLOAD = CONTENT / "worldrpg/payloads/daggerfall.art-replacements.json"
+MEDIA = "worldrpg/packs/daggerfall.art-replacements/media"
+PAYLOAD = CONTENT / "worldrpg/packs/daggerfall.art-replacements/payload.json"
 QUALITY = 90
 AREAS = ("paper-doll", "worn", "items", "spells", "effects", "surfaces", "terrain", "flats", "people", "people-rig", "ui")
 PEOPLE_RIG = Path(os.environ.get("PEOPLE_RIG", "/home/agent/dev/asset-pipeline/live-evidence/publications/w453-walk-20261109"))

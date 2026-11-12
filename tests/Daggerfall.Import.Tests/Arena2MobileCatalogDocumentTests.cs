@@ -100,7 +100,7 @@ public sealed class Arena2MobileCatalogDocumentTests
     public void PublishesTheRealDonorTableWhenItIsAvailable()
     {
         string donorPath = TestData.Donor("Assets/Scripts/Utility/EnemyBasics.cs");
-        string payload = Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "payloads", "daggerfall.base.json");
+        string payload = TestData.PackPayload("daggerfall.base");
 
         Arena2MobileCatalogPublication publication = Arena2MobileCatalogDocument.Build(File.ReadAllText(donorPath), File.ReadAllText(payload), "donor/EnemyBasics.cs");
         // The measured reconciliation: 62 donor entries, one variant, one unpublished mobile.
@@ -158,7 +158,7 @@ public sealed class Arena2MobileCatalogDocumentTests
 
         Arena2MobileCatalogPublication publication = Arena2MobileCatalogDocument.Build(
             File.ReadAllText(donorPath),
-            File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "payloads", "daggerfall.base.json")),
+            File.ReadAllText(TestData.PackPayload("daggerfall.base")),
             donorPath,
             enemyConfigurations: MonsterArchiveInventory.Enumerate(File.ReadAllBytes(archivePath), "MONSTER.BSA"));
         JsonArray mobiles = JsonNode.Parse(publication.Json)!["mobiles"]!.AsArray();

@@ -211,7 +211,7 @@ public sealed class DaggerfallRestorationEffectsTests
     {
         var source = ReadInputs(TestData.RepositoryRoot);
         var destination = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)),
-            TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot,"content/worldrpg/payloads/daggerfall.castle-necromoghan.json")),TestPayload.Definitions);
+            TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot,"content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")),TestPayload.Definitions);
         var composition = new DaggerfallSessionComposition(TestPayload.Definitions,source,DaggerfallTuning.Defaults)
             { Profiles = new([source,destination]) };
         List<string> releases = []; ContentFake content = new(releases); PopulateContent(content,source); PopulateContent(content,destination);

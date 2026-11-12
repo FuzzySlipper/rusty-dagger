@@ -141,6 +141,13 @@ internal sealed record DaggerfallDyeTint(string Multiply, double Brightness);
 /// </summary>
 internal sealed class DaggerfallArtReplacements
 {
+    /// <summary>
+    /// The art pack's folder, a content-root path: its descriptor, its payload and the media the payload names, and
+    /// beside them the committed art read without the pack, the authored UI kit (<see cref="DaggerfallUiArt.AuthoredRoot"/>)
+    /// and the held definition (<c>DaggerfallHeldArt.DocumentPath</c>), so all of the game's own art is one unit.
+    /// </summary>
+    internal const string Folder = "worldrpg/packs/daggerfall.art-replacements";
+
     private readonly Dictionary<string, DaggerfallArtReplacement> _byClassic;
     private readonly Dictionary<string, DaggerfallArtReplacement> _byMediaId;
 

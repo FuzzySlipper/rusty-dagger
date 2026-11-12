@@ -17,7 +17,7 @@ public sealed class NormalizedMediaValidationTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        byte[] scenario = TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
+        byte[] scenario = TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.privateers-hold/payload.json"));
 
         ProductContent withImportedPreference = MutateDungeonMedia(root, media => media["actors"]!.AsArray()
             .Single(value => value!["mobileId"]!.GetValue<int>() == 15)!["preferredRestState"] = "idle");
@@ -38,7 +38,7 @@ public sealed class NormalizedMediaValidationTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        byte[] payload = TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
+        byte[] payload = TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.privateers-hold/payload.json"));
 
         Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateDungeonMedia(root, media => FirstActorState(media, "idle")["frames"]!.AsArray()[0]!["orientation"] = 8)), payload, definitions));
         Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateDungeonMedia(root, media => FirstActorState(media, "idle")["playback"]!["loops"] = "true")), payload, definitions));
@@ -85,7 +85,7 @@ public sealed class NormalizedMediaValidationTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        byte[] payload = TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
+        byte[] payload = TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.privateers-hold/payload.json"));
 
         Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateClassicMedia(root, media =>
         {
@@ -104,7 +104,7 @@ public sealed class NormalizedMediaValidationTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        byte[] payload = TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
+        byte[] payload = TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.privateers-hold/payload.json"));
 
         Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateClassicMedia(root, media => media["weaponMedia"]!.AsArray()[0]!["actions"]!.AsArray()[0]!["frameStart"] = -1)), payload, definitions));
         Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateClassicMedia(root, media => media["weaponMedia"]!.AsArray()[0]!["actions"]!.AsArray()[1]!["frameStart"] = -1)), payload, definitions));
@@ -130,7 +130,7 @@ public sealed class NormalizedMediaValidationTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        byte[] payload = TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
+        byte[] payload = TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.privateers-hold/payload.json"));
 
         // A melee strike shorter than the melee hit frame: every strike can play a melee swing.
         DaggerfallContentException melee = Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateClassicMedia(root, media =>

@@ -3,7 +3,7 @@
 
 usage: arcs.py [NAME ...]        rerun it whenever a model changes
 
-Reads the committed models in content/worldrpg/first-person/weapons and writes NAME.arcs.json beside each. All of it works
+Reads the committed models in content/worldrpg/packs/daggerfall.art-replacements/first-person/weapons and writes NAME.arcs.json beside each. All of it works
 on the model's metal, or all of the model when it has no metal slot; on a bow only the middle, which the draw barely bends,
 and on a flail its ball, in the joint's own space, as the ball swings free. It holds:
 
@@ -23,7 +23,7 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[3]
-MODELS = ROOT / "content/worldrpg/first-person/weapons"
+MODELS = ROOT / "content/worldrpg/packs/daggerfall.art-replacements/first-person/weapons"
 SPEC = ROOT / "authoring/specs/weapons/weapons.json"
 # Arcs per square metre of metal, and at least and at most this many.
 ARCS_PER_AREA = 1500

@@ -46,10 +46,11 @@ internal sealed class DaggerfallUiArt
     internal static readonly string[] Screens = ["screen.character-generation", "screen.death", "screen.pick.02", "screen.prison", "screen.title"];
 
     /// <summary>
-    /// Where the publication puts the authored UI kit. Every artifact under it is delivered: the kit is the
-    /// skin every screen draws, and the inventory states which images it has, so no list is kept here.
+    /// Where the publication puts the authored UI kit: in the art pack's folder, though every session draws it whichever
+    /// art the player chose. Every artifact under it is delivered: the kit is the skin every screen draws, and the
+    /// inventory states which images it has, so no list is kept here.
     /// </summary>
-    internal const string AuthoredPathSegment = "/media/ui/authored/";
+    internal const string AuthoredRoot = DaggerfallArtReplacements.Folder + "/authored-ui/";
 
     /// <summary>The paper doll's worn-item images, read only when the doll first draws one.</summary>
     internal const string PaperDollInventoryPath = "worldrpg/media/character/paper-doll/paper-doll-inventory.json";
@@ -150,7 +151,7 @@ internal sealed class DaggerfallUiArt
         string[] pickScreens = inventory.Where(entry => entry.Value.Slot == "pick").Select(entry => entry.Key).Order(StringComparer.Ordinal).ToArray();
         if (pickScreens.Length == 0 || !pickScreens.Contains("screen.pick.02", StringComparer.Ordinal))
             throw new InvalidOperationException("The published pick slot must supply screen.pick.02.");
-        string[] authored = inventory.Where(entry => entry.Value.Path.Contains(AuthoredPathSegment, StringComparison.Ordinal))
+        string[] authored = inventory.Where(entry => entry.Value.Path.StartsWith(AuthoredRoot, StringComparison.Ordinal))
             .Select(entry => entry.Key).ToArray();
         // The refreshed images are indexed first, as the identities read below may name them (refreshed icons).
         HashSet<string> refreshed = new(StringComparer.Ordinal);
@@ -262,7 +263,7 @@ internal sealed class DaggerfallUiArt
         // An authored original is the product's own tracked file, so its bytes are the authority and the length the
         // import recorded is not checked against them: a changed original makes the data container stale (it is an
         // importer revision input) and the product says so, rather than failing here.
-        if (bytes.LongLength != entry.ByteLength && !entry.Path.Contains(AuthoredPathSegment, StringComparison.Ordinal))
+        if (bytes.LongLength != entry.ByteLength && !entry.Path.StartsWith(AuthoredRoot, StringComparison.Ordinal))
         {
             throw new InvalidOperationException($"Published UI art '{mediaId}' at '{entry.Path}' is {bytes.LongLength} bytes where the inventory states {entry.ByteLength}.");
         }

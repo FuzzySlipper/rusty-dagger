@@ -25,9 +25,9 @@ from PIL import Image
 
 REPOSITORY = Path(__file__).resolve().parents[3]
 CONTENT = REPOSITORY / "content"
-MEDIA = "worldrpg/media/refreshed/groundcover"
-PAYLOAD = CONTENT / "worldrpg/payloads/daggerfall.art-replacements.json"
-TERRAIN = "worldrpg/media/refreshed/terrain"
+MEDIA = "worldrpg/packs/daggerfall.art-replacements/media/groundcover"
+PAYLOAD = CONTENT / "worldrpg/packs/daggerfall.art-replacements/payload.json"
+TERRAIN = "worldrpg/packs/daggerfall.art-replacements/media/terrain"
 
 SHELL_SIZE, SHELL_TEXELS_PER_METRE = 96, 24
 TUFT_SIZE = 32

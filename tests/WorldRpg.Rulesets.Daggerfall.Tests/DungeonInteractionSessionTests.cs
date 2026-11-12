@@ -83,7 +83,7 @@ public sealed class DungeonInteractionSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
         DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(root)),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source);
@@ -131,7 +131,7 @@ public sealed class DungeonInteractionSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
         DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(root)),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source);
@@ -166,7 +166,7 @@ public sealed class DungeonInteractionSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
         DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(root)),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source);
@@ -196,7 +196,7 @@ public sealed class DungeonInteractionSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
         DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(root)),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source);
@@ -238,7 +238,7 @@ public sealed class DungeonInteractionSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
         DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(root)),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source);
@@ -295,7 +295,7 @@ public sealed class DungeonInteractionSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
         DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(root)),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.castle-necromoghan.json")), definitions);
+            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source);

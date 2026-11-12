@@ -25,7 +25,7 @@ public sealed class TownStartBundleTests
     {
         string root = TestData.RepositoryRoot;
         ProductContent full = FullContent(root);
-        DaggerfallSiteProfile exterior = ReadProfile(root, full, TestPayload.Definitions, "daggerfall.charing-exterior.json");
+        DaggerfallSiteProfile exterior = ReadProfile(root, full, TestPayload.Definitions, "daggerfall.charing-exterior");
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
@@ -57,8 +57,8 @@ public sealed class TownStartBundleTests
     {
         string root = TestData.RepositoryRoot;
         ProductContent full = FullContent(root);
-        DaggerfallSiteProfile exterior = ReadProfile(root, full, TestPayload.Definitions, "daggerfall.charing-exterior.json");
-        DaggerfallSiteProfile store = ReadProfile(root, full, TestPayload.Definitions, "daggerfall.charing-interior-2-1-0.json");
+        DaggerfallSiteProfile exterior = ReadProfile(root, full, TestPayload.Definitions, "daggerfall.charing-exterior");
+        DaggerfallSiteProfile store = ReadProfile(root, full, TestPayload.Definitions, "daggerfall.charing-interior-2-1-0");
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
@@ -146,7 +146,7 @@ public sealed class TownStartBundleTests
     {
         string root = TestData.RepositoryRoot;
         ProductContent full = FullContent(root);
-        DaggerfallSiteProfile exterior = ReadProfile(root, full, TestPayload.Definitions, "daggerfall.the-hawkston-cemetery-exterior.json");
+        DaggerfallSiteProfile exterior = ReadProfile(root, full, TestPayload.Definitions, "daggerfall.the-hawkston-cemetery-exterior");
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);

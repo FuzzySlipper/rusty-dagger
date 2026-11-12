@@ -95,7 +95,7 @@ public sealed class NormalLightSessionTests
             ContentFake content = new(releases); PopulateContent(content, inputs);
             if (twoSites)
             {
-                Destination = ReadProfile(TestData.RepositoryRoot, FullContent(TestData.RepositoryRoot), TestPayload.Definitions, "daggerfall.castle-necromoghan.json");
+                Destination = ReadProfile(TestData.RepositoryRoot, FullContent(TestData.RepositoryRoot), TestPayload.Definitions, "daggerfall.castle-necromoghan");
                 PopulateContent(content, Destination);
             }
             Graphics = new(releases) { RejectDisposeOfRetainedAppearance = true };
