@@ -26,17 +26,24 @@ Engine setup, compilation and running follow the Den runbook
 
 ## Set up
 
-The product consumes one immutable Engine SDK/runtime pair, pinned by
-`<RustyEnginePackageVersion>` in `Directory.Build.props`. The Engine's `rusty`
-command installs, updates and runs it. Get `rusty` once with the Engine bootstrap
+Prerequisites: git, the .NET 10 SDK, Node 22 with npm, and python3, rsync and
+zstd (which `scripts/data-sync.sh` uses). The product consumes one immutable
+Engine SDK/runtime pair, pinned by `<RustyEnginePackageVersion>` in
+`Directory.Build.props`. The Engine's `rusty` command installs, updates and runs
+it. Get `rusty` once with the Engine bootstrap
 (`curl -fsSL https://raw.githubusercontent.com/FuzzySlipper/rusty-engine/main/scripts/install-rusty.sh | bash`),
-then in a clean checkout:
+then:
 
 ```bash
+git clone https://github.com/FuzzySlipper/rusty-dagger.git && cd rusty-dagger
 rusty status
 rusty install
 npm ci
 ```
+
+While the repository is private, a den machine with no GitHub login reads it
+through a read-only deploy key named by a `github-rusty-dagger` host in its
+`~/.ssh/config`: `git clone git@github-rusty-dagger:FuzzySlipper/rusty-dagger.git`.
 
 `rusty update` moves the pin to the newest published pair and lists the release
 notes to read; `rusty update --check` only reports. AGENTS.md says when and where
@@ -51,11 +58,11 @@ say what may be deleted:
 | Folder | Holds | Lifecycle |
 | --- | --- | --- |
 | `local/inputs/` | `arena2`, `Sound`, `fp-melee` (purchased art) | supplied, never regenerated: keep a copy |
-| `local/data/` | `daggerfall-data.rpak`, `music.rpak`, `first-person.rpak` | what the game opens; rebuilt by the import and `authoring/tools/fp-arms/build.sh` |
+| `local/data/` | `daggerfall-data.rpak`, `music.rpak`, `first-person.rpak` | what the game opens; rebuilt by the import and `authoring/tools/fp-arms/build.sh`, or pulled whole by `scripts/data-sync.sh` |
 | `local/build/` | import staging and records, the fp-arms build, verify stamps | regenerable |
 | `local/art/` | `reference/` exports, `generated/` finals and studies, `review/` pages | the art pipeline's working files ([authoring/README.md](authoring/README.md)) |
 | `local/scratch/` | experiments | deletable at any time |
-| `local/evidence` | a link to the den NAS's `evidence/rusty-dagger/`, a folder per task | kept off the checkout |
+| `local/evidence` | a link to the den NAS's `evidence/rusty-dagger/`, a folder per task (`ln -s /mnt/den-nas-backup/data/evidence/rusty-dagger local/evidence`) | kept off the checkout |
 
 - Supply the game's `ARENA2` directory as `local/inputs/arena2` (or pass
   `--arena2` the folder Daggerfall is installed in) and the song folder as
@@ -84,19 +91,28 @@ say what may be deleted:
   arena2, so they never leave the network.
 
   ```bash
-  scripts/data-sync.sh pull                                  # a new checkout, from the NAS store
-  scripts/data-sync.sh push den-k8:build/workspaces/rusty-dagger   # refresh another Linux box (on den-agents)
-  scripts/data-sync.sh status                                # is this copy stale?
+  scripts/data-sync.sh pull                                        # the containers, from the NAS store
+  scripts/data-sync.sh pull den-agents:dev/rusty-dagger --import-tree   # a box that runs the tests
+  scripts/data-sync.sh status                                      # is this copy stale?
   ```
 
+  The store holds only `local/data`. A box that runs the tests also needs
+  `local/build/import` (the staging, records and music records the importer and UI
+  tests read), which only den-agents' checkout has: pull it from there with
+  `--import-tree`, which brings the containers too, and copy the corpus the import
+  suite reads: `rsync -a den-agents:dev/rusty-dagger/local/inputs/arena2 local/inputs/`.
+  Pull right after cloning or checking out, and check that `status` reads current.
   Over ssh only changed 8 KiB blocks travel, so a refresh after an import sends
   tens of megabytes; to or from the store (`/mnt/den-nas-backup/data/rusty-dagger/lan`)
-  changed files go whole. After an import den-agents also runs
+  changed files go whole. After an import den-agents runs
   `scripts/data-sync.sh push`, which keeps the store current. Nothing is deleted
-  unless you add `--mirror`. Add `--import-tree` to a box-to-box run to also copy
-  `local/build/import`, which the importer and UI tests read (a full verify needs
-  it). Windows pulls whole files from den-agents through
-  `P:` on the console desktop: `powershell -File scripts\data-sync.ps1`.
+  unless you add `--mirror`.
+- Windows (den-win11) runs the game and never imports or verifies. `P:`, den-agents'
+  home, is mapped only on the console desktop, so a command that reads it runs
+  through `C:\Users\agent\crew\bin\run-on-desktop.ps1`. A Windows checkout pulls
+  its containers whole from den-agents' checkout with
+  `powershell -File scripts\data-sync.ps1`. Only the newest pairs publish win-x64
+  archives: `rusty install` says `RUSTY_INSTALL_NOT_PUBLISHED` for an older pin.
 - Every run prints the container's importer revision beside the checkout's. When
   they differ the copy is stale for this tree (or the tree is ahead of the last
   import): pull again once den-agents has imported that revision.
@@ -109,9 +125,6 @@ say what may be deleted:
   from; the import reads no Daggerfall Unity file and needs no donor checkout.
   `dotnet run --project src/Daggerfall.Source.Tool -- donor-drift --donor DIR`
   reports where they differ from a Daggerfall Unity checkout.
-- A checkout from before this layout moves its files once with
-  `scripts/split-local.sh` (`--dry-run` first), while nothing imports, promotes
-  art or runs the game from it or a worktree that links it.
 
 A worktree links only the inputs and the containers of the main checkout, so its
 build and art files stay its own; on den machines evidence links to the NAS:
@@ -190,6 +203,20 @@ Controls and screens are described on the wiki page `wiki/rusty-dagger/game-ui`.
 It installs the pinned pair and UI dependencies, runs the UI tests, builds the
 products and the import tool, runs every test project under `tests/`, and stages
 the CoreCLR product.
+
+Only verify needs these; a machine that only runs the game can skip them:
+
+- `local/inputs/arena2` and `local/build/import` (Game data says how a box that
+  does not import gets them), and `ffmpeg` on `PATH`: the import suite converts a
+  cinematic with it.
+- For `--play`, a Chromium: `chromium` on `PATH`, or `RUSTY_CHROMIUM_PATH` naming
+  one, such as Playwright's (`npx playwright install chromium`; add `--with-deps`
+  once, with sudo, for its system libraries).
+- `DAGGER_DONOR_ROOT` naming a Daggerfall Unity checkout
+  (`git clone https://github.com/Interkarma/daggerfall-unity`). Without it the
+  tests that compare our tables with the donor skip, with the reason.
+- python3 with numpy, scipy and Pillow for the art pipeline's tests, which skip
+  without them.
 
 - `--play` also starts the product, presses Begin in a headless Chromium, creates
   a character and passes once the game reaches ordinary play with no error (about
