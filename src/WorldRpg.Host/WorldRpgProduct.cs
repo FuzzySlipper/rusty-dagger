@@ -342,14 +342,11 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
 
     /// <summary>
     /// The bundles a player may choose: every admitted bundle for a ruleset this product composes that
-    /// resolves against its compiled variants. Content does not change while the product runs.
+    /// resolves. Content does not change while the product runs.
     /// </summary>
     private IReadOnlyList<GameBundleSummary> BundleOptions() => _bundleOptions ??= [.. GameCompositionResolver.ListBundles(_context.Content)
         .Where(option => _explicitRuleset is null ? BuiltInRulesets.Composes(option.Ruleset) : option.Ruleset == _explicitRuleset.Id)
-        .Where(option => GameCompositionResolver.Resolve(_context.Content, option.Id, CompiledVariants(_explicitRuleset), _installed).IsResolved)];
-
-    private static IReadOnlyList<RulesVariantManifest> CompiledVariants(IGameRuleset? ruleset) => ruleset is null ? BuiltInRulesets.VariantManifests
-        : ruleset is IRulesVariantCatalog catalog ? catalog.CompiledVariants : [];
+        .Where(option => GameCompositionResolver.Resolve(_context.Content, option.Id, _installed).IsResolved)];
 
     /// <summary>Tells a session that presents the entry screen's bundle choice what it may offer.</summary>
     private void OfferBundles(IGameSession session)
@@ -453,7 +450,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     private static (ResolvedGameComposition Composition, IGameRuleset Selected) ResolveSelection(ProductCreateContext context, IGameRuleset? ruleset, GameBundleId bundle,
         IReadOnlyList<InstalledContent> installed)
     {
-        ResolvedGameComposition composition = GameCompositionResolver.Resolve(context.Content, bundle, CompiledVariants(ruleset), installed).RequireComposition();
+        ResolvedGameComposition composition = GameCompositionResolver.Resolve(context.Content, bundle, installed).RequireComposition();
         IGameRuleset selected = ruleset ?? BuiltInRulesets.Resolve(composition.Ruleset);
         if (selected.Id != composition.Ruleset)
             throw new InvalidOperationException($"Selected ruleset '{selected.Id.Value}' does not match bundle ruleset '{composition.Ruleset.Value}'.");
@@ -974,7 +971,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             key = request.Key;
         }
 
-        WorldRpgSaveSlotEntry entry = SaveSlots.SaveSlot(key, request.Label.Trim(), new GameSaveEnvelope(saveable.CaptureSave(), CompositionIdentity.Variants),
+        WorldRpgSaveSlotEntry entry = SaveSlots.SaveSlot(key, request.Label.Trim(), saveable.CaptureSave(),
             description: (saveable as ISaveDescribingGameSession)?.DescribeSave());
         requesting.ReportSaveOutcome($"Saved '{entry.Label}' (revision {entry.Revision}).");
         RefreshSaveSlots(requesting);
@@ -990,7 +987,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             return;
         }
 
-        _ = SaveSlots.SaveSlot(QuickSaveKey, QuickSaveLabel, new GameSaveEnvelope(saveable.CaptureSave(), CompositionIdentity.Variants),
+        _ = SaveSlots.SaveSlot(QuickSaveKey, QuickSaveLabel, saveable.CaptureSave(),
             description: (saveable as ISaveDescribingGameSession)?.DescribeSave());
         requesting.ReportSaveOutcome("Quick saved.");
         RefreshSaveSlots(requesting);
@@ -998,7 +995,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
 
     private void LoadNamedSlot(ISaveRequestingGameSession requesting, string key)
     {
-        (GameSaveEnvelope? envelope, WorldRpgSlotLoadDiagnostic? diagnostic) = SaveSlots.LoadSlot(key, Composition.Ruleset.Value, CompositionIdentity.Variants);
+        (RulesetSavePayload? payload, WorldRpgSlotLoadDiagnostic? diagnostic) = SaveSlots.LoadSlot(key, Composition.Ruleset.Value);
         if (diagnostic is not null)
         {
             requesting.ReportSaveOutcome($"Load failed: {diagnostic.Message}");
@@ -1006,7 +1003,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             return;
         }
 
-        LoadSavedGame(requesting, envelope!);
+        LoadSavedGame(requesting, payload!);
     }
 
     private void DeleteNamedSlot(ISaveRequestingGameSession requesting, SaveSlotRequest request)
@@ -1060,21 +1057,11 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     /// <summary>The Host's slot naming: a new slot takes the first free ordinal.</summary>
     private static string SaveSlotKey(ulong ordinal) => $"slot-{ordinal}";
 
-    /// <summary>Whether two variant selections are the same set; selection order carries no meaning for a save.</summary>
-    private static bool SameVariants(IReadOnlyList<RulesVariantId> saved, IReadOnlyList<RulesVariantId> running) =>
-        saved.Select(variant => variant.Value).Order(StringComparer.Ordinal)
-            .SequenceEqual(running.Select(variant => variant.Value).Order(StringComparer.Ordinal), StringComparer.Ordinal);
-
-    private void LoadSavedGame(ISaveRequestingGameSession requesting, GameSaveEnvelope envelope)
+    private void LoadSavedGame(ISaveRequestingGameSession requesting, RulesetSavePayload payload)
     {
-        if (envelope.Payload.Ruleset != Composition.Ruleset)
+        if (payload.Ruleset != Composition.Ruleset)
         {
             requesting.ReportSaveOutcome("Load failed: the saved game is for a different ruleset.");
-            return;
-        }
-        if (!SameVariants(envelope.Variants, CompositionIdentity.Variants))
-        {
-            requesting.ReportSaveOutcome("Load failed: the saved game ran under different rules variants.");
             return;
         }
 
@@ -1088,7 +1075,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         // restored and adopted on the updates after. A save that fails to restore leaves this game running and says why.
         IGameSession? restored = null;
         _loading.Start("Loading the saved game", [
-            new("Restoring the saved world", () => restored = saveable.CreateSession(SessionContext(Composition), envelope.Payload)),
+            new("Restoring the saved world", () => restored = saveable.CreateSession(SessionContext(Composition), payload)),
             new("Entering the world", () => AdoptLoadedGame(requesting, restored!), AwaitArrivalGround),
         ], error => requesting.ReportSaveOutcome($"Load failed: {error.Message}"));
     }

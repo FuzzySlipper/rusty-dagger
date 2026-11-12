@@ -50,7 +50,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
     private readonly Func<ActorState, bool>? _openBlockedDoor;
     private readonly ActorWanderCoordinator _wander;
     private readonly IRandomService _random;
-    private readonly IDaggerfallEnemyEngagement _engagement;
+    private readonly DaggerfallContactEngagement _engagement;
     private readonly Func<long, long, DaggerfallEnemyMotorContext> _motorContext;
     private readonly Func<long, long, double, (double Reach, bool Ranged)?>? _attackAtDistance;
     private readonly DaggerfallPursuitManeuverTuning _maneuvers;
@@ -70,7 +70,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
         Func<long, PursuitPolicy>? movementPolicy = null,
         Func<long, bool>? canOpenDoors = null,
         Func<ActorState, bool>? openBlockedDoor = null, Func<long, PursuitTarget?>? selectTarget = null, Func<long, bool>? questRestrained = null, Func<long, long, double, (double Reach, bool Ranged)?>? attackAtDistance = null,
-        IDaggerfallEnemyEngagement? engagement = null, ActorReactions? reactions = null)
+        DaggerfallContactEngagement? engagement = null, ActorReactions? reactions = null)
     {
         _reactions = reactions;
         _engagement = engagement ?? new DaggerfallContactEngagement(DaggerfallContactTuning.Default);
@@ -383,7 +383,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
         var attack = _attackAtDistance?.Invoke(actor.DurableId, target.DurableId, observation.Distance);
         // EnemyMotor.DoRangedAttack holds the band for a selected bow shot or a ready ranged spell.
         bool rangedAttack = attack?.Ranged == true || _rangedSpellReady?.Invoke(actor, target, observation.Distance) == true;
-        // The engagement owner spaces the attack and the maneuvers around it against the delivery that resolves it.
+        // Engagement spaces the attack and the maneuvers around it against the delivery that resolves it.
         observation = observation with { Reach = (attack?.Reach ?? observation.Reach) is double reach ? _engagement.EngageReach(reach, attack?.Ranged == true) : null };
         var memory = Senses(actor).Motor;
         return DaggerfallEnemyMotorPolicy.Select(memory, _movementPolicy(actor.DurableId), _maneuvers,

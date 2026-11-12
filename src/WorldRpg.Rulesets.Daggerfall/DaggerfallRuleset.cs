@@ -5,9 +5,8 @@ using WorldRpg.Rulesets.Daggerfall.Presentation;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatalog, IInstalledContentRuleset
+public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentRuleset
 {
-    private readonly IReadOnlyList<DaggerfallRulesVariant> _variants;
     private readonly ConditionalWeakTable<ResolvedGameComposition, DaggerfallAdmittedContent> _admittedContent = [];
     private readonly bool _videosEnabled;
     public static readonly RulesetId Identity = new("daggerfall");
@@ -36,25 +35,13 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
     /// <summary>The refreshed art set (<see cref="DaggerfallArtReplacements"/>); a bundle selects at most one.</summary>
     internal static readonly ContentPackRoleId ArtReplacementsRole = new("daggerfall.art-replacements");
 
-    /// <summary>Creates the ordinary product ruleset, compiling no rules variants, with its admitted cinematic playback enabled.</summary>
-    public DaggerfallRuleset() : this([]) { }
-
-    /// <summary>Creates the ordinary product ruleset with the compiled rules variants a bundle may select.</summary>
-    public DaggerfallRuleset(IReadOnlyList<DaggerfallRulesVariant> variants) : this(variants, videosEnabled: true) { }
+    /// <summary>Creates the ordinary product ruleset, with its admitted cinematic playback enabled.</summary>
+    public DaggerfallRuleset() : this(videosEnabled: true) { }
 
     /// <summary>Test-only explicit no-video composition; absent admitted content is never interpreted as this setting.</summary>
-    internal DaggerfallRuleset(bool videosEnabled) : this([], videosEnabled) { }
-
-    internal DaggerfallRuleset(IReadOnlyList<DaggerfallRulesVariant> variants, bool videosEnabled)
-    {
-        ArgumentNullException.ThrowIfNull(variants);
-        _variants = [.. variants];
-        _videosEnabled = videosEnabled;
-    }
+    internal DaggerfallRuleset(bool videosEnabled) => _videosEnabled = videosEnabled;
 
     public RulesetId Id => Identity;
-
-    public IReadOnlyList<RulesVariantManifest> CompiledVariants => [.. _variants.Select(variant => variant.Manifest)];
 
     /// <summary>The import tool <c>rusty build --release</c> ships, from the game's folder.</summary>
     private const string ReleaseImportTool = "tools/Daggerfall.Import.Tool/Daggerfall.Import.Tool";
@@ -148,7 +135,6 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IRulesVariantCatal
             HeldArt = admitted.HeldArt,
             ArtReplacements = admitted.ArtReplacements,
             Blocks = admitted.Blocks,
-            Seams = DaggerfallSeamSelection.From(context.Composition.Variants, _variants),
             Loading = context.Loading,
         };
 

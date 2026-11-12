@@ -7,7 +7,7 @@ On top of the root `AGENTS.md`.
 - `CombatResolution` stages keep their order when split: admission, contact, negation, calculation, mitigation, application.
 - Read existing stat modifiers; don't apply their bonuses again. Keep calculated damage apart from health actually lost.
 - Essential application never depends on a fact subscriber. Facts appended during a reaction wait for the next delivery.
-- A deviation that replaces behaviour is a variant's seam owner; an additive one is a RuleEvent contribution.
+- Change a rule in its owner; effects and items add to it as RuleEvent contributions.
 - Saved live items must agree with the durable allocator.
 - A new lifecycle feature decides what happens to owned items and native resources.
 

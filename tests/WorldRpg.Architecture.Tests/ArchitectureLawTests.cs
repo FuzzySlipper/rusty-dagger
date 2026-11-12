@@ -14,10 +14,7 @@ public sealed class ArchitectureLawTests
         AssertProjectReferences("Daggerfall.Import", []);
         AssertProjectReferences("WorldRpg.Kit", []);
         AssertProjectReferences("WorldRpg.Rulesets.Daggerfall", ["WorldRpg.Kit"]);
-        AssertProjectReferences("WorldRpg.Host", ["WorldRpg.Kit", "WorldRpg.Rulesets.Daggerfall", "WorldRpg.Rulesets.Daggerfall.Variants"]);
-        // Variants deviate from classic by referencing it; classic never references its variants, which
-        // the classic ruleset's own expected references above already pin.
-        AssertProjectReferences("WorldRpg.Rulesets.Daggerfall.Variants", ["WorldRpg.Kit", "WorldRpg.Rulesets.Daggerfall"]);
+        AssertProjectReferences("WorldRpg.Host", ["WorldRpg.Kit", "WorldRpg.Rulesets.Daggerfall"]);
 
         foreach (string project in ActiveRuntimeProjects()) AssertPackageReference(project, "Rusty.Engine");
     }
@@ -142,16 +139,13 @@ public sealed class ArchitectureLawTests
             ("content opened by bare path", @"\bContentOpenRequest\b", "DaggerfallData.cs"),
         ];
 
-        foreach (string project in new[] { "WorldRpg.Rulesets.Daggerfall", "WorldRpg.Rulesets.Daggerfall.Variants" })
+        foreach (string file in SourceFiles(SourceDirectory("WorldRpg.Rulesets.Daggerfall")))
         {
-            foreach (string file in SourceFiles(SourceDirectory(project)))
-            {
-                string source = ExecutableText(File.ReadAllText(file));
-                AssertNoForbiddenPatterns(file, source, pathOpens);
-                AssertNoForbiddenPatterns(file, source, ownedOpens
-                    .Where(open => !string.Equals(Path.GetFileName(file), open.Owner, StringComparison.Ordinal))
-                    .Select(open => (open.Label, open.Pattern)));
-            }
+            string source = ExecutableText(File.ReadAllText(file));
+            AssertNoForbiddenPatterns(file, source, pathOpens);
+            AssertNoForbiddenPatterns(file, source, ownedOpens
+                .Where(open => !string.Equals(Path.GetFileName(file), open.Owner, StringComparison.Ordinal))
+                .Select(open => (open.Label, open.Pattern)));
         }
     }
 
@@ -265,7 +259,7 @@ public sealed class ArchitectureLawTests
 
     /// <summary>Every Engine product assembly.</summary>
     private static IEnumerable<string> ActiveRuntimeProjects() =>
-    ["WorldRpg.Kit", "WorldRpg.Rulesets.Daggerfall", "WorldRpg.Rulesets.Daggerfall.Variants", "WorldRpg.Host"];
+    ["WorldRpg.Kit", "WorldRpg.Rulesets.Daggerfall", "WorldRpg.Host"];
 
     private static string WithoutXmlComments(string project) => Regex.Replace(project, "<!--.*?-->", string.Empty, RegexOptions.Singleline);
 

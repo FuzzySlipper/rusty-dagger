@@ -29,7 +29,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 /// attack lands the slots that clear the player's reflexes; armour absorbs; and a whiff or a negated blow runs no
 /// Strikes payload.
 /// </summary>
-internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperations ops, DaggerfallContactTuning tuning) : IDaggerfallPhysicalDelivery
+internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperations ops, DaggerfallContactTuning tuning)
 {
     private const long PlayerId = DaggerfallActorIdentity.PlayerEntityId;
     /// <summary>The critical-strike draw's salt.</summary>
@@ -39,6 +39,7 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
     // Enemy blows whose hit frame came before their wind-up ended, each with the step it may land on.
     private readonly List<(DeferredAttackImpact Impact, ulong DueStep)> _windingUp = [];
 
+    /// <summary>Whether a player's projectile is released or in flight.</summary>
     public bool HasPlayerFlight => _released.Any(shot => shot.Request.AttackerId == PlayerId) || _shots.Any(shot => shot.Release.Request.AttackerId == PlayerId);
 
     /// <summary>
@@ -74,6 +75,7 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         return first.Kind == ContactKind.None || first.Kind == ContactKind.Actor && first.ActorId == target;
     }
 
+    /// <summary>Delivers a prepared attack at its impact.</summary>
     public void Apply(AttackRequest request, PreparedPhysicalAttack attack, FactBuffer<IProductFact> facts)
     {
         DaggerfallAdmittedAttack admission = attack.Admission
@@ -100,6 +102,7 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         foreach (ActorVolumeContact contact in touched.Actors) Connect(request, attack, contact.ActorId, facts);
     }
 
+    /// <summary>Takes a released projectile into flight; false when the impact is not a flight.</summary>
     public bool DeferImpact(DeferredAttackImpact impact, FactBuffer<IProductFact> facts)
     {
         if (!impact.Request.Delayed) return false;
@@ -111,8 +114,10 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         return true;
     }
 
+    /// <summary>Whether a blow past its hit frame is still held, winding up to land on <paramref name="target"/>.</summary>
     public bool HoldsImpactAt(long target) => _windingUp.Any(held => held.Impact.Request.TargetId == target);
 
+    /// <summary>Lands every held blow due by this step.</summary>
     public void LandDueImpacts(ulong generation, ulong simulationStep, FactBuffer<IProductFact> facts)
     {
         foreach ((DeferredAttackImpact impact, ulong due) in _windingUp.ToArray())
@@ -145,6 +150,7 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         }
     }
 
+    /// <summary>The current flight poses the world appearance draws.</summary>
     public IReadOnlyList<DaggerfallRangedFlightView> ReadFlights(ulong generation, ulong simulationStep) =>
         [.. _shots.Where(shot => shot.Release.Request.Generation == generation)
             .OrderBy(shot => shot.Release.Request.AttackerId).ThenBy(shot => shot.ReleaseStep)
@@ -152,6 +158,7 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
                 new RangedShotIdentity(generation, shot.Release.Request.AttackerId, shot.Release.Request.TargetId ?? 0, shot.ReleaseStep),
                 WorldPoint.From(shot.Position), shot.Direction))];
 
+    /// <summary>A site transition retires every flight.</summary>
     public void ClearFlight()
     {
         _windingUp.Clear();

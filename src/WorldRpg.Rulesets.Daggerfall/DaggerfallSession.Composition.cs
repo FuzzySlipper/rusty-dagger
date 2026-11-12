@@ -333,13 +333,15 @@ internal sealed partial class DaggerfallSession
                 DaggerfallMolagBalEffects.Reconcile(effects, MolagBalEquipped);
             };
             DaggerfallActorInventories actorInventories = assembled.ActorInventories;
-            DaggerfallComposedSeams seams = composition.Seams.Build(SeamInputs(), _tuning.Contact);
-            _guard = seams.PlayerGuard;
+            DaggerfallContactInputs contactInputs = new(definitions, () => character, _random,
+                id => id == actors.Player.DurableId ? equipmentCoordinator.Read() : actorInventories.EquipmentFor(id).Read(),
+                id => id == actors.Player.DurableId ? actors.Player.Stats : actors.TryGet(id, out ActorState actor) ? actor.Stats : null,
+                () => _heldEnchantments.ArmorValueModifier) { PlayerAvoidHit = () => character.Background?.Modifiers.AvoidHit ?? 0 };
+            _guard = new DaggerfallContactGuard(contactInputs, _tuning.Contact);
             _attackClock = new DaggerfallPlayerAttackClock(_tuning.Attacks, this);
             _stamina = new DaggerfallPlayerStamina(_tuning.Attacks.Stamina);
             _stamina.Refresh(actors.Player.Stats);
-            _harmPresentation = seams.HarmPresentation;
-            _touch = seams.TouchDelivery(new(_contact, _spatial, () => _sites?.CharacterEnvironment(assembled.PlayerControl.Motion)));
+            _touch = new DaggerfallContactTouch(new(_contact, _spatial, () => _sites?.CharacterEnvironment(assembled.PlayerControl.Motion)), _tuning.Contact);
             ActorNavigationCoordinator navigation = new(engine.Spatial, _spatial.Session, actors.Store, _spatial.CurrentController,
                 actor => _sites.CharacterEnvironment(actor.Actor.Store.Get(actor.Actor.Entity, EngineComponentTypes.CharacterMotion)));
             _reactions = new ActorReactions(navigation);
@@ -349,8 +351,8 @@ internal sealed partial class DaggerfallSession
                 () => assembled.PlayerControl.Position, () => character, DeliverWeaponPoison, () => _heldEnchantments.AttackChanceModifier, TransformWithWabbajack, effects.MagicDefenseFor,
                 actorId => effects.ControlsFor(actorId).PhysicalAttacks, TransferMolagBal, (caster, target, item, damage) => _itemCastTriggers.Strike(caster, target, item, damage), DeliverMonsterHit,
                 npcs.IsGameplayActive, EffectiveFoeTeam,
-                seams.PhysicalMitigation,
-                seams.PhysicalDelivery,
+                new DaggerfallContactMitigation(contactInputs, _tuning.Contact, _guard),
+                _tuning.Contact,
                 _tuning.Attacks,
                 targetUnaware: id => EnemyBehavior.Unaware(id),
                 alertTarget: id => EnemyBehavior.Provoke(id, MinuteIndex(_time.Calendar)),
@@ -362,10 +364,6 @@ internal sealed partial class DaggerfallSession
                 new DaggerfallStrikes(_tuning.Attacks.Strike, actors, _reactions, () => assembled.PlayerControl.Position,
                     id => DefinitionsByActor.TryGetValue(id, out DaggerfallActorDefinition? struck) ? struck.Weight : null, id => EnemyBehavior.NavigationMode(id)),
                 PassesThrough);
-            DaggerfallSeamInputs SeamInputs() => new(definitions, () => character, _random,
-                id => id == actors.Player.DurableId ? equipmentCoordinator.Read() : actorInventories.EquipmentFor(id).Read(),
-                id => id == actors.Player.DurableId ? actors.Player.Stats : actors.TryGet(id, out ActorState actor) ? actor.Stats : null,
-                () => _heldEnchantments.ArmorValueModifier) { PlayerAvoidHit = () => character.Background?.Modifiers.AvoidHit ?? 0 };
             _equipmentMoves.Changed += _combat.EquipmentChanged;
             GameplayServices<IProductFact> kit = new(actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, inventory, equipmentCoordinator);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
@@ -389,7 +387,7 @@ internal sealed partial class DaggerfallSession
                     effects.GrantsLevitation(id)),
                 canOpenDoors: id => DaggerfallEnemyBehaviorModule.CanOpenDoors(id, authored, definitions),
                 openBlockedDoor: TryOpenDoorForEnemy, selectTarget: SelectQuestAwareEnemyTarget, questRestrained: QuestFoeRestrained, attackAtDistance: _combat.EnemyAttackAtDistance,
-                engagement: seams.EnemyEngagement);
+                engagement: new DaggerfallContactEngagement(_tuning.Contact));
             _authoredEntityIds = DaggerActorFactory.AdmittedAuthoredEntityIds(inputs, playerDefinition.Loadout);
             if (restore is null)
             {

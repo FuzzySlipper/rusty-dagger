@@ -114,10 +114,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// </remarks>
     internal World.DaggerfallSiteContext Site => _site;
 
-    /// <summary>The selected player guard seam owner; classic has none.</summary>
-    private readonly IDaggerfallPlayerGuard _guard;
-    private readonly IDaggerfallTouchDelivery _touch;
-    private readonly IDaggerfallHarmPresentation _harmPresentation;
+    /// <summary>The player's active block.</summary>
+    private readonly DaggerfallContactGuard _guard;
+    private readonly DaggerfallContactTouch _touch;
 
     /// <summary>A focus, mode, rest or travel change drops a held guard with the rest of the held input.</summary>
     private void NeutralizeGuard() => _guard.Neutralize(_latestUpdateGeneration ?? 0UL, _latestSimulationStep ?? 0UL, _facts);
@@ -847,7 +846,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             _appearance.ReactEffectOutcome(magic.Outcome, State.Actors, State.PlayerControl.Position,
                 _latestUpdateGeneration ?? 1UL, _latestSimulationStep ?? 1UL);
         if (fact is SpellCastFact cast)
-            _appearance.ReactSpellCast(cast, State.Actors, State.PlayerControl.Position, _harmPresentation);
+            _appearance.ReactSpellCast(cast, State.Actors, State.PlayerControl.Position);
         _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);
         if (fact is EnemyAttackStartedFact enemy)
             (_sites.Appearances.FirstOrDefault(appearance => appearance.HasActor(enemy.AttackerId)) ?? _appearance).React(fact, State.Actors);

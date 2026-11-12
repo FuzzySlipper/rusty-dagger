@@ -365,10 +365,10 @@ public sealed partial class DaggerfallEquipmentWearTests
             _authored[DaggerfallActorIdentity.PlayerEntityId] = playerDefinition;
             _authored[Enemy] = brigand;
             _actorEquipment[Enemy] = BuildEquipment(enemy.Actor.Entity, enemy.Actor, out _);
-            DaggerfallComposedSeams seams = DaggerfallSeamSelection.Default.Build(new DaggerfallSeamInputs(Definitions, () => null, _random,
+            DaggerfallContactInputs contactInputs = new(Definitions, () => null, _random,
                 id => id == DaggerfallActorIdentity.PlayerEntityId ? PlayerEquipment.Read() : _actorEquipment[id].Read(),
                 id => id == DaggerfallActorIdentity.PlayerEntityId ? _actors.Player.Stats : _actors.TryGet(id, out ActorState actor) ? actor.Stats : null,
-                () => 0), DaggerfallContactTuning.Default);
+                () => 0);
             _combat = new DaggerCombatRules(_random, _actors, PlayerEquipment, _ => null, _itemInstances, Definitions, _authored,
                 CombatCollaborators.Targeting(_actors, _authored, out _spatial, out _contact),
                 skillUses: _ => { },
@@ -382,7 +382,7 @@ public sealed partial class DaggerfallEquipmentWearTests
                 molagBalStrike: molagBalStrike ?? ((_, _, _, _, _, _, _) => throw new InvalidOperationException("This fixture was given no Mace of Molag Bal transfer.")),
                 itemStrike: (_, _, _, damage) => damage,
                 monsterHit: _ => { }, actorGameplayActive: _ => true, actorTeam: id => _authored.GetValueOrDefault(id)?.Team,
-                mitigation: seams.PhysicalMitigation, delivery: seams.PhysicalDelivery, attackTuning: DaggerfallAttackTuning.Default,
+                mitigation: CombatCollaborators.Mitigation(contactInputs), contactTuning: DaggerfallContactTuning.Default, attackTuning: DaggerfallAttackTuning.Default,
                 contact: CombatCollaborators.Contact(_actors, _spatial, () => null),
                 strikePose: actor => CombatCollaborators.StrikePose(_actors, actor, null));
         }

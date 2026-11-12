@@ -5,9 +5,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 /// it matches, so a reflected effect is heard as a deflection and an absorbed one as harm taken whole. A
 /// spell that met no one has already sounded its release, and an applied effect keeps its own presentation.
 /// </summary>
-internal sealed class DaggerfallContactHarmPresentation : IDaggerfallHarmPresentation
+internal static class DaggerfallContactHarmPresentation
 {
-    public DaggerfallOutcomeCue? SpellOutcomeCue(DaggerfallCastOutcome outcome) => outcome switch
+    internal static DaggerfallOutcomeCue? SpellOutcomeCue(DaggerfallCastOutcome outcome) => outcome switch
     {
         DaggerfallCastOutcome.Reflected => DaggerfallOutcomeCue.Deflected,
         DaggerfallCastOutcome.Absorbed => DaggerfallOutcomeCue.Absorbed,

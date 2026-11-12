@@ -9,7 +9,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 /// promise from an enemy's behavior that the player is in reach. A touch that contacts no one is still
 /// released and paid for, and misses.
 /// </summary>
-internal sealed class DaggerfallContactTouch(DaggerfallTouchOperations ops, DaggerfallContactTuning tuning) : IDaggerfallTouchDelivery
+internal sealed class DaggerfallContactTouch(DaggerfallTouchOperations ops, DaggerfallContactTuning tuning)
 {
     public DaggerfallTouchReach Reach(DaggerfallTouchCast cast)
     {

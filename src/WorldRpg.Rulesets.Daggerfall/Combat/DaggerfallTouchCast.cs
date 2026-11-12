@@ -18,17 +18,8 @@ internal readonly record struct DaggerfallTouchReach(bool Releases, IReadOnlyLis
     internal static DaggerfallTouchReach Refused { get; } = new(false, []);
 }
 
-/// <summary>The session's spatial reads a touch owner queries.</summary>
+/// <summary>The session's spatial reads touch delivery queries.</summary>
 /// <param name="Contact">Actor contact over the session's actor bodies.</param>
 /// <param name="Spatial">The session's spatial movement system.</param>
 /// <param name="Environment">The current world environment contact queries run against.</param>
 internal sealed record DaggerfallTouchOperations(ActorContact Contact, SpatialMovementSystem Spatial, Func<CharacterStepEnvironment?> Environment);
-
-/// <summary>
-/// The touch delivery seam (<see cref="DaggerfallRulesSeams.TouchDelivery"/>): whom a touch spell reaches
-/// at its cast frame. Casting owns readiness, cost and effects; this owner only decides the reach.
-/// </summary>
-internal interface IDaggerfallTouchDelivery
-{
-    DaggerfallTouchReach Reach(DaggerfallTouchCast cast);
-}

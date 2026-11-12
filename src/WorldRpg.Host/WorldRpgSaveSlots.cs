@@ -71,7 +71,7 @@ public sealed class WorldRpgSaveSlots : IDisposable
     /// Saves into a named slot. The public guard applies to that slot's monotonic revision while
     /// the catalog's Engine revision protects unrelated slots from a lost concurrent update.
     /// </summary>
-    public WorldRpgSaveSlotEntry SaveSlot(string key, string label, GameSaveEnvelope value, PersistenceRevisionGuard guard = PersistenceRevisionGuard.Any, ulong expectedRevision = 0,
+    public WorldRpgSaveSlotEntry SaveSlot(string key, string label, RulesetSavePayload value, PersistenceRevisionGuard guard = PersistenceRevisionGuard.Any, ulong expectedRevision = 0,
         SaveDescription? description = null)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -89,14 +89,13 @@ public sealed class WorldRpgSaveSlots : IDisposable
         EnsureSlotGuard(key, existing, guard, expectedRevision);
 
         ulong revision = existing is null ? 1 : checked(existing.Revision + 1);
-        WritePayload(key, revision, value.Payload.Bytes.ToArray());
+        WritePayload(key, revision, value.Bytes.ToArray());
         WorldRpgPersistedSaveSlot saved = new(
             key,
             label,
             DateTime.UtcNow,
-            value.Payload.Ruleset.Value,
+            value.Ruleset.Value,
             revision,
-            [.. value.Variants.Select(variant => variant.Value)],
             description);
         snapshot.Entries.RemoveAll(entry => string.Equals(entry.Key, key, StringComparison.Ordinal));
         snapshot.Entries.Add(saved);
@@ -106,16 +105,14 @@ public sealed class WorldRpgSaveSlots : IDisposable
     }
 
     /// <summary>
-    /// Loads a slot's envelope without touching any session: missing, corrupt, ruleset-mismatch and
-    /// rules-variant-mismatch outcomes arrive named, and the current session is never mutated by a
-    /// rejected load. A save runs only under the rules variants it was made with.
+    /// Loads a slot's payload without touching any session: missing, corrupt and ruleset-mismatch
+    /// outcomes arrive named, and the current session is never mutated by a rejected load.
     /// </summary>
-    public (GameSaveEnvelope? Envelope, WorldRpgSlotLoadDiagnostic? Diagnostic) LoadSlot(string key, string ruleset, IReadOnlyList<RulesVariantId> variants)
+    public (RulesetSavePayload? Payload, WorldRpgSlotLoadDiagnostic? Diagnostic) LoadSlot(string key, string ruleset)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentException.ThrowIfNullOrWhiteSpace(ruleset);
-        ArgumentNullException.ThrowIfNull(variants);
 
         CatalogSnapshot snapshot;
         try
@@ -138,17 +135,9 @@ public sealed class WorldRpgSaveSlots : IDisposable
             return (null, new("incompatible", $"Slot '{key}' belongs to ruleset '{entry.Ruleset}', not '{ruleset}'."));
         }
 
-        string[] saved = [.. entry.SavedVariants.Order(StringComparer.Ordinal)];
-        string[] running = [.. variants.Select(variant => variant.Value).Order(StringComparer.Ordinal)];
-        if (!saved.SequenceEqual(running, StringComparer.Ordinal))
-        {
-            return (null, new("incompatible", $"Slot '{key}' was saved under rules variants {Describe(saved)}, but this game runs {Describe(running)}."));
-        }
-
         try
         {
-            return (new GameSaveEnvelope(new RulesetSavePayload(new RulesetId(entry.Ruleset), ReadPayload(key, entry.Revision)),
-                entry.SavedVariants.Select(variant => new RulesVariantId(variant))), null);
+            return (new RulesetSavePayload(new RulesetId(entry.Ruleset), ReadPayload(key, entry.Revision)), null);
         }
         catch (WorldRpgSaveFormatException error)
         {
@@ -328,20 +317,15 @@ public sealed class WorldRpgSaveSlots : IDisposable
             ? new WorldRpgSaveFormatException($"The saved slot catalog is malformed: {detail}.")
             : new WorldRpgSaveFormatException($"The saved slot catalog is malformed: {detail}.", inner);
 
-    private static string Describe(string[] variants) => variants.Length == 0 ? "none (the ruleset's own rules)" : $"[{string.Join(", ", variants)}]";
-
     private sealed record CatalogSnapshot(List<WorldRpgPersistedSaveSlot> Entries, bool Present, ulong Revision);
 }
 
 /// <summary>
 /// Durable catalog metadata for one named Host-owned save slot; its payload is stored separately.
-/// <paramref name="Variants"/> are the rules variants the game ran under; a slot written before any
-/// variant existed has none, which is what it ran under.
 /// </summary>
-internal sealed record WorldRpgPersistedSaveSlot(string Key, string Label, DateTime SavedAtUtc, string Ruleset, ulong Revision, string[]? Variants = null,
+internal sealed record WorldRpgPersistedSaveSlot(string Key, string Label, DateTime SavedAtUtc, string Ruleset, ulong Revision,
     SaveDescription? Description = null)
 {
-    internal IReadOnlyList<string> SavedVariants => Variants ?? [];
     internal WorldRpgSaveSlotEntry ToEntry() => new(Key, Label, SavedAtUtc, Ruleset, Revision, Description);
 }
 

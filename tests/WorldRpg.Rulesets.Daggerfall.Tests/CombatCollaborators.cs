@@ -97,10 +97,10 @@ internal static class CombatCollaborators
     {
         IRandomService draws = random ?? SessionRandom.Create();
         Func<WorldPoint?> position = playerPosition ?? (() => session.State.PlayerControl.Position);
-        DaggerfallComposedSeams seams = DaggerfallSeamSelection.Default.Build(new DaggerfallSeamInputs(definitions, () => null, draws,
+        DaggerfallContactInputs contactInputs = new(definitions, () => null, draws,
             id => session.State.ActorInventories.EquipmentFor(id).Read(),
             id => id == DaggerfallActorIdentity.PlayerEntityId ? session.State.Actors.Player.Stats : session.State.Actors.TryGet(id, out ActorState actor) ? actor.Stats : null,
-            () => 0), DaggerfallContactTuning.Default);
+            () => 0);
         return new(draws, session.State.Actors, session.State.Equipment, session.State.ActorInventories.InventoryFor,
             session.State.ItemInstances, definitions, authored, targeting,
             skillUses: skillUses ?? (_ => { }), actorEquipment: session.State.ActorInventories.EquipmentFor,
@@ -113,7 +113,12 @@ internal static class CombatCollaborators
             molagBalStrike: (_, _, _, _, _, _, _) => throw new InvalidOperationException("This fact arms no Mace of Molag Bal."),
             itemStrike: (_, _, _, damage) => damage, monsterHit: _ => { },
             actorGameplayActive: actorGameplayActive ?? (_ => true), actorTeam: id => authored.GetValueOrDefault(id)?.Team,
-            mitigation: seams.PhysicalMitigation, delivery: seams.PhysicalDelivery, attackTuning: DaggerfallAttackTuning.Default, targetUnaware: targetUnaware,
+            mitigation: CombatCollaborators.Mitigation(contactInputs), contactTuning: DaggerfallContactTuning.Default, attackTuning: DaggerfallAttackTuning.Default, targetUnaware: targetUnaware,
             contact: Contact(session.State.Actors, spatial, position), strikePose: actor => StrikePose(session.State.Actors, actor, position()));
     }
+
+    /// <summary>The session's physical mitigation over <paramref name="inputs"/>, with a lowered guard of its own.</summary>
+    internal static DaggerfallContactMitigation Mitigation(DaggerfallContactInputs inputs) =>
+        new(inputs, DaggerfallContactTuning.Default, new DaggerfallContactGuard(inputs, DaggerfallContactTuning.Default));
+
 }

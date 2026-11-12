@@ -20,11 +20,12 @@ namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 /// scaled per channel, taken off the damage that reaches it.</item>
 /// </list>
 /// </summary>
-internal sealed class DaggerfallContactMitigation(DaggerfallSeamInputs session, DaggerfallContactTuning tuning, IDaggerfallPlayerGuard guard) : IDaggerfallPhysicalMitigation
+internal sealed class DaggerfallContactMitigation(DaggerfallContactInputs session, DaggerfallContactTuning tuning, DaggerfallContactGuard guard)
 {
     /// <summary>The deflection draw's salt.</summary>
     internal const int DeflectionSalt = 71;
 
+    /// <summary>Whether the target turns the whole harm away before it is calculated.</summary>
     public void Negate(NegationEvent negation, DaggerfallPhysicalHarm harm)
     {
         string? minimum = harm.TargetId == DaggerfallActorIdentity.PlayerEntityId && session.Character()?.RacialOverrides?.Current?.RequiresSilver == true
@@ -37,6 +38,7 @@ internal sealed class DaggerfallContactMitigation(DaggerfallSeamInputs session, 
             negation.Negation = HarmNegation.Deflected;
     }
 
+    /// <summary>What the target deflects, absorbs or resists of the calculated harm.</summary>
     public void Mitigate(MitigationEvent mitigation, DaggerfallPhysicalHarm harm)
     {
         if (!DaggerfallHarmChannels.IsPhysical(mitigation.Channel)) return;

@@ -63,54 +63,10 @@ public sealed class WorldRpgProductSaveLoadTests
         product.Update(Update(7));
         Assert.Single(restored.SaveSlots);
         using WorldRpgSaveSlots reopened = new(Context(persistence).Engine, "worldrpg.saves");
-        (GameSaveEnvelope? deleted, WorldRpgSlotLoadDiagnostic? diagnostic) = reopened.LoadSlot(second.Key, "test", []);
+        (RulesetSavePayload? deleted, WorldRpgSlotLoadDiagnostic? diagnostic) = reopened.LoadSlot(second.Key, "test");
         Assert.Null(deleted);
         Assert.Equal("missing", diagnostic!.Kind);
     }
-
-    [Fact]
-    public void A_game_under_two_variants_loads_its_save_under_the_same_set_in_either_order_and_not_under_another()
-    {
-        InMemoryPersistenceService persistence = new();
-        LoadTestRuleset ruleset = new(Variant("test.contact", "test.delivery"), Variant("test.armor", "test.mitigation"));
-        using (WorldRpgProduct product = new(Context(persistence), ruleset, new GameBundleId("test.variants")))
-        {
-            product.Start();
-            LoadTestSession session = ruleset.RequireCurrent();
-            session.SaveValue = 44;
-            session.ArmSlotRequest(new(SaveSlotOperation.Save, Label: "Two variants"));
-            product.Update(Update(1));
-            session.ArmSlotRequest(new(SaveSlotOperation.Load, "slot-1"));
-            product.Update(Update(2));
-            FinishLoading(product, 2);
-            Assert.Equal((byte)44, Assert.IsType<LoadTestSession>(ruleset.Replacement).SaveValue);
-        }
-
-        LoadTestRuleset reordered = new(Variant("test.contact", "test.delivery"), Variant("test.armor", "test.mitigation"));
-        using (WorldRpgProduct product = new(Context(persistence), reordered, new GameBundleId("test.variants-reordered")))
-        {
-            product.Start();
-            reordered.RequireCurrent().ArmSlotRequest(new(SaveSlotOperation.Load, "slot-1"));
-            product.Update(Update(1));
-            FinishLoading(product, 1);
-            Assert.Equal((byte)44, Assert.IsType<LoadTestSession>(reordered.Replacement).SaveValue);
-        }
-
-        LoadTestRuleset classic = new(Variant("test.contact", "test.delivery"), Variant("test.armor", "test.mitigation"));
-        using (WorldRpgProduct product = new(Context(persistence), classic, new GameBundleId("test.bundle")))
-        {
-            product.Start();
-            LoadTestSession session = classic.RequireCurrent();
-            session.ArmSlotRequest(new(SaveSlotOperation.Load, "slot-1"));
-            product.Update(Update(1));
-            Assert.Null(classic.Replacement);
-            Assert.StartsWith("Load failed:", session.Outcome, StringComparison.Ordinal);
-            Assert.Contains("[test.armor, test.contact]", session.Outcome, StringComparison.Ordinal);
-        }
-    }
-
-    private static RulesVariantManifest Variant(string id, string seam) =>
-        new(new(id), new("test"), [new RulesSeamId(seam)], new("test.tuning"), [], ownsSaveState: false);
 
     [Fact]
     public void Quick_save_overwrites_one_quick_slot_and_quick_load_reads_it()
@@ -319,28 +275,28 @@ public sealed class WorldRpgProductSaveLoadTests
     public void Choosing_a_game_is_acknowledged_on_the_loading_screen_and_a_game_that_cannot_open_leaves_the_title_running()
     {
         InMemoryPersistenceService persistence = new();
-        LoadTestRuleset ruleset = new(Variant("test.contact", "test.delivery"), Variant("test.armor", "test.mitigation"));
+        LoadTestRuleset ruleset = new();
         using WorldRpgProduct product = new(Context(persistence), ruleset, new GameBundleId("test.bundle"));
         product.Start();
         LoadTestSession title = ruleset.RequireCurrent();
 
         ruleset.CreateFailure = "the game's content could not be read";
-        title.ArmBundleRequest(new GameBundleId("test.variants"));
+        title.ArmBundleRequest(new GameBundleId("test.second"));
         product.Update(Update(1));
-        Assert.Equal(new LoadingState("Opening test.variants", "Reading test.variants", 0, 2, 0d), product.Loading);
+        Assert.Equal(new LoadingState("Opening test.second", "Reading test.second", 0, 2, 0d), product.Loading);
         Assert.Same(title, ruleset.RequireCurrent());
         product.Update(Update(2));
         Assert.Null(product.Loading);
         Assert.Same(title, ruleset.RequireCurrent());
         Assert.False(title.Disposed);
-        Assert.Equal("The game 'test.variants' could not be opened: the game's content could not be read", title.BundleOutcome);
+        Assert.Equal("The game 'test.second' could not be opened: the game's content could not be read", title.BundleOutcome);
 
         ruleset.CreateFailure = null;
-        title.ArmBundleRequest(new GameBundleId("test.variants"));
+        title.ArmBundleRequest(new GameBundleId("test.second"));
         product.Update(Update(3));
         FinishLoading(product, 4);
         Assert.NotSame(title, ruleset.RequireCurrent());
-        Assert.Equal(new GameBundleId("test.variants"), ruleset.RequireCurrent().Bundles!.Current);
+        Assert.Equal(new GameBundleId("test.second"), ruleset.RequireCurrent().Bundles!.Current);
     }
 
     [Fact]
@@ -373,18 +329,19 @@ public sealed class WorldRpgProductSaveLoadTests
     public void The_entry_screen_offers_every_bundle_that_composes_and_switches_to_the_chosen_one_and_remembers_it()
     {
         InMemoryPersistenceService persistence = new();
-        LoadTestRuleset ruleset = new(Variant("test.contact", "test.delivery"), Variant("test.armor", "test.mitigation"));
+        LoadTestRuleset ruleset = new();
         using (WorldRpgProduct product = new(Context(persistence), ruleset, new GameBundleId("test.bundle")))
         {
             product.Start();
             LoadTestSession title = ruleset.RequireCurrent();
             GameBundleChoices offered = title.Bundles!;
             Assert.Equal(new GameBundleId("test.bundle"), offered.Current);
-            Assert.Equal(["test.bundle", "test.variants", "test.variants-reordered"], offered.Options.Select(option => option.Id.Value));
+            // A bundle that does not compose (its pack is missing) is not offered.
+            Assert.Equal(["test.bundle", "test.second"], offered.Options.Select(option => option.Id.Value));
             Assert.Equal("Test bundle", offered.Options[0].Title);
-            Assert.Equal("test.variants", offered.Options[1].Title);
+            Assert.Equal("test.second", offered.Options[1].Title);
 
-            title.ArmBundleRequest(new GameBundleId("test.variants"));
+            title.ArmBundleRequest(new GameBundleId("test.second"));
             product.Update(Update(1));
             FinishLoading(product, 1);
 
@@ -392,20 +349,19 @@ public sealed class WorldRpgProductSaveLoadTests
             Assert.NotSame(title, switched);
             Assert.True(title.Disposed);
             Assert.Equal(ProductMode.Title, product.Mode);
-            Assert.Equal(new GameBundleId("test.variants"), switched.Bundles!.Current);
-            // The switched composition is the one a save records: its variants.
-            switched.ArmSlotRequest(new(SaveSlotOperation.Save, Label: "Under variants"));
+            Assert.Equal(new GameBundleId("test.second"), switched.Bundles!.Current);
+            switched.ArmSlotRequest(new(SaveSlotOperation.Save, Label: "In the second game"));
             product.Update(Update(2));
         }
 
-        LoadTestRuleset restarted = new(Variant("test.contact", "test.delivery"), Variant("test.armor", "test.mitigation"));
+        LoadTestRuleset restarted = new();
         using (WorldRpgProduct product = new(Context(persistence), restarted, new GameBundleId("test.bundle")))
         {
             product.Start();
             LoadTestSession title = restarted.RequireCurrent();
-            Assert.Equal(new GameBundleId("test.variants"), title.Bundles!.Current);
+            Assert.Equal(new GameBundleId("test.second"), title.Bundles!.Current);
             Assert.Null(title.BundleOutcome);
-            // The remembered game loads its own save: the variant sets agree.
+            // The remembered game loads its own save.
             title.ArmSlotRequest(new(SaveSlotOperation.Load, "slot-1"));
             product.Update(Update(1));
             FinishLoading(product, 1);
@@ -421,12 +377,12 @@ public sealed class WorldRpgProductSaveLoadTests
         using WorldRpgProduct product = new(Context(persistence), ruleset, new GameBundleId("test.bundle"));
         product.Start();
         LoadTestSession title = ruleset.RequireCurrent();
-        // Without its variants compiled, only the plain bundle composes.
-        Assert.Equal(["test.bundle"], title.Bundles!.Options.Select(option => option.Id.Value));
-        title.ArmBundleRequest(new GameBundleId("test.variants"));
+        // A bundle whose pack is missing does not compose, so it is never offered.
+        Assert.Equal(["test.bundle", "test.second"], title.Bundles!.Options.Select(option => option.Id.Value));
+        title.ArmBundleRequest(new GameBundleId("test.broken"));
         product.Update(Update(1));
         Assert.Same(title, ruleset.RequireCurrent());
-        Assert.Equal("The game 'test.variants' is not available.", title.BundleOutcome);
+        Assert.Equal("The game 'test.broken' is not available.", title.BundleOutcome);
 
         product.Begin();
         Assert.Equal(ProductMode.Playing, product.Mode);
@@ -440,21 +396,22 @@ public sealed class WorldRpgProductSaveLoadTests
     public void A_remembered_bundle_that_no_longer_composes_starts_the_default_and_says_so()
     {
         InMemoryPersistenceService persistence = new();
-        LoadTestRuleset withVariants = new(Variant("test.contact", "test.delivery"), Variant("test.armor", "test.mitigation"));
-        using (WorldRpgProduct product = new(Context(persistence), withVariants, new GameBundleId("test.bundle")))
+        LoadTestRuleset first = new();
+        using (WorldRpgProduct product = new(Context(persistence), first, new GameBundleId("test.bundle")))
         {
             product.Start();
-            withVariants.RequireCurrent().ArmBundleRequest(new GameBundleId("test.variants"));
+            first.RequireCurrent().ArmBundleRequest(new GameBundleId("test.second"));
             product.Update(Update(1));
             FinishLoading(product, 1);
         }
 
-        LoadTestRuleset withoutVariants = new();
-        using WorldRpgProduct restarted = new(Context(persistence), withoutVariants, new GameBundleId("test.bundle"));
+        // The second game's bundle is gone from the content the product starts with next time.
+        LoadTestRuleset second = new();
+        using WorldRpgProduct restarted = new(new ProductCreateContext(Engine(persistence), Content(second: false), EmptyInput()), second, new GameBundleId("test.bundle"));
         restarted.Start();
-        LoadTestSession title = withoutVariants.RequireCurrent();
+        LoadTestSession title = second.RequireCurrent();
         Assert.Equal(new GameBundleId("test.bundle"), title.Bundles!.Current);
-        Assert.Equal("The remembered game 'test.variants' is unavailable; the default is active.", title.BundleOutcome);
+        Assert.Equal("The remembered game 'test.second' is unavailable; the default is active.", title.BundleOutcome);
     }
 
     private static ProductUpdate Update(ulong step) =>
@@ -470,11 +427,11 @@ public sealed class WorldRpgProductSaveLoadTests
     private static ProductCreateContext Context(IPersistenceService persistence) =>
         new(Engine(persistence), Content(), EmptyInput());
 
-    private static ProductContent Content() => new(new ReadOnlyMemory<ProductContentFile>(
+    private static ProductContent Content(bool second = true) => new(new ReadOnlyMemory<ProductContentFile>(
     [
         new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/bundles/test.bundle.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.game-bundle","id":"test.bundle","title":"Test bundle","ruleset":"test","contentPacks":[{"id":"test.pack"}],"tuning":{"id":"test.tuning"}}""")),
-        new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/bundles/test.variants.bundle.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.game-bundle","id":"test.variants","ruleset":"test","contentPacks":[{"id":"test.pack"}],"tuning":{"id":"test.tuning"},"variants":["test.contact","test.armor"]}""")),
-        new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/bundles/test.variants-reordered.bundle.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.game-bundle","id":"test.variants-reordered","ruleset":"test","contentPacks":[{"id":"test.pack"}],"tuning":{"id":"test.tuning"},"variants":["test.armor","test.contact"]}""")),
+        .. second ? [new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/bundles/test.second.bundle.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.game-bundle","id":"test.second","ruleset":"test","contentPacks":[{"id":"test.pack"}],"tuning":{"id":"test.tuning"}}"""))] : Array.Empty<ProductContentFile>(),
+        new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/bundles/test.broken.bundle.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.game-bundle","id":"test.broken","ruleset":"test","contentPacks":[{"id":"test.absent"}],"tuning":{"id":"test.tuning"}}""")),
         new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/packs/test/pack.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.content-pack","id":"test.pack","ruleset":"test","role":"test.content","dependencies":[],"payload":"payload/content.json"}""")),
         new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("worldrpg/tuning/test/tuning.json"), System.Text.Encoding.UTF8.GetBytes("""{"kind":"worldrpg.tuning-profile","id":"test.tuning","ruleset":"test","payload":"payload/values.json"}""")),
         new ProductContentFile(System.Text.Encoding.UTF8.GetBytes("payload/content.json"), System.Text.Encoding.UTF8.GetBytes("{}")),
@@ -493,11 +450,9 @@ public sealed class WorldRpgProductSaveLoadTests
         return context;
     }
 
-    private sealed class LoadTestRuleset(params RulesVariantManifest[] variants) : ISaveableGameRuleset, IRulesVariantCatalog
+    private sealed class LoadTestRuleset : ISaveableGameRuleset
     {
         public RulesetId Id => new("test");
-
-        public IReadOnlyList<RulesVariantManifest> CompiledVariants { get; } = variants;
 
         internal LoadTestSession? Current { get; private set; }
 

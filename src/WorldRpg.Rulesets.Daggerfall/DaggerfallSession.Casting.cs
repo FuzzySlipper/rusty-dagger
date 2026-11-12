@@ -124,7 +124,7 @@ internal sealed partial class DaggerfallSession
         Vector3 origin = attempt.Origin.ToVector();
         if (attempt.Target is DaggerfallSpellTarget.SingleTargetAtRange or DaggerfallSpellTarget.AreaAtRange)
             origin += attempt.Direction * DaggerfallDungeonSpellPolicy.MissileArmLengthMetres;
-        // The behavior admitted the player in touch reach; the touch owner decides whom the touch reaches.
+        // The behavior admitted the player in touch reach; touch delivery decides whom the touch reaches.
         DaggerfallTouchReach touch = attempt.Target == DaggerfallSpellTarget.ByTouch
             ? _touch.Reach(new(attempt.ActorId, origin + Vector3.UnitY * (ActorContactBody.Height * ActorEyeFraction), attempt.Direction, DaggerfallActorIdentity.PlayerEntityId))
             : default;

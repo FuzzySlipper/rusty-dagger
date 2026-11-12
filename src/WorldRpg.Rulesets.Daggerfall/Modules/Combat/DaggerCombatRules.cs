@@ -31,8 +31,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     private readonly ActorsState _actors;
     private readonly MechanicsEquipmentCoordinator _equipment;
     private readonly Func<long, MechanicsInventoryCoordinator?> _actorInventories;
-    /// <summary>The selected physical mitigation seam owner: classic's material requirement unless a variant claims it.</summary>
-    private readonly IDaggerfallPhysicalMitigation _mitigation;
+    private readonly DaggerfallContactMitigation _mitigation;
     private readonly Func<long, MechanicsEquipmentCoordinator> _actorEquipment;
     private readonly DaggerfallItemInstances _itemInstances;
     private readonly DaggerfallItemConditionService _itemCondition;
@@ -70,8 +69,8 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     private readonly Func<long, DaggerfallStrikePose?>? _strikePose;
     private readonly Func<CharacterStepEnvironment?>? _contactEnvironment;
     private readonly Func<long, Vector3> _actorVelocity;
-    /// <summary>The selected physical delivery seam owner: classic's to-hit and target-locked flight unless a variant claims it.</summary>
-    private readonly IDaggerfallPhysicalDelivery _delivery;
+    private readonly DaggerfallContactDelivery _delivery;
+    internal DaggerfallContactDelivery Delivery => _delivery;
     internal bool HasPlayerRangedFlight => _delivery.HasPlayerFlight;
     // The pack's arrow item is the one ammunition the adopted ranged shots draw. A second ranged
     // action with different ammunition would move this name onto the authored action.
@@ -97,7 +96,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         Func<long, bool> physicalAttacksBlocked,
         Func<long, long, ulong, int, int, ulong, ulong, (double Magicka, int Strength)> molagBalStrike, Func<long, long, DaggerfallItemStrikeSource, int, int> itemStrike,
         Action<DaggerfallMonsterHitExposure> monsterHit, Func<long, bool> actorGameplayActive, Func<long, string?> actorTeam,
-        IDaggerfallPhysicalMitigation mitigation, Func<IDaggerfallPhysicalHarmOperations, IDaggerfallPhysicalDelivery> delivery,
+        DaggerfallContactMitigation mitigation, DaggerfallContactTuning contactTuning,
         DaggerfallAttackTuning attackTuning,
         Func<long, bool>? targetUnaware = null, Action<long>? alertTarget = null, Func<DaggerfallAdrenalineRush?>? playerRush = null,
         ActorContact? contact = null, Func<long, DaggerfallStrikePose?>? strikePose = null, Func<CharacterStepEnvironment?>? contactEnvironment = null,
@@ -140,7 +139,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         _playerRush = playerRush ?? (() => null);
         _weaponMaterialModifiers = DaggerfallFormulaPolicy.ClassicWeaponMaterialModifiers;
         _actions = definitions.Actions;
-        _delivery = (delivery ?? throw new ArgumentNullException(nameof(delivery)))(this);
+        _delivery = new DaggerfallContactDelivery(this, contactTuning ?? throw new ArgumentNullException(nameof(contactTuning)));
         Execution = new(actors, this, DeferRangedImpact, impactsOutliveTheirTarget: true, _delivery.Interrupt);
         Attacks = new(PlayerId, Targeting, Execution, ReachOf, facts => facts.Append(new AttackRejectedFact(AttackRejection.MissingPlayerPosition)),
             untargetedSwingsWaitForImpact: true);
@@ -190,7 +189,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
                 : action.Interpretation == "enemy-equipped-melee"
                     ? ResolveEquippedEnemyAttack(attacker, cooldown, action.Reach.Value)
                     : ResolveFixedAttack(attacker.Definition, action, cooldown);
-            // A held shot spends nothing: the delivery owner decides before an arrow leaves the quiver.
+            // A held shot spends nothing: delivery decides before an arrow leaves the quiver.
             if (rangedAttack && request.TargetId is long mark && _delivery.HoldsFire(request.AttackerId, mark)) return false;
             if (rangedAttack && !TrySpendArrow(request.AttackerId, facts)) return false;
         }
@@ -227,7 +226,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
 
     /// <summary>
     /// Paralysis stops a new release, whoever owns the flight; an already released projectile remains its
-    /// own admitted flight. The delivery owner takes every other released shot into its flight.
+    /// own admitted flight. Delivery takes every other released shot into its flight.
     /// </summary>
     private bool DeferRangedImpact(DeferredAttackImpact impact, FactBuffer<IProductFact> facts)
     {
@@ -271,11 +270,11 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     /// <summary>Whether a blow past its hit frame is still winding up to land on <paramref name="target"/>.</summary>
     internal bool HoldsImpactAt(long target) => _delivery.HoldsImpactAt(target);
 
-    /// <summary>Lands the delivery owner's held blows due by this step.</summary>
+    /// <summary>Lands delivery's held blows due by this step.</summary>
     internal void LandDueImpacts(ulong generation, ulong simulationStep, FactBuffer<IProductFact> facts) =>
         _delivery.LandDueImpacts(generation, simulationStep, facts);
 
-    /// <summary>Advances the delivery owner's flights by the update's elapsed seconds.</summary>
+    /// <summary>Advances delivery's flights by the update's elapsed seconds.</summary>
     internal void AdvanceRangedFlight(ulong generation, ulong simulationStep, double elapsedSeconds,
         IReadOnlyDictionary<long, WorldPoint> positions, FactBuffer<IProductFact> facts) =>
         _delivery.AdvanceFlight(generation, simulationStep, elapsedSeconds, positions, facts);
@@ -810,9 +809,9 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
         ? race.DonorRaceId
         : 0;
 
-    // The shared physical harm operations a delivery owner resolves and applies harm through.
+    // The shared physical harm operations delivery resolves and applies harm through.
     CombatResolution IDaggerfallPhysicalHarmOperations.Rules => Rules;
-    IDaggerfallPhysicalMitigation IDaggerfallPhysicalHarmOperations.Mitigation => _mitigation;
+    DaggerfallContactMitigation IDaggerfallPhysicalHarmOperations.Mitigation => _mitigation;
     AttackExecution<IProductFact> IDaggerfallPhysicalHarmOperations.Execution => Execution;
     DaggerfallDefinitions IDaggerfallPhysicalHarmOperations.Catalog => _catalog;
     bool IDaggerfallPhysicalHarmOperations.TryResolve(long id, out Combatant combatant) => TryResolve(id, out combatant);

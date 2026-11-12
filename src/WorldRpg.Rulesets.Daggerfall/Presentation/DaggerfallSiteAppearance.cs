@@ -1277,14 +1277,14 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             outcome.CompletedImmediately ? null : outcome.Instance, outcome.TargetId, outcome.CasterId, outcome.ItemId);
     }
 
-    internal void ReactSpellCast(SpellCastFact cast, ActorsState actors, WorldPoint? player, IDaggerfallHarmPresentation? harm = null)
+    internal void ReactSpellCast(SpellCastFact cast, ActorsState actors, WorldPoint? player)
     {
         if (disposed || cast.Sequence is not long sequence || cast.CasterId is not long caster) return;
-        if (cast.Outcome == DaggerfallCastOutcome.DeliveryCompleted && harm is not null)
+        if (cast.Outcome == DaggerfallCastOutcome.DeliveryCompleted)
         {
-            // Each negated effect sounds its outcome once at whoever it reached, when the selected presentation gives it one.
+            // Each negated effect sounds its outcome once at whoever it reached, when it has one.
             foreach (DaggerfallCastEffectResult result in cast.Effects)
-                if (result.TargetId is long target && harm.SpellOutcomeCue(result.Outcome) is DaggerfallOutcomeCue cue)
+                if (result.TargetId is long target && DaggerfallContactHarmPresentation.SpellOutcomeCue(result.Outcome) is DaggerfallOutcomeCue cue)
                 {
                     PresentationEventIdentity outcome = Event(caster, target, checked((ulong)sequence), 0, $"spell-outcome:{cue}");
                     // A caster may stand far off, so the outcome is heard where the effect arrived.

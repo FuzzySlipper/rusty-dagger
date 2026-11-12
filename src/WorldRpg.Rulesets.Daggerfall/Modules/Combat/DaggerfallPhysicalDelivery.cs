@@ -17,7 +17,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 /// <summary>
 /// One attack as admission accepted it, before delivery: the attacker and its attack, the costs already
-/// spent, and the sources captured at the admitted boundary. Every delivery owner starts from this.
+/// spent, and the sources captured at the admitted boundary. Delivery starts from this.
 /// </summary>
 internal sealed record DaggerfallAdmittedAttack(
     AttackRequest Request,
@@ -42,63 +42,19 @@ internal sealed record DaggerfallAdmittedAttack(
     /// <summary>Whether this player's attack started aimed at a civilian, so it harms any it meets.</summary>
     internal bool HarmsCivilians { get; init; }
 
-    /// <summary>The prepared attack carrying this admission's sources, with the delivery owner's outcome.</summary>
+    /// <summary>The prepared attack carrying this admission's sources, with delivery's outcome.</summary>
     internal PreparedPhysicalAttack Prepared(AttackOutcome outcome) => new(Attack.CooldownSeconds, outcome, Feedback, WabbajackSource,
         MolagBalSource: MolagBalSource, ItemStrikeSource: StrikeSource, IsRanged: Ranged, RangedWeapon: RangedWeapon, Action: Action, Admission: this);
 }
 
 /// <summary>
-/// The physical delivery seam (<see cref="DaggerfallRulesSeams.PhysicalDelivery"/>): when an admitted
-/// physical attack's harm is decided and whom it reaches. The owner resolves harm through the shared
-/// <see cref="IDaggerfallPhysicalHarmOperations"/> and the selected physical mitigation owner, so
-/// contributions, consequences and facts are the same under every owner.
-/// </summary>
-internal interface IDaggerfallPhysicalDelivery
-{
-    /// <summary>An attacker's attack was interrupted: drop any impact the owner still holds for it that has not landed.</summary>
-    void Interrupt(long attacker, ulong generation);
-
-    /// <summary>Whether an enemy archer holds its shot at <paramref name="target"/> now, before any arrow is spent.</summary>
-    bool HoldsFire(long archer, long target);
-
-    /// <summary>Prepares an admitted attack's delivery; false refuses it, with the reason already published.</summary>
-    bool TryPrepare(DaggerfallAdmittedAttack admitted, FactBuffer<IProductFact> facts, out PreparedPhysicalAttack prepared);
-
-    /// <summary>Delivers a prepared attack at its impact.</summary>
-    void Apply(AttackRequest request, PreparedPhysicalAttack attack, FactBuffer<IProductFact> facts);
-
-    /// <summary>Takes a released projectile into the owner's flight; false when the impact is not a flight.</summary>
-    bool DeferImpact(DeferredAttackImpact impact, FactBuffer<IProductFact> facts);
-
-    /// <summary>Whether a blow past its hit frame is still held, winding up to land on <paramref name="target"/>.</summary>
-    bool HoldsImpactAt(long target);
-
-    /// <summary>Lands every held blow due by this step.</summary>
-    void LandDueImpacts(ulong generation, ulong simulationStep, FactBuffer<IProductFact> facts);
-
-    /// <summary>Advances every flight by the update's elapsed seconds and delivers what arrives.</summary>
-    void AdvanceFlight(ulong generation, ulong simulationStep, double elapsedSeconds,
-        IReadOnlyDictionary<long, WorldPoint> positions, FactBuffer<IProductFact> facts);
-
-    /// <summary>The current flight poses the world appearance draws.</summary>
-    IReadOnlyList<DaggerfallRangedFlightView> ReadFlights(ulong generation, ulong simulationStep);
-
-    bool HasPlayerFlight { get; }
-
-    /// <summary>A site transition retires every flight.</summary>
-    void ClearFlight();
-
-    void RebaseFlight(Vector3 delta);
-}
-
-/// <summary>
-/// The shared physical harm machinery every delivery owner resolves and applies harm through: actors,
-/// draws, the damage roll, consequences, artifacts, wear, skill uses and facts.
+/// The shared physical harm machinery <see cref="DaggerfallContactDelivery"/> resolves and applies harm through:
+/// actors, draws, the damage roll, consequences, artifacts, wear, skill uses and facts.
 /// </summary>
 internal interface IDaggerfallPhysicalHarmOperations
 {
     CombatResolution Rules { get; }
-    IDaggerfallPhysicalMitigation Mitigation { get; }
+    DaggerfallContactMitigation Mitigation { get; }
     AttackExecution<IProductFact> Execution { get; }
     DaggerfallDefinitions Catalog { get; }
     bool TryResolve(long id, out Combatant combatant);

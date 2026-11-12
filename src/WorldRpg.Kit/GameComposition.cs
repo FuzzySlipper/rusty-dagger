@@ -11,51 +11,13 @@ public readonly record struct ContentPackId(string Value);
 /// <summary>A ruleset-interpreted content-pack role; opaque to the Kit.</summary>
 public readonly record struct ContentPackRoleId(string Value);
 public readonly record struct TuningProfileId(string Value);
-/// <summary>A compiled rules variant a game bundle may select.</summary>
-public readonly record struct RulesVariantId(string Value);
-/// <summary>A ruleset-declared variation point a variant replaces as a whole owner; opaque to the Kit.</summary>
-public readonly record struct RulesSeamId(string Value);
 
 public sealed record GameBundle(GameBundleId Id, RulesetId Ruleset, IReadOnlyList<ContentPackReference> ContentPacks, TuningProfileReference Tuning,
-    IReadOnlyList<RulesVariantId> Variants, string Title);
+    string Title);
 
 /// <summary>An admitted game bundle as a player chooses it: its id, the ruleset it composes, and its authored title.</summary>
 public sealed record GameBundleSummary(GameBundleId Id, RulesetId Ruleset, string Title);
 
-/// <summary>
-/// What a compiled rules variant declares about itself: the ruleset it deviates from, the seams whose
-/// owners it replaces, its own tuning profile, the content packs it needs, and whether it owns save state.
-/// A ruleset publishes its compiled variants' manifests; a bundle selects them by id.
-/// </summary>
-public sealed record RulesVariantManifest
-{
-    public RulesVariantManifest(RulesVariantId id, RulesetId ruleset, IEnumerable<RulesSeamId> seams, TuningProfileId tuning,
-        IEnumerable<ContentPackId> contentPacks, bool ownsSaveState)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(id.Value);
-        ArgumentException.ThrowIfNullOrWhiteSpace(ruleset.Value);
-        ArgumentException.ThrowIfNullOrWhiteSpace(tuning.Value);
-        Id = id; Ruleset = ruleset; Tuning = tuning; OwnsSaveState = ownsSaveState;
-        Seams = Array.AsReadOnly((seams ?? throw new ArgumentNullException(nameof(seams))).ToArray());
-        ContentPacks = Array.AsReadOnly((contentPacks ?? throw new ArgumentNullException(nameof(contentPacks))).ToArray());
-        if (Seams.Any(seam => string.IsNullOrWhiteSpace(seam.Value)) || Seams.Distinct().Count() != Seams.Count)
-            throw new ArgumentException($"Rules variant '{id.Value}' must claim each seam once by a non-empty id.", nameof(seams));
-        if (ContentPacks.Any(pack => string.IsNullOrWhiteSpace(pack.Value)) || ContentPacks.Distinct().Count() != ContentPacks.Count)
-            throw new ArgumentException($"Rules variant '{id.Value}' must name each content pack once by a non-empty id.", nameof(contentPacks));
-    }
-    public RulesVariantId Id { get; }
-    public RulesetId Ruleset { get; }
-    public IReadOnlyList<RulesSeamId> Seams { get; }
-    public TuningProfileId Tuning { get; }
-    public IReadOnlyList<ContentPackId> ContentPacks { get; }
-    public bool OwnsSaveState { get; }
-}
-
-/// <summary>A selected rules variant with its admitted tuning profile.</summary>
-public sealed record ResolvedRulesVariant(RulesVariantManifest Manifest, TuningProfile Tuning)
-{
-    public RulesVariantId Id => Manifest.Id;
-}
 public sealed record ContentPackReference(ContentPackId Id);
 public sealed record TuningProfileReference(TuningProfileId Id);
 
@@ -99,19 +61,17 @@ public sealed class TuningProfile
 
 public sealed class ResolvedGameComposition
 {
-    internal ResolvedGameComposition(GameBundle bundle, IEnumerable<ContentPack> packs, TuningProfile tuning, IEnumerable<ResolvedRulesVariant> variants,
+    internal ResolvedGameComposition(GameBundle bundle, IEnumerable<ContentPack> packs, TuningProfile tuning,
         ProductContent content, IEnumerable<InstalledContent> installed)
     {
-        Bundle = bundle; ContentPacks = Freeze(packs); Tuning = tuning; Variants = Freeze(variants);
+        Bundle = bundle; ContentPacks = Freeze(packs); Tuning = tuning;
         Content = content; Installed = Freeze(installed);
-        Identity = new ResolvedCompositionIdentity(Bundle, ContentPacks, Tuning, Variants);
+        Identity = new ResolvedCompositionIdentity(Bundle, ContentPacks, Tuning);
     }
     public GameBundle Bundle { get; }
     public RulesetId Ruleset => Bundle.Ruleset;
     public IReadOnlyList<ContentPack> ContentPacks { get; }
     public TuningProfile Tuning { get; }
-    /// <summary>The bundle's selected rules variants, in bundle order; empty for the ruleset's own rules.</summary>
-    public IReadOnlyList<ResolvedRulesVariant> Variants { get; }
     /// <summary>The resolved selection, retained for product diagnostics.</summary>
     public ResolvedCompositionIdentity Identity { get; }
     /// <summary>The original immutable Engine content snapshot selected by this composition.</summary>
@@ -128,10 +88,8 @@ public sealed class ResolvedCompositionIdentity
     private readonly IReadOnlyList<ContentPackId> _contentPacks;
     private readonly IReadOnlyList<ResolvedContentPackIdentity> _contentPackIdentities;
 
-    internal ResolvedCompositionIdentity(GameBundle bundle, IEnumerable<ContentPack> contentPacks, TuningProfile tuning, IEnumerable<ResolvedRulesVariant> variants)
+    internal ResolvedCompositionIdentity(GameBundle bundle, IEnumerable<ContentPack> contentPacks, TuningProfile tuning)
     {
-        ArgumentNullException.ThrowIfNull(variants);
-        Variants = Array.AsReadOnly(variants.Select(variant => variant.Id).ToArray());
         ArgumentNullException.ThrowIfNull(bundle);
         ArgumentNullException.ThrowIfNull(contentPacks);
         ArgumentNullException.ThrowIfNull(tuning);
@@ -147,8 +105,6 @@ public sealed class ResolvedCompositionIdentity
     public IReadOnlyList<ContentPackId> ContentPacks => _contentPacks;
     public IReadOnlyList<ResolvedContentPackIdentity> ContentPackIdentities => _contentPackIdentities;
     public TuningProfileId Tuning { get; }
-    /// <summary>The selected rules variants, which a save records and a load must match.</summary>
-    public IReadOnlyList<RulesVariantId> Variants { get; }
 }
 
 /// <summary>Resolved content-pack identity for diagnostics and ruleset construction.</summary>
@@ -160,10 +116,6 @@ public sealed record CompositionDiagnostic(string Code, string Message, string? 
 /// <summary>The named resolution findings a caller may act on.</summary>
 public static class CompositionDiagnosticNames
 {
-    public const string UnknownVariant = "variant.unknown";
-    public const string VariantRulesetMismatch = "variant.ruleset-mismatch";
-    public const string VariantSeamCollision = "variant.seam-collision";
-    public const string DuplicateVariantManifest = "variant.duplicate-manifest";
     /// <summary>A content pack the bundle names that no content source describes.</summary>
     public const string MissingContentPack = "content-pack.missing";
     /// <summary>A content pack whose payload no content source holds.</summary>
@@ -188,31 +140,20 @@ public static class GameCompositionResolver
     private const string BundleKind = "worldrpg.game-bundle", PackKind = "worldrpg.content-pack", TuningKind = "worldrpg.tuning-profile";
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
 
-    /// <summary>Resolves a bundle that may select no compiled rules variants.</summary>
+    /// <summary>Resolves a bundle against admitted product content alone.</summary>
     public static GameCompositionResolution Resolve(ProductContent content, GameBundleId requestedBundle) =>
         Resolve(content, requestedBundle, []);
 
-    /// <summary>Resolves a bundle against admitted product content alone.</summary>
-    public static GameCompositionResolution Resolve(ProductContent content, GameBundleId requestedBundle, IReadOnlyList<RulesVariantManifest> compiledVariants) =>
-        Resolve(content, requestedBundle, compiledVariants, []);
-
-    /// <summary>
-    /// Resolves a bundle against admitted content, the containers installed beside the product, and the compiled
-    /// rules variants the product composes. An unknown variant, a variant for another ruleset, or two variants
-    /// claiming one seam is an error; each selected variant's tuning profile and content packs resolve as the
-    /// bundle's own do.
-    /// </summary>
+    /// <summary>Resolves a bundle against admitted content and the containers installed beside the product.</summary>
     /// <remarks>
     /// Product content is read first and the installed containers after it, in order: a content pack a
     /// container's description carries is indexed with the product's own descriptors, and a payload is read from
     /// the product's content or else from the first container that holds it. A pack two sources both describe is
     /// a duplicate, as within one source.
     /// </remarks>
-    public static GameCompositionResolution Resolve(ProductContent content, GameBundleId requestedBundle, IReadOnlyList<RulesVariantManifest> compiledVariants,
-        IReadOnlyList<InstalledContent> installed)
+    public static GameCompositionResolution Resolve(ProductContent content, GameBundleId requestedBundle, IReadOnlyList<InstalledContent> installed)
     {
         ArgumentNullException.ThrowIfNull(content);
-        ArgumentNullException.ThrowIfNull(compiledVariants);
         ArgumentNullException.ThrowIfNull(installed);
         List<CompositionDiagnostic> diagnostics = [];
         SortedDictionary<string, byte> files = IndexFiles(content, diagnostics);
@@ -232,22 +173,14 @@ public static class GameCompositionResolver
         Dictionary<ContentPackId, VisitState> visits = [];
         foreach (ContentPackReference reference in selected.ContentPacks) ResolvePack(reference, selected.Ruleset, packs, sources, visits, ordered, diagnostics);
         TuningProfile? tuning = ResolveTuning(selected.Tuning.Id, selected.Ruleset, tunings, files, diagnostics, content);
-        List<ResolvedRulesVariant> variants = [];
-        foreach (RulesVariantManifest manifest in SelectVariants(selected, compiledVariants, diagnostics))
-        {
-            // A variant's own packs join the bundle's after them; one the bundle already selects is not added twice.
-            foreach (ContentPackId pack in manifest.ContentPacks) ResolvePack(new(pack), selected.Ruleset, packs, sources, visits, ordered, diagnostics);
-            if (ResolveTuning(manifest.Tuning, selected.Ruleset, tunings, files, diagnostics, content) is TuningProfile variantTuning)
-                variants.Add(new(manifest, variantTuning));
-        }
         if (diagnostics.Any(diagnostic => diagnostic.Code == "error") || tuning is null) return new(null, diagnostics);
-        GameBundle bundle = new(selected.Id, selected.Ruleset, Freeze(selected.ContentPacks), selected.Tuning, Freeze(selected.Variants), selected.Title);
-        return new(new ResolvedGameComposition(bundle, ordered, tuning, variants, content, installed), diagnostics);
+        GameBundle bundle = new(selected.Id, selected.Ruleset, Freeze(selected.ContentPacks), selected.Tuning, selected.Title);
+        return new(new ResolvedGameComposition(bundle, ordered, tuning, content, installed), diagnostics);
     }
 
     /// <summary>
     /// Every well-formed game bundle the content admits, by id, without resolving any: whether one composes
-    /// is <see cref="Resolve(ProductContent, GameBundleId, IReadOnlyList{RulesVariantManifest})"/>'s answer.
+    /// is <see cref="Resolve(ProductContent, GameBundleId)"/>'s answer.
     /// </summary>
     public static IReadOnlyList<GameBundleSummary> ListBundles(ProductContent content)
     {
@@ -259,32 +192,6 @@ public static class GameCompositionResolver
         foreach (string path in IndexFiles(content, diagnostics).Keys)
             if (path.EndsWith(".bundle.json", StringComparison.Ordinal)) ReadDescriptor(path, content.ReadBytes(path), bundles, packs, tunings, diagnostics);
         return [.. bundles.Values.OrderBy(bundle => bundle.Id.Value, StringComparer.Ordinal).Select(bundle => new GameBundleSummary(bundle.Id, bundle.Ruleset, bundle.Title))];
-    }
-
-    private static List<RulesVariantManifest> SelectVariants(GameBundleDescriptor bundle, IReadOnlyList<RulesVariantManifest> compiled, List<CompositionDiagnostic> diagnostics)
-    {
-        Dictionary<RulesVariantId, RulesVariantManifest> catalog = [];
-        foreach (RulesVariantManifest manifest in compiled)
-            if (!catalog.TryAdd(manifest.Id, manifest))
-                Error(diagnostics, $"Two compiled rules variants declare id '{manifest.Id.Value}'.", CompositionDiagnosticNames.DuplicateVariantManifest);
-        List<RulesVariantManifest> selected = [];
-        Dictionary<RulesSeamId, RulesVariantId> claims = [];
-        foreach (RulesVariantId id in bundle.Variants)
-        {
-            if (!catalog.TryGetValue(id, out RulesVariantManifest? manifest))
-            { Error(diagnostics, $"Game bundle '{bundle.Id.Value}' selects rules variant '{id.Value}', which this product does not compile.", CompositionDiagnosticNames.UnknownVariant); continue; }
-            if (manifest.Ruleset != bundle.Ruleset)
-            { Error(diagnostics, $"Rules variant '{id.Value}' applies to ruleset '{manifest.Ruleset.Value}', not '{bundle.Ruleset.Value}'.", CompositionDiagnosticNames.VariantRulesetMismatch); continue; }
-            bool collides = false;
-            foreach (RulesSeamId seam in manifest.Seams)
-            {
-                if (claims.TryGetValue(seam, out RulesVariantId owner))
-                { Error(diagnostics, $"Rules variants '{owner.Value}' and '{id.Value}' both claim seam '{seam.Value}'.", CompositionDiagnosticNames.VariantSeamCollision); collides = true; }
-                else claims[seam] = id;
-            }
-            if (!collides) selected.Add(manifest);
-        }
-        return selected;
     }
 
     private static SortedDictionary<string, byte> IndexFiles(ProductContent content, List<CompositionDiagnostic> diagnostics)
@@ -342,25 +249,16 @@ public static class GameCompositionResolver
         if (contentPacks.Count == 0) throw new InvalidOperationException("Game bundle must select at least one content pack.");
         if (contentPacks.GroupBy(reference => reference.Id).Any(group => group.Count() > 1)) throw new InvalidOperationException("Game bundle selects a content pack more than once.");
         JsonElement tuning = Object(root, "tuning");
-        List<RulesVariantId> variants = [];
-        if (root.TryGetProperty("variants", out JsonElement selected))
-        {
-            if (selected.ValueKind != JsonValueKind.Array) throw new InvalidOperationException("'variants' must be an array.");
-            foreach (JsonElement element in selected.EnumerateArray())
-            {
-                if (element.ValueKind != JsonValueKind.String || element.GetString() is not { } value || !Identifier(value))
-                    throw new InvalidOperationException("A selected rules variant must be a valid identifier.");
-                variants.Add(new(value));
-            }
-            if (variants.Distinct().Count() != variants.Count) throw new InvalidOperationException("Game bundle selects a rules variant more than once.");
-        }
         string id = Id(root, "id");
+        // There are no rules variants: a bundle that still selects some would silently play rules it did not ask for.
+        if (root.TryGetProperty("variants", out _))
+            throw new InvalidOperationException($"Game bundle '{id}' selects rules variants, which this product does not have; remove its 'variants'.");
         // A bundle's title is what a player chooses it by; one that authors none is named by its id.
         string title = id;
         if (root.TryGetProperty("title", out JsonElement authored))
             title = authored.ValueKind == JsonValueKind.String && authored.GetString() is { } text && !string.IsNullOrWhiteSpace(text)
                 ? text.Trim() : throw new InvalidOperationException("'title' must be a non-empty string.");
-        return new(new(id), new(Id(root, "ruleset")), contentPacks.ToArray(), new(new(Id(tuning, "id"))), variants.ToArray(), title);
+        return new(new(id), new(Id(root, "ruleset")), contentPacks.ToArray(), new(new(Id(tuning, "id"))), title);
     }
 
     private static ContentPackDescriptor Pack(JsonElement root)
@@ -450,7 +348,7 @@ public static class GameCompositionResolver
     internal sealed record ContentPackDescriptor(ContentPackId Id, RulesetId Ruleset, ContentPackRoleId Role, IReadOnlyList<ContentPackReference> Dependencies, string PayloadPath);
     internal sealed record TuningDescriptor(TuningProfileId Id, RulesetId Ruleset, string PayloadPath);
     private sealed record GameBundleDescriptor(GameBundleId Id, RulesetId Ruleset, IReadOnlyList<ContentPackReference> ContentPacks, TuningProfileReference Tuning,
-        IReadOnlyList<RulesVariantId> Variants, string Title);
+        string Title);
 }
 
 public sealed class GameSessionContext(IEngineContext engine, ResolvedGameComposition composition, LoadingScreen? loading = null)
@@ -475,11 +373,6 @@ public interface ILoadingScreenSession
 {
     void PublishLoading();
 }
-/// <summary>
-/// Optional ruleset seam publishing the manifests of the rules variants it compiles, so a bundle's
-/// variant selection resolves against exactly what this ruleset can build.
-/// </summary>
-public interface IRulesVariantCatalog { IReadOnlyList<RulesVariantManifest> CompiledVariants { get; } }
 public interface IGameSession : IDisposable { void PublishInitial(); ProductUpdateResult Update(ProductUpdate update); }
 
 /// <summary>Optional entry flow that constructs a fresh session from committed character choices.</summary>
@@ -709,21 +602,6 @@ public sealed class RulesetSavePayload
     }
     public RulesetId Ruleset { get; }
     public ReadOnlyMemory<byte> Bytes => _bytes.ToArray();
-}
-
-/// <summary>
-/// Ruleset-neutral envelope persisted by the Host; only the ruleset interprets Payload. It records the
-/// rules variants the game ran under, which a load must match.
-/// </summary>
-public sealed class GameSaveEnvelope
-{
-    public GameSaveEnvelope(RulesetSavePayload payload, IEnumerable<RulesVariantId> variants)
-    {
-        Payload = payload ?? throw new ArgumentNullException(nameof(payload));
-        Variants = Array.AsReadOnly((variants ?? throw new ArgumentNullException(nameof(variants))).ToArray());
-    }
-    public RulesetSavePayload Payload { get; }
-    public IReadOnlyList<RulesVariantId> Variants { get; }
 }
 
 /// <summary>Optional compiled-ruleset persistence seam. A resume payload is supplied after its ruleset identity is checked.</summary>

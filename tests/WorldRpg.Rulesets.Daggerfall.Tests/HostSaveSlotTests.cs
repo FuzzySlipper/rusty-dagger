@@ -33,7 +33,7 @@ public sealed class HostSaveSlotTests
             NewGameSessionTests.Commit(creation, "class13");
             using var game = Assert.IsType<DaggerfallSession>(creation.CreateNewGame());
             game.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(7);
-            slots.SaveSlot("slot-archer", "Archer", new GameSaveEnvelope(game.CaptureSave(), []));
+            slots.SaveSlot("slot-archer", "Archer", game.CaptureSave());
         }
 
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
@@ -115,10 +115,10 @@ public sealed class HostSaveSlotTests
             savedNpcUniqueId = npcUniqueIdentity.Value;
 
             // The Host's one save layout: catalog metadata plus the slot's payload under its own key.
-            WorldRpgSaveSlotEntry saved = slots.SaveSlot("slot-1", "Before the reopen", new GameSaveEnvelope(sourceSession.CaptureSave(), []),
+            WorldRpgSaveSlotEntry saved = slots.SaveSlot("slot-1", "Before the reopen", sourceSession.CaptureSave(),
                 PersistenceRevisionGuard.Absent);
             Assert.Equal(1UL, saved.Revision);
-            savedUniqueIds = [.. CapturedUniqueItemIds(DaggerfallSavePayload.Read(slots.LoadSlot("slot-1", "daggerfall", []).Envelope!.Payload))];
+            savedUniqueIds = [.. CapturedUniqueItemIds(DaggerfallSavePayload.Read(slots.LoadSlot("slot-1", "daggerfall").Payload!))];
         }
 
         ContentFake resumedContent = new(releases);
@@ -129,10 +129,10 @@ public sealed class HostSaveSlotTests
         // A reopened process reads the slot through the same catalog and resumes through the ruleset's
         // restore path, exactly as the product's load does, before any session state exists.
         using WorldRpgSaveSlots reopened = new(resumedEngine.Context, "worldrpg.saves");
-        (GameSaveEnvelope? envelope, WorldRpgSlotLoadDiagnostic? diagnostic) = reopened.LoadSlot("slot-1", "daggerfall", []);
+        (RulesetSavePayload? payload, WorldRpgSlotLoadDiagnostic? diagnostic) = reopened.LoadSlot("slot-1", "daggerfall");
         Assert.Null(diagnostic);
         ResolvedGameComposition composition = TestSessions.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition();
-        using IGameSession resumed = resumedRuleset.CreateSession(new GameSessionContext(resumedEngine.Context, composition), envelope!.Payload);
+        using IGameSession resumed = resumedRuleset.CreateSession(new GameSessionContext(resumedEngine.Context, composition), payload!);
         DaggerfallSession restoredSession = resumedRuleset.RequireSession();
         PlayerActorState restoredPlayer = restoredSession.State.Actors.Player;
         Stat restoredMaximum = restoredPlayer.Stats.GetStat(StatId.Parse("health-maximum"));
@@ -253,7 +253,7 @@ public sealed class HostSaveSlotTests
         Assert.Contains("Confirm deleting 'slot-1'.", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
         product.Update(new ProductUpdate(OuterUpdate(14), [Ui("{\"action\":\"delete-slot\",\"key\":\"slot-1\",\"confirm\":true}")]));
         using WorldRpgSaveSlots reopened = new(engine.Context, "worldrpg.saves");
-        (GameSaveEnvelope? deleted, WorldRpgSlotLoadDiagnostic? deletedDiagnostic) = reopened.LoadSlot("slot-1", "daggerfall", []);
+        (RulesetSavePayload? deleted, WorldRpgSlotLoadDiagnostic? deletedDiagnostic) = reopened.LoadSlot("slot-1", "daggerfall");
         Assert.Null(deleted);
         Assert.Equal("missing", deletedDiagnostic!.Kind);
     }
@@ -296,14 +296,14 @@ public sealed class HostSaveSlotTests
             SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
             EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), persistence: persistence);
             using WorldRpgSaveSlots slots = new(engine.Context, "worldrpg.saves");
-            slots.SaveSlot("slot-1", "Forged", new GameSaveEnvelope(DaggerfallSavePayload.Encode(rejected), []), PersistenceRevisionGuard.Absent);
+            slots.SaveSlot("slot-1", "Forged", DaggerfallSavePayload.Encode(rejected), PersistenceRevisionGuard.Absent);
             CapturingDaggerfallRuleset ruleset = new();
             ResolvedGameComposition composition = TestSessions.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition();
 
             // Resolution refuses the save before any session state or Engine resource exists.
-            GameSaveEnvelope envelope = slots.LoadSlot("slot-1", "daggerfall", []).Envelope!;
+            RulesetSavePayload payload = slots.LoadSlot("slot-1", "daggerfall").Payload!;
             ArgumentException rejection = Assert.Throws<ArgumentException>(() =>
-                ruleset.CreateSession(new GameSessionContext(engine.Context, composition), envelope.Payload));
+                ruleset.CreateSession(new GameSessionContext(engine.Context, composition), payload));
             Assert.Contains(classification, rejection.Message, StringComparison.Ordinal);
             Assert.Null(ruleset.Session);
             Assert.Equal(0, spatial.StepCalls);

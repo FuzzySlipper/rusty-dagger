@@ -56,9 +56,6 @@ internal sealed record DaggerfallSessionComposition(
     /// <summary>The compiled effect catalog; null composes the ruleset's own disease and poison families.</summary>
     internal DaggerfallEffectCatalog? Effects { get; init; }
 
-    /// <summary>The owner selected for each rules seam; classic unless a selected variant claims it.</summary>
-    internal DaggerfallSeamSelection Seams { get; init; } = DaggerfallSeamSelection.Default;
-
     /// <summary>The classic block records building names are admitted from; null admits none.</summary>
     internal DaggerfallBlocksSnapshot? Blocks { get; init; }
 

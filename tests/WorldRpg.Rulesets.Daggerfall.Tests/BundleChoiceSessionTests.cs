@@ -79,8 +79,8 @@ public sealed class BundleChoiceSessionTests
             Assert.Equal("test.second", first.PublishedNested("bundles", "current"));
         }
 
-        // A build whose bundle now selects a variant it does not compile cannot start the remembered game.
-        ProductContent withdrawn = WithSecondGame(root, "test.withdrawn");
+        // A build whose bundle now names a pack nothing carries cannot start the remembered game.
+        ProductContent withdrawn = WithSecondGame(root, missingPack: "test.withdrawn");
         EngineContextFake second = Engine();
         using WorldRpgProduct restarted = new(new ProductCreateContext(second.Context, withdrawn, input), new CapturingDaggerfallRuleset(), new GameBundleId("daggerfall.classic"));
         restarted.Start();
@@ -92,14 +92,14 @@ public sealed class BundleChoiceSessionTests
         Assert.Contains(notice, second.PublishedField("lastOutcome"), StringComparison.Ordinal);
     }
 
-    /// <summary>The committed content with a second game over the classic bundle's packs, selecting the given variants.</summary>
-    private static ProductContent WithSecondGame(string root, params string[] variants)
+    /// <summary>The committed content with a second game over the classic bundle's packs, and a pack no source carries when one is named.</summary>
+    private static ProductContent WithSecondGame(string root, string? missingPack = null)
     {
         ProductContent full = StagedContent(root, out BundleContentFake bundles);
         JsonObject bundle = JsonNode.Parse(full.ReadBytes("worldrpg/bundles/daggerfall.classic.bundle.json").Span)!.AsObject();
         bundle["id"] = "test.second";
         bundle["title"] = "Second game";
-        if (variants.Length != 0) bundle["variants"] = new JsonArray([.. variants.Select(variant => JsonValue.Create(variant))]);
+        if (missingPack is not null) bundle["contentPacks"]!.AsArray().Add(new JsonObject { ["id"] = missingPack });
         ProductContentFile[] files = [.. full.Files.ToArray(),
             new(Encoding.UTF8.GetBytes("worldrpg/bundles/test.second.bundle.json"), Encoding.UTF8.GetBytes(bundle.ToJsonString()))];
         return new ProductContent(files, bundles);

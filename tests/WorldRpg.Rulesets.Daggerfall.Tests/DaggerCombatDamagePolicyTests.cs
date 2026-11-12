@@ -50,37 +50,9 @@ public sealed class DaggerCombatDamagePolicyTests
     }
 
     [Fact]
-    public void A_variants_physical_mitigation_owner_replaces_the_default_mitigation_for_the_blow()
+    public void An_untargeted_player_swing_is_admitted_without_a_target_and_never_rejected()
     {
-        // The same armed brigand swing as above, under a whole-owner mitigation seam that absorbs two and
-        // neither deflects nor applies the default material requirement.
-        RecordingMitigation absorbing = new(absorb: 2);
-        using DamagePolicyFixture fixture = new(mitigation: absorbing);
-        fixture.NpcStrength(50);
-        fixture.EquipNpcWeapon(2, "iron-longsword", 9001);
-        fixture.Script(body: BareFeet, deflect: null, damage: 7);
-
-        BlowResolution result = fixture.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true), out IReadOnlyList<IProductFact> published);
-        Assert.DoesNotContain(published, fact => fact is ActorStruckFact); // Only the player's blows rock a body.
-
-        Assert.Equal((true, true, 4), (result.Outcome.Hit, result.Outcome.Allowed, result.Outcome.Damage));
-        DaggerfallPhysicalHarm harm = Assert.Single(absorbing.Mitigated);
-        Assert.Equal((2L, DaggerfallActorIdentity.PlayerEntityId, "long-blade", "iron"), (harm.AttackerId, harm.TargetId, harm.Skill, harm.WeaponMaterial));
-        Assert.Equal(harm, Assert.Single(absorbing.Negated));
-
-        using DamagePolicyFixture negated = new(mitigation: new RecordingMitigation(negate: true));
-        negated.EquipNpcWeapon(2, "iron-longsword", 9001);
-        negated.Script(body: BareFeet, deflect: null);
-        BlowResolution turned = negated.Run(new AttackRequest(2, DaggerfallActorIdentity.PlayerEntityId, 5, 9, .125d, Delayed: true));
-        Assert.Equal((true, false, 0), (turned.Outcome.Hit, turned.Outcome.Allowed, turned.Outcome.Damage));
-        Assert.DoesNotContain(turned.Ranges, range => range == (2, 16)); // A negated harm is never rolled.
-    }
-
-    [Fact]
-    public void A_delivery_owner_deciding_contact_at_the_hit_frame_receives_an_untargeted_swing_there()
-    {
-        RecordingDelivery delivery = new();
-        using DamagePolicyFixture fixture = new(delivery: delivery.Bind);
+        using DamagePolicyFixture fixture = new();
         AttackRequest swing = new(DaggerfallActorIdentity.PlayerEntityId, null, 3, 5, .125d, Delayed: true);
 
         IReadOnlyList<IProductFact> started = fixture.StartSwing(swing, out bool admitted);
@@ -88,63 +60,8 @@ public sealed class DaggerCombatDamagePolicyTests
         Assert.True(admitted);
         PlayerAttackStartedFact announced = Assert.Single(started.OfType<PlayerAttackStartedFact>());
         Assert.Null(announced.TargetId);
-        DaggerfallAdmittedAttack prepared = Assert.Single(delivery.Prepared);
-        Assert.Equal(swing, prepared.Request);
-        Assert.False(prepared.Ranged);
-        Assert.False(prepared.EnemyAttack);
-        Assert.Empty(delivery.Applied);
         Assert.DoesNotContain(started, fact => fact is AttackRejectedFact);
-
-        fixture.DeliverImpact(swing);
-        Assert.Equal([swing], delivery.Applied);
-        Assert.NotNull(delivery.Operations); // Bind asserts the owner is built once, over the shared operations.
-    }
-
-    private sealed class RecordingDelivery : IDaggerfallPhysicalDelivery
-    {
-        internal IDaggerfallPhysicalHarmOperations? Operations { get; private set; }
-        internal List<DaggerfallAdmittedAttack> Prepared { get; } = [];
-        internal List<AttackRequest> Applied { get; } = [];
-        internal IDaggerfallPhysicalDelivery Bind(IDaggerfallPhysicalHarmOperations operations)
-        {
-            Assert.Null(Operations);
-            Operations = operations;
-            return this;
-        }
-        public bool HoldsFire(long archer, long target) => false;
-        public void Interrupt(long attacker, ulong generation) { }
-        public bool TryPrepare(DaggerfallAdmittedAttack admitted, FactBuffer<IProductFact> facts, out DaggerCombatRules.DaggerfallPreparedAttack prepared)
-        {
-            Prepared.Add(admitted);
-            prepared = admitted.Prepared(new AttackOutcome(false, true, 0));
-            return true;
-        }
-        public void Apply(AttackRequest request, DaggerCombatRules.DaggerfallPreparedAttack attack, FactBuffer<IProductFact> facts) => Applied.Add(request);
-        public bool DeferImpact(DeferredAttackImpact impact, FactBuffer<IProductFact> facts) => false;
-        public void AdvanceFlight(ulong generation, ulong simulationStep, double fixedDeltaSeconds,
-            IReadOnlyDictionary<long, WorldPoint> positions, FactBuffer<IProductFact> facts) { }
-        public IReadOnlyList<DaggerfallRangedFlightView> ReadFlights(ulong generation, ulong simulationStep) => [];
-        public bool HasPlayerFlight => false;
-        public bool HoldsImpactAt(long target) => false;
-        public void LandDueImpacts(ulong generation, ulong simulationStep, FactBuffer<IProductFact> facts) { }
-        public void ClearFlight() { }
-        public void RebaseFlight(System.Numerics.Vector3 delta) { }
-    }
-
-    private sealed class RecordingMitigation(int absorb = 0, bool negate = false) : IDaggerfallPhysicalMitigation
-    {
-        internal List<DaggerfallPhysicalHarm> Negated { get; } = [];
-        internal List<DaggerfallPhysicalHarm> Mitigated { get; } = [];
-        public void Negate(NegationEvent negation, DaggerfallPhysicalHarm harm)
-        {
-            Negated.Add(harm);
-            if (negate) negation.Negation = HarmNegation.Deflected;
-        }
-        public void Mitigate(MitigationEvent mitigation, DaggerfallPhysicalHarm harm)
-        {
-            Mitigated.Add(harm);
-            mitigation.Absorbed += absorb;
-        }
+        Assert.DoesNotContain(fixture.DeliverImpact(swing), fact => fact is AttackRejectedFact);
     }
 
     [Fact]
@@ -874,7 +791,6 @@ public sealed class DaggerCombatDamagePolicyTests
         private DaggerfallCharacterState? _character;
 
         internal DamagePolicyFixture(bool armed = true, int attackChanceShift = 0,
-            IDaggerfallPhysicalMitigation? mitigation = null, Func<IDaggerfallPhysicalHarmOperations, IDaggerfallPhysicalDelivery>? delivery = null,
             IRandomService? random = null)
         {
             DaggerfallDefinitions definitions = Definitions;
@@ -904,7 +820,6 @@ public sealed class DaggerCombatDamagePolicyTests
             _actorEquipment[2] = BuildEquipment(enemy.Actor.Entity, 2, enemy.Actor);
             _itemCondition = new DaggerfallItemConditionService(definitions, _itemInstances,
                 new DaggerfallEquipmentMoves(_actorInventories[DaggerfallActorIdentity.PlayerEntityId], _playerEquipment, definitions, itemInstances: _itemInstances));
-            DaggerfallComposedSeams seams = DaggerfallSeamSelection.Default.Build(SeamInputs, DaggerfallContactTuning.Default);
             _combat = new DaggerCombatRules(_random, _actors, _playerEquipment,
                 id => _actorInventories.TryGetValue(id, out MechanicsInventoryCoordinator? quiver) ? quiver : null,
                 _itemInstances, definitions, _authored, CombatCollaborators.Targeting(_actors, _authored, out _spatial, out SpatialFake spatialFake),
@@ -919,8 +834,7 @@ public sealed class DaggerCombatDamagePolicyTests
                 molagBalStrike: (_, _, _, _, _, _, _) => throw new InvalidOperationException("This fixture arms no Mace of Molag Bal."),
                 itemStrike: (_, _, _, damage) => damage,
                 monsterHit: _ => { }, actorGameplayActive: _ => true, actorTeam: id => _authored.GetValueOrDefault(id)?.Team,
-                mitigation: mitigation ?? seams.PhysicalMitigation,
-                delivery: ops => Delivery = (delivery ?? seams.PhysicalDelivery)(ops),
+                mitigation: CombatCollaborators.Mitigation(ContactInputs), contactTuning: DaggerfallContactTuning.Default,
                 attackTuning: DaggerfallAttackTuning.Default,
                 targetUnaware: Unaware.Contains, alertTarget: id => { Alerted.Add(id); Unaware.Remove(id); }, playerRush: () => Rush,
                 contact: Contact = CombatCollaborators.Contact(_actors, _spatial, () => _playerPosition),
@@ -1054,8 +968,8 @@ public sealed class DaggerCombatDamagePolicyTests
         /// <summary>Interrupts an attacker's attack, as leaving attack state or losing its target does.</summary>
         internal void Interrupt(long attackerId, ulong generation) => _combat.Execution.Interrupt(attackerId, generation);
 
-        /// <summary>The physical delivery owner the rules composed.</summary>
-        internal IDaggerfallPhysicalDelivery Delivery { get; private set; } = null!;
+        /// <summary>The physical delivery the rules compose.</summary>
+        internal DaggerfallContactDelivery Delivery => _combat.Delivery;
 
         /// <summary>The player's controller velocity, which an archer may lead.</summary>
         internal Vector3 PlayerVelocity { get; set; }
@@ -1089,8 +1003,8 @@ public sealed class DaggerCombatDamagePolicyTests
 
         internal ActorsState Actors => _actors;
 
-        /// <summary>The session reads seam owners are built over, from this fixture.</summary>
-        internal DaggerfallSeamInputs SeamInputs => new(Definitions, () => _character, _random,
+        /// <summary>The session reads the guard and mitigation are built over, from this fixture.</summary>
+        internal DaggerfallContactInputs ContactInputs => new(Definitions, () => _character, _random,
             id => id == DaggerfallActorIdentity.PlayerEntityId ? _playerEquipment.Read() : _actorEquipment[id].Read(),
             id => id == DaggerfallActorIdentity.PlayerEntityId ? _actors.Player.Stats : _actors.TryGet(id, out ActorState actor) ? actor.Stats : null,
             () => ArmorValueShift);

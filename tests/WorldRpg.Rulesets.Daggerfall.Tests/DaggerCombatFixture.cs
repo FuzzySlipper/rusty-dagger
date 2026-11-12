@@ -46,8 +46,8 @@ internal sealed class DaggerCombatFixture : IDisposable
         MechanicsEquipmentCoordinator sourceEquipment = CombatCollaborators.Equipment(Actors, source.Actor, Definitions, out MechanicsInventoryCoordinator sourceInventory);
         DaggerfallItemConditionService itemCondition = new(Definitions, itemInstances,
             new DaggerfallEquipmentMoves(playerInventory, playerEquipment, Definitions, itemInstances: itemInstances));
-        DaggerfallComposedSeams seams = DaggerfallSeamSelection.Default.Build(new DaggerfallSeamInputs(Definitions, () => null, Random,
-            id => (id == 2 ? sourceEquipment : playerEquipment).Read(), id => Actors.TryGet(id, out ActorState actor) ? actor.Stats : null, () => 0), DaggerfallContactTuning.Default);
+        DaggerfallContactInputs contactInputs = new(Definitions, () => null, Random,
+            id => (id == 2 ? sourceEquipment : playerEquipment).Read(), id => Actors.TryGet(id, out ActorState actor) ? actor.Stats : null, () => 0);
         Rules = new DaggerCombatRules(
             Random, Actors, playerEquipment, id => id == 2 ? sourceInventory : playerInventory,
             itemInstances, Definitions, authored,
@@ -61,7 +61,7 @@ internal sealed class DaggerCombatFixture : IDisposable
             molagBalStrike: (_, _, _, _, _, _, _) => throw new InvalidOperationException("This fixture arms no Mace of Molag Bal."),
             itemStrike: (_, _, _, damage) => damage, monsterHit: MonsterHits.Add,
             actorGameplayActive: _ => true, actorTeam: id => authored.GetValueOrDefault(id)?.Team,
-            mitigation: seams.PhysicalMitigation, delivery: seams.PhysicalDelivery, attackTuning: DaggerfallAttackTuning.Default);
+            mitigation: CombatCollaborators.Mitigation(contactInputs), contactTuning: DaggerfallContactTuning.Default, attackTuning: DaggerfallAttackTuning.Default);
     }
 
     /// <summary>The skill uses combat recorded, in order.</summary>

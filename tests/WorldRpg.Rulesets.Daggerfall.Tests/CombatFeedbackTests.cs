@@ -160,20 +160,19 @@ public sealed class CombatFeedbackTests
         using ActorsState actors = ActorsWithNpc(11, HealthyMechanics(), new(2, 0, 3));
         using DaggerfallSiteAppearance presentation = new(MediaContent(releases), new AppearanceFake(releases), inputs,
             audio.Service, random: KeyedRandomFake.Create(8).Service);
-        IDaggerfallHarmPresentation harm = new Modules.Combat.DaggerfallContactHarmPresentation();
         ulong Clip(string id) => (ulong)(inputs.Audio.ToList().FindIndex(value => value.Id == id) + 1);
         SpellCastFact Cast(long sequence, DaggerfallCastOutcome outcome) => new(DaggerfallCastOutcome.DeliveryCompleted, sequence, 1, "spell", 5,
             [new DaggerfallCastEffectResult(0, 11, outcome)]);
 
         // A spell that met no one, and an applied effect, keep their own presentation: no outcome cue.
-        presentation.ReactSpellCast(Cast(1, DaggerfallCastOutcome.Missed), actors, null, harm);
-        presentation.ReactSpellCast(Cast(2, DaggerfallCastOutcome.Applied), actors, null, harm);
+        presentation.ReactSpellCast(Cast(1, DaggerfallCastOutcome.Missed), actors, null);
+        presentation.ReactSpellCast(Cast(2, DaggerfallCastOutcome.Applied), actors, null);
         Assert.Empty(audio.Voices);
 
         SpellCastFact reflected = Cast(3, DaggerfallCastOutcome.Reflected);
-        presentation.ReactSpellCast(reflected, actors, null, harm);
-        presentation.ReactSpellCast(reflected, actors, null, harm);
-        presentation.ReactSpellCast(Cast(4, DaggerfallCastOutcome.Absorbed), actors, null, harm);
+        presentation.ReactSpellCast(reflected, actors, null);
+        presentation.ReactSpellCast(reflected, actors, null);
+        presentation.ReactSpellCast(Cast(4, DaggerfallCastOutcome.Absorbed), actors, null);
         Assert.Equal(2, audio.Voices.Count);
         Assert.Equal((Clip("sound.436"), new Vector3(2, 0, 3), 1.1F), (audio.Voices[0].Clip.Handle.Value, audio.Voices[0].Position, audio.Voices[0].Pitch));
         Assert.StartsWith("hit", inputs.Audio.ToList()[(int)audio.Voices[1].Clip.Handle.Value - 1].Id, StringComparison.Ordinal);

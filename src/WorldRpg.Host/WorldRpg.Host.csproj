@@ -42,13 +42,12 @@
     <RustyEngineProductUiProjectionContract>dagger.ui.snapshot.v1</RustyEngineProductUiProjectionContract>
     <RustyEngineProductFixedStepHz>60</RustyEngineProductFixedStepHz>
     <RustyEngineProductFixedStepMaxCatchUpSteps>4</RustyEngineProductFixedStepMaxCatchUpSteps>
-    <RustyEngineWatchPaths>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../WorldRpg.Kit'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../WorldRpg.Rulesets.Daggerfall'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../WorldRpg.Rulesets.Daggerfall.Variants'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../ui'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../content'))</RustyEngineWatchPaths>
+    <RustyEngineWatchPaths>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../WorldRpg.Kit'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../WorldRpg.Rulesets.Daggerfall'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../ui'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../content'))</RustyEngineWatchPaths>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="../WorldRpg.Kit/WorldRpg.Kit.csproj" />
     <ProjectReference Include="../WorldRpg.Rulesets.Daggerfall/WorldRpg.Rulesets.Daggerfall.csproj" />
-    <ProjectReference Include="../WorldRpg.Rulesets.Daggerfall.Variants/WorldRpg.Rulesets.Daggerfall.Variants.csproj" />
     <RustyEngineProductTool Include="../Daggerfall.Import.Tool/Daggerfall.Import.Tool.csproj" />
     <PackageReference Include="Rusty.Engine" Version="[$(RustyEnginePackageVersion)]">
       <ExcludeAssets Condition="'$(RustyEngineUseSourceDevelopment)' == 'true'">compile;runtime</ExcludeAssets>

@@ -176,8 +176,8 @@ internal static class TestSessions
         .Select(path => new ProductContentFile(Encoding.UTF8.GetBytes(path), fake.Body(path)!)).ToArray()), null);
 
     /// <summary>Resolves a bundle over the content and the containers it installs, as the Host does.</summary>
-    internal static GameCompositionResolution Resolve(ProductContent content, GameBundleId bundle, IReadOnlyList<RulesVariantManifest>? compiledVariants = null) =>
-        GameCompositionResolver.Resolve(content, bundle, compiledVariants ?? [], Installed(content));
+    internal static GameCompositionResolution Resolve(ProductContent content, GameBundleId bundle) =>
+        GameCompositionResolver.Resolve(content, bundle, Installed(content));
 
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ProductContent, IReadOnlyList<InstalledContent>> InstalledByContent = [];
 

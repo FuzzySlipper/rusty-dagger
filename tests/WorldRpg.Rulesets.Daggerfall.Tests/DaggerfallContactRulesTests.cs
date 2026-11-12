@@ -29,12 +29,11 @@ public sealed class DaggerfallContactRulesTests
     private static DaggerfallContactTuning Tuning => DaggerfallTuning.Defaults.Contact;
 
     [Fact]
-    public void The_contact_tuning_is_read_from_the_default_profile_and_the_classic_bundle_selects_no_variant()
+    public void The_contact_tuning_is_read_from_the_classic_bundles_profile()
     {
         ProductContent content = FullContent(TestData.RepositoryRoot);
-        ResolvedGameComposition classic = Resolve(content, new GameBundleId("daggerfall.classic"), []).RequireComposition();
+        ResolvedGameComposition classic = Resolve(content, new GameBundleId("daggerfall.classic")).RequireComposition();
 
-        Assert.Empty(classic.Identity.Variants);
         DaggerfallContactTuning tuning = DaggerfallTuning.Read(classic.Tuning.Payload.Span).Contact;
         Assert.Equal(new DaggerfallChannelDeflection(DaggerfallDeflectionMode.Partial, .5d), tuning.DeflectionFor(DaggerfallHarmChannels.Blunt));
         Assert.Equal(DaggerfallDeflectionMode.Full, tuning.DeflectionFor(DaggerfallHarmChannels.Edged)!.Mode);
@@ -205,7 +204,7 @@ public sealed class DaggerfallContactRulesTests
     [Fact]
     public void Melee_enemies_engage_inside_their_reach_while_archers_engage_at_range()
     {
-        IDaggerfallEnemyEngagement contact = new DaggerfallContactEngagement(Tuning);
+        DaggerfallContactEngagement contact = new DaggerfallContactEngagement(Tuning);
         Assert.Equal(2.25d * Tuning.EngageReachFraction, contact.EngageReach(2.25d, ranged: false), 6);
         Assert.True(contact.EngageReach(2.25d, ranged: false) < 2.25d);
         Assert.Equal(30d, contact.EngageReach(30d, ranged: true));
@@ -256,12 +255,12 @@ public sealed class DaggerfallContactRulesTests
     public void Deflection_negates_an_edged_blow_whole_turns_aside_part_of_a_blunt_one_and_the_material_requirement_still_holds()
     {
         using Fixture fixture = new();
-        DaggerfallSeamInputs inputs = fixture.SeamInputs;
+        DaggerfallContactInputs inputs = fixture.ContactInputs;
         DaggerfallActorDefinition player = TestPayload.Definitions.RequireActor(new DaggerfallActorId("player"));
         CombatParticipants participants = new(fixture.Actors.Get(2).Actor, fixture.Actors.Player.Actor, "attack");
         DaggerfallPhysicalHarm chest = new(2, Player, player, "long-blade", "iron", 3, 1, 1);
 
-        DaggerfallContactMitigation certain = new(inputs with { Random = RandomMinimum.Create() }, Tuning, new FixedGuard());
+        DaggerfallContactMitigation certain = new(inputs with { Random = RandomMinimum.Create() }, Tuning, new DaggerfallContactGuard(inputs, Tuning));
         NegationEvent edged = new(participants, DaggerfallHarmChannels.Edged);
         certain.Negate(edged, chest);
         Assert.Equal(HarmNegation.Deflected, edged.Negation);
@@ -270,7 +269,7 @@ public sealed class DaggerfallContactRulesTests
         Assert.Equal(5, blunt.Deflected);
         Assert.Equal(certain.Absorption(chest, DaggerfallHarmChannels.Blunt), blunt.Absorbed);
 
-        DaggerfallContactMitigation never = new(inputs with { Random = RandomMaximum.Create() }, Tuning, new FixedGuard());
+        DaggerfallContactMitigation never = new(inputs with { Random = RandomMaximum.Create() }, Tuning, new DaggerfallContactGuard(inputs, Tuning));
         NegationEvent landed = new(participants, DaggerfallHarmChannels.Edged);
         never.Negate(landed, chest);
         Assert.Equal(HarmNegation.None, landed.Negation);
@@ -284,7 +283,7 @@ public sealed class DaggerfallContactRulesTests
     public void Worn_armor_enchantments_shift_what_the_players_armor_absorbs()
     {
         using Fixture fixture = new();
-        DaggerfallContactMitigation mitigation = new(fixture.SeamInputs, Tuning, new FixedGuard());
+        DaggerfallContactMitigation mitigation = CombatCollaborators.Mitigation(fixture.ContactInputs);
         DaggerfallActorDefinition player = TestPayload.Definitions.RequireActor(new DaggerfallActorId("player"));
         CombatParticipants participants = new(fixture.Actors.Get(2).Actor, fixture.Actors.Player.Actor, "attack");
         DaggerfallPhysicalHarm chest = new(2, Player, player, "long-blade", "iron", 3, 1, 1);
@@ -358,8 +357,8 @@ public sealed class DaggerfallContactRulesTests
     {
         using Fixture fixture = new();
         int avoid = 0;
-        DaggerfallSeamInputs inputs = fixture.SeamInputs with { PlayerAvoidHit = () => avoid };
-        DaggerfallContactMitigation mitigation = new(inputs, Tuning, new FixedGuard());
+        DaggerfallContactInputs inputs = fixture.ContactInputs with { PlayerAvoidHit = () => avoid };
+        DaggerfallContactMitigation mitigation = new(inputs, Tuning, new DaggerfallContactGuard(inputs, Tuning));
         StatsComponent stats = fixture.Actors.Player.Stats;
         stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Luck.Value)).BaseValue = 50;
         int average = mitigation.DeflectionChance(Player);
@@ -376,7 +375,7 @@ public sealed class DaggerfallContactRulesTests
     public void Holding_block_raises_a_guard_only_with_a_drawn_weapon_and_no_swing_and_it_costs_stamina_until_the_pool_empties()
     {
         using Fixture fixture = new();
-        DaggerfallContactGuard guard = new(fixture.SeamInputs, Tuning);
+        DaggerfallContactGuard guard = new(fixture.ContactInputs, Tuning);
         Track stamina = fixture.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value));
         stamina.SetCurrent(50d);
         FactBuffer<IProductFact> facts = new();
@@ -422,46 +421,24 @@ public sealed class DaggerfallContactRulesTests
     public void A_raised_guard_adds_its_deflection_bonus_to_the_player_only()
     {
         using Fixture fixture = new();
-        DaggerfallSeamInputs inputs = fixture.SeamInputs;
-        FixedGuard guard = new();
+        DaggerfallContactInputs inputs = fixture.ContactInputs;
+        DaggerfallContactGuard guard = new(inputs, Tuning);
         DaggerfallContactMitigation mitigation = new(inputs, Tuning, guard);
         int lowered = mitigation.DeflectionChance(Player), enemy = mitigation.DeflectionChance(2);
-        guard.Raised = true;
-        Assert.Equal(Math.Min(lowered + (int)Tuning.GuardDeflectionBonus, (int)Tuning.GuardMaximumChance), mitigation.DeflectionChance(Player));
-        Assert.Equal(enemy, mitigation.DeflectionChance(2));
-    }
-
-    [Fact]
-    public void The_default_owners_share_one_guard_the_mitigation_reads()
-    {
-        using Fixture fixture = new();
-        DaggerfallComposedSeams seams = DaggerfallSeamSelection.Default.Build(fixture.SeamInputs, Tuning);
-        DaggerfallContactGuard guard = Assert.IsType<DaggerfallContactGuard>(seams.PlayerGuard);
-        DaggerfallContactMitigation mitigation = Assert.IsType<DaggerfallContactMitigation>(seams.PhysicalMitigation);
-        int lowered = mitigation.DeflectionChance(Player);
-        FactBuffer<IProductFact> facts = new();
 
         guard.Observe([Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1, intent: "block")], []);
-        guard.Step(.5d, canGuard: true, swinging: false, 1, 1, facts);
+        guard.Step(.5d, canGuard: true, swinging: false, 1, 1, new FactBuffer<IProductFact>());
 
         Assert.True(guard.Raised);
-        Assert.True(mitigation.DeflectionChance(Player) > lowered);
-    }
-
-    private sealed class FixedGuard : IDaggerfallPlayerGuard
-    {
-        public bool Raised { get; set; }
-        public bool WantsTime => false;
-        public void Observe(ReadOnlySpan<ProductInputEvent> inputs, IReadOnlyList<WorldRpg.Kit.Controls.ControllerActionBinding> pad) { }
-        public void Step(double seconds, bool canGuard, bool swinging, ulong generation, ulong simulationStep, FactBuffer<IProductFact> facts) { }
-        public void Neutralize(ulong generation, ulong simulationStep, FactBuffer<IProductFact> facts) { }
+        Assert.Equal(Math.Min(lowered + (int)Tuning.GuardDeflectionBonus, (int)Tuning.GuardMaximumChance), mitigation.DeflectionChance(Player));
+        Assert.Equal(enemy, mitigation.DeflectionChance(2));
     }
 
     [Fact]
     public void A_touch_reaches_every_actor_its_volume_contacts_but_none_behind_the_world_and_one_that_meets_no_one_is_still_released()
     {
         using Fixture fixture = new();
-        IDaggerfallTouchDelivery touch = new DaggerfallContactTouch(fixture.TouchOperations, Tuning);
+        DaggerfallContactTouch touch = new DaggerfallContactTouch(fixture.TouchOperations, Tuning);
         ulong brigand = fixture.Actors.Get(2).Actor.Entity.Value;
         ulong second = fixture.SpawnBrigand(3, new WorldPoint(1f, 0f, .4f)).Actor.Entity.Value;
         DaggerfallTouchCast cast = new(Player, new Vector3(0f, 1.65f, 0f), Vector3.UnitX, Admitted: null);
@@ -494,7 +471,7 @@ public sealed class DaggerfallContactRulesTests
     public void An_enemy_touch_reaches_the_player_only_when_its_volume_does_whatever_its_behavior_admitted()
     {
         using Fixture fixture = new();
-        IDaggerfallTouchDelivery touch = new DaggerfallContactTouch(fixture.TouchOperations, Tuning);
+        DaggerfallContactTouch touch = new DaggerfallContactTouch(fixture.TouchOperations, Tuning);
         DaggerfallTouchCast cast = new(2, new Vector3(1f, 1.62f, 0f), -Vector3.UnitX, Admitted: Player);
 
         fixture.Spatial.OverlapContactsResult = _ => Touching();
