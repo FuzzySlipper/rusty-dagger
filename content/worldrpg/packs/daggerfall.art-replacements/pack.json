@@ -1,0 +1,10 @@
+{
+  "kind": "worldrpg.content-pack",
+  "id": "daggerfall.art-replacements",
+  "ruleset": "daggerfall",
+  "role": "daggerfall.art-replacements",
+  "dependencies": [
+    { "id": "daggerfall.imported" }
+  ],
+  "payload": "worldrpg/packs/daggerfall.art-replacements/payload.json"
+}

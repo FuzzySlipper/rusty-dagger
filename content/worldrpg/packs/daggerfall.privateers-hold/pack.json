@@ -1,0 +1,10 @@
+{
+  "kind": "worldrpg.content-pack",
+  "id": "daggerfall.privateers-hold",
+  "ruleset": "daggerfall",
+  "role": "daggerfall.site",
+  "dependencies": [
+    { "id": "daggerfall.base" }
+  ],
+  "payload": "worldrpg/packs/daggerfall.privateers-hold/payload.json"
+}

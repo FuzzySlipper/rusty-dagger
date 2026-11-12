@@ -1,0 +1,6 @@
+{
+  "kind": "worldrpg.tuning-profile",
+  "id": "daggerfall.defaults",
+  "ruleset": "daggerfall",
+  "payload": "worldrpg/tuning/daggerfall.defaults/payload.json"
+}

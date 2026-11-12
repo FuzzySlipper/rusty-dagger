@@ -1,0 +1,10 @@
+{
+  "kind": "worldrpg.content-pack",
+  "id": "daggerfall.base",
+  "ruleset": "daggerfall",
+  "role": "daggerfall.base",
+  "dependencies": [
+    { "id": "daggerfall.imported" }
+  ],
+  "payload": "worldrpg/packs/daggerfall.base/payload.json"
+}
