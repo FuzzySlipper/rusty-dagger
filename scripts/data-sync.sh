@@ -45,15 +45,31 @@ elif [[ ${#folders[@]} -gt 1 ]]; then
   exit 2
 fi
 
-# The import records its revision in the container's first entry, worldrpg/data-container.json.
-container_head() { head -c 8192 "$data/daggerfall-data.rpak" 2>/dev/null | tr -c '[:print:]\n' '?'; }
-container_revision() {
-  container_head | grep -o '"importerRevision": *"[0-9a-f]*"' | grep -o '[0-9a-f]\{64\}' ||
-    echo "none (no local/data/daggerfall-data.rpak)"
+# What the container says of itself (worldrpg/data-container.json), read through its index, so an entry stored
+# compressed (import --compress) reads the same: the revision on the first line, then "whole", "departs" or
+# "unrecorded" (a description from before departures were recorded), then one departure per line.
+describe_container() {
+  [[ -f $data/daggerfall-data.rpak ]] || { echo "none (no local/data/daggerfall-data.rpak)"; return; }
+  python3 - "$data/daggerfall-data.rpak" <<'EOF'
+import json, struct, subprocess, sys
+with open(sys.argv[1], 'rb') as container:
+    offset, length = struct.unpack('<QQ', container.read(24)[8:24])
+    container.seek(offset)
+    entry = next((e for e in json.loads(container.read(length))['entries'] if e['path'] == 'worldrpg/data-container.json'), None)
+    if entry is None:
+        sys.exit(print('none (the container carries no description)'))
+    container.seek(entry['offset'])
+    data = container.read(entry.get('zstdLength', entry['byteLength']))
+if 'zstdLength' in entry:
+    data = subprocess.run(['zstd', '-dcq'], input=data, capture_output=True, check=True).stdout
+description = json.loads(data)
+departures = description.get('departures')
+print(description.get('importerRevision') or 'none (the description names no revision)')
+print('unrecorded' if departures is None else 'departs' if departures else 'whole')
+for departure in departures or []:
+    print(departure)
+EOF
 }
-# A whole import records no departures; a repack over an earlier one, or block variants, records each.
-container_whole() { local head; head=$(container_head); [[ $head == *'"departures": []'* ]]; }
-container_departures() { container_head | sed -n '/"departures": *\[/,/\]/p' | grep -o '"[^"]*"' | grep -v '^"departures"$'; }
 # The same target the build stamps the revision with; no restore or compile, about a second.
 checkout_revision() {
   command -v dotnet >/dev/null || { echo "unknown (dotnet is not on PATH)"; return; }
@@ -64,7 +80,8 @@ checkout_revision() {
 }
 report() {
   local container checkout
-  container=$(container_revision)
+  description=$(describe_container)
+  container=$(sed -n 1p <<<"$description")
   checkout=$(checkout_revision)
   echo "importer revision of the container: $container"
   echo "importer revision of this checkout: $checkout"
@@ -73,11 +90,13 @@ report() {
   elif [[ $container != "$checkout" ]]; then
     echo "They differ: the game will call this data stale. Pull from den-agents once it has imported this revision; never import here."
   fi
-  if [[ $container =~ ^[0-9a-f]{64}$ ]] && ! container_whole; then
-    echo "The container is not one whole import, so the game calls it stale:"
-    container_departures | sed 's/^/  /' || echo "  (it records no departures field: an import from before they were recorded)"
-  fi
+  case $(sed -n 2p <<<"$description") in
+    departs) echo "The container is not one whole import, so the game calls it stale:"; sed -n '3,$s/^/  /p' <<<"$description" ;;
+    unrecorded) echo "The container records no departures (an import from before they were recorded), so this build calls it malformed." ;;
+  esac
 }
+# Only one whole import may replace another machine's data.
+container_whole() { [[ $(sed -n 2p <<<"$description") == whole ]]; }
 
 # Where a folder of this checkout is on the other side: the same path in the remote checkout, or the store for local/data.
 there() { if [[ -n $remote ]]; then echo "$remote/$1"; else echo "$store"; fi; }
