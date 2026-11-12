@@ -184,7 +184,7 @@ public sealed class ArchitectureLawTests
         string[] threadPoolOwners =
         [
             // Exterior cells' ground, built ahead of the window from terrain and location definitions.
-            Path.Combine("World", "DaggerfallExteriorCellGrounds.cs"),
+            Path.Combine("Exterior", "DaggerfallExteriorCellGrounds.cs"),
         ];
         (string Label, string Pattern)[] safeCodeBoundaryEscapes =
         [
