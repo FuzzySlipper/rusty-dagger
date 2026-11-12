@@ -172,7 +172,7 @@ public sealed class WorldRpgInstalledContentTests : IDisposable
             : string.Empty;
         // Padding lets every entry compress, so that each is stored as zstd when the pack is compressed.
         string padding = compress ? new(' ', 4096) : string.Empty;
-        Write(staged, InstalledContent.DescriptionPath, $$"""{"kind":"worldrpg.data-container","importerRevision":"{{revision}}","contentPacks":[{{packs}}]}{{padding}}""");
+        Write(staged, InstalledContent.DescriptionPath, $$"""{"kind":"worldrpg.data-container","importerRevision":"{{revision}}","departures":[],"contentPacks":[{{packs}}]}{{padding}}""");
         Write(staged, "payload/imported.json", "imported" + padding);
         Write(staged, InstalledRuleset.SessionReadPath, "detail" + padding);
         // Inside a product call the container is packed through that call's Engine, as a tool's would be beside it.

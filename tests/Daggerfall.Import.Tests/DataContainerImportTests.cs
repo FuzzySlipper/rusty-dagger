@@ -346,7 +346,17 @@ public sealed class DataContainerImportTests : IDisposable
         Assert.Equal(DataContainers.DescriptorKind, (string)descriptor["kind"]!);
         Assert.Equal(ImporterBuild.Revision, (string)descriptor["importerRevision"]!);
         Assert.Matches("^[0-9a-f]{64}$", ImporterBuild.Revision);
+        Assert.Empty(descriptor["departures"]!.AsArray());
         Assert.Equal(packs.Count, descriptor["contentPacks"]!.AsArray().Count);
+
+        // A repack over what an earlier run staged names this revision too, but records that it departs from a
+        // whole import, so the product never reads it as current.
+        DataContainers.WriteDescriptor(staging, "import --only locations");
+        JsonNode repacked = JsonNode.Parse(File.ReadAllText(Path.Combine(staging, ImportLayout.DescriptorPath)))!;
+        Assert.Equal(ImporterBuild.Revision, (string)repacked["importerRevision"]!);
+        string departure = (string)Assert.Single(repacked["departures"]!.AsArray())!;
+        Assert.Contains("repacked by import --only locations over", departure, StringComparison.Ordinal);
+        Assert.Contains("run the full import", departure, StringComparison.Ordinal);
     }
 
     [Fact]

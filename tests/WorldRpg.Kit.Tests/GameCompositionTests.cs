@@ -40,7 +40,7 @@ public sealed class GameCompositionTests
         {
             string staged = Directory.CreateDirectory(Path.Combine(directory, "staged")).FullName;
             Write(staged, InstalledContent.DescriptionPath, """
-                {"kind":"worldrpg.data-container","importerRevision":"rev-1","contentPacks":[
+                {"kind":"worldrpg.data-container","importerRevision":"rev-1","departures":["repacked over an earlier run"],"contentPacks":[
                   {"kind":"worldrpg.content-pack","id":"test.imported","ruleset":"test","role":"test.content","dependencies":[{"id":"test.base"}],"payload":"payload/imported.json"}]}
                 """);
             Write(staged, "payload/imported.json", "imported");
@@ -69,6 +69,9 @@ public sealed class GameCompositionTests
                 Assert.Equal("base", Encoding.UTF8.GetString(composition.RequireContentPack(new("test.base")).Payload.Span));
                 Assert.Same(installed, Assert.Single(composition.Installed));
                 Assert.Equal("rev-1", installed.Description!.Revision);
+                // How the content departs from a whole run is the container's own record; whether that makes it
+                // stale is the ruleset's call.
+                Assert.Equal(["repacked over an earlier run"], installed.Description.Departures);
             });
         }
         finally
@@ -85,7 +88,7 @@ public sealed class GameCompositionTests
         {
             string staged = Directory.CreateDirectory(Path.Combine(directory, "staged")).FullName;
             Write(staged, InstalledContent.DescriptionPath, """
-                {"kind":"worldrpg.data-container","importerRevision":"rev-1","contentPacks":[
+                {"kind":"worldrpg.data-container","importerRevision":"rev-1","departures":[],"contentPacks":[
                   {"kind":"worldrpg.content-pack","id":"test.base","ruleset":"test","role":"test.content","dependencies":[],"payload":"payload/base.json"}]}
                 """);
             string container = Path.Combine(directory, "data.rpak");

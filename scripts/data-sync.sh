@@ -8,10 +8,13 @@
 #   scripts/data-sync.sh push den-k8:build/workspaces/rusty-dagger   # into that checkout over ssh
 #   scripts/data-sync.sh pull den-agents:dev/rusty-dagger            # from that checkout over ssh
 #   scripts/data-sync.sh status                     # only compare the container's importer revision with this tree's
+#                                                   # (and say whether it departs from a whole import)
 #   ... --mirror                                    # also delete what the destination has and the source lacks
 #   ... HOST:CHECKOUT --import-tree                 # also local/build/import, the staging and records the tests read
 #   DAGGER_DATA_STORE=/path scripts/data-sync.sh pull
 #
+# push refuses a container that departs from one whole import (an import --only or pack repack):
+# its revision no longer says what it holds, so it must not replace another machine's data.
 # Adds and updates by default and deletes nothing. Over ssh only the changed 8 KiB blocks travel (an importer change
 # sends tens of megabytes, not 1.8 GB); onto or off the NFS store each changed file is copied whole. The receiver
 # writes a temporary file and renames it, so a game that has a container open keeps reading the old one.
@@ -43,10 +46,14 @@ elif [[ ${#folders[@]} -gt 1 ]]; then
 fi
 
 # The import records its revision in the container's first entry, worldrpg/data-container.json.
+container_head() { head -c 8192 "$data/daggerfall-data.rpak" 2>/dev/null | tr -c '[:print:]\n' '?'; }
 container_revision() {
-  head -c 8192 "$data/daggerfall-data.rpak" 2>/dev/null | grep -ao '"importerRevision": *"[0-9a-f]*"' | grep -o '[0-9a-f]\{64\}' ||
+  container_head | grep -o '"importerRevision": *"[0-9a-f]*"' | grep -o '[0-9a-f]\{64\}' ||
     echo "none (no local/data/daggerfall-data.rpak)"
 }
+# A whole import records no departures; a repack over an earlier one records one.
+container_whole() { local head; head=$(container_head); [[ $head == *'"departures": []'* ]]; }
+container_departures() { container_head | sed -n '/"departures": *\[/,/\]/p' | grep -o '"[^"]*"' | grep -v '^"departures"$'; }
 # The same target the build stamps the revision with; no restore or compile, about a second.
 checkout_revision() {
   command -v dotnet >/dev/null || { echo "unknown (dotnet is not on PATH)"; return; }
@@ -66,6 +73,10 @@ report() {
   elif [[ $container != "$checkout" ]]; then
     echo "They differ: the game will call this data stale. Pull from den-agents once it has imported this revision; never import here."
   fi
+  if [[ $container =~ ^[0-9a-f]{64}$ ]] && ! container_whole; then
+    echo "The container is not one whole import, so the game calls it stale:"
+    container_departures | sed 's/^/  /' || echo "  (it records no departures field: an import from before they were recorded)"
+  fi
 }
 
 # Where a folder of this checkout is on the other side: the same path in the remote checkout, or the store for local/data.
@@ -74,6 +85,7 @@ there() { if [[ -n $remote ]]; then echo "$remote/$1"; else echo "$store"; fi; }
 case $direction in
   push)
     report
+    container_whole || { echo "data-sync: refusing to push a container that is not one whole import; run the full import first" >&2; exit 1; }
     for folder in "${folders[@]}"; do
       [[ -d $root/$folder ]] || { echo "data-sync: $root/$folder does not exist" >&2; exit 1; }
       if [[ -n $remote ]]; then ssh "${remote%%:*}" mkdir -p "${remote#*:}/$folder"; else mkdir -p "$store"; fi

@@ -77,8 +77,9 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
     ];
 
     /// <summary>
-    /// Whether the data container was imported by the importer this ruleset was built with: content another
-    /// importer revision wrote may lack, or shape differently, what this build reads.
+    /// Whether the data container is one whole import by the importer this ruleset was built with: content another
+    /// importer revision wrote may lack, or shape differently, what this build reads, and a container that departs
+    /// from a whole import (a repack over an earlier one) holds what its revision does not say.
     /// </summary>
     public string? CheckInstalledContent(InstalledContent content)
     {
@@ -88,9 +89,13 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
         try { description = content.Description; }
         catch (InvalidDataException exception) { return exception.Message; }
         if (description is null) return $"{content.Name} carries no description of the import that produced it.";
-        return description.Revision == DaggerfallImporterRevision.Value
+        if (description.Revision != DaggerfallImporterRevision.Value)
+            return $"{content.Name} was imported by importer revision {Short(description.Revision)}, and this build reads revision {Short(DaggerfallImporterRevision.Value)}.";
+        // A repack over an earlier import: the revision is this
+        // build's, but it no longer says what the container holds.
+        return description.Departures.Count == 0
             ? null
-            : $"{content.Name} was imported by importer revision {Short(description.Revision)}, and this build reads revision {Short(DaggerfallImporterRevision.Value)}.";
+            : $"{content.Name} is not one whole import of this build's importer revision: {string.Join("; ", description.Departures)}.";
 
         static string Short(string revision) => revision.Length > 12 ? revision[..12] : revision;
     }

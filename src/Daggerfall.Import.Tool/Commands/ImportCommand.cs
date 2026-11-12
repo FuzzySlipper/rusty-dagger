@@ -14,7 +14,8 @@ namespace Daggerfall.Import.Tool.Commands;
 /// import records first, so a file no step writes any more disappears. Each step is the tool's own command,
 /// run with the arguments it would be given on the command line, so a step can be rerun alone while the
 /// importer is developed: <c>--only</c> reruns the named steps over the existing staging tree and repacks,
-/// and <c>pack</c> repacks after a command was run by hand.
+/// and <c>pack</c> repacks after a command was run by hand. Only a full run describes a container as its
+/// revision's whole import; a repack records that it departs from one, so it never reads as current.
 /// </para>
 /// <para>
 /// The run works in the repository root, and the steps are given repository-relative paths: the commands
@@ -124,7 +125,8 @@ internal static class ImportCommand
             if (status != 0) throw new InvalidOperationException($"step '{step.Label}' failed with exit status {status}; nothing was packed.");
         }
 
-        DataContainers.Pack(args.Switch("--compress"), install);
+        DataContainers.Pack(args.Switch("--compress"), install,
+            only is null ? null : $"import --only {string.Join(',', steps.Where(step => only.Contains(step.Label)).Select(step => step.Label))}");
         // A player keeps only the containers; the staging tree and the records are the developer's.
         if (ImportLayout.ReleaseDirectory is not null) Directory.Delete("local", recursive: true);
         Console.WriteLine($"import: finished in {(Environment.TickCount64 - started) / 1000}s");

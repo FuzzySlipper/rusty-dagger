@@ -172,17 +172,21 @@ internal static class DataContainers
 
     /// <summary>
     /// Writes the data container's description into the staging tree: the importer revision the container was
-    /// produced by and the descriptors of the derived packs. A pack whose payload the staging tree lacks is
-    /// refused by name, since the container would otherwise describe content it does not carry.
+    /// produced by, how its content departs from one whole import at that revision, and the descriptors of the
+    /// derived packs. A pack whose payload the staging tree lacks is refused by name, since the container would
+    /// otherwise describe content it does not carry.
     /// </summary>
-    internal static void WriteDescriptor(string staging)
+    /// <param name="repack">The command that repacked files an earlier run staged, or null for a full import.</param>
+    internal static void WriteDescriptor(string staging, string? repack = null)
     {
         IReadOnlyList<JsonObject> packs = DerivedPacks();
         string[] absent = [.. packs.Select(pack => (string)pack["payload"]!).Where(payload => !File.Exists(Path.Combine(staging, payload)))];
         if (absent.Length != 0)
             throw new InvalidOperationException($"The staging tree lacks the derived payloads [{string.Join(", ", absent)}]; run the import before packing.");
-        Describe(staging, packs);
-        Console.WriteLine($"data container: importer revision {ImporterBuild.Revision}, {packs.Count} derived content packs described");
+        string[] departures = [.. Repacked(repack)];
+        Describe(staging, packs, departures);
+        Console.WriteLine($"data container: importer revision {ImporterBuild.Revision}, {packs.Count} derived content packs described"
+            + (departures.Length == 0 ? "" : $"; it departs from a whole import, so it reads as stale: {string.Join("; ", departures)}"));
     }
 
     /// <summary>
@@ -190,18 +194,26 @@ internal static class DataContainers
     /// no content packs, since the tracks are read by name rather than through a pack. A music container packed
     /// from recordings by other means carries only the tracks and is read the same way.
     /// </summary>
-    internal static void WriteMusicDescriptor(string tracks)
+    internal static void WriteMusicDescriptor(string tracks, string? repack = null)
     {
-        Describe(tracks, []);
+        Describe(tracks, [], [.. Repacked(repack)]);
         Console.WriteLine($"music container: importer revision {ImporterBuild.Revision} described");
     }
 
-    private static void Describe(string root, IReadOnlyList<JsonObject> packs)
+    /// <summary>
+    /// A repack over files an earlier run staged: those files may come from another importer revision, so the
+    /// revision this run records no longer says what the container holds.
+    /// </summary>
+    private static IEnumerable<string> Repacked(string? repack) =>
+        repack is null ? [] : [$"repacked by {repack} over files an earlier run staged; run the full import"];
+
+    private static void Describe(string root, IReadOnlyList<JsonObject> packs, IReadOnlyList<string> departures)
     {
         JsonObject descriptor = new()
         {
             ["kind"] = DescriptorKind,
             ["importerRevision"] = ImporterBuild.Revision,
+            ["departures"] = new JsonArray([.. departures.Select(departure => JsonValue.Create(departure))]),
             ["contentPacks"] = new JsonArray([.. packs]),
         };
         PayloadFiles.WriteFile(Path.Combine(root, ImportLayout.DescriptorPath),
@@ -213,11 +225,12 @@ internal static class DataContainers
     /// when they were staged, then opens each through the Engine and checks that it carries exactly the staged
     /// files.
     /// </summary>
-    internal static void Pack(bool compress, string? install = null)
+    /// <param name="repack">The command that repacked files an earlier run staged, or null for a full import.</param>
+    internal static void Pack(bool compress, string? install, string? repack)
     {
         ImportLayout.RefuseLinkedOutputs(Directory.GetCurrentDirectory(), install);
-        WriteDescriptor(ImportLayout.Staging);
-        if (Directory.Exists(ImportLayout.MusicTracks)) WriteMusicDescriptor(ImportLayout.MusicTracks);
+        WriteDescriptor(ImportLayout.Staging, repack);
+        if (Directory.Exists(ImportLayout.MusicTracks)) WriteMusicDescriptor(ImportLayout.MusicTracks, repack);
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions());
         PackOne(host, ImportLayout.Staging, ImportLayout.Installed(ImportLayout.DataContainer, install), compress);
         if (Directory.Exists(ImportLayout.MusicTracks))

@@ -11,8 +11,8 @@ namespace WorldRpg.Kit;
 /// <para>
 /// A container is content that is installed and replaced on its own, such as data a player converts from files
 /// the product does not ship. Its description (<see cref="DescriptionPath"/>) names the revision of the tool that
-/// produced it and the content packs it carries; a pack it describes resolves exactly as a product content pack
-/// does, its payload read from the container.
+/// produced it, how its content departs from one whole run of that revision, and the content packs it carries; a
+/// pack it describes resolves exactly as a product content pack does, its payload read from the container.
 /// </para>
 /// <para>
 /// The Kit knows only that a pack may live in an installed container. Which containers a product opens, which it
@@ -57,8 +57,13 @@ public sealed class InstalledContent
 
 /// <summary>What a container says of itself: the revision of the tool that produced it and the packs it carries.</summary>
 /// <param name="Revision">The producing tool's revision, which a ruleset compares with the one it was built with.</param>
+/// <param name="Departures">
+/// How the container's content departs from one whole run of the tool at <paramref name="Revision"/>, such as a
+/// repack over files an earlier run wrote, or an input the revision does not cover; empty for a whole run. A
+/// container that departs is not current, whatever revision it names, since the revision no longer says what it holds.
+/// </param>
 /// <param name="ContentPacks">Each content pack descriptor the container carries, as its JSON.</param>
-public sealed record InstalledContentDescription(string Revision, IReadOnlyList<JsonElement> ContentPacks)
+public sealed record InstalledContentDescription(string Revision, IReadOnlyList<string> Departures, IReadOnlyList<JsonElement> ContentPacks)
 {
     internal static InstalledContentDescription Read(string container, ReadOnlyMemory<byte> bytes)
     {
@@ -70,9 +75,13 @@ public sealed record InstalledContentDescription(string Revision, IReadOnlyList<
                 throw new InvalidDataException($"its kind is not '{InstalledContent.DescriptionKind}'");
             if (!root.TryGetProperty("importerRevision", out JsonElement revision) || revision.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(revision.GetString()))
                 throw new InvalidDataException("it names no 'importerRevision'");
+            if (!root.TryGetProperty("departures", out JsonElement departures) || departures.ValueKind != JsonValueKind.Array
+                || departures.EnumerateArray().Any(departure => departure.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(departure.GetString())))
+                throw new InvalidDataException("'departures' is not an array of text");
             if (!root.TryGetProperty("contentPacks", out JsonElement packs) || packs.ValueKind != JsonValueKind.Array)
                 throw new InvalidDataException("'contentPacks' is not an array");
-            return new(revision.GetString()!, [.. packs.EnumerateArray().Select(pack => pack.Clone())]);
+            return new(revision.GetString()!, [.. departures.EnumerateArray().Select(departure => departure.GetString()!)],
+                [.. packs.EnumerateArray().Select(pack => pack.Clone())]);
         }
         catch (JsonException exception)
         {
