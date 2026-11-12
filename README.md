@@ -107,12 +107,15 @@ say what may be deleted:
   changed files go whole. After an import den-agents runs
   `scripts/data-sync.sh push`, which keeps the store current. Nothing is deleted
   unless you add `--mirror`.
-- Windows (den-win11) runs the game and never imports or verifies. `P:`, den-agents'
-  home, is mapped only on the console desktop, so a command that reads it runs
-  through `C:\Users\agent\crew\bin\run-on-desktop.ps1`. A Windows checkout pulls
-  its containers whole from den-agents' checkout with
-  `powershell -File scripts\data-sync.ps1`. Only the newest pairs publish win-x64
-  archives: `rusty install` says `RUSTY_INSTALL_NOT_PUBLISHED` for an older pin.
+- Windows (den-win11) runs the game and never imports or verifies. Its default
+  install is a native clone, `C:\dev\rusty-dagger`, set up as above, whose
+  containers come whole from den-agents' checkout through `P:` with
+  `powershell -File scripts\data-sync.ps1`. `P:`, den-agents' home, is mapped only
+  on the console desktop, so that pull and anything that opens a window run
+  through `C:\Users\agent\crew\bin\run-on-desktop.ps1`. Running from a den-agents
+  worktree over `P:` also works, for uncommitted work or a throwaway pin. Only the
+  newest pairs publish win-x64 archives: `rusty install` says
+  `RUSTY_INSTALL_NOT_PUBLISHED` for an older pin.
 - Every run prints the container's importer revision beside the checkout's. When
   they differ the copy is stale for this tree (or the tree is ahead of the last
   import): pull again once den-agents has imported that revision.
