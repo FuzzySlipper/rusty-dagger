@@ -55,7 +55,6 @@ internal static class ImportCommand
     public static ToolCommand Command { get; } = new("import",
     [
         CommandOption.Optional("--arena2", "DIR"), CommandOption.Optional("--music", "DIR"),
-        CommandOption.Optional("--block-variants", "FILE"),
         CommandOption.Optional("--repository", "DIR"), CommandOption.Optional("--install", "DIR"), CommandOption.Optional("--only", "STEP[,STEP...]"),
         CommandOption.Switch("--compress"),
     ], Run);
@@ -67,7 +66,7 @@ internal static class ImportCommand
     /// The inputs a run reads, as repository-relative paths where they lie inside the repository. The cinematics
     /// are converted only when FFmpeg is on PATH; without it the game plays with none.
     /// </summary>
-    internal sealed record Inputs(string Arena2, string? Music, string? BlockVariants, bool Cinematics = true);
+    internal sealed record Inputs(string Arena2, string? Music, bool Cinematics = true);
 
     private static int Run(CommandArguments args)
     {
@@ -83,7 +82,6 @@ internal static class ImportCommand
         Inputs inputs = new(
             Portable(Arena2Folder(Path.GetFullPath(arena2, invoked)) ?? arena2, invoked, repository),
             args.Optional("--music") is { } music ? Portable(music, invoked, repository) : null,
-            args.Optional("--block-variants") is { } variants ? Portable(variants, invoked, repository) : null,
             cinematics);
         IReadOnlyList<Step> steps = Steps(inputs);
         HashSet<string>? only = args.Optional("--only") is { } names
@@ -111,8 +109,6 @@ internal static class ImportCommand
         Console.WriteLine(cinematics
             ? $"import: {FirstLine("ffmpeg", "-version")}"
             : "import: warning: ffmpeg and ffprobe are not both on PATH, so the cinematics are not converted and the game plays without them; install FFmpeg and import again to add them.");
-        if (inputs.BlockVariants is { } descriptor)
-            Console.WriteLine($"import: warning: the block variants of '{descriptor}' are not importer revision inputs, so the containers will read as stale; import without --block-variants for data any checkout reads as current.");
         long started = Environment.TickCount64;
         if (only is null)
         {
@@ -218,9 +214,8 @@ internal static class ImportCommand
 
         // 5. The per-block world publication: every RMB exterior, building interior and RDB block a location
         //    places, normalized in its own frame, its static meshes placing the world media publication's meshes.
-        string[] variants = inputs.BlockVariants is null ? [] : ["--variants", inputs.BlockVariants];
-        Add("world-blocks", ["world-blocks", "--arena2", arena2, "--pack", imported, "--buildings", buildings, "--shared", worldMedia, "--inventory", Inventory,
-            "--out", ImportLayout.WorldBlocks, "--source-manifest", $"{records}/world-blocks.sources.json", .. variants]);
+        Add("world-blocks", "world-blocks", "--arena2", arena2, "--pack", imported, "--buildings", buildings, "--shared", worldMedia, "--inventory", Inventory,
+            "--out", ImportLayout.WorldBlocks, "--source-manifest", $"{records}/world-blocks.sources.json");
 
         // 6. Site closures. Each writes only what is its own: every body and shared sidecar entry is referenced
         //    from the world media publication above. Its source manifest goes to the import records.
@@ -275,7 +270,6 @@ internal static class ImportCommand
         bool IsFile(string path) => File.Exists(Path.Combine(repository, path));
         bool IsDirectory(string path) => Directory.Exists(Path.Combine(repository, path));
 
-        if (inputs.BlockVariants is { } variants && !IsFile(variants)) yield return $"block variant descriptor '{variants}'";
         if (!IsDirectory(inputs.Arena2))
         {
             yield return $"Arena2 directory '{inputs.Arena2}' (link local/inputs/arena2 to the game's ARENA2 folder or pass --arena2)";

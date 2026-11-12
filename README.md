@@ -78,9 +78,7 @@ say what may be deleted:
 - To work on the importer, `import --only STEP,...` reruns named steps and repacks.
   The result records that it is a repack over an earlier run, so the entry screen
   calls it stale (a warning under `rusty dev`) and `scripts/data-sync.sh push`
-  refuses it; only a full import reads as current. `--block-variants FILE` is the
-  same: the variants are not revision inputs, so the description lists their
-  digests and the data reads as stale.
+  refuses it; only a full import reads as current.
 - On our own network only den-agents imports; every other machine copies its
   containers with `scripts/data-sync.sh` and never imports. They are derived from
   arena2, so they never leave the network.

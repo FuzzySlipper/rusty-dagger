@@ -20,10 +20,6 @@ public sealed class QuestWorldActionTests
     [InlineData("transfer pc inside _location_ marker 2")]
     [InlineData("worldupdate location at 1 in region 17 variant restored")]
     [InlineData("worldupdate locationnew named A New Town in region 17 variant restored")]
-    [InlineData("worldupdate block S0000000.RMB at 1 in region 17 variant restored")]
-    [InlineData("worldupdate blockAll S0000000.RMB variant -")]
-    [InlineData("worldupdate building S0000000.RMB 1 at 1 in region 17 variant restored")]
-    [InlineData("worldupdate buildingAll S0000000.RMB 1 variant restored")]
     public void Retained_source_forms_compile(string action)
     {
         var source = new DaggerfallQuestSourceDefinition("world", "", "world.txt", DaggerfallQuestDisposition.Compiled, [], [new("headless", 1, [action], null)], []);
@@ -114,12 +110,10 @@ public sealed class QuestWorldActionTests
         Assert.Null(restored.Sites.Projection.Inputs.VariantName);
     }
 
-    [Theory]
-    [InlineData("worldupdate blockAll S0000000.RMB variant altered")]
-    [InlineData("worldupdate location at 1 in region 17 variant absent")]
-    public void World_updates_without_published_content_complete_and_keep_base_content(string action)
+    [Fact]
+    public void A_world_update_without_published_content_completes_and_keeps_base_content()
     {
-        var definitions = QuestWorldAdmissionTests.Definitions(actions: [action, "say 100"], messages: ["Runs after fallback."]);
+        var definitions = QuestWorldAdmissionTests.Definitions(actions: ["worldupdate location at 1 in region 17 variant absent", "say 100"], messages: ["Runs after fallback."]);
         using var f = new SanguineRoseSessionTests.Fixture(definitions: definitions);
         var profiles = new DaggerfallSiteProfiles([f.Inputs, f.Castle]); f.Session.AdmitSiteProfiles(profiles.ForSession());
         Start(f); Advance(f.Session);

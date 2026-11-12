@@ -122,7 +122,7 @@ public sealed class ImporterRevisionTests
         HashSet<string> inputs = RevisionInputs();
         List<string> outside = [];
         HashSet<string> checkedPaths = new(StringComparer.Ordinal);
-        foreach (ImportCommand.Step step in ImportCommand.Steps(new("local/inputs/arena2", "local/inputs/Sound", null)))
+        foreach (ImportCommand.Step step in ImportCommand.Steps(new("local/inputs/arena2", "local/inputs/Sound")))
         {
             ToolCommand command = Program.Commands[step.Arguments[0]];
             // A staged option the step leaves out reads its default, so the default is checked too.

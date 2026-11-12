@@ -68,9 +68,8 @@ internal static class SiteInputs
     /// A plan or a determinism check describes the publication a write produces, so it is recorded under the
     /// write verb and a plan of an unchanged tree compares equal to the tree.
     /// </summary>
-    public static ImportInvocation Invocation(CommandArguments args, IReadOnlyList<PublishedSource>? authoredOverlays = null) => new(
-        ["daggerfall-import-tool", .. args.Raw.Select((argument, index) => index == 0 && argument is "plan" or "verify-real-data" ? "write" : argument)],
-        authoredOverlays ?? []);
+    public static ImportInvocation Invocation(CommandArguments args) => new(
+        ["daggerfall-import-tool", .. args.Raw.Select((argument, index) => index == 0 && argument is "plan" or "verify-real-data" ? "write" : argument)]);
 
     /// <summary>
     /// Writes the site's source manifest to the import records: the corpus scanned against the documented

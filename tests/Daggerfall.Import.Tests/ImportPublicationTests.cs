@@ -30,11 +30,10 @@ public sealed class ImportPublicationTests : IDisposable
     }
 
     [Fact]
-    public void ManifestRecordsTheCommandAndAuthoredOverlaysButNotTheImporterRevision()
+    public void ManifestRecordsTheCommandButNotTheImporterRevision()
     {
         ImportPublicationPlan plan = CreatePlan(new ImportPublicationArtifact("value.bin", "value"u8));
-        PublishedSource overlay = new("world-block-variants/index.json", ContentDigest.Compute("overlay"u8), 7);
-        ImportPublicationPlan invoked = plan.WithInvocation(new ImportInvocation(["daggerfall-import-tool", "write", "--arena2", "arena2"], [overlay]));
+        ImportPublicationPlan invoked = plan.WithInvocation(new ImportInvocation(["daggerfall-import-tool", "write", "--arena2", "arena2"]));
 
         // Only the manifest changes: the recorded invocation is provenance, not another artifact.
         Assert.Equal(
@@ -42,16 +41,13 @@ public sealed class ImportPublicationTests : IDisposable
             invoked.Artifacts.Where(artifact => artifact.RelativePath != "import-manifest.json").Select(artifact => artifact.ContentHash));
         ReadOnlyMemory<byte> manifestBytes = invoked.Artifacts.Single(artifact => artifact.RelativePath == "import-manifest.json").Bytes;
         CanonicalImportManifest reopened = ImportPublicationManifestSerializer.Deserialize(manifestBytes.Span);
-        // The command and overlays are stated once, as top-level fields.
+        // The command is stated once, as a top-level field.
         Assert.DoesNotContain("\"invocation\"", Encoding.UTF8.GetString(manifestBytes.Span), StringComparison.Ordinal);
         // The importer revision is the data container's, so a revision change rewrites no manifest.
         Assert.DoesNotContain("importerRevision", Encoding.UTF8.GetString(manifestBytes.Span), StringComparison.Ordinal);
         Assert.Equal(["daggerfall-import-tool", "write", "--arena2", "arena2"], reopened.Command);
-        Assert.Equal(overlay, Assert.Single(reopened.AuthoredOverlays));
-        // An authored overlay is recorded beside the sources it overlays, never among them.
-        Assert.DoesNotContain(reopened.Sources, source => source.Path == overlay.Path);
         Assert.Empty(plan.Manifest.Command);
-        Assert.Throws<ArgumentException>(() => plan.WithInvocation(new ImportInvocation(["write\n"], [])));
+        Assert.Throws<ArgumentException>(() => plan.WithInvocation(new ImportInvocation(["write\n"])));
     }
 
     [Fact]

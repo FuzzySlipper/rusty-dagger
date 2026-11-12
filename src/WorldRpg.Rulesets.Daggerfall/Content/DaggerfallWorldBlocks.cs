@@ -109,7 +109,7 @@ internal sealed class DaggerfallWorldBlockDocument
 /// composition: the index is read the first time a location needs a block, and each block document only
 /// when a location that places it is assembled, so no block body is held once the documents are interpreted.
 /// </summary>
-internal sealed partial class DaggerfallWorldBlocks
+internal sealed class DaggerfallWorldBlocks
 {
 
     /// <summary>The bundle's root inside the content store.</summary>
@@ -149,7 +149,7 @@ internal sealed partial class DaggerfallWorldBlocks
     /// <summary>Whether the publication places a block for this key.</summary>
     internal bool Contains(DaggerfallWorldBlockKey key)
     {
-        // Once read, the index answers without opening the bundle again: residency and quest selection ask per profile.
+        // Once read, the index answers without opening the bundle again: residency asks per profile.
         lock (_gate)
             if (_index is not null) return _index.ContainsKey(key);
         using DaggerfallDataRoot bundle = Open();
@@ -160,7 +160,7 @@ internal sealed partial class DaggerfallWorldBlocks
     /// Reads the documents of the given blocks in one bundle opening. A block the publication does not
     /// carry, or a document that does not read, is reported by name; nothing is skipped.
     /// </summary>
-    internal IReadOnlyDictionary<DaggerfallWorldBlockKey, DaggerfallWorldBlockDocument> Read(IEnumerable<DaggerfallWorldBlockKey> keys, Func<DaggerfallWorldBlockKey, DaggerfallBlockVariantSelection>? select = null)
+    internal IReadOnlyDictionary<DaggerfallWorldBlockKey, DaggerfallWorldBlockDocument> Read(IEnumerable<DaggerfallWorldBlockKey> keys)
     {
         ArgumentNullException.ThrowIfNull(keys);
         DaggerfallWorldBlockKey[] requested = [.. keys.Distinct()];
@@ -176,9 +176,6 @@ internal sealed partial class DaggerfallWorldBlocks
                 continue;
             }
 
-            // A selection without published content keeps the base block; its owner warned when it was selected.
-            if (select?.Invoke(key) is { Empty: false } selection && _variants.TryGetValue((key, selection.Key), out IndexEntry? variant))
-                entry = variant;
             ReadOnlyMemory<byte> bytes;
             try { bytes = bundle.ReadBytes(entry.Document); }
             catch (Exception exception) when (exception is FileNotFoundException or EngineCallException)
@@ -205,7 +202,6 @@ internal sealed partial class DaggerfallWorldBlocks
             {
                 using JsonDocument document = JsonDocument.Parse(bundle.ReadBytes(IndexPath));
                 JsonElement root = DaggerfallBaseContent.Object(document.RootElement, "world block index", diagnostics);
-                ReadVariants(root, diagnostics);
                 foreach (JsonElement value in DaggerfallBaseContent.Array(root, "blocks", diagnostics))
                 {
                     JsonElement block = DaggerfallBaseContent.Object(value, "world block index entry", diagnostics);

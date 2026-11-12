@@ -2,7 +2,6 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Daggerfall.Import.Audio;
-using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
 using Daggerfall.Import.Tool;
 using Daggerfall.Import.Tool.Commands;
@@ -78,11 +77,10 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void Every_missing_input_is_named_before_anything_is_written()
     {
-        ImportCommand.Inputs inputs = new("local/inputs/arena2", "local/inputs/Sound", "variants.json");
+        ImportCommand.Inputs inputs = new("local/inputs/arena2", "local/inputs/Sound");
 
         string[] missing = [.. ImportCommand.MissingInputs(inputs, root)];
 
-        Assert.Contains(missing, entry => entry.StartsWith("block variant descriptor 'variants.json'", StringComparison.Ordinal));
         Assert.Contains(missing, entry => entry.StartsWith("Arena2 directory 'local/inputs/arena2'", StringComparison.Ordinal));
         Assert.Contains($"tracked file '{ImportCommand.Donor}/Assets/Scripts/Utility/EnemyBasics.cs'", missing);
         Assert.Contains($"tracked directory '{ImportCommand.Donor}/Assets/StreamingAssets/Quests'", missing);
@@ -210,8 +208,8 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void Without_FFmpeg_the_import_converts_no_cinematics_and_changes_nothing_else()
     {
-        IReadOnlyList<ImportCommand.Step> with = ImportCommand.Steps(new("local/inputs/arena2", null, null));
-        IReadOnlyList<ImportCommand.Step> without = ImportCommand.Steps(new("local/inputs/arena2", null, null, Cinematics: false));
+        IReadOnlyList<ImportCommand.Step> with = ImportCommand.Steps(new("local/inputs/arena2", null));
+        IReadOnlyList<ImportCommand.Step> without = ImportCommand.Steps(new("local/inputs/arena2", null, Cinematics: false));
 
         Assert.Equal(["cinematic-media-vid", "cinematic-media-flc"], with.Select(step => step.Label).Where(label => label.StartsWith("cinematic-media", StringComparison.Ordinal)));
         Assert.Equal(
@@ -222,7 +220,7 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void The_relief_is_baked_after_the_sections_it_reads()
     {
-        string[] labels = [.. ImportCommand.Steps(new("local/inputs/arena2", null, null)).Select(step => step.Label)];
+        string[] labels = [.. ImportCommand.Steps(new("local/inputs/arena2", null)).Select(step => step.Label)];
 
         int relief = Array.IndexOf(labels, "relief");
         Assert.True(relief > Array.IndexOf(labels, "locations"));
@@ -232,7 +230,7 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void Every_step_is_a_tool_command_the_commands_own_grammar_accepts()
     {
-        ImportCommand.Inputs inputs = new("local/inputs/arena2", "local/inputs/Sound", "variants.json");
+        ImportCommand.Inputs inputs = new("local/inputs/arena2", "local/inputs/Sound");
 
         IReadOnlyList<ImportCommand.Step> steps = ImportCommand.Steps(inputs);
 
@@ -249,13 +247,12 @@ public sealed class DataContainerImportTests : IDisposable
             argument => Assert.Equal(AuthoredUi.ProductDirectory, argument));
         Assert.Equal(["music-tracks", "classic-media"], steps.Take(2).Select(step => step.Label));
         Assert.Equal("source-coverage", steps[^1].Label);
-        Assert.Contains("variants.json", steps.Single(step => step.Label == "world-blocks").Arguments);
     }
 
     [Fact]
     public void A_command_rerun_without_its_staged_options_reads_and_writes_what_the_import_does()
     {
-        IReadOnlyList<ImportCommand.Step> steps = ImportCommand.Steps(new("local/inputs/arena2", "local/inputs/Sound", null));
+        IReadOnlyList<ImportCommand.Step> steps = ImportCommand.Steps(new("local/inputs/arena2", "local/inputs/Sound"));
 
         int staged = 0;
         foreach (ImportCommand.Step step in steps)
@@ -288,8 +285,8 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void The_data_container_steps_are_the_same_whichever_music_was_supplied()
     {
-        IReadOnlyList<ImportCommand.Step> without = ImportCommand.Steps(new("local/inputs/arena2", null, null));
-        IReadOnlyList<ImportCommand.Step> with = ImportCommand.Steps(new("local/inputs/arena2", "local/inputs/Sound", null));
+        IReadOnlyList<ImportCommand.Step> without = ImportCommand.Steps(new("local/inputs/arena2", null));
+        IReadOnlyList<ImportCommand.Step> with = ImportCommand.Steps(new("local/inputs/arena2", "local/inputs/Sound"));
 
         // Only the music container's own step reads the music folder; no other step names it or what it staged.
         Assert.DoesNotContain(without, step => step.Label == "music-tracks");
@@ -358,27 +355,6 @@ public sealed class DataContainerImportTests : IDisposable
         string departure = (string)Assert.Single(repacked["departures"]!.AsArray())!;
         Assert.Contains("repacked by import --only locations over", departure, StringComparison.Ordinal);
         Assert.Contains("run the full import", departure, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Block_variants_the_world_blocks_carry_are_recorded_by_digest_as_a_departure()
-    {
-        // Variant documents are authored inputs outside the importer revision, and no default import passes them, so
-        // a container that carries them records each and reads as stale for any checkout.
-        string staging = Path.Combine(root, "staging");
-        foreach (JsonObject pack in DataContainers.DerivedPacks()) Write(staging, (string)pack["payload"]!, "{}"u8);
-        PublishedSource variant = new("world-block-variants/index.json", ContentDigest.Compute("variants"u8), 8);
-        ImportPublicationPlan plan = ImportPublicationPlan.Create(new("daggerfall-import/world-blocks", [new("arena2/BLOCKS.BSA", ContentDigest.Compute("blocks"u8), 6)]),
-            [new("blocks.json", "{}"u8.ToArray())], new(["daggerfall-import-tool", "world-blocks", "--variants", "variants.json"], [variant]));
-        Write(staging, "worldrpg/imports/world-blocks/" + ImportPublicationManifestSerializer.ManifestRelativePath,
-            plan.Artifacts.Single(artifact => artifact.RelativePath == ImportPublicationManifestSerializer.ManifestRelativePath).Bytes.ToArray());
-
-        DataContainers.WriteDescriptor(staging);
-
-        JsonNode descriptor = JsonNode.Parse(File.ReadAllText(Path.Combine(staging, ImportLayout.DescriptorPath)))!;
-        string departure = (string)Assert.Single(descriptor["departures"]!.AsArray())!;
-        Assert.StartsWith("worldrpg/imports/world-blocks carries authored inputs no default import passes", departure, StringComparison.Ordinal);
-        Assert.Contains($"world-block-variants/index.json (sha256 {variant.ContentDigest.Value})", departure, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -26,7 +26,7 @@ function Report {
         $text = [System.Text.Encoding]::UTF8.GetString($head, 0, $read)
         $match = [regex]::Match($text, '"importerRevision": *"([0-9a-f]{64})"')
         if ($match.Success) { $container = $match.Groups[1].Value }
-        # A whole import records no departures; a repack over an earlier one, or block variants, records each.
+        # A whole import records no departures; a repack over an earlier one records one.
         $whole = $text -match '"departures": *\[\]'
     }
     # The same target the build stamps the revision with; no restore or compile, about a second.
@@ -43,7 +43,7 @@ function Report {
         Write-Output 'They differ: the game will call this data stale. Pull from den-agents once it has imported this revision; never import here.'
     }
     if ($container -match '^[0-9a-f]{64}$' -and -not $whole) {
-        Write-Output 'The container is not one whole import (an import --only or pack repack, or block variants), so the game calls it stale.'
+        Write-Output 'The container is not one whole import (an import --only or pack repack), so the game calls it stale.'
     }
 }
 

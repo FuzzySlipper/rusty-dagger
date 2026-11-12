@@ -4,7 +4,7 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-internal sealed record DaggerfallQuestWorldUpdate(string Kind, int? Region, int? Location, string? LocationName, string? Block, int? Building, string Variant);
+internal sealed record DaggerfallQuestWorldUpdate(string Kind, int? Region, int? Location, string? LocationName, string Variant);
 
 internal static partial class DaggerfallQuestTaskCompiler
 {
@@ -15,8 +15,6 @@ internal static partial class DaggerfallQuestTaskCompiler
     [
         Header(@"^worldupdate\s+(?<kind>location)\s+at\s+(?<location>\d+)\s+in\s+region\s+(?<region>\d+)\s+variant\s+(?<variant>[a-zA-Z0-9_.-]+)$"),
         Header(@"^worldupdate\s+(?<kind>locationnew)\s+named\s+(?<name>.+)\s+in\s+region\s+(?<region>\d+)\s+variant\s+(?<variant>[a-zA-Z0-9_.-]+)$"),
-        Header(@"^worldupdate\s+(?<kind>block|building)\s+(?<block>[a-zA-Z0-9_.-]+)(?:\s+(?<building>\d+))?\s+at\s+(?<location>\d+)\s+in\s+region\s+(?<region>\d+)\s+variant\s+(?<variant>[a-zA-Z0-9_.-]+)$"),
-        Header(@"^worldupdate\s+(?<kind>blockAll|buildingAll)\s+(?<block>[a-zA-Z0-9_.-]+)(?:\s+(?<building>\d+))?\s+variant\s+(?<variant>[a-zA-Z0-9_.-]+)$"),
     ];
     private static DaggerfallQuestTaskOperation? CompileWorldAction(string line, int sourceLine)
     {
@@ -35,11 +33,10 @@ internal static partial class DaggerfallQuestTaskCompiler
             var match = pattern.Match(line);
             if (!match.Success) continue;
             string kind = match.Groups["kind"].Value.ToLowerInvariant();
-            if (kind.StartsWith("building", StringComparison.Ordinal) != match.Groups["building"].Success && kind is not ("location" or "locationnew")) continue;
             int? Number(string name) => match.Groups[name].Success ? Step(match.Groups[name].Value, sourceLine) : null;
             string? Text(string name) => match.Groups[name].Success ? match.Groups[name].Value : null;
             return new(DaggerfallQuestTaskOperationKind.WorldUpdate, sourceLine, line, [], [], null,
-                WorldUpdate: new(kind, Number("region"), Number("location"), Text("name"), Text("block"), Number("building"), match.Groups["variant"].Value));
+                WorldUpdate: new(kind, Number("region"), Number("location"), Text("name"), match.Groups["variant"].Value));
         }
         return null;
     }

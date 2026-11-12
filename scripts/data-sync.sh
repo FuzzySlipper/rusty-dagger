@@ -13,7 +13,7 @@
 #   ... HOST:CHECKOUT --import-tree                 # also local/build/import, the staging and records the tests read
 #   DAGGER_DATA_STORE=/path scripts/data-sync.sh pull
 #
-# push refuses a container that departs from one whole import (an import --only or pack repack, or block variants):
+# push refuses a container that departs from one whole import (an import --only or pack repack):
 # its revision no longer says what it holds, so it must not replace another machine's data.
 # Adds and updates by default and deletes nothing. Over ssh only the changed 8 KiB blocks travel (an importer change
 # sends tens of megabytes, not 1.8 GB); onto or off the NFS store each changed file is copied whole. The receiver

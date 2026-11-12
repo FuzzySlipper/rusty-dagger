@@ -30,8 +30,8 @@ internal sealed record DaggerfallSiteDetailSource(DaggerfallSiteDetails? Details
 /// </summary>
 /// <remarks>
 /// The most recently read locations are kept, so the site the player is in, and the few a quest or the map is
-/// looking at, are read once rather than on every question, while a pass over many locations (a block variant
-/// selected for every location that places a block) does not keep all of them.
+/// looking at, are read once rather than on every question, while a pass over many locations does not keep all of
+/// them.
 /// </remarks>
 internal sealed class DaggerfallSiteDetails
 {

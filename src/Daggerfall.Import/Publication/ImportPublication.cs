@@ -98,35 +98,24 @@ public sealed record ImportPublicationManifestArtifact(string RelativePath, Cont
     }
 }
 
-/// <summary>
-/// How a publication was produced: the command line that writes it and the authored overlay documents it
-/// applied. The overlays are recorded beside the sources rather than among them, because the sprite
-/// authoring basis an overlay is written against is computed from the sources.
-/// </summary>
-public sealed record ImportInvocation(IReadOnlyList<string> Command, IReadOnlyList<PublishedSource> AuthoredOverlays)
+/// <summary>How a publication was produced: the command line that writes it.</summary>
+public sealed record ImportInvocation(IReadOnlyList<string> Command)
 {
-    public static ImportInvocation None { get; } = new([], []);
+    public static ImportInvocation None { get; } = new([]);
 
     public void Validate()
     {
         ArgumentNullException.ThrowIfNull(Command);
-        ArgumentNullException.ThrowIfNull(AuthoredOverlays);
         if (Command.Any(argument => argument is null || argument.Any(char.IsControl)))
         {
             throw new ArgumentException("A recorded command argument must be plain text.", nameof(Command));
-        }
-
-        foreach (PublishedSource overlay in AuthoredOverlays)
-        {
-            ArgumentNullException.ThrowIfNull(overlay);
-            overlay.Validate();
         }
     }
 }
 
 /// <summary>
-/// Canonical statement of an import result: the command line that produced it, the sources and authored
-/// overlays it read, and the artifacts it wrote. It excludes timestamps and the importer revision, which the
+/// Canonical statement of an import result: the command line that produced it, the sources it read, and the
+/// artifacts it wrote. It excludes timestamps and the importer revision, which the
 /// data container's description records once; the command is recorded as the caller spelled it, so a caller
 /// that passes repository-relative paths keeps the manifest host-independent.
 /// </summary>
@@ -134,19 +123,17 @@ public sealed record CanonicalImportManifest(
     string ImporterId,
     IReadOnlyList<string> Command,
     IReadOnlyList<PublishedSource> Sources,
-    IReadOnlyList<PublishedSource> AuthoredOverlays,
     IReadOnlyList<ImportPublicationManifestArtifact> Artifacts)
 {
     public CanonicalImportManifest Canonicalize() => this with
     {
         Sources = Sources.OrderBy(source => source.Path, StringComparer.Ordinal).ToArray(),
-        AuthoredOverlays = AuthoredOverlays.OrderBy(source => source.Path, StringComparer.Ordinal).ToArray(),
         Artifacts = Artifacts.OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal).Select(artifact => artifact.Canonicalize()).ToArray(),
     };
 
     /// <summary>The invocation this manifest records, as a view of its own fields rather than another one.</summary>
     [JsonIgnore]
-    public ImportInvocation Invocation => new(Command, AuthoredOverlays);
+    public ImportInvocation Invocation => new(Command);
 
     public void Validate()
     {
@@ -155,7 +142,6 @@ public sealed record CanonicalImportManifest(
         ArgumentNullException.ThrowIfNull(Artifacts);
         Invocation.Validate();
         ValidateUnique(Sources, source => source.Path, "source path");
-        ValidateUnique(AuthoredOverlays, source => source.Path, "authored overlay path");
         ValidateUnique(Artifacts, artifact => artifact.RelativePath, "artifact path");
         foreach (PublishedSource source in Sources)
         {
@@ -311,7 +297,6 @@ public sealed class ImportPublicationPlan
             provenance.ImporterId,
             invocation.Command.ToArray(),
             provenance.Sources.Select(source => new PublishedSource(source.SourcePath, source.ContentDigest, source.ByteLength)).ToArray(),
-            invocation.AuthoredOverlays.ToArray(),
             orderedContent.Select(artifact => new ImportPublicationManifestArtifact(artifact.RelativePath, artifact.ContentHash, artifact.Bytes.Length, artifact.DependsOnPaths)).ToArray());
         manifest.Validate();
         byte[] manifestBytes = ImportPublicationManifestSerializer.Serialize(manifest);

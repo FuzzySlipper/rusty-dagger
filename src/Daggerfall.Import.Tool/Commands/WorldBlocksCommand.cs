@@ -20,7 +20,7 @@ internal static class WorldBlocksCommand
 {
     public static ToolCommand Command { get; } = new("world-blocks",
         [Options.Arena2, Options.Pack, SiteInputs.Shared, CommandOption.Staged(SiteInputs.Output.Name, "OUTPUT_DIR", ImportLayout.WorldBlocks), Options.Inventory,
-            CommandOption.Staged(SiteInputs.SourceManifest.Name, "FILE", $"{ImportLayout.Records}/world-blocks.sources.json"), CommandOption.Optional("--variants", "FILE"),
+            CommandOption.Staged(SiteInputs.SourceManifest.Name, "FILE", $"{ImportLayout.Records}/world-blocks.sources.json"),
             CommandOption.Staged("--buildings", "PAYLOAD.json", ImportLayout.BuildingsPayload)], Run);
 
     private static int Run(CommandArguments args)
@@ -36,9 +36,8 @@ internal static class WorldBlocksCommand
             ?? throw new InvalidOperationException($"The block building catalog '{args["--buildings"]}' is empty.");
         WorldBlocksPublication publication = Arena2WorldBlocksPublication.Create(sources, locations, Arena2SitePublication.WorldMediaImporterId,
             line => Console.WriteLine($"world blocks: {line} ({clock.Elapsed.TotalSeconds:F0}s)"), catalog);
-        if (args.Optional("--variants") is { } variants) publication = WorldBlockVariantPublication.Append(publication, variants);
         RequireSharedMeshes(publication, args[SiteInputs.Shared.Name]);
-        ImportPublicationPlan plan = publication.Plan.WithInvocation(SiteInputs.Invocation(args, publication.Plan.Manifest.AuthoredOverlays));
+        ImportPublicationPlan plan = publication.Plan.WithInvocation(SiteInputs.Invocation(args));
         SiteInputs.PrintComparison(ImportPublicationWriter.Write(plan, Path.GetFullPath(args[SiteInputs.Output.Name])));
         SiteInputs.WriteSourceManifest(args, plan);
         DaggerfallWorldBlockCounts counts = publication.Index.Counts;

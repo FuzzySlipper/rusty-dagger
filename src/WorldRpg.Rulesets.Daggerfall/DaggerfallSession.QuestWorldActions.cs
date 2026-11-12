@@ -11,7 +11,7 @@ internal sealed partial class DaggerfallSession
         {
             var update = operation.WorldUpdate!;
             var worldProfiles = _sites.Profiles ?? throw new NotSupportedException("WorldUpdate requires an admitted site catalog.");
-            DaggerfallSiteId? site = null;
+            DaggerfallSiteId site;
             if (update.Kind == "locationnew")
             {
                 var named = Site.Records.Where(value => value.Region == update.Region && value.Name == update.LocationName).ToArray();
@@ -23,13 +23,12 @@ internal sealed partial class DaggerfallSession
                 }
                 site = named[0].Id;
             }
-            else if (update.Region is int region && update.Location is int location)
+            else
             {
-                site = new(region, location);
+                site = new(update.Region!.Value, update.Location!.Value);
                 _ = Site.Records.SingleOrDefault(value => value.Id == site) ?? throw new NotSupportedException($"WorldUpdate location '{site}' is absent from the canonical catalog.");
             }
-            if (update.Kind is "location" or "locationnew") worldProfiles.SetLocationVariant(site!.Value, update.Variant);
-            else worldProfiles.SetBlockVariant(site, update.Block!, update.Building, update.Variant);
+            worldProfiles.SetLocationVariant(site, update.Variant);
             return true;
         }
         if (operation.Kind == DaggerfallQuestTaskOperationKind.RevealPlace)
