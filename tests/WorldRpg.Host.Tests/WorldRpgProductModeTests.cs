@@ -305,6 +305,30 @@ public sealed class WorldRpgProductModeTests
     }
 
     [Fact]
+    public void Attach_republishes_the_current_session_without_restarting_it_and_nothing_after_shutdown()
+    {
+        PlainRuleset ruleset = new();
+        WorldRpgProduct product = new(Context(), ruleset, new GameBundleId("test.bundle"));
+        StartInPlay(product);
+        int published = ruleset.Session.Published;
+
+        // An admitted update publishes through the session's own update, never by republishing.
+        product.Update(Update(1));
+        Assert.Equal(published, ruleset.Session.Published);
+
+        // A newly attached client gets the current session's projection again; the session stays.
+        product.Attach();
+        Assert.Equal(published + 1, ruleset.Session.Published);
+        Assert.False(ruleset.Session.Disposed);
+
+        // Shutdown disposes the session, and an attach after it has nothing to republish.
+        product.Shutdown();
+        product.Attach();
+        Assert.Equal(published + 1, ruleset.Session.Published);
+        Assert.True(ruleset.Session.Disposed);
+    }
+
+    [Fact]
     public void A_session_that_cannot_apply_a_mode_is_never_told_the_world_is_held()
     {
         // Pausing is this product's own doing, because it drops the update. A modal and a death
@@ -384,9 +408,6 @@ public sealed class WorldRpgProductModeTests
         Assert.Equal(ProductMode.Playing, beginRuleset.LastApplied);
         Assert.Equal(1, beginRuleset.Updates);
         Assert.Equal(ProductMode.Title, beginRuleset.ModeAtUpdate);
-
-        // The world really is held for that update in the ruleset too, which is the half a fake session
-        // cannot show: the seam test below counts admitted steps across the same transition.
 
         // The entry screen is the product's own gate, not a state a caller can step over: every other
         // transition is refused while it is up, and each refusal says the screen is why.
@@ -657,9 +678,11 @@ public sealed class WorldRpgProductModeTests
     {
         internal int Updates { get; private set; }
 
-        public void PublishInitial()
-        {
-        }
+        internal int Published { get; private set; }
+
+        internal bool Disposed { get; private set; }
+
+        public void PublishInitial() => Published++;
 
         public ProductUpdateResult Update(ProductUpdate update)
         {
@@ -667,9 +690,7 @@ public sealed class WorldRpgProductModeTests
             return ProductUpdateResult.None;
         }
 
-        public void Dispose()
-        {
-        }
+        public void Dispose() => Disposed = true;
     }
 
     private static ProductContent Content() => new(ContentFiles());

@@ -1,6 +1,9 @@
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.Combat;
+using WorldRpg.Kit.Progression;
+using WorldRpg.Kit.Targeting;
 using Xunit;
 
 namespace WorldRpg.Kit.Tests;
@@ -135,6 +138,20 @@ public sealed class ActorsAndProgressionTests
         Assert.Equal(102, second.DurableId);
         Assert.Equal("rat", first.Actor.TypeId.Value);
         Assert.Equal([101L, 102L], actors.All.Select(actor => actor.DurableId).Order());
+    }
+
+    [Fact]
+    public void Actors_carry_only_the_components_their_capabilities_opt_into()
+    {
+        using ActorsState actors = new();
+        PlayerActorState player = actors.CreatePlayer(1, new EntityTypeId("player"), Stats(), "health", ActorCapabilities.Attacks);
+        ActorState plain = actors.CreateActor(101, new EntityTypeId("rat"), Stats(), Pose(1), "health");
+
+        Assert.True(player.Actor.TryGet<AttackState>(out _));
+        Assert.False(player.Actor.TryGet<TargetingComponent>(out _));
+        Assert.False(player.Actor.TryGet<ProgressionState>(out _));
+        Assert.False(plain.Actor.TryGet<AttackState>(out _));
+        Assert.False(plain.Actor.TryGet<TargetingComponent>(out _));
     }
 
     [Fact]

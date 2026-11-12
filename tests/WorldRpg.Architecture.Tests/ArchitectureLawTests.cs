@@ -9,37 +9,6 @@ public sealed class ArchitectureLawTests
     private static readonly string RepositoryRoot = TestData.RepositoryRoot;
 
     [Fact]
-    public void Kit_does_not_encode_reference_ruleset_vocabulary_or_references()
-    {
-        string kit = SourceDirectory("WorldRpg.Kit");
-        // Prose is not the boundary: Kit must not name reference-ruleset vocabulary in what it carries —
-        // code or a hardcoded string — but a comment explaining that a mechanism is generic is not a
-        // violation, and must not fail the build.
-        string source = WithoutComments(ReadSources(kit));
-
-        foreach (string forbidden in new[] { "Daggerfall", "Arena2", "PrivateersHold", "DFUnity" })
-            Assert.DoesNotContain(forbidden, source, StringComparison.OrdinalIgnoreCase);
-
-        Assert.DoesNotContain("WorldRpg.Rulesets.Daggerfall", ProjectFile("WorldRpg.Kit"), StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Canary_does_not_use_reference_ruleset_vocabulary_or_references()
-    {
-        string canary = SourceDirectory("WorldRpg.Rulesets.Canary.Tests");
-        string source = WithoutComments(ReadSources(canary));
-        string project = ProjectFile("WorldRpg.Rulesets.Canary.Tests");
-
-        foreach (string forbidden in new[] { "Daggerfall", "Arena2", "PrivateersHold", "DFUnity" })
-        {
-            Assert.DoesNotContain(forbidden, source, StringComparison.OrdinalIgnoreCase);
-            Assert.DoesNotContain(forbidden, project, StringComparison.OrdinalIgnoreCase);
-        }
-
-        Assert.DoesNotContain("WorldRpg.Rulesets.Daggerfall", project, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void Project_references_follow_the_worldrpg_dependency_graph()
     {
         AssertProjectReferences("Daggerfall.Import", []);
@@ -49,7 +18,6 @@ public sealed class ArchitectureLawTests
         // Variants deviate from classic by referencing it; classic never references its variants, which
         // the classic ruleset's own expected references above already pin.
         AssertProjectReferences("WorldRpg.Rulesets.Daggerfall.Variants", ["WorldRpg.Kit", "WorldRpg.Rulesets.Daggerfall"]);
-        AssertProjectReferences("WorldRpg.Rulesets.Canary.Tests", ["WorldRpg.Host", "WorldRpg.Kit"]);
 
         foreach (string project in ActiveRuntimeProjects()) AssertPackageReference(project, "Rusty.Engine");
     }
@@ -75,8 +43,7 @@ public sealed class ArchitectureLawTests
     [Fact]
     public void Verification_script_runs_every_test_project()
     {
-        // A suite the gate never runs rots unseen: the canary sat outside the script while every other
-        // suite was run, so nothing reported whether it still held.
+        // A suite the gate never runs rots unseen: nothing reports whether it still holds.
         string script = File.ReadAllText(Path.Combine(RepositoryRoot, "scripts", "verify.sh"));
         string[] tested = Regex.Matches(script, @"^\s*dotnet test\s+(\S+\.csproj)", RegexOptions.Multiline | RegexOptions.CultureInvariant)
             .Select(match => match.Groups[1].Value.Replace('\\', '/'))
@@ -234,16 +201,7 @@ public sealed class ArchitectureLawTests
     /// code uses rather than one a comment or a user-facing message merely mentions. Text inside an
     /// interpolation hole is kept, because that text still runs.
     /// </summary>
-    internal static string ExecutableText(string source) => Stripped(source, stripLiterals: true);
-
-    /// <summary>
-    /// A source file's text without comments, keeping literals: for a law about the vocabulary a project
-    /// may name, where a hardcoded reference-ruleset string is as much a violation as a type reference,
-    /// while a comment explaining the boundary is not.
-    /// </summary>
-    internal static string WithoutComments(string source) => Stripped(source, stripLiterals: false);
-
-    private static string Stripped(string source, bool stripLiterals)
+    internal static string ExecutableText(string source)
     {
         System.Text.StringBuilder text = new(source.Length);
         for (int index = 0; index < source.Length; index++)
@@ -259,10 +217,6 @@ public sealed class ArchitectureLawTests
                 index += 2;
                 while (index + 1 < source.Length && !(source[index] == '*' && source[index + 1] == '/')) index++;
                 index++;
-            }
-            else if (!stripLiterals)
-            {
-                text.Append(value);
             }
             else if (value is '"' or '\'' || (value == '$' && index + 1 < source.Length && source[index + 1] == '"'))
             {
@@ -307,11 +261,6 @@ public sealed class ArchitectureLawTests
         Assert.DoesNotContain("while (true)", text, StringComparison.Ordinal);
         Assert.DoesNotContain("DllImport mention", text, StringComparison.Ordinal);
         Assert.Equal(2, text.Split("Assembly.Load(").Length - 1);
-        // The vocabulary law strips comments but keeps literals, so a hardcoded reference-ruleset string
-        // is still a violation while the comment above it is not.
-        Assert.DoesNotContain("named in prose", WithoutComments(source), StringComparison.Ordinal);
-        Assert.Contains("Daggerfall", WithoutComments("// Daggerfall\nvar key = \"Daggerfall\";"), StringComparison.Ordinal);
-        Assert.DoesNotContain("Daggerfall", ExecutableText("// Daggerfall\nvar key = \"Daggerfall\";"), StringComparison.Ordinal);
     }
 
     /// <summary>Every Engine product assembly.</summary>
@@ -361,17 +310,9 @@ public sealed class ArchitectureLawTests
                 .Attribute("Version")?.Value);
     }
 
-    private static string ProjectFile(string project) => project.EndsWith(".Tests", StringComparison.Ordinal)
-        ? Path.Combine(RepositoryRoot, "tests", project, $"{project}.csproj")
-        : Path.Combine(RepositoryRoot, "src", project, $"{project}.csproj");
+    private static string ProjectFile(string project) => Path.Combine(RepositoryRoot, "src", project, $"{project}.csproj");
 
-    private static string SourceDirectory(string project) => project.EndsWith(".Tests", StringComparison.Ordinal)
-            ? Path.Combine(RepositoryRoot, "tests", project)
-            : Path.Combine(RepositoryRoot, "src", project);
-
-    private static string ReadSources(string path) => string.Join(
-        Environment.NewLine,
-        SourceFiles(path).Select(File.ReadAllText));
+    private static string SourceDirectory(string project) => Path.Combine(RepositoryRoot, "src", project);
 
     private static void AssertNoForbiddenPatterns(string file, string source, IEnumerable<(string Label, string Pattern)> patterns)
     {

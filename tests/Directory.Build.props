@@ -2,15 +2,13 @@
   <!-- The root props pins the Engine SDK pair and its restore feed; every test project still needs it. -->
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
   <!-- Test-only support compiled into every test project: the repository root, the operator-supplied
-       Arena2 corpus and donor roots, and the attributes that skip a test when that data is absent.
-       The canary reads no repository data and must carry no reference-ruleset vocabulary, so it
-       does not compile it. -->
-  <ItemGroup Condition="'$(MSBuildProjectName)' != 'WorldRpg.Rulesets.Canary.Tests'">
+       Arena2 corpus and donor roots, and the attributes that skip a test when that data is absent. -->
+  <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)Shared/**/*.cs" LinkBase="Shared" />
     <Using Include="WorldRpg.Tests.Support" />
   </ItemGroup>
   <!-- The real data containers, read through the Engine's test host, for the suites that reference the Engine. -->
-  <ItemGroup Condition="'$(MSBuildProjectName)' != 'WorldRpg.Rulesets.Canary.Tests' and '$(MSBuildProjectName)' != 'WorldRpg.Architecture.Tests'">
+  <ItemGroup Condition="'$(MSBuildProjectName)' != 'WorldRpg.Architecture.Tests'">
     <Compile Include="$(MSBuildThisFileDirectory)SharedEngine/**/*.cs" LinkBase="SharedEngine" />
   </ItemGroup>
 </Project>

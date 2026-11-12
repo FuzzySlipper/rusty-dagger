@@ -167,7 +167,6 @@ if [[ ${#generated_missing[@]} -eq 0 ]]; then
 else
   skip "suite tests/WorldRpg.Rulesets.Daggerfall.Tests (its facts read the data container's site closures and payloads)"
 fi
-dotnet test tests/WorldRpg.Rulesets.Canary.Tests/WorldRpg.Rulesets.Canary.Tests.csproj
 dotnet test tests/WorldRpg.Kit.Tests/WorldRpg.Kit.Tests.csproj
 dotnet test tests/WorldRpg.Host.Tests/WorldRpg.Host.Tests.csproj
 

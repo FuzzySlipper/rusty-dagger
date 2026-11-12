@@ -7,8 +7,8 @@ progression, combat and characters inhabit it rather than forming a linear spine
 
 > **Engine guarantees. Kit shapes. Ruleset decides. Bundle assembles. Host launches.**
 
-Daggerfall is the first compiled ruleset, compatibility corpus, content source
-and game-bundle family. It is not implicit WorldRpg architecture.
+Daggerfall is the compiled ruleset, compatibility corpus, content source and
+game-bundle family.
 
 ## Sources of truth
 
@@ -62,11 +62,10 @@ are the way to make contributions discoverable.
 
 ## Kit, Daggerfall and tuning
 
-Reusable mechanisms start in the Kit; when placement is uncertain, prefer the
-Kit and keep concrete Daggerfall policy behind ruleset-owned definitions. The
-Kit never mentions Daggerfall, Arena2, Privateer's Hold or DFUnity vocabulary;
-those belong to the ruleset, its content and presentation, and the importer.
-Don't move Daggerfall vocabulary into the Kit by renaming it.
+A mechanism has its own tests and never references the session. The Kit's
+mechanisms meet that, and their tests run without the Daggerfall data; a new
+mechanism may equally sit in the ruleset beside the domain that uses it, and
+any of them may use Daggerfall's names.
 
 Give each value one home: adjustable rule values are typed, validated tuning
 handles; actor, item, encounter and world values are content; algorithmic

@@ -2,8 +2,8 @@
 
 Rusty Dagger is the reference repository and proving product for **WorldRpg**, an
 opinionated construction kit and host for world-centric, real-time, first-person
-systemic RPGs. Daggerfall is its first compiled ruleset, compatibility corpus and
-content source; it is not the WorldRpg architecture.
+systemic RPGs. Daggerfall is its compiled ruleset, compatibility corpus and
+content source.
 
 > **Engine guarantees. Kit shapes. Ruleset decides. Bundle assembles. Host launches.**
 
