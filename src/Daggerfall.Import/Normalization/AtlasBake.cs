@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalized;
+using Daggerfall.Import.Relief;
 using Rgb = (byte R, byte G, byte B);
 
 namespace Daggerfall.Import.Normalization;

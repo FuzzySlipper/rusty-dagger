@@ -1,9 +1,7 @@
 using System.Buffers.Binary;
 using System.Diagnostics;
-using Daggerfall.Import.Arena2;
-using Daggerfall.Import.Normalized;
 
-namespace Daggerfall.Import.Normalization;
+namespace Daggerfall.Import.Relief;
 
 /// <summary>One location the relief calms the ground under.</summary>
 /// <param name="MapPixelX">Its map pixel's column.</param>
@@ -66,6 +64,10 @@ public sealed record DaggerfallRelief(int Width, int Height, float[] Metres, int
 /// where the calibration closes on the classic heights, then carried onto finer ones, each cutting detail the last could
 /// not hold. All noise comes from coordinate hashes, so a bake depends on its input alone.
 /// </summary>
+/// <remarks>
+/// Everything the bake runs lives in this folder, which <c>ImporterBuild.ReliefBakeRevision</c> digests so an import can
+/// reuse a kept bake; <c>ReliefBakeRevisionTests</c> compile the folder alone, so a call into importer code outside it fails.
+/// </remarks>
 public static partial class ReliefBake
 {
     /// <summary>Lattice nodes along one map pixel of the coarsest stage.</summary>
@@ -100,32 +102,6 @@ public static partial class ReliefBake
     /// <summary>A pixel's classic height in metres, from its heightmap value and its cell's centre sample.</summary>
     public static double ClassicMetres(byte heightmap, byte centreSample) =>
         Math.Clamp((heightmap * HeightScale) + (centreSample * SampleScale), OceanSource, MaximumSource) * TerrainScale;
-
-    /// <summary>The bake's input from the source wilderness, the published climate grid and the locations.</summary>
-    public static ReliefInput Input(WoodsFile woods, DaggerfallClimateGrid climate, DaggerfallLocations locations)
-    {
-        ArgumentNullException.ThrowIfNull(woods);
-        ArgumentNullException.ThrowIfNull(climate);
-        ArgumentNullException.ThrowIfNull(locations);
-        const int width = WoodsReader.MapWidth, height = WoodsReader.MapHeight, centre = WoodsReader.CellSamples / 2;
-        double[] classic = new double[width * height], rain = new double[width * height];
-        for (int i = 0; i < classic.Length; i++) classic[i] = ClassicMetres(woods.Heightmap[i], woods.Cells[i].Samples[centre]);
-        Array.Fill(rain, 1);
-        foreach (DaggerfallGridRow row in climate.Rows)
-        {
-            // The grid's first column is a sentinel, so its column x is map pixel x - 1.
-            int x = -1;
-            foreach (DaggerfallGridRun run in row.Runs)
-            {
-                for (int i = Math.Max(x, 0); i < Math.Min(x + run.Count, width); i++) rain[(row.Y * width) + i] = Rain(run.Value);
-                x += run.Count;
-            }
-        }
-
-        ReliefPlace[] places = [.. locations.Locations.Where(location => location.Exterior is not null)
-            .Select(location => new ReliefPlace(location.Exterior!.MapPixelX, location.Exterior.MapPixelY, location.Exterior.Width * location.Exterior.Height))];
-        return new(width, height, classic, rain, places);
-    }
 
     /// <summary>Bakes a map; <paramref name="report"/> hears each calibration round.</summary>
     public static DaggerfallRelief Bake(ReliefInput input, int rounds = DefaultRounds, int steps = DefaultSteps, double sourceSquareKilometres = DefaultSourceSquareKilometres, Action<string>? report = null) =>
@@ -219,11 +195,6 @@ public static partial class ReliefBake
             sea[(j * lattice.Cols) + i] = input.Classic[((j / lattice.PerPixel) * input.Width) + (i / lattice.PerPixel)] <= OceanMetres + SeaMargin;
         return sea;
     }
-
-    private static double Rain(int climate) => climate switch
-    {
-        224 => .35, 225 => .5, 226 => .9, 227 => 1.7, 228 => 1.5, 230 or 231 => 1.2, 232 => 1.1, _ => 1,
-    };
 
     /// <summary>Calms the ground under every location, so its flattening doesn't stand on a cliff.</summary>
     private static void CalmPads(Lattice lattice, double[] height, IReadOnlyList<ReliefPlace> places)

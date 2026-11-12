@@ -1,6 +1,6 @@
 using System.Buffers.Binary;
 
-namespace Daggerfall.Import.Normalization;
+namespace Daggerfall.Import.Relief;
 
 /// <summary>One point along a river, in metres from the heightmap's corner.</summary>
 /// <param name="X">Metres east.</param>

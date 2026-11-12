@@ -172,9 +172,9 @@ public sealed class ImporterRevisionTests
 
     private static string Revision(string project) => MsBuild(project, "-t:StampImporterRevision", "-getProperty:_ImporterRevision").Trim();
 
-    private static JsonElement Evaluate(string project, params string[] arguments) => JsonDocument.Parse(MsBuild(project, arguments)).RootElement.Clone();
+    internal static JsonElement Evaluate(string project, params string[] arguments) => JsonDocument.Parse(MsBuild(project, arguments)).RootElement.Clone();
 
-    private static string MsBuild(string project, params string[] arguments)
+    internal static string MsBuild(string project, params string[] arguments)
     {
         ProcessStartInfo start = new(Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet")
         {

@@ -12,4 +12,11 @@ namespace Daggerfall.Import;
 public static partial class ImporterBuild
 {
     public static string Revision { get; } = StampedRevision;
+
+    /// <summary>
+    /// The identity of the relief bake's own source, <c>src/Daggerfall.Import/Relief</c>, stamped the same way: a kept
+    /// bake is recorded against it, so an edit anywhere else in the importer leaves the bake current and an edit to the
+    /// bake makes the next import bake again.
+    /// </summary>
+    public static string ReliefBakeRevision { get; } = StampedReliefBakeRevision;
 }

@@ -28,6 +28,12 @@ internal static class ImportLayout
     /// <summary>The music container's files: one recording per track at the root, by the naming scheme.</summary>
     public const string MusicTracks = "local/build/import/music";
 
+    /// <summary>
+    /// The last relief bake with the record of what it was baked from (<see cref="KeptRelief"/>), beside the staging tree
+    /// a full import clears, so the next full import takes it when nothing it is baked from changed.
+    /// </summary>
+    public const string KeptRelief = "local/build/import/relief";
+
     /// <summary>The imported payload: every base section the commands derive.</summary>
     public const string ImportedPayload = $"{Staging}/worldrpg/payloads/daggerfall.imported.json";
 
@@ -101,7 +107,7 @@ internal static class ImportLayout
     /// </summary>
     public static void RefuseLinkedOutputs(string repository, string? install)
     {
-        foreach (string output in new[] { Installed(DataContainer, install), Installed(MusicContainer, install), Staging, Records, MusicTracks })
+        foreach (string output in new[] { Installed(DataContainer, install), Installed(MusicContainer, install), Staging, Records, MusicTracks, KeptRelief })
         {
             for (FileSystemInfo? current = new FileInfo(Path.GetFullPath(output, repository));
                  current is not null;

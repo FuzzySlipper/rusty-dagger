@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
+using Daggerfall.Import.Relief;
 
 namespace Daggerfall.Import.Tool.Commands;
 

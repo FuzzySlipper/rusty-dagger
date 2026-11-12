@@ -75,4 +75,29 @@
       <FileWrites Include="$(_ImporterRevisionFile)" />
     </ItemGroup>
   </Target>
+
+  <!-- The relief bake's revision, the same digest over the bake's own source alone (src/Daggerfall.Import/Relief), so a
+       kept terrain bake stays valid across every other importer edit and goes stale on any edit to the bake. A project
+       sets StampReliefBakeRevision to true to have the constant `StampedReliefBakeRevision` added to its revision class.
+       Daggerfall.Import.Tests' ReliefBakeRevisionTests compile that folder alone, so the bake cannot run importer code
+       outside it. -->
+  <Target Name="StampReliefBakeRevision" BeforeTargets="CoreCompile" Condition="'$(StampReliefBakeRevision)' == 'true'">
+    <PropertyGroup>
+      <_ReliefBakeRepositoryRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..'))</_ReliefBakeRepositoryRoot>
+      <_ReliefBakeRevisionFile>$(IntermediateOutputPath)ReliefBakeRevision.g.cs</_ReliefBakeRevisionFile>
+      <ImporterRevisionModifier Condition="'$(ImporterRevisionModifier)' == ''">public</ImporterRevisionModifier>
+    </PropertyGroup>
+    <ItemGroup>
+      <_ReliefBakeInput Include="$(_ReliefBakeRepositoryRoot)/src/Daggerfall.Import/Relief/**" />
+    </ItemGroup>
+    <ComputeImporterRevision Root="$(_ReliefBakeRepositoryRoot)" Files="@(_ReliefBakeInput)">
+      <Output TaskParameter="Revision" PropertyName="_ReliefBakeRevision" />
+    </ComputeImporterRevision>
+    <WriteLinesToFile File="$(_ReliefBakeRevisionFile)" Overwrite="true" WriteOnlyWhenDifferent="true"
+                      Lines="// &lt;auto-generated/&gt;;namespace $(ImporterRevisionNamespace)%3B;$(ImporterRevisionModifier) static partial class $(ImporterRevisionClass) { private const string StampedReliefBakeRevision = &quot;$(_ReliefBakeRevision)&quot;%3B }" />
+    <ItemGroup>
+      <Compile Include="$(_ReliefBakeRevisionFile)" />
+      <FileWrites Include="$(_ReliefBakeRevisionFile)" />
+    </ItemGroup>
+  </Target>
 </Project>

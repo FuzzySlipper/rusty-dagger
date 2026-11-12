@@ -13,10 +13,12 @@
     <!-- The drift check builds the base pack's internal text with the import's own text tokenizer. -->
     <InternalsVisibleTo Include="Daggerfall.Source.Tool" />
   </ItemGroup>
-  <!-- Stamps ImporterBuild.Revision, the importer revision the data container records. -->
+  <!-- Stamps ImporterBuild.Revision, the importer revision the data container records, and
+       ImporterBuild.ReliefBakeRevision, the one a kept terrain bake is recorded against. -->
   <PropertyGroup>
     <ImporterRevisionNamespace>Daggerfall.Import</ImporterRevisionNamespace>
     <ImporterRevisionClass>ImporterBuild</ImporterRevisionClass>
+    <StampReliefBakeRevision>true</StampReliefBakeRevision>
   </PropertyGroup>
   <Import Project="../ImporterRevision.targets" />
 </Project>

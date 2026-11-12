@@ -1,5 +1,5 @@
 using System.Buffers.Binary;
-using Daggerfall.Import.Normalization;
+using Daggerfall.Import.Relief;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;

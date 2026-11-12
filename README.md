@@ -131,7 +131,10 @@ The import refuses to write through any of these links, since it would replace
 what every checkout opens. A worktree whose branch changes the importer's inputs
 imports into its own: `rm local/data local/build/import && mkdir local/data`,
 link back `first-person.rpak` if it needs one, then import. Build
-`first-person.rpak` the same way.
+`first-person.rpak` the same way. A full import keeps its terrain bake in
+`local/build/import/relief/` and takes it again when nothing it is baked from
+changed; copy the main checkout's first (never link it), or the import bakes for
+several minutes: `mkdir -p local/build/import && cp -r "$main/local/build/import/relief" local/build/import/`.
 
 Rules for the tracked side:
 
