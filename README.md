@@ -144,9 +144,9 @@ Rules for the tracked side:
   `media/<area>/`, the authored UI kit in `authored-ui/` (its
   `ui-authored-assets.json` is written by `authoring/tools/ui/ui-art-kit.py
   manifest`) and the held definition and models in `first-person/`.
-- `daggerfall.base` is authored and `daggerfall.imported` is generated. A few base
-  sections (`buildingNames`, `internalText`, `npcCaptions`) were taken from
-  Daggerfall Unity, need nothing from arena2, and are checked by `donor-drift`.
+- `daggerfall.base` is authored and `daggerfall.imported` is generated. Two base
+  sections (`buildingNames`, `internalText`) were taken from Daggerfall Unity,
+  need nothing from arena2, and are checked by `donor-drift`.
   A payload section belongs to one of them: the reader refuses a section both carry.
 - In `src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv`, never renumber or recreate a `CNT-` ID;
   reclassify a file by changing its `family_id`. Only `Daggerfall.Source.Tool`'s

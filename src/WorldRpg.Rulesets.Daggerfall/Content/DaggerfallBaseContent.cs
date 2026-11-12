@@ -2482,10 +2482,9 @@ internal static partial class DaggerfallBaseContent
             diagnostics.Add($"The published faction catalog claims {regions.Count} regions for the {regionCount} published regions.");
         }
 
-        // The flat captions are Daggerfall Unity's Internal_Flats table, taken into the base pack's npcCaptions section.
         Dictionary<(int Archive, int Record), string> npcCaptions = [];
-        if (root.TryGetProperty("npcCaptions", out JsonElement captionSection) && captionSection.ValueKind == JsonValueKind.Object)
-            foreach (JsonElement row in Array(captionSection, "captions", diagnostics))
+        if (section.TryGetProperty("npcCaptions", out var captionRows))
+            foreach (var row in captionRows.EnumerateArray())
             {
                 int archive = Integer(row, "archive", diagnostics), record = Integer(row, "record", diagnostics);
                 string caption = Text(row, "caption", diagnostics);

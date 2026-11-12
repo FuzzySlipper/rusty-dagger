@@ -48,6 +48,11 @@ internal static class DonorTakes
         }),
         Input("mobiles.json", donor => new MobileTable(
             Taken(donor, "Assets/Scripts/Utility/EnemyBasics.cs", out string text), DonorMobileTable.Read(text))),
+        Input("npc-captions.json", donor =>
+        {
+            TakenFrom source = Taken(donor, $"{TextDirectory}/Internal_Flats.csv", out _);
+            return new NpcCaptionTable(source, DonorNpcCaptions.Read(File.ReadAllBytes(Path.Combine(donor, TextDirectory, "Internal_Flats.csv")), source.Path));
+        }),
         Input("quest-tables.json", donor => new QuestTablesInput("", QuestTables(donor))),
         Input("quest-list.json", donor => new QuestListInput("", DonorQuestList.Read(File.ReadAllBytes(Path.Combine(donor, QuestTableDirectory, "QuestList-Classic.txt")),
             PublishedSourcePath.Donor($"{QuestTableDirectory}/QuestList-Classic.txt"), Directory.EnumerateFiles(Path.Combine(donor, QuestDirectory), "*.txt")))),
@@ -78,8 +83,6 @@ internal static class DonorTakes
             PublishedSourcePath.Donor("Assets/Scripts/API/MapsFile.cs"))),
         Section("internalText", donor => DonorInternalText.Build(File.ReadAllBytes(Path.Combine(donor, $"{TextDirectory}/Internal_Strings.csv")),
             PublishedSourcePath.Donor($"{TextDirectory}/Internal_Strings.csv"), "en")),
-        Section("npcCaptions", donor => DonorNpcCaptions.Build(File.ReadAllBytes(Path.Combine(donor, $"{TextDirectory}/Internal_Flats.csv")),
-            PublishedSourcePath.Donor($"{TextDirectory}/Internal_Flats.csv"))),
     ];
 
     /// <summary>The base pack's payload, where the tables the import never needs are sections the ruleset reads.</summary>

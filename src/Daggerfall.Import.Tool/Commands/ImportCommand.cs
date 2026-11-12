@@ -33,7 +33,7 @@ internal static class ImportCommand
          "WOODS.WLD", "FACTION.TXT", "SPELLS.STD", "MAGIC.DEF", "ANIM0000.VID", "AZURA.FLC"];
 
     /// <summary>Our own tables the steps read, under <see cref="ImportLayout.Inputs"/>.</summary>
-    private static readonly string[] InputFiles = ["races.json", "item-groups.json", "item-templates.json", "magic-item-templates.json", "spell-costs.json", "mobiles.json", "quest-tables.json", "quest-list.json"];
+    private static readonly string[] InputFiles = ["races.json", "item-groups.json", "item-templates.json", "magic-item-templates.json", "spell-costs.json", "mobiles.json", "npc-captions.json", "quest-tables.json", "quest-list.json"];
 
     public static ToolCommand Command { get; } = new("import",
     [
@@ -158,7 +158,8 @@ internal static class ImportCommand
         Add("blocks", "blocks", "--arena2", arena2, "--document", blocks, "--buildings", buildings, "--inventory", Inventory, "--update");
         Add("geometry", "geometry", "--arena2", arena2, "--blocks", blocks, "--records", importRecords, "--inventory", Inventory, "--update");
         Add("climate", "climate", "--arena2", arena2, "--pack", imported, "--inventory", Inventory, "--update");
-        Add("factions", "factions", "--arena2", arena2, "--pack", imported, "--inventory", Inventory, "--update");
+        Add("factions", "factions", "--arena2", arena2, "--pack", imported, "--inventory", Inventory,
+            "--npc-captions", Input("npc-captions.json"), "--update");
         Add("terrain", "terrain", "--arena2", arena2, "--pack", imported, "--out", staging, "--inventory", Inventory, "--update");
         Add("relief", "relief", "--arena2", arena2, "--pack", imported, "--out", staging, "--update");
         Add("atlas", "atlas", "--pack", imported, "--out", staging, "--update");

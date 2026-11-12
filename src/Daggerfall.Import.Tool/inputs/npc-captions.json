@@ -1,0 +1,1140 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Flats.csv",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "ccd83c28296e0ef54f3453033ed3100a1575c22b059f32c564943fc83034a5c0",
+    "byteLength": 4672
+  },
+  "captions": [
+    {
+      "archive": 175,
+      "record": 0,
+      "caption": "beautiful maiden"
+    },
+    {
+      "archive": 175,
+      "record": 1,
+      "caption": "dark warrior"
+    },
+    {
+      "archive": 175,
+      "record": 2,
+      "caption": "terrible child"
+    },
+    {
+      "archive": 175,
+      "record": 3,
+      "caption": "horned man"
+    },
+    {
+      "archive": 175,
+      "record": 4,
+      "caption": "clawed monstrosity"
+    },
+    {
+      "archive": 175,
+      "record": 5,
+      "caption": "green humanoid"
+    },
+    {
+      "archive": 175,
+      "record": 6,
+      "caption": "four-armed giant"
+    },
+    {
+      "archive": 175,
+      "record": 7,
+      "caption": "dark woman"
+    },
+    {
+      "archive": 175,
+      "record": 8,
+      "caption": "blonde woman"
+    },
+    {
+      "archive": 175,
+      "record": 9,
+      "caption": "cloven-footed man"
+    },
+    {
+      "archive": 175,
+      "record": 10,
+      "caption": "dark woman"
+    },
+    {
+      "archive": 175,
+      "record": 11,
+      "caption": "dark-clad woman"
+    },
+    {
+      "archive": 175,
+      "record": 12,
+      "caption": "green serpent"
+    },
+    {
+      "archive": 175,
+      "record": 13,
+      "caption": "crimson giant"
+    },
+    {
+      "archive": 175,
+      "record": 14,
+      "caption": "elegant gentleman"
+    },
+    {
+      "archive": 175,
+      "record": 15,
+      "caption": "wizened crone"
+    },
+    {
+      "archive": 176,
+      "record": 0,
+      "caption": "dark-cloaked man"
+    },
+    {
+      "archive": 176,
+      "record": 1,
+      "caption": "dark-cloaked man"
+    },
+    {
+      "archive": 176,
+      "record": 2,
+      "caption": "bare-breasted dancer"
+    },
+    {
+      "archive": 176,
+      "record": 3,
+      "caption": "bare-breasted dancer"
+    },
+    {
+      "archive": 176,
+      "record": 4,
+      "caption": "dancer"
+    },
+    {
+      "archive": 176,
+      "record": 5,
+      "caption": "dark-cloaked man"
+    },
+    {
+      "archive": 176,
+      "record": 6,
+      "caption": "woman in black and red"
+    },
+    {
+      "archive": 177,
+      "record": 0,
+      "caption": "cowled old man"
+    },
+    {
+      "archive": 177,
+      "record": 1,
+      "caption": "old man with a hat"
+    },
+    {
+      "archive": 177,
+      "record": 2,
+      "caption": "bald man"
+    },
+    {
+      "archive": 177,
+      "record": 3,
+      "caption": "blonde woman"
+    },
+    {
+      "archive": 177,
+      "record": 4,
+      "caption": "man with glowing eyes"
+    },
+    {
+      "archive": 177,
+      "record": 5,
+      "caption": "magic crafter"
+    },
+    {
+      "archive": 178,
+      "record": 0,
+      "caption": "cowled woman"
+    },
+    {
+      "archive": 178,
+      "record": 1,
+      "caption": "red-cowled man"
+    },
+    {
+      "archive": 178,
+      "record": 2,
+      "caption": "red-cloaked man"
+    },
+    {
+      "archive": 178,
+      "record": 3,
+      "caption": "red-cloaked man"
+    },
+    {
+      "archive": 178,
+      "record": 4,
+      "caption": "man with glowing eyes"
+    },
+    {
+      "archive": 178,
+      "record": 5,
+      "caption": "red-cowled dancer"
+    },
+    {
+      "archive": 178,
+      "record": 6,
+      "caption": "red-cowled dancer"
+    },
+    {
+      "archive": 179,
+      "record": 0,
+      "caption": "naked dark-haired woman"
+    },
+    {
+      "archive": 179,
+      "record": 1,
+      "caption": "naked woman"
+    },
+    {
+      "archive": 179,
+      "record": 2,
+      "caption": "mysterious woman"
+    },
+    {
+      "archive": 179,
+      "record": 3,
+      "caption": "black-cowled dancer"
+    },
+    {
+      "archive": 179,
+      "record": 4,
+      "caption": "red-haired woman"
+    },
+    {
+      "archive": 180,
+      "record": 0,
+      "caption": "dark-haired woman in red"
+    },
+    {
+      "archive": 180,
+      "record": 1,
+      "caption": "noblewoman wearing blue"
+    },
+    {
+      "archive": 180,
+      "record": 2,
+      "caption": "well-dressed man"
+    },
+    {
+      "archive": 180,
+      "record": 3,
+      "caption": "portly man in violet"
+    },
+    {
+      "archive": 181,
+      "record": 0,
+      "caption": "blue-cloaked man"
+    },
+    {
+      "archive": 181,
+      "record": 1,
+      "caption": "young woman in blue"
+    },
+    {
+      "archive": 181,
+      "record": 2,
+      "caption": "blue-cloaked old man"
+    },
+    {
+      "archive": 181,
+      "record": 3,
+      "caption": "blue-cloaked boy"
+    },
+    {
+      "archive": 181,
+      "record": 4,
+      "caption": "beautiful blonde"
+    },
+    {
+      "archive": 181,
+      "record": 5,
+      "caption": "dancer wearing blue"
+    },
+    {
+      "archive": 181,
+      "record": 6,
+      "caption": "blue-cloaked dancer"
+    },
+    {
+      "archive": 181,
+      "record": 7,
+      "caption": "blue-cloaked dancer"
+    },
+    {
+      "archive": 182,
+      "record": 0,
+      "caption": "white-haired old man"
+    },
+    {
+      "archive": 182,
+      "record": 1,
+      "caption": "fat bald man"
+    },
+    {
+      "archive": 182,
+      "record": 2,
+      "caption": "blond-bearded man"
+    },
+    {
+      "archive": 182,
+      "record": 3,
+      "caption": "bearded man"
+    },
+    {
+      "archive": 182,
+      "record": 4,
+      "caption": "well-dressed boy"
+    },
+    {
+      "archive": 182,
+      "record": 5,
+      "caption": "jester"
+    },
+    {
+      "archive": 182,
+      "record": 6,
+      "caption": "jester"
+    },
+    {
+      "archive": 182,
+      "record": 7,
+      "caption": "white-bearded man"
+    },
+    {
+      "archive": 182,
+      "record": 8,
+      "caption": "man in chef's hat"
+    },
+    {
+      "archive": 182,
+      "record": 9,
+      "caption": "woman in gray"
+    },
+    {
+      "archive": 182,
+      "record": 10,
+      "caption": "woman in blue"
+    },
+    {
+      "archive": 182,
+      "record": 11,
+      "caption": "comely maiden"
+    },
+    {
+      "archive": 182,
+      "record": 12,
+      "caption": "milk maid"
+    },
+    {
+      "archive": 182,
+      "record": 13,
+      "caption": "man wearing brown"
+    },
+    {
+      "archive": 182,
+      "record": 14,
+      "caption": "man in a brown hat"
+    },
+    {
+      "archive": 182,
+      "record": 15,
+      "caption": "blond aristocrat"
+    },
+    {
+      "archive": 182,
+      "record": 16,
+      "caption": "fair-bearded man"
+    },
+    {
+      "archive": 182,
+      "record": 17,
+      "caption": "blond-bearded man"
+    },
+    {
+      "archive": 182,
+      "record": 18,
+      "caption": "brown-haired young man"
+    },
+    {
+      "archive": 182,
+      "record": 19,
+      "caption": "man in a gray tunic"
+    },
+    {
+      "archive": 182,
+      "record": 20,
+      "caption": "man in a green coat"
+    },
+    {
+      "archive": 182,
+      "record": 21,
+      "caption": "old beggar"
+    },
+    {
+      "archive": 182,
+      "record": 22,
+      "caption": "cloaked old man"
+    },
+    {
+      "archive": 182,
+      "record": 23,
+      "caption": "man in a blue coat"
+    },
+    {
+      "archive": 182,
+      "record": 24,
+      "caption": "bearded old man"
+    },
+    {
+      "archive": 182,
+      "record": 25,
+      "caption": "scruffy-looking sailor"
+    },
+    {
+      "archive": 182,
+      "record": 26,
+      "caption": "young lady in green"
+    },
+    {
+      "archive": 182,
+      "record": 27,
+      "caption": "elegantly dressed lady"
+    },
+    {
+      "archive": 182,
+      "record": 28,
+      "caption": "blue-cloaked woman"
+    },
+    {
+      "archive": 182,
+      "record": 29,
+      "caption": "pathetic old cripple"
+    },
+    {
+      "archive": 182,
+      "record": 30,
+      "caption": "pitiful bald man"
+    },
+    {
+      "archive": 182,
+      "record": 31,
+      "caption": "pitiful bald man"
+    },
+    {
+      "archive": 182,
+      "record": 32,
+      "caption": "good-looking whore"
+    },
+    {
+      "archive": 182,
+      "record": 33,
+      "caption": "prostitute"
+    },
+    {
+      "archive": 182,
+      "record": 34,
+      "caption": "blonde whore"
+    },
+    {
+      "archive": 182,
+      "record": 35,
+      "caption": "scruffy sailor"
+    },
+    {
+      "archive": 182,
+      "record": 36,
+      "caption": "snake charmer"
+    },
+    {
+      "archive": 182,
+      "record": 37,
+      "caption": "flute player"
+    },
+    {
+      "archive": 182,
+      "record": 38,
+      "caption": "little girl"
+    },
+    {
+      "archive": 182,
+      "record": 39,
+      "caption": "street sweeper"
+    },
+    {
+      "archive": 182,
+      "record": 40,
+      "caption": "wise-looking man"
+    },
+    {
+      "archive": 182,
+      "record": 41,
+      "caption": "remarkable woman"
+    },
+    {
+      "archive": 182,
+      "record": 42,
+      "caption": "page boy"
+    },
+    {
+      "archive": 182,
+      "record": 43,
+      "caption": "little boy"
+    },
+    {
+      "archive": 182,
+      "record": 44,
+      "caption": "old crone"
+    },
+    {
+      "archive": 182,
+      "record": 45,
+      "caption": "adventuresome woman"
+    },
+    {
+      "archive": 182,
+      "record": 46,
+      "caption": "handsome young man"
+    },
+    {
+      "archive": 182,
+      "record": 47,
+      "caption": "pretty young lady"
+    },
+    {
+      "archive": 182,
+      "record": 48,
+      "caption": "blond whore"
+    },
+    {
+      "archive": 182,
+      "record": 49,
+      "caption": "juggler"
+    },
+    {
+      "archive": 182,
+      "record": 50,
+      "caption": "flutist"
+    },
+    {
+      "archive": 182,
+      "record": 51,
+      "caption": "lutist"
+    },
+    {
+      "archive": 182,
+      "record": 52,
+      "caption": "drummer"
+    },
+    {
+      "archive": 182,
+      "record": 53,
+      "caption": "young bellringer"
+    },
+    {
+      "archive": 182,
+      "record": 54,
+      "caption": "hooded man"
+    },
+    {
+      "archive": 182,
+      "record": 55,
+      "caption": "hooded man"
+    },
+    {
+      "archive": 182,
+      "record": 56,
+      "caption": "hooded woman"
+    },
+    {
+      "archive": 182,
+      "record": 57,
+      "caption": "nearly naked man"
+    },
+    {
+      "archive": 182,
+      "record": 58,
+      "caption": "nearly naked man"
+    },
+    {
+      "archive": 182,
+      "record": 59,
+      "caption": "blacksmith"
+    },
+    {
+      "archive": 183,
+      "record": 0,
+      "caption": "regal fairie"
+    },
+    {
+      "archive": 183,
+      "record": 1,
+      "caption": "regal fairie"
+    },
+    {
+      "archive": 183,
+      "record": 2,
+      "caption": "guard"
+    },
+    {
+      "archive": 183,
+      "record": 3,
+      "caption": "guard"
+    },
+    {
+      "archive": 183,
+      "record": 4,
+      "caption": "noble-looking man"
+    },
+    {
+      "archive": 183,
+      "record": 5,
+      "caption": "flamboyant young man"
+    },
+    {
+      "archive": 183,
+      "record": 6,
+      "caption": "bearded king"
+    },
+    {
+      "archive": 183,
+      "record": 7,
+      "caption": "king wearing a turban"
+    },
+    {
+      "archive": 183,
+      "record": 8,
+      "caption": "white-haired queen"
+    },
+    {
+      "archive": 183,
+      "record": 9,
+      "caption": "brunette queen"
+    },
+    {
+      "archive": 183,
+      "record": 10,
+      "caption": "king"
+    },
+    {
+      "archive": 183,
+      "record": 11,
+      "caption": "queen"
+    },
+    {
+      "archive": 183,
+      "record": 12,
+      "caption": "cowled monk"
+    },
+    {
+      "archive": 183,
+      "record": 13,
+      "caption": "handsome young king"
+    },
+    {
+      "archive": 183,
+      "record": 14,
+      "caption": "stunning brunette"
+    },
+    {
+      "archive": 183,
+      "record": 15,
+      "caption": "blind old crone"
+    },
+    {
+      "archive": 183,
+      "record": 16,
+      "caption": "stylish fat man"
+    },
+    {
+      "archive": 183,
+      "record": 17,
+      "caption": "bedraggled witch"
+    },
+    {
+      "archive": 183,
+      "record": 18,
+      "caption": "gorgeous Redguard"
+    },
+    {
+      "archive": 183,
+      "record": 19,
+      "caption": "majestic orc"
+    },
+    {
+      "archive": 183,
+      "record": 20,
+      "caption": "Dark Elf king"
+    },
+    {
+      "archive": 183,
+      "record": 21,
+      "caption": "blonde queen"
+    },
+    {
+      "archive": 184,
+      "record": 0,
+      "caption": "well-to-do merchant"
+    },
+    {
+      "archive": 184,
+      "record": 1,
+      "caption": "woman in a cloak"
+    },
+    {
+      "archive": 184,
+      "record": 2,
+      "caption": "man in a green robe"
+    },
+    {
+      "archive": 184,
+      "record": 3,
+      "caption": "fat flutist"
+    },
+    {
+      "archive": 184,
+      "record": 4,
+      "caption": "strapping young man"
+    },
+    {
+      "archive": 184,
+      "record": 5,
+      "caption": "beautiful blonde"
+    },
+    {
+      "archive": 184,
+      "record": 6,
+      "caption": "bare-breasted wench"
+    },
+    {
+      "archive": 184,
+      "record": 7,
+      "caption": "sleek-looking blonde"
+    },
+    {
+      "archive": 184,
+      "record": 8,
+      "caption": "blonde strumpet"
+    },
+    {
+      "archive": 184,
+      "record": 9,
+      "caption": "shapely brunette"
+    },
+    {
+      "archive": 184,
+      "record": 10,
+      "caption": "dazzling blonde"
+    },
+    {
+      "archive": 184,
+      "record": 11,
+      "caption": "naked blonde woman"
+    },
+    {
+      "archive": 184,
+      "record": 12,
+      "caption": "naked brunette"
+    },
+    {
+      "archive": 184,
+      "record": 13,
+      "caption": "naked blonde"
+    },
+    {
+      "archive": 184,
+      "record": 14,
+      "caption": "naked brunette"
+    },
+    {
+      "archive": 184,
+      "record": 15,
+      "caption": "ragged young boy"
+    },
+    {
+      "archive": 184,
+      "record": 16,
+      "caption": "chubby old man"
+    },
+    {
+      "archive": 184,
+      "record": 17,
+      "caption": "brawny peasant"
+    },
+    {
+      "archive": 184,
+      "record": 18,
+      "caption": "tough she-devil"
+    },
+    {
+      "archive": 184,
+      "record": 19,
+      "caption": "attractive blonde"
+    },
+    {
+      "archive": 184,
+      "record": 20,
+      "caption": "man in purple"
+    },
+    {
+      "archive": 184,
+      "record": 21,
+      "caption": "bearded old man"
+    },
+    {
+      "archive": 184,
+      "record": 22,
+      "caption": "woman with a staff"
+    },
+    {
+      "archive": 184,
+      "record": 23,
+      "caption": "woman in green pants"
+    },
+    {
+      "archive": 184,
+      "record": 24,
+      "caption": "dark-haired rogue"
+    },
+    {
+      "archive": 184,
+      "record": 25,
+      "caption": "fair-haired youth"
+    },
+    {
+      "archive": 184,
+      "record": 26,
+      "caption": "red-haired woman"
+    },
+    {
+      "archive": 184,
+      "record": 27,
+      "caption": "pathetic beggar"
+    },
+    {
+      "archive": 184,
+      "record": 28,
+      "caption": "red-headed vixen"
+    },
+    {
+      "archive": 184,
+      "record": 29,
+      "caption": "blonde wearing blue"
+    },
+    {
+      "archive": 184,
+      "record": 30,
+      "caption": "dark-skinned woman"
+    },
+    {
+      "archive": 184,
+      "record": 31,
+      "caption": "bald slave"
+    },
+    {
+      "archive": 184,
+      "record": 32,
+      "caption": "dark warrior woman"
+    },
+    {
+      "archive": 184,
+      "record": 33,
+      "caption": "dark buxom wench"
+    },
+    {
+      "archive": 184,
+      "record": 34,
+      "caption": "man on horseback"
+    },
+    {
+      "archive": 199,
+      "record": 0,
+      "caption": "Light"
+    },
+    {
+      "archive": 199,
+      "record": 1,
+      "caption": "Light"
+    },
+    {
+      "archive": 199,
+      "record": 2,
+      "caption": "Daedra"
+    },
+    {
+      "archive": 199,
+      "record": 3,
+      "caption": "Summoning"
+    },
+    {
+      "archive": 199,
+      "record": 4,
+      "caption": "Rest"
+    },
+    {
+      "archive": 199,
+      "record": 5,
+      "caption": "Court"
+    },
+    {
+      "archive": 199,
+      "record": 6,
+      "caption": "Pit"
+    },
+    {
+      "archive": 199,
+      "record": 7,
+      "caption": "Effect"
+    },
+    {
+      "archive": 199,
+      "record": 8,
+      "caption": "Entrance"
+    },
+    {
+      "archive": 199,
+      "record": 9,
+      "caption": "Path"
+    },
+    {
+      "archive": 199,
+      "record": 10,
+      "caption": "Start"
+    },
+    {
+      "archive": 199,
+      "record": 11,
+      "caption": "Quest"
+    },
+    {
+      "archive": 199,
+      "record": 12,
+      "caption": "Create"
+    },
+    {
+      "archive": 199,
+      "record": 13,
+      "caption": "Prison"
+    },
+    {
+      "archive": 199,
+      "record": 14,
+      "caption": "Prison exit"
+    },
+    {
+      "archive": 199,
+      "record": 15,
+      "caption": "Random monster"
+    },
+    {
+      "archive": 199,
+      "record": 16,
+      "caption": "Monster"
+    },
+    {
+      "archive": 334,
+      "record": 19,
+      "caption": "Gothryd"
+    },
+    {
+      "archive": 334,
+      "record": 21,
+      "caption": "Aubk-i"
+    },
+    {
+      "archive": 334,
+      "record": 0,
+      "caption": "Provlith"
+    },
+    {
+      "archive": 334,
+      "record": 1,
+      "caption": "Popudax"
+    },
+    {
+      "archive": 334,
+      "record": 5,
+      "caption": "Cyndassa"
+    },
+    {
+      "archive": 334,
+      "record": 4,
+      "caption": "Mynisera"
+    },
+    {
+      "archive": 334,
+      "record": 18,
+      "caption": "Mobar"
+    },
+    {
+      "archive": 334,
+      "record": 17,
+      "caption": "Bridwell"
+    },
+    {
+      "archive": 357,
+      "record": 7,
+      "caption": "Prince Lhotun"
+    },
+    {
+      "archive": 334,
+      "record": 10,
+      "caption": "Lady Northbridge"
+    },
+    {
+      "archive": 357,
+      "record": 15,
+      "caption": "Queen Akorithi"
+    },
+    {
+      "archive": 357,
+      "record": 1,
+      "caption": "Prince Greklith"
+    },
+    {
+      "archive": 346,
+      "record": 17,
+      "caption": "Princess Elysana"
+    },
+    {
+      "archive": 346,
+      "record": 0,
+      "caption": "Princess Morgiah"
+    },
+    {
+      "archive": 346,
+      "record": 22,
+      "caption": "Queen Barenziah"
+    },
+    {
+      "archive": 346,
+      "record": 21,
+      "caption": "King Eadwyre"
+    },
+    {
+      "archive": 346,
+      "record": 16,
+      "caption": "Prince Helseth"
+    },
+    {
+      "archive": 346,
+      "record": 11,
+      "caption": "Karethys"
+    },
+    {
+      "archive": 346,
+      "record": 7,
+      "caption": "Lord Castellian"
+    },
+    {
+      "archive": 346,
+      "record": 10,
+      "caption": "blue-cloaked woman (court wayrest)"
+    },
+    {
+      "archive": 334,
+      "record": 16,
+      "caption": "guard"
+    },
+    {
+      "archive": 346,
+      "record": 20,
+      "caption": "guard"
+    },
+    {
+      "archive": 357,
+      "record": 13,
+      "caption": "guard"
+    },
+    {
+      "archive": 334,
+      "record": 6,
+      "caption": "jester"
+    },
+    {
+      "archive": 346,
+      "record": 3,
+      "caption": "jester"
+    },
+    {
+      "archive": 334,
+      "record": 3,
+      "caption": "jester"
+    },
+    {
+      "archive": 334,
+      "record": 11,
+      "caption": "lutist"
+    },
+    {
+      "archive": 334,
+      "record": 20,
+      "caption": "stylish fat man"
+    },
+    {
+      "archive": 334,
+      "record": 7,
+      "caption": "bearded old man"
+    },
+    {
+      "archive": 334,
+      "record": 9,
+      "caption": "page boy"
+    },
+    {
+      "archive": 334,
+      "record": 15,
+      "caption": "guard"
+    },
+    {
+      "archive": 346,
+      "record": 19,
+      "caption": "guard"
+    },
+    {
+      "archive": 357,
+      "record": 12,
+      "caption": "guard"
+    },
+    {
+      "archive": 346,
+      "record": 14,
+      "caption": "wise-looking man"
+    },
+    {
+      "archive": 357,
+      "record": 5,
+      "caption": "flute player"
+    },
+    {
+      "archive": 357,
+      "record": 2,
+      "caption": "woman in gray"
+    },
+    {
+      "archive": 357,
+      "record": 4,
+      "caption": "scruffy sailor"
+    },
+    {
+      "archive": 357,
+      "record": 10,
+      "caption": "nearly naked man"
+    },
+    {
+      "archive": 334,
+      "record": 14,
+      "caption": "blacksmith"
+    }
+  ]
+}

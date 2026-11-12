@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
@@ -97,13 +96,15 @@ public sealed class DaggerfallFactionsTests
     }
 
     [Fact]
-    public void The_base_pack_carries_the_localized_flat_captions_with_offline_addresses_and_provenance()
+    public void Publishes_our_localized_flat_captions_with_offline_addresses_and_provenance()
     {
-        JsonNode section = JsonNode.Parse(File.ReadAllBytes(TestData.PackPayload("daggerfall.base")))!["npcCaptions"]!;
-        JsonArray captions = section["captions"]!.AsArray();
-        Assert.Equal(226, captions.Count);
-        Assert.Equal("daggerfall-unity/Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Flats.csv", section["source"]!["path"]!.GetValue<string>());
-        Assert.Equal("beautiful maiden", captions.Single(value => value!["archive"]!.GetValue<int>() == 175 && value["record"]!.GetValue<int>() == 0)!["caption"]!.GetValue<string>());
+        NpcCaptionTable table = TakenTable.Read<NpcCaptionTable>(File.ReadAllBytes(TestData.Input("npc-captions.json")), "npc-captions.json");
+        var baseline = DaggerfallFactionsBuilder.Build("#1\nname: X\n", "arena2/FACTION.TXT", [1], Inventory());
+        var catalog = DaggerfallFactionsBuilder.WithNpcCaptions(baseline, table);
+        Assert.Equal(226, catalog.NpcCaptions.Count);
+        Assert.Equal("daggerfall-unity/Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Flats.csv", catalog.NpcCaptionSource!.Path);
+        Assert.Equal(table.Source.ContentDigest, catalog.NpcCaptionSource.ContentDigest);
+        Assert.Equal("beautiful maiden", catalog.NpcCaptions.Single(value => value.Archive == 175 && value.Record == 0).Caption);
     }
 
     [Theory]
@@ -111,7 +112,7 @@ public sealed class DaggerfallFactionsTests
     [InlineData("Key,Value\n22400,caption\n22400,other\n")]
     [InlineData("Key,Value\n22400,\n")]
     public void Malformed_caption_data_is_reported_without_silently_dropping_entries(string csv) =>
-        Assert.Throws<InvalidOperationException>(() => DonorNpcCaptions.Build(System.Text.Encoding.UTF8.GetBytes(csv), "fixture/Internal_Flats.csv"));
+        Assert.Throws<InvalidOperationException>(() => DonorNpcCaptions.Read(System.Text.Encoding.UTF8.GetBytes(csv), "fixture/Internal_Flats.csv"));
 
     private static IReadOnlyList<SourceInventoryRow> Inventory() =>
     [

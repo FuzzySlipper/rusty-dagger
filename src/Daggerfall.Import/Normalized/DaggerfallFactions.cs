@@ -21,6 +21,15 @@ public enum DaggerfallRegionFactionDisposition
     Unclaimed,
 }
 
+/// <summary>One localized flat caption, with its address decoded offline.</summary>
+public sealed record DaggerfallNpcCaption(int Archive, int Record, string Caption);
+
+/// <summary>
+/// Our flat-caption table, taken once from the donor's <c>Internal_Flats.csv</c>. The factions section carries it,
+/// and the world media publishes a sprite for every captioned flat.
+/// </summary>
+public sealed record NpcCaptionTable(TakenFrom Source, IReadOnlyList<DaggerfallNpcCaption> Captions);
+
 /// <summary>Normalized billboard address decoded offline from the faction flat field.</summary>
 public sealed record DaggerfallFactionFlat(int Id, int Archive, int Record);
 
@@ -147,10 +156,18 @@ public sealed record DaggerfallFactions(
     IReadOnlyList<DaggerfallRegionFactions> Regions,
     IReadOnlyList<DaggerfallFactionNameAlias> DuplicateNames)
 {
+    public PublishedSource? NpcCaptionSource { get; init; }
+    public IReadOnlyList<DaggerfallNpcCaption> NpcCaptions { get; init; } = [];
     public void Validate()
     {
         ArgumentNullException.ThrowIfNull(Source);
         Source.Validate();
+        NpcCaptionSource?.Validate();
+        if (NpcCaptions.Count != 0 && NpcCaptionSource is null)
+            throw new InvalidOperationException("NPC captions require their published donor source.");
+        if (NpcCaptions.Any(value => value.Archive < 0 || value.Record is < 0 or > 127 || string.IsNullOrWhiteSpace(value.Caption))
+            || NpcCaptions.Select(value => (value.Archive, value.Record)).Distinct().Count() != NpcCaptions.Count)
+            throw new InvalidOperationException("NPC captions carry malformed or duplicate flat addresses.");
         if (Factions.Count == 0)
         {
             throw new InvalidOperationException("The faction catalog carries no factions.");
@@ -208,6 +225,14 @@ public sealed record DaggerfallFactionNameAlias(string Name, IReadOnlyList<int> 
 /// </summary>
 public static class DaggerfallFactionsBuilder
 {
+    /// <summary>The factions with our flat-caption table, citing the donor table it was taken from.</summary>
+    public static DaggerfallFactions WithNpcCaptions(DaggerfallFactions factions, NpcCaptionTable captions)
+    {
+        DaggerfallFactions result = factions with { NpcCaptionSource = captions.Source.Cited(), NpcCaptions = captions.Captions };
+        result.Validate();
+        return result;
+    }
+
     /// <summary>The inventory family the faction file is documented under.</summary>
     public const string FactionsFamily = "CNT-013";
 

@@ -95,7 +95,7 @@ internal sealed partial class ImportToolFixture : IDisposable
         {
             ["--arena2"] = Arena2, ["--pack"] = Pack, ["--authored"] = Authored, ["--records"] = Records,
             ["--inventory"] = Inventory, ["--out"] = At("output"), ["--group"] = "worldrpg", ["--language"] = "en",
-            ["--races"] = Input("races.json"), ["--spell-costs"] = Input("spell-costs.json"), ["--mobiles"] = Input("mobiles.json"),
+            ["--races"] = Input("races.json"), ["--spell-costs"] = Input("spell-costs.json"), ["--mobiles"] = Input("mobiles.json"), ["--npc-captions"] = Input("npc-captions.json"),
             ["--archive"] = Path.Combine(Arena2, "MONSTER.BSA"), ["--monster"] = Path.Combine(Arena2, "MONSTER.BSA"),
             ["--document"] = At("blocks.json"), ["--buildings"] = At("buildings.json"), ["--blocks"] = At("blocks.json"),
             ["--quest-documents"] = Input("quests"), ["--quest-tables"] = Input("quest-tables.json"), ["--quest-list"] = Input("quest-list.json"),
@@ -158,8 +158,9 @@ internal sealed partial class ImportToolFixture : IDisposable
             case "climate":
                 Section("climate", DaggerfallWorldGridsBuilder.BuildClimate(Source("CLIMATE.PAK"), Label("CLIMATE.PAK"), Rows));
                 Section("politic", DaggerfallWorldGridsBuilder.BuildPolitic(Source("POLITIC.PAK"), Label("POLITIC.PAK"), Rows)); break;
-            case "factions": Section("factions",
-                DaggerfallFactionsBuilder.Build(File.ReadAllText(Path.Combine(Arena2, "FACTION.TXT")), Label("FACTION.TXT"), Source("FACTION.TXT"), Rows)); break;
+            case "factions": Section("factions", DaggerfallFactionsBuilder.WithNpcCaptions(
+                DaggerfallFactionsBuilder.Build(File.ReadAllText(Path.Combine(Arena2, "FACTION.TXT")), Label("FACTION.TXT"), Source("FACTION.TXT"), Rows),
+                Table<NpcCaptionTable>("npc-captions.json"))); break;
             case "terrain":
                 DaggerfallTerrain terrain = DaggerfallTerrainBuilder.Build(Source("WOODS.WLD"), Label("WOODS.WLD"), Rows);
                 Section("terrain", terrain);

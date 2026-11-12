@@ -23,27 +23,21 @@ internal static class DonorInternalText
     }
 }
 
-/// <summary>Daggerfall Unity's <c>Internal_Flats.csv</c> as the base pack's <c>npcCaptions</c> section.</summary>
+/// <summary>Daggerfall Unity's <c>Internal_Flats.csv</c> as our flat-caption table.</summary>
 internal static class DonorNpcCaptions
 {
-    public static NpcCaptionSection Build(byte[] bytes, string label)
+    public static IReadOnlyList<DaggerfallNpcCaption> Read(byte[] bytes, string label)
     {
         InternalStringsCatalog catalog = InternalStringsReader.Read(bytes, label);
-        NpcCaption[] captions = [.. catalog.Records.Select(row =>
+        DaggerfallNpcCaption[] captions = [.. catalog.Records.Select(row =>
         {
             if (!int.TryParse(row.Key, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int id))
                 throw new InvalidOperationException($"NPC caption source '{label}' has nonnumeric flat identity '{row.Key}'.");
-            return new NpcCaption(id >> 7, id & 127, row.Value);
+            return new DaggerfallNpcCaption(id >> 7, id & 127, row.Value);
         })];
         if (captions.Any(caption => string.IsNullOrWhiteSpace(caption.Caption))
             || captions.Select(caption => (caption.Archive, caption.Record)).Distinct().Count() != captions.Length)
             throw new InvalidOperationException($"NPC caption source '{label}' carries an empty caption or one flat address twice.");
-        return new(PublishedSource.Of(label, bytes), captions);
+        return captions;
     }
 }
-
-/// <summary>One localized flat caption, with its address decoded offline.</summary>
-internal sealed record NpcCaption(int Archive, int Record, string Caption);
-
-/// <summary>The flat captions by billboard address, citing the donor table they were taken from.</summary>
-internal sealed record NpcCaptionSection(PublishedSource Source, IReadOnlyList<NpcCaption> Captions);

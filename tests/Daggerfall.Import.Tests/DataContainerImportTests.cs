@@ -144,7 +144,7 @@ public sealed class DataContainerImportTests : IDisposable
 
         // Neither a tool without its inputs nor one in a directory with no product.rpak is in a release.
         Assert.Null(ImportLayout.FindRelease(tool));
-        Directory.CreateDirectory(Path.Combine(tool, "data"));
+        Directory.CreateDirectory(Path.Combine(tool, ImportLayout.Inputs));
         File.WriteAllText(Path.Combine(tool, ImportLayout.Inventory), "id\n");
         Assert.Null(ImportLayout.FindRelease(tool));
 
@@ -197,7 +197,7 @@ public sealed class DataContainerImportTests : IDisposable
         // The host runs the tool from its build output in the installed-content directory, so the repository is the
         // one that build output lies in.
         string repository = Directory.CreateDirectory(Path.Combine(root, "repo")).FullName;
-        Directory.CreateDirectory(Path.Combine(repository, "data"));
+        Directory.CreateDirectory(Path.Combine(repository, ImportLayout.Inputs));
         File.WriteAllText(Path.Combine(repository, ImportLayout.Inventory), "id\n");
         string output = Directory.CreateDirectory(Path.Combine(repository, "src", "Daggerfall.Import.Tool", "bin", "Debug", "net10.0")).FullName;
         Assert.Equal(repository, ImportLayout.EnclosingRepository(output));
@@ -242,9 +242,9 @@ public sealed class DataContainerImportTests : IDisposable
         }
 
         // Each step writes into the staging tree or the records, never into the repository's content: what it names
-        // there is the authored UI art, which it reads.
+        // there is the authored UI art and its manifest, which it reads.
         Assert.All(steps.SelectMany(step => step.Arguments).Where(argument => argument.StartsWith("content/", StringComparison.Ordinal)),
-            argument => Assert.Equal(AuthoredUi.ProductDirectory, argument));
+            argument => Assert.Contains(argument, new[] { AuthoredUi.ProductDirectory, AuthoredUi.ManifestFile }));
         Assert.Equal(["music-tracks", "classic-media"], steps.Take(2).Select(step => step.Label));
         Assert.Equal("source-coverage", steps[^1].Label);
     }

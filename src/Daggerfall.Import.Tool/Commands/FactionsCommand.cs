@@ -11,12 +11,15 @@ namespace Daggerfall.Import.Tool.Commands;
 /// </summary>
 internal static class FactionsCommand
 {
-    public static ToolCommand Command { get; } = new("factions", [Options.Arena2, Options.Pack, Options.Inventory, Options.Update], Run);
+    public static ToolCommand Command { get; } = new("factions", [Options.Arena2, Options.Pack, Options.Inventory,
+        CommandOption.Required("--npc-captions", "NPC_CAPTIONS.json"), Options.Update], Run);
 
     private static int Run(CommandArguments args)
     {
         string path = Path.Combine(args["--arena2"], "FACTION.TXT");
         DaggerfallFactions factions = DaggerfallFactionsBuilder.Build(File.ReadAllText(path), Options.Arena2Label("FACTION.TXT"), File.ReadAllBytes(path), Options.ReadInventory(args));
+        factions = DaggerfallFactionsBuilder.WithNpcCaptions(factions,
+            TakenTable.Read<NpcCaptionTable>(File.ReadAllBytes(args["--npc-captions"]), args["--npc-captions"]));
         Console.WriteLine($"factions: {factions.Factions.Count} records, {factions.Regions.Count(region => region.Disposition == DaggerfallRegionFactionDisposition.Claimed)} claimed regions, {factions.DuplicateNames.Count} duplicated names");
         foreach (DaggerfallFactionNameAlias alias in factions.DuplicateNames)
         {

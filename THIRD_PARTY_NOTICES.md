@@ -44,12 +44,11 @@ Daggerfall Unity file and commit it came from:
 - in `src/Daggerfall.Import.Tool/inputs/`, which the import reads and a release ships beside the import
   tool: the race exposure flags (`RaceTemplate.cs`), the item groups (`ItemEnums.cs`, `ItemHelper.cs`,
   `ItemsFile.cs`), the item and magic-item templates (`ItemTemplates.txt`, `MagicItemTemplates.txt`),
-  the spell-cost tables (`FormulaHelper.cs`), the static mobile table (`EnemyBasics.cs`), the classic quest
-  list and quest tables (`StreamingAssets/Tables`), and the rewritten classic quest scripts of
+  the spell-cost tables (`FormulaHelper.cs`), the static mobile table (`EnemyBasics.cs`), the flat-caption
+  table (`Internal_Flats.csv`), the classic quest list and quest tables (`StreamingAssets/Tables`), and the rewritten classic quest scripts of
   `StreamingAssets/Quests`, each as a quest document of ours carrying the same text;
-- in the `buildingNames`, `internalText` and `npcCaptions` sections of
-  `content/worldrpg/packs/daggerfall.base/payload.json`: the region name banks and names (`MapsFile.cs`)
-  and the internal string and flat-caption tables (`Internal_Strings.csv`, `Internal_Flats.csv`).
+- in the `buildingNames` and `internalText` sections of `content/worldrpg/packs/daggerfall.base/payload.json`:
+  the region name banks and names (`MapsFile.cs`) and the internal string table (`Internal_Strings.csv`).
 
 `daggerfall-source-tool donor-drift --donor DIR` compares them with a Daggerfall Unity checkout. Daggerfall
 Unity is distributed under the following licence:
