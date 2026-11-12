@@ -2,6 +2,21 @@
 
 On top of the root `AGENTS.md`.
 
+## Layout
+
+- Every source file sits in the folder of the domain it serves, judged by what it does, not by its name. The project root holds no source file. A `DaggerfallSession.X.cs` partial goes in its domain's folder.
+- References point down this order, never up it:
+  1. `Content`
+  2. `Scene` and `Text`, shared services
+  3. `Character`, `Items`, `Time`, `Condition`
+  4. `Actors`, `Magic`, `Afflictions`, `Combat`
+  5. `Interiors`, `Exterior`, `Travel`
+  6. `Economy`, `Society`, `Dialogue`
+  7. `Quests`
+
+  `Session` and `Developer` compose everything and `UiProjection` reads everything; nothing references those three. Existing code still has references against the order. Don't add new ones.
+- Tests mirror these folders in `tests/WorldRpg.Rulesets.Daggerfall.Tests`. Shared test support stays in that project's root and `Fakes/`.
+
 ## Gameplay
 
 - `CombatResolution` stages keep their order when split: admission, contact, negation, calculation, mitigation, application.
