@@ -57,7 +57,7 @@ public sealed class ImporterRevisionTests
                 "content/worldrpg/packs/daggerfall.base/pack.json",
                 // The ruleset joins the authored base payload to the imported sections when it loads.
                 "content/worldrpg/packs/daggerfall.base/payload.json",
-                "src/WorldRpg.Rulesets.Daggerfall/DaggerfallRuleset.cs",
+                "src/WorldRpg.Rulesets.Daggerfall/Session/DaggerfallRuleset.cs",
                 "src/Daggerfall.Import/obj/Debug/net10.0/ImporterRevision.g.cs",
                 "src/Daggerfall.Import.Tool/bin/Debug/net10.0/Daggerfall.Import.Tool.dll",
             ];
