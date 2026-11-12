@@ -36,9 +36,6 @@ public sealed class DaggerfallReferenceCatalogTests
         Assert.Equal(definitions.Vocabulary.Skills.Select(id => id.Value), definitions.Catalogs.Skills.Select(key => key.Id));
         Assert.Equal(Enumerable.Range(0, 35), definitions.Catalogs.Skills.Select(key => key.Index));
         Assert.Equal(Enumerable.Range(0, 5), definitions.Catalogs.Resistances.Select(key => key.Index));
-        // An enemy reference resolves to the actor another part of the pack defines.
-        Assert.All(definitions.Catalogs.Enemies, enemy => Assert.True(definitions.Actors.ContainsKey(new DaggerfallActorId(enemy.Id))));
-        Assert.All(definitions.Catalogs.ItemTemplates, item => Assert.True(definitions.Items.ContainsKey(new DaggerfallItemId(item.Id))));
         // A name two careers share cannot be a key, and resolving by it says so.
         Assert.Equal(["Knight"], definitions.Catalogs.CareerNameCollisions);
         Assert.Throws<InvalidOperationException>(() => definitions.Catalogs.RequireCareerByName("Knight"));
@@ -75,12 +72,12 @@ public sealed class DaggerfallReferenceCatalogTests
         Assert.Equal(19, definitions.Catalogs.Careers.Count);
 
         ResolvedGameComposition broken = TestSessions
-            .Resolve(Content(root => root["catalogs"]!["careers"]!.AsArray()[0]!["primarySkills"]!.AsArray()[0] = "not-a-skill"), new GameBundleId("daggerfall.classic"))
+            .Resolve(Content(root => root["catalogs"]!["careers"]!.AsArray()[0]!["primarySkills"]!.AsArray()[0] = 35), new GameBundleId("daggerfall.classic"))
             .RequireComposition();
         ReadOnlyMemory<byte> authoredPayload = broken.RequireContentPack(new ContentPackId("daggerfall.base")).Payload;
         ReadOnlyMemory<byte> brokenPayload = broken.RequireContentPack(new ContentPackId("daggerfall.imported")).Payload;
         DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => { DaggerfallBaseContent.Read(authoredPayload, brokenPayload, DaggerfallData.For(broken)); });
-        Assert.Contains("not-a-skill", error.Message, StringComparison.Ordinal);
+        Assert.Contains("skill 35", error.Message, StringComparison.Ordinal);
     }
 
     private static ProductContent Content(Action<JsonObject>? change) => change is null
@@ -135,11 +132,11 @@ public sealed class DaggerfallReferenceCatalogTests
                     careers[0]!["primarySkills"] = new JsonArray();
                     break;
                 case "career naming nine attributes":
-                    JsonArray attributes = careers[0]!["attributes"]!.AsArray();
-                    attributes.Add(attributes[0]!.GetValue<string>());
+                    JsonArray attributes = careers[0]!["attributeValues"]!.AsArray();
+                    attributes.Add(attributes[0]!.GetValue<int>());
                     break;
                 case "career naming one skill twice":
-                    careers[0]!["majorSkills"]!.AsArray()[0] = careers[0]!["primarySkills"]!.AsArray()[0]!.GetValue<string>();
+                    careers[0]!["majorSkills"]!.AsArray()[0] = careers[0]!["primarySkills"]!.AsArray()[0]!.GetValue<int>();
                     break;
                 case "career with unknown equipment restriction":
                     careers[0]!["forbiddenEquipment"]!.AsArray()[0] = "forbidden-material:moonstone";
@@ -160,7 +157,7 @@ public sealed class DaggerfallReferenceCatalogTests
 
         // A consumer can check a citation without owning the inventory, and the runtime
         // refuses a citation outside this set.
-        Assert.Equal(25, definitions.Catalogs.SourcePaths.Count);
+        Assert.Equal(23, definitions.Catalogs.SourcePaths.Count);
         Assert.Contains("arena2/CLASSES.DAT", definitions.Catalogs.SourcePaths);
         Assert.Contains("arena2/TEXT.RSC", definitions.Catalogs.SourcePaths);
         Assert.Contains("daggerfall-unity/Assets/Scripts/Game/Entities/RaceTemplate.cs", definitions.Catalogs.SourcePaths);
@@ -172,27 +169,37 @@ public sealed class DaggerfallReferenceCatalogTests
     public void Rejects_a_career_naming_a_skill_the_catalog_does_not_carry()
     {
         DaggerfallContentException error = Mutate(pack =>
-            pack["catalogs"]!["careers"]!.AsArray()[0]!["primarySkills"]!.AsArray()[0] = "not-a-skill");
+            pack["catalogs"]!["careers"]!.AsArray()[0]!["primarySkills"]!.AsArray()[0] = 35);
 
-        Assert.Contains("not-a-skill", error.Message, StringComparison.Ordinal);
+        Assert.Contains("skill 35", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Rejects_a_reference_to_an_actor_the_pack_does_not_define()
+    public void An_authored_vocabulary_edit_names_the_imported_skills_without_a_new_import()
     {
-        DaggerfallContentException error = Mutate(pack =>
-            pack["catalogs"]!["enemies"]!.AsArray()[0]!["id"] = "enemy-the-pack-does-not-define");
+        // The import publishes classic skill indices and the authored vocabulary names them when the ruleset
+        // loads, so an edit to the vocabulary reaches every career with the imported data left as it is.
+        JsonObject payload = TestPayload.Sections("vocabulary");
+        JsonArray skills = payload["vocabulary"]!["skills"]!.AsArray();
+        List<string> names = [.. skills.Select(skill => skill!.GetValue<string>())];
+        int mysticism = names.IndexOf("mysticism"), alteration = names.IndexOf("alteration");
+        skills[mysticism] = "alteration";
+        skills[alteration] = "mysticism";
 
-        Assert.Contains("enemy-the-pack-does-not-define", error.Message, StringComparison.Ordinal);
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(TestPayload.Splice(payload));
+
+        Assert.Equal(["alteration", "mysticism", "thaumaturgy"], definitions.Catalogs.RequireCareer("class00").PrimarySkills);
+        Assert.Equal(mysticism, definitions.Catalogs.Skills.Single(key => key.Id == "alteration").Index);
     }
 
     [Fact]
-    public void Rejects_a_reference_to_an_item_the_pack_does_not_define()
+    public void Rejects_an_imported_skill_space_the_vocabulary_does_not_name_whole()
     {
-        DaggerfallContentException error = Mutate(pack =>
-            pack["catalogs"]!["itemTemplates"]!.AsArray()[0]!["id"] = "item-the-pack-does-not-define");
+        // The vocabulary names the classic skill space index by index, so an imported space of another size is
+        // refused rather than leaving a skill unnamed.
+        DaggerfallContentException error = Mutate(pack => pack["catalogs"]!["skills"]!.AsArray().RemoveAt(34));
 
-        Assert.Contains("item-the-pack-does-not-define", error.Message, StringComparison.Ordinal);
+        Assert.Contains("The vocabulary names 35 skills where the catalog's classic skill space has 34.", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]

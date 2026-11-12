@@ -14,7 +14,7 @@ internal static class ItemTemplateLedgerCommand
     private const string ItemTemplateFamily = "CNT-011";
 
     public static ToolCommand Command { get; } = new("item-template-ledger",
-        [CommandOption.Required("--donor", "ITEMS_DIR"), Options.Inventory, Options.Authored, Options.Pack, Options.Update], Run);
+        [CommandOption.Required("--donor", "ITEMS_DIR"), Options.Inventory, Options.Pack, Options.Update], Run);
 
     private static int Run(CommandArguments args)
     {
@@ -31,13 +31,11 @@ internal static class ItemTemplateLedgerCommand
             File.ReadAllText(Path.Combine(donor, "ItemHelper.cs")),
             File.ReadAllText(Path.Combine(donor, "..", "..", "API", "ItemsFile.cs")),
             PublishedSourcePath.DonorRoot);
-        // The published items are authored; the ledger records how many there are.
-        int publishedItems = PayloadFiles.ReadAuthored(args["--authored"])["items"]?.AsArray().Count ?? 0;
-        JsonObject ledger = ItemTemplateLedgerBuilder.Build(baseline, family.Id, family.PathOrPattern, targetStatus, publishedItems);
+        JsonObject ledger = ItemTemplateLedgerBuilder.Build(baseline, family.Id, family.PathOrPattern, targetStatus);
         Console.WriteLine($"target: {family.Id} | {family.PathOrPattern} | documented '{family.Disposition}' -> status '{targetStatus}'");
         Console.WriteLine($"item template ledger: {baseline.Targets.Count} targets, {baseline.Targets.Count(target => target.IsReferenced)} referenced by donor groups, {baseline.Unreferenced.Count()} referenced by none, {baseline.OutOfRangeIndices.Count} outside the classic space");
         Console.WriteLine($"unreferenced indices: [{string.Join(", ", baseline.Unreferenced.Select(target => target.Index))}]");
-        Console.WriteLine($"published items: {publishedItems}, value provenance 'catalog-migration', native decoding false");
+        Console.WriteLine("published items: value provenance 'catalog-migration', native decoding false");
 
         if (!args.Switch("--update"))
         {

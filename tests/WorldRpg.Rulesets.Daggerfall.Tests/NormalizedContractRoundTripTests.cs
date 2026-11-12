@@ -103,7 +103,7 @@ public sealed class NormalizedContractRoundTripTests
         string enemyBasics = TestContentFiles.ReadText(TestData.Donor("Assets/Scripts/Utility/EnemyBasics.cs"));
         byte[] authored = TestContentFiles.ReadCopy(TestData.PackPayload("daggerfall.base"));
         global::Daggerfall.Import.Arena2.Arena2MobileCatalogPublication publication = global::Daggerfall.Import.Arena2.Arena2MobileCatalogDocument.Build(
-            enemyBasics, Encoding.UTF8.GetString(authored), "donor/EnemyBasics.cs");
+            enemyBasics, "donor/EnemyBasics.cs");
         string mobiles = JsonNode.Parse(publication.Json)!.ToJsonString(PublishedJson.SectionCompact);
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(authored, RewriteImportedPayload(
             new Dictionary<string, string>(StringComparer.Ordinal) { ["mobiles"] = mobiles }), TestPayload.Data);

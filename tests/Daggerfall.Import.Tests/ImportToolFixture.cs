@@ -159,7 +159,7 @@ internal sealed partial class ImportToolFixture : IDisposable
                 foreach ((string path, byte[] bytes) in DaggerfallLocationDetails.Files(locations)) result.Add(At(Path.Combine("output", path.Replace('/', Path.DirectorySeparatorChar))), bytes);
                 break;
             case "magic-catalog": sections.Add("magic", Arena2MagicCatalogDocument.Build(Source("SPELLS.STD"), Source("MAGIC.DEF"), Label("SPELLS.STD"), Label("MAGIC.DEF"), Arena2MagicEffectCostTable.Read(File.ReadAllText(Donor("Assets/Scripts/Game/Formulas/FormulaHelper.cs")))).Json); break;
-            case "mobile-catalog": sections.Add("mobiles", Arena2MobileCatalogDocument.Build(File.ReadAllText(Donor("Assets/Scripts/Utility/EnemyBasics.cs")), File.ReadAllText(Authored), PublishedSourcePath.Donor("Assets/Scripts/Utility/EnemyBasics.cs"), MonsterArchiveInventory.Enumerate(Source("MONSTER.BSA"), "MONSTER.BSA")).Json); break;
+            case "mobile-catalog": sections.Add("mobiles", Arena2MobileCatalogDocument.Build(File.ReadAllText(Donor("Assets/Scripts/Utility/EnemyBasics.cs")), PublishedSourcePath.Donor("Assets/Scripts/Utility/EnemyBasics.cs"), MonsterArchiveInventory.Enumerate(Source("MONSTER.BSA"), "MONSTER.BSA"), PublishedSource.Of(Label("MONSTER.BSA"), Source("MONSTER.BSA"))).Json); break;
             case "internal-strings": Section("text", DaggerfallInternalStringsBuilder.Merge(Read<DaggerfallText>(Pack, "text"), File.ReadAllBytes(Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv")), PublishedSourcePath.Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv"), "en")); break;
             case "climate":
                 Section("climate", DaggerfallWorldGridsBuilder.BuildClimate(Source("CLIMATE.PAK"), Label("CLIMATE.PAK"), Rows));
@@ -184,20 +184,15 @@ internal sealed partial class ImportToolFixture : IDisposable
                     blockInputs.Records.SelectMany(block => (block.Objects?.ModelIds ?? []).Select(id => new DaggerfallGeometryUseSite(id, block.SourceKey))).ToArray());
                 recordSections.Add("geometry", JsonSerializer.Serialize(geometry, PublishedJson.Section)); break;
             case "catalogs":
-                var authored = JsonNode.Parse(File.ReadAllText(Authored))!;
-                var vocabulary = authored["vocabulary"]!;
                 var catalogs = DaggerfallCatalogBuilder.Build(Rows,
-                    vocabulary["attributes"]!.AsArray().Select(v => v!.GetValue<string>()).ToArray(),
-                    vocabulary["skills"]!.AsArray().Select(v => v!.GetValue<string>()).ToArray(),
                     Directory.EnumerateFiles(Arena2, "CLASS*.CFG").Order(StringComparer.Ordinal).Select(file => (Path.GetFileName(file), File.ReadAllBytes(file))).ToArray(),
-                    authored["actors"]!.AsArray().Select(v => v!["id"]!.GetValue<string>()).Where(id => id != "player").ToArray(),
-                    authored["items"]!.AsArray().Select(v => v!["id"]!.GetValue<string>()).ToArray(), File.ReadAllText(Donor("Assets/Scripts/Game/Entities/RaceTemplate.cs")),
+                    File.ReadAllText(Donor("Assets/Scripts/Game/Entities/RaceTemplate.cs")),
                     Source("CLASSES.DAT"), DaggerfallTextBuilder.Build(Source("TEXT.RSC"), Label("TEXT.RSC"), Rows, "en"));
                 sections.Add("catalogs", Encoding.UTF8.GetString(DaggerfallCatalogSerializer.Serialize(catalogs, Rows.Select(row => row.PathOrPattern).ToHashSet(StringComparer.Ordinal)))); break;
             case "item-template-ledger":
                 var family = Rows.Single(row => row.RowType == "family" && row.Id == "CNT-011");
                 var baseline = ItemTemplateBaseline.FromDonorSources(File.ReadAllText(Donor("Assets/Scripts/Game/Items/ItemEnums.cs")), File.ReadAllText(Donor("Assets/Scripts/Game/Items/ItemHelper.cs")), File.ReadAllText(Donor("Assets/Scripts/API/ItemsFile.cs")), PublishedSourcePath.DonorRoot);
-                sections.Add(ItemTemplateLedgerBuilder.SectionName, ItemTemplateLedgerBuilder.Build(baseline, family.Id, family.PathOrPattern, ItemTemplateLedgerBuilder.StatusFor(family.Disposition), JsonNode.Parse(File.ReadAllText(Authored))!["items"]!.AsArray().Count).ToJsonString(PublishedJson.Section)); break;
+                sections.Add(ItemTemplateLedgerBuilder.SectionName, ItemTemplateLedgerBuilder.Build(baseline, family.Id, family.PathOrPattern, ItemTemplateLedgerBuilder.StatusFor(family.Disposition)).ToJsonString(PublishedJson.Section)); break;
             case "items":
                 var templates = File.ReadAllBytes(Donor("Assets/Resources/ItemTemplates.txt"));
                 string label = PublishedSourcePath.Donor("Assets/Resources/ItemTemplates.txt");

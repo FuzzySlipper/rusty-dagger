@@ -28,7 +28,6 @@ internal static class ImportCommand
     private const string Inventory = ImportLayout.Inventory;
     private const string UiAssets = "data/ui-authored-assets.json";
     private const string UiOriginal = AuthoredUi.ProductDirectory;
-    private const string Authored = "content/worldrpg/packs/daggerfall.base/payload.json";
 
     private static readonly string[] Arena2Files =
         ["MAPS.BSA", "BLOCKS.BSA", "ARCH3D.BSA", "MONSTER.BSA", "DAGGER.SND", "TEXT.RSC", "CLASSES.DAT", "CLIMATE.PAK", "POLITIC.PAK",
@@ -160,17 +159,17 @@ internal static class ImportCommand
         Add("sky-media", "sky-media", "--arena2", arena2, "--out", staging, "--group", "worldrpg", "--update");
 
         // 2. The imported payload's sections, in dependency order, with the block document and the import
-        //    records. Commands that join authored sections (vocabulary, actors, items) read the authored payload.
-        Add("catalogs", "catalogs", "--arena2", arena2, "--inventory", Inventory, "--authored", Authored, "--pack", imported,
+        //    records. None reads the authored payload: the ruleset joins it to these sections when it loads.
+        Add("catalogs", "catalogs", "--arena2", arena2, "--inventory", Inventory, "--pack", imported,
             "--donor-races", Donor("Assets/Scripts/Game/Entities/RaceTemplate.cs"), "--update");
         Add("item-template-ledger", "item-template-ledger", "--donor", Donor("Assets/Scripts/Game/Items"), "--inventory", Inventory,
-            "--authored", Authored, "--pack", imported, "--update");
+            "--pack", imported, "--update");
         Add("character-presentation", "character-presentation", "--arena2", arena2, "--inventory", Inventory, "--pack", imported,
             "--out", staging, "--group", "worldrpg", "--update");
         Add("locations", "locations", "--arena2", arena2, "--pack", imported, "--out", staging, "--update");
         Add("magic-catalog", "magic-catalog", "--arena2", arena2, "--pack", imported,
             "--donor-formulas", Donor("Assets/Scripts/Game/Formulas/FormulaHelper.cs"), "--update");
-        Add("mobile-catalog", "mobile-catalog", "--donor", Donor("Assets/Scripts/Utility/EnemyBasics.cs"), "--authored", Authored,
+        Add("mobile-catalog", "mobile-catalog", "--donor", Donor("Assets/Scripts/Utility/EnemyBasics.cs"),
             "--pack", imported, "--archive", $"{arena2}/MONSTER.BSA", "--update");
         Add("text", "text", "--arena2", arena2, "--pack", imported, "--inventory", Inventory, "--language", "en", "--update");
         Add("internal-strings", "internal-strings",
@@ -297,7 +296,7 @@ internal static class ImportCommand
             yield return $"tracked directory '{Donor}/Assets/StreamingAssets/Quests'";
 
         if (inputs.Music is { } music && !IsDirectory(music)) yield return $"music folder '{music}' (a folder of <track>.<ext> recordings, or leave out --music)";
-        foreach (string file in new[] { Inventory, UiAssets, Authored }.Where(file => !IsFile(file)))
+        foreach (string file in new[] { Inventory, UiAssets }.Where(file => !IsFile(file)))
             yield return $"tracked file '{file}'";
         if (!IsDirectory(UiOriginal)) yield return $"tracked directory '{UiOriginal}'";
     }

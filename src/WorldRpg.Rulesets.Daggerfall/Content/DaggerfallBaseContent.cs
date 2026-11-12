@@ -158,12 +158,12 @@ internal static partial class DaggerfallBaseContent
             Dictionary<DaggerfallActorId, DaggerfallActorDefinition> actors = ReadActors(root, vocabulary, actions, items, diagnostics);
             List<DaggerfallHudResourceDefinition> hud = ReadHud(root, diagnostics);
             IReadOnlyList<DaggerfallDonorErratum> donorErrata = ReadDonorErrata(root, diagnostics);
-            DaggerfallCatalogSet catalogs = ReadCatalogs(root, vocabulary, actors, items, diagnostics);
+            DaggerfallCatalogSet catalogs = ReadCatalogs(root, vocabulary, diagnostics);
             DaggerfallMobileCatalogSet mobiles = ReadMobileCatalog(root, actors, diagnostics);
             DaggerfallEncounterActors.AddMissing(actors, catalogs, mobiles, vocabulary);
             DaggerfallEncounterSet encounters = ReadEncounters(root, catalogs, mobiles, diagnostics);
             ValidateActorIdentities(actors, catalogs, mobiles, diagnostics);
-            DaggerfallItemTemplateLedger itemTemplates = ReadItemTemplateLedger(root, catalogs, diagnostics);
+            DaggerfallItemTemplateLedger itemTemplates = ReadItemTemplateLedger(root, diagnostics);
             DaggerfallCharacterPresentationSet characterPresentation = ReadCharacterPresentation(root, catalogs, diagnostics);
             DaggerfallMagicCatalogSet magic = ReadMagicCatalog(root, diagnostics);
             DaggerfallEnemySpells enemySpells = ReadEnemySpells(root, mobiles, magic, diagnostics);
@@ -1108,8 +1108,6 @@ internal static partial class DaggerfallBaseContent
             foreach (var recommendation in questionnaire.Recommendations)
                 Add("class-recommendation", recommendation.Warrior, recommendation.Rogue, recommendation.Mage, recommendation.CareerId);
         }
-        foreach (DaggerfallCatalogReference enemy in definitions.Catalogs.Enemies.OrderBy(enemy => enemy.Id, StringComparer.Ordinal)) Add("catalog-enemy", enemy.Id, enemy.Source.Path);
-        foreach (DaggerfallCatalogReference item in definitions.Catalogs.ItemTemplates.OrderBy(item => item.Id, StringComparer.Ordinal)) Add("catalog-item-template", item.Id, item.Source.Path);
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value.ToString())));
     }
 
@@ -1515,9 +1513,10 @@ internal static partial class DaggerfallBaseContent
     }
 
     /// <summary>
-    /// Reads the published mobile catalog from the pack alone. Each record states the donor's parameters,
-    /// the actor this product publishes and the disposition reconciling them, so a consumer resolves a
-    /// mobile's behaviour, damage and health without opening the donor's source table.
+    /// Reads the published mobile catalog and joins it to the authored actors. Each imported record states the
+    /// donor's parameters and the identity its donor name gives it; which authored actor carries it, and so its
+    /// disposition, is joined here rather than by the import, so an authored actor edit leaves the imported data
+    /// current. A consumer resolves a mobile's behaviour, damage and health without opening the donor's table.
     /// </summary>
     private static DaggerfallMobileCatalogSet ReadMobileCatalog(
         JsonElement root,
@@ -1538,12 +1537,20 @@ internal static partial class DaggerfallBaseContent
 
         Dictionary<int, DaggerfallMobileDefinition> mobiles = [];
         Dictionary<string, DaggerfallMobileDefinition> byActor = new(StringComparer.Ordinal);
-        foreach (JsonElement mobile in Array(section, "mobiles", diagnostics))
+        JsonElement[] records = [.. Array(section, "mobiles", diagnostics)];
+        // The donor names some mobiles more than once; an authored actor keeps each addressable by numbering
+        // it after its donor id, and the plain identity is the entry it repeats.
+        Dictionary<string, int> identityCounts = records.Select(mobile => OptionalText(mobile, "identity"))
+            .GroupBy(identity => identity, StringComparer.Ordinal).ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+        foreach (JsonElement mobile in records)
         {
             int donorId = Integer(mobile, "donorId", diagnostics);
             string identity = OptionalText(mobile, "identity");
-            string disposition = Text(mobile, "disposition", diagnostics);
-            string? actor = mobile.TryGetProperty("actor", out JsonElement actorValue) && actorValue.ValueKind == JsonValueKind.String ? actorValue.GetString() : null;
+            string numbered = $"{identity}-{donorId.ToString(CultureInfo.InvariantCulture)}";
+            string? actor = actors.ContainsKey(new DaggerfallActorId(numbered)) ? numbered
+                : actors.ContainsKey(new DaggerfallActorId(identity)) ? identity : null;
+            string disposition = actor is not null ? (actor == numbered && identityCounts[identity] > 1 ? "published-variant" : "published")
+                : donorId >= DaggerfallEncounterActors.FirstClassMobile ? "human-mobile" : "unpublished";
             JsonElement corpse = Object(Property(mobile, "corpse", diagnostics), "corpse", diagnostics);
             JsonElement sounds = Object(Property(mobile, "sounds", diagnostics), "sounds", diagnostics);
             JsonElement damage = Object(Property(mobile, "damage", diagnostics), "damage", diagnostics);
@@ -1609,28 +1616,7 @@ internal static partial class DaggerfallBaseContent
                 diagnostics.Add($"Published mobile {donorId} ('{definition.DonorName}') carries no identity, so nothing links it to an actor.");
             }
 
-            if (disposition is not ("published" or "published-variant" or "human-mobile" or "unpublished"))
-            {
-                diagnostics.Add($"Published mobile {donorId} ('{definition.DonorName}') is named as '{disposition}', which is not one of the four dispositions the catalog defines.");
-            }
-
-            // The disposition and the actor have to agree: a mobile the catalog calls published must name
-            // an actor, and one it calls unpublished or human must not claim one.
-            bool namesKnownActor = actor is not null && actors.ContainsKey(new DaggerfallActorId(actor));
-            if (definition.IsPublished && actor is null)
-            {
-                diagnostics.Add($"Published mobile {donorId} ('{definition.DonorName}') is named as {disposition} but carries no actor identity.");
-            }
-            else if (definition.IsPublished && !namesKnownActor)
-            {
-                diagnostics.Add($"Published mobile {donorId} ('{definition.DonorName}') names actor '{actor}', which the pack does not define.");
-            }
-            else if (!definition.IsPublished && actor is not null)
-            {
-                diagnostics.Add($"Published mobile {donorId} ('{definition.DonorName}') is named as {disposition} but claims actor '{actor}'.");
-            }
-
-            if (namesKnownActor && !byActor.TryAdd(actor!, definition))
+            if (actor is not null && !byActor.TryAdd(actor, definition))
             {
                 diagnostics.Add($"Published mobile catalog names actor '{actor}' twice, so a consumer cannot resolve one mobile for it.");
             }
@@ -3167,7 +3153,7 @@ internal static partial class DaggerfallBaseContent
                     Integer(magnitude, "levelBase", diagnostics), Integer(magnitude, "levelHigh", diagnostics), Integer(magnitude, "perLevel", diagnostics));
     }
 
-    private static DaggerfallItemTemplateLedger ReadItemTemplateLedger(JsonElement root, DaggerfallCatalogSet catalogs, DaggerfallContentDiagnostics diagnostics)
+    private static DaggerfallItemTemplateLedger ReadItemTemplateLedger(JsonElement root, DaggerfallContentDiagnostics diagnostics)
     {
         if (!root.TryGetProperty("itemTemplateLedger", out JsonElement value) || value.ValueKind != JsonValueKind.Object)
         {
@@ -3191,13 +3177,6 @@ internal static partial class DaggerfallBaseContent
             && !string.Equals(status, DaggerfallItemTemplateLedger.PresentStatus, StringComparison.Ordinal))
         {
             diagnostics.Add($"The item template ledger records source status '{status}', which is neither '{DaggerfallItemTemplateLedger.AbsentStatus}' nor '{DaggerfallItemTemplateLedger.PresentStatus}'.");
-        }
-
-        // The ledger's target cites the documented inventory exactly as a catalog citation
-        // does, so a manifest change cannot leave one half of the pack stale.
-        if (targetPath.Length != 0 && !catalogs.SourcePaths.Contains(targetPath, StringComparer.Ordinal))
-        {
-            diagnostics.Add($"The item template ledger cites '{targetPath}', which the payload's catalog sources do not carry.");
         }
 
         string substituteStatus = Text(substitute, "status", diagnostics);
@@ -3596,29 +3575,23 @@ internal static partial class DaggerfallBaseContent
     /// define. Runtime code never opens a source file; the provenance it carries is a
     /// citation the import tool already reconciled against the documented inventory.
     /// </summary>
-    private static DaggerfallCatalogSet ReadCatalogs(
-        JsonElement root,
-        DaggerfallVocabulary vocabulary,
-        IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> actors,
-        IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> items,
-        DaggerfallContentDiagnostics diagnostics)
+    /// <summary>
+    /// Reads the imported catalogs and joins them to the authored vocabulary here, not in the import: the
+    /// import publishes the classic attribute and skill indices, and the vocabulary names them in index order,
+    /// so an authored edit to the vocabulary reaches the game without making the imported data stale.
+    /// </summary>
+    private static DaggerfallCatalogSet ReadCatalogs(JsonElement root, DaggerfallVocabulary vocabulary, DaggerfallContentDiagnostics diagnostics)
     {
         JsonElement value = Object(Property(root, "catalogs", diagnostics), "catalogs", diagnostics);
         IReadOnlyList<string> sources = ReadTexts(value, "sources", diagnostics);
-        IReadOnlyList<DaggerfallCatalogKey> attributes = ReadCatalogKeys(value, "attributes", sources, diagnostics);
-        IReadOnlyList<DaggerfallCatalogKey> skills = ReadCatalogKeys(value, "skills", sources, diagnostics);
+        IReadOnlyList<DaggerfallCatalogKey> attributes = ReadClassicIndices(value, "attributes", vocabulary.Attributes, sources, diagnostics);
+        IReadOnlyList<DaggerfallCatalogKey> skills = ReadClassicIndices(value, "skills", vocabulary.Skills, sources, diagnostics);
         IReadOnlyList<DaggerfallCatalogKey> resistances = ReadCatalogKeys(value, "resistances", sources, diagnostics);
         string[] attributeKeys = [.. attributes.Select(key => key.Id)];
-        string[] skillKeys = [.. skills.Select(key => key.Id)];
         string[] elementKeys = [.. resistances.Select(key => key.Id)];
-        if (!attributeKeys.SequenceEqual(vocabulary.Attributes.Take(attributeKeys.Length).Select(id => id.Value), StringComparer.Ordinal))
+        if (skills.Count != vocabulary.Skills.Count)
         {
-            diagnostics.Add("The catalog attributes must be the vocabulary's attributes in index order.");
-        }
-
-        if (!skillKeys.SequenceEqual(vocabulary.Skills.Select(id => id.Value), StringComparer.Ordinal))
-        {
-            diagnostics.Add("The catalog skills must be the vocabulary's skills in index order.");
+            diagnostics.Add($"The vocabulary names {vocabulary.Skills.Count} skills where the catalog's classic skill space has {skills.Count}.");
         }
 
         List<DaggerfallRaceDefinition> races = [];
@@ -3650,10 +3623,10 @@ internal static partial class DaggerfallBaseContent
         {
             string id = Text(career, "id", diagnostics);
             string name = Text(career, "name", diagnostics);
-            IReadOnlyList<string> primary = ReadIds(career, "primarySkills", diagnostics);
-            IReadOnlyList<string> major = ReadIds(career, "majorSkills", diagnostics);
-            IReadOnlyList<string> minor = ReadIds(career, "minorSkills", diagnostics);
-            IReadOnlyList<string> careerAttributes = ReadIds(career, "attributes", diagnostics);
+            IReadOnlyList<string> primary = ReadSkillIndices(career, "primarySkills", id, skills, diagnostics);
+            IReadOnlyList<string> major = ReadSkillIndices(career, "majorSkills", id, skills, diagnostics);
+            IReadOnlyList<string> minor = ReadSkillIndices(career, "minorSkills", id, skills, diagnostics);
+            IReadOnlyList<string> careerAttributes = attributeKeys;
             IReadOnlyList<int> attributeValues = Array(career, "attributeValues", diagnostics).Select(value =>
             {
                 if (value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out int parsed)) return parsed;
@@ -3677,35 +3650,11 @@ internal static partial class DaggerfallBaseContent
             // A value no consumer interprets would be an ability the career claims and never grants.
             if (!specials.IsClassic && specials.Fields.All(field => field.Value != InvalidFlagByte))
                 diagnostics.Add($"Career '{id}' carries special-ability values [{string.Join(", ", specials.Fields.Select(field => $"{field.Name}={field.Value}"))}] outside the classic bits and single conditions.");
-            IReadOnlyList<string> expertProficiencies = ReadIds(career, "expertProficiencies", diagnostics);
+            IReadOnlyList<string> expertProficiencies = ReadSkillIndices(career, "expertProficiencies", id, skills, diagnostics);
             IReadOnlyList<string> forbiddenEquipment = ReadIds(career, "forbiddenEquipment", diagnostics);
             DaggerfallCareerDefinition definition = new(
                 id, name, primary, major, minor, careerAttributes, attributeValues, hitPoints, spellPointMultiplierMilli, multiplier, resistant, immune,
                 resistanceFlags, immunityFlags, lowToleranceFlags, criticalWeaknessFlags, attackModifierFlags, specials, expertProficiencies, forbiddenEquipment, ReadCitation(career, sources, diagnostics));
-            foreach (string skill in definition.SkillReferences)
-            {
-                if (!skillKeys.Contains(skill, StringComparer.Ordinal))
-                {
-                    diagnostics.Add($"Career '{id}' names skill '{skill}', which the catalog does not carry.");
-                }
-            }
-
-            foreach (string skill in expertProficiencies)
-            {
-                if (!skillKeys.Contains(skill, StringComparer.Ordinal))
-                {
-                    diagnostics.Add($"Career '{id}' claims expertise in skill '{skill}', which the catalog does not carry.");
-                }
-            }
-
-            foreach (string attribute in careerAttributes)
-            {
-                if (!attributeKeys.Contains(attribute, StringComparer.Ordinal))
-                {
-                    diagnostics.Add($"Career '{id}' names attribute '{attribute}', which the catalog does not carry.");
-                }
-            }
-
             foreach (string element in resistant.Concat(immune))
             {
                 if (!elementKeys.Contains(element, StringComparer.Ordinal))
@@ -3767,24 +3716,6 @@ internal static partial class DaggerfallBaseContent
             diagnostics.Add("The career name collisions the catalogs record must be the names more than one career carries.");
         }
 
-        IReadOnlyList<DaggerfallCatalogReference> enemies = ReadCatalogReferences(value, "enemies", sources, diagnostics);
-        foreach (DaggerfallCatalogReference enemy in enemies)
-        {
-            if (!actors.ContainsKey(new DaggerfallActorId(enemy.Id)))
-            {
-                diagnostics.Add($"The catalog references enemy '{enemy.Id}', which the pack does not define.");
-            }
-        }
-
-        IReadOnlyList<DaggerfallCatalogReference> itemTemplates = ReadCatalogReferences(value, "itemTemplates", sources, diagnostics);
-        foreach (DaggerfallCatalogReference item in itemTemplates)
-        {
-            if (!items.ContainsKey(new DaggerfallItemId(item.Id)))
-            {
-                diagnostics.Add($"The catalog references item template '{item.Id}', which the pack does not define.");
-            }
-        }
-
         DaggerfallClassQuestionnaire? questionnaire = null;
         if (value.TryGetProperty("classQuestionnaire", out JsonElement questionsValue) && questionsValue.ValueKind != JsonValueKind.Null)
         {
@@ -3806,7 +3737,7 @@ internal static partial class DaggerfallBaseContent
                 diagnostics.Add("Class questionnaire recommendations must resolve all ten-answer results to published careers.");
             questionnaire = new(questions, recommendations);
         }
-        return new DaggerfallCatalogSet(attributes, skills, resistances, races, careers, collisions, enemies, itemTemplates, sources, questionnaire);
+        return new DaggerfallCatalogSet(attributes, skills, resistances, races, careers, collisions, sources, questionnaire);
     }
 
     private static bool ValidEquipmentRestriction(string value)
@@ -3895,20 +3826,51 @@ internal static partial class DaggerfallBaseContent
         return System.Array.AsReadOnly(keys.ToArray());
     }
 
-    private static IReadOnlyList<DaggerfallCatalogReference> ReadCatalogReferences(JsonElement value, string property, IReadOnlyList<string> sources, DaggerfallContentDiagnostics diagnostics)
+    /// <summary>
+    /// One classic index space the authored vocabulary names: contiguous indices from zero, each with a valid
+    /// citation, keyed by the vocabulary's id at that index. A space wider than the vocabulary is refused.
+    /// </summary>
+    private static IReadOnlyList<DaggerfallCatalogKey> ReadClassicIndices(JsonElement value, string property, IReadOnlyList<DaggerfallStatId> vocabulary,
+        IReadOnlyList<string> sources, DaggerfallContentDiagnostics diagnostics)
     {
-        List<DaggerfallCatalogReference> references = [];
+        List<DaggerfallCatalogKey> keys = [];
         foreach (JsonElement entry in Array(value, property, diagnostics))
         {
-            references.Add(new DaggerfallCatalogReference(Text(entry, "id", diagnostics), ReadCitation(entry, sources, diagnostics)));
+            int index = Integer(entry, "index", diagnostics);
+            DaggerfallCatalogCitation citation = ReadCitation(entry, sources, diagnostics);
+            if (index != keys.Count)
+            {
+                diagnostics.Add($"'{property}' must carry contiguous indices from zero.");
+                break;
+            }
+
+            if (index >= vocabulary.Count)
+            {
+                diagnostics.Add($"The catalog's classic {property} space has index {index}, which the vocabulary's {vocabulary.Count} {property} do not name.");
+                break;
+            }
+
+            keys.Add(new DaggerfallCatalogKey(vocabulary[index].Value, index, citation));
         }
 
-        if (references.Select(reference => reference.Id).Distinct(StringComparer.Ordinal).Count() != references.Count)
+        return System.Array.AsReadOnly(keys.ToArray());
+    }
+
+    /// <summary>A career's skills, published as classic skill indices and named through the catalog's skill keys.</summary>
+    private static IReadOnlyList<string> ReadSkillIndices(JsonElement career, string property, string careerId, IReadOnlyList<DaggerfallCatalogKey> skills,
+        DaggerfallContentDiagnostics diagnostics)
+    {
+        List<string> names = [];
+        foreach (JsonElement entry in Array(career, property, diagnostics))
         {
-            diagnostics.Add($"'{property}' must carry distinct ids.");
+            if (entry.ValueKind == JsonValueKind.Number && entry.TryGetInt32(out int index) && index >= 0 && index < skills.Count)
+                names.Add(skills[index].Id);
+            else
+                diagnostics.Add($"Career '{careerId}' names skill {entry} in '{property}', which is not an index of the catalog's classic skills.");
         }
 
-        return System.Array.AsReadOnly(references.ToArray());
+        if (names.Distinct(StringComparer.Ordinal).Count() != names.Count) diagnostics.Add($"Career '{careerId}' names a skill twice in '{property}'.");
+        return System.Array.AsReadOnly(names.ToArray());
     }
 
     /// <summary>

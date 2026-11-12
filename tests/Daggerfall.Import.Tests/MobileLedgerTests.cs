@@ -16,7 +16,6 @@ public sealed class MobileLedgerTests
 
         Assert.Equal(5, ledger.DonorEntries);
         Assert.Equal(3, ledger.PublishedActors);
-        Assert.Equal(2, ledger.CatalogEntries);
         Assert.Equal(2, ledger.Entries.Count(entry => entry.Disposition == MobileLedgerDisposition.Published));
         Assert.Equal(1, ledger.Entries.Count(entry => entry.Disposition == MobileLedgerDisposition.PublishedVariant));
         Assert.Equal(1, ledger.Entries.Count(entry => entry.Disposition == MobileLedgerDisposition.HumanClass));
@@ -79,13 +78,7 @@ public sealed class MobileLedgerTests
             { "id": "rat" },
             { "id": "dragonling" },
             { "id": "dragonling-40" }
-          ],
-          "catalogs": {
-            "enemies": [
-              { "id": "rat" },
-              { "id": "dragonling" }
-            ]
-          }
+          ]
         }
         """;
 }

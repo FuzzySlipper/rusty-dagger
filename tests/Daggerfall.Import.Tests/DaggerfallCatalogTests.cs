@@ -67,7 +67,7 @@ public sealed class DaggerfallCatalogTests
         Assert.Equal(40, record.MajorSkill1);
 
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => DaggerfallCatalogBuilder.Build(
-            ReadInventory(), VocabularyAttributes(), VocabularySkills(), [("CLASS00.CFG", bytes)], EnemyIds(), ItemIds(), RaceTemplate()));
+            ReadInventory(), [("CLASS00.CFG", bytes)], RaceTemplate()));
         Assert.Contains("CLASS00.CFG", error.Message, StringComparison.Ordinal);
         Assert.Contains("40", error.Message, StringComparison.Ordinal);
     }
@@ -93,9 +93,6 @@ public sealed class DaggerfallCatalogTests
         Assert.Equal(8, catalogs.Attributes.Count);
         Assert.Equal(35, catalogs.Skills.Count);
         Assert.Equal(5, catalogs.Resistances.Count);
-        // Every pack actor except the player is an enemy reference the catalog resolves.
-        Assert.Equal(44, catalogs.Enemies.Count);
-        Assert.Equal(32, catalogs.ItemTemplates.Count);
         // Every record cites a documented source path, which the build validated.
         Assert.All(catalogs.Careers, career => Assert.StartsWith("arena2/CLASS", career.Source.Path, StringComparison.Ordinal));
         Assert.All(catalogs.Races, race => Assert.Equal("daggerfall-unity/Assets/Scripts/Game/Entities/RaceTemplate.cs", race.Source.Path));
@@ -105,10 +102,12 @@ public sealed class DaggerfallCatalogTests
         Assert.Equal("Knight", catalogs.Careers.Single(career => career.Id == "class17").Name);
         Assert.Equal("Knight", catalogs.Careers.Single(career => career.Id == "class18").Name);
         // The supplied Knight record holds the terminal no-skill value in a major slot, so
-        // it contributes two major skills rather than a key nothing can resolve.
-        Assert.Equal(["etiquette", "dodging"], catalogs.Careers.Single(career => career.Id == "class18").MajorSkills);
+        // it contributes two major skills rather than an index nothing can resolve. Skills are classic indices,
+        // which the ruleset names by the authored vocabulary: etiquette and dodging here.
+        Assert.Equal([1, 20], catalogs.Careers.Single(career => career.Id == "class18").MajorSkills);
         Assert.Equal("Mage", catalogs.Careers.Single(career => career.Id == "class00").Name);
-        Assert.Equal(["mysticism", "alteration", "thaumaturgy"], catalogs.Careers.Single(career => career.Id == "class00").PrimarySkills);
+        // Mysticism, alteration and thaumaturgy.
+        Assert.Equal([27, 25, 26], catalogs.Careers.Single(career => career.Id == "class00").PrimarySkills);
         // CLASS00's weapon/armor/shield bitfield prohibits long blades, axes, and
         // missile weapons, plus the three larger shield forms and chain/plate armor.
         Assert.Equal(
@@ -128,7 +127,7 @@ public sealed class DaggerfallCatalogTests
         carrier[18] = ClassCfgDecoder.NoSkillIndex;
 
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => DaggerfallCatalogBuilder.Build(
-            ReadInventory(), VocabularyAttributes(), VocabularySkills(), [("CLASS00.CFG", carrier)], EnemyIds(), ItemIds(), RaceTemplate()));
+            ReadInventory(), [("CLASS00.CFG", carrier)], RaceTemplate()));
 
         Assert.Contains("class00", error.Message, StringComparison.Ordinal);
         Assert.Contains("primary", error.Message, StringComparison.Ordinal);
@@ -146,8 +145,8 @@ public sealed class DaggerfallCatalogTests
             Assert.InRange(career.PrimarySkills.Count, 1, 3);
             Assert.InRange(career.MajorSkills.Count, 1, 3);
             Assert.InRange(career.MinorSkills.Count, 1, 6);
-            Assert.Equal(8, career.Attributes.Count);
-            Assert.Equal(career.SkillReferences.Count(), career.SkillReferences.Distinct(StringComparer.Ordinal).Count());
+            Assert.Equal(8, career.AttributeValues.Count);
+            Assert.Equal(career.SkillReferences.Count(), career.SkillReferences.Distinct().Count());
         });
     }
 
@@ -157,7 +156,7 @@ public sealed class DaggerfallCatalogTests
         // A suffix match would have cited SS00.CFG as the CLASS00 carrier, publishing
         // provenance the inventory does not support.
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => DaggerfallCatalogBuilder.Build(
-            ReadInventory(), VocabularyAttributes(), VocabularySkills(), [("SS00.CFG", ReadClass("CLASS00.CFG"))], EnemyIds(), ItemIds(), RaceTemplate()));
+            ReadInventory(), [("SS00.CFG", ReadClass("CLASS00.CFG"))], RaceTemplate()));
 
         Assert.Contains("SS00.CFG", error.Message, StringComparison.Ordinal);
     }
@@ -175,7 +174,7 @@ public sealed class DaggerfallCatalogTests
         Assert.Contains("empty catalog", error.Message, StringComparison.Ordinal);
 
         InvalidOperationException builderError = Assert.Throws<InvalidOperationException>(() => DaggerfallCatalogBuilder.Build(
-            ReadInventory(), VocabularyAttributes(), VocabularySkills(), [], EnemyIds(), ItemIds(), RaceTemplate()));
+            ReadInventory(), [], RaceTemplate()));
         Assert.Contains("empty catalog", builderError.Message, StringComparison.Ordinal);
     }
 
@@ -213,7 +212,7 @@ public sealed class DaggerfallCatalogTests
         IReadOnlyList<SourceInventoryRow> inventory = [.. ReadInventory().Where(row => row.Id != "CNT-010.file.CLASS18.CFG")];
 
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => DaggerfallCatalogBuilder.Build(
-            inventory, VocabularyAttributes(), VocabularySkills(), ReadCareers(), EnemyIds(), ItemIds(), RaceTemplate()));
+            inventory, ReadCareers(), RaceTemplate()));
 
         Assert.Contains("CLASS18.CFG", error.Message, StringComparison.Ordinal);
     }
@@ -322,24 +321,18 @@ public sealed class DaggerfallCatalogTests
             .Single(value => value["id"]!.GetValue<string>() == "class12")["resistanceFlags"]!.GetValue<int>());
     }
 
-    [CorpusAndGeneratedContentFact]
-    public void The_published_catalogs_cover_every_pack_key_they_reference()
+    [GeneratedContentFact]
+    public void The_published_catalogs_name_no_authored_key()
     {
-        DaggerfallCatalogs catalogs = BuildFromRepository();
-
-        // The reference catalogs are a view of keys the pack defines, so the *published*
-        // pack must cover every one of them: an actor or item added without re-running
-        // the builder would otherwise leave a consumer resolving a key the catalog the
-        // pack actually carries does not list. Comparing the builder's own inputs with
-        // its own output would prove nothing, so this reads the pack file.
-        System.Text.Json.Nodes.JsonNode published = System.Text.Json.Nodes.JsonNode.Parse(ImportedText())!;
-        string[] publishedEnemies = [.. published["catalogs"]!["enemies"]!.AsArray().Select(value => value!["id"]!.GetValue<string>())];
-        string[] publishedItems = [.. published["catalogs"]!["itemTemplates"]!.AsArray().Select(value => value!["id"]!.GetValue<string>())];
-        Assert.Equal(EnemyIds().Order(StringComparer.Ordinal), publishedEnemies.Order(StringComparer.Ordinal));
-        Assert.Equal(ItemIds().Order(StringComparer.Ordinal), publishedItems.Order(StringComparer.Ordinal));
-        // And the builder reproduces that published section.
-        Assert.Equal(publishedEnemies, catalogs.Enemies.Select(enemy => enemy.Id));
-        Assert.Equal(publishedItems, catalogs.ItemTemplates.Select(item => item.Id));
+        // The import never reads the authored payload, so the catalogs carry the classic attribute and skill
+        // indices and no vocabulary key, actor or item: the ruleset joins those when it loads.
+        System.Text.Json.Nodes.JsonObject published = System.Text.Json.Nodes.JsonNode.Parse(ImportedText())!["catalogs"]!.AsObject();
+        Assert.False(published.ContainsKey("enemies"));
+        Assert.False(published.ContainsKey("itemTemplates"));
+        Assert.All(published["skills"]!.AsArray(), skill => Assert.False(skill!.AsObject().ContainsKey("id")));
+        System.Text.Json.Nodes.JsonObject mage = published["careers"]!.AsArray().Single(career => career!["id"]!.GetValue<string>() == "class00")!.AsObject();
+        Assert.Equal([27, 25, 26], mage["primarySkills"]!.AsArray().Select(value => value!.GetValue<int>()));
+        Assert.False(mage.ContainsKey("attributes"));
     }
 
     [CorpusFact]
@@ -364,13 +357,13 @@ public sealed class DaggerfallCatalogTests
         DaggerfallCareerRecord career = catalogs.Careers[0];
         DaggerfallCatalogs dangling = catalogs with
         {
-            Careers = [career with { PrimarySkills = ["not-a-skill", .. career.PrimarySkills.Skip(1)] }, .. catalogs.Careers.Skip(1)],
+            Careers = [career with { PrimarySkills = [35, .. career.PrimarySkills.Skip(1)] }, .. catalogs.Careers.Skip(1)],
         };
         IReadOnlySet<string> inventoryIds = ReadInventory().Select(row => row.PathOrPattern).ToHashSet(StringComparer.Ordinal);
 
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => dangling.Validate(inventoryIds));
 
-        Assert.Contains("not-a-skill", error.Message, StringComparison.Ordinal);
+        Assert.Contains("index 35", error.Message, StringComparison.Ordinal);
     }
 
     [CorpusFact]
@@ -390,7 +383,7 @@ public sealed class DaggerfallCatalogTests
     }
 
     private static DaggerfallCatalogs BuildFromRepository() => DaggerfallCatalogBuilder.Build(
-        ReadInventory(), VocabularyAttributes(), VocabularySkills(), ReadCareers(), EnemyIds(), ItemIds(), RaceTemplate(),
+        ReadInventory(), ReadCareers(), RaceTemplate(),
         File.ReadAllBytes(TestData.Corpus("CLASSES.DAT")), DaggerfallTextBuilder.Build(File.ReadAllBytes(TestData.Corpus("TEXT.RSC")), "arena2/TEXT.RSC", ReadInventory(), "en"));
 
     private static string RaceTemplate() => File.ReadAllText(TestData.Donor("Assets/Scripts/Game/Entities/RaceTemplate.cs"));
@@ -404,22 +397,6 @@ public sealed class DaggerfallCatalogTests
             .Select(path => (Path.GetFileName(path), File.ReadAllBytes(path)))];
 
     private static byte[] ReadClass(string name) => File.ReadAllBytes(TestData.Corpus(name));
-
-    private static List<string> VocabularyAttributes() =>
-        [.. System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(PackPath()))!["vocabulary"]!["attributes"]!.AsArray().Select(value => value!.GetValue<string>())];
-
-    private static List<string> VocabularySkills() =>
-        [.. System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(PackPath()))!["vocabulary"]!["skills"]!.AsArray().Select(value => value!.GetValue<string>())];
-
-    private static List<string> EnemyIds() =>
-        [.. System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(PackPath()))!["actors"]!.AsArray()
-            .Select(value => value!.AsObject()["id"]!.GetValue<string>())
-            .Where(id => id != "player")];
-
-    private static List<string> ItemIds() =>
-        [.. System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(PackPath()))!["items"]!.AsArray().Select(value => value!.AsObject()["id"]!.GetValue<string>())];
-
-    private static string PackPath() => Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.base/payload.json");
 
     private static string ImportedText() => System.Text.Encoding.UTF8.GetString(ImportedContent.Read("worldrpg/payloads/daggerfall.imported.json"));
 }

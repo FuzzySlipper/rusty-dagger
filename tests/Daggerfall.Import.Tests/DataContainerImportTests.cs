@@ -87,7 +87,8 @@ public sealed class DataContainerImportTests : IDisposable
         Assert.Contains($"tracked directory '{ImportCommand.Donor}/Assets/StreamingAssets/Quests'", missing);
         Assert.Contains(missing, entry => entry.StartsWith("music folder 'local/inputs/Sound'", StringComparison.Ordinal));
         Assert.Contains("tracked file 'data/content-source-manifest.csv'", missing);
-        Assert.Contains("tracked file 'content/worldrpg/packs/daggerfall.base/payload.json'", missing);
+        // The import does not read the authored base payload, so its absence is no missing input.
+        Assert.DoesNotContain(missing, entry => entry.Contains("daggerfall.base", StringComparison.Ordinal));
 
         // A folder that is not ARENA2 is named as such rather than as a list of every archive it lacks.
         Directory.CreateDirectory(Path.Combine(root, "local/inputs/arena2"));
@@ -242,9 +243,9 @@ public sealed class DataContainerImportTests : IDisposable
         }
 
         // Each step writes into the staging tree or the records, never into the repository's content: what it names
-        // there is the authored base payload and the authored UI art, both read.
+        // there is the authored UI art, which it reads.
         Assert.All(steps.SelectMany(step => step.Arguments).Where(argument => argument.StartsWith("content/", StringComparison.Ordinal)),
-            argument => Assert.Contains(argument, new[] { "content/worldrpg/packs/daggerfall.base/payload.json", AuthoredUi.ProductDirectory }));
+            argument => Assert.Equal(AuthoredUi.ProductDirectory, argument));
         Assert.Equal(["music-tracks", "classic-media"], steps.Take(2).Select(step => step.Label));
         Assert.Equal("source-coverage", steps[^1].Label);
         Assert.Contains("variants.json", steps.Single(step => step.Label == "world-blocks").Arguments);

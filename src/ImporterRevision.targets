@@ -8,8 +8,9 @@
        class is not public) and declares the partial class; this target adds the constant `StampedRevision` to it.
        The inputs are the import pipeline's source (src/Daggerfall.Import and src/Daggerfall.Import.Tool, which
        holds only the import, its steps and pack) and the tracked files its steps read: the source inventory, the
-       authored UI manifest and originals, the Daggerfall Unity tables and the authored base payload. A command
-       that does not feed the containers lives in src/Daggerfall.Source.Tool, outside the hash. Build output is
+       authored UI manifest and originals and the Daggerfall Unity tables. The import never reads the authored base
+       payload; the ruleset joins it to the imported sections when it loads. A command that does not feed the
+       containers lives in src/Daggerfall.Source.Tool, outside the hash. Build output is
        excluded; files are hashed by path and content with CRLF read as LF, so a Windows checkout of the same commit
        names the same revision. Daggerfall.Import.Tests' ImporterRevisionTests fail when a source file or repository
        path the import reaches lies outside these inputs. The generated file is rewritten only when the value
@@ -62,7 +63,7 @@
       <_ImporterRevisionInput Include="$(_ImporterRepositoryRoot)/src/Daggerfall.Import/**;$(_ImporterRepositoryRoot)/src/Daggerfall.Import.Tool/**"
                               Exclude="$(_ImporterRepositoryRoot)/src/*/bin/**;$(_ImporterRepositoryRoot)/src/*/obj/**" />
       <_ImporterRevisionInput Include="$(_ImporterRepositoryRoot)/data/content-source-manifest.csv;$(_ImporterRepositoryRoot)/data/ui-authored-assets.json;$(_ImporterRepositoryRoot)/data/daggerfall-unity/**" />
-      <_ImporterRevisionInput Include="$(_ImporterRepositoryRoot)/content/worldrpg/packs/daggerfall.art-replacements/authored-ui/**;$(_ImporterRepositoryRoot)/content/worldrpg/packs/daggerfall.base/payload.json" />
+      <_ImporterRevisionInput Include="$(_ImporterRepositoryRoot)/content/worldrpg/packs/daggerfall.art-replacements/authored-ui/**" />
     </ItemGroup>
     <ComputeImporterRevision Root="$(_ImporterRepositoryRoot)" Files="@(_ImporterRevisionInput)">
       <Output TaskParameter="Revision" PropertyName="_ImporterRevision" />

@@ -37,9 +37,10 @@ public static class Arena2SitePublication
         .Select(record => $"sprite/texture-216-{record}")];
 
     /// <summary>
-    /// The actor media every site publishes: one sprite per mobile the imported mobile catalog says the
-    /// runtime may materialize — its published actors, their numbered variants and the human mobiles it
-    /// resolves through careers. A mobile the catalog leaves unpublished has no actor to draw.
+    /// The actor media every site publishes: one sprite per mobile the imported mobile catalog gives a texture,
+    /// so whichever of them the authored actors place, the runtime can draw. The donor's table leaves a mobile it
+    /// never uses (the horse) with no texture, and that one has nothing to draw. Which mobiles an authored actor
+    /// carries is the ruleset's join, so the import publishes media without reading the authored payload.
     /// </summary>
     public static IReadOnlyList<string> RuntimeActorResources(string importedPayloadJson)
     {
@@ -52,7 +53,7 @@ public static class Arena2SitePublication
         }
 
         return [.. mobiles.EnumerateArray()
-            .Where(mobile => mobile.GetProperty("disposition").GetString() != "unpublished")
+            .Where(mobile => mobile.GetProperty("maleTexture").GetInt32() > 0)
             .Select(mobile => mobile.GetProperty("donorId").GetInt32())
             .Order()
             .Select(id => $"actor/mobile-{id}")];

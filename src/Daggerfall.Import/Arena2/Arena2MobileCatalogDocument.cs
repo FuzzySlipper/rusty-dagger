@@ -181,60 +181,34 @@ public static class Arena2MobileTable
     }
 }
 
-/// <summary>The published mobile catalog and what it carried.</summary>
-public sealed record Arena2MobileCatalogPublication(string Json, int Mobiles, int Published, int Unpublished, int HumanMobiles);
+/// <summary>The published mobile catalog and how many mobiles it carried.</summary>
+public sealed record Arena2MobileCatalogPublication(string Json, int Mobiles);
 
 /// <summary>
 /// Publishes the donor's static mobile table as one normalized record per mobile: the parameters a later
-/// actor-construction task consumes, each reconciled with the identity this product publishes.
+/// actor-construction task consumes, and the identity its donor name gives it.
 /// </summary>
 /// <remarks>
-/// The donor's table is the parameter authority and the pack is the identity authority, so both are read
-/// here and every entry states its disposition — published, published as a numbered variant where the
-/// donor names a mobile twice, human mobile, or unpublished. A mobile the pack does not publish is
-/// recorded with the donor's parameters and its gap named rather than dropped, because the coverage
-/// record is the point of publishing the table at all.
+/// The donor's table is the parameter authority and the authored pack is the actor authority. Every mobile is
+/// published, whether or not an authored actor carries it, because the coverage record is the point of
+/// publishing the table at all; the ruleset joins each identity to the authored actors when it loads.
 /// </remarks>
 public static class Arena2MobileCatalogDocument
 {
     /// <summary>
-    /// Builds the document's JSON from the donor table and the published pack. The mobile table is the
-    /// parameter authority; a supplied MONSTER.BSA inventory additionally supplies each mobile's career
-    /// attack-modifier byte, which lives in its <c>ENEMY###.CFG</c> record and not in the table.
+    /// Builds the document's JSON from the donor table. The mobile table is the parameter authority; a
+    /// supplied MONSTER.BSA inventory additionally supplies each mobile's career attack-modifier byte, which
+    /// lives in its <c>ENEMY###.CFG</c> record and not in the table, and the archive it was read from is cited
+    /// beside the table.
     /// </summary>
     public static Arena2MobileCatalogPublication Build(
-        string donorEnemyBasics, string packJson, string donorPath, MonsterArchiveInventory? enemyConfigurations = null)
+        string donorEnemyBasics, string donorPath, MonsterArchiveInventory? enemyConfigurations = null, PublishedSource? enemyConfigurationArchive = null)
     {
         IReadOnlyList<Arena2MobileTableEntry> table = Arena2MobileTable.Read(donorEnemyBasics);
-        JsonNode pack = JsonNode.Parse(packJson) ?? throw new InvalidOperationException("The published pack is not JSON.");
-        string[] actors = [.. (pack["actors"]?.AsArray() ?? throw new InvalidOperationException("The published pack carries no actors."))
-            .Select(actor => actor!["id"]?.GetValue<string>() ?? throw new InvalidOperationException("A published actor carries no id."))];
-        HashSet<string> actorIds = new(actors, StringComparer.Ordinal);
-
-        Dictionary<string, int> nameCounts = [];
-        foreach (Arena2MobileTableEntry entry in table)
-        {
-            string identity = MobileLedgerBuilder.Identity(entry.Name);
-            nameCounts[identity] = nameCounts.TryGetValue(identity, out int seen) ? seen + 1 : 1;
-        }
-
         JsonArray mobiles = [];
-        int published = 0;
-        int unpublished = 0;
-        int human = 0;
         foreach (Arena2MobileTableEntry entry in table)
         {
             string identity = MobileLedgerBuilder.Identity(entry.Name);
-            bool repeated = nameCounts[identity] > 1;
-            string numbered = $"{identity}-{entry.Id}";
-            string? actor = actorIds.Contains(numbered) ? numbered : actorIds.Contains(identity) ? identity : null;
-            string disposition = actor is not null ? (actor == numbered && repeated ? "published-variant" : "published")
-                : entry.Id >= MobileLedgerBuilder.FirstHumanMobileId ? "human-mobile"
-                : "unpublished";
-            if (disposition is "published" or "published-variant") published++;
-            else if (disposition == "human-mobile") human++;
-            else unpublished++;
-
             var career = enemyConfigurations?.EnemyConfigurations.SingleOrDefault(record => record.MobileId == entry.Id)?.Configuration;
             mobiles.Add(new JsonObject
             {
@@ -249,8 +223,6 @@ public static class Arena2MobileCatalogDocument
                 ["prefersRanged"] = entry.PrefersRanged,
                 ["glowColor"] = entry.GlowColor is { } glow ? new JsonObject
                 { ["red"] = glow.Red, ["green"] = glow.Green, ["blue"] = glow.Blue } : null,
-                ["actor"] = actor,
-                ["disposition"] = disposition,
                 ["behaviour"] = entry.Behaviour,
                 ["affinity"] = entry.Affinity,
                 ["maleTexture"] = entry.MaleTexture,
@@ -285,13 +257,14 @@ public static class Arena2MobileCatalogDocument
 
         JsonObject document = new()
         {
-            ["sources"] = new JsonArray(JsonSerializer.SerializeToNode(PublishedSource.Of(donorPath, Encoding.UTF8.GetBytes(donorEnemyBasics)), PublishedJson.Section)),
+            ["sources"] = new JsonArray([.. new[] { PublishedSource.Of(donorPath, Encoding.UTF8.GetBytes(donorEnemyBasics)), enemyConfigurationArchive }
+                .OfType<PublishedSource>().Select(source => JsonSerializer.SerializeToNode(source, PublishedJson.Section))]),
             ["mobiles"] = mobiles,
         };
 
         return new Arena2MobileCatalogPublication(
             document.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }),
-            table.Count, published, unpublished, human);
+            table.Count);
     }
 
     /// <summary>

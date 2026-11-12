@@ -136,9 +136,6 @@ internal sealed record DaggerfallCareerSpecials(
     ];
 }
 
-/// <summary>A key that names a record another catalog owns.</summary>
-internal sealed record DaggerfallCatalogReference(string Id, DaggerfallCatalogCitation Source);
-
 /// <summary>
 /// The normalized reference catalogs a runtime consumer resolves keys through. Runtime
 /// code reads these records and never opens a source file: the keys, their indices and
@@ -151,8 +148,6 @@ internal sealed class DaggerfallCatalogSet(
     IReadOnlyList<DaggerfallRaceDefinition> races,
     IReadOnlyList<DaggerfallCareerDefinition> careers,
     IReadOnlyList<string> careerNameCollisions,
-    IReadOnlyList<DaggerfallCatalogReference> enemies,
-    IReadOnlyList<DaggerfallCatalogReference> itemTemplates,
     IReadOnlyList<string> sourcePaths, DaggerfallClassQuestionnaire? classQuestionnaire = null)
 {
     /// <summary>The classic element keys, in the index order the catalog publishes.</summary>
@@ -172,10 +167,6 @@ internal sealed class DaggerfallCatalogSet(
 
     /// <summary>Career names more than one supplied record carries, so a name is not a key.</summary>
     internal IReadOnlyList<string> CareerNameCollisions { get; } = Array.AsReadOnly(careerNameCollisions.ToArray());
-
-    internal IReadOnlyList<DaggerfallCatalogReference> Enemies { get; } = Array.AsReadOnly(enemies.ToArray());
-
-    internal IReadOnlyList<DaggerfallCatalogReference> ItemTemplates { get; } = Array.AsReadOnly(itemTemplates.ToArray());
 
     /// <summary>
     /// The documented source paths the pack says it drew from. A citation outside this set is

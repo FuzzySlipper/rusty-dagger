@@ -6,8 +6,9 @@ namespace Daggerfall.Import.Normalized;
 /// <summary>
 /// Builds the normalized reference catalogs from what the documented inventory admits:
 /// the eight playable races the inventory names, the classic attribute, skill and
-/// element index spaces the career carrier uses, the careers decoded from the supplied
-/// CLASS*.CFG records, and references to the enemy and item keys other catalogs own.
+/// element index spaces the career carrier uses, and the careers decoded from the supplied
+/// CLASS*.CFG records. Attributes and skills are published by classic index: the authored
+/// vocabulary names them, and the ruleset joins the two when it loads.
 /// Every citation is checked against the inventory, so a catalog cannot cite a source
 /// the repository does not document.
 /// </summary>
@@ -16,53 +17,22 @@ public static class DaggerfallCatalogBuilder
     /// <summary>Inventory families the catalogs cite.</summary>
     public const string RaceFamily = "CNT-009";
     public const string CareerFamily = "CNT-010";
-    public const string EnemyFamily = "CNT-007";
-    public const string ItemTemplateFamily = "CNT-011";
 
     public static DaggerfallCatalogs Build(
         IReadOnlyList<SourceInventoryRow> inventory,
-        IReadOnlyList<string> vocabularyAttributes,
-        IReadOnlyList<string> vocabularySkills,
         IReadOnlyList<(string FileName, byte[] Bytes)> careers,
-        IReadOnlyList<string> enemyIds,
-        IReadOnlyList<string> itemTemplateIds,
         string raceTemplateSource, byte[]? classRecommendations = null, DaggerfallText? classQuestionText = null)
     {
         ArgumentNullException.ThrowIfNull(inventory);
-        ArgumentNullException.ThrowIfNull(vocabularyAttributes);
-        ArgumentNullException.ThrowIfNull(vocabularySkills);
         ArgumentNullException.ThrowIfNull(careers);
-        ArgumentNullException.ThrowIfNull(enemyIds);
-        ArgumentNullException.ThrowIfNull(itemTemplateIds);
         IReadOnlySet<string> documentedPaths = inventory.Select(row => row.PathOrPattern).ToHashSet(StringComparer.Ordinal);
         DaggerfallCatalogSource family(string path) => new(path);
 
         SourceInventoryRow careerFamily = RequireFamily(inventory, CareerFamily);
         SourceInventoryRow raceFamily = RequireFamily(inventory, RaceFamily);
-        (string EnemySourceId, string EnemySourcePath) = FamilyCitation(inventory, EnemyFamily);
-        (string ItemSourceId, string ItemSourcePath) = FamilyCitation(inventory, ItemTemplateFamily);
-        if (vocabularySkills.Count != ClassCfgDecoder.SkillCount)
-        {
-            throw new InvalidOperationException($"The skill vocabulary carries {vocabularySkills.Count} keys where the classic index space has {ClassCfgDecoder.SkillCount}.");
-        }
-
-        if (vocabularyAttributes.Count < DaggerfallCatalogs.ClassicAttributeCount)
-        {
-            throw new InvalidOperationException($"The attribute vocabulary carries {vocabularyAttributes.Count} keys where a career record names {DaggerfallCatalogs.ClassicAttributeCount}.");
-        }
-
         DaggerfallCatalogSource careerCitation = family(careerFamily.PathOrPattern);
-        List<DaggerfallIndexedKey> attributes = [];
-        for (int index = 0; index < DaggerfallCatalogs.ClassicAttributeCount; index++)
-        {
-            attributes.Add(new DaggerfallIndexedKey(vocabularyAttributes[index], index, careerCitation));
-        }
-
-        List<DaggerfallIndexedKey> skills = [];
-        for (int index = 0; index < vocabularySkills.Count; index++)
-        {
-            skills.Add(new DaggerfallIndexedKey(vocabularySkills[index], index, careerCitation));
-        }
+        List<DaggerfallClassicIndex> attributes = [.. Enumerable.Range(0, DaggerfallCatalogs.ClassicAttributeCount).Select(index => new DaggerfallClassicIndex(index, careerCitation))];
+        List<DaggerfallClassicIndex> skills = [.. Enumerable.Range(0, ClassCfgDecoder.SkillCount).Select(index => new DaggerfallClassicIndex(index, careerCitation))];
 
         List<DaggerfallIndexedKey> resistances = [];
         for (int index = 0; index < DaggerfallCatalogs.ElementCount; index++)
@@ -98,10 +68,9 @@ public static class DaggerfallCatalogBuilder
             careerRecords.Add(new DaggerfallCareerRecord(
                 CareerKey(fileName),
                 decoded.Name,
-                [.. decoded.PrimarySkill(skills)],
-                [.. decoded.MajorSkill(skills)],
-                [.. decoded.MinorSkill(skills)],
-                [.. attributes.Select(key => key.Id)],
+                [.. decoded.PrimarySkill()],
+                [.. decoded.MajorSkill()],
+                [.. decoded.MinorSkill()],
                 [.. decoded.Attributes.Select(value => checked((int)value))],
                 decoded.HitPointsPerLevel,
                 SpellPointMultiplierMilli(decoded.AbilityFlagsAndSpellPoints),
@@ -119,7 +88,7 @@ public static class DaggerfallCatalogBuilder
                 decoded.RapidHealing,
                 decoded.Regeneration,
                 decoded.SpellAbsorptionFlags,
-                [.. ExpertProficiencySkills(decoded.WeaponArmorShields, skills)],
+                [.. ExpertProficiencySkills(decoded.WeaponArmorShields)],
                 DaggerfallCareerEquipmentRestrictions.FromClassicFlags(decoded.ForbiddenMaterials, decoded.WeaponArmorShields),
                 new DaggerfallCatalogSource(carrier.PathOrPattern)));
         }
@@ -135,8 +104,6 @@ public static class DaggerfallCatalogBuilder
                 .Where(group => group.Count() > 1)
                 .Select(group => group.Key)
                 .Order(StringComparer.Ordinal)],
-            [.. enemyIds.Select(id => new DaggerfallReferenceKey(id, family(EnemySourcePath)))],
-            [.. itemTemplateIds.Select(id => new DaggerfallReferenceKey(id, family(ItemSourcePath)))],
             []);
         // The published sources are exactly what the records cite; Validate refuses a set
         // that disagrees, so this cannot drift from the citations a consumer reads.
@@ -162,26 +129,26 @@ public static class DaggerfallCatalogBuilder
             _ => throw new InvalidOperationException("CLASS spell-point multiplier bits are not a classic value."),
         };
 
-    private static IEnumerable<string> PrimarySkill(this ClassCfgRecord record, IReadOnlyList<DaggerfallIndexedKey> skills) =>
-        Skill(record.PrimarySkill1, skills).Concat(Skill(record.PrimarySkill2, skills)).Concat(Skill(record.PrimarySkill3, skills));
+    private static IEnumerable<int> PrimarySkill(this ClassCfgRecord record) =>
+        Skill(record.PrimarySkill1).Concat(Skill(record.PrimarySkill2)).Concat(Skill(record.PrimarySkill3));
 
-    private static IEnumerable<string> MajorSkill(this ClassCfgRecord record, IReadOnlyList<DaggerfallIndexedKey> skills) =>
-        Skill(record.MajorSkill1, skills).Concat(Skill(record.MajorSkill2, skills)).Concat(Skill(record.MajorSkill3, skills));
+    private static IEnumerable<int> MajorSkill(this ClassCfgRecord record) =>
+        Skill(record.MajorSkill1).Concat(Skill(record.MajorSkill2)).Concat(Skill(record.MajorSkill3));
 
-    private static IEnumerable<string> MinorSkill(this ClassCfgRecord record, IReadOnlyList<DaggerfallIndexedKey> skills) =>
-        Skill(record.MinorSkill1, skills)
-            .Concat(Skill(record.MinorSkill2, skills))
-            .Concat(Skill(record.MinorSkill3, skills))
-            .Concat(Skill(record.MinorSkill4, skills))
-            .Concat(Skill(record.MinorSkill5, skills))
-            .Concat(Skill(record.MinorSkill6, skills));
+    private static IEnumerable<int> MinorSkill(this ClassCfgRecord record) =>
+        Skill(record.MinorSkill1)
+            .Concat(Skill(record.MinorSkill2))
+            .Concat(Skill(record.MinorSkill3))
+            .Concat(Skill(record.MinorSkill4))
+            .Concat(Skill(record.MinorSkill5))
+            .Concat(Skill(record.MinorSkill6));
 
     /// <summary>
     /// One skill slot. The terminal value names no skill, so it contributes no reference
     /// rather than a key the catalog cannot resolve; a real Knight record holds it.
     /// </summary>
-    private static IEnumerable<string> Skill(int index, IReadOnlyList<DaggerfallIndexedKey> skills) =>
-        index == ClassCfgDecoder.NoSkillIndex ? [] : [skills[index].Id];
+    private static IEnumerable<int> Skill(int index) =>
+        index == ClassCfgDecoder.NoSkillIndex ? [] : [index];
 
     /// <summary>
     /// The elements a classic effect-flag byte marks, in key order. The bit is the
@@ -201,12 +168,11 @@ public static class DaggerfallCatalogBuilder
 
     /// <summary>
     /// The career's weapon-proficiency byte — the high byte of the classic weapon/armor/shields
-    /// field — read as skill keys. The donor matches these bits against a weapon's skill value:
-    /// bit <c>1 &lt;&lt; k</c> is the classic skill at vocabulary index <c>FirstWeaponSkillIndex +
-    /// k</c> — short blade, long blade, hand to hand, axe, blunt weapon and archery, contiguous
+    /// field — read as classic skill indices. The donor matches these bits against a weapon's skill value:
+    /// bit <c>1 &lt;&lt; k</c> is the classic skill index <c>FirstWeaponSkillIndex + k</c> — short blade, long blade, hand to hand, axe, blunt weapon and archery, contiguous
     /// in the classic index space.
     /// </summary>
-    private static IEnumerable<string> ExpertProficiencySkills(uint weaponArmorShields, IReadOnlyList<DaggerfallIndexedKey> skills)
+    private static IEnumerable<int> ExpertProficiencySkills(uint weaponArmorShields)
     {
         const int proficiencyBitCount = 6;
         const int firstWeaponSkillIndex = 28;
@@ -215,19 +181,13 @@ public static class DaggerfallCatalogBuilder
         {
             if ((value & (1u << bit)) != 0)
             {
-                yield return skills[firstWeaponSkillIndex + bit].Id;
+                yield return firstWeaponSkillIndex + bit;
             }
         }
     }
 
     private static SourceInventoryRow RequireFamily(IReadOnlyList<SourceInventoryRow> inventory, string familyId) =>
         SourceInventoryRow.RequireFamily(inventory, familyId);
-
-    private static (string Id, string Path) FamilyCitation(IReadOnlyList<SourceInventoryRow> inventory, string familyId)
-    {
-        SourceInventoryRow row = RequireFamily(inventory, familyId);
-        return (row.Id, row.PathOrPattern);
-    }
 
     /// <summary>The inventory file record for one supplied career carrier.</summary>
     private static SourceInventoryRow RequireCareerFile(IReadOnlyList<SourceInventoryRow> inventory, string fileName) =>

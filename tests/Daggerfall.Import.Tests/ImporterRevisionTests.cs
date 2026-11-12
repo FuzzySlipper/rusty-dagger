@@ -43,7 +43,6 @@ public sealed class ImporterRevisionTests
                 "data/ui-authored-assets.json",
                 "data/daggerfall-unity/Assets/Resources/ItemTemplates.txt",
                 "content/worldrpg/packs/daggerfall.art-replacements/authored-ui/ui-stone-title-v2.png",
-                "content/worldrpg/packs/daggerfall.base/payload.json",
             ];
             string[] unread =
             [
@@ -55,6 +54,8 @@ public sealed class ImporterRevisionTests
                 "content/worldrpg/packs/daggerfall.art-replacements/media/ui/screens--title.webp",
                 "content/worldrpg/packs/daggerfall.art-replacements/first-person/daggerfall.held.json",
                 "content/worldrpg/packs/daggerfall.base/pack.json",
+                // The ruleset joins the authored base payload to the imported sections when it loads.
+                "content/worldrpg/packs/daggerfall.base/payload.json",
                 "src/WorldRpg.Rulesets.Daggerfall/DaggerfallRuleset.cs",
                 "src/Daggerfall.Import/obj/Debug/net10.0/ImporterRevision.g.cs",
                 "src/Daggerfall.Import.Tool/bin/Debug/net10.0/Daggerfall.Import.Tool.dll",
@@ -146,7 +147,7 @@ public sealed class ImporterRevisionTests
         }
 
         Assert.True(outside.Count == 0, $"import steps read repository files outside the importer revision: {string.Join(", ", outside.Distinct().Take(20))}");
-        Assert.Contains("content/worldrpg/packs/daggerfall.base/payload.json", checkedPaths);
+        Assert.DoesNotContain("content/worldrpg/packs/daggerfall.base/payload.json", checkedPaths);
         Assert.Contains("data/content-source-manifest.csv", checkedPaths);
         Assert.Contains("data/ui-authored-assets.json", checkedPaths);
         Assert.Contains(checkedPaths, path => path.StartsWith(AuthoredUi.ProductDirectory + "/", StringComparison.Ordinal));

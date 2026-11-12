@@ -62,10 +62,10 @@ say what may be deleted:
   `local/inputs/Sound`. A link is fine.
 - Import once, and again after a pull that changes the importer revision: its
   inputs are `src/Daggerfall.Import`, `src/Daggerfall.Import.Tool`, the data
-  files under `data/`, the authored UI art and
-  `content/worldrpg/packs/daggerfall.base/payload.json`
-  (`src/ImporterRevision.targets` lists them). The entry screen says when the
-  data is missing, damaged or from another importer.
+  files under `data/` and the authored UI art (`src/ImporterRevision.targets`
+  lists them). The import never reads the authored base payload, so editing it
+  needs no import. The entry screen says when the data is missing, damaged or
+  from another importer.
 
   ```bash
   dotnet run --project src/Daggerfall.Import.Tool -- import --music local/inputs/Sound
@@ -142,8 +142,9 @@ Rules for the tracked side:
   reclassify a file by changing its `family_id`. Only `Daggerfall.Source.Tool`'s
   `source-manifest --update-inventory` writes the disposition column.
 - An edit to an importer revision input, including any file under `data/` but its
-  README and the authored base payload, makes every machine's data stale. Make one
-  deliberately. A command that does not feed the containers goes in
+  README, makes every machine's data stale. Make one deliberately. An import step
+  never reads the authored base payload: a join between authored and imported
+  sections belongs in the ruleset's content reader. A command that does not feed the containers goes in
   `Daggerfall.Source.Tool`, never `Daggerfall.Import.Tool`, whose every file is an input.
 
 The wiki page `wiki/rusty-dagger/import-and-data-container` has the fuller account.

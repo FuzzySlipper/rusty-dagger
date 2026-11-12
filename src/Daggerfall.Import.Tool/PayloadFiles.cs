@@ -5,9 +5,9 @@ using Daggerfall.Import.Publication;
 namespace Daggerfall.Import.Tool;
 
 /// <summary>
-/// The payload files the import commands read and write. The authored base payload
-/// (<c>daggerfall.base</c>) is tracked and hand-edited; a command reads the sections it needs from it
-/// and never writes it. The imported payload (<c>daggerfall.imported</c>) and the import records are
+/// The payload files the import commands read and write. The import never reads the authored base payload
+/// (<c>daggerfall.base</c>): the ruleset joins it to the imported sections when it loads, so editing it leaves
+/// the imported data current. The imported payload (<c>daggerfall.imported</c>) and the import records are
 /// generated: a full <c>import</c> clears the staging tree and the records and the commands rebuild them
 /// section by section, so the first command to write one creates it.
 /// </summary>
@@ -41,33 +41,6 @@ internal static class PayloadFiles
     /// <summary>Writes one section serialized in the published dialect.</summary>
     internal static void WriteSection<T>(string path, string section, T value) =>
         WriteSections(path, new Dictionary<string, string>(StringComparer.Ordinal) { [section] = JsonSerializer.Serialize(value, PublishedJson.Section) });
-
-    /// <summary>The authored base payload's text; it is tracked, so its absence is refused.</summary>
-    internal static string ReadAuthoredText(string path) => File.Exists(path)
-        ? File.ReadAllText(path)
-        : throw new FileNotFoundException($"The authored base payload is not at '{path}'.", path);
-
-    /// <summary>The authored base payload's root.</summary>
-    internal static JsonObject ReadAuthored(string path) => JsonNode.Parse(ReadAuthoredText(path))!.AsObject();
-
-    /// <summary>
-    /// The authored and imported sections as one root, for a reader that joins the two. Each section has
-    /// one owner, so a section both files carry is refused rather than resolved by precedence.
-    /// </summary>
-    internal static string CombinedText(string authoredPath, string importedPath)
-    {
-        JsonObject authored = ReadAuthored(authoredPath);
-        JsonObject imported = JsonNode.Parse(File.ReadAllText(importedPath))!.AsObject();
-        foreach ((string name, JsonNode? value) in imported.ToArray())
-        {
-            if (authored.ContainsKey(name))
-                throw new InvalidOperationException($"Section '{name}' is in both '{authoredPath}' and '{importedPath}'; each section has one owner.");
-            imported.Remove(name);
-            authored[name] = value;
-        }
-
-        return authored.ToJsonString();
-    }
 
     /// <summary>
     /// Reads an operator file under the individual source quota, refusing one that changed while it was read.

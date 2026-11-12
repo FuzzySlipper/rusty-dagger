@@ -27,7 +27,7 @@ public sealed class Arena2MobileCatalogDocumentTests
     [DonorFact("Assets/Scripts/Utility/EnemyBasics.cs")]
     public void Publishes_soul_glow_shadow_and_ranged_preference_from_source()
     {
-        var publication = Arena2MobileCatalogDocument.Build(File.ReadAllText(TestData.Donor("Assets/Scripts/Utility/EnemyBasics.cs")), Pack(), "donor/EnemyBasics.cs");
+        var publication = Arena2MobileCatalogDocument.Build(File.ReadAllText(TestData.Donor("Assets/Scripts/Utility/EnemyBasics.cs")), "donor/EnemyBasics.cs");
         var rows = JsonNode.Parse(publication.Json)!["mobiles"]!.AsArray();
         JsonNode Row(int id) => rows.Single(row => row!["donorId"]!.GetValue<int>() == id)!;
         Assert.Equal(3000, Row(21)["soulPoints"]!.GetValue<int>());
@@ -41,21 +41,19 @@ public sealed class Arena2MobileCatalogDocumentTests
     }
 
     [Fact]
-    public void PublishesEveryDonorParameterAndNamesEachMobileDisposition()
+    public void PublishesEveryDonorParameterAndIdentityWithoutJoiningTheAuthoredActors()
     {
-        Arena2MobileCatalogPublication publication = Arena2MobileCatalogDocument.Build(Donor(), Pack(), "donor/EnemyBasics.cs");
+        Arena2MobileCatalogPublication publication = Arena2MobileCatalogDocument.Build(Donor(), "donor/EnemyBasics.cs");
         JsonObject document = JsonNode.Parse(publication.Json)!.AsObject();
 
         Assert.Equal(5, publication.Mobiles);
-        // The repeated donor name publishes twice: once under the plain identity and once numbered.
-        Assert.Equal(3, publication.Published);
-        Assert.Equal(1, publication.Unpublished);
-        Assert.Equal(1, publication.HumanMobiles);
         Assert.Equal("donor/EnemyBasics.cs", document["sources"]!.AsArray()[0]!["path"]!.GetValue<string>());
 
         JsonObject rat = document["mobiles"]!.AsArray().Single(mobile => mobile!["donorId"]!.GetValue<int>() == 0)!.AsObject();
-        Assert.Equal("rat", rat["actor"]!.GetValue<string>());
-        Assert.Equal("published", rat["disposition"]!.GetValue<string>());
+        Assert.Equal("rat", rat["identity"]!.GetValue<string>());
+        // Which authored actor a mobile is, and so its disposition, is joined by the ruleset when it loads.
+        Assert.False(rat.ContainsKey("actor"));
+        Assert.False(rat.ContainsKey("disposition"));
         Assert.Equal("General", rat["behaviour"]!.GetValue<string>());
         Assert.Equal("Animal", rat["affinity"]!.GetValue<string>());
         Assert.Equal(255, rat["maleTexture"]!.GetValue<int>());
@@ -73,10 +71,8 @@ public sealed class Arena2MobileCatalogDocumentTests
         Assert.Equal(2, rat["weight"]!.GetValue<int>());
         Assert.Equal("Vermin", rat["team"]!.GetValue<string>());
 
-        // A repeated donor name keeps both entries, the second addressed by the numbered identity.
-        JsonObject variant = document["mobiles"]!.AsArray().Single(mobile => mobile!["disposition"]!.GetValue<string>() == "published-variant")!.AsObject();
-        Assert.Equal("dragonling-40", variant["actor"]!.GetValue<string>());
-        Assert.Equal("Dragonling", variant["donorName"]!.GetValue<string>());
+        // A repeated donor name keeps both entries under one identity; the ruleset tells them apart by donor id.
+        Assert.Equal(2, document["mobiles"]!.AsArray().Count(mobile => mobile!["identity"]!.GetValue<string>() == "dragonling"));
 
         // The senses flag is the donor entry's own: stated where the entry says so, false where it is silent.
         Assert.True(document["mobiles"]!.AsArray().Single(mobile => mobile!["donorId"]!.GetValue<int>() == 41)!["seesThroughInvisibility"]!.GetValue<bool>());
@@ -84,41 +80,32 @@ public sealed class Arena2MobileCatalogDocumentTests
         Assert.False(rat["castsMagic"]!.GetValue<bool>());
         Assert.False(document.ContainsKey("divergences"));
 
-        // The human mobile is a career-space fact, not a missing actor.
-        JsonObject human = document["mobiles"]!.AsArray().Single(mobile => mobile!["disposition"]!.GetValue<string>() == "human-mobile")!.AsObject();
-        Assert.Null(human["actor"]);
-        Assert.Equal(130, human["donorId"]!.GetValue<int>());
-
-        // A mobile nothing publishes still carries its parameters; the gap is stated, not dropped.
-        JsonObject unpublished = document["mobiles"]!.AsArray().Single(mobile => mobile!["disposition"]!.GetValue<string>() == "unpublished")!.AsObject();
-        Assert.Equal(39, unpublished["donorId"]!.GetValue<int>());
-        Assert.Null(unpublished["actor"]);
-        Assert.Contains("Horse", unpublished["donorName"]!.GetValue<string>(), StringComparison.Ordinal);
+        // A mobile no authored actor carries is published with its parameters all the same.
+        JsonObject horse = document["mobiles"]!.AsArray().Single(mobile => mobile!["donorId"]!.GetValue<int>() == 39)!.AsObject();
+        Assert.Contains("Horse", horse["donorName"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 
     [DonorFact("Assets/Scripts/Utility/EnemyBasics.cs")]
     public void PublishesTheRealDonorTableWhenItIsAvailable()
     {
         string donorPath = TestData.Donor("Assets/Scripts/Utility/EnemyBasics.cs");
-        string payload = TestData.PackPayload("daggerfall.base");
 
-        Arena2MobileCatalogPublication publication = Arena2MobileCatalogDocument.Build(File.ReadAllText(donorPath), File.ReadAllText(payload), "donor/EnemyBasics.cs");
-        // The measured reconciliation: 62 donor entries, one variant, one unpublished mobile.
+        Arena2MobileCatalogPublication publication = Arena2MobileCatalogDocument.Build(File.ReadAllText(donorPath), "donor/EnemyBasics.cs");
         Assert.Equal(62, publication.Mobiles);
-        Assert.Equal(1, publication.Unpublished);
-        Assert.Equal(17, publication.HumanMobiles);
         JsonArray mobiles = JsonNode.Parse(publication.Json)!["mobiles"]!.AsArray();
+        // The donor's human-mobile space: 19 records, two of which the authored pack places as actors.
+        Assert.Equal(19, mobiles.Count(mobile => mobile!["donorId"]!.GetValue<int>() >= MobileLedgerBuilder.FirstHumanMobileId));
         Assert.Equal(
             "Horse (unused, but can appear in merchant-sold soul traps)",
-            mobiles.Single(mobile => mobile!["disposition"]!.GetValue<string>() == "unpublished")!["donorName"]!.GetValue<string>());
+            mobiles.Single(mobile => mobile!["donorId"]!.GetValue<int>() == 39)!["donorName"]!.GetValue<string>());
         // EnemyBasics states CanOpenDoors per mobile; the behavior caller consumes this source fact
         // instead of granting a blanket product ability.
         Assert.True(mobiles.Single(mobile => mobile!["donorId"]!.GetValue<int>() == 1)!["canOpenDoors"]!.GetValue<bool>());
         Assert.False(mobiles.Single(mobile => mobile!["donorId"]!.GetValue<int>() == 0)!["canOpenDoors"]!.GetValue<bool>());
-        // Every published actor that came from the donor table carries a damage range; an actor with no
-        // range here is one the donor gives none, which is a fact a policy task must see.
-        List<JsonNode> ranged = [.. mobiles.Where(mobile => mobile!["disposition"]!.GetValue<string>() == "published").Select(mobile => mobile!)];
-        Assert.All(ranged, mobile =>
+        // Every monster the donor table carries but the unused horse states a damage range and a behaviour; one with
+        // no range is one the donor gives none, which is a fact a policy task must see.
+        List<JsonNode> monsters = [.. mobiles.Where(mobile => mobile!["donorId"]!.GetValue<int>() is < MobileLedgerBuilder.FirstHumanMobileId and not 39).Select(mobile => mobile!)];
+        Assert.All(monsters, mobile =>
         {
             Assert.NotNull(mobile!["damage"]);
             Assert.False(string.IsNullOrEmpty(mobile["behaviour"]!.GetValue<string>()));
@@ -142,7 +129,7 @@ public sealed class Arena2MobileCatalogDocumentTests
             EnemyArchive(("ENEMY000.CFG", configuration)), "MONSTER.BSA");
 
         Arena2MobileCatalogPublication publication = Arena2MobileCatalogDocument.Build(
-            Donor(), Pack(), "donor/EnemyBasics.cs", enemyConfigurations: enemyConfigurations);
+            Donor(), "donor/EnemyBasics.cs", enemyConfigurations: enemyConfigurations);
         JsonArray mobiles = JsonNode.Parse(publication.Json)!["mobiles"]!.AsArray();
 
         Assert.Equal(0x04, mobiles.Single(mobile => mobile!["donorId"]!.GetValue<int>() == 0)!["attackModifierFlags"]!.GetValue<int>());
@@ -158,7 +145,6 @@ public sealed class Arena2MobileCatalogDocumentTests
 
         Arena2MobileCatalogPublication publication = Arena2MobileCatalogDocument.Build(
             File.ReadAllText(donorPath),
-            File.ReadAllText(TestData.PackPayload("daggerfall.base")),
             donorPath,
             enemyConfigurations: MonsterArchiveInventory.Enumerate(File.ReadAllBytes(archivePath), "MONSTER.BSA"));
         JsonArray mobiles = JsonNode.Parse(publication.Json)!["mobiles"]!.AsArray();
@@ -269,15 +255,5 @@ public sealed class Arena2MobileCatalogDocumentTests
             },
         };
 
-        """;
-
-    private static string Pack() => """
-        {
-          "actors": [
-            { "id": "rat" },
-            { "id": "dragonling" },
-            { "id": "dragonling-40" }
-          ]
-        }
         """;
 }

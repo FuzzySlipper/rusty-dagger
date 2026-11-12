@@ -26,7 +26,7 @@ public sealed record MobileLedgerEntry(int Id, string Name, string Identity, Mob
 /// The donor's static mobile table reconciled with the pack's published identities, naming every
 /// difference rather than leaving coverage implied.
 /// </summary>
-public sealed record MobileLedger(int DonorEntries, int PublishedActors, int CatalogEntries, IReadOnlyList<MobileLedgerEntry> Entries)
+public sealed record MobileLedger(int DonorEntries, int PublishedActors, IReadOnlyList<MobileLedgerEntry> Entries)
 {
     /// <summary>Entries the donor defines and nothing published carries.</summary>
     public IReadOnlyList<MobileLedgerEntry> Unpublished => [.. Entries.Where(entry => entry.Disposition == MobileLedgerDisposition.Unpublished)];
@@ -72,7 +72,6 @@ public static class MobileLedgerBuilder
         List<string> actors = [.. (pack["actors"]?.AsArray() ?? throw new InvalidOperationException("The published pack carries no actors."))
             .Select(actor => actor!["id"]?.GetValue<string>() ?? throw new InvalidOperationException("A published actor carries no id."))];
         HashSet<string> actorIds = new(actors, StringComparer.Ordinal);
-        int catalogEntries = pack["catalogs"]?["enemies"]?.AsArray().Count ?? 0;
 
         // A donor name is published under its own identity; a repeated donor name is published once
         // under the name and once as a numbered variant, which is how the pack keeps both addressable.
@@ -107,7 +106,7 @@ public static class MobileLedgerBuilder
             entries.Add(new MobileLedgerEntry(id, name, candidate, disposition, note));
         }
 
-        return new MobileLedger(donor.Count, actorIds.Count, catalogEntries, entries);
+        return new MobileLedger(donor.Count, actorIds.Count, entries);
     }
 
     /// <summary>The pack's identity for a donor comment name.</summary>

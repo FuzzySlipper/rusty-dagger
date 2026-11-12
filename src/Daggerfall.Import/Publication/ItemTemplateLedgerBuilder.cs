@@ -57,13 +57,11 @@ public static class ItemTemplateLedgerBuilder
     /// <param name="targetRecordId">The documented inventory record for the native source.</param>
     /// <param name="targetPath">The documented path of the native source.</param>
     /// <param name="targetStatus">The native source's status.</param>
-    /// <param name="publishedItemCount">How many item definitions the pack publishes.</param>
     public static JsonObject Build(
         ItemTemplateBaseline baseline,
         string targetRecordId,
         string targetPath,
-        string targetStatus,
-        int publishedItemCount)
+        string targetStatus)
     {
         ArgumentNullException.ThrowIfNull(baseline);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetRecordId);
@@ -136,7 +134,6 @@ public static class ItemTemplateLedgerBuilder
             },
             ["publishedItems"] = new JsonObject
             {
-                ["count"] = publishedItemCount,
                 ["valueProvenance"] = "catalog-migration",
                 ["restsOn"] = new JsonArray
                 {

@@ -331,18 +331,15 @@ public sealed class ItemTemplateLedgerTests
     public void The_published_ledger_records_the_absent_source_and_the_published_items()
     {
         System.Text.Json.Nodes.JsonObject ledger = ReadPublishedLedger();
-        System.Text.Json.Nodes.JsonObject pack = System.Text.Json.Nodes.JsonNode
-            .Parse(File.ReadAllText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.base/payload.json")))!
-            .AsObject();
 
         Assert.Equal("daggerfall-unity/Assets/Scripts/API/ItemsFile.cs", ledger["target"]!["path"]!.GetValue<string>());
         Assert.Equal("absent", ledger["target"]!["status"]!.GetValue<string>());
         Assert.Equal("provisional-donor-code-baseline", ledger["baseline"]!["rule"]!.GetValue<string>());
 
-        // The published items' values were migrated, not decoded, and the ledger says so
-        // beside a count that matches the payload it describes.
+        // The published items' values were migrated, not decoded, and the ledger says so. It does not count
+        // them: the items are authored, and the import never reads the authored payload.
         System.Text.Json.Nodes.JsonObject published = ledger["publishedItems"]!.AsObject();
-        Assert.Equal(pack["items"]!.AsArray().Count, published["count"]!.GetValue<int>());
+        Assert.False(published.ContainsKey("count"));
         Assert.Equal("catalog-migration", published["valueProvenance"]!.GetValue<string>());
         Assert.False(published["nativeDecoding"]!.GetValue<bool>());
     }

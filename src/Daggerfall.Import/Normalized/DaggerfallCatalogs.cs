@@ -19,7 +19,25 @@ public sealed record DaggerfallCatalogSource(string Path)
     }
 }
 
-/// <summary>One indexed key of a classic index space: an attribute, skill or resistance.</summary>
+/// <summary>
+/// One index of a classic index space whose keys the authored vocabulary names: an attribute or a skill. The
+/// import publishes the index and where it comes from; the ruleset names it by the vocabulary when it loads, so
+/// the import never reads the authored payload.
+/// </summary>
+public sealed record DaggerfallClassicIndex(int Index, DaggerfallCatalogSource Source)
+{
+    public void Validate(IReadOnlySet<string> documentedPaths)
+    {
+        if (Index < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(Index), Index, "A classic index is negative.");
+        }
+
+        Source.Validate(documentedPaths);
+    }
+}
+
+/// <summary>One indexed key of a classic index space the import names itself: a resistance element.</summary>
 public sealed record DaggerfallIndexedKey(string Id, int Index, DaggerfallCatalogSource Source)
 {
     public void Validate(IReadOnlySet<string> documentedPaths)
@@ -30,20 +48,6 @@ public sealed record DaggerfallIndexedKey(string Id, int Index, DaggerfallCatalo
             throw new ArgumentOutOfRangeException(nameof(Index), Index, $"Catalog key '{Id}' has a negative index.");
         }
 
-        Source.Validate(documentedPaths);
-    }
-}
-
-/// <summary>
-/// A key that names a record another catalog owns, without an index: an enemy the actor
-/// catalog defines, or an item template the item catalog defines. The reference is what
-/// a consumer resolves; the record itself belongs to its owning task.
-/// </summary>
-public sealed record DaggerfallReferenceKey(string Id, DaggerfallCatalogSource Source)
-{
-    public void Validate(IReadOnlySet<string> documentedPaths)
-    {
-        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
         Source.Validate(documentedPaths);
     }
 }
@@ -71,17 +75,15 @@ public sealed record DaggerfallRaceKey(string Id, int DonorRaceId, DaggerfallCat
 }
 
 /// <summary>
-/// One decoded career: the classic record's identity, the skills it trains, and its
-/// authored initial attribute bases. Attribute keys retain the source order while the
-/// parallel values are the numbers the CLASS carrier actually supplies.
+/// One decoded career: the classic record's identity, the skills it trains by classic skill index, and its
+/// initial attribute bases, one per classic attribute in index order, as the CLASS carrier supplies them.
 /// </summary>
 public sealed record DaggerfallCareerRecord(
     string Id,
     string Name,
-    IReadOnlyList<string> PrimarySkills,
-    IReadOnlyList<string> MajorSkills,
-    IReadOnlyList<string> MinorSkills,
-    IReadOnlyList<string> Attributes,
+    IReadOnlyList<int> PrimarySkills,
+    IReadOnlyList<int> MajorSkills,
+    IReadOnlyList<int> MinorSkills,
     IReadOnlyList<int> AttributeValues,
     int HitPointsPerLevel,
     int SpellPointMultiplierMilli,
@@ -99,13 +101,13 @@ public sealed record DaggerfallCareerRecord(
     int RapidHealingFlags,
     int RegenerationFlags,
     int SpellAbsorptionFlags,
-    IReadOnlyList<string> ExpertProficiencies,
+    IReadOnlyList<int> ExpertProficiencies,
     IReadOnlyList<string> ForbiddenEquipment,
     DaggerfallCatalogSource Source)
 {
     /// <summary>Every skill the career trains, in record order.</summary>
     [System.Text.Json.Serialization.JsonIgnore]
-    public IEnumerable<string> SkillReferences => PrimarySkills.Concat(MajorSkills).Concat(MinorSkills);
+    public IEnumerable<int> SkillReferences => PrimarySkills.Concat(MajorSkills).Concat(MinorSkills);
 
     /// <summary>
     /// The four classic effect-flag bytes as they were read. The element lists are the
@@ -122,7 +124,7 @@ public sealed record DaggerfallCareerRecord(
         ("criticalWeaknessFlags", CriticalWeaknessFlags),
     ];
 
-    public void Validate(IReadOnlySet<string> documentedPaths, IReadOnlySet<string> skillKeys, IReadOnlySet<string> attributeKeys, IReadOnlySet<string> elementKeys)
+    public void Validate(IReadOnlySet<string> documentedPaths, int skillCount, IReadOnlySet<string> elementKeys)
     {
         NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
         if (string.IsNullOrWhiteSpace(Name))
@@ -154,11 +156,11 @@ public sealed record DaggerfallCareerRecord(
             throw new InvalidOperationException($"Career '{Id}' names {PrimarySkills.Count} primary, {MajorSkills.Count} major and {MinorSkills.Count} minor skills where the classic record carries one to three of each and up to six minor.");
         }
 
-        NormalizedImportDocument.ValidateUnique(PrimarySkills, value => value, $"career '{Id}' primary skill");
-        NormalizedImportDocument.ValidateUnique(MajorSkills, value => value, $"career '{Id}' major skill");
-        NormalizedImportDocument.ValidateUnique(MinorSkills, value => value, $"career '{Id}' minor skill");
-        NormalizedImportDocument.ValidateUnique(SkillReferences, value => value, $"career '{Id}' skill");
-        RequireReferences(SkillReferences, skillKeys, $"career '{Id}' names skill");
+        NormalizedImportDocument.ValidateUnique(PrimarySkills, value => value.ToString(System.Globalization.CultureInfo.InvariantCulture), $"career '{Id}' primary skill");
+        NormalizedImportDocument.ValidateUnique(MajorSkills, value => value.ToString(System.Globalization.CultureInfo.InvariantCulture), $"career '{Id}' major skill");
+        NormalizedImportDocument.ValidateUnique(MinorSkills, value => value.ToString(System.Globalization.CultureInfo.InvariantCulture), $"career '{Id}' minor skill");
+        NormalizedImportDocument.ValidateUnique(SkillReferences, value => value.ToString(System.Globalization.CultureInfo.InvariantCulture), $"career '{Id}' skill");
+        RequireIndices(SkillReferences.Concat(ExpertProficiencies), skillCount, $"career '{Id}' names skill");
         foreach ((string name, int value) in FlagBytes)
         {
             if (value is < 0 or > DaggerfallCatalogs.MaximumFlagByte)
@@ -181,7 +183,6 @@ public sealed record DaggerfallCareerRecord(
         RequireReferences(ImmunityElements, elementKeys, $"career '{Id}' is immune to element");
         RequireElements(ResistanceElements, ResistanceFlags, "resists");
         RequireElements(ImmunityElements, ImmunityFlags, "is immune to");
-        RequireReferences(Attributes, attributeKeys, $"career '{Id}' names attribute");
         NormalizedImportDocument.ValidateUnique(ForbiddenEquipment, value => value, $"career '{Id}' forbidden equipment");
         foreach (string restriction in ForbiddenEquipment)
         {
@@ -208,6 +209,17 @@ public sealed record DaggerfallCareerRecord(
         if (!elements.SequenceEqual(expected, StringComparer.Ordinal))
         {
             throw new InvalidOperationException($"Career '{Id}' {verb} [{string.Join(", ", elements)}] where its flags {flags} say [{string.Join(", ", expected)}].");
+        }
+    }
+
+    private static void RequireIndices(IEnumerable<int> values, int count, string owner)
+    {
+        foreach (int value in values)
+        {
+            if (value < 0 || value >= count)
+            {
+                throw new InvalidOperationException($"{owner} index {value}, which the catalog does not carry.");
+            }
         }
     }
 
@@ -257,17 +269,16 @@ public static class DaggerfallCareerEquipmentRestrictions
 /// <summary>
 /// The normalized reference catalogs a runtime consumer resolves keys through. This is
 /// the contract CAP-DATA is satisfied by: every key is indexed, carries inventory-backed
-/// provenance, and refers to other keys rather than to source bytes.
+/// provenance, and refers to other keys rather than to source bytes. The attribute and skill
+/// spaces are published as classic indices, which the ruleset names by the authored vocabulary.
 /// </summary>
 public sealed record DaggerfallCatalogs(
-    IReadOnlyList<DaggerfallIndexedKey> Attributes,
-    IReadOnlyList<DaggerfallIndexedKey> Skills,
+    IReadOnlyList<DaggerfallClassicIndex> Attributes,
+    IReadOnlyList<DaggerfallClassicIndex> Skills,
     IReadOnlyList<DaggerfallIndexedKey> Resistances,
     IReadOnlyList<DaggerfallRaceKey> Races,
     IReadOnlyList<DaggerfallCareerRecord> Careers,
     IReadOnlyList<string> CareerNameCollisions,
-    IReadOnlyList<DaggerfallReferenceKey> Enemies,
-    IReadOnlyList<DaggerfallReferenceKey> ItemTemplates,
     IReadOnlyList<string> Sources)
 {
     /// <summary>
@@ -311,8 +322,6 @@ public sealed record DaggerfallCatalogs(
         ArgumentNullException.ThrowIfNull(Resistances);
         ArgumentNullException.ThrowIfNull(Races);
         ArgumentNullException.ThrowIfNull(Careers);
-        ArgumentNullException.ThrowIfNull(Enemies);
-        ArgumentNullException.ThrowIfNull(ItemTemplates);
 
         if (Attributes.Count == 0 || Skills.Count == 0 || Resistances.Count == 0 || Races.Count == 0 || Careers.Count == 0)
         {
@@ -320,16 +329,19 @@ public sealed record DaggerfallCatalogs(
         }
 
         ClassQuestionnaire?.Validate(documentedPaths, Careers);
-        ValidateIndexed(Attributes, "attribute", documentedPaths);
-        ValidateIndexed(Skills, "skill", documentedPaths);
+        ValidateIndices(Attributes, "attribute", documentedPaths);
+        ValidateIndices(Skills, "skill", documentedPaths);
         ValidateIndexed(Resistances, "resistance", documentedPaths);
+        if (Attributes.Count != ClassicAttributeCount)
+        {
+            throw new InvalidOperationException($"The attribute catalog carries {Attributes.Count} indices where a career record names {ClassicAttributeCount}.");
+        }
+
         if (Resistances.Count != ElementCount)
         {
             throw new InvalidOperationException($"The resistance catalog carries {Resistances.Count} keys where the classic carrier has {ElementCount}.");
         }
 
-        Dictionary<string, DaggerfallIndexedKey> attributes = Attributes.ToDictionary(key => key.Id, StringComparer.Ordinal);
-        Dictionary<string, DaggerfallIndexedKey> skills = Skills.ToDictionary(key => key.Id, StringComparer.Ordinal);
         Dictionary<string, DaggerfallIndexedKey> elements = Resistances.ToDictionary(key => key.Id, StringComparer.Ordinal);
 
         NormalizedImportDocument.ValidateUnique(Races, race => race.Id, "race");
@@ -356,15 +368,9 @@ public sealed record DaggerfallCatalogs(
 
         foreach (DaggerfallCareerRecord career in Careers)
         {
-            career.Validate(documentedPaths, skills.Keys.ToHashSet(StringComparer.Ordinal), attributes.Keys.ToHashSet(StringComparer.Ordinal), elements.Keys.ToHashSet(StringComparer.Ordinal));
-            if (career.Attributes.Count != ClassicAttributeCount)
-            {
-                throw new InvalidOperationException($"Career '{career.Id}' carries {career.Attributes.Count} attribute values where the classic record carries {ClassicAttributeCount}.");
-            }
+            career.Validate(documentedPaths, Skills.Count, elements.Keys.ToHashSet(StringComparer.Ordinal));
         }
 
-        ValidateReferenced(Enemies, "enemy", documentedPaths);
-        ValidateReferenced(ItemTemplates, "item template", documentedPaths);
         // The pack carries the set of inventory records it drew from, so a consumer can
         // check a citation without owning the inventory, and a citation outside the set
         // is a defect rather than a typo nobody can see.
@@ -387,30 +393,28 @@ public sealed record DaggerfallCatalogs(
 
     /// <summary>Every documented source path the catalog records cite.</summary>
     public IEnumerable<string> CitedSources() =>
-        Attributes.Concat<DaggerfallIndexedKey>(Skills)
-            .Concat(Resistances)
-            .Select(key => key.Source.Path)
+        Attributes.Concat(Skills).Select(index => index.Source.Path)
+            .Concat(Resistances.Select(key => key.Source.Path))
             .Concat(Races.Select(race => race.Source.Path))
             .Concat(Careers.Select(career => career.Source.Path))
-            .Concat(Enemies.Select(enemy => enemy.Source.Path))
-            .Concat(ItemTemplates.Select(item => item.Source.Path))
             .Concat(ClassQuestionnaire?.Sources ?? [])
             .Distinct(StringComparer.Ordinal);
-
-    private static void ValidateReferenced(IReadOnlyList<DaggerfallReferenceKey> keys, string kind, IReadOnlySet<string> documentedPaths)
-    {
-        NormalizedImportDocument.ValidateUnique(keys, key => key.Id, kind);
-        foreach (DaggerfallReferenceKey key in keys)
-        {
-            key.Validate(documentedPaths);
-        }
-    }
 
     private static void ValidateIndexed(IReadOnlyList<DaggerfallIndexedKey> keys, string kind, IReadOnlySet<string> documentedPaths)
     {
         NormalizedImportDocument.ValidateUnique(keys, key => key.Id, kind);
-        NormalizedImportDocument.ValidateUnique(keys, key => key.Index.ToString(), $"{kind} index");
         foreach (DaggerfallIndexedKey key in keys)
+        {
+            key.Validate(documentedPaths);
+        }
+
+        ValidateIndices([.. keys.Select(key => new DaggerfallClassicIndex(key.Index, key.Source))], kind, documentedPaths);
+    }
+
+    private static void ValidateIndices(IReadOnlyList<DaggerfallClassicIndex> keys, string kind, IReadOnlySet<string> documentedPaths)
+    {
+        NormalizedImportDocument.ValidateUnique(keys, key => key.Index.ToString(), $"{kind} index");
+        foreach (DaggerfallClassicIndex key in keys)
         {
             key.Validate(documentedPaths);
         }

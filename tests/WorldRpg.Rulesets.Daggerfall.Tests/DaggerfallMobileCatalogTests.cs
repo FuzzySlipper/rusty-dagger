@@ -58,24 +58,45 @@ public sealed class DaggerfallMobileCatalogTests
     }
 
     [Fact]
-    public void RefusesACatalogThatDisagreesWithThePack()
+    public void JoinsEachMobileToTheAuthoredActorsWhenItLoads()
     {
-        // A mobile that names an actor the pack does not define, and a published mobile with no actor at
-        // all: both would leave a consumer resolving a record that points nowhere.
+        DaggerfallMobileCatalogSet mobiles = TestPayload.Definitions.Mobiles;
+        // The donor names some mobiles twice; the authored actor numbered after the donor id is the variant.
+        DaggerfallMobileDefinition variant = Assert.Single(mobiles.Mobiles.Values, mobile => mobile.Disposition == "published-variant");
+        Assert.Equal($"{variant.Identity}-{variant.DonorId}", variant.Actor);
+        // The human mobiles are a career-space fact, not missing actors.
+        Assert.Equal(17, mobiles.HumanMobiles.Count());
+        Assert.All(mobiles.HumanMobiles, mobile => Assert.Null(mobile.Actor));
+
+        // An authored actor added for a mobile nothing published reaches the catalog with no new import.
         JsonObject payload = TestPayload.Sections("mobiles", "actors");
-        JsonObject named = payload["mobiles"]!["mobiles"]!.AsArray().First(mobile => mobile!["disposition"]!.GetValue<string>() == "published")!.AsObject();
-        named["actor"] = "no-such-actor";
-        JsonObject stripped = payload["mobiles"]!["mobiles"]!.AsArray().Last(mobile => mobile!["disposition"]!.GetValue<string>() == "published")!.AsObject();
-        stripped["actor"] = null;
+        JsonObject horse = payload["actors"]!.AsArray().First(actor => actor!["id"]!.GetValue<string>() == "rat")!.DeepClone().AsObject();
+        horse["id"] = "horse";
+        horse["mobileId"] = 39;
+        payload["actors"]!.AsArray().Add(horse);
+
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(TestPayload.Splice(payload));
+
+        DaggerfallMobileDefinition published = Assert.Contains(39, definitions.Mobiles.Mobiles);
+        Assert.Equal("horse", published.Actor);
+        Assert.Equal("published", published.Disposition);
+        Assert.Empty(definitions.Mobiles.Unpublished);
+        Assert.Equal(39, definitions.Mobiles.ForActor("horse")?.DonorId);
+    }
+
+    [Fact]
+    public void RefusesTwoMobilesThatJoinOneActor()
+    {
+        // Two donor records whose identities both name one authored actor would leave a consumer resolving two
+        // mobiles for it.
+        JsonObject payload = TestPayload.Sections("mobiles", "actors");
+        payload["mobiles"]!["mobiles"]!.AsArray().First(mobile => mobile!["donorId"]!.GetValue<int>() == 1)!["identity"] = "rat";
 
         DaggerfallContentException failure = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(payload)));
 
         Assert.True(
-            failure.Diagnostics.Any(message => message.Contains("'no-such-actor'", StringComparison.Ordinal) && message.Contains("does not define", StringComparison.Ordinal)),
-            $"the unknown actor was not named: {string.Join(" | ", failure.Diagnostics)}");
-        Assert.True(
-            failure.Diagnostics.Any(message => message.Contains("carries no actor identity", StringComparison.Ordinal)),
-            $"the actorless published mobile was not named: {string.Join(" | ", failure.Diagnostics)}");
+            failure.Diagnostics.Any(message => message.Contains("names actor 'rat' twice", StringComparison.Ordinal)),
+            $"the doubly joined actor was not named: {string.Join(" | ", failure.Diagnostics)}");
     }
 
     [Fact]

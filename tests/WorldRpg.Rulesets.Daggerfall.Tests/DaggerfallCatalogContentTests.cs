@@ -253,21 +253,6 @@ public sealed class DaggerfallCatalogContentTests
     }
 
     [Fact]
-    public void RejectsALedgerWhoseTargetCitesARecordTheCatalogSourcesDoNotCarry()
-    {
-        // The ledger's provenance is validated the way every catalog citation is, so the
-        // pack cannot carry a source reference one half knows and the other does not.
-        // The ledger's own target block, not the citation string: the path appears in every catalog
-        // item reference too, so a bare replacement would be caught by the catalog gate and this test
-        // would pass with the ledger gate gone.
-        const string ledgerTarget = "\"target\":{\"path\":\"daggerfall-unity/Assets/Scripts/API/ItemsFile.cs\",";
-        Assert.True(TestPayload.Contains(ledgerTarget), "The ledger's target block is not in the payload.");
-        byte[] tampered = TestPayload.Replaced((ledgerTarget, ledgerTarget.Replace("ItemsFile.cs", "Invented.cs", StringComparison.Ordinal)));
-
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(tampered));
-    }
-
-    [Fact]
     public void RejectsAResolvedTargetWithNeitherTheByteSourceNorASubstitute()
     {
         // Decoding needs the byte source or a marked substitute behind it. With the
@@ -278,12 +263,6 @@ public sealed class DaggerfallCatalogContentTests
             ("\"disposition\":\"unresolved\"", "\"disposition\":\"decoded\""));
 
         Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(tampered));
-    }
-
-    [Fact]
-    public void RejectsAUnicodeIdentifierThatIsShortInUtf16ButNotEngineCompatible()
-    {
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Replaced(("\"id\": \"rat\"", "\"id\": \"rát\""))));
     }
 
     [Theory]
