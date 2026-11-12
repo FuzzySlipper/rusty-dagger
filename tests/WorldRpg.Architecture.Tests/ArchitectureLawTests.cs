@@ -72,6 +72,24 @@ public sealed class ArchitectureLawTests
     }
 
     [Fact]
+    public void No_tracked_file_sits_where_converted_game_files_were_removed_from_history()
+    {
+        // Files converted from the player's Daggerfall data, and captures that reproduce them, were once committed
+        // at these places and have been removed from every commit. content/ tracks only content/worldrpg, whose
+        // layout the next test fixes; the generated pack is written into the data container, never into the tree.
+        if (!Directory.Exists(Path.Combine(RepositoryRoot, ".git")) && !File.Exists(Path.Combine(RepositoryRoot, ".git"))) return;
+        using System.Diagnostics.Process git = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("git",
+            ["-C", RepositoryRoot, "ls-files", "--", "content", "authoring-content", "engine-render-check", "render-check", "docs/evidence"])
+            { RedirectStandardOutput = true, UseShellExecute = false })!;
+        string[] tracked = git.StandardOutput.ReadToEnd().Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        git.WaitForExit();
+        Assert.Equal(0, git.ExitCode);
+        string[] returned = [.. tracked.Where(path => !path.StartsWith("content/worldrpg/", StringComparison.Ordinal)
+            || path.StartsWith("content/worldrpg/packs/daggerfall.imported/", StringComparison.Ordinal))];
+        Assert.True(returned.Length == 0, $"Git tracks files where converted game files were removed:{Environment.NewLine}{string.Join(Environment.NewLine, returned.Take(20))}");
+    }
+
+    [Fact]
     public void A_content_pack_or_tuning_profile_is_one_folder()
     {
         // Each pack's descriptor, payload and media sit in packs/<id>/ and each tuning profile in tuning/<id>/, so a
