@@ -41,10 +41,6 @@ rusty install
 npm ci
 ```
 
-While the repository is private, a den machine with no GitHub login reads it
-through a read-only deploy key named by a `github-rusty-dagger` host in its
-`~/.ssh/config`: `git clone git@github-rusty-dagger:FuzzySlipper/rusty-dagger.git`.
-
 `rusty update` moves the pin to the newest published pair and lists the release
 notes to read; `rusty update --check` only reports. AGENTS.md says when and where
 the pin may move.
