@@ -183,7 +183,7 @@ internal static class DataContainers
         string[] absent = [.. packs.Select(pack => (string)pack["payload"]!).Where(payload => !File.Exists(Path.Combine(staging, payload)))];
         if (absent.Length != 0)
             throw new InvalidOperationException($"The staging tree lacks the derived payloads [{string.Join(", ", absent)}]; run the import before packing.");
-        string[] departures = [.. Repacked(repack)];
+        string[] departures = [.. Repacked(repack), .. AuthoredOverlays(staging)];
         Describe(staging, packs, departures);
         Console.WriteLine($"data container: importer revision {ImporterBuild.Revision}, {packs.Count} derived content packs described"
             + (departures.Length == 0 ? "" : $"; it departs from a whole import, so it reads as stale: {string.Join("; ", departures)}"));
@@ -206,6 +206,26 @@ internal static class DataContainers
     /// </summary>
     private static IEnumerable<string> Repacked(string? repack) =>
         repack is null ? [] : [$"repacked by {repack} over files an earlier run staged; run the full import"];
+
+    /// <summary>
+    /// The authored inputs a staged publication applied over its sources: today only the world block variants
+    /// <c>import --block-variants</c> admits. They are not importer revision inputs and no default import passes
+    /// them, so the container records each by path and digest and reads as stale wherever it is opened.
+    /// </summary>
+    private static IEnumerable<string> AuthoredOverlays(string staging)
+    {
+        string imports = Path.Combine(staging, "worldrpg", "imports");
+        if (!Directory.Exists(imports)) yield break;
+        foreach (string manifest in Directory.EnumerateFiles(imports, ImportPublicationManifestSerializer.ManifestRelativePath, SearchOption.AllDirectories)
+                     .Order(StringComparer.Ordinal))
+        {
+            IReadOnlyList<PublishedSource> overlays = ImportPublicationManifestSerializer.Deserialize(File.ReadAllBytes(manifest)).AuthoredOverlays;
+            if (overlays.Count == 0) continue;
+            string publication = Path.GetRelativePath(staging, Path.GetDirectoryName(manifest)!).Replace('\\', '/');
+            yield return $"{publication} carries authored inputs no default import passes: "
+                + string.Join(", ", overlays.Select(overlay => $"{overlay.Path} (sha256 {overlay.ContentDigest.Value})"));
+        }
+    }
 
     private static void Describe(string root, IReadOnlyList<JsonObject> packs, IReadOnlyList<string> departures)
     {

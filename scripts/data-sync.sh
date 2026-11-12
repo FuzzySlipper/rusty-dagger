@@ -13,7 +13,7 @@
 #   ... HOST:CHECKOUT --import-tree                 # also local/build/import, the staging and records the tests read
 #   DAGGER_DATA_STORE=/path scripts/data-sync.sh pull
 #
-# push refuses a container that departs from one whole import (an import --only or pack repack):
+# push refuses a container that departs from one whole import (an import --only or pack repack, or block variants):
 # its revision no longer says what it holds, so it must not replace another machine's data.
 # Adds and updates by default and deletes nothing. Over ssh only the changed 8 KiB blocks travel (an importer change
 # sends tens of megabytes, not 1.8 GB); onto or off the NFS store each changed file is copied whole. The receiver
@@ -51,7 +51,7 @@ container_revision() {
   container_head | grep -o '"importerRevision": *"[0-9a-f]*"' | grep -o '[0-9a-f]\{64\}' ||
     echo "none (no local/data/daggerfall-data.rpak)"
 }
-# A whole import records no departures; a repack over an earlier one records one.
+# A whole import records no departures; a repack over an earlier one, or block variants, records each.
 container_whole() { local head; head=$(container_head); [[ $head == *'"departures": []'* ]]; }
 container_departures() { container_head | sed -n '/"departures": *\[/,/\]/p' | grep -o '"[^"]*"' | grep -v '^"departures"$'; }
 # The same target the build stamps the revision with; no restore or compile, about a second.

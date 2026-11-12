@@ -111,6 +111,8 @@ internal static class ImportCommand
         Console.WriteLine(cinematics
             ? $"import: {FirstLine("ffmpeg", "-version")}"
             : "import: warning: ffmpeg and ffprobe are not both on PATH, so the cinematics are not converted and the game plays without them; install FFmpeg and import again to add them.");
+        if (inputs.BlockVariants is { } descriptor)
+            Console.WriteLine($"import: warning: the block variants of '{descriptor}' are not importer revision inputs, so the containers will read as stale; import without --block-variants for data any checkout reads as current.");
         long started = Environment.TickCount64;
         if (only is null)
         {

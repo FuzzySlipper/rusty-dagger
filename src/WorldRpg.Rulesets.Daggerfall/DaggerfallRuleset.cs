@@ -79,7 +79,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
     /// <summary>
     /// Whether the data container is one whole import by the importer this ruleset was built with: content another
     /// importer revision wrote may lack, or shape differently, what this build reads, and a container that departs
-    /// from a whole import (a repack over an earlier one) holds what its revision does not say.
+    /// from a whole import (a repack over an earlier one, or block variants) holds what its revision does not say.
     /// </summary>
     public string? CheckInstalledContent(InstalledContent content)
     {
@@ -91,7 +91,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
         if (description is null) return $"{content.Name} carries no description of the import that produced it.";
         if (description.Revision != DaggerfallImporterRevision.Value)
             return $"{content.Name} was imported by importer revision {Short(description.Revision)}, and this build reads revision {Short(DaggerfallImporterRevision.Value)}.";
-        // A repack over an earlier import: the revision is this
+        // A repack over an earlier import, or block variants no default import passes: the revision is this
         // build's, but it no longer says what the container holds.
         return description.Departures.Count == 0
             ? null

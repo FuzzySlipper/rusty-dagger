@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Daggerfall.Import.Audio;
+using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
 using Daggerfall.Import.Tool;
 using Daggerfall.Import.Tool.Commands;
@@ -357,6 +358,27 @@ public sealed class DataContainerImportTests : IDisposable
         string departure = (string)Assert.Single(repacked["departures"]!.AsArray())!;
         Assert.Contains("repacked by import --only locations over", departure, StringComparison.Ordinal);
         Assert.Contains("run the full import", departure, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Block_variants_the_world_blocks_carry_are_recorded_by_digest_as_a_departure()
+    {
+        // Variant documents are authored inputs outside the importer revision, and no default import passes them, so
+        // a container that carries them records each and reads as stale for any checkout.
+        string staging = Path.Combine(root, "staging");
+        foreach (JsonObject pack in DataContainers.DerivedPacks()) Write(staging, (string)pack["payload"]!, "{}"u8);
+        PublishedSource variant = new("world-block-variants/index.json", ContentDigest.Compute("variants"u8), 8);
+        ImportPublicationPlan plan = ImportPublicationPlan.Create(new("daggerfall-import/world-blocks", [new("arena2/BLOCKS.BSA", ContentDigest.Compute("blocks"u8), 6)]),
+            [new("blocks.json", "{}"u8.ToArray())], new(["daggerfall-import-tool", "world-blocks", "--variants", "variants.json"], [variant]));
+        Write(staging, "worldrpg/imports/world-blocks/" + ImportPublicationManifestSerializer.ManifestRelativePath,
+            plan.Artifacts.Single(artifact => artifact.RelativePath == ImportPublicationManifestSerializer.ManifestRelativePath).Bytes.ToArray());
+
+        DataContainers.WriteDescriptor(staging);
+
+        JsonNode descriptor = JsonNode.Parse(File.ReadAllText(Path.Combine(staging, ImportLayout.DescriptorPath)))!;
+        string departure = (string)Assert.Single(descriptor["departures"]!.AsArray())!;
+        Assert.StartsWith("worldrpg/imports/world-blocks carries authored inputs no default import passes", departure, StringComparison.Ordinal);
+        Assert.Contains($"world-block-variants/index.json (sha256 {variant.ContentDigest.Value})", departure, StringComparison.Ordinal);
     }
 
     [Fact]
