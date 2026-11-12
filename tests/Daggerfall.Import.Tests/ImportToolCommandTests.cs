@@ -16,7 +16,7 @@ internal sealed class ImportToolDataTheoryAttribute : TheoryAttribute
 internal sealed class ImportToolDataFactAttribute : FactAttribute
 {
     public ImportToolDataFactAttribute() => Skip = MissingInputs();
-    internal static string? MissingInputs() => TestData.MissingGeneratedContent() ?? MissingStaging() ?? TestData.MissingCorpus([]) ?? TestData.MissingDonor([]);
+    internal static string? MissingInputs() => TestData.MissingGeneratedContent() ?? MissingStaging() ?? TestData.MissingCorpus([]);
 
     // The commands read publications from disk, so these tests read the staging tree an import leaves beside the
     // containers; a machine given only the containers and the records has no staging tree to give them.
