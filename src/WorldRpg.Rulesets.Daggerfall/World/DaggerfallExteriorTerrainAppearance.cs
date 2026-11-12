@@ -43,8 +43,8 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     }
 
     /// <summary>
-    /// Takes the art set: ground layers wear its surfaces whatever the player chose, and nature draws in its flats
-    /// whenever <paramref name="refreshed"/> answers that the player has not chosen classic art.
+    /// Takes the art set: ground layers wear its surfaces whatever the run draws, and nature draws in its flats
+    /// whenever <paramref name="refreshed"/> answers that the run does not draw classic art.
     /// </summary>
     internal void UseArt(DaggerfallArtReplacements art, Func<bool> refreshed)
     {

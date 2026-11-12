@@ -135,9 +135,9 @@ internal sealed record DaggerfallDyeTint(string Multiply, double Brightness);
 
 /// <summary>
 /// The refreshed art set: generated images promoted from <c>authoring/</c> (<c>promote.py</c>), each standing in for
-/// one classic media identity. A presentation that draws a classic identity draws its replacement instead when the
-/// player has not chosen classic art, so every category substitutes through this one map and classic art stays
-/// the fallback.
+/// one classic media identity. A presentation that draws a classic identity draws its replacement instead unless a
+/// developer switched the run to classic art (<c>world.classic-art</c>), so every category substitutes through this
+/// one map and classic art stays the fallback.
 /// </summary>
 internal sealed class DaggerfallArtReplacements
 {

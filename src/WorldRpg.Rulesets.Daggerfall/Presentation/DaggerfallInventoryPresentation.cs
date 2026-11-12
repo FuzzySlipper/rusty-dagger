@@ -228,7 +228,7 @@ internal sealed class DaggerfallInventoryPresentation
         int? region = bank is not null && currentRegion is not null ? currentRegion() : null;
         InventoryItemPresentation[] rows = Compare([.. items.Select(item =>
             DescribeItem(item.Key, item.Definition, item.Quantity, item.Slots.Length == 0 ? moves.GridPosition(item.Key) : null, item.Slots))]);
-        // The art the icons are drawn in is part of what the rows show, so choosing classic or refreshed art redraws them.
+        // The art the icons are drawn in is part of what the rows show, so switching between classic and refreshed art redraws them.
         string drawn = art?.Invoke() is null ? "classic" : "refreshed";
         return new InventoryPresentation($"{current.StoreRevision}:{moves.LayoutRevision}:{MetadataRevision}:{bank?.Revision}:{region}:{drawn}", rows,
             definitions.EquipmentSlots.Values.OrderBy(slot => SlotOrder(slot.Id.Value)).Select(slot => SlotPresentation(slot.Id.Value,

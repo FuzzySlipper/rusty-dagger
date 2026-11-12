@@ -28,7 +28,7 @@ internal sealed partial class DaggerfallSiteAppearance
 
     /// <summary>
     /// Admits the refreshed set's world effects and particle glow, drawn whenever <paramref name="refreshed"/> answers
-    /// that the player has not chosen classic art.
+    /// that the run does not draw classic art.
     /// </summary>
     /// <exception cref="InvalidOperationException">A refreshed effect does not have its classic effect's frame count,
     /// so its classic sequence would play the wrong frames.</exception>

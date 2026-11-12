@@ -78,7 +78,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
 
     /// <summary>
     /// Classic art draws nature in the donor's places, one batch per cell and record. Refreshed art leaves it to the flora
-    /// field, which draws each record's art at the classic size, and choosing classic art again redraws the batches.
+    /// field, which draws each record's art at the classic size, and switching back to classic art redraws the batches.
     /// </summary>
     [Fact]
     public void Refreshed_nature_leaves_the_cells_for_the_flora_field_and_classic_art_draws_them_again()

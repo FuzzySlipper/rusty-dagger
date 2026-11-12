@@ -55,6 +55,8 @@ which `rusty-live-debug --origin URL` (`help`, `complete world.`) and the in-gam
 - They act through the owners ordinary play uses, so the next save holds the result, and they wait while a screen
   or question is open.
 - Reaching a trainer: `world.enter Charing "Temple of Kynareth"`, `world.find training`, `world.goto Actor:<id>`.
+- Comparing old and new art: `world.classic-art on` draws the classic art for the run, `off` the refreshed art.
+  No settings screen offers it, and nothing keeps it past the run.
 - `scripts/tour/tour.py` and `cost.py` drive them over many scenes (usage in their headers).
 
 ## Implementation ownership
