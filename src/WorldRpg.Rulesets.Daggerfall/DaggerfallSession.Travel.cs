@@ -70,7 +70,7 @@ internal sealed partial class DaggerfallSession
         double? heading = player is null ? null : ((State.PlayerControl.YawRadians * 180 / Math.PI) % 360 + 360) % 360;
         // The atlas is the land's own map; the classic art set draws the classic map instead.
         return _travelMap.Read(_travelPolicy.SupportedDestinations(), _definitions.BuildingNames.RegionNames, player, heading,
-            _controlSettings.ClassicArt ? null : _atlasTiles, _definitions.WorldNames);
+            _classicArt ? null : _atlasTiles, _definitions.WorldNames);
     }
 
     private void ChangeTravel(DaggerfallPlayerUiAction action)

@@ -4799,21 +4799,13 @@ test('the interface scale fits the reference layout to the window unless the pla
   } finally { f.dispose(); }
 });
 
-test('settings offer classic art over the refreshed set only when the bundle carries one', () => {
+test('settings offer no choice of art: classic art is a developer comparison, not a player setting', () => {
   const f = fixture();
   try {
-    f.publish({ controls: { diagnostic: '', bindings: [], classicArt: null } });
+    f.publish({ controls: { diagnostic: '', bindings: [] } });
     f.root.querySelector('[data-action="settings"]').click();
-    const label = f.root.querySelector('.dagger-controls-art');
-    assert.equal(label.hidden, true, 'With no refreshed art there is nothing to choose.');
-    f.publish({ controls: { diagnostic: '', bindings: [], classicArt: false } });
-    assert.equal(label.hidden, false);
-    const box = label.querySelector('input');
-    assert.equal(box.checked, false);
-    box.checked = true; box.dispatchEvent(new window.Event('change'));
-    assert.deepEqual(f.actions.at(-1), { action: 'controls-classic-art', enabled: true });
-    f.publish({ controls: { diagnostic: '', bindings: [], classicArt: true } });
-    assert.equal(box.checked, true);
+    const labels = [...f.root.querySelectorAll('label')].map(label => label.textContent);
+    assert.equal(labels.some(text => /classic art/i.test(text)), false);
   } finally { f.dispose(); }
 });
 

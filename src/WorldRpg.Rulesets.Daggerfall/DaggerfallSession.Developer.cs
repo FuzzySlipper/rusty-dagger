@@ -273,6 +273,13 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
         return DebugCommandResult.Success($"Trees grow as {kind}s.");
     }
 
+    public DebugCommandResult ClassicArt(string state)
+    {
+        if (state is not ("on" or "off")) return Refused("Classic art is on or off.");
+        _classicArt = state == "on";
+        return DebugCommandResult.Success(_classicArt ? "Classic art is drawn in place of the refreshed art for this run." : "The refreshed art is drawn.");
+    }
+
     public DebugCommandResult GroundCover(string kinds)
     {
         if (_horizon.GroundCover is not { } cover) return Refused("Ground cover draws outdoors in refreshed art.");

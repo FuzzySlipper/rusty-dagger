@@ -132,7 +132,6 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.ActionDrivenTime: ChangePlayerTime(action.Enabled!.Value); break;
             case DaggerfallUiActionKind.ControlsLook:
             case DaggerfallUiActionKind.ControlsUiScale:
-            case DaggerfallUiActionKind.ControlsClassicArt:
             case DaggerfallUiActionKind.ControlsGroundCover:
             case DaggerfallUiActionKind.ControlsClutterDistance:
             case DaggerfallUiActionKind.ControlsRebind:

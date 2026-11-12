@@ -78,6 +78,9 @@ public interface IDeveloperWorldSession
 
     /// <summary>Whether forest grows on the far hills for this run, for comparing by eye.</summary>
     DebugCommandResult FarForest(string state);
+
+    /// <summary>Draws the ruleset's classic art in place of its refreshed art for this run, to compare the two: on or off.</summary>
+    DebugCommandResult ClassicArt(string state);
 }
 
 /// <summary>The live-debug commands over <see cref="IDeveloperWorldSession"/>; the delegate follows session replacement.</summary>
@@ -151,6 +154,9 @@ public sealed class DeveloperWorldDebugModule(Func<IDeveloperWorldSession> curre
 
     [DebugCommand("world.farforest", Description = "Developer: grow forest on the far hills for this run: on or off.")]
     public DebugCommandResult FarForest(string state) => current().FarForest(state);
+
+    [DebugCommand("world.classic-art", Description = "Developer: draw the classic art in place of the refreshed art for this run, to compare them: on or off.")]
+    public DebugCommandResult ClassicArt(string state) => current().ClassicArt(state);
 
     [DebugCommand("world.trees", Description = "Developer: grow trees that have meshes as KIND for this run: mesh or sprite.")]
     public DebugCommandResult Trees(string kind) => current().Trees(kind);

@@ -25,7 +25,7 @@ internal readonly record struct DaggerfallAtlasTileRequest(int Level, int Column
 internal enum DaggerfallUiActionKind
 {
     Begin, CinematicSkip, MapNoteAdd, MapNoteEdit, MapNoteRemove, ArtRequest, SpellReady, SpellUnready, SpellCast, SpellBuy, SpellDelete, SpellInfo, SpellSwap, SpellSort, SpellMakerDraft, SpellMakerBuy, PotionMix, ItemMakerDraft, ItemMakerBuy, DaedraSummon, DaedraAnswer,
-    ControlsRebind, ControlsRebindButton, ControlsVolume, ControlsReset, ControlsLook, ControlsUiScale, ControlsClassicArt, ControlsGroundCover, ControlsClutterDistance, ActionDrivenTime,
+    ControlsRebind, ControlsRebindButton, ControlsVolume, ControlsReset, ControlsLook, ControlsUiScale, ControlsGroundCover, ControlsClutterDistance, ActionDrivenTime,
     CharacterClassQuestions, CharacterClassAnswer, CharacterClassBack,
     CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel, CharacterQuickStart,
     CharacterLevelAllocate, CharacterLevelCommit,
@@ -153,7 +153,6 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.ControlsVolume, "controls-volume", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.ControlsLook, "controls-look", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.ControlsUiScale, "controls-ui-scale", DaggerfallUiPhases.Live),
-        new(DaggerfallUiActionKind.ControlsClassicArt, "controls-classic-art", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.ControlsGroundCover, "controls-ground-cover", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.ControlsClutterDistance, "controls-clutter-distance", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.ActionDrivenTime, "action-driven-time", DaggerfallUiPhases.Live),
@@ -543,7 +542,7 @@ internal static class DaggerfallUiAction
                 return fields.SetEquals(["action", "container"]) && !string.IsNullOrWhiteSpace(container)
                     ? new(action, Container: container) : null;
             if (action == "controls-clutter-distance") return fields.SetEquals(["action", "scale"]) && scale.HasValue ? new(action, Scale: scale) : null;
-            if (action is "action-driven-time" or "controls-classic-art" or "controls-ground-cover") return fields.SetEquals(["action", "enabled"])
+            if (action is "action-driven-time" or "controls-ground-cover") return fields.SetEquals(["action", "enabled"])
                 && enabled.HasValue ? new(action, Enabled: enabled) : null;
             if (action == "controls-look") return fields.SetEquals(["action", "sensitivity", "invert"])
                 && sensitivity.HasValue && invert.HasValue ? new(action, Sensitivity: sensitivity, Invert: invert) : null;

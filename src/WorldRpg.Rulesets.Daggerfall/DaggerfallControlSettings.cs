@@ -211,13 +211,6 @@ public sealed class DaggerfallControlSettings
         UiScale = scale;
     }
 
-    /// <summary>
-    /// Whether the player chose the classic art over the refreshed art set where the bundle carries one. A
-    /// presentation preference, persisted with the controls.
-    /// </summary>
-    public bool ClassicArt { get; private set; }
-    public void SetClassicArt(bool classic) => ClassicArt = classic;
-
     /// <summary>Whether refreshed ground cover (grass, relief and tufts) grows near the player: a video preference.</summary>
     public bool GroundCover { get; private set; } = true;
     public void SetGroundCover(bool grows) => GroundCover = grows;
@@ -274,7 +267,6 @@ public sealed class DaggerfallControlSettings
         SetLook(preferences.LookSensitivity, preferences.InvertVertical);
         ActionDrivenTime = preferences.ActionDrivenTime;
         SetUiScale(preferences.UiScale);
-        ClassicArt = preferences.ClassicArt;
         GroundCover = preferences.GroundCover;
         SetClutterDistance(preferences.ClutterDistance);
         _controller = preferences.Controller?.ToDictionary(entry => entry.Key, entry => entry.Value.ToList(), StringComparer.Ordinal);
@@ -345,7 +337,7 @@ public sealed class DaggerfallControlSettings
     public void Reset() { ReplaceBindings(CreateDefaultBindings()); _controller = null; SetLook(1, DaggerfallTuning.Defaults.PlayerControl.InvertVertical); }
 
     /// <summary>Serializes the bindings for the settings holder.</summary>
-    public string Serialize() => JsonSerializer.Serialize(new DaggerfallControlPreferences(_bindings, LookSensitivity, InvertVertical, ActionDrivenTime, UiScale, _controller, _volumes, ClassicArt, GroundCover, ClutterDistance), DaggerfallControlSettingsJsonContext.Default.DaggerfallControlPreferences);
+    public string Serialize() => JsonSerializer.Serialize(new DaggerfallControlPreferences(_bindings, LookSensitivity, InvertVertical, ActionDrivenTime, UiScale, _controller, _volumes, GroundCover, ClutterDistance), DaggerfallControlSettingsJsonContext.Default.DaggerfallControlPreferences);
 
     /// <summary>Parses a complete persisted binding set after validating every action and control.</summary>
     public static DaggerfallControlSettings Parse(string json)
@@ -516,7 +508,6 @@ internal sealed record DaggerfallControlPreferences(
     float? UiScale = null,
     Dictionary<string, List<int>>? Controller = null,
     Dictionary<string, float>? Volumes = null,
-    bool ClassicArt = false,
     bool GroundCover = true,
     float ClutterDistance = 1);
 

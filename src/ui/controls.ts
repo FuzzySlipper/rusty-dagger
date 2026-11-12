@@ -9,8 +9,6 @@ export interface ControlsProjection {
   /** The player's chosen interface scale, or null to follow the window. */
   readonly uiScale?: number | null;
   readonly uiScaleRange?: UiScaleRange;
-  /** Whether the player chose classic art over the bundle's refreshed art; null when the bundle carries none. */
-  readonly classicArt?: boolean | null;
   /** Ground cover's video choices, offered only with a refreshed art set: whether it grows, and how far, as a share of its reach. */
   readonly groundCover?: GroundCoverChoice | null;
   readonly bindings: readonly ControlBinding[];
@@ -149,12 +147,7 @@ export function mountControls(root: HTMLElement, claim: (action: ControlAction) 
       }));
     });
   };
-  // Art: the refreshed set the bundle carries, or the classic art it replaces. A preference the ruleset persists.
-  const classicArt = document.createElement('input'); classicArt.type = 'checkbox';
-  const classicArtLabel = document.createElement('label'); classicArtLabel.className = 'dagger-controls-art';
-  classicArtLabel.append(classicArt, ' Classic art (the original pixel art in place of the refreshed art)');
-  classicArt.addEventListener('change', () => claim({ action: 'controls-classic-art', enabled: classicArt.checked }));
-  root.append(status, cancel, mousePad, scaleGroup, classicArtLabel, sensitivityLabel, invertLabel, applyLook, sound, swapLabel, rows, reset);
+  root.append(status, cancel, mousePad, scaleGroup, sensitivityLabel, invertLabel, applyLook, sound, swapLabel, rows, reset);
   let lastLook = '';
   const submit = (key: string): void => {
     if (capture?.kind !== 'key') return;
@@ -185,8 +178,6 @@ export function mountControls(root: HTMLElement, claim: (action: ControlAction) 
       diagnostic = value.diagnostic;
       scale = value.uiScaleRange ? { chosen: value.uiScale ?? null, range: value.uiScaleRange, effective: effectiveScale } : null;
       paintScale();
-      classicArtLabel.hidden = value.classicArt === null || value.classicArt === undefined;
-      classicArt.checked = value.classicArt === true;
       drawSound(value);
       const look = JSON.stringify([value.lookSensitivity, value.invertVertical]);
       if (look !== lastLook) { sensitivity.value = String(value.lookSensitivity ?? 1); invert.checked = value.invertVertical ?? true; lastLook = look; }

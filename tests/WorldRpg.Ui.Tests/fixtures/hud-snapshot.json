@@ -294,7 +294,6 @@
     "lookSensitivity": 1,
     "invertVertical": true,
     "uiScale": null,
-    "classicArt": null,
     "groundCover": null,
     "uiScaleRange": {
       "minimum": 0.5,

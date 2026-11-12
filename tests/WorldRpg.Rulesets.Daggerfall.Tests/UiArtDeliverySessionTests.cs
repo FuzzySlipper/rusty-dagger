@@ -420,7 +420,7 @@ public sealed class UiArtDeliverySessionTests
     }
 
     [Fact]
-    public void The_paper_doll_draws_the_refreshed_art_set_until_the_player_chooses_classic_art()
+    public void The_paper_doll_draws_the_refreshed_art_set_until_a_developer_switches_to_classic_art()
     {
         string root = TestData.RepositoryRoot;
         List<string> releases = [];
@@ -456,7 +456,8 @@ public sealed class UiArtDeliverySessionTests
         Dictionary<string, object?> demanded = Assert.IsType<Dictionary<string, object?>>(hud["uiArtDemanded"]);
         string delivered = Assert.IsType<string>(Assert.IsType<object?[]>(demanded["images"]).Cast<Dictionary<string, object?>>().Single(image => Equals(image["id"], bodyId))["image"]);
         Assert.StartsWith("data:image/webp;base64,", delivered, StringComparison.Ordinal);
-        Assert.Equal(false, Assert.IsType<Dictionary<string, object?>>(hud["controls"])["classicArt"]);
+        // The art is no player setting: the controls carry no choice of it.
+        Assert.False(Assert.IsType<Dictionary<string, object?>>(hud["controls"]).ContainsKey("classicArt"));
         // The character sheet's portrait is the face the doll wears, refreshed and delivered with the doll's layers.
         string SheetHead(Dictionary<string, object?> snapshot) => Assert.IsType<string>(Assert.IsType<object?[]>(Assert.IsType<Dictionary<string, object?>>(
                 Assert.IsType<Dictionary<string, object?>>(snapshot["character"])["identity"])["selectedMedia"]).Cast<Dictionary<string, object?>>()
@@ -525,15 +526,10 @@ public sealed class UiArtDeliverySessionTests
                 .Select(image => Assert.IsType<string>(image["id"])).ToHashSet(),
             new HashSet<string> { "effect.glint.magic", "effect.glint.coins", "refreshed.effect.glint.magic", "refreshed.effect.glint.coins" });
 
-        // Choosing classic art draws the classic images again, with their pixels square.
-        session.Update(new ProductUpdate(OuterUpdate(3), [Input(InputEventKind.DirectDigital) with
-        {
-            ValueKind = InputValueKind.ProductPayload,
-            PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
-            PayloadData = "{\"action\":\"controls-classic-art\",\"enabled\":true}"u8.ToArray(),
-        }]));
+        // A developer's world.classic-art draws the classic images again, with their pixels square.
+        Assert.True(session.ClassicArt("on").Succeeded);
+        session.Update(new ProductUpdate(OuterUpdate(3), []));
         Dictionary<string, object?> classic = Assert.IsType<Dictionary<string, object?>>(engine.Published());
-        Assert.Equal(true, Assert.IsType<Dictionary<string, object?>>(classic["controls"])["classicArt"]);
         Assert.All(Layers(classic), layer => Assert.Equal((false, false), (Assert.IsType<string>(layer["mediaId"]).StartsWith("refreshed.", StringComparison.Ordinal), layer["smooth"])));
         Assert.Equal(SheetHead(hud)["refreshed.".Length..], SheetHead(classic));
         Assert.Contains(refreshedIcon["refreshed.".Length..], Icons(classic));
@@ -564,7 +560,8 @@ public sealed class UiArtDeliverySessionTests
 
         // With refreshed art it lies as itself: its world image standing on the floor, as tall as it is on the paper
         // doll's body (a hundredth of a metre per doll unit), in its metal through the bare steel's mask.
-        Act(5, "{\"action\":\"controls-classic-art\",\"enabled\":false}");
+        Assert.True(session.ClassicArt("off").Succeeded);
+        session.Update(new ProductUpdate(OuterUpdate(5), []));
         SpriteFromAtlasRequest item = appearance.SpriteRequests.Last();
         float height = (float)steel.Doll!.Height * .01F;
         Assert.Equal(height, item.Size.Y, 4);

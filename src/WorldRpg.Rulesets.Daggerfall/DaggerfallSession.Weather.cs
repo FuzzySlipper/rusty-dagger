@@ -44,7 +44,7 @@ internal sealed partial class DaggerfallSession
             _horizon.Show(_spatial.Session, origin, player, _time.Calendar.Season == DaggerfallSeason.Winter,
                 _sites.Projection.Lighting.SkyLight / _tuning.SiteLighting.ViewFull,
                 CurrentWeather is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy or DaggerfallWeatherKind.Overcast,
-                !_controlSettings.ClassicArt, _sites.GroundLayers, _sites.FloraLook);
+                !_classicArt, _sites.GroundLayers, _sites.FloraLook);
         else _horizon.Hide();
         _weatherPresentation.Update(_sites.Projection, _time.Calendar, CurrentClimate, CurrentConditions,
             _weather.SkyVariant(CurrentClimate), player, sheltered, seconds, playing, _horizon.FogDensity);

@@ -140,7 +140,8 @@ public sealed class DaggerfallWeatherSessionTests
         session.Update(Update(3));
         Assert.True(fixture.Engine.BackdropLinked);
 
-        session.Update(new ProductUpdate(new(ProductLifecycleState.Running, 4,1,4,4,60,1,0,1d/60d), [ClassicArt()]));
+        session.ClassicArt("on");
+        session.Update(Update(4));
         session.Update(Update(5));
         Assert.False(fixture.Engine.BackdropLinked);
         Assert.Equal(FogMode.Linear, fixture.Engine.Fogs.Last().Mode);
@@ -186,11 +187,13 @@ public sealed class DaggerfallWeatherSessionTests
         session.Weather("Rain");
         session.Update(Update(4));
         Assert.Equal("colour", fixture.Engine.Background);
-        session.Update(new ProductUpdate(new(ProductLifecycleState.Running, 5,1,5,5,60,1,0,1d/60d), [ClassicArt()]));
+        session.ClassicArt("on");
+        session.Update(Update(5));
         Assert.Equal("panorama", fixture.Engine.Background);
         session.Update(Update(6));
         Assert.Equal("panorama", fixture.Engine.Background);
-        session.Update(new ProductUpdate(new(ProductLifecycleState.Running, 7,1,7,7,60,1,0,1d/60d), [ClassicArt(false)]));
+        session.ClassicArt("off");
+        session.Update(Update(7));
         session.Update(Update(8));
         Assert.Equal("colour", fixture.Engine.Background);
 
@@ -279,12 +282,6 @@ public sealed class DaggerfallWeatherSessionTests
         var appearance = new AppearanceFake(releases);
         return (EngineContextFake.Create(content,spatial.Service,appearance),spatial,appearance);
     }
-    private static ProductInputEvent ClassicArt(bool enabled = true) => Input(InputEventKind.DirectDigital) with
-    {
-        ValueKind = InputValueKind.ProductPayload, PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
-        PayloadData = System.Text.Encoding.UTF8.GetBytes($"{{\"action\":\"controls-classic-art\",\"enabled\":{(enabled ? "true" : "false")}}}"),
-    };
-
     private static ProductUpdate Update(ulong step) => new(new(ProductLifecycleState.Running,
         step,1,step,step,60,1,0,1d/60d),[]);
 }

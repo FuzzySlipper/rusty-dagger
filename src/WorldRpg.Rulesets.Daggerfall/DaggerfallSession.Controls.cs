@@ -35,7 +35,6 @@ internal sealed partial class DaggerfallSession
         InputMappingReplacementOutcome outcome = _controlEngine!.Input.ReplacePhysicalMappings(settings.PhysicalMappings());
         if (outcome != InputMappingReplacementOutcome.Staged)
             throw new InvalidOperationException($"Control bindings were not applied: {outcome}.");
-        bool artChanged = settings.ClassicArt != _controlSettings.ClassicArt;
         _controlSettings = settings;
         PlayerTime.Select(settings.ActionDrivenTime);
         _input.ConfigureLook(_tuning.PlayerControl.LookSensitivity * settings.LookSensitivity, settings.InvertVertical);
@@ -77,11 +76,10 @@ internal sealed partial class DaggerfallSession
         {
             DaggerfallControlSettings candidate = action.Kind == DaggerfallUiActionKind.ControlsReset
                 ? new() : DaggerfallControlSettings.Parse(_controlSettings.Serialize());
-            // Resetting the controls keeps the interface scale, the art, the ground cover and the sound levels: they are not bindings.
+            // Resetting the controls keeps the interface scale, the ground cover and the sound levels: they are not bindings.
             if (action.Kind == DaggerfallUiActionKind.ControlsReset)
             {
                 candidate.SetUiScale(_controlSettings.UiScale);
-                candidate.SetClassicArt(_controlSettings.ClassicArt);
                 candidate.SetGroundCover(_controlSettings.GroundCover);
                 candidate.SetClutterDistance(_controlSettings.ClutterDistance);
                 foreach ((string bus, _) in DaggerfallControlSettings.SoundBuses) candidate.SetVolume(bus, _controlSettings.Volume(bus));
@@ -91,7 +89,6 @@ internal sealed partial class DaggerfallSession
             else if (action.Kind == DaggerfallUiActionKind.ControlsRebindButton)
                 candidate.RebindButton(action.Item!, checked((int)action.Amount!.Value), PadActions, action.Confirm);
             else if (action.Kind == DaggerfallUiActionKind.ControlsUiScale) candidate.SetUiScale(action.Scale);
-            else if (action.Kind == DaggerfallUiActionKind.ControlsClassicArt) candidate.SetClassicArt(action.Enabled!.Value);
             else if (action.Kind == DaggerfallUiActionKind.ControlsGroundCover) candidate.SetGroundCover(action.Enabled!.Value);
             else if (action.Kind == DaggerfallUiActionKind.ControlsClutterDistance) candidate.SetClutterDistance(action.Scale!.Value);
             else if (action.Kind == DaggerfallUiActionKind.ControlsVolume) candidate.SetVolume(action.Item!, action.Scale!.Value);

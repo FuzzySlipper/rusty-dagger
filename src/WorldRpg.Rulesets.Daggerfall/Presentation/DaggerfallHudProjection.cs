@@ -256,8 +256,6 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("lookSensitivity", builder.Number(controlSettings.LookSensitivity)),
             ("invertVertical", builder.Boolean(controlSettings.InvertVertical)),
             ("uiScale", controlSettings.UiScale is float uiScale ? builder.Number(uiScale) : builder.Null()),
-            // The art choice is offered only when the bundle carries a refreshed art set to choose over classic.
-            ("classicArt", RefreshedArt ? builder.Boolean(controlSettings.ClassicArt) : builder.Null()),
             // Ground cover grows only from a refreshed art set, so it is offered only with one.
             ("groundCover", RefreshedArt ? builder.Object(
                 ("grows", builder.Boolean(controlSettings.GroundCover)),
