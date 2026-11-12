@@ -4,7 +4,9 @@
 
 The Daggerfall ruleset's content is derived from the game data of *The Elder Scrolls II: Daggerfall*
 (Bethesda Softworks). This repository does not contain or redistribute that data, or any file
-converted from it. The operator supplies their own copy of the game's `ARENA2` directory as
+converted from it, but one: the terrain bake in `src/Daggerfall.Import.Tool/inputs/relief/`, eroded
+relief and rivers computed from the heightmap in `WOODS.WLD`, the climate and the locations, which the
+import takes in place of baking them again. The operator supplies their own copy of the game's `ARENA2` directory as
 `local/inputs/arena2`, and the import command converts it into the data container
 `local/data/daggerfall-data.rpak` on their machine (ignored by Git). The project wiki's
 `import-and-data-container` page says what is generated and what is authored.
@@ -14,9 +16,9 @@ converted from it. The operator supplies their own copy of the game's `ARENA2` d
 A release (`rusty build --release`) carries the product, the Engine host with its own third-party
 licences in `share/third-party/`, the .NET runtime (MIT, its licence and notices in `dotnet/`), the game
 UI's typefaces with their licences (below), and the import tool with the tracked files it reads, among them
-our tables taken from Daggerfall Unity (below). It carries no Daggerfall Unity file, and nothing derived
-from *The Elder Scrolls II: Daggerfall*: the player's import writes `daggerfall-data.rpak` and `music.rpak`
-on their own machine.
+our tables taken from Daggerfall Unity (below) and the terrain bake (above). It carries no Daggerfall
+Unity file, and nothing else derived from *The Elder Scrolls II: Daggerfall*: the player's import writes
+`daggerfall-data.rpak` and `music.rpak` on their own machine.
 
 ## Music (not redistributed)
 

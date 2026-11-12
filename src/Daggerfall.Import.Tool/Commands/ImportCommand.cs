@@ -11,8 +11,8 @@ namespace Daggerfall.Import.Tool.Commands;
 /// <para>
 /// Every input is checked before anything is written, and every missing one is named, so an absent input
 /// stops the run instead of leaving a half-written staging tree. A full run clears the staging tree and the
-/// import records first, so a file no step writes any more disappears; the relief bake kept beside them stays, and the
-/// relief step takes it instead of baking again when its record says nothing it is baked from changed. Each step is the
+/// import records first, so a file no step writes any more disappears. The relief step takes the tracked terrain bake
+/// instead of baking again when its record says nothing it is baked from changed. Each step is the
 /// tool's own command, run with the arguments it would be given on the command line, so a step can be rerun alone while the
 /// importer is developed: <c>--only</c> reruns the named steps over the existing staging tree and repacks,
 /// and <c>pack</c> repacks after a command was run by hand. Only a full run describes a container as its

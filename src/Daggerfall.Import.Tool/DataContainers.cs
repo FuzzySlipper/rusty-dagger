@@ -29,10 +29,12 @@ internal static class ImportLayout
     public const string MusicTracks = "local/build/import/music";
 
     /// <summary>
-    /// The last relief bake with the record of what it was baked from (<see cref="KeptRelief"/>), beside the staging tree
-    /// a full import clears, so the next full import takes it when nothing it is baked from changed.
+    /// The terrain bake the repository tracks, with the record of what it was baked from (<see cref="KeptRelief"/>):
+    /// an import takes it when nothing it is baked from changed, and otherwise bakes and replaces it. It is a cache
+    /// its record checks, so it cannot change what the import writes and is not an importer revision input; a release
+    /// ships it with the other inputs.
     /// </summary>
-    public const string KeptRelief = "local/build/import/relief";
+    public const string KeptRelief = $"{Inputs}/relief";
 
     /// <summary>The imported payload: every base section the commands derive.</summary>
     public const string ImportedPayload = $"{Staging}/worldrpg/payloads/daggerfall.imported.json";

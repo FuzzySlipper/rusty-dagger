@@ -9,6 +9,8 @@
        The inputs are the import pipeline's source (src/Daggerfall.Import and src/Daggerfall.Import.Tool, which
        holds only the import, its steps and pack, and in inputs/ the tracked files its steps read: the source
        inventory and our tables taken from Daggerfall Unity) and the authored UI originals with their manifest. The
+       tracked terrain bake in inputs/relief is left out: the relief step takes it only when its record names the bake
+       this code would make from the player's files, so it cannot change what the import writes. The
        import reads no Daggerfall Unity file and never the authored base payload; the ruleset joins the base pack's
        sections to the imported ones when it loads. A command that does not feed the containers, the donor drift
        check among them, lives in src/Daggerfall.Source.Tool, outside the hash. Build output is
@@ -62,7 +64,7 @@
     </PropertyGroup>
     <ItemGroup>
       <_ImporterRevisionInput Include="$(_ImporterRepositoryRoot)/src/Daggerfall.Import/**;$(_ImporterRepositoryRoot)/src/Daggerfall.Import.Tool/**"
-                              Exclude="$(_ImporterRepositoryRoot)/src/*/bin/**;$(_ImporterRepositoryRoot)/src/*/obj/**" />
+                              Exclude="$(_ImporterRepositoryRoot)/src/*/bin/**;$(_ImporterRepositoryRoot)/src/*/obj/**;$(_ImporterRepositoryRoot)/src/Daggerfall.Import.Tool/inputs/relief/**" />
       <_ImporterRevisionInput Include="$(_ImporterRepositoryRoot)/content/worldrpg/packs/daggerfall.art-replacements/authored-ui/**" />
     </ItemGroup>
     <ComputeImporterRevision Root="$(_ImporterRepositoryRoot)" Files="@(_ImporterRevisionInput)">
@@ -76,8 +78,8 @@
     </ItemGroup>
   </Target>
 
-  <!-- The relief bake's revision, the same digest over the bake's own source alone (src/Daggerfall.Import/Relief), so a
-       kept terrain bake stays valid across every other importer edit and goes stale on any edit to the bake. A project
+  <!-- The relief bake's revision, the same digest over the bake's own source alone (src/Daggerfall.Import/Relief), so the
+       tracked terrain bake stays valid across every other importer edit and goes stale on any edit to the bake. A project
        sets StampReliefBakeRevision to true to have the constant `StampedReliefBakeRevision` added to its revision class.
        Daggerfall.Import.Tests' ReliefBakeRevisionTests compile that folder alone, so the bake cannot run importer code
        outside it. -->

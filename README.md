@@ -47,9 +47,9 @@ the pin may move.
 
 ## Game data
 
-The game content is not in the repository: it is converted from your own copy of
-Daggerfall into containers under `local/`, the one ignored folder. Its folders
-say what may be deleted:
+The game content is not in the repository, apart from the terrain bake (below):
+it is converted from your own copy of Daggerfall into containers under `local/`,
+the one ignored folder. Its folders say what may be deleted:
 
 | Folder | Holds | Lifecycle |
 | --- | --- | --- |
@@ -65,7 +65,8 @@ say what may be deleted:
   `local/inputs/Sound`. A link is fine.
 - Import once, and again after a pull that changes the importer revision: its
   inputs are `src/Daggerfall.Import` and `src/Daggerfall.Import.Tool`, whose
-  `inputs/` holds the source inventory and our tables, and the authored UI art
+  `inputs/` holds the source inventory and our tables (not the terrain bake in
+  `inputs/relief/`, which cannot change what it writes), and the authored UI art
   with its manifest (`src/ImporterRevision.targets` lists them). The import never
   reads the authored base payload, so editing it needs no import. The entry screen says when the data is missing, damaged or
   from another importer.
@@ -115,6 +116,14 @@ say what may be deleted:
 - Every run prints the container's importer revision beside the checkout's. When
   they differ the copy is stale for this tree (or the tree is ahead of the last
   import): pull again once den-agents has imported that revision.
+- The terrain bake is tracked in `src/Daggerfall.Import.Tool/inputs/relief/`
+  with the record of what it was baked from. The import's `relief` step takes it
+  when the record matches the arena2 and this build's bake; otherwise it bakes
+  (14 minutes or more), says which input differed and rewrites those files.
+  **Refresh** it with any change to `src/Daggerfall.Import/Relief/` or the bake's
+  stages: run the full import on den-agents and commit the rewritten files with
+  that change. `KeptReliefTests` fails while they are stale. Git stores the
+  21 MB again only when the bytes change.
 - `local/data/first-person.rpak` is optional: 3D first-person arms built from
   purchased art by `authoring/tools/fp-arms/build.sh`. Without it a 3D `viewmodel.style`
   draws the classic weapon sprites, with a warning.
@@ -143,14 +152,14 @@ The import refuses to write through any of these links, since it would replace
 what every checkout opens. A worktree whose branch changes the importer's inputs
 imports into its own: `rm local/data local/build/import && mkdir local/data`,
 link back `first-person.rpak` if it needs one, then import. Build
-`first-person.rpak` the same way. A full import keeps its terrain bake in
-`local/build/import/relief/` and takes it again when nothing it is baked from
-changed; copy the main checkout's first (never link it), or the import bakes for
-several minutes: `mkdir -p local/build/import && cp -r "$main/local/build/import/relief" local/build/import/`.
+`first-person.rpak` the same way. The import takes the tracked terrain bake, so
+there is nothing to copy for it.
 
 Rules for the tracked side:
 
-- Nothing converted from Daggerfall is ever committed. An untracked file under
+- Nothing converted from Daggerfall is ever committed, but for the terrain bake
+  in `src/Daggerfall.Import.Tool/inputs/relief/`, tracked by Patch's decision
+  (#10758), which is no licence for any other. An untracked file under
   `content/` fails the architecture tests.
 - A content pack is one folder, `content/worldrpg/packs/<id>/`: its `pack.json`,
   the `payload.json` it names and any media it owns. A tuning profile is
@@ -170,7 +179,7 @@ Rules for the tracked side:
   `inputs/`, makes every machine's data stale. Make one deliberately. An import step
   never reads the authored base payload: a join between authored and imported
   sections belongs in the ruleset's content reader. A command that does not feed the containers goes in
-  `Daggerfall.Source.Tool`, never `Daggerfall.Import.Tool`, whose every file is an input.
+  `Daggerfall.Source.Tool`, never `Daggerfall.Import.Tool`, whose every file but the terrain bake is an input.
 
 The wiki page `wiki/rusty-dagger/import-and-data-container` has the fuller account.
 

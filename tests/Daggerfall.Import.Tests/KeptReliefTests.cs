@@ -1,3 +1,7 @@
+using System.Text.Json.Nodes;
+using Daggerfall.Import.Arena2;
+using Daggerfall.Import.Normalization;
+using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Relief;
 using Daggerfall.Import.Tool;
 using Daggerfall.Import.Tool.Commands;
@@ -6,12 +10,45 @@ using Xunit;
 namespace Daggerfall.Import.Tests;
 
 /// <summary>
-/// A kept relief bake is taken only when its record names exactly the bake the import would make; anything else is
+/// The tracked relief bake is taken only when its record names exactly the bake the import would make; anything else is
 /// baked again, and the reason names what changed. The bake itself is <see cref="ReliefBakeTests"/>'.
 /// </summary>
 public sealed class KeptReliefTests
 {
     private static readonly byte[] Relief = [1, 2, 3], Rivers = [4, 5];
+
+    private const string Refresh = "refresh the tracked bake with this code: run the import on den-agents (or `relief --arena2 local/inputs/arena2 "
+        + "--pack local/build/import/staging/worldrpg/payloads/daggerfall.imported.json --out local/build/import/staging "
+        + "--keep src/Daggerfall.Import.Tool/inputs/relief --update`) and commit what it rewrote with the change to the bake";
+
+    [Fact]
+    public void The_tracked_bake_is_the_one_the_bake_code_in_the_tree_makes()
+    {
+        string tracked = Path.Combine(TestData.RepositoryRoot, ImportLayout.KeptRelief);
+        JsonObject json = JsonNode.Parse(File.ReadAllBytes(Path.Combine(tracked, KeptRelief.RecordFile)))!.AsObject();
+        ReliefRecord record = ReliefRecord.FromJson(json);
+
+        Assert.True(record.Code == ImporterBuild.ReliefBakeRevision,
+            $"the tracked bake was baked by bake code {record.Code[..12]}, and the tree's is {ImporterBuild.ReliefBakeRevision[..12]}: {Refresh}.");
+        Assert.True(record.Settings == ReliefRecord.SettingsOf(ReliefBake.DefaultStages, ReliefBake.DefaultSourceSquareKilometres),
+            $"the tracked bake was baked with '{record.Settings}', not the tree's stages and river threshold: {Refresh}.");
+        Assert.True(ReliefRecord.Digest(File.ReadAllBytes(Path.Combine(tracked, "relief.bin"))) == record.Relief
+            && ReliefRecord.Digest(File.ReadAllBytes(Path.Combine(tracked, "rivers.bin"))) == record.Rivers,
+            $"the tracked relief.bin and rivers.bin are not the files their record names: {Refresh}.");
+        // Only what the bake is baked from: nothing that names a machine, a path or a runtime.
+        Assert.Equal(["code", "heights", "places", "rain", "relief", "rivers", "settings"], json.Select(field => field.Key).Order(StringComparer.Ordinal));
+    }
+
+    [ImportToolDataFact]
+    public void The_tracked_bake_is_taken_for_the_supplied_arena2_and_the_imported_climate_and_locations()
+    {
+        string imported = ImportedContent.Staged("worldrpg/payloads/daggerfall.imported.json");
+        ReliefInput input = ReliefInputs.Read(WoodsReader.Read(File.ReadAllBytes(TestData.Corpus("WOODS.WLD")), "WOODS.WLD"),
+            PayloadFiles.ReadSection<DaggerfallClimateGrid>(imported, "climate"), PayloadFiles.ReadSection<DaggerfallLocations>(imported, "locations"));
+
+        Assert.True(KeptRelief.Take(Path.Combine(TestData.RepositoryRoot, ImportLayout.KeptRelief), Record(input), out string why) is not null,
+            $"an import here would bake, since {why}");
+    }
 
     [Fact]
     public void A_bake_kept_with_its_record_is_taken_when_nothing_it_is_baked_from_changed()
@@ -45,7 +82,6 @@ public sealed class KeptReliefTests
         Assert.Contains("the bake's stages and river threshold changed",
             Refusal(folder, ReliefRecord.Of(input, [new(ReliefBake.NodesPerPixel, 1, 1)], ReliefBake.DefaultSourceSquareKilometres)));
         Assert.Contains("the bake's code (src/Daggerfall.Import/Relief) changed", Refusal(folder, Record(input) with { Code = new string('0', 64) }));
-        Assert.Contains("the .NET runtime changed", Refusal(folder, Record(input) with { Runtime = ".NET 9.0.0" }));
     }
 
     [Fact]
@@ -53,7 +89,7 @@ public sealed class KeptReliefTests
     {
         using Folder folder = new();
         ReliefRecord record = Record(Input());
-        Assert.Contains("no bake is kept", Refusal(folder, record));
+        Assert.Contains("holds no bake", Refusal(folder, record));
 
         KeptRelief.Keep(folder.Path, record, Relief, Rivers);
         string recordFile = Path.Combine(folder.Path, KeptRelief.RecordFile);

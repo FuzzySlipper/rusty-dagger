@@ -11,9 +11,10 @@ namespace Daggerfall.Import.Tool.Commands;
 /// The relief and its rivers are raw files under the content root, beside the cell samples, which the walked and distant ground read.
 /// </summary>
 /// <remarks>
-/// With <c>--keep</c> (the import passes <see cref="ImportLayout.KeptRelief"/>) a bake is kept there with the record of
-/// what it was baked from, and a later run whose record matches publishes the kept bake instead of baking for minutes;
-/// otherwise it bakes and says which input changed. Without it, as when run by hand, it always bakes.
+/// With <c>--keep</c> (the import passes <see cref="ImportLayout.KeptRelief"/>, the tracked bake) a run whose record
+/// there matches publishes that bake instead of baking for minutes; otherwise it bakes, says which input changed, and
+/// keeps the new bake there with its record, which is how the tracked bake is refreshed. Without it, as when run by
+/// hand, it always bakes.
 /// </remarks>
 internal static class ReliefCommand
 {
@@ -33,7 +34,7 @@ internal static class ReliefCommand
             if (KeptRelief.Take(keep, record, out string why) is { } kept)
             {
                 Publish(root, kept.Relief, kept.Rivers);
-                Console.WriteLine($"relief: reused the bake kept in {keep}: same bake code ({record.Code[..12]}), settings, runtime, WOODS.WLD heights, climate rain and locations");
+                Console.WriteLine($"relief: took the bake in {keep}: same bake code ({record.Code[..12]}), settings, WOODS.WLD heights, climate rain and locations");
                 return 0;
             }
 
@@ -49,7 +50,7 @@ internal static class ReliefCommand
         if (keep is not null)
         {
             KeptRelief.Keep(keep, record, reliefBytes, riversBytes);
-            Console.WriteLine($"relief: kept the bake in {keep} for the next import");
+            Console.WriteLine($"relief: kept the bake in {keep}, which the repository tracks: commit it when the bake's code or settings moved it (README, Game data)");
         }
 
         return 0;

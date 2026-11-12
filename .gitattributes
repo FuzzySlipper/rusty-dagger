@@ -1,2 +1,4 @@
 # Daggerfall Unity inputs are read byte for byte by the import; keep them as Daggerfall Unity ships them.
 data/daggerfall-unity/** -text
+# The tracked terrain bake is compared byte for byte with its record.
+src/Daggerfall.Import.Tool/inputs/relief/*.bin binary

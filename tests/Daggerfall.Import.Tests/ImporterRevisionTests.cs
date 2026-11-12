@@ -58,6 +58,9 @@ public sealed class ImporterRevisionTests
                 // The ruleset joins the authored base payload to the imported sections when it loads.
                 "content/worldrpg/packs/daggerfall.base/payload.json",
                 "src/WorldRpg.Rulesets.Daggerfall/Session/DaggerfallRuleset.cs",
+                // The tracked terrain bake is taken only when its record names the bake this code makes, so it cannot change the import's output.
+                "src/Daggerfall.Import.Tool/inputs/relief/relief.bin",
+                "src/Daggerfall.Import.Tool/inputs/relief/record.json",
                 "src/Daggerfall.Import/obj/Debug/net10.0/ImporterRevision.g.cs",
                 "src/Daggerfall.Import.Tool/bin/Debug/net10.0/Daggerfall.Import.Tool.dll",
             ];
@@ -134,7 +137,9 @@ public sealed class ImporterRevisionTests
             {
                 // local/ holds the operator's own files and what the import writes. source-coverage reads the whole
                 // repository only to reconcile the inventory: it writes its report to the records, never the container.
-                if (value.StartsWith("local/", StringComparison.Ordinal) || (value == "." && step.Label == "source-coverage")) continue;
+                // The tracked terrain bake is a cache its record checks (ImportLayout.KeptRelief), and the relief step writes it.
+                if (value.StartsWith("local/", StringComparison.Ordinal) || (value == "." && step.Label == "source-coverage")
+                    || value == ImportLayout.KeptRelief) continue;
                 string full = Path.GetFullPath(Path.Combine(Root, value));
                 IEnumerable<string> files = File.Exists(full) ? [full]
                     : Directory.Exists(full) ? Directory.EnumerateFiles(full, "*", SearchOption.AllDirectories)

@@ -1,0 +1,1 @@
+These three files are the terrain bake made from `WOODS.WLD`, tracked by Patch's decision under Den task #10758; that decision covers no other file made from arena2. Refreshing them is in the root README's Game data section.
