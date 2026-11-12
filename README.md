@@ -32,7 +32,7 @@ Engine SDK/runtime pair, pinned by `<RustyEnginePackageVersion>` in
 `Directory.Build.props`. The Engine's `rusty` command installs, updates and runs
 it. Get `rusty` once with the Engine bootstrap
 (`curl -fsSL https://raw.githubusercontent.com/FuzzySlipper/rusty-engine/main/scripts/install-rusty.sh | bash`),
-then:
+and again when `rusty install` says `rusty` is older than the pinned pair, then:
 
 ```bash
 git clone https://github.com/FuzzySlipper/rusty-dagger.git && cd rusty-dagger
